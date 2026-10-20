@@ -306,21 +306,19 @@ FREQUENCIES_COUNT_NOTE = (
     "applied most often are not thereby the most important, and one "
     "participant can account for many codings.")
 
-# What warns in v0.14 and goes in v0.15.1 (owner ruling 25, questions 3,
-# 7 and 8; ruling 70 moved the removals from v0.15 to v0.15.1): one
-# sentence, the same in the tool's description and in its answer, so a
-# test can pin one source of wording. The REFI-QDA export's, the
-# journals' and the rename back's name QualCoder's own feature only for
-# researchers who use it, the gap said as Exegete's (whole-branch review,
-# round 2). The tool that returned the names list, deprecated in v0.14
-# too, was removed in v0.15.0 (ruling 78): the names file replaces it.
-# The REFI-QDA export is kept, to be fixed (ruling 85, item 2): its
-# sentence names its known faults and no removal, under the same name
-# and in the same answer field until the piece that fixes it. The three
-# tools and the four help topics announced here went in 0.15.1, as
-# announced (the CHANGELOG names them): a call of one of the tools is
-# refused as an unknown tool, and a removed topic is answered below.
-DEPRECATED_REFI_EXPORT = (
+# The REFI-QDA export, deprecated in v0.14, is kept, to be fixed (ruling
+# 85, item 2): this sentence names its known faults and no removal, in
+# its description and, under known_faults, in every answer the tool
+# itself gives (not a refusal made by _tool_guard, outside it). The
+# QualCoder export it names is for researchers who have QualCoder, the
+# gap said as Exegete's (whole-branch review, round 2). Each fault is in
+# the code: one User, the AI coder, creates every selection and coding
+# (refi_export.py); the project export reads every coder's codings,
+# hidden ones included; no Cases or Notes element, text sources only;
+# a session's export takes every suggestion and writes no status. The
+# piece that fixes the export removes the sentence and its guards
+# (tests/test_v0151_refi_known_faults.py).
+REFI_EXPORT_KNOWN_FAULTS = (
     "Known faults (a later release is meant to fix them): this export "
     "files every coding under the AI coder name, the researcher's own and "
     "a hidden coder's included, so another program shows them as the "
@@ -330,6 +328,18 @@ DEPRECATED_REFI_EXPORT = (
     "QualCoder's own export (Project, Export, REFI-QDA Project export), "
     "for researchers who have QualCoder, keeps each coder, the cases, "
     "notes and media.")
+
+# What warns in v0.14 and goes in v0.15.1 (owner ruling 25, questions 3,
+# 7 and 8; ruling 70 moved the removals from v0.15 to v0.15.1): one
+# sentence, the same in the tool's description and in its answer, so a
+# test can pin one source of wording. The journals' and the rename
+# back's name QualCoder's own feature only for researchers who use it,
+# the gap said as Exegete's (whole-branch review, round 2). The tool that
+# returned the names list, deprecated in v0.14 too, was removed in
+# v0.15.0 (ruling 78): the names file replaces it. The three tools and
+# the four help topics announced here went in 0.15.1, as announced (the
+# CHANGELOG names them): a call of one of the tools is refused as an
+# unknown tool, and a removed topic is answered below.
 DEPRECATED_CASCADE = (
     "Deprecated, removed in v0.15.1: cascade; the preview token already "
     "approves the whole branch.")
@@ -791,8 +801,10 @@ def _deprecated(sentence: Any, before: Optional[str],
     The answer carries it under `key`, "deprecated" unless another is
     given: create_backup's sentence has a key of its own,
     create_backup_ignored, so it never takes the place of a "deprecated"
-    one (v0.15.1). With `in_description` false the description is left
-    as it is, for a sentence its Args line already gives.
+    one (v0.15.1), and the REFI-QDA export's sentence, which names its
+    known faults and no removal, has known_faults, since the export is
+    kept (ruling 85, item 2). With `in_description` false the description
+    is left as it is, for a sentence its Args line already gives.
 
     A sentence that names a tool the core set lacks, on a core tool, is
     given as a function returning it marked (`_mark_unregistered`), and
@@ -7709,7 +7721,8 @@ def search_memos(query: str, limit: int = 50) -> str:
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(DEPRECATED_REFI_EXPORT, before="REFI-QDA is the interchange")
+@_deprecated(REFI_EXPORT_KNOWN_FAULTS, before="REFI-QDA is the interchange",
+             key="known_faults")
 def export_refi_qda(
     output_path: str,
     coding_session_id: Optional[str] = None,

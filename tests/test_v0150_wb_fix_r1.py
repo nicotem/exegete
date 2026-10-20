@@ -85,16 +85,19 @@ class TestTheRemovalsInV0151:
         # and ignores create_backup, import_text_file's false included
         # (tests/test_v0151_ignored_argument.py); 7 since v0.15.1 removed
         # three tools and four help topics, as announced, with their
-        # sentences (tests/test_v0151_removed_tools.py)
-        assert len(DEPRECATIONS) >= 7, DEPRECATIONS
+        # sentences (tests/test_v0151_removed_tools.py); 6 since the
+        # REFI-QDA export, kept, names its known faults under a name of
+        # its own, REFI_EXPORT_KNOWN_FAULTS, no longer a deprecation
+        # (tests/test_v0151_refi_known_faults.py)
+        assert len(DEPRECATIONS) >= 6, DEPRECATIONS
         assert "DEPRECATED_IMPORT_SKIP_BACKUP" not in DEPRECATIONS
+        assert "DEPRECATED_REFI_EXPORT" not in DEPRECATIONS
         assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
         for gone in ("DEPRECATED_CODE_REPORT", "DEPRECATED_CLEANUP",
                      "DEPRECATED_MERGE_PROPOSALS", "DEPRECATED_HELP_TOPICS"):
             assert gone not in DEPRECATIONS, gone
 
-    @pytest.mark.parametrize("name", [n for n in DEPRECATIONS
-                                      if n != "DEPRECATED_REFI_EXPORT"])
+    @pytest.mark.parametrize("name", DEPRECATIONS)
     def test_each_sentence_names_v0151(self, name):
         sentence = getattr(server, name)
         assert sentence.startswith("Deprecated, removed in v0.15.1: "), name
@@ -103,9 +106,10 @@ class TestTheRemovalsInV0151:
     def test_the_refi_export_is_kept_with_its_faults_named(self):
         """The owner's decision of 20 October 2026 (ruling 85, item 2): the
         REFI-QDA export stays, to be fixed, so its sentence names its known
-        faults and announces no removal (under its earlier constant until
-        the piece that fixes it)."""
-        sentence = server.DEPRECATED_REFI_EXPORT
+        faults and announces no removal (under a name of its own since
+        v0.15.1, REFI_EXPORT_KNOWN_FAULTS, until the piece that fixes
+        it)."""
+        sentence = server.REFI_EXPORT_KNOWN_FAULTS
         assert sentence.startswith("Known faults (a later release is meant "
                                    "to fix them): ")
         assert "Deprecated" not in sentence and "removed" not in sentence

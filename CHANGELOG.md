@@ -53,6 +53,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the topics `analyze_for_coding`, `apply_codings`, `edit_suggestion` and
   `coding_style_guidance`, which repeated the tools' own descriptions;
   asked for one, it says so and lists the topics it has.
+- **The REFI-QDA export stays.** `export_refi_qda` is no longer
+  deprecated and is not removed: the maintainer means to fix it in a
+  later release (his decision of 20 October 2026). Until then its
+  description and its answers name its known faults, in the answer's
+  `known_faults` field, where 0.15.0 had `deprecated`; a script or saved
+  instruction that read `deprecated` should read `known_faults`.
 
 ### Changed
 
@@ -151,8 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the refusal alone does.
 - **The documents read again against the code, and put right where they
   were no longer true**: the REFI-QDA export is kept, and its
-  description and answers (still in the field `deprecated`) name its
-  known faults instead of its removal; the plans give undo to v0.15.2
+  description and answers name its known faults instead of its removal
+  (below); the plans give undo to v0.15.2
   and method to v0.15.3; the setting OpenAI documents for Codex is said
   to be untested, with no test promised; PRIVACY.md names QualCoder
   3.8's AI search store, which backups keep (as `list_backups`' note now
@@ -224,6 +230,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   removed, with the topics it has, and no error; asked for
   `start_coding_session`, it answers, as for any tool without a topic,
   that the tool's description documents it.
+
+### Changed: the REFI-QDA export is kept, its faults named
+
+- **`export_refi_qda` is no longer deprecated, and stays.** 0.14
+  announced its removal; the maintainer means to fix it in a later
+  release instead. Until then its description and every answer it
+  gives, its own refusals included, name its known faults: it files
+  every coding under the AI coder name, the researcher's own and a
+  hidden coder's included, so another program shows them as the AI's;
+  it leaves out cases, annotations, journals and media; and a session's
+  export includes every suggestion, rejected ones too, with nothing to
+  say which. The answer carries that sentence in the field
+  `known_faults`, where 0.15.0 had `deprecated`. A refusal Exegete
+  makes in the same way for every tool (no project selected, an
+  unexpected error) carries neither, as in 0.15.0.
 
 ### Fixed
 

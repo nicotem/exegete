@@ -441,15 +441,15 @@ RELEASE_LABELS = (re.compile(r"\bNEW\b"),
                   re.compile(r"(?i)\bfrom v?0\.\d+\)"),
                   re.compile(r"exegete-v?\d+\.\d+"))
 # Where a version is the point: the roadmap, the licence's record of
-# which terms apply to which release, the dated check of the table, and
-# the export being withdrawn
+# which terms apply to which release, and the dated check of the table
+# (the REFI-QDA export's removal date went in v0.15.1: it is kept, its
+# known faults named, ruling 85, item 2)
 VERSIONS_IN_PLACE = ("## What comes next", "## Disclaimer", "## Licence",
                      "## Acknowledgements")
 # (v0.15.0, the release review: the table's stamp gives QualCoder's
 # side its date and names the Exegete its column describes)
 DATED = re.compile(r"Exegete v?0\.\d+\.\d+ against QualCoder|"
-                   r"beside Exegete v?0\.\d+\.\d+:|"
-                   r"\(removed in 0\.\d+(?:\.\d+)?\)")
+                   r"beside Exegete v?0\.\d+\.\d+:")
 
 
 def _release_labels(text):
@@ -479,13 +479,14 @@ def test_the_label_check_would_notice():
                 "download the file whose name ends in `.mcpb` (for example "
                 "`exegete-0.14.1-alpha.mcpb`)",
                 "Checked on 29 September 2026, this program's 0.14.0 (then "
-                "called qualcoder-mcp) against QualCoder 3.8.2"):
+                "called qualcoder-mcp) against QualCoder 3.8.2",
+                "Export only, being withdrawn (removed in 0.15.1)"):
         assert _release_labels(old), old
     for kept in ("QualCoder 3.8.2 and the 4.0 beta", "QualCoder 4.0's format",
                  "Checked on 1 October 2026, Exegete 0.14.2 against "
                  "QualCoder 3.8.2", "QualCoder 3.8.2 and 4.0 as checked on "
                  "10 October 2026, beside Exegete 0.15.0:",
-                 "Export only, being withdrawn (removed in 0.15)", "a name that starts with `exegete-` and ends "
+                 "a name that starts with `exegete-` and ends "
                  "in `.mcpb`"):
         assert not _release_labels(kept), kept
 

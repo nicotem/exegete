@@ -197,8 +197,9 @@ class TestClaudeCodesLimitsOnEveryPython:
 # The three notes' new ending, each said as Exegete's gap or on a condition
 NOTES = {
     # (v0.15.1: the export is kept, its known faults named, ruling 85,
-    # item 2; the ending the review asked for is unchanged)
-    "DEPRECATED_REFI_EXPORT": (
+    # item 2, under a name of its own; the ending the review asked for is
+    # unchanged)
+    "REFI_EXPORT_KNOWN_FAULTS": (
         "Exegete has no other REFI-QDA export yet; QualCoder's own export "
         "(Project, Export, REFI-QDA Project export), for researchers who "
         "have QualCoder, keeps each coder, the cases, notes and media."),
@@ -210,7 +211,7 @@ NOTES = {
         "own Rename, if the researcher uses it, still makes one)."),
 }
 # Which tools' descriptions carry each
-CARRIERS = {"DEPRECATED_REFI_EXPORT": ("export_refi_qda",),
+CARRIERS = {"REFI_EXPORT_KNOWN_FAULTS": ("export_refi_qda",),
             "DEPRECATED_JOURNAL_ATTRIBUTES": ("create_attribute_type",
                                               "set_attribute"),
             "DEPRECATED_RENAME_BACK": ("rename_file",)}
@@ -237,7 +238,10 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
         for old in UNCONDITIONAL:
             assert old not in note, old
 
-    @pytest.mark.parametrize("constant", DEPRECATIONS)
+    # (the REFI-QDA export's sentence, no longer a deprecation since
+    # v0.15.1, is still a note that names QualCoder)
+    @pytest.mark.parametrize("constant",
+                             DEPRECATIONS + ["REFI_EXPORT_KNOWN_FAULTS"])
     def test_every_deprecation_names_qualcoder_on_a_condition(self,
                                                              constant):
         text = getattr(server, constant)

@@ -374,7 +374,7 @@ NOTICE_HERE = (
      "_stored_copy_block"),
     (30, "src/exegete/database.py", "PDF_PROBLEM_MESSAGES",
      "QualcoderDatabase.search_files"),
-    (30, "src/exegete/server.py", "DEPRECATED_REFI_EXPORT",
+    (30, "src/exegete/server.py", "REFI_EXPORT_KNOWN_FAULTS",
      "get_project_summary", "_opening_in_qualcoder_40"),
     (31, "src/exegete/reading_copy.py", "QUALCODER_WHITE_TEXT",
      "text_colour"),

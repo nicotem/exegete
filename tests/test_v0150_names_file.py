@@ -970,8 +970,9 @@ class TestExportsKeepOut:
             output_path=str(target), overwrite=True, **extra))
         refusal = {"error": EXPORT_REFUSAL}
         if tool == "export_refi_qda":
-            # deprecated: every answer carries the sentence
-            refusal["deprecated"] = server.DEPRECATED_REFI_EXPORT
+            # every answer the tool itself gives names its known faults
+            # (v0.15.1, ruling 85, item 2)
+            refusal["known_faults"] = server.REFI_EXPORT_KNOWN_FAULTS
         assert answer == refusal, answer
         assert names.read_bytes() == before
         assert sorted(os.listdir(other / "Exegete")) == sorted(

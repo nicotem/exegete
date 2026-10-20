@@ -322,7 +322,7 @@ Values in the package
     answers
     Here: src/exegete/database.py, PDF_PROBLEM_MESSAGES and
     QualcoderDatabase.search_files.
-    Here: src/exegete/server.py, DEPRECATED_REFI_EXPORT,
+    Here: src/exegete/server.py, REFI_EXPORT_KNOWN_FAULTS,
     get_project_summary and _opening_in_qualcoder_40.
     From: GUI/ui_main.py, lines 368, 370, 379 and 410; code_pdf.py,
     lines 2018-2020 and 5792; __main__.py, lines 2034-2035.

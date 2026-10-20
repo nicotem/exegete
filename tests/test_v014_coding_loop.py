@@ -1889,7 +1889,7 @@ class TestFixRound2WhatGoesInV015:
         # ruling 70 moved the removals to v0.15.1 (the whole-branch
         # review of v0.15.0, round 1); ruling 85, item 2 keeps the
         # REFI-QDA export, whose sentence names its known faults instead
-        if sentence is not server.DEPRECATED_REFI_EXPORT:
+        if sentence is not server.REFI_EXPORT_KNOWN_FAULTS:
             assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
@@ -1908,31 +1908,37 @@ class TestFixRound2WhatGoesInV015:
         assert "deprecated" not in summary.lower()
 
     def test_the_refi_qda_exports(self, setup_server, tmp_path):
-        self._described("export_refi_qda", server.DEPRECATED_REFI_EXPORT)
-        # (v0.15.1: kept, its known faults named, ruling 85, item 2; the
-        # answer's field keeps its name until the piece that fixes it)
+        self._described("export_refi_qda", server.REFI_EXPORT_KNOWN_FAULTS)
+        # (v0.15.1: kept, its known faults named, ruling 85, item 2, in
+        # the answer's own field, known_faults, and no longer deprecated;
+        # tests/test_v0151_refi_known_faults.py)
         for words in ("Known faults (a later release is meant to fix them)",
                       "files every coding under the AI coder name",
                       "leaves out cases, annotations, journals and media",
                       "includes every suggestion, rejected ones too",
                       "QualCoder's own export (Project, Export, REFI-QDA "
                       "Project export)"):
-            assert words in server.DEPRECATED_REFI_EXPORT, words
-        assert "removed" not in server.DEPRECATED_REFI_EXPORT
+            assert words in server.REFI_EXPORT_KNOWN_FAULTS, words
+        assert "removed" not in server.REFI_EXPORT_KNOWN_FAULTS
         sid = new_session()
         g = record(sid, item())["recorded"][0]["guid"]
         session_export = jcall("export_refi_qda", coding_session_id=sid,
                                output_path=str(tmp_path / "s.qdpx"))
         assert session_export["success"] is True
-        assert session_export["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        assert session_export["known_faults"] == \
+            server.REFI_EXPORT_KNOWN_FAULTS
+        assert "deprecated" not in session_export
         approve_and_apply(sid, [g])
         project_export = jcall("export_refi_qda",
                                output_path=str(tmp_path / "p.qdpx"))
         assert project_export["success"] is True
-        assert project_export["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        assert project_export["known_faults"] == \
+            server.REFI_EXPORT_KNOWN_FAULTS
+        assert "deprecated" not in project_export
         refused = jcall("export_refi_qda", output_path="relative.qdpx")
         assert "error" in refused
-        assert refused["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        assert refused["known_faults"] == server.REFI_EXPORT_KNOWN_FAULTS
+        assert "deprecated" not in refused
 
     def test_whole_tools_that_go(self, setup_server):
         """v0.15.1: the three tools went, as announced, with their

@@ -83,10 +83,15 @@ class TestTheRemovalsInV0151:
         # 12 since read_pseudonym_list, and its sentence, were removed in
         # v0.15.0 (the files design, piece 5); 11 since v0.15.1 accepts
         # and ignores create_backup, import_text_file's false included
-        # (tests/test_v0151_ignored_argument.py)
-        assert len(DEPRECATIONS) >= 11, DEPRECATIONS
+        # (tests/test_v0151_ignored_argument.py); 7 since v0.15.1 removed
+        # three tools and four help topics, as announced, with their
+        # sentences (tests/test_v0151_removed_tools.py)
+        assert len(DEPRECATIONS) >= 7, DEPRECATIONS
         assert "DEPRECATED_IMPORT_SKIP_BACKUP" not in DEPRECATIONS
         assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
+        for gone in ("DEPRECATED_CODE_REPORT", "DEPRECATED_CLEANUP",
+                     "DEPRECATED_MERGE_PROPOSALS", "DEPRECATED_HELP_TOPICS"):
+            assert gone not in DEPRECATIONS, gone
 
     @pytest.mark.parametrize("name", [n for n in DEPRECATIONS
                                       if n != "DEPRECATED_REFI_EXPORT"])

@@ -316,7 +316,10 @@ FREQUENCIES_COUNT_NOTE = (
 # too, was removed in v0.15.0 (ruling 78): the names file replaces it.
 # The REFI-QDA export is kept, to be fixed (ruling 85, item 2): its
 # sentence names its known faults and no removal, under the same name
-# and in the same answer field until the piece that fixes it.
+# and in the same answer field until the piece that fixes it. The three
+# tools and the four help topics announced here went in 0.15.1, as
+# announced (the CHANGELOG names them): a call of one of the tools is
+# refused as an unknown tool, and a removed topic is answered below.
 DEPRECATED_REFI_EXPORT = (
     "Known faults (a later release is meant to fix them): this export "
     "files every coding under the AI coder name, the researcher's own and "
@@ -327,28 +330,12 @@ DEPRECATED_REFI_EXPORT = (
     "QualCoder's own export (Project, Export, REFI-QDA Project export), "
     "for researchers who have QualCoder, keeps each coder, the cases, "
     "notes and media.")
-DEPRECATED_CODE_REPORT = (
-    "Deprecated, removed in v0.15.1: get_coded_segments(code_id=...) reads "
-    "the same passages, page by page and without the 1,000 limit.")
-DEPRECATED_CLEANUP = (
-    "Deprecated, removed in v0.15.1: it deletes every project's old "
-    "sessions with no preview; delete_coding_session removes one.")
 DEPRECATED_CASCADE = (
     "Deprecated, removed in v0.15.1: cascade; the preview token already "
     "approves the whole branch.")
 DEPRECATED_OWNER = (
     "Deprecated, removed in v0.15.1: owner, which can only repeat the "
     "project's AI coder name.")
-DEPRECATED_HELP_TOPICS = (
-    "Deprecated, removed in v0.15.1: the topics analyze_for_coding, "
-    "apply_codings, edit_suggestion and coding_style_guidance, which "
-    "repeat the tools' own descriptions.")
-DEPRECATED_HELP_TOPIC_NAMES = frozenset({
-    "analyze_for_coding", "apply_codings", "edit_suggestion",
-    "coding_style_guidance"})
-DEPRECATED_MERGE_PROPOSALS = (
-    "Deprecated, removed in v0.15.1: reject the proposal instead, and add "
-    "its passages to the other with update_proposal if they belong there.")
 DEPRECATED_JOURNAL_ATTRIBUTES = (
     "Deprecated, removed in v0.15.1: attributes on journal entries, which "
     "Exegete can set but never reads back (QualCoder's Journals window, "
@@ -363,6 +350,18 @@ DEPRECATED_RENAME_BACK = (
     "Deprecated, removed in v0.15.1: a rename back recognised from the "
     "project's backups (QualCoder's own Rename, if the researcher uses it, "
     "still makes one).")
+
+# The help topics explain_ai_coding_tools no longer has (0.15.1, as
+# announced in 0.14): asked for one, it answers with this sentence and the
+# topics it has, and no error, since the name was once a topic.
+REMOVED_HELP_TOPICS = frozenset({
+    "analyze_for_coding", "apply_codings", "edit_suggestion",
+    "coding_style_guidance"})
+HELP_TOPIC_REMOVED = (
+    "This help topic was removed in 0.15.1 because it repeated the tools' "
+    "own descriptions: each tool's description documents its arguments, "
+    "refusals and overrides, and start_coding_session's says what to ask "
+    "the researcher before a coding session.")
 
 # create_backup, accepted and ignored (v0.15.1; owner ruling 85, item 6:
 # it goes with the tools' earlier names in the release on method).
@@ -7708,87 +7707,6 @@ def search_memos(query: str, limit: int = 50) -> str:
     return json.dumps(payload, indent=2)
 
 
-# How many segments export_code_report returns (v0.14, claims audit item
-# 16: named, and said in the answer when a code has more).
-CODE_REPORT_SEGMENT_LIMIT = 1000
-
-
-@mcp.tool(annotations=TOOL_READS)
-@_tool_guard
-@_deprecated(DEPRECATED_CODE_REPORT, before="This tool creates")
-def export_code_report(code_name: str) -> str:
-    """Generate a comprehensive report for a specific code.
-
-    This tool creates a detailed report including code metadata, up to
-    1,000 of its coded text segments, and frequency information. The
-    answer says how many text segments there are (segments_total) and
-    whether the report stopped short (truncated); get_coded_segments
-    pages through all of them with its cursor.
-
-    Memo privacy (QualCoder 4.0 convention): this report is returned
-    into the conversation, not written to a file, so every memo it
-    contains is the public part only (text before the first '#####'
-    marker). Unlike the file exports (export_refi_qda, export_codebook,
-    export_coded_segments_report) it never carries the private zone.
-
-    Coder visibility (projects with the coder-visibility capability,
-    QualCoder 3.8.2 and 4.0 onwards): segments reflect visible
-    coders by default and the result then carries a coder_visibility
-    block. There is no coder override on this tool; use
-    get_coded_segments(coder=...) for that.
-
-    Args:
-        code_name: The name of the code to generate a report for. The
-                   same name after spacing and Unicode form are
-                   normalised is used first, otherwise one that differs
-                   only by letter case; a name matching no code, or two,
-                   is refused with the code names
-
-    Returns:
-        JSON object with the code's information, up to 1,000 of its coded
-        text segments, segments_returned, segments_total and truncated
-    """
-    # Find the code by name, by the codebook tools' rule: the first
-    # lower() match used to pick "Trust" for "trust" when both exist
-    # (v0.14, claims audit item 12)
-    code_row, code_match, refusal = _resolve_code_name_filter(get_db(),
-                                                              code_name)
-    if refusal is not None:
-        return json.dumps(refusal, indent=2)
-    if code_row is None:
-        return json.dumps({"error": "code_name must not be empty"})
-
-    # Get detailed information, by the resolved code's id (fix round 3)
-    code_id = code_row["id"]
-    details = get_db().get_code_details(code_id)
-    segments = get_db().get_coded_text_segments(
-        code_id, limit=CODE_REPORT_SEGMENT_LIMIT)
-    # The report stops at 1,000 segments; it used to say nothing, while
-    # its own statistics gave the full count (v0.14, claims audit item
-    # 16). Both counts are the visible text codings on existing files.
-    total = details["statistics"]["text_segments"]
-    truncated = total > len(segments)
-
-    payload = {
-        "code": details,
-        "code_match": code_match,
-        "segments": segments,
-        "segments_returned": len(segments),
-        "segments_total": total,
-        "truncated": truncated,
-        "report_generated": True
-    }
-    if truncated:
-        payload["note"] = (
-            f"This report holds the first {len(segments):,} of the code's "
-            f"{total:,} text segments. get_coded_segments(code_id="
-            f"{code_id}) reads all of them, page by page with its cursor.")
-    note = _coder_visibility_note()
-    if note:
-        payload["coder_visibility"] = note
-    return _ai_json(payload, indent=2)
-
-
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
 @_deprecated(DEPRECATED_REFI_EXPORT, before="REFI-QDA is the interchange")
@@ -14587,53 +14505,6 @@ def delete_coding_session(coding_session_id: str) -> str:
         return json.dumps({"error": error_text(e)})
 
 
-@mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
-@_deprecated(DEPRECATED_CLEANUP, before="Deletes every session file")
-def cleanup_old_sessions(days_old: int = 30) -> str:
-    """Clean up old coding sessions, for every project on this computer.
-
-    Deletes every session file whose last change is older than days_old
-    days, whichever project it belongs to, including sessions that hold
-    approved suggestions not yet applied. No preview is given and a
-    deleted session cannot be recovered; codings already applied stay in
-    their projects. To remove one session, use delete_coding_session; to
-    see what is there first, list_coding_sessions.
-
-    Args:
-        days_old: Delete sessions whose last change is older than N days
-                  (default: 30; at least 1)
-
-    Returns:
-        JSON with count of deleted sessions
-
-    Example:
-        "Clean up sessions older than 30 days"
-        "Delete coding sessions older than 60 days"
-    """
-    try:
-        if not isinstance(days_old, int) or days_old < 1:
-            return json.dumps({
-                "error": "days_old must be a positive integer (>= 1); "
-                         "refusing to delete recent or all sessions. To remove "
-                         "a specific session use delete_coding_session."
-            })
-
-        deleted_count = session_manager.cleanup_old_sessions(days_old)
-
-        return json.dumps({
-            "success": True,
-            "deleted_count": deleted_count,
-            "days_old": days_old,
-            "message": f"Deleted {deleted_count} sessions older than {days_old} days"
-        }, indent=2)
-
-    except Exception as e:
-        logger.error("Error in cleanup_old_sessions: %s", error_label(e))
-        return json.dumps({"error": error_text(e)})
-
-
-
 # The pandoc defaults file the converted_documents topic names (0.14.3,
 # decision 3): two lines, checked against this digest before
 # its place is given, so a file changed on the disk is never named.
@@ -14724,21 +14595,8 @@ def _used_the_earlier_name() -> bool:
     return os.path.lexists(state_folder.old_path())
 
 
-def _help_topic(tool_name: Optional[str]) -> Optional[str]:
-    """The help topic a name asks for: a renamed tool's new name reads the
-    topic its earlier name has, while the deprecated topics last
-    (whole-branch review, round 1: help asked for under the name every
-    text now uses was answered "Unknown tool")."""
-    earlier = {new: old for old, new in RENAMED_TOOLS.items()}.get(
-        tool_name)
-    return earlier if earlier in DEPRECATED_HELP_TOPIC_NAMES else tool_name
-
-
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
-@_deprecated(DEPRECATED_HELP_TOPICS, before="Args:",
-             when=lambda a: _help_topic(a.get("tool_name"))
-             in DEPRECATED_HELP_TOPIC_NAMES)
 def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     """Get help and examples for AI coding tools.
 
@@ -14898,117 +14756,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "researcher before writing",
                 "Session persistence: resume work at any time",
                 "Full recovery tools: delete_coding, list_backups, restore_backup"
-            ]
-        },
-        # The deprecated topic keeps the tool's earlier name until the
-        # help topics go (v0.15.1); its text names the tool by its new one
-        "analyze_for_coding": {
-            "purpose": "Starts a coding session (start_coding_session): "
-                       "records the files, codes and "
-                       "instruction the researcher asked for, and returns "
-                       "the session id and the next steps. It reads no file "
-                       "and makes no suggestion: you read each file with "
-                       "read_file_with_codings and record suggestions "
-                       "with record_suggestions",
-            "when_to_use": "Before suggesting codings for the researcher to "
-                           "review, one session per request",
-            "parameters": {
-                "file_ids": "The files the session covers (required); "
-                            "suggestions on any other file are refused",
-                "code_names": "The codes the session covers, matched "
-                              "exactly, else ignoring letter case, spacing "
-                              "and Unicode form; None for every code. "
-                              "Suggestions under any other code are refused",
-                "instruction": "Required: the researcher's answers to "
-                               "the three questions; ask them first"
-            },
-            "examples": [
-                {"prompt": "Suggest codings for files 1, 2 and 3",
-                 "explanation": "A session over three files with every code"},
-                {"prompt": "Suggest codings for the transcripts with the "
-                           "code 'Workplace stress' only",
-                 "explanation": "code_names=['Workplace stress']: a "
-                                "suggestion under any other code is refused"},
-                {"prompt": "Look at file 5 for what is said about motivation",
-                 "explanation": "The instruction carries the focus; the "
-                                "codes stay those named, or all"}
-            ],
-            "tips": [
-                "Ask the three questions first; their answers are the "
-                "instruction",
-                "Start with one file to test before batch coding",
-                "A file id or code name that matches nothing comes back in "
-                "not_found: tell the researcher",
-                "Save the session id and pass it to every follow-up tool as coding_session_id"
-            ]
-        },
-        "apply_codings": {
-            "purpose": "Write approved coding suggestions to the project",
-            "when_to_use": "After reviewing suggestions and approving the ones you want",
-            "workflow": [
-                "1. Run start_coding_session on your files",
-                "2. Record the suggestions with record_suggestions",
-                "3. Review with review_suggestions",
-                "4. Adjust spans/codes in place with edit_suggestion",
-                "5. Approve/reject with update_suggestion_status",
-                "6. Apply approved codings with apply_codings",
-                "7. Exegete takes a backup before every change; "
-                "delete_coding removes one coding and marks its suggestion "
-                "removed in the session; restore_backup rolls the project "
-                "back (all but its Exegete, audio and video folders, "
-                "which a restore keeps)"
-            ]
-        },
-        "edit_suggestion": {
-            "purpose": "Adjust a PENDING suggestion's span (extend/shrink/"
-                       "move) and/or its code during review, before approval",
-            "when_to_use": "When the researcher wants a wider quote, a "
-                           "tighter span, or a different code on a "
-                           "suggestion, instead of rejecting and "
-                           "re-recording",
-            "notes": [
-                "Pending suggestions only: to edit an approved or "
-                "rejected one, reopen it (update_suggestion_status "
-                "reopen=[guid]), edit it, and ask the researcher to decide "
-                "again; an applied one is in the project, and delete_coding "
-                "removes it and marks the suggestion removed, after which "
-                "it can be reopened too",
-                "use_alternative='shorter'|'longer' applies a ready-made "
-                "span Exegete computed (core sentence / enclosing "
-                "paragraph), the one-call answer to 'make it "
-                "shorter/longer'; alternatives are recomputed after every "
-                "edit",
-                "New spans are re-verified against the file text with the "
-                "same machinery as record_suggestions",
-                "Moving a suggestion to another code clears its explicit "
-                "or interpretive label, given for the old code, unless "
-                "reading is passed with the change; reading alone "
-                "relabels it",
-                "Proposal evidence spans are edited the same way via "
-                "update_proposal(example_segments=...)"
-            ]
-        },
-        "coding_style_guidance": {
-            "purpose": "Passage length and more than one code per passage, "
-                       "as the researcher chose them at the start of the "
-                       "session",
-            "span_style": [
-                "Ask how long a coded passage should be: a phrase, whole "
-                "sentences (the default) or a whole answer; pass the "
-                "answer in start_coding_session's instruction and honour it",
-                "Researchers can widen or narrow any span at review with "
-                "edit_suggestion, where shorter and longer alternatives "
-                "exist (use_alternative)",
-                "After three same-direction picks, ask whether to change "
-                "the length for the rest of the session"
-            ],
-            "co_coding": [
-                "Ask whether a passage may carry more than one code; only "
-                "then record a second code on it, its reason saying why "
-                "both apply",
-                "A pairing the researcher adds at review is looked for "
-                "elsewhere only after they say yes: a yes permits "
-                "looking, not applying"
             ]
         },
         "grounding_rules": {
@@ -15177,7 +14924,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     }
 
     asked = tool_name
-    tool_name = _help_topic(tool_name)
 
     if tool_name == "brief":
         # v0.14.2: the assistant's brief, the very text read_brief and
@@ -15203,10 +14949,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
 
     else:
         topics = [
-                "analyze_for_coding",
-                "apply_codings",
-                "edit_suggestion",
-                "coding_style_guidance",
                 "grounding_rules",
                 "methodology_vocabulary",
                 "methods_notes",
@@ -15219,6 +14961,16 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                "have a dedicated help entry here; every other tool "
                "documents its arguments, refusals and overrides in its "
                "own description.")
+        if asked in REMOVED_HELP_TOPICS:
+            # A topic removed in 0.15.1, as announced in 0.14: said so,
+            # with no error, since the name was once a topic; its new
+            # name, start_coding_session, has none, as any other tool
+            return json.dumps({
+                "topic": asked,
+                "note": HELP_TOPIC_REMOVED,
+                "available_tools": topics,
+                "tip": tip,
+            }, indent=2)
         if asked in ALL_TOOL_NAMES:
             # One of Exegete's tools, with no topic of its own: not
             # "unknown" (whole-branch review, round 1); marked where the
@@ -15257,9 +15009,12 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
 
     WORKFLOW: start_coding_session creates a session -> you read
     the files and record the codes you see emerging with this tool ->
-    present them -> the user refines (update_proposal / merge_proposals)
-    and decides (update_proposal_status) -> create_proposed_codes writes
-    the approved ones.
+    present them -> the user refines (update_proposal; to merge two,
+    reject one with update_proposal_status, then give the other its own
+    passages and the rejected one's together in update_proposal's
+    example_segments, which replaces the list) and decides
+    (update_proposal_status) -> create_proposed_codes writes the approved
+    ones.
 
     Args:
         coding_session_id: The session ID from start_coding_session
@@ -15434,7 +15189,9 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         "rejected": rejected,
         "proposal_statistics": session.proposal_statistics(),
         "next_step": "Present the proposals to the user; refine with "
-                     "update_proposal / merge_proposals, decide with "
+                     "update_proposal (to merge two, reject one and give "
+                     "the other both sets of passages in example_segments, "
+                     "which replaces the list), decide with "
                      "update_proposal_status, then write the approved ones "
                      "with create_proposed_codes.",
     }
@@ -15766,76 +15523,6 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
             f"them may show shifted in its editor. Relay this to the "
             f"user."
         )
-    return json.dumps(result, indent=2)
-
-
-@mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
-@_deprecated(DEPRECATED_MERGE_PROPOSALS, before="Session-only")
-def merge_proposals(coding_session_id: str, from_proposal_guid: str,
-                    into_proposal_guid: str) -> str:
-    """Combine two code PROPOSALS before creation.
-
-    Session-only (unlike merge_codes). The target keeps its name, colour,
-    category and definition and gains the source's passages
-    (deduplicated). The source is marked MERGED, a final status: never
-    approved or created. An approved target returns to pending
-    (approval_withdrawn): show it to the researcher again.
-
-    Args:
-        coding_session_id: The session ID
-        from_proposal_guid: The proposal merged away (becomes merged)
-        into_proposal_guid: The proposal that absorbs the evidence
-    """
-    # Bridge fix: some MCP middleware strips arguments named
-    # 'session_id' (reserved for its own routing); the tool
-    # argument is coding_session_id, aliased for the body.
-    session_id = coding_session_id
-    if not session_manager.session_exists(session_id):
-        return json.dumps({"error": f"Session {session_id} not found"})
-    session = session_manager.load_session(session_id)
-    source = session.get_proposal_by_guid(from_proposal_guid)
-    target = session.get_proposal_by_guid(into_proposal_guid)
-    if source is None or target is None:
-        return json.dumps({"error": "Both proposals must exist in this session"})
-    if from_proposal_guid == into_proposal_guid:
-        return json.dumps({"error": "Cannot merge a proposal into itself"})
-    for p in (source, target):
-        if p.status == "created":
-            return json.dumps({
-                "error": f"Proposal '{p.name}' was already created; merge "
-                         f"the real codes with merge_codes instead."
-            })
-        if p.status == "merged":
-            return json.dumps({"error": _proposal_merged_refusal(p)})
-
-    existing_spans = {(s["file_id"], s["start_pos"], s["end_pos"])
-                      for s in target.example_segments}
-    moved = 0
-    for seg in source.example_segments:
-        key = (seg["file_id"], seg["start_pos"], seg["end_pos"])
-        if key not in existing_spans:
-            target.example_segments.append(seg)
-            existing_spans.add(key)
-            moved += 1
-    source.status = "merged"
-    source.merged_into = target.guid
-    withdrawn = target.status == "approved" and moved > 0
-    if withdrawn:
-        target.status = "pending"
-    session.last_modified = datetime.now().isoformat()
-    session_manager.save_session(session)
-    result = {
-        "success": True,
-        "message": f"Merged proposal '{source.name}' into '{target.name}'",
-        "evidence_moved": moved,
-        "target": {"guid": target.guid, "name": target.name,
-                   "status": target.status,
-                   "evidence_count": len(target.example_segments)},
-        "source_status": "merged",
-    }
-    if withdrawn:
-        result["approval_withdrawn"] = APPROVAL_WITHDRAWN
     return json.dumps(result, indent=2)
 
 

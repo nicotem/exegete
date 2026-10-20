@@ -1348,19 +1348,18 @@ class TestTheTexts:
                 ) in upgrading
 
     def test_the_answers_that_speak_of_a_restore(self):
-        """explain_ai_coding_tools' step 6 and apply_codings' workflow say
-        what a restore keeps (the answer for a missing coder-visibility
-        view: tests/test_v0150_qualcoder_texts_1.py)."""
+        """explain_ai_coding_tools' step 6 says what a restore keeps (the
+        answer for a missing coder-visibility view:
+        tests/test_v0150_qualcoder_texts_1.py); the help topic
+        apply_codings, whose workflow said it too, was removed in v0.15.1,
+        as announced in 0.14, and says so."""
         overview = _flat(server.explain_ai_coding_tools())
         assert "whole project back" not in overview
         assert ("list_backups + restore_backup roll the project back (all "
                 "but its Exegete, audio and video folders, which a restore "
                 "keeps).") in overview
-        workflow = _flat(server.explain_ai_coding_tools("apply_codings"))
-        assert "whole project back" not in workflow
-        assert ("restore_backup rolls the project back (all but its "
-                "Exegete, audio and video folders, which a restore keeps)"
-                ) in workflow
+        topic = json.loads(server.explain_ai_coding_tools("apply_codings"))
+        assert topic["note"] == server.HELP_TOPIC_REMOVED
 
     def test_the_modules_own_words(self):
         words = _flat(private_files.__doc__)

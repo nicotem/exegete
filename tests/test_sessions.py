@@ -374,7 +374,9 @@ class TestSessionManager:
         assert manager.storage_dir == storage_path
         assert not storage_path.exists()
         assert manager.list_sessions() == []
-        assert manager.cleanup_old_sessions(days_old=0) == 0
+        # (v0.15.1: cleanup_old_sessions removed, as announced in 0.14)
+        assert manager.delete_session(
+            "00000000-0000-4000-8000-000000000000") is False
         assert manager.session_exists("00000000-0000-4000-8000-000000000000") is False
 
         manager.save_session(AICodingSession(**sample_session_data))
@@ -554,9 +556,13 @@ class TestSessionManager:
 
         assert result is False
 
-    def test_cleanup_old_sessions(self, temp_session_dir, sample_session_data):
-        """Test cleaning up old sessions."""
+    def test_old_sessions_listed_and_removed_one_at_a_time(
+            self, temp_session_dir, sample_session_data):
+        """v0.15.1 removed cleanup_old_sessions, as announced in 0.14: a
+        larger days_old lists the old sessions, and each is removed on
+        its own (CHANGELOG, "Upgrading from 0.15.0")."""
         manager = SessionManager(temp_session_dir)
+        assert not hasattr(manager, "cleanup_old_sessions")
 
         # Create old sessions
         for i in range(3):
@@ -570,12 +576,16 @@ class TestSessionManager:
             recent_session = AICodingSession(**{**sample_session_data, "description": f"Recent {i}"})
             manager.save_session(recent_session)
 
-        # Cleanup sessions older than 30 days
-        deleted = manager.cleanup_old_sessions(days_old=30)
-
-        assert deleted == 3
-        sessions = manager.list_sessions(days_old=365)  # Get all sessions
-        assert len(sessions) == 2
+        assert len(manager.list_sessions(days_old=30)) == 2
+        every = manager.list_sessions(days_old=3650)
+        assert len(every) == 5
+        recent = {s["coding_session_id"]
+                  for s in manager.list_sessions(days_old=30)}
+        for entry in every:
+            if entry["coding_session_id"] not in recent:
+                assert manager.delete_session(entry["coding_session_id"])
+        sessions = manager.list_sessions(days_old=3650)
+        assert {s["coding_session_id"] for s in sessions} == recent
 
     def test_save_load_round_trip(self, temp_session_dir, sample_session_data, sample_suggestion_data):
         """Test complete save/load cycle preserves all data."""
@@ -616,6 +626,6 @@ class TestSessionManager:
         sessions = manager.list_sessions()
         assert sessions == []
 
-        # cleanup should skip invalid files
-        deleted = manager.cleanup_old_sessions(days_old=0)
-        assert deleted == 0
+        # and leaves them where they are (v0.15.1: cleanup_old_sessions,
+        # which skipped them too, removed as announced in 0.14)
+        assert invalid_file.exists()

@@ -1027,8 +1027,8 @@ class SessionManager:
         Returns:
             List of session metadata dictionaries. Each entry carries the
             API-facing key ``coding_session_id``; the on-disk files keep
-            their own ``session_id`` key, which ``load_session`` and
-            ``cleanup_old_sessions`` continue to read.
+            their own ``session_id`` key, which ``load_session`` continues
+            to read.
         """
         sessions = []
         cutoff_date = datetime.now() - timedelta(days=days_old)
@@ -1118,36 +1118,3 @@ class SessionManager:
                 logger.error(f"Failed to delete session {session_id}: {error_label(e)}")
                 raise
         return False
-
-    def cleanup_old_sessions(self, days_old: int = 30) -> int:
-        """Delete sessions older than specified days.
-
-        Args:
-            days_old: Delete sessions older than N days
-
-        Returns:
-            Count of deleted sessions
-        """
-        deleted = 0
-        cutoff_date = datetime.now() - timedelta(days=days_old)
-
-        try:
-            for filepath in self.storage_dir.glob("session_*.json"):
-                try:
-                    with open(filepath, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                    last_modified = datetime.fromisoformat(data['last_modified'])
-                    if last_modified < cutoff_date:
-                        filepath.unlink()
-                        deleted += 1
-                        logger.info(f"Deleted old session {data['session_id']}")
-                except Exception as e:
-                    logger.warning(f"Error processing {filepath.name} during "
-                                   f"cleanup: {error_label(e)}")
-                    continue
-        except Exception as e:
-            logger.error(f"Error during session cleanup: {error_label(e)}")
-            raise
-
-        logger.info(f"Cleaned up {deleted} old sessions")
-        return deleted

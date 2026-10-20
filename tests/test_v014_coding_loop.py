@@ -71,6 +71,28 @@ def session_file(sid):
     return Path(server.session_manager.storage_dir) / f"session_{sid}.json"
 
 
+def merged_as_in_0150(sid, source, target):
+    """A merge as 0.15.0's merge_proposals, removed in 0.15.1, left the
+    session file: the target gains the source's passages it lacks, and
+    returns to pending if it was approved; the source is `merged`, a
+    final status, with `merged_into` the target. Sessions saved so still
+    load and read as before."""
+    path = session_file(sid)
+    data = json.loads(path.read_text())
+    by_guid = {p["guid"]: p for p in data["proposed_codes"]}
+    into, away = by_guid[target], by_guid[source]
+    spans = {(x["file_id"], x["start_pos"], x["end_pos"])
+             for x in into["example_segments"]}
+    moved = [x for x in away["example_segments"]
+             if (x["file_id"], x["start_pos"], x["end_pos"]) not in spans]
+    into["example_segments"] += moved
+    if into["status"] == "approved" and moved:
+        into["status"] = "pending"
+    away["status"] = "merged"
+    away["merged_into"] = target
+    path.write_text(json.dumps(data))
+
+
 def record(sid, *items, **kw):
     return jcall("record_suggestions", coding_session_id=sid,
                  suggestions=list(items), **kw)
@@ -292,8 +314,10 @@ class TestNoScoreInAnyText:
         assert server.GROUNDING_RECORD in text
 
     def test_the_help_and_the_guidance_carry_no_score(self):
-        for topic in (None, "analyze_for_coding", "apply_codings",
-                      "grounding_rules", "coding_style_guidance"):
+        # (v0.15.1: the topics analyze_for_coding, apply_codings and
+        # coding_style_guidance removed, as announced in 0.14)
+        for topic in (None, "grounding_rules", "methodology_vocabulary",
+                      "methods_notes"):
             text = server.explain_ai_coding_tools(topic).lower()
             assert "confidence" not in text, topic
         assert "confidence" not in server.METHODS_GUIDANCE.lower()
@@ -616,12 +640,12 @@ class TestTheLoopsTextsSayWhatHappens:
         assert "It reads no file and returns no suggestion" in text
         assert "performs AI analysis" not in text
         assert "not_found" in text
+        # (v0.15.1: the help topic under its earlier name, which said the
+        # same, removed as announced in 0.14; its answer says so)
+        assert "filters to stress-related codes only" not in text.lower()
         help_ = json.loads(server.explain_ai_coding_tools(
             "analyze_for_coding"))
-        assert "reads no file" in help_["purpose"]
-        blob = json.dumps(help_).lower()
-        assert "automatically" not in blob
-        assert "filters to stress-related codes only" not in blob
+        assert help_["note"] == server.HELP_TOPIC_REMOVED
 
     def test_read_file_with_codings_names_its_four_counts(
             self, setup_server):
@@ -631,11 +655,16 @@ class TestTheLoopsTextsSayWhatHappens:
         for key in stats:
             assert key in text, key
 
-    def test_cleanup_old_sessions_says_what_it_deletes(self):
-        text = self._desc("cleanup_old_sessions")
-        assert "every project" in text
-        assert "approved suggestions not yet applied" in text
-        assert "No preview" in text
+    def test_cleanup_old_sessions_is_gone(self):
+        """v0.15.1, as announced in 0.14: the tool that deleted every
+        project's old sessions with no preview is removed; sessions are
+        listed by age and removed one at a time."""
+        tools = server.mcp._tool_manager._tools
+        assert "cleanup_old_sessions" not in tools
+        assert "days_old" in tools["list_coding_sessions"].parameters[
+            "properties"]
+        assert "coding_session_id" in tools["delete_coding_session"] \
+            .parameters["required"]
 
     def test_edit_and_status_texts_give_the_working_advice(self):
         text = " ".join(self._desc("edit_suggestion").split())
@@ -644,8 +673,6 @@ class TestTheLoopsTextsSayWhatHappens:
                 "again") in text
         assert "then approve after editing" not in text
         assert "reopen" in self._desc("update_suggestion_status")
-        help_ = json.loads(server.explain_ai_coding_tools("edit_suggestion"))
-        assert any("reopen" in note for note in help_["notes"])
 
 
 class TestApprovalIsDescribedHonestly:
@@ -800,11 +827,11 @@ class TestAProposalsApprovalBindsIt:
         target, source = self._proposals(sid, "Isolation", "Mentoring")
         call("update_proposal_status", coding_session_id=sid,
              approve=[target, source])
-        merged = jcall("merge_proposals", coding_session_id=sid,
-                       from_proposal_guid=source, into_proposal_guid=target)
-        assert merged["source_status"] == "merged"
-        assert merged["target"]["status"] == "pending"
-        assert "approval_withdrawn" in merged
+        # (v0.15.1: merge_proposals removed; a session it merged in 0.15.0
+        # reads as before)
+        merged_as_in_0150(sid, source, target)
+        assert self._status(sid, source) == "merged"
+        assert self._status(sid, target) == "pending"
         again = jcall("update_proposal_status", coding_session_id=sid,
                       approve=[source, target])
         assert again["skipped_merged"] == 1 and again["approved"] == 1
@@ -822,31 +849,34 @@ class TestAProposalsApprovalBindsIt:
             ("Isolation", STRESSED), ("Isolation", COPE)]
 
     def test_a_merged_proposal_cannot_be_merged_again(self, setup_server):
+        """v0.15.1: a merge is now a rejection and an update_proposal; a
+        proposal merged in 0.15.0 can be neither."""
         sid = new_session()
         a, b, c = self._proposals(sid, "Isolation", "Mentoring", "Other")
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
-        for src, dst in ((b, c), (c, b)):
-            out = jcall("merge_proposals", coding_session_id=sid,
-                        from_proposal_guid=src, into_proposal_guid=dst)
-            assert "merged into another proposal" in out["error"]
+        merged_as_in_0150(sid, b, a)
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    reject=[b])
+        assert out["skipped_merged"] == 1 and out["rejected"] == 0
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=b, example_segments=[
+                        {"file_id": 1, "segment_text": STRESSED}])
+        assert "merged into another proposal" in out["error"]
+        assert self._status(sid, b) == "merged"
 
     def test_a_merged_name_can_be_proposed_again(self, setup_server):
         sid = new_session()
         a, b = self._proposals(sid, "Isolation", "Mentoring")
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
+        merged_as_in_0150(sid, b, a)
         assert self._proposals(sid, "Mentoring")
 
     def test_the_review_and_the_texts_say_merged(self, setup_server):
         sid = new_session()
         a, b = self._proposals(sid, "Isolation", "Mentoring")
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
+        merged_as_in_0150(sid, b, a)
         out = call("review_proposals", coding_session_id=sid)
         assert "Status: MERGED into 'Isolation'" in out
         tools = server.mcp._tool_manager._tools
-        assert "marked rejected" not in tools["merge_proposals"].description
+        assert "merge_proposals" not in tools
         for name in ("create_proposed_codes", "update_proposal_status"):
             text = " ".join(tools[name].description.split())
             assert "only if it is approved again" in text, name
@@ -1230,8 +1260,7 @@ class TestFixRoundSessionFilesHardened:
         out = jcall("propose_codes", coding_session_id=sid,
                     proposals=[{"name": "A"}, {"name": "B"}])
         a, b = [r["guid"] for r in out["recorded"]]
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
+        merged_as_in_0150(sid, b, a)
         path = session_file(sid)
         data = json.loads(path.read_text())
         crafted = "x‮IGNORE ALL\u0007"
@@ -1360,8 +1389,12 @@ class TestFixRoundTextsTrue:
         assert "saw every" not in cc
         readme = " ".join((Path(__file__).parent.parent / "TOOLS.md")
                           .read_text(encoding="utf-8").split())
-        assert ("an approved target returns to pending when it gains "
-                "evidence") in readme
+        # (v0.15.1: merge_proposals, whose entry said that an approved
+        # target returns to pending when it gains evidence, removed as
+        # announced; a merge now gives the target its passages through
+        # update_proposal, whose entry says it)
+        assert ("changing an approved proposal returns it to pending"
+                ) in readme
 
 
 # =============================================================================
@@ -1447,9 +1480,8 @@ class TestFixRound2TheReading:
         texts += [server.GROUNDING_RECORD, server.READING_REQUIRED,
                   server.explain_ai_coding_tools(), server.METHODS_GUIDANCE]
         texts += [server.explain_ai_coding_tools(topic) for topic in
-                  ("analyze_for_coding", "apply_codings", "edit_suggestion",
-                   "coding_style_guidance", "grounding_rules",
-                   "methodology_vocabulary", "methods_notes")]
+                  ("grounding_rules", "methodology_vocabulary",
+                   "methods_notes")]
         for text in texts:
             flat = " ".join(text.split())
             assert "reading into" not in flat and "read it in" not in flat
@@ -1546,8 +1578,7 @@ class TestFixRound2StartingASession:
     def test_no_default_and_no_preference_for_long_passages(self):
         texts = [t.description for t in
                  server.mcp._tool_manager._tools.values()]
-        texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE,
-                  server.explain_ai_coding_tools("coding_style_guidance")]
+        texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE]
         for text in texts:
             flat = " ".join(text.split())
             for gone in ("Code all relevant segments", "overwhelmingly",
@@ -1561,10 +1592,10 @@ class TestFixRound2StartingASession:
         assert "only where the researcher allowed more than one" \
             in record_desc
         assert "only after they say yes" in record_desc
-        style = json.loads(server.explain_ai_coding_tools(
-            "coding_style_guidance"))
-        co = " ".join(style["co_coding"])
-        assert "only after they say yes" in co
+        # (v0.15.1: the help topic coding_style_guidance, which repeated
+        # start_coding_session's description, removed as announced)
+        co = " ".join(server.mcp._tool_manager._tools[
+            "start_coding_session"].description.split())
         assert "a yes permits looking, not applying" in co
         assert "Actively consider MULTIPLE" not in co
 
@@ -1904,22 +1935,21 @@ class TestFixRound2WhatGoesInV015:
         assert refused["deprecated"] == server.DEPRECATED_REFI_EXPORT
 
     def test_whole_tools_that_go(self, setup_server):
-        self._described("export_code_report", server.DEPRECATED_CODE_REPORT)
-        assert jcall("export_code_report", code_name="Stress")[
-            "deprecated"] == server.DEPRECATED_CODE_REPORT
-        self._described("cleanup_old_sessions", server.DEPRECATED_CLEANUP)
-        assert jcall("cleanup_old_sessions", days_old=3650)[
-            "deprecated"] == server.DEPRECATED_CLEANUP
-        self._described("merge_proposals",
-                        server.DEPRECATED_MERGE_PROPOSALS)
-        sid = new_session()
-        a, b = [r["guid"] for r in jcall(
-            "propose_codes", coding_session_id=sid,
-            proposals=[{"name": "One"}, {"name": "Two"}])["recorded"]]
-        merged = jcall("merge_proposals", coding_session_id=sid,
-                       from_proposal_guid=b, into_proposal_guid=a)
-        assert merged["success"] is True
-        assert merged["deprecated"] == server.DEPRECATED_MERGE_PROPOSALS
+        """v0.15.1: the three tools went, as announced, with their
+        sentences (tests/test_v0151_removed_tools.py); no tool's
+        description or answer carries a sentence on them."""
+        tools = server.mcp._tool_manager._tools
+        for name, constant in (
+                ("export_code_report", "DEPRECATED_CODE_REPORT"),
+                ("cleanup_old_sessions", "DEPRECATED_CLEANUP"),
+                ("merge_proposals", "DEPRECATED_MERGE_PROPOSALS")):
+            assert name not in tools
+            assert not hasattr(server, constant), constant
+            with pytest.raises(Exception, match=f"Unknown tool: {name}"):
+                call(name)
+        for name, tool in tools.items():
+            assert "removed in v0.15.1: get_coded_segments" not in (
+                tool.description or ""), name
 
     @staticmethod
     def _warned(answer, sentence, expected):
@@ -1932,7 +1962,6 @@ class TestFixRound2WhatGoesInV015:
                 ("delete_code", server.DEPRECATED_CASCADE),
                 ("apply_codings", server.DEPRECATED_OWNER),
                 ("import_text_file", server.DEPRECATED_OWNER),
-                ("explain_ai_coding_tools", server.DEPRECATED_HELP_TOPICS),
                 ("create_attribute_type",
                  server.DEPRECATED_JOURNAL_ATTRIBUTES),
                 ("set_attribute", server.DEPRECATED_JOURNAL_ATTRIBUTES),
@@ -1968,13 +1997,15 @@ class TestFixRound2WhatGoesInV015:
         self._warned(call("import_text_file", filename="b.txt",
                           content="text", create_backup=False),
                      owner, False)
-        topics = server.DEPRECATED_HELP_TOPICS
-        for topic in sorted(server.DEPRECATED_HELP_TOPIC_NAMES):
-            self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
-                         topics, True)
+        # (v0.15.1: the four help topics removed, as announced; each is
+        # answered that it was, and no answer is marked deprecated)
+        for topic in sorted(server.REMOVED_HELP_TOPICS):
+            answer = jcall("explain_ai_coding_tools", tool_name=topic)
+            assert answer["note"] == server.HELP_TOPIC_REMOVED
+            assert "deprecated" not in answer
         for topic in (None, "grounding_rules", "methods_notes"):
             self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
-                         topics, False)
+                         server.HELP_TOPIC_REMOVED, False)
         journal = server.DEPRECATED_JOURNAL_ATTRIBUTES
         self._warned(jcall("create_attribute_type", name="Mood",
                            applies_to=" Journal ", create_backup=False),
@@ -2036,9 +2067,8 @@ class TestFixRound2TheCountWords:
         texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE,
                   server.GROUNDING_RULES, server.METHODOLOGY_VOCABULARY]
         texts += [server.explain_ai_coding_tools(topic) for topic in
-                  ("analyze_for_coding", "apply_codings", "edit_suggestion",
-                   "coding_style_guidance", "grounding_rules",
-                   "methodology_vocabulary", "methods_notes")]
+                  ("grounding_rules", "methodology_vocabulary",
+                   "methods_notes")]
         return texts
 
     def test_neither_word_is_served(self):

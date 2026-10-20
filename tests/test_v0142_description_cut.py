@@ -783,8 +783,25 @@ CHANGED_0151_TEXTS = {
     "copy_project_to_workspace": (1909, 1569, "68e802ffd0fde4ef"),
     "create_project": (2613, 2079, "41b00db6efcb9ba1"),
 }
-WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
-         **CHANGED_0151, **CHANGED_0151_TEXTS}
+# And v0.15.1's removals, as announced in 0.14
+# (tests/test_v0151_removed_tools.py, whose before_the_removals puts these
+# two back as 0.15.0 served them): the help topics' deprecation sentence
+# leaves explain_ai_coding_tools' description, and propose_codes'
+# WORKFLOW says how to merge two proposals without merge_proposals (reject
+# one, then give the other both sets of passages in update_proposal's
+# example_segments)
+REMOVALS_0151 = {
+    "explain_ai_coding_tools": (471, 371, "2a67738a0b20f970"),
+    "propose_codes": (2865, 2290, "57967898aef29c34"),
+}
+# The three tools those removals took out; their lines above stay as the
+# record of what they served
+REMOVED_0151 = {"export_code_report", "cleanup_old_sessions",
+                "merge_proposals"}
+WORDS = {name: words for name, words in {
+    **WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
+    **CHANGED_0151, **CHANGED_0151_TEXTS, **REMOVALS_0151}.items()
+    if name not in REMOVED_0151}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to

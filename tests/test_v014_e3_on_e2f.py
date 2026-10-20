@@ -62,8 +62,11 @@ class TestTheExportsTogether:
 
     def test_the_code_report_and_the_refi_note(self, setup_server,
                                                tmp_path):
-        report = host_json("export_code_report", {"code_name": "stress"})
-        assert (report["segments_total"], report["truncated"]) == (1, False)
+        # (v0.15.1: export_code_report removed, as announced in 0.14;
+        # get_coded_segments reads the same passages, every one of them)
+        report = host_json("get_coded_segments", {"code_id": 1})
+        assert (report["segment_count"],
+                report["selection"]["total_segments"]) == (1, 1)
         refi = host_json("export_refi_qda", {
             "output_path": str(tmp_path / "p.qdpx")})
         assert "categories above the exported codes are included" in \

@@ -4732,8 +4732,8 @@ class QualcoderDatabase:
         round 3): these maps give a code its path and its category in an
         answer, and every code and category is read to build them, so a
         damaged name elsewhere used to fail the read of an undamaged
-        code (export_code_report). Read-only: no write takes a name from
-        here.
+        code (the code report, removed in 0.15.1). Read-only: no write
+        takes a name from here.
         """
         caps = getattr(self, "capabilities", None)
         has_supercid = caps is not None and caps.has_supercid

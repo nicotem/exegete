@@ -228,7 +228,9 @@ class TestTheIntroduction:
                 "pseudonymise_source"],
             "**Export** the codebook, a coding report, frequencies and the "
             "case-by-code matrix as CSV, text or Markdown": [
-                "export_codebook", "export_code_report",
+                # the coding report is export_coded_segments_report's
+                # file (v0.15.1 removed export_code_report, as announced)
+                "export_codebook", "export_coded_segments_report",
                 "export_frequencies_csv", "export_case_code_matrix_csv"],
             # v0.15.1: before every change, whatever create_backup says;
             # the backup's moment: Exegete takes it itself, before each

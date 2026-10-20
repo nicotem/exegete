@@ -327,9 +327,11 @@ class TestNoShippedTextNamesIt:
 class TestTheCount:
 
     def test_full_has_82_tools_and_core_25(self):
-        assert (FULL_TOOLS, CORE_TOOLS) == (82, 25)
+        """82 at this piece; 79 since v0.15.1 removed three tools, as
+        announced in 0.14 (tests/test_v0151_removed_tools.py)."""
+        assert (FULL_TOOLS, CORE_TOOLS) == (79, 25)
         server._apply_toolset("full")
-        assert len(_listed()) == 82
+        assert len(_listed()) == 79
         server._apply_toolset("core")
         assert len(_listed()) == 25
 
@@ -407,16 +409,18 @@ class TestInstall:
 
     def test_the_counts(self):
         install = _flat(_read("INSTALL.md"))
-        assert "On Python 3.13, 4 of `full`'s 82 descriptions" in install
-        assert "`full` (default) registers 82 tools" in install
-        # v0.15.1: the rounded figure held to the measured pin
+        # v0.15.1: 79 tools since three were removed, as announced in
+        # 0.14, and the rounded figure held to the measured pin
         # (test_toolset_modes.py): about 208,000 with create_backup
         # accepted and ignored, then about 209,000 with audio and video
-        # left out of backups, as the small corrections leave it
+        # left out of backups, as the small corrections leave it, then
+        # about 205,000 with the three tools removed
+        assert "On Python 3.13, 4 of `full`'s 79 descriptions" in install
+        assert "`full` (default) registers 79 tools" in install
         rounded = _rounded_full()
-        assert ("Exegete offers 82 tools by default, and the serialised "
+        assert ("Exegete offers 79 tools by default, and the serialised "
                 f"tool definitions alone measure about {rounded} characters, "
-                "roughly 52k tokens") in install
+                "roughly 51k tokens") in install
         assert f"(about {rounded} characters with `full`;" in install
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
@@ -429,17 +433,19 @@ class TestToolsReadmePrivacy:
 
     def test_tools(self):
         tools = _read("TOOLS.md")
+        # (79 since v0.15.1's removals)
         assert ("extension and when you configure Exegete yourself) "
-                "registers 82 tools,") in tools
+                "registers 79 tools,") in tools
         assert ("(`pseudonymise_source`): replace the names you list, or a "
                 "list you fill in on your own computer (`prepare_names_list`, "
                 "`save_names_list`), as whole words,") in tools
 
     def test_readme(self):
         readme = _read("README.md")
-        assert ("| `full` | 82: all, creating a project and two renamed "
+        # (79 and 51k tokens since v0.15.1's removals)
+        assert ("| `full` | 79: all, creating a project and two renamed "
                 "tools' earlier names included | about "
-                f"{_rounded_full()} characters, 52k tokens |") in readme
+                f"{_rounded_full()} characters, 51k tokens |") in readme
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "

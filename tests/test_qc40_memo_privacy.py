@@ -834,7 +834,9 @@ class TestReadPathsStrip:
             (server.get_coded_segments, (1,), {}),
             (server.search_coded_text, ("stressed",), {}),
             (server.read_file_with_codings, (1,), {}),
-            (server.export_code_report, ("Stress",), {}),
+            # (v0.15.1: export_code_report removed; the codes' memos by
+            # name, read the same way)
+            (server.search_coded_text, ("stressed",), {"code_name": "Stress"}),
             (server.list_attribute_types, (), {}),
             (server.get_case_attributes, (1,), {}),
             (server.get_file_attributes, (1,), {}),
@@ -1032,14 +1034,13 @@ class TestExportDescriptionsDisclose:
             assert "Full memos on export" in doc, tool.__name__
             assert "#####" in doc, tool.__name__
 
-    def test_export_code_report_discloses_strip_and_no_override(self):
-        # It returns into the conversation and strips; the description
-        # must say so, symmetrically with its file-export siblings
-        # (QA round 1, F4)
-        doc = server.export_code_report.__doc__ or ""
-        assert "#####" in doc
-        assert "public part only" in doc
-        assert "no coder override" in doc
+    def test_the_report_that_stripped_is_gone(self):
+        # export_code_report returned into the conversation and stripped,
+        # and said so (QA round 1, F4); v0.15.1 removed it, as announced
+        # in 0.14, so no text speaks of it as a read that strips
+        assert not hasattr(server, "export_code_report")
+        for tool in server.mcp._tool_manager._tools.values():
+            assert "export_code_report" not in (tool.description or "")
 
 
 # =============================================================================

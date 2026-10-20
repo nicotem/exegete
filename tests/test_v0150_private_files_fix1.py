@@ -197,8 +197,10 @@ class TestThePlacesAndTheTable:
                 "and Linux |") in section
         assert ("| Exegete removes the texts an import's preview read, as "
                 "\"How your data flows\" says; coding sessions go at your "
-                "word (`delete_coding_session`, `cleanup_old_sessions`); the "
+                "word (`delete_coding_session`); the "
                 "rest stays until you delete it.") in section
+        # (v0.15.1: cleanup_old_sessions removed, as announced in 0.14)
+        assert "cleanup_old_sessions" not in section
         assert "says for each" not in section
         assert ("the folder for projects, or the folder you named for a new "
                 "project; where you export;") in section

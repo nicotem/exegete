@@ -353,7 +353,8 @@ class TestTextPositions:
         server.read_file_with_codings(78)
         server.get_coding_frequencies()
         server.get_case_code_matrix()
-        server.export_code_report("Stress")
+        # (v0.15.1: export_code_report removed; a code by name)
+        server.search_coded_text("here", code_name="Stress")
         server.search_files("here", search_content=True)
         server.get_project_summary()
         assert _data_qda(qualcoder_db_path).read_bytes() == digest_before

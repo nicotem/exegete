@@ -33,6 +33,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   "Tool set" says `core`, the smaller set stays with the new switch
   off: to have every tool, set it to `full` as well. After changing a
   setting, quit Claude Desktop and open it again.
+- **Three tools removed, as announced in 0.14.** Instead of
+  `export_code_report`, `get_coded_segments(code_id=...)` reads the same
+  passages, page by page and without the limit of 1,000. Instead of
+  `cleanup_old_sessions`, which deleted every project's old sessions
+  with no preview, `list_coding_sessions` with a larger `days_old`
+  (3650, for example) lists the old ones, and `delete_coding_session`
+  removes them one at a time. Instead of `merge_proposals`, reject one
+  proposal (`update_proposal_status`), then give the other its own
+  passages and the rejected one's together in `update_proposal`'s
+  `example_segments`, which replaces the list; proposals merged earlier
+  stay merged. A call of a removed tool is refused as an unknown tool.
+  A choice your assistant app saved for one of them (to run it without
+  asking, or to block it) no longer applies, and the tool that replaces
+  it keeps its own, so you may want to look at those tools once in the
+  app's settings; in Codex, a `[mcp_servers.exegete.tools.<name>]` table
+  you added for a removed tool can be deleted (INSTALL.md, Codex).
+- **Four help topics removed.** `explain_ai_coding_tools` no longer has
+  the topics `analyze_for_coding`, `apply_codings`, `edit_suggestion` and
+  `coding_style_guidance`, which repeated the tools' own descriptions;
+  asked for one, it says so and lists the topics it has.
 
 ### Changed
 
@@ -179,6 +199,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   folders, rather than that nothing was lost. Restoring one of
   QualCoder's backups always says that the project's audio and video
   folders are kept as they are.
+
+### Removed: three tools and four help topics, as announced in 0.14
+
+- **`export_code_report`**, which returned a report of one code with up
+  to 1,000 of its passages: `get_coded_segments(code_id=...)` reads the
+  same passages, page by page, with no such limit.
+- **`cleanup_old_sessions`**, which deleted the coding sessions of every
+  project on the computer older than a number of days, with no preview,
+  approved suggestions not yet applied included. `list_coding_sessions`
+  with a larger `days_old` lists the old sessions, and
+  `delete_coding_session` removes one at a time. Sessions now gather in
+  `~/.exegete/sessions` until they are removed that way.
+- **`merge_proposals`**, which combined two code proposals. To merge
+  two, reject one with `update_proposal_status`, then give the other its
+  own passages and the rejected one's together in `update_proposal`'s
+  `example_segments`, which replaces the list. A proposal merged before
+  stays merged: a coding session that holds one still loads and shows it
+  as merged, and it still cannot be changed, approved or created.
+- **Four help topics of `explain_ai_coding_tools`**:
+  `analyze_for_coding`, `apply_codings`, `edit_suggestion` and
+  `coding_style_guidance`, which repeated what the tools' own
+  descriptions say. Asked for one of them, it answers that the topic was
+  removed, with the topics it has, and no error; asked for
+  `start_coding_session`, it answers, as for any tool without a topic,
+  that the tool's description documents it.
 
 ### Fixed
 
@@ -360,21 +405,22 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (82 tools) | 209,145 | 206,624 | 219,725 | 217,084 |
+| `full` (79 tools; 82 in 0.15.0) | 205,044 | 206,624 | 215,452 | 217,084 |
 | `core` (25 tools) | 68,780 | 68,258 | 72,240 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 209,145 characters (about 52.3k tokens
-  at chars/4) over 82 tools, and core = 68,780 (about 17.2k) over 25,
+- Serialised tool JSON: full = 205,044 characters (about 51.3k tokens
+  at chars/4) over 79 tools, and core = 68,780 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 219,725 and
-  72,240. Against 0.15.0's figures (206,624 and 68,258 on 3.13), four
-  changes moved them. The first, `create_backup` accepted and ignored.
+  which also gives exactly 0.15.0's figures for its tree), 215,452 and
+  72,240. Against 0.15.0's figures (206,624 over 82 tools and 68,258 on
+  3.13), five changes moved them. The first, `create_backup` accepted
+  and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
   is null rather than true: 91 characters more in each entry (92 in
@@ -402,9 +448,17 @@ schemas together, as below; the brief as `read_brief` returns it):
   descriptions: `create_project`'s, 129 characters more in `full` (137
   on 3.11), and `copy_project_to_workspace`'s, 89 more in both sets (93
   on 3.11), so 218 more in `full` and 89 in `core` (230 and 93 on
-  3.11). Rounded, the figures are about 209,000 and 69,000 characters,
-  still about 52k and 17k tokens. No other tool's entry changed. The
-  full brief says that Exegete takes a backup before every change,
+  3.11). The fifth, the three tools and four help topics removed, as
+  announced in 0.14: the three tools' entries, with their separators,
+  4,107 characters fewer in `full` (4,295 on 3.11);
+  `explain_ai_coding_tools`' description without the topics'
+  deprecation sentence, 166 fewer (162 on 3.11); and `propose_codes`'
+  description, which now says how to merge two proposals, 172 more
+  (184). In all, 4,101 characters fewer in `full` (4,273 on 3.11);
+  `core` serves none of the three tools. Rounded, the figures are about
+  205,000 and 69,000 characters, about 51k and 17k tokens. No other
+  tool's entry changed. The full brief says that Exegete takes a backup
+  before every change,
   rather than "unless the researcher asks for none": 14 characters
   fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and

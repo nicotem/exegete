@@ -92,13 +92,23 @@ class TestInductiveLoop:
             memo="refined def"))
         assert up.get("success") is True, up
 
-        # merge proposals: g2's evidence unions into g1; g2 merged (final,
-        # v0.14; it used to be an ordinary, reversible rejection)
-        mg = json.loads(server.merge_proposals(sid, g2, g1))
+        # merge proposals, as v0.15.1 does it (merge_proposals removed, as
+        # announced in 0.14): g2 rejected, its evidence given to g1 with
+        # g1's own in update_proposal's example_segments
+        rj = json.loads(server.update_proposal_status(sid, reject=[g2]))
+        assert rj["rejected"] == 1, rj
+        info = json.loads(server.get_coding_session_info(sid))
+        props = {p["guid"]: p for p in info["proposed_codes"]}
+        both = [{"file_id": seg["file_id"],
+                 "segment_text": seg["segment_text"]}
+                for guid in (g1, g2)
+                for seg in props[guid]["example_segments"]]
+        mg = json.loads(server.update_proposal(sid, g1,
+                                               example_segments=both))
         assert mg.get("success") is True, mg
         info = json.loads(server.get_coding_session_info(sid))
         props = {p["guid"]: p for p in info["proposed_codes"]}
-        assert props[g2]["status"] == "merged"
+        assert props[g2]["status"] == "rejected"
         assert len(props[g1]["example_segments"]) == 2  # unioned evidence
 
         # review shows the refined name

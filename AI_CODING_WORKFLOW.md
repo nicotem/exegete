@@ -683,9 +683,7 @@ Load session abc123 and show me what we did
 ```
 Delete session abc123
 ```
-(`delete_coding_session`; `cleanup_old_sessions`, which deletes every
-project's old sessions with no preview, is deprecated and goes in
-v0.15.1)
+(`delete_coding_session`)
 
 ### Backup Management
 

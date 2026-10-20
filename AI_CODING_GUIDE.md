@@ -127,7 +127,7 @@ session. None of this replaces your approval of each suggestion.
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
 | `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
 | `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (known faults, which a later release is meant to fix: every coding under the AI coder name; QualCoder's own export, if you use QualCoder, keeps each coder) |
-| `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` / `cleanup_old_sessions` (deprecated) | Session management |
+| `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` | Session management |
 | `copy_project_to_workspace(source_path, new_name)` | Copy a project into the safe workspace |
 
 ## Best Practices
@@ -239,8 +239,10 @@ INSTALL.md.)
 **Can the AI create new codes?** Yes, with your approval: `propose_codes`
 records code proposals discovered in the data, you review and refine
 them (`review_proposals`, `update_proposal`, `update_proposal_status`;
-`merge_proposals` is deprecated: reject one proposal and add its
-passages to the other), and `create_proposed_codes` writes the
+to merge two, reject one (`update_proposal_status`), then give the
+other its own passages and the rejected one's together in
+`update_proposal`'s `example_segments`, which replaces the list), and
+`create_proposed_codes` writes the
 approved ones to the codebook, as codes only; Claude then suggests their
 passages one by one, the proposals' example passages first, for you to
 decide like any suggestion. The codebook tools (`create_code`,
@@ -286,6 +288,4 @@ workspace workflow: copy first, work on the copy, and compare, in the
 conversation or in QualCoder, before adopting changes.
 
 **Where are sessions stored?** `~/.exegete/sessions/` as JSON, one
-file per session. `delete_coding_session` removes one;
-`cleanup_old_sessions` (deprecated, removed in v0.15.1) deletes every
-project's old sessions with no preview.
+file per session. `delete_coding_session` removes one.

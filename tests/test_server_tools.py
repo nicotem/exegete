@@ -218,17 +218,16 @@ class TestSearchMemos:
 
 
 class TestExportCodeReport:
-    """Test export_code_report tool."""
+    """export_code_report was removed in v0.15.1, as announced in 0.14:
+    get_coded_segments reads the same passages."""
 
-    def test_valid_code(self, setup_server):
-        result = server.export_code_report("Stress")
-        # Returns formatted text, not JSON
-        assert "Stress" in result
+    def test_it_is_gone(self, setup_server):
+        assert not hasattr(server, "export_code_report")
+        assert "export_code_report" not in server.mcp._tool_manager._tools
 
-    def test_nonexistent_code(self, setup_server):
-        result = server.export_code_report("NonexistentCode")
-        data = json.loads(result)
-        assert "error" in data
+    def test_get_coded_segments_reads_the_code(self, setup_server):
+        data = json.loads(server.get_coded_segments(code_id=1))
+        assert "error" not in data
 
 
 class TestGetProjectSummary:
@@ -579,28 +578,17 @@ class TestDeleteCodingSession:
 
 
 class TestCleanupOldSessions:
-    """Test cleanup_old_sessions tool."""
+    """cleanup_old_sessions was removed in v0.15.1, as announced in 0.14:
+    nothing removes every session at once (QA F9: days_old=0 once wiped
+    them all); delete_coding_session removes one."""
 
-    def test_cleanup(self, setup_server):
-        result = server.cleanup_old_sessions(days_old=30)
-        data = json.loads(result)
-        assert data["success"] is True
-        assert "deleted_count" in data
-
-    def test_cleanup_rejects_zero_days(self, setup_server, session_with_suggestions):
-        """days_old=0 used to silently wipe ALL sessions (QA F9)."""
-        result = server.cleanup_old_sessions(days_old=0)
-        data = json.loads(result)
-        assert "error" in data
-        # the session must still exist
+    def test_it_is_gone(self, setup_server, session_with_suggestions):
+        assert not hasattr(server, "cleanup_old_sessions")
+        assert not hasattr(setup_server.session_manager,
+                           "cleanup_old_sessions")
         assert setup_server.session_manager.session_exists(
             session_with_suggestions.session_id
         )
-
-    def test_cleanup_rejects_negative_days(self, setup_server):
-        result = server.cleanup_old_sessions(days_old=-5)
-        data = json.loads(result)
-        assert "error" in data
 
 
 # =============================================================================
@@ -617,9 +605,15 @@ class TestExplainAiCodingTools:
         assert "workflow" in data
 
     def test_specific_tool(self, setup_server):
-        result = server.explain_ai_coding_tools("analyze_for_coding")
+        result = server.explain_ai_coding_tools("grounding_rules")
         data = json.loads(result)
         assert "purpose" in data
+
+    def test_a_removed_topic(self, setup_server):
+        """v0.15.1: the topic analyze_for_coding removed, as announced."""
+        data = json.loads(server.explain_ai_coding_tools("analyze_for_coding"))
+        assert data["note"] == server.HELP_TOPIC_REMOVED
+        assert "error" not in data
 
     def test_unknown_tool(self, setup_server):
         result = server.explain_ai_coding_tools("unknown_tool")

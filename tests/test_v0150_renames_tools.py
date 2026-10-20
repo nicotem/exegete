@@ -183,13 +183,15 @@ class TestTheRegistry:
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         exact = sys.version_info[:2] == (3, 13)
-        # v0.15.1's ignored create_backup: put back first
+        # v0.15.1's ignored create_backup and removals: put back first
         from test_v0151_ignored_argument import before_the_ignored_argument
+        from test_v0151_removed_tools import before_the_removals
         for name, (length, solid, digest) in BEFORE_THE_RENAME.items():
             text = before_the_ignored_argument(name, registered[name])
-            # explain_ai_coding_tools' notice names the deprecated topic
-            assert not EARLIER.search(_flat(text).replace(
-                _flat(server.DEPRECATED_HELP_TOPICS), "")), name
+            # (v0.15.1: explain_ai_coding_tools' notice, which named the
+            # deprecated topic, went with the topics; put back below)
+            assert not EARLIER.search(_flat(text)), name
+            text = before_the_removals(name, text)
             if name in LOCK_PARAGRAPH_BEFORE:
                 text = put_back_the_lock_paragraph(name, text)
             if name == "start_coding_session":
@@ -442,18 +444,17 @@ def _help_texts():
     for topic in unknown["available_tools"]:
         texts[f"explain_ai_coding_tools({topic})"] = \
             server.explain_ai_coding_tools(topic)
-    texts["explain_ai_coding_tools(no_such_topic)"] = json.dumps(
-        {**unknown, "available_tools": [t for t in unknown["available_tools"]
-                                        if t != "analyze_for_coding"]})
-    assert "analyze_for_coding" in unknown["available_tools"]
+    texts["explain_ai_coding_tools(no_such_topic)"] = json.dumps(unknown)
+    # (v0.15.1: the topic under the earlier name removed, as announced)
+    assert "analyze_for_coding" not in unknown["available_tools"]
     return texts
 
 
 def _served(mode):
     """Every text the tool set serves, by where it is served, with the
     places an earlier name may stand taken out: the earlier names' own
-    entries, the deprecated topic's name in the list of topics (above)
-    and the notice that the topic is deprecated."""
+    entries (v0.15.1 removed the deprecated topic, which kept the earlier
+    name, and its notice)."""
     tools = _listed(mode)
     texts = {"instructions": server.mcp._mcp_server.instructions or "",
              "brief, full": server.BRIEF_FULL,
@@ -471,9 +472,7 @@ def _served(mode):
     texts.update(_prompt_texts())
     texts.update(_help_texts())
     texts.update(_session_answers(set(tools)))
-    notice = _flat(server.DEPRECATED_HELP_TOPICS)
-    return {where: _flat(text).replace(notice, "")
-            for where, text in texts.items()}
+    return {where: _flat(text) for where, text in texts.items()}
 
 
 @pytest.fixture
@@ -518,7 +517,6 @@ class TestNoEarlierNameServed:
                       "start_coding_session", "record_suggestions",
                       "read_file_with_codings",
                       "explain_ai_coding_tools()",
-                      "explain_ai_coding_tools(analyze_for_coding)",
                       f"resource {server.names.RESOURCE_SCHEME}://files/60"):
             assert where in named, where
         # and the answers given only in a particular state (compare_coders
@@ -530,18 +528,17 @@ class TestNoEarlierNameServed:
             assert words in texts[where], where
 
     def test_the_notice_and_the_topic_keep_the_earlier_name(self):
-        """The deprecated help topic is an argument value: it keeps its
-        name until the deprecated topics go, and its text names the tool
-        by its new one."""
-        assert "analyze_for_coding" in server.DEPRECATED_HELP_TOPIC_NAMES
-        assert "the topics analyze_for_coding," in \
-            server.DEPRECATED_HELP_TOPICS
+        """The deprecated help topic was an argument value: it kept its
+        name until the deprecated topics went, in v0.15.1 as announced;
+        asked for, it is answered that it was removed, with the answer's
+        pointer naming the tool by its new name."""
+        assert "analyze_for_coding" in server.REMOVED_HELP_TOPICS
+        assert not hasattr(server, "DEPRECATED_HELP_TOPICS")
         topic = json.loads(server.explain_ai_coding_tools(
             "analyze_for_coding"))
-        assert "start_coding_session" in topic["purpose"]
-        assert "read_file_with_codings" in topic["purpose"]
-        assert _flat(topic["deprecated"]) == _flat(
-            server.DEPRECATED_HELP_TOPICS)
+        assert topic["note"] == server.HELP_TOPIC_REMOVED
+        assert "start_coding_session" in topic["note"]
+        assert "deprecated" not in topic
         description = server.mcp.original_descriptions[
             "explain_ai_coding_tools"]
         assert DROPPED_EXAMPLE not in description
@@ -731,9 +728,9 @@ class TestTheDocuments:
                 entry = next(line for line in text.splitlines()
                              if line.startswith(
                                  "- `explain_ai_coding_tools(tool_name)`"))
-                # the deprecated help topic, by its name
-                assert "**Its topics `analyze_for_coding`," in entry
-                text = text.replace(entry, "")
+                # (v0.15.1: the deprecated help topic, by its name, went
+                # with the topics, as announced)
+                assert "analyze_for_coding" not in entry
             assert not EARLIER.search(text), (name, EARLIER.findall(text))
 
     def test_the_section_on_earlier_names(self):
@@ -751,22 +748,23 @@ class TestTheDocuments:
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
         # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5)
-        assert ("registers 82 tools, two of them the earlier names of two "
+        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
+        # removed three tools, as announced in 0.14
+        assert ("registers 79 tools, two of them the earlier names of two "
                 "renamed tools (see \"Earlier names\" below)") in tools
         assert ("only the 25-tool supervised coding set is registered: "
                 "read_brief,") in tools.replace("> ", "")
         assert ("copy_project_to_workspace, delete_coding, list_backups, and "
                 "the two earlier names below.") in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
-        assert "`full` (default) registers 82 tools, every tool," in install
+        assert "`full` (default) registers 79 tools, every tool," in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
         assert "`core` registers the 25-tool supervised coding set" in install
-        assert "Exegete offers 82 tools by default" in install
+        assert "Exegete offers 79 tools by default" in install
         assert "register only the 25-tool supervised coding set" in install
         readme = _read("README.md")
-        assert ("| `full` | 82: all, creating a project and two renamed "
+        assert ("| `full` | 79: all, creating a project and two renamed "
                 "tools' earlier names included |") in readme
         assert "| `core` | 25: the coding loop and its safety tools |" \
             in readme
@@ -911,12 +909,20 @@ class TestHelpUnderTheNewNames:
     the coding loop's help only under the name being retired."""
 
     def test_the_new_name_reads_the_earlier_name_s_topic(self):
-        new = server.explain_ai_coding_tools("start_coding_session")
-        assert new == server.explain_ai_coding_tools("analyze_for_coding")
-        answer = json.loads(new)
-        assert "error" not in answer
-        # the topic is deprecated under either name, and says so
-        assert answer["deprecated"] == server.DEPRECATED_HELP_TOPICS
+        """v0.15.1: the topic went, as announced; the new name has no
+        topic of its own, as any tool, and the earlier name, once a
+        topic, is answered that it was removed; neither is an error."""
+        answer = json.loads(server.explain_ai_coding_tools(
+            "start_coding_session"))
+        assert "error" not in answer and "deprecated" not in answer
+        assert answer["note"] == (
+            "start_coding_session has no help topic of its own: its "
+            "description documents its arguments, refusals and "
+            "overrides.")
+        earlier = json.loads(server.explain_ai_coding_tools(
+            "analyze_for_coding"))
+        assert "error" not in earlier and "deprecated" not in earlier
+        assert earlier["note"] == server.HELP_TOPIC_REMOVED
 
     @pytest.mark.parametrize("name", ["read_file_with_codings",
                                       "analyze_file_with_coding",
@@ -929,7 +935,8 @@ class TestHelpUnderTheNewNames:
         assert answer["note"] == (
             f"{name} has no help topic of its own: its description "
             f"documents its arguments, refusals and overrides.")
-        assert "analyze_for_coding" in answer["available_tools"]
+        # (v0.15.1: the topic under the earlier name removed)
+        assert "analyze_for_coding" not in answer["available_tools"]
         assert "deprecated" not in answer
 
     def test_in_core_a_tool_it_lacks_is_marked(self):

@@ -525,8 +525,10 @@ class TestTheDocuments:
         # backups: 208,427, about 208,000, and its fix round 2: 208,927,
         # about 209,000; and the ai_data folder named in create_project's
         # and copy_project_to_workspace's descriptions (the small
-        # corrections): 209,145, about 209,000
-        assert (rounded, tokens) == ("209,000", "52k")
+        # corrections): 209,145, about 209,000; and v0.15.1's removals,
+        # three tools and four help topics, as announced in 0.14: 79
+        # tools, 205,044, about 205,000
+        assert (rounded, tokens) == ("205,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "

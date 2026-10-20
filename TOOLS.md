@@ -399,7 +399,7 @@ says only that a private note exists, never its content. One exception,
 chosen for parity with QualCoder's own exports: exported files
 (`export_refi_qda`, `export_codebook`, `export_coded_segments_report`)
 carry full memos, marker and private section included, and those tools
-say so. `export_code_report` returns into the conversation and strips.
+say so.
 
 **The novelty filter and coder visibility.** `exclude_code_ids` on
 `search_files` and `search_coded_text` drops candidates that overlap a
@@ -983,7 +983,7 @@ no longer listed, until v1.0.
 
 Claude can use these tools to analyse your data. The full toolset
 (`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
-extension and when you configure Exegete yourself) registers 82
+extension and when you configure Exegete yourself) registers 79
 tools, two of them the earlier names of two renamed tools (see "Earlier
 names" below); the argument lists below name every argument each tool
 declares, and each tool's own description says what each one does.
@@ -1012,7 +1012,7 @@ declares, and each tool's own description says what each one does.
 > loudly at startup. Measured for 0.15.1 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 209,000 characters for `full`, roughly 52k
+> definitions run to about 205,000 characters for `full`, roughly 51k
 > tokens at four characters per token, and about 69,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -1040,7 +1040,6 @@ declares, and each tool's own description says what each one does.
 - `get_coded_segments(code_id, limit, coder, strategy, max_chars, file_ids, cursor)` - Segments for a code, sampled by strategy (`by_document`, `diverse_by_document`, `recent_first`, `sequential`) under an optional character budget; `codings_not_shown` counts the code's region codings (areas on PDF pages or images) and audio/video codings in the same scope, which a text read does not show
 - `get_coding_frequencies(coder)` - Coding statistics: text codings per code, with `codings_not_counted` giving the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
 - `search_memos(query, limit)` - Search every memo and note outside QualCoder's saved graphs (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type
-- `export_code_report(code_name)` - Detailed code report returned into the conversation (public memo text only), with up to 1,000 of the code's text segments; `segments_total` and `truncated` say when there are more, which `get_coded_segments` pages through. **Deprecated, removed in v0.15.1**: `get_coded_segments(code_id=...)` reads the same passages page by page
 - `get_project_summary()` - Comprehensive project overview, naming any PDF with no usable text and counting the region and audio/video codings the text statistics leave out
 
 On projects with the coder-visibility capability (QualCoder 3.8.2 and
@@ -1089,14 +1088,12 @@ still answers empty, and that answer is a finding.
 - `get_coding_session_info(coding_session_id)` - View all details of a coding session
 - `list_coding_sessions(project_path, days_old)` - List the saved coding sessions changed in the last `days_old` days (30 by default), optionally for one project
 - `delete_coding_session(coding_session_id)` - Delete a saved session file (not the codings)
-- `cleanup_old_sessions(days_old)` - Delete every session file on this computer whose last change is older than N days (N >= 1), for every project, including sessions holding approved suggestions not yet applied; there is no preview. **Deprecated, removed in v0.15.1**: `delete_coding_session` removes one session
-- `explain_ai_coding_tools(tool_name)` - Built-in help for this workflow, including `grounding_rules`, `methodology_vocabulary` and `methods_notes`. **Its topics `analyze_for_coding`, `apply_codings`, `edit_suggestion` and `coding_style_guidance` are deprecated, removed in v0.15.1**: they repeat the tools' own descriptions
+- `explain_ai_coding_tools(tool_name)` - Built-in help for this workflow, including `grounding_rules`, `methodology_vocabulary` and `methods_notes`
 
 **Inductive Coding (proposing new codes):**
 - `propose_codes(coding_session_id, proposals, replace)` - Record brand-new code proposals discovered in the data
 - `review_proposals(coding_session_id, proposal_guids, show_examples)` - Review proposed codes in detail before deciding
 - `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created; changing an approved proposal returns it to pending, so what is created is what was approved
-- `merge_proposals(coding_session_id, from_proposal_guid, into_proposal_guid)` - Combine two proposals; the source is marked merged, a final status (it can never be approved or created), and an approved target returns to pending when it gains evidence (a merge whose spans were all already there changes nothing). **Deprecated, removed in v0.15.1**: reject the proposal instead, and add its passages to the other with `update_proposal` if they belong there
 - `update_proposal_status(coding_session_id, approve, reject)` - Approve or reject proposals; GUIDs not in the session are listed, and a GUID in both lists is refused
 - `create_proposed_codes(coding_session_id, create_backup)` - **WRITES TO DATABASE** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first
 

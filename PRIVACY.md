@@ -524,7 +524,7 @@ project is moved, both folders are searched, and setting it back to
 
 | Kind | Where | What | Who deletes it |
 |---|---|---|---|
-| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read; the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says; coding sessions go at your word (`delete_coding_session`, `cleanup_old_sessions`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the pseudonymisation run records, and the secret that keys their digests |
+| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read; the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the pseudonymisation run records, and the secret that keys their digests |
 | Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page), as "Reading a whole file" says, so they can stay longer while Exegete is not running; the working folder as each reading ends; you, at any time |
 | Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
 | Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word) |
@@ -721,10 +721,7 @@ convention, whichever program made the project, Exegete or QualCoder:
   written by export_coded_segments_report) keep memos in full, private
   zone included, because QualCoder's own exports do, and Exegete keeps
   its exports the same. The export tools say so in their descriptions.
-  export_code_report, despite its name, returns JSON into the
-  conversation rather than writing a file, so it strips like every
-  other read. Treat exported files with the same care as the project
-  itself.
+  Treat exported files with the same care as the project itself.
 
 The private zone stays in your project database on disk; this
 convention controls only what enters the AI conversation through
@@ -963,7 +960,7 @@ project has the coder-visibility capability:
   stays on everything else they own (codes, categories, files, cases,
   journal entries, attribute types and attribute values), and every tool
   and resource that shows an owner shows it: the file view's
-  `file_info`, `export_code_report`,
+  `file_info`,
   `list_attribute_types`, `get_case_attributes` and
   `get_file_attributes`, the answer of `create_code`, `create_category`
   or `create_case` when the name already exists (it returns the

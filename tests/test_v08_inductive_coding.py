@@ -3,7 +3,9 @@
 
 The six-tool loop: propose_codes records brand-new code proposals on the
 session (writing nothing to the project), review_proposals shows them,
-update_proposal / merge_proposals refine them, update_proposal_status
+update_proposal refines them (merge_proposals, removed in v0.15.1 as
+announced in 0.14: a merge is a rejection and an update_proposal now),
+update_proposal_status
 records the user's decisions, and create_proposed_codes performs the one
 atomic backed-up write. Covers: session-only guarantees, collision
 flag-then-block, refuse-on-missing-category, evidence validation with
@@ -286,49 +288,46 @@ class TestA3UpdateProposal:
 
 
 # ============================================================================
-# A.4 merge_proposals
+# A.4 merging two proposals (v0.15.1: merge_proposals removed, as
+# announced in 0.14; reject one, then give the other both sets of passages
+# in update_proposal's example_segments, which replaces the list)
 # ============================================================================
 
 class TestA4MergeProposals:
 
-    def test_merge_moves_evidence_and_marks_source_merged(self, setup_server):
+    def test_merge_by_a_rejection_and_the_others_passages(self,
+                                                          setup_server):
         sid = _make_session(setup_server)
         g1 = _propose_one(sid, name="Deadline stress")
         g2 = _propose_one(sid, name="Time pressure", example_segments=[
             {"file_id": 1, "segment_text": "I feel stressed about deadlines"},
             {"file_id": 1, "segment_text": "I cope by exercising"},
         ])
-        out = json.loads(server.merge_proposals(sid, g2, g1))
-        assert out["success"] is True
-        # duplicate span deduplicated: only the coping segment moves
-        assert out["evidence_moved"] == 1
-        assert out["target"]["evidence_count"] == 2
+        rejected = json.loads(server.update_proposal_status(sid,
+                                                            reject=[g2]))
+        assert rejected["rejected"] == 1
+        out = json.loads(server.update_proposal(sid, g1, example_segments=[
+            {"file_id": 1, "segment_text": "I feel stressed about deadlines"},
+            {"file_id": 1, "segment_text": "I cope by exercising"},
+        ]))
+        assert out["success"] is True, out
         session = server.session_manager.load_session(sid)
-        # v0.14 (the claims audit's item 1): a final status, not a
-        # reversible rejection, so the source can never be created
-        assert session.get_proposal_by_guid(g2).status == "merged"
-        assert session.get_proposal_by_guid(g2).merged_into == g1
+        assert len(session.get_proposal_by_guid(g1).example_segments) == 2
+        # a rejected proposal is created only if approved again
+        assert session.get_proposal_by_guid(g2).status == "rejected"
 
-    def test_self_merge_refused(self, setup_server):
-        sid = _make_session(setup_server)
-        g1 = _propose_one(sid)
-        out = json.loads(server.merge_proposals(sid, g1, g1))
-        assert "itself" in out["error"]
+    def test_the_tool_is_gone(self, setup_server):
+        assert not hasattr(server, "merge_proposals")
+        assert "merge_proposals" not in server.mcp._tool_manager._tools
 
-    def test_created_participant_refused(self, setup_server):
+    def test_a_created_proposal_takes_no_passages(self, setup_server):
         sid = _make_session(setup_server)
         g1 = _propose_one(sid, name="Created one")
-        g2 = _propose_one(sid, name="Pending one")
         server.update_proposal_status(sid, approve=[g1])
         server.create_proposed_codes(sid)
-        out = json.loads(server.merge_proposals(sid, g2, g1))
-        assert "merge_codes" in out["error"]
-
-    def test_missing_guid_refused(self, setup_server):
-        sid = _make_session(setup_server)
-        g1 = _propose_one(sid)
-        out = json.loads(server.merge_proposals(sid, g1, "ghost"))
-        assert "must exist" in out["error"]
+        out = json.loads(server.update_proposal(sid, g1, example_segments=[
+            {"file_id": 1, "segment_text": "I cope by exercising"}]))
+        assert "already created" in out["error"]
 
 
 # ============================================================================

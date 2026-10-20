@@ -685,7 +685,7 @@ within each description's first 2,048 characters, a few named
 exceptions apart, which reach the model through `read_brief` or the
 tools' answers. Measured for 0.15.1, the descriptions are longer on
 Python 3.10 to 3.12 than on 3.13, which strips the indentation they are
-written with. On Python 3.13, 4 of `full`'s 82 descriptions are longer
+written with. On Python 3.13, 4 of `full`'s 79 descriptions are longer
 than 4,096 characters (`pseudonymise_source`, 17,825;
 `start_coding_session`, 6,038; `search_files`, 4,802;
 `record_suggestions`, 4,455); on 3.10 to 3.12, 5 are (the same four, at
@@ -745,7 +745,7 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 82 tools, every tool,
+- `EXEGETE_TOOLSET`: `full` (default) registers 79 tools, every tool,
   creating a project included, so that a study can be started from the
   conversation (TOOLS.md, "Starting a project from the conversation");
   two of them are the earlier names of two renamed tools (TOOLS.md,
@@ -1124,10 +1124,10 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 82 tools by
+**Step 3. Use the core toolset.** Exegete offers 79 tools by
 default, and the serialised tool definitions alone measure about
-209,000 characters, roughly 52k tokens, against about 69,000
-characters, roughly 17k tokens, for the 25 tools of `core` (209,145
+205,000 characters, roughly 51k tokens, against about 69,000
+characters, roughly 17k tokens, for the 25 tools of `core` (205,044
 and 68,780 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far
@@ -1140,7 +1140,7 @@ past where small-model tool selection degrades. Set
 model, set the context length to at least 32k for the core toolset
 (that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
-or 64k if you must run the full surface (its schema alone is about 52k
+or 64k if you must run the full surface (its schema alone is about 51k
 tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
@@ -1600,7 +1600,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 209,000 characters with `full`; TOOLS.md says how that
+  (about 205,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

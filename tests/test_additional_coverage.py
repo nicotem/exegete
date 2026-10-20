@@ -83,9 +83,10 @@ class TestNoProjectLoaded:
         data = json.loads(server.search_memos("test"))
         assert "No project selected" in data["error"]
 
-    def test_export_code_report_no_project(self):
+    def test_search_coded_text_by_code_name_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
-        data = json.loads(server.export_code_report("Test"))
+        # (v0.15.1: export_code_report, which took a code name, removed)
+        data = json.loads(server.search_coded_text("x", code_name="Test"))
         assert "No project selected" in data["error"]
 
     def test_get_project_summary_no_project(self):
@@ -222,8 +223,10 @@ class TestAdditionalSqlInjection:
     ]
 
     @pytest.mark.parametrize("payload", PAYLOADS)
-    def test_export_code_report_injection(self, setup_server, payload):
-        result = server.export_code_report(payload)
+    def test_code_name_injection(self, setup_server, payload):
+        # (v0.15.1: export_code_report removed; search_coded_text resolves
+        # a code name by the same rule)
+        result = server.search_coded_text("stress", code_name=payload)
         data = json.loads(result)
         assert "error" in data
         # Verify DB intact

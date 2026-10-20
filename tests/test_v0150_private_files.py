@@ -1072,8 +1072,8 @@ class TestTheDocuments:
                 "| Kind | Where | What | Who deletes it |",
                 "| Exegete's working state | `~/.exegete`, hidden on macOS "
                 "and Linux |",
-                "coding sessions go at your word (`delete_coding_session`, "
-                "`cleanup_old_sessions`)",
+                # (v0.15.1: cleanup_old_sessions removed, as announced)
+                "coding sessions go at your word (`delete_coding_session`)",
                 "| Pages and copies to look at | the reading folder",
                 "the reading folder's files at its first tidy once they are "
                 "a week old (an hour for an import's page), as \"Reading a "

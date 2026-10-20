@@ -352,7 +352,8 @@ class TestErrorInformationLeakage:
 
     def test_search_error_no_stack_trace(self, setup_server):
         """Errors should not include Python stack traces."""
-        result = server.export_code_report("NonexistentCode")
+        # (v0.15.1: export_code_report removed; a code name resolved alike)
+        result = server.search_coded_text("x", code_name="NonexistentCode")
         data = json.loads(result)
         if "error" in data:
             error_msg = data["error"]

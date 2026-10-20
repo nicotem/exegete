@@ -1972,8 +1972,8 @@ class TestTheDocuments:
         assert lines[at - 1].startswith("- `prepare_names_list()` - ")
         assert lines[at + 1].startswith("- `create_project(")
         # 82 since read_pseudonym_list was removed (the files design,
-        # piece 5)
-        assert "registers 82 tools, two of them the earlier names" in \
+        # piece 5), 79 since v0.15.1 removed three tools, as announced
+        assert "registers 79 tools, two of them the earlier names" in \
             _flat(tools)
 
     def test_the_changelog_says_what_was_added(self):

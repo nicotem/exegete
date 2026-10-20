@@ -520,8 +520,12 @@ class TestTheSizes:
     # v0.15.0 removed read_pseudonym_list (the files design, piece 5), so
     # the tools held to 0.14.2's figure are the others: its entry as
     # 0.14.2 served it, 1,234 characters, and its separator are left out
-    # of `full`'s (197,586 before); `core` never served it.
-    NOW_0142 = {"full": 196_350, "core": 64_687}
+    # of `full`'s (197,586 before); `core` never served it. v0.15.1
+    # removed export_code_report, cleanup_old_sessions and
+    # merge_proposals, as announced in 0.14: their entries as 0.14.2
+    # served them (1,846, 1,111 and 1,138) and their separators, 4,101
+    # characters, leave `full` (196,350 before); `core` never served them.
+    NOW_0142 = {"full": 192_249, "core": 64_687}
     # The same tools as this tree serves them: v0.14.3
     # lengthens two, read_file_with_codings (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
@@ -600,7 +604,12 @@ class TestTheSizes:
     # copy_project_to_workspace's descriptions name the empty ai_data
     # folder Exegete makes (218 characters more in `full`, 89 in `core`,
     # which serves the copy alone; tests/test_v0151_small_corrections.py).
-    NOW = {"full": 198_237, "core": 65_464}
+    # v0.15.1, the removals: export_code_report, cleanup_old_sessions and
+    # merge_proposals leave `full`, their entries and separators 4,107
+    # characters here (198,237 before); explain_ai_coding_tools loses the
+    # help topics' deprecation sentence (166 fewer) and propose_codes says
+    # how to merge two proposals now (172 more).
+    NOW = {"full": 194_136, "core": 65_464}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -626,11 +635,10 @@ class TestTheSizes:
                           "set_project_ai_coder_name": 2_564,
                           # the coder names, piece 3
                           "export_refi_qda": 2_584,
-                          # the whole-branch review, round 1: the
-                          # removals in v0.15.1
-                          "cleanup_old_sessions": 1_111,
-                          "export_code_report": 1_846,
-                          "merge_proposals": 1_138,
+                          # (the whole-branch review, round 1, changed
+                          # three tools v0.15.1 then removed:
+                          # cleanup_old_sessions, export_code_report and
+                          # merge_proposals, left out of NOW_0142 above)
                           # not presuming QualCoder, piece 5
                           "add_annotation": 2_233,
                           "add_journal_entry": 1_534,

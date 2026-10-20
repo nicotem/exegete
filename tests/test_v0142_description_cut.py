@@ -715,7 +715,45 @@ CHANGED_0150 = {
     # that it "cannot see" one (rename_case 2,065, rename_file 3,410)
     "restore_backup": (2877, 2367, "06cea91506d0e578"),
 }
-WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
+# The descriptions v0.15.1 changes, as it serves them, on top of 0.15.0's
+# words. The ignored argument (tests/test_v0151_ignored_argument.py):
+# Exegete takes a backup before every change, so the 22 tools that take
+# create_backup say in its Args line that it is no longer used (59
+# characters more each on 3.13), and every text that offered to skip a
+# backup says that Exegete takes one before every change: apply_codings'
+# opening paragraph, delete_coding's and delete_annotation's (whose
+# private note no longer forces a backup), import_text_file's
+# deprecation of create_backup=false (gone), list_backups' first
+# sentence and pseudonymise_source's sentence on its backup, which adds
+# that a run that changes nothing takes none
+CHANGED_0151 = {
+    "add_annotation": (1635, 1327, "4bbbbadf442ce4d9"),
+    "add_journal_entry": (1075, 864, "12671d098694fc7f"),
+    "apply_codings": (2576, 2080, "5bd24c4f519eb9d7"),
+    "create_attribute_type": (2101, 1669, "514860e96ff9c269"),
+    "create_case": (1647, 1362, "058d9acfbdafa8bf"),
+    "create_category": (1839, 1456, "1932d23aa946913a"),
+    "create_code": (2883, 2334, "164e07affb43e225"),
+    "create_proposed_codes": (1867, 1527, "4e0e3c73ad69168e"),
+    "delete_annotation": (1747, 1409, "febaf8e7ef5e66f2"),
+    "delete_coding": (2772, 2226, "20b73b09f4af1cfc"),
+    "import_text_file": (3979, 2949, "32c2ba85d34a6301"),
+    "link_file_to_case": (1781, 1353, "5b8da085c5673f75"),
+    "list_backups": (2164, 1819, "2d9decd0dc2f1483"),
+    "move_category": (1398, 1072, "cbf3cb5c7691d6b2"),
+    "move_code_to_category": (1735, 1370, "aaea0c1644efe794"),
+    "pseudonymise_source": (17825, 13103, "e26b83009d0c054a"),
+    "recolor_code": (1293, 1061, "1379964b6a5e9ead"),
+    "rename_case": (2124, 1733, "39675c0d95087246"),
+    "rename_category": (998, 808, "47f306f452b8c7d5"),
+    "rename_code": (968, 778, "d44768fcb8687026"),
+    "rename_file": (3469, 2859, "2a48298f73e57c30"),
+    "set_attribute": (1747, 1411, "6926f03ebdf6151c"),
+    "set_memo": (2610, 2080, "38ff500521558e9d"),
+    "update_annotation": (1990, 1631, "ce66fc0d896a7302"),
+}
+WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
+         **CHANGED_0151}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to
@@ -781,7 +819,8 @@ class TestTheDescriptionsKeepTheirWords:
             "compare_coders": ("TWO KAPPAS", "UNIT OF ANALYSIS"),
             "create_code": ("Text containing '#####'", "Colours are stored"),
             "delete_code": ("Two-step by design.", "SUB-CODES"),
-            "delete_coding": ("Two guards", "A backup is created first"),
+            # v0.15.1: "Exegete takes a backup first", in the same place
+            "delete_coding": ("Two guards", "Exegete takes a backup first"),
             "edit_suggestion": ("READING AND CODE", "Edits are not"),
             # v0.15.0: the refusal's paragraph is one sentence now (not
             # presuming QualCoder, piece 5), in the same place

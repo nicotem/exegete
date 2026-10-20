@@ -579,7 +579,13 @@ class TestTheSizes:
     # so every other tool is still held to 0.14.2's figure. The files
     # design, piece 5, removes read_pseudonym_list: its entry, 1,308
     # characters here, and its separator leave `full` (197,026 before).
-    NOW = {"full": 195_716, "core": 64_942}
+    # v0.15.1, the ignored argument: create_backup's Args line in the 22
+    # tools that take it, its schema's default now null, and the texts
+    # that offered to skip a backup, in apply_codings, delete_coding,
+    # delete_annotation, import_text_file, list_backups and
+    # pseudonymise_source (1,577 characters more in `full`, 225 in
+    # `core`; tests/test_v0142_description_cut.py pins their words).
+    NOW = {"full": 197_293, "core": 65_167}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

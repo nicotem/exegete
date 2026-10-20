@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Upgrading from 0.15.0
+
+- **`create_backup` no longer does anything.** Exegete takes one backup
+  before every change, whatever the argument says, so a call with
+  `create_backup=false` takes one as well. The 22 tools that take it
+  still accept it, with any value, so that saved instructions keep
+  working, until v0.15.2, the method release, removes it with the two
+  tools' earlier names; a call that gives it is told so, under
+  `create_backup_ignored` in an answer in JSON, or in a last paragraph
+  of one in text, a refusal included, though not the answer that no
+  project is selected or that an unexpected error stopped the tool. A
+  call without it, or with null, is told nothing. `import_text_file`'s
+  `create_backup=false`, which 0.14.3 deprecated, is accepted in the
+  same way and no longer adds `deprecated` to the answer. A script or a
+  saved instruction that passes `create_backup=false` to save time or
+  disk space now takes a backup at each change: `prune_backups` removes
+  old ones.
+
 ### Changed
 
 - **The approval token's tag is now under its signature.** The token a
@@ -85,6 +103,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refused because either changed leaves no safety backup; it compares
   them once more after it, and a change made while the safety backup
   is made is refused, as before, with the safety backup named.
+- **No text offers to skip a backup any more.** Each tool that takes
+  `create_backup` says in its description that the argument is no
+  longer used, and its input schema gives no default but null. The
+  descriptions of `apply_codings`, `delete_coding`, `delete_annotation`,
+  `list_backups` and `pseudonymise_source`, the help on AI coding, the
+  brief, the refusal to delete a row that carries a private note, the
+  extension's description, the README, TOOLS.md, PRIVACY.md, INSTALL.md
+  and the two AI coding guides now say that Exegete takes a backup
+  before every change. PRIVACY.md no longer counts a forced backup
+  among what tells the assistant that a row carries a private note:
+  the refusal alone does.
 
 ### Fixed
 
@@ -202,6 +231,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The README's badge and `CITATION.cff` give Exegete's DOI on
   Zenodo**, 10.5281/zenodo.23496246, which always leads to the newest
   release.
+
+### Measured
+
+What a host is sent with every request, beside 0.15.0's published
+figures, in characters (the tool sets' names, descriptions and input
+schemas together, as below; the brief as `read_brief` returns it):
+
+| | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
+|---|---|---|---|---|
+| `full` (82 tools) | 208,201 | 206,624 | 218,729 | 217,084 |
+| `core` (25 tools) | 68,483 | 68,258 | 71,923 | 71,690 |
+| The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
+| The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
+| The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
+
+- Serialised tool JSON: full = 208,201 characters (about 52.1k tokens
+  at chars/4) over 82 tools, and core = 68,483 (about 17.1k) over 25,
+  measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
+  separate environment installed from the repository's lock file, not
+  the repository's own `venv/`: for 0.15.0's tree it gives exactly
+  0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
+  which also gives exactly 0.15.0's figures for its tree), 218,729 and
+  71,923. Against 0.15.0's figures (206,624 and 68,258 on 3.13), one
+  change moved them: `create_backup` accepted and ignored. In 18 of the
+  22 tools that take it, the argument's line in the description says
+  that it is no longer used and its schema's default is null rather
+  than true: 91 characters more in each entry (92 in
+  `link_file_to_case`'s, whose line was one character shorter; 95 and
+  96 on 3.11). In the other four, the texts that offered to skip a
+  backup changed with it: `apply_codings`' opening paragraph, 112
+  characters more in all (116 on 3.11); `delete_coding`'s and
+  `delete_annotation`'s paragraphs on a private note, which no longer
+  forces a backup, and on the backup, 65 and 89 fewer (69 and 97);
+  `import_text_file`'s deprecation of `create_backup=false`, gone, 51
+  fewer on both. And `list_backups`' first sentence, 4 fewer on both,
+  and `pseudonymise_source`'s sentence on its backup, which adds that a
+  run that changes nothing takes none, 35 more (39). In all, 1,577
+  characters more in `full` and 225 in `core`, whose `apply_codings`,
+  `create_code`, `delete_coding`, `list_backups` and `set_memo` carry
+  them (1,645 and 233 on 3.11). No other tool's entry changed. The full
+  brief says that Exegete takes a backup before every change, rather
+  than "unless the researcher asks for none": 14 characters fewer.
+- Claude Code keeps 4,096 characters of a tool's description, and
+  16,384 through its tool search: in `full`, 32 descriptions pass 2,048
+  (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096 (5 on
+  3.11) and one, `pseudonymise_source` (17,825 characters; 18,957 on
+  3.11), passes 16,384.
 
 ## [0.15.0-alpha] - 2026-10-20
 

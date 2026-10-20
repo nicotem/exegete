@@ -2052,7 +2052,9 @@ class TestTheDocuments:
 
     def test_the_measurement_names_its_entry(self):
         log = _flat(_read("CHANGELOG.md"))
-        measured = log[log.index("### Measured"):log.index(
+        # 0.15.0's Measured (v0.15.1 has one of its own, above it)
+        release = log[log.index("## [0.15.0-alpha]"):]
+        measured = release[release.index("### Measured"):release.index(
             "## [0.14.3-alpha]")]
         # (piece 5's sentence on read_pseudonym_list's removal follows)
         assert ("And `save_names_list`, which saves the names file as the "
@@ -2072,8 +2074,9 @@ class TestTheDocuments:
             assert entry + len(", ") == 1294
         elif sys.version_info[:2] == (3, 11):
             assert entry + len(", ") == 1358
-        brief = len(server.read_brief())
-        assert f"the full brief {brief:,}." in measured
+        # 0.15.0's brief, history since v0.15.1's took out "unless the
+        # researcher asks for none" (its own Measured gives 13,211)
+        assert "the full brief 13,225." in measured
 
     def test_privacy_says_what_the_save_reads_and_writes(self):
         privacy = _flat(_read("PRIVACY.md"))

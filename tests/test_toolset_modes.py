@@ -463,10 +463,10 @@ class TestThePublishedSchemaBudget:
     # and separator, 1,310 characters fewer in `full` (1,362 on 3.11);
     # `core` did not serve it, and get_current_project's description is
     # unchanged (its answer's note changed).
-    FULL_MEASURED = 206_624          # 82 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_258           # 25 tools, same environment
-    FULL_MEASURED_310 = 217_084      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 71_690
+    FULL_MEASURED = 208_201          # 82 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_483           # 25 tools, same environment
+    FULL_MEASURED_310 = 218_729      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 71_923
 
     # Why two per cent, away from the reference environment.
     #
@@ -493,9 +493,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "206,624"
-    CORE_CHARS = "68,258"
-    FULL_ROUNDED = "207,000"
+    FULL_CHARS = "208,201"
+    CORE_CHARS = "68,483"
+    FULL_ROUNDED = "208,000"
     CORE_ROUNDED = "68,000"
     FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"
@@ -545,7 +545,21 @@ class TestThePublishedSchemaBudget:
         is the Unreleased one alone, and 0.14.3's figure is history
         (`_v0143_entry`). From the release on, the current entry is
         0.15.0's, under an Unreleased heading that says nothing yet.
+        v0.15.1 moves it again (create_backup accepted and ignored, its
+        line in 22 descriptions and its schema's default, and the texts
+        that offered to skip a backup), so the current entry is the
+        Unreleased one alone, and 0.15.0's figure is history
+        (`_v0150_entry`).
         """
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [Unreleased]"):
+                    text.index("## [0.15.0-alpha]")]
+
+    @classmethod
+    def _v0150_entry(cls):
+        """The 0.15.0 entry, whose figure is history and stays put
+        (v0.15.1's ignored create_backup moves the figure, so the current
+        entry is the Unreleased one, above the 0.15.0 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3")]
 
@@ -688,17 +702,23 @@ class TestThePublishedSchemaBudget:
         assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
         # The environment, by path: this repository holds two, at
         # different interpreters, and a version alone does not say which
-        # was used. v0.15.0's figures are taken in separate environments
-        # installed from the lock, and the entry says so, with the check
-        # that they give 0.14.3's figures exactly for 0.14.3's tree.
+        # was used. v0.15.1's figures, as v0.15.0's, are taken in
+        # separate environments installed from the lock, and the entry
+        # says so, with the check that they give 0.15.0's figures exactly
+        # for 0.15.0's tree.
         flat = " ".join(entry.split())
         assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a "
                 "separate environment installed from the repository's lock "
                 "file, not the repository's own `venv/`") in flat
-        assert "for 0.14.3's tree it gives exactly 0.14.3's figures" in flat
+        assert "for 0.15.0's tree it gives exactly 0.15.0's figures" in flat
         assert ("Python 3.11.13 (likewise a separate environment, which "
-                "also gives exactly 0.14.3's figures for its tree)") in flat
+                "also gives exactly 0.15.0's figures for its tree)") in flat
         assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
+        # 0.15.0's own figures, as history, taken the same way
+        v0150 = " ".join(self._v0150_entry().split())
+        assert "for 0.14.3's tree it gives exactly 0.14.3's figures" in v0150
+        assert ("Python 3.11.13 (likewise a separate environment, which "
+                "also gives exactly 0.14.3's figures for its tree)") in v0150
         # 0.14.3's own figures, as history: taken the same way, and
         # checked against the repository's environments (the review of
         # 12 October 2026 found it naming `venv/` instead).
@@ -719,6 +739,10 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0150 = self._v0150_entry()
+        assert v0150.count("Serialised tool") == 1
+        assert "full = 206,624 characters" in v0150
+        assert self.FULL_CHARS not in v0150
         v0143 = self._v0143_entry()
         assert v0143.count("Serialised tool") == 1
         assert "full = 201,739 characters" in v0143
@@ -777,12 +801,13 @@ class TestThePublishedSchemaBudget:
         # v0.15.1, the LM Studio route: Step 3 of the recipe gives both
         # sets in one sentence, rounded and to the character, so a
         # re-measure that moves these constants names that sentence too
+        # (v0.15.1, the ignored argument: measured for 0.15.1)
         assert (f"measure about {self.FULL_ROUNDED} characters, roughly "
                 f"{self.FULL_TOKENS} tokens, against about "
                 f"{self.CORE_ROUNDED} characters, roughly "
                 f"{self.CORE_TOKENS} tokens, for the 25 tools of `core` "
                 f"({self.FULL_CHARS} and {self.CORE_CHARS} characters, "
-                f"measured for 0.15.0 on Python 3.13;") in install
+                f"measured for 0.15.1 on Python 3.13;") in install
 
     # `pseudonymise_source`'s own share of the full figure, which
     # INSTALL.md states rounded to the nearest 500 (v0.13: the one-file

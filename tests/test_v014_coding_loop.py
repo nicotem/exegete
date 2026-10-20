@@ -1945,8 +1945,10 @@ class TestFixRound2WhatGoesInV015:
         self._warned(call("apply_codings", coding_session_id=sid,
                           create_backup=False, owner="Somebody Else"),
                      owner, True)                  # refused, as JSON
+        # (v0.15.1: without create_backup, whose own sentence would
+        # follow as the last paragraph; tests/test_v0151_ignored_argument.py)
         applied = call("apply_codings", coding_session_id=sid,
-                       create_backup=False, owner="AI Coding Assistant")
+                       owner="AI Coding Assistant")
         assert "CODINGS APPLIED" in applied        # a text answer
         assert applied.endswith("\n\n" + owner)
         sid = new_session()
@@ -2191,7 +2193,9 @@ class TestFixRound2TheMinors:
             encoding="utf-8").split())
         assert "Every write operation creates a timestamped backup" \
             not in workflow
-        assert "unless it is called with `create_backup=false`" in workflow
+        # v0.15.1: Exegete takes a backup before every change, and no
+        # text offers to skip one (tests/test_v0151_ignored_argument.py)
+        assert "create_backup=false" not in workflow
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()
                     if l.startswith("- `start_coding_session("))

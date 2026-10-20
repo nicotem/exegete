@@ -678,17 +678,17 @@ convention, whichever program made the project, Exegete or QualCoder:
   pre-v16 schemas). By owner ruling, three rules limit that:
   - delete_coding and delete_annotation refuse a row whose memo carries
     a private note unless the caller passes
-    `confirm_private_note_deletion=true`, and for such a row a backup
-    is always taken first, even when `create_backup=false` was asked.
+    `confirm_private_note_deletion=true`; with it the row is deleted
+    after a backup, as every change is.
     The refusal says only that a private note exists on that row; it
     never quotes, counts or characterises it.
   - The cascades (delete_code, delete_category, merge_codes,
     merge_category) require a preview token, always back up first, and
     their preview reports how many rows carrying a private note the
     operation would remove, as a count only.
-  - Deliberate disclosure: because the refusal and the forced backup
-    trigger only on rows that carry a private note, they reveal that a
-    private note EXISTS on that row (never its content). The owner
+  - Deliberate disclosure: because the refusal triggers only on rows
+    that carry a private note, it reveals that a private note EXISTS on
+    that row (never its content). The owner
     accepts this trade so that a private note is never destroyed
     without an explicit decision, and never without a backup.
 - **The exception, deliberately**: exported FILES (the REFI-QDA

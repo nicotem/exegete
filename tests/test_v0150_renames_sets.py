@@ -504,8 +504,10 @@ class TestTheDocuments:
         # 206,613, about 207,000; and save_names_list (piece 4): 83
         # tools, 207,912, and its fix round 1, 207,934, about 208,000;
         # and read_pseudonym_list removed (piece 5): 82 tools, 206,624,
-        # about 207,000
-        assert (rounded, tokens) == ("207,000", "52k")
+        # about 207,000; and v0.15.1's create_backup accepted and
+        # ignored, with the texts that offered to skip a backup: 208,201,
+        # about 208,000
+        assert (rounded, tokens) == ("208,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "

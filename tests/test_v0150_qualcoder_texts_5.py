@@ -214,13 +214,16 @@ class TestThePutBack:
         # the whole-branch review's round 1 moved the removals to v0.15.1:
         # put back too
         from test_v0150_wb_fix_r1 import before_the_review
+        # and v0.15.1's ignored create_backup: put back too
+        from test_v0151_ignored_argument import before_the_ignored_argument
         pinned = {"delete_coding": (2992, 2420, "11210044336ce58c"),
                   "update_annotation": (2052, 1709, "32e8e8c22ca88105"),
                   "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f")}
         server._apply_toolset("full")
         for name, (length, solid, digest) in pinned.items():
             text = before_the_review(put_back_the_lock_paragraph(
-                name, server.mcp.original_descriptions[name]))
+                name, before_the_ignored_argument(
+                    name, server.mcp.original_descriptions[name])))
             got = _fingerprint(text)
             assert got[1:] == (solid, digest), name
             if sys.version_info[:2] == (3, 13):

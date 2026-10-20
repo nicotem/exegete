@@ -402,9 +402,10 @@ class TestInstall:
         assert "On Python 3.13, 4 of `full`'s 82 descriptions" in install
         assert "`full` (default) registers 82 tools" in install
         assert ("Exegete offers 82 tools by default, and the serialised "
-                "tool definitions alone measure about 207,000 characters, "
+                "tool definitions alone measure about 208,000 characters, "
                 "roughly 52k tokens") in install
-        assert "(about 207,000 characters with `full`;" in install
+        # v0.15.1: about 208,000 (create_backup accepted and ignored)
+        assert "(about 208,000 characters with `full`;" in install
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
                 if len(t.description or "") > 4096]
@@ -425,7 +426,7 @@ class TestToolsReadmePrivacy:
     def test_readme(self):
         readme = _read("README.md")
         assert ("| `full` | 82: all, creating a project and two renamed "
-                "tools' earlier names included | about 207,000 characters, "
+                "tools' earlier names included | about 208,000 characters, "
                 "52k tokens |") in readme
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "
@@ -540,8 +541,9 @@ class TestChangelog:
                 "separator with it: 1,310 characters fewer in `full`, 1,362 "
                 "on 3.11; `core` did not serve it. No other tool's entry "
                 "changed.") in measured
-        assert (f"the full brief {len(server.read_brief()):,}."
-                ) in measured
+        # 0.15.0's brief, history since v0.15.1's took out "unless the
+        # researcher asks for none" (its own Measured gives 13,211)
+        assert "the full brief 13,225." in measured
 
     def test_the_changes_it_describes_are_the_texts_served(self):
         """The release's account of the import's note and of

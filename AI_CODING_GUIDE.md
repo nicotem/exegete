@@ -222,8 +222,7 @@ session. None of this replaces your approval of each suggestion.
   capability
   reads follow the per-coder visibility
   setting (see "Working alongside QualCoder 4.0" in TOOLS.md)
-- Every write creates a timestamped backup first unless called with
-  `create_backup=false` (`list_backups` shows them, including QualCoder's own `_BKUP_` snapshots)
+- Exegete takes a timestamped backup before every change (`list_backups` shows them, including QualCoder's own `_BKUP_` snapshots)
 - Sessions only apply to the project they were created in
 - Applied suggestions are marked and cannot be double-applied
 

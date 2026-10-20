@@ -524,23 +524,30 @@ class TestTheDescription:
         # and the whole-branch review's round 1 moved the removals to
         # v0.15.1: put back too
         from test_v0150_wb_fix_r1 import before_the_review
+        # and v0.15.1's ignored create_backup changed its sentence on
+        # the backup: put back too
+        from test_v0151_ignored_argument import before_the_ignored_argument
         server._apply_toolset("full")
         before = before_the_review(without_the_paragraph(
             put_back_the_lock_paragraph(
-                TOOL, server.mcp.original_descriptions[TOOL])))
+                TOOL, before_the_ignored_argument(
+                    TOOL, server.mcp.original_descriptions[TOOL]))))
         length, solid, digest = _fingerprint(before)
         assert (solid, digest) == (12705, "b497f4c553410195")
         if sys.version_info[:2] == (3, 13):
             assert length == 17339
 
     def test_its_line_in_changed_0150_is_what_is_served(self):
-        from test_v0142_description_cut import (CHANGED_0150, WORDS,
-                                                _fingerprint)
+        from test_v0142_description_cut import (CHANGED_0150, CHANGED_0151,
+                                                WORDS, _fingerprint)
+        # v0.15.1's ignored create_backup changed its sentence on the
+        # backup (its own line, CHANGED_0151): put back
+        from test_v0151_ignored_argument import before_the_ignored_argument
         server._apply_toolset("full")
-        length, solid, digest = _fingerprint(
-            server.mcp.original_descriptions[TOOL])
+        length, solid, digest = _fingerprint(before_the_ignored_argument(
+            TOOL, server.mcp.original_descriptions[TOOL]))
         assert CHANGED_0150[TOOL][1:] == (solid, digest)
-        assert WORDS[TOOL] == CHANGED_0150[TOOL]
+        assert WORDS[TOOL] == CHANGED_0151[TOOL]
         if sys.version_info[:2] == (3, 13):
             assert CHANGED_0150[TOOL][0] == length
 

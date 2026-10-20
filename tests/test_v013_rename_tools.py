@@ -632,7 +632,9 @@ class TestRenameFile:
     ])
     def test_the_length_limits_at_and_over_each_boundary(
             self, project, typed, error):
-        out = _file(1, typed, create_backup=False)
+        # (v0.15.1: without create_backup, which every change ignores
+        # and whose answer would carry create_backup_ignored)
+        out = _file(1, typed)
         if error is None:
             assert out["changed"] is True, out
         else:

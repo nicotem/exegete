@@ -442,6 +442,8 @@ NOT_TOOLS = {
     "set_at": "a key of the AI coder name's record",
     "update_check": "the check for new versions' state file, "
                     "update_check.json, and the extension's setting",
+    "create_backup_ignored": "the key of an answer to a call that gave "
+                             "create_backup, which Exegete ignores",
 }
 
 

@@ -100,8 +100,7 @@ never put participant data in an issue.
   (other identifying details are not looked for).
 - **Export** the codebook, a coding report, frequencies and the
   case-by-code matrix as CSV, text or Markdown.
-- **Go back**: a backup before each change, by default, and a way to
-  restore one.
+- **Go back**: a backup before every change, and a way to restore one.
 
 **Not in Exegete yet**, and done in QualCoder for now: bringing in
 images, audio and video; coding by selecting text yourself; coding
@@ -530,7 +529,7 @@ telemetry; its one request of its own is the check for new versions
 the AI behind it
 ([Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes)).
 It reads a project's SQLite database read-only; each tool that writes
-opens its own connection, after a backup (by default), and refuses
+opens its own connection, after a backup, and refuses
 while the project's lock file is active (QualCoder 3.8.2 has the
 project open, or another conversation using Exegete is writing to it). Each backup copies the
 whole project folder, with any media stored in it, next to the project;
@@ -542,7 +541,7 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 82: all, creating a project and two renamed tools' earlier names included | about 207,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `full` | 82: all, creating a project and two renamed tools' earlier names included | about 208,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
 
 That is how much of a model's context a host uses when it sends every
@@ -587,7 +586,7 @@ the extension, is still accepted and means `full`.
   matter come first in each description, within 2,048 characters; the
   rest reach the model through `read_brief` or the answers. One
   description is longer than 16,384 characters, `pseudonymise_source`'s
-  (17,791 on Python 3.13, 18,919 on 3.10 to 3.12):
+  (17,825 on Python 3.13, 18,957 on 3.10 to 3.12):
   [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients)
   says how to let it through whole.
 - **Resources** (`exegete://...`), prompts, and

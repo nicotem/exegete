@@ -3890,8 +3890,8 @@ def private_note_refusal(kind: str, row_id: int,
     # stays marker-free, so a marker in any result always means a leak
     return (f"{kind} {row_id} carries a private note (a memo section the "
             f"assistant cannot see); nothing was deleted. Pass "
-            f"{override}=true to delete it anyway; a backup is taken first "
-            f"regardless of create_backup.")
+            f"{override}=true to delete it anyway; a backup is taken "
+            f"first.")
 
 
 def _append_provenance_block(target_memo: Any, block: str) -> str:

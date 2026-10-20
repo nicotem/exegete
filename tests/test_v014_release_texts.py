@@ -111,8 +111,10 @@ def test_the_export_descriptions_name_no_ruling():
         assert "owner-ruled" not in description, tool
 
 
-def test_the_manifest_says_a_call_can_ask_for_no_backup():
+def test_the_manifest_says_every_change_takes_a_backup():
+    """v0.15.1: no call can ask for none any more."""
     manifest = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
-    assert ("Every write is preceded by a backup of the project unless "
-            "the call asks for none.") in manifest["long_description"]
+    assert ("Exegete takes a backup of the project before every change."
+            ) in manifest["long_description"]
+    assert "asks for none" not in manifest["long_description"]

@@ -125,7 +125,9 @@ class TestClaudeCodesLimitsOnEveryPython:
         long = _long_paragraph()
         assert ("a figure under 16,384 lowers the limit for tools found "
                 "through tool search, so it cuts more, not less") in long
-        assert ("Measured for 0.15.0, the descriptions are longer on "
+        # v0.15.1: measured again, create_backup's line in 22
+        # descriptions and pseudonymise_source's sentence on its backup
+        assert ("Measured for 0.15.1, the descriptions are longer on "
                 "Python 3.10 to 3.12 than on 3.13, which strips the "
                 "indentation they are written with.") in long
 
@@ -153,7 +155,8 @@ class TestClaudeCodesLimitsOnEveryPython:
                 ) in long
         longest, name = over[0]
         assert name == "pseudonymise_source"
-        assert (f"its last 1,407 characters are cut even through tool "
+        # 1,441 since v0.15.1 (17,825 on 3.13)
+        assert (f"its last 1,441 characters are cut even through tool "
                 f"search on 3.13, and its last {longest - 16384:,} on 3.10 "
                 f"to 3.12, its sentence on the lock file among them") in long
 
@@ -163,7 +166,12 @@ class TestClaudeCodesLimitsOnEveryPython:
         length = len(served[name])
         assert name == "pseudonymise_source" and length > 16384
         readme = _flat(_read("README.md"))
-        measured = _flat(_unreleased()[_unreleased().index("### Measured"):])
+        # v0.15.1 measures again: the current figure is in the
+        # [Unreleased] part's Measured, 0.15.0's is history
+        log = _read("CHANGELOG.md")
+        current = log[log.index("## [Unreleased]"):
+                      log.index("## [0.15.0-alpha]")]
+        measured = _flat(current[current.index("### Measured"):])
         if sys.version_info[:2] >= (3, 13):
             assert (f"`pseudonymise_source`'s ({length:,} on Python 3.13, "
                     ) in readme

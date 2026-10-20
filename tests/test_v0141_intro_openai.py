@@ -221,8 +221,9 @@ class TestTheIntroduction:
             "case-by-code matrix as CSV, text or Markdown": [
                 "export_codebook", "export_code_report",
                 "export_frequencies_csv", "export_case_code_matrix_csv"],
-            "**Go back**: a backup before each change, by default, and a way "
-            "to restore one": ["list_backups", "restore_backup"],
+            # v0.15.1: before every change, whatever create_backup says
+            "**Go back**: a backup before every change, and a way to "
+            "restore one": ["list_backups", "restore_backup"],
         }
         for words, needed in claims.items():
             assert words in covers, words

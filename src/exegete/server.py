@@ -327,9 +327,6 @@ DEPRECATED_CASCADE = (
 DEPRECATED_OWNER = (
     "Deprecated, removed in v0.15.1: owner, which can only repeat the "
     "project's AI coder name.")
-DEPRECATED_IMPORT_SKIP_BACKUP = (
-    "Deprecated, removed in v0.15.1: create_backup=false; an import always "
-    "takes a backup first.")
 DEPRECATED_HELP_TOPICS = (
     "Deprecated, removed in v0.15.1: the topics analyze_for_coding, "
     "apply_codings, edit_suggestion and coding_style_guidance, which "
@@ -354,6 +351,18 @@ DEPRECATED_RENAME_BACK = (
     "Deprecated, removed in v0.15.1: a rename back recognised from the "
     "project's backups (QualCoder's own Rename, if the researcher uses it, "
     "still makes one).")
+
+# create_backup, accepted and ignored (v0.15.1; owner ruling 85, item 6:
+# it goes with the tools' earlier names in the release on method).
+# Exegete takes one backup before every change, so the argument decides
+# nothing; a call that gives it, whatever its value, is answered with
+# this sentence under a key of its own, create_backup_ignored, never in
+# place of a "deprecated" one. The owner's words of 20 October 2026.
+IGNORED_CREATE_BACKUP = (
+    "create_backup no longer does anything: Exegete takes one backup "
+    "before every change, whatever it says. It is still accepted, so that "
+    "saved instructions keep working, until the release on method removes "
+    "it with the tools' earlier names.")
 
 # start_coding_session without the researcher's answers (owner ruling 25,
 # question 5, with the Saldaña reading's item 17)
@@ -571,8 +580,8 @@ for a way round it.
   item is marked approved, on the researcher's word; only then can
   apply_codings or create_proposed_codes write them.
 - Other changes (a new code, a memo, a case, an attribute) happen when
-  you call the tool at the researcher's request, with a backup of the
-  project first, unless the researcher asks for none.
+  you call the tool at the researcher's request; Exegete takes a backup
+  of the project before every change.
 - Deleting or merging codes and categories, restoring or pruning
   backups, pseudonymising a file, importing documents, saving the names
   list and correcting the researcher's coder name take two steps: a
@@ -741,9 +750,11 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
     return deco
 
 
-def _with_deprecation(answer: Any, sentence: str) -> Any:
-    """The answer with the deprecation sentence: the "deprecated" key of a
-    JSON object, else a last line of a text answer."""
+def _with_deprecation(answer: Any, sentence: str,
+                      key: str = "deprecated") -> Any:
+    """The answer with the deprecation sentence: the `key` of a JSON
+    object ("deprecated" unless another is given), else a last paragraph
+    of a text answer."""
     if not isinstance(answer, str):
         return answer
     try:
@@ -751,25 +762,32 @@ def _with_deprecation(answer: Any, sentence: str) -> Any:
     except ValueError:
         return f"{answer}\n\n{sentence}"
     if isinstance(payload, dict):
-        payload["deprecated"] = sentence
+        payload[key] = sentence
         return json.dumps(payload, indent=2)
     return answer
 
 
 def _deprecated(sentence: Any, before: Optional[str],
-                when: Optional[Callable[[Dict[str, Any]], bool]] = None):
+                when: Optional[Callable[[Dict[str, Any]], bool]] = None,
+                key: str = "deprecated", in_description: bool = True):
     """What goes in v0.15.1 (owner ruling 25, questions 3, 7 and 8; ruling
     70): the
     sentence in the tool's description (before the line holding
     `before`), and in every answer the tool gives, or, for an option,
     only when `when(arguments)` holds. Sits inside _tool_guard.
 
+    The answer carries it under `key`, "deprecated" unless another is
+    given: create_backup's sentence has a key of its own,
+    create_backup_ignored, so it never takes the place of a "deprecated"
+    one (v0.15.1). With `in_description` false the description is left
+    as it is, for a sentence its Args line already gives.
+
     A sentence that names a tool the core set lacks, on a core tool, is
     given as a function returning it marked (`_mark_unregistered`), and
     is written into the docstring by hand: marking it when the tool is
     defined would mark tools not yet registered."""
     def deco(fn):
-        if isinstance(sentence, str):
+        if isinstance(sentence, str) and in_description:
             fn = _with_guidance(sentence, before=before)(fn)
         signature = inspect.signature(fn)
 
@@ -785,9 +803,19 @@ def _deprecated(sentence: Any, before: Optional[str],
                 except TypeError:
                     return answer
             return _with_deprecation(
-                answer, sentence if isinstance(sentence, str) else sentence())
+                answer, sentence if isinstance(sentence, str) else sentence(),
+                key)
         return wrapper
     return deco
+
+
+# The 22 tools that take create_backup: a call that gives it, whatever its
+# value, is answered with IGNORED_CREATE_BACKUP under create_backup_ignored,
+# refusals the tool answers itself included; a call without it carries
+# nothing. Each tool's Args line says so, in place of its description.
+_ignores_create_backup = _deprecated(
+    IGNORED_CREATE_BACKUP, before=None, key="create_backup_ignored",
+    in_description=False, when=lambda a: a.get("create_backup") is not None)
 
 
 def _is(value: Any, word: str) -> bool:
@@ -11122,19 +11150,20 @@ def _codings_failed_validation(failures, total_approved: int
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_ignores_create_backup
 @_deprecated(DEPRECATED_OWNER, before="Args:",
              when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Safety guarantees:")
 def apply_codings(
     coding_session_id: str,
-    create_backup: bool = True,
+    create_backup: Optional[bool] = None,
     owner: Optional[str] = None
 ) -> str:
     """Apply approved coding suggestions to the project database.
 
     THIS WRITES TO THE DATABASE. This is the final step that actually modifies
-    your project. Only approved suggestions will be applied. A backup is created
-    first by default for safety.
+    your project. Only approved suggestions will be applied. Exegete takes a
+    backup of the project first, as before every change.
 
     Safety guarantees:
     - Refused while the project's lock file is active (QualCoder 3.8.2 has
@@ -11163,7 +11192,8 @@ def apply_codings(
 
     Args:
         coding_session_id: The session ID with approved suggestions
-        create_backup: Create timestamped backup before writing (default: True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         owner: Deprecated (above). Only the project's AI coder name is
                accepted, as a no-op; any other value is refused before
                backup or write (set_project_ai_coder_name changes it)
@@ -11487,17 +11517,16 @@ def apply_codings(
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_ignores_create_backup
 @_deprecated(DEPRECATED_OWNER, before="Args:",
              when=lambda a: a.get("owner") is not None)
-@_deprecated(DEPRECATED_IMPORT_SKIP_BACKUP, before="Args:",
-             when=lambda a: a.get("create_backup") is False)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def import_text_file(
     filename: str,
     content: str,
     memo: str = "",
     owner: Optional[str] = None,
-    create_backup: bool = True,
+    create_backup: Optional[bool] = None,
     case_name: Optional[str] = None,
     apply_project_pseudonyms: bool = False
 ) -> str:
@@ -11542,8 +11571,8 @@ def import_text_file(
         owner: Deprecated (above). Only the project's AI coder name is
                accepted, as a no-op; any other value is refused before
                backup or write (set_project_ai_coder_name changes it)
-        create_backup: Create timestamped backup before writing (default:
-                       True; false is deprecated, above)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         case_name: Optional existing case to link the new file to.
                    The same name after spacing and Unicode form are
                    normalised is used first; otherwise one that differs
@@ -12483,11 +12512,12 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_ignores_create_backup
 def link_file_to_case(
     file_id: int,
     case_id: Optional[int] = None,
     case_name: Optional[str] = None,
-    create_backup: bool = True
+    create_backup: Optional[bool] = None
 ) -> str:
     """Link a source file to a case so it appears in case-based analyses.
 
@@ -12517,7 +12547,8 @@ def link_file_to_case(
                    same case, or nothing is linked. The answer's
                    case_match says which rule matched ("id", "exact" or
                    "case_insensitive")
-        create_backup: Create timestamped backup before writing (default: True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the created link (case, file, covered span)
@@ -12584,7 +12615,8 @@ def link_file_to_case(
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-def delete_coding(coding_id: int, create_backup: bool = True,
+@_ignores_create_backup
+def delete_coding(coding_id: int, create_backup: Optional[bool] = None,
                   allow_hidden_coder: bool = False,
                   confirm_private_note_deletion: bool = False) -> str:
     """Delete a single coded segment from the project database.
@@ -12604,10 +12636,9 @@ def delete_coding(coding_id: int, create_backup: bool = True,
       code_id, file_id) plus a coder_visibility note.
     - Private note (any project): a coding whose memo carries a '#####'
       private section the assistant cannot see is REFUSED unless
-      confirm_private_note_deletion=true, and a backup is ALWAYS taken
-      for such a row even with create_backup=false. Note that this
-      refusal, or the forced backup, tells you that a private note
-      exists on the row (never its content); the owner accepts that.
+      confirm_private_note_deletion=true. Note that this refusal tells
+      you that a private note exists on the row (never its content);
+      the owner accepts that.
     When both apply, both overrides are required and both refusals come
     back in one response.
 
@@ -12616,11 +12647,11 @@ def delete_coding(coding_id: int, create_backup: bool = True,
     to it) or another program is writing to the database; for QualCoder
     4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
-    A backup is created first by default, so the deletion can be undone with
-    restore_backup if needed. When the coding came from an AI coding
-    session of this project (apply_codings), that suggestion is marked
-    removed in its session and the answer names the session
-    (sessions_updated): it can then be approved and applied again, or
+    Exegete takes a backup first, as before every change, so the deletion
+    can be undone with restore_backup if needed. When the coding came
+    from an AI coding session of this project (apply_codings), that
+    suggestion is marked removed in its session and the answer names the
+    session (sessions_updated): it can then be approved and applied again, or
     reopened and edited, and the same passage can be recorded again. Not
     for a hidden coder's row, whose answer stays ids only.
 
@@ -12628,8 +12659,8 @@ def delete_coding(coding_id: int, create_backup: bool = True,
         coding_id: The ctid of the coding to delete. You can find ctids in
                    the output of apply_codings, get_coded_segments, or
                    read_file_with_codings (segment_id).
-        create_backup: Create timestamped backup before deleting (default:
-                   True; ignored, always on, for a row carrying a private note)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to delete a hidden coder's coding
         confirm_private_note_deletion: Override to delete a coding whose
                    memo carries a private note
@@ -12772,9 +12803,9 @@ def _mark_removed_in_sessions(deleted: Dict[str, Any]) -> List[Dict[str, Any]]:
 def list_backups() -> str:
     """List the automatic backups of the currently open project.
 
-    Every write operation (apply_codings, import_text_file, delete_coding,
-    restore_backup and the other write tools) creates a timestamped backup
-    folder next to the project by default, named
+    Exegete takes a backup before every change (apply_codings,
+    import_text_file, delete_coding, restore_backup and the other write
+    tools): a timestamped folder next to the project, named
     '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
     together with QualCoder's own '<project>_BKUP_*' backups found next to
     the project (kind 'qualcoder'), newest first, so you can pick one for
@@ -14367,7 +14398,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "researcher said yes to",
                 "step_5": "Apply approved codings to database (apply_codings: "
                           "bound to the session's project, all-or-nothing, "
-                          "a backup first unless create_backup is false)",
+                          "a backup first, as before every change)",
                 "step_6": "Recover if needed: delete_coding removes a single "
                           "coding (on projects with the coder-visibility "
                           "capability it refuses a hidden coder's row without "
@@ -14472,7 +14503,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "suggestion before applying (Exegete writes what is "
                 "marked approved; it cannot see who approved it)",
                 "Write approved codings to the project (with a backup "
-                "first, unless create_backup is false)",
+                "first, as before every change)",
                 "Writes are refused while the project's lock file is active "
                 "(QualCoder 3.8.2 has the project open, or another "
                 "conversation using Exegete is writing to it) or another "
@@ -14536,7 +14567,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "4. Adjust spans/codes in place with edit_suggestion",
                 "5. Approve/reject with update_suggestion_status",
                 "6. Apply approved codings with apply_codings",
-                "7. A backup is created before writing by default; "
+                "7. Exegete takes a backup before every change; "
                 "delete_coding removes one coding and marks its suggestion "
                 "removed in the session; restore_backup rolls the project "
                 "back (all but its Exegete folder, which a restore keeps)"
@@ -15563,9 +15594,10 @@ def _check_approved_proposals(db_, approved):
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_proposed_codes(coding_session_id: str,
-                          create_backup: bool = True) -> str:
+                          create_backup: Optional[bool] = None) -> str:
     """Create the APPROVED code proposals in the project codebook.
 
     THIS WRITES TO THE DATABASE: each approved proposal becomes a code
@@ -15590,7 +15622,8 @@ def create_proposed_codes(coding_session_id: str,
 
     Args:
         coding_session_id: The session with approved proposals
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the created codes (proposal guid -> real code id, plus
@@ -15733,10 +15766,11 @@ def create_proposed_codes(coding_session_id: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def set_memo(target_type: str, target_id: Optional[int] = None,
              memo: str = Field(...),
-             create_backup: bool = True,
+             create_backup: Optional[bool] = None,
              allow_hidden_coder: bool = False) -> str:
     """Write (or clear) the memo on a code, category, file, coding, or
     case, or the project memo.
@@ -15778,7 +15812,8 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
                    id / coding ctid / case caseid); null, or left out, for
                    'project'
         memo: The memo text ('' clears it)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to write on a hidden coder's coding
                             (target_type 'coding' only)
 
@@ -15833,9 +15868,10 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_journal_entry(name: str, entry: str,
-                      create_backup: bool = True) -> str:
+                      create_backup: Optional[bool] = None) -> str:
     """Add a research journal entry to the project.
 
     THIS WRITES TO THE DATABASE. Journals are free-form research notes
@@ -15850,7 +15886,8 @@ def add_journal_entry(name: str, entry: str,
     Args:
         name: A short unique title for the entry
         entry: The journal text
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the new entry's id, name and date
@@ -15885,11 +15922,12 @@ def add_journal_entry(name: str, entry: str,
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Colours are stored")
 def create_code(name: str, category: Optional[str] = None,
                 color: Optional[str] = None, memo: Optional[str] = None,
                 parent_code_id: Optional[int] = None,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Create a new code in the codebook.
 
     THIS WRITES TO THE DATABASE. Adds a code that can then be applied to
@@ -15935,7 +15973,8 @@ def create_code(name: str, category: Optional[str] = None,
         memo: Optional code definition/memo
         parent_code_id: Optional cid of an existing code to nest under
                         (v16+ sub-code; mutually exclusive with category)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the new code's id, name, category and color, or the
@@ -16036,8 +16075,9 @@ def create_code(name: str, category: Optional[str] = None,
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_ignores_create_backup
 def rename_code(code_id: int, new_name: str,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Rename a code. THIS WRITES TO THE DATABASE. Names are unique.
 
     A new name that matches ANOTHER code case-insensitively is refused
@@ -16056,7 +16096,8 @@ def rename_code(code_id: int, new_name: str,
         code_id: The code's cid
         new_name: The new name (must not collide with another code,
                   case-insensitively)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -16100,8 +16141,9 @@ def rename_code(code_id: int, new_name: str,
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_ignores_create_backup
 def recolor_code(code_id: int, color: str,
-                 create_backup: bool = True) -> str:
+                 create_backup: Optional[bool] = None) -> str:
     """Set a code's colour (#RRGGBB). THIS WRITES TO THE DATABASE.
 
     Colours are stored as the nearest QualCoder palette colour (120 fixed
@@ -16124,7 +16166,8 @@ def recolor_code(code_id: int, color: str,
     Args:
         code_id: The code's cid
         color: Hex colour in #RRGGBB format (snapped onto the palette)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     target = snap_to_palette(validate_color(color))
     code_id = validate_id(code_id, "code_id")
@@ -16170,9 +16213,10 @@ def recolor_code(code_id: int, color: str,
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_ignores_create_backup
 def move_code_to_category(code_id: int,
                           category: Optional[str] = None,
-                          create_backup: bool = True) -> str:
+                          create_backup: Optional[bool] = None) -> str:
     """Move a code into a category (or out of any category).
 
     THIS WRITES TO THE DATABASE. The result names the category the code
@@ -16203,7 +16247,8 @@ def move_code_to_category(code_id: int,
                   Unicode form are ignored; the result names the row it
                   resolved to), or null/omitted to make the code
                   uncategorised
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     category_id = None
     if category is not None:
@@ -16286,10 +16331,11 @@ def move_code_to_category(code_id: int,
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_category(name: str, parent_category: Optional[str] = None,
                     memo: Optional[str] = None,
-                    create_backup: bool = True) -> str:
+                    create_backup: Optional[bool] = None) -> str:
     """Create a code category. THIS WRITES TO THE DATABASE.
 
     Categories group codes (and can nest under a parent category). Names
@@ -16320,7 +16366,8 @@ def create_category(name: str, parent_category: Optional[str] = None,
                          names the row it resolved to); omit for a
                          top-level category
         memo: Optional category memo
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     marker = private_marker_refusal(memo, "memo")
     if marker is not None:
@@ -16389,8 +16436,9 @@ def create_category(name: str, parent_category: Optional[str] = None,
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_ignores_create_backup
 def rename_category(category_id: int, new_name: str,
-                    create_backup: bool = True) -> str:
+                    create_backup: Optional[bool] = None) -> str:
     """Rename a category. THIS WRITES TO THE DATABASE. Names are unique.
 
     A new name that matches ANOTHER category case-insensitively is
@@ -16409,7 +16457,8 @@ def rename_category(category_id: int, new_name: str,
         category_id: The category's catid
         new_name: The new name (must not collide with another category,
                   case-insensitively)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -16450,8 +16499,9 @@ def rename_category(category_id: int, new_name: str,
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_ignores_create_backup
 def move_category(category_id: int, parent_category: Optional[str] = None,
-                  create_backup: bool = True) -> str:
+                  create_backup: Optional[bool] = None) -> str:
     """Reparent a category under another category (or to the top level).
 
     THIS WRITES TO THE DATABASE. The result names the parent the category
@@ -16476,7 +16526,8 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
                          Unicode form are ignored; the result names the
                          row it resolved to), or null/omitted to move to
                          the top level
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_supercatid = None
     if parent_category is not None:
@@ -19104,7 +19155,8 @@ def pseudonymise_source(
     preview_token=<the token>. The token is valid for 60 minutes and only
     while the text and the rows it covers are unchanged; if the project
     changed in between, the execute is refused and you must preview
-    again. A backup is always created first and cannot be turned off.
+    again. Exegete takes a backup first, as before every change; a run
+    that changes nothing takes none.
 
     Deterministic and rule-based. ONLY the names in the mapping are
     replaced, as whole words, case-sensitively unless case_mode says
@@ -20097,9 +20149,10 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
-                   create_backup: bool = True) -> str:
+                   create_backup: Optional[bool] = None) -> str:
     """Attach a note (annotation) to a text span of a file.
 
     THIS WRITES TO THE DATABASE. An annotation is a researcher note
@@ -20122,7 +20175,8 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
         start_pos: 0-based character offset (inclusive)
         end_pos: End offset (exclusive, > start_pos)
         memo: The note text (must be non-empty)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the new annotation (anid, span, note). If it contains
@@ -20168,9 +20222,10 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def update_annotation(annotation_id: int, memo: str,
-                      create_backup: bool = True,
+                      create_backup: Optional[bool] = None,
                       allow_hidden_coder: bool = False) -> str:
     """Edit an annotation's note. AN EMPTY NOTE DELETES THE ANNOTATION.
 
@@ -20205,7 +20260,8 @@ def update_annotation(annotation_id: int, memo: str,
         annotation_id: The annotation's anid (from read_file_with_codings
                        or search_memos)
         memo: The new note text ('' deletes the annotation)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to edit a hidden coder's annotation
     """
     marker = private_marker_refusal(memo, "memo")
@@ -20231,14 +20287,16 @@ def update_annotation(annotation_id: int, memo: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-def delete_annotation(annotation_id: int, create_backup: bool = True,
+@_ignores_create_backup
+def delete_annotation(annotation_id: int,
+                      create_backup: Optional[bool] = None,
                       allow_hidden_coder: bool = False,
                       confirm_private_note_deletion: bool = False) -> str:
     """Delete an annotation by its anid.
 
     THIS WRITES TO THE DATABASE. Removes one annotation (the note on a
-    text span), never the text, codings, or anything else. A backup is
-    created first by default.
+    text span), never the text, codings, or anything else. Exegete takes
+    a backup first, as before every change.
 
     Two guards, each with an explicit override the user must ask for:
     - Hidden coder (projects with the coder-visibility capability that hide
@@ -20250,10 +20308,9 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
       carries ids only plus a coder_visibility note.
     - Private note (any project): an annotation whose note carries a
       '#####' private section the assistant cannot see is REFUSED unless
-      confirm_private_note_deletion=true, and a backup is ALWAYS taken
-      for such a row even with create_backup=false. Note that this
-      refusal, or the forced backup, tells you that a private note
-      exists on the row (never its content); the owner accepts that.
+      confirm_private_note_deletion=true. Note that this refusal tells
+      you that a private note exists on the row (never its content);
+      the owner accepts that.
     When both apply, both overrides are required and both refusals come
     back in one response.
 
@@ -20265,9 +20322,8 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
 
     Args:
         annotation_id: The annotation's anid
-        create_backup: Create a timestamped backup before writing (default
-                       True; ignored, always on, for a row carrying a
-                       private note)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to delete a hidden coder's annotation
         confirm_private_note_deletion: Override to delete an annotation
                        whose note carries a private section
@@ -20301,9 +20357,10 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_case(name: str, memo: Optional[str] = None,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Create a new case (participant/subject) in the project.
 
     THIS WRITES TO THE DATABASE. Cases group data by participant; link
@@ -20330,7 +20387,8 @@ def create_case(name: str, memo: Optional[str] = None,
     Args:
         name: The case name (unique among cases, case-insensitively)
         memo: Optional case memo
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Example:
         "Create a case for participant Dana"
@@ -20502,8 +20560,9 @@ _RENAME_QC40_PARAGRAPH = (
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_ignores_create_backup
 def rename_case(case_id: int, new_name: str,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Rename a case. THIS WRITES TO THE DATABASE. Only the name changes.
 
     As in QualCoder's Manage Cases, only the case's name is written: its
@@ -20538,7 +20597,8 @@ def rename_case(case_id: int, new_name: str,
         case_id: The case's id (caseid)
         new_name: The new name (must not collide with another case,
                   ignoring letter case, spacing and Unicode form)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -21004,9 +21064,10 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_tool_guard
+@_ignores_create_backup
 @_with_guidance(DEPRECATED_RENAME_BACK, before="The result carries")
 def rename_file(file_id: int, new_name: str,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Rename a file's entry. THIS WRITES TO THE DATABASE. Only the name.
 
     Exactly as QualCoder's Manage Files "Rename database entry": only the
@@ -21064,7 +21125,8 @@ def rename_file(file_id: int, new_name: str,
     Args:
         file_id: The file's id
         new_name: The new name
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     file_id = validate_id(file_id, "file_id")
     if not isinstance(new_name, str):
@@ -21125,13 +21187,14 @@ def rename_file(file_id: int, new_name: str,
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_tool_guard
+@_ignores_create_backup
 @_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
              when=lambda a: _is(a.get("applies_to"), "journal"))
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_attribute_type(name: str, applies_to: str,
                           value_type: str = "character",
                           memo: Optional[str] = None,
-                          create_backup: bool = True) -> str:
+                          create_backup: Optional[bool] = None) -> str:
     """Define a new attribute for cases, files or journals.
 
     THIS WRITES TO THE DATABASE. Attributes are typed variables attached
@@ -21162,7 +21225,8 @@ def create_attribute_type(name: str, applies_to: str,
                     query_by_attribute. There is no path back from numeric data to
                     character-only in Exegete, so choose carefully.
         memo: Optional description of what the attribute captures
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Example:
         "Add a numeric Age attribute for cases"
@@ -21195,10 +21259,11 @@ def create_attribute_type(name: str, applies_to: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
+@_ignores_create_backup
 @_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
              when=lambda a: _is(a.get("target_type"), "journal"))
 def set_attribute(target_type: str, target_id: int, attribute_name: str,
-                  value: str, create_backup: bool = True) -> str:
+                  value: str, create_backup: Optional[bool] = None) -> str:
     """Set (or clear) an attribute value on a case, file or journal.
 
     THIS WRITES TO THE DATABASE. The attribute must already exist (see
@@ -21227,7 +21292,8 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
         attribute_name: The attribute to set (exact name; see
                         list_attribute_types)
         value: The value as a string ("" clears/unsets)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Example:
         "Set Age to 34 for case 2"

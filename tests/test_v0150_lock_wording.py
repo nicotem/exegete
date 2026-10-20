@@ -292,8 +292,13 @@ class TestTheSixDescriptions:
 
     @pytest.mark.parametrize("tool", sorted(BEFORE))
     def test_no_description_is_longer_than_before(self, served, tool):
+        # v0.15.1's ignored create_backup lengthens rename_case's and
+        # rename_file's line on it: put back, so that this change's own
+        # words are measured
+        from test_v0151_ignored_argument import before_the_ignored_argument
         before = BEFORE[tool][0 if sys.version_info >= (3, 13) else 1]
-        assert len(served[tool]) <= before, (tool, len(served[tool]))
+        text = before_the_ignored_argument(tool, served[tool])
+        assert len(text) <= before, (tool, len(text))
 
     @pytest.mark.parametrize("tool", sorted(set(NEW_WORDS) - {
         "rename_case", "rename_file"}))
@@ -316,10 +321,13 @@ class TestTheSixDescriptions:
         before = {"start_coding_session": (6042, 4908, "662931b185aced31"),
                   "restore_backup": (2877, 2367, "9014851203733822"),
                   "delete_coding": (2867, 2307, "be5e2d1ea0338a1e")}
+        # and v0.15.1's ignored create_backup: put back first
+        from test_v0151_ignored_argument import before_the_ignored_argument
         server._apply_toolset("full")
         for name, (length, solid, digest) in before.items():
             text = put_back_the_lock_wording(
-                name, server.mcp.original_descriptions[name])
+                name, before_the_ignored_argument(
+                    name, server.mcp.original_descriptions[name]))
             got = _fingerprint(text)
             assert got[1:] == (solid, digest), name
             if sys.version_info[:2] == (3, 13):

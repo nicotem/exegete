@@ -389,8 +389,8 @@ server drops the marker and what follows it silently, which here emptied
 notes that began with it ("make this note private"), so the private part
 stays the researcher's to write in QualCoder.
 Deleting a coding or annotation whose memo carries a private note is
-refused unless `confirm_private_note_deletion=true`, and for such a row
-a backup is always taken even with `create_backup=false`; the refusal
+refused unless `confirm_private_note_deletion=true`; with it the row is
+deleted after a backup, as every change is. The refusal
 says only that a private note exists, never its content. One exception,
 chosen for parity with QualCoder's own exports: exported files
 (`export_refi_qda`, `export_codebook`, `export_coded_segments_report`)
@@ -594,7 +594,7 @@ Apply the approved codings to the project
 Claude will:
 - Verify every approved suggestion against the project (right project,
   files/codes exist, text matches positions)
-- Create a backup first (by default)
+- Create a backup first, as before every change
 - Write approved codings to database (all-or-nothing)
 - Report success with coding IDs
 - Check the results, in the conversation, on your own screen or in QualCoder: read them back here, ask for the file to be opened for reading (`open_file_for_reading`: a page in your browser shows them in the text), or open the project in QualCoder to see them in the text (a QualCoder 4.0 window that was already open will not show them until the project is reopened)
@@ -617,7 +617,7 @@ all but its `Exegete` folder, which a restore keeps.
   Nothing sorts or totals by the reading. An applied coding's memo says
   which, in words
 - **Session Persistence**: Resume work at any time, all sessions saved to disk
-- **Automatic Backups**: Every write creates a timestamped backup first, unless you pass `create_backup=false`
+- **Automatic Backups**: Exegete takes a timestamped backup before every change; `create_backup` no longer does anything (it is still accepted until the release on method, and a call that gives it is told so)
 - **Workspace Isolation**: Work on copies in dedicated workspace folder
 - **Direct Database Writes**: No import/export step; codings are in the project at once: the next read shows them, and QualCoder shows them when it next opens the project (an open QualCoder 4.0 window does not show Exegete's changes until the project is reopened)
 - **Granular Control**: Approve, reject or reopen individual suggestions by GUID; a GUID the session does not hold is named, not passed over
@@ -989,10 +989,10 @@ declares, and each tool's own description says what each one does.
 > copy_project_to_workspace, delete_coding, list_backups, and the two
 > earlier names below.
 > Required for local models, optional elsewhere; unknown values fail
-> loudly at startup. Measured for 0.15.0 (the
+> loudly at startup. Measured for 0.15.1 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 207,000 characters for `full`, roughly 52k
+> definitions run to about 208,000 characters for `full`, roughly 52k
 > tokens at four characters per token, and about 68,000 characters for
 > `core`, roughly 17k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those

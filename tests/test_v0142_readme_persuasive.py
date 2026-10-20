@@ -369,8 +369,11 @@ def test_the_path_of_a_coding():
     # each step a behaviour of the server
     status = inspect.signature(server.update_suggestion_status).parameters
     assert {"approve", "reject", "reopen"} <= set(status)
+    # v0.15.1: a backup before every change, whatever create_backup says;
+    # the argument is accepted and ignored, its default null
+    # (tests/test_v0151_ignored_argument.py)
     apply = inspect.signature(server.apply_codings)
-    assert apply.parameters["create_backup"].default is True
+    assert apply.parameters["create_backup"].default is None
     doc = " ".join(server.apply_codings.__doc__.split())
     assert "re-validated BEFORE the backup" in doc
     assert "single all-or-nothing transaction" in doc
@@ -673,10 +676,12 @@ def test_the_assistants_table():
 
 def _measured():
     # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
-    # carries them (test_toolset_modes.py pins them)
+    # carries them (test_toolset_modes.py pins them); v0.15.1 moves them
+    # again (create_backup accepted and ignored), so they are in the
+    # Unreleased part above 0.15.0's
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [0.15.0-alpha]",
-                           "## [0.14.3-alpha]"))
+    entry = _flat(_between(changelog, "## [Unreleased]",
+                           "## [0.15.0-alpha]"))
     measured = entry[entry.index("### Measured"):]
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",
                       measured)
@@ -763,7 +768,7 @@ def test_the_advanced_section_rests_on_the_code():
                   "clears old ones.",
                   "It reads a project's SQLite database read-only; each "
                   "tool that writes opens its own connection, after a "
-                  "backup (by default), and refuses while the project's "
+                  "backup, and refuses while the project's "
                   "lock file is active (QualCoder 3.8.2 has the project "
                   "open, or another conversation using Exegete is writing "
                   "to it).",

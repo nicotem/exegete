@@ -183,8 +183,10 @@ class TestTheRegistry:
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         exact = sys.version_info[:2] == (3, 13)
+        # v0.15.1's ignored create_backup: put back first
+        from test_v0151_ignored_argument import before_the_ignored_argument
         for name, (length, solid, digest) in BEFORE_THE_RENAME.items():
-            text = registered[name]
+            text = before_the_ignored_argument(name, registered[name])
             # explain_ai_coding_tools' notice names the deprecated topic
             assert not EARLIER.search(_flat(text).replace(
                 _flat(server.DEPRECATED_HELP_TOPICS), "")), name

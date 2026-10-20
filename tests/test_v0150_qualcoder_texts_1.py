@@ -553,10 +553,15 @@ class TestTheThreeDescriptions:
         # paragraph on the files Exegete keeps for the project
         # (tests/test_v0150_private_files.py, which pins it): taken out too
         from test_v0150_private_files import without_the_files_paragraph
+        # and v0.15.1's ignored create_backup changes pseudonymise_source's
+        # sentence on its backup: put back too
+        from test_v0151_ignored_argument import before_the_ignored_argument
+        from test_v0142_description_cut import CHANGED_0151
         assert REMOVED not in descriptions and REMOVED not in raw
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
-            text = before_the_review(raw[name])
+            text = before_the_review(before_the_ignored_argument(
+                name, raw[name]))
             if name == "get_current_project":
                 text = without_the_files_paragraph(text)
                 assert text != raw[name], name
@@ -569,7 +574,7 @@ class TestTheThreeDescriptions:
             if indented:
                 assert len(text) <= length_311, name
             assert name in CHANGED_0150 and WORDS[name] == \
-                CHANGED_0150[name], name
+                CHANGED_0151.get(name, CHANGED_0150[name]), name
 
 
 # ---------------------------------------------------------------------------

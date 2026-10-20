@@ -2940,10 +2940,60 @@ BACKUP_IGNORE_PATTERNS = ("*.lock",) + QUALCODER_BACKUP_IGNORE_PATTERNS
 # (qualcoder_history.ai_data_found).
 AI_DATA_FOLDER = "ai_data"
 
+# The project's audio and video folders, which QualCoder makes for a new
+# project (4.0 __main__.py:2194-2201, at the tag 4.0) and again when it
+# opens one (__main__.py:2879-2884), and into which its import copies
+# recordings (manage_files.py:3048-3053 and 3064-3067). A departure, named
+# (v0.15.1, the owner's decision of 27 September 2026): Exegete's backups
+# leave both folders out, whatever is at their names, and a restore keeps
+# the project's own, never taking the backup's (server._kept_by_restore).
+# QualCoder's save_backup keeps media unless its `backup_av_files`
+# setting (on by default, app.py:1376) is off, and then leaves out six
+# file endings wherever they are (app.py:1745-1752). Exegete never writes
+# in either folder, so a backup taken before a change has no copy of
+# them to lose; a workspace copy keeps them.
+MEDIA_FOLDERS = ("audio", "video")
+
+
+def top_entry_named(top: Union[str, Path], name: str,
+                    names: Tuple[str, ...]) -> bool:
+    """Whether `name`, a top-level entry of a project folder or of a
+    backup (`top`), is at one of `names` as the disk takes names: letter
+    case folded on macOS and Windows (as `private_files` compares the
+    Exegete folder's name), exactly elsewhere, or, where the system
+    compares names exactly and the disk does not (Linux on a disk that
+    ignores letter case), another spelling the disk takes for that name:
+    the same entry, by device and inode, read with `lstat`, never
+    following a link. The one test a backup's leave-out and a restore's
+    keep both make, so the two never disagree (v0.15.1). Never raises."""
+    from . import private_files
+    for wanted in names:
+        if private_files._same_name(name, wanted, None):
+            return True
+        if name.casefold() != wanted.casefold():
+            continue
+        try:
+            info = os.lstat(Path(top) / name)
+            own = os.lstat(Path(top) / wanted)
+        except (OSError, ValueError):
+            continue
+        if info.st_ino and (info.st_dev, info.st_ino) == (own.st_dev,
+                                                         own.st_ino):
+            return True
+    return False
+
+
+def is_media_folder_entry(top: Union[str, Path], name: str) -> bool:
+    """Whether a top-level entry of a project folder or of a backup is at
+    the audio or the video folder's name (MEDIA_FOLDERS), whatever it is:
+    a folder, a file, a link or a junction. Never raises."""
+    return top_entry_named(top, name, MEDIA_FOLDERS)
+
 
 def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
                  database_copied: bool = False,
-                 exclude_real: Optional[set] = None):
+                 exclude_real: Optional[set] = None,
+                 leave_out_top: Tuple[str, ...] = ()):
     """The ignore callback shared by backup_project and copy_project_to_workspace.
 
     Applies BACKUP_IGNORE_PATTERNS and additionally skips any entry that
@@ -2969,6 +3019,11 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
     database into the copy by `_copy_database`. `exclude_real` (fix round
     1) names, by real path, the file a linked `data.qda` points to and
     its side files, which the copy has already taken consistently.
+
+    `leave_out_top` (v0.15.1; a backup passes MEDIA_FOLDERS) names
+    entries at the project's top that are left out whatever they are, a
+    link or a junction included, matched by `top_entry_named`: never
+    copied, never followed, never reported as skipped.
     """
     root_real = os.path.normcase(os.path.realpath(project_root))
     patterns = shutil.ignore_patterns(*BACKUP_IGNORE_PATTERNS)
@@ -2990,9 +3045,15 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
 
     def _ignore(dirpath, names):
         ignored = set(patterns(dirpath, names))
-        if database_copied and \
-                os.path.normcase(os.path.abspath(dirpath)) == root_norm:
+        at_top = os.path.normcase(os.path.abspath(dirpath)) == root_norm
+        if database_copied and at_top:
             ignored.update(n for n in names if n in DATABASE_FILES)
+        if leave_out_top and at_top:
+            # Before the links are looked at, so a link at one of these
+            # names is left out, not reported as skipped
+            ignored.update(n for n in names
+                           if top_entry_named(project_root, n,
+                                              leave_out_top))
         if exclude_real:
             ignored.update(
                 n for n in names
@@ -3357,7 +3418,9 @@ def _copy_database(source: Path, dest: Path,
 
 def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
                        report: Optional[Dict[str, Any]] = None,
-                       database_later: bool = False) -> Optional[Path]:
+                       database_later: bool = False,
+                       leave_out_top: Tuple[str, ...] = ()
+                       ) -> Optional[Path]:
     """Copy a project folder into `dest`, an empty folder the caller has
     just claimed (and removes on any failure): the database
     consistently, the rest as before. A data.qda that is a link inside
@@ -3370,7 +3433,11 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
     is not copied here: the link checks are made as before, the
     database and its side files are left out of the copy, and the file
     to copy it from is returned, for `StartedBackup.finish` to copy by
-    `_copy_database` (None when the project has no data.qda)."""
+    `_copy_database` (None when the project has no data.qda).
+
+    `leave_out_top` names the entries at the project's top left out of
+    the copy, whatever they are (`_copy_ignore`): a backup passes
+    MEDIA_FOLDERS, a workspace copy nothing."""
     database = source / "data.qda"
     exclude_real: set = set()
     database_source: Optional[Path] = None
@@ -3394,7 +3461,8 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
         source, dest, dirs_exist_ok=True,
         ignore=_copy_ignore(source, skipped,
                             database_copied=database_source is not None,
-                            exclude_real=exclude_real))
+                            exclude_real=exclude_real,
+                            leave_out_top=leave_out_top))
     _withhold_exegete_folder_links(source, skipped, report)
     return database_source if database_later else None
 
@@ -3695,7 +3763,8 @@ def start_backup(project_path: Union[str, Path],
         raise OSError(f"Backup failed: {error_label(e)}") from None
     try:
         database_source = _copy_project_tree(project_path, partial, skipped,
-                                             report, database_later=True)
+                                             report, database_later=True,
+                                             leave_out_top=MEDIA_FOLDERS)
     except BackupWithoutDatabaseError:
         # The copy would hold no database (fix round 1): no backup, so
         # nothing may be written
@@ -3720,7 +3789,8 @@ def backup_project(project_path: Union[str, Path],
 
     The whole project tree is copied, ai_data/ included, minus
     BACKUP_IGNORE_PATTERNS (QualCoder's own backup ignore set plus
-    *.lock; see the constant above); the database by SQLite's own copy.
+    *.lock; see the constant above) and the audio and video folders
+    (MEDIA_FOLDERS, v0.15.1); the database by SQLite's own copy.
     Symlinks pointing outside the project folder, dangling symlinks, and
     in-project symlink loops are skipped rather than followed (S-P1, see
     _copy_ignore).
@@ -4791,9 +4861,10 @@ class QualcoderDatabase:
                 "project is damaged. A backup made before the damage "
                 "still has the views: restoring it (list_backups, "
                 "restore_backup) takes the project back to that "
-                "backup's state, all but its Exegete folder, which a "
-                "restore keeps; QualCoder 4.0, if you use it, recreates "
-                "the views when it opens the project."))
+                "backup's state, all but its Exegete, audio and video "
+                "folders, which a restore keeps; QualCoder 4.0, if you "
+                "use it, recreates the views when it opens the "
+                "project."))
         return view
 
     def _visibility_in_force(self) -> Optional[bool]:

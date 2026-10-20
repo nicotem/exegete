@@ -69,6 +69,7 @@ from .database import (
     private_note_refusal,
     MAX_CODER_NAME_LENGTH,
     backup_project,
+    is_media_folder_entry,
     backup_sort_key,
     is_this_servers_backup_name,
     BACKUP_DATED_BY_NAME,
@@ -12108,9 +12109,16 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
     return ctx, names_stop
 
 
-def _folder_megabytes(folder: Path) -> float:
+def _folder_megabytes(folder: Path, leave_out_media: bool = False) -> float:
+    """The size of the files in a folder, links not followed; with
+    `leave_out_media`, without the entries at its top a backup leaves out
+    (`database.is_media_folder_entry`, v0.15.1)."""
     total = 0
-    for root, _dirs, files in os.walk(folder):
+    for root, dirs, files in os.walk(folder):
+        if leave_out_media and root == os.fspath(folder):
+            dirs[:] = [d for d in dirs if not is_media_folder_entry(folder, d)]
+            files = [f for f in files
+                     if not is_media_folder_entry(folder, f)]
         for name in files:
             try:
                 total += os.lstat(os.path.join(root, name)).st_size
@@ -12122,15 +12130,18 @@ def _folder_megabytes(folder: Path) -> float:
 def _import_backup_note(project_folder: Path, adding_bytes: int):
     backups = [b for b in _collect_backups(project_folder)
                if b["kind"] == OWN_BACKUP_KIND]
-    return {"backup": "one backup of the whole project is taken first, "
-                      "before anything is written",
-            "backup_size_mb": _folder_megabytes(project_folder),
+    return {"backup": "one backup of the project, its audio and video "
+                      "folders aside, is taken first, before anything is "
+                      "written",
+            "backup_size_mb": _folder_megabytes(project_folder,
+                                                leave_out_media=True),
             "backups_already_take_mb": round(
                 sum(b["size_mb"] for b in backups), 1),
             "this_batch_adds_mb": round(adding_bytes / (1024 * 1024), 1),
-            "backup_tip": "Each import takes a backup of the whole "
-                          "project, originals included, so bringing "
-                          "several files in at once keeps backups few."}
+            "backup_tip": "Each import takes a backup of the project, its "
+                          "audio and video folders aside, originals "
+                          "included, so bringing several files in at once "
+                          "keeps backups few."}
 
 
 def _import_arguments_error(paths, memo) -> Optional[str]:
@@ -12925,11 +12936,12 @@ def list_backups() -> str:
     QualCoder's do, so for the hour after the clocks go back two backups
     can be listed out of order.
 
-    Backups carry the whole project tree, ai_data/ included (QualCoder
-    4.0's AI prompt library and chat history are non-regenerable user
-    data), but exclude the regenerable vector-search database
-    ai_data/search.sqlite (which duplicates every text source in
-    plaintext) and sqlite sidecar files, like QualCoder's own backups;
+    Backups carry the whole project tree except its audio and video
+    folders, ai_data/ included (QualCoder 4.0's AI prompt library and
+    chat history are non-regenerable user data), but exclude the
+    regenerable vector-search database ai_data/search.sqlite (which
+    duplicates every text source in plaintext) and sqlite sidecar
+    files, like QualCoder's own backups;
     QualCoder rebuilds search.sqlite on project open. The project
     database is copied with SQLite's own online backup, so a backup
     taken while QualCoder is writing holds what was last committed, and
@@ -13012,8 +13024,8 @@ QUALCODER_38_BACKUPS_NOTE = (
 # privacy reader): the note says so, since 3.8's store holds the sources'
 # text as 4.0's index does, and PRIVACY.md names it.
 BACKUPS_HOLD_NOTE = (
-    "Backups hold the whole project folder, except lock files and "
-    "SQLite's working files.")
+    "Backups hold the whole project folder, except its audio and video "
+    "folders, lock files and SQLite's working files.")
 AI_DATA_BACKUPS_NOTE = (
     "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
     "also holds its AI prompt library and chat history, which backups "
@@ -13198,16 +13210,17 @@ def prune_backups(keep_last: Optional[int] = None,
     A reason to prune beyond disk space: a backup taken before a
     `pseudonymise_source` run holds the text as it was, real names
     included, and so does any `pseudonyms.json` the project carries,
-    since a backup copies the whole tree. A project is not pseudonymised
+    since a backup copies that file too. A project is not pseudonymised
     while those copies sit beside it, so once a run is verified, pruning
     is part of finishing it. Removing them also removes your recovery
     point, which is the trade; keep at least one until you are sure.
 
     This does not touch the live project database, so it works even while
-    QualCoder has the project open. Each backup is a whole project tree,
-    ai_data/ included (minus the regenerable search.sqlite and sqlite
-    sidecars, as in QualCoder's own backups), so pruning also removes
-    those recovery points for the AI prompt library and chat history.
+    QualCoder has the project open. Each backup is the project tree but
+    its audio and video folders, ai_data/ included (minus the
+    regenerable search.sqlite and sqlite sidecars, as in QualCoder's own
+    backups), so pruning also removes those recovery points for the AI
+    prompt library and chat history.
 
     Args:
         keep_last: Keep only this many of Exegete's newest backups (0
@@ -13623,6 +13636,18 @@ def _is_exegete_entry(top: Path, name: str) -> bool:
         own.st_dev, own.st_ino)
 
 
+def _kept_by_restore(folder: Path, name: str) -> bool:
+    """Whether a restore keeps the top-level entry `name` of the project
+    folder (or leaves it out of the backup it copies from, `folder`): the
+    entry at the Exegete folder's name (`_is_exegete_entry`), or one at
+    the audio or the video folder's name, whatever it is (v0.15.1). The
+    media test is the one a backup's leave-out makes
+    (`database.is_media_folder_entry`), so what a backup leaves out is
+    exactly what a restore keeps. Never raises."""
+    return (_is_exegete_entry(folder, name)
+            or is_media_folder_entry(folder, name))
+
+
 def _holds_exegete_folder(folder: Path) -> bool:
     """Whether a project folder, or a backup, has the project's Exegete
     folder: a real folder, read with `lstat`, at a top-level name
@@ -13673,18 +13698,19 @@ def _gone_already(function, path, failure) -> None:
 
 
 def _clear_all_but_exegete_folder(project_folder: Path) -> None:
-    """Remove every top-level entry of the project folder but the one at
-    the Exegete folder's name (each name `_is_exegete_entry` takes,
-    whatever is there: the folder, a file, a link), which a restore
-    leaves where it is, as it is: nothing in it is read, copied or
-    removed (v0.15.0). A link or a junction is removed as a link, never
+    """Remove every top-level entry of the project folder but those a
+    restore keeps (`_kept_by_restore`: the one at the Exegete folder's
+    name, v0.15.0, and those at the audio and the video folder's names,
+    v0.15.1, whatever is there: a folder, a file, a link), which a
+    restore leaves where they are, as they are: nothing in them is read,
+    copied or removed. A link or a junction is removed as a link, never
     followed; a folder with everything in it. An entry another program
     removed since the listing (a temporary file, a .DS_Store) is gone
     already and passed over. Raises on any other failure, which the
     restore's recovery from the safety backup answers."""
     with os.scandir(project_folder) as entries:
         going = [entry.path for entry in entries
-                 if not _is_exegete_entry(project_folder, entry.name)]
+                 if not _kept_by_restore(project_folder, entry.name)]
     for path in going:
         try:
             info = os.lstat(path)
@@ -13707,16 +13733,20 @@ def _clear_all_but_exegete_folder(project_folder: Path) -> None:
 def _copy_around_exegete_folder(source: Path, project_folder: Path,
                                 *, leave_out_folder: bool) -> None:
     """Copy `source` (the backup; in the recovery, the safety backup) into
-    the project folder, around the entry `_clear_all_but_exegete_folder`
-    left at the Exegete folder's name. With `leave_out_folder`, the
-    source's top-level entry at that name (each name `_is_exegete_entry`
-    takes) is left out, whatever it is; nothing below the top is. Any
-    other entry of the source that would land on something still in the
-    project raises before anything is copied, rather than mixing the
-    source's files into the folder kept. Raises on any failure."""
+    the project folder, around the entries `_clear_all_but_exegete_folder`
+    left. The source's top-level entries at the audio and the video
+    folder's names are always left out, whatever they are (v0.15.1: the
+    project's own are kept); with `leave_out_folder`, so is its entry at
+    the Exegete folder's name (each name `_is_exegete_entry` takes);
+    nothing below the top is. Any other entry of the source that would
+    land on something still in the project raises before anything is
+    copied, rather than mixing the source's files into a folder kept.
+    Raises on any failure."""
     top = os.path.normcase(os.path.abspath(source))
 
     def leave_out(name: str) -> bool:
+        if is_media_folder_entry(source, name):
+            return True
         return leave_out_folder and _is_exegete_entry(source, name)
 
     for name in os.listdir(source):
@@ -13730,6 +13760,42 @@ def _copy_around_exegete_folder(source: Path, project_folder: Path,
         return {name for name in names if leave_out(name)}
     shutil.copytree(source, project_folder, ignore=ignore,
                     dirs_exist_ok=True)
+
+
+# Said on the preview of restoring one of QualCoder's own backups that
+# holds files in its audio or video folder (v0.15.1)
+MEDIA_KEPT_NOTE = (
+    "The project's audio and video folders are kept as they are, not taken "
+    "from the backup; the backup's copies ({files}) stay in it.")
+
+
+def _media_kept_note(count: int) -> str:
+    """MEDIA_KEPT_NOTE with its count: "1 file", "3 files"."""
+    return MEDIA_KEPT_NOTE.format(
+        files=f"{count} file" if count == 1 else f"{count} files")
+
+
+def _media_files_in(folder: Path) -> int:
+    """How many files a backup holds in the entries at its top that a
+    restore leaves out as audio or video (`is_media_folder_entry`): a
+    folder's files at any depth, links never followed; a file there
+    counts one, a link none. Names nothing. Never raises."""
+    count = 0
+    try:
+        with os.scandir(folder) as entries:
+            tops = [entry for entry in entries
+                    if is_media_folder_entry(folder, entry.name)]
+        for entry in tops:
+            if entry.is_symlink() or reading_folder.is_link(Path(entry.path)):
+                continue
+            if entry.is_file(follow_symlinks=False):
+                count += 1
+            elif entry.is_dir(follow_symlinks=False):
+                for _root, _dirs, files in os.walk(entry.path):
+                    count += len(files)
+    except Exception:                                   # noqa: BLE001
+        return count
+    return count
 
 
 def _project_holds_exegete_entry(project_folder: Path) -> bool:
@@ -13789,7 +13855,7 @@ def restore_backup(backup_path: str,
 
     The project's Exegete folder (files the researcher fills in) is kept
     as it is, never taken from the backup; the preview says when either
-    has one.
+    has one. So are its audio and video folders.
 
     Args:
         backup_path: Path to the backup folder (from list_backups)
@@ -13868,7 +13934,12 @@ def restore_backup(backup_path: str,
                     "proceed."
         }
         if qualcoder_made:
+            # A restore keeps the project's audio and video folders and
+            # never takes the backup's (v0.15.1): said with a count when
+            # the backup holds files there, never a name
+            held = _media_files_in(backup_folder)
             preview["note"] = (
+                _media_kept_note(held) if held else
                 "This is a QualCoder-made backup: depending on QualCoder's "
                 "settings it may not contain audio/video media files."
             )
@@ -14071,8 +14142,9 @@ def restore_backup(backup_path: str,
                          error_label(recovery_error))
         failed: Dict[str, Any] = {
             "error": "Restore failed. The pre-restore state is preserved in "
-                     "the safety backup; copy it back over the project folder "
-                     "to recover.",
+                     "the safety backup; copy its contents back into the "
+                     "project folder to recover, leaving its audio and "
+                     "video folders as they are.",
             "safety_backup": str(safety_backup),
         }
         # The project's Exegete folder is never removed by the swap or the
@@ -14519,7 +14591,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "'#####' private note without "
                           "confirm_private_note_deletion); list_backups + "
                           "restore_backup roll the project back (all but its "
-                          "Exegete folder, which a restore keeps). The "
+                          "Exegete, audio and video folders, which a restore "
+                          "keeps). The "
                           "destructive codebook tools, restore_backup and "
                           "prune_backups are two-step: call without "
                           "preview_token to see exactly what would change and "
@@ -14683,7 +14756,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "7. Exegete takes a backup before every change; "
                 "delete_coding removes one coding and marks its suggestion "
                 "removed in the session; restore_backup rolls the project "
-                "back (all but its Exegete folder, which a restore keeps)"
+                "back (all but its Exegete, audio and video folders, "
+                "which a restore keeps)"
             ]
         },
         "edit_suggestion": {

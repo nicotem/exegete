@@ -142,6 +142,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conversation stay; the install and update commands carry the optional part for PDF and
   EPUB; and the account of the extension's folder setting after an
   update says what was seen, and where.
+- **Backups leave out the audio and video folders, and a restore keeps
+  the project's.** Exegete's backups no longer copy the project's
+  `audio` and `video` folders, which no Exegete tool changes, and
+  `restore_backup` leaves the project's own as they are, never taking a
+  backup's: a backup is smaller and quicker, and a recording added since
+  the backup stays. This departs from QualCoder, whose backups keep
+  audio and video unless its setting for them is off. A backup made by
+  an earlier version, or by QualCoder, still holds its copies, which a
+  restore leaves in it; restoring one of QualCoder's that holds some
+  says how many files. A recording the project no longer has may now be
+  kept only in such a backup, and pruning the backup removes it: copy it
+  out first if you need it. Restoring a backup made by this release
+  with Exegete 0.15.0 (two versions on one computer, or after going
+  back) leaves the project without its audio and video folders; they
+  are then only in the safety backup 0.15.0 takes first. When a restore
+  fails and cannot put the project back, its answer now says to copy
+  the safety backup's contents into the project folder, leaving the
+  audio and video folders as they are.
 
 ### Fixed
 
@@ -305,20 +323,20 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (82 tools) | 208,327 | 206,624 | 218,855 | 217,084 |
-| `core` (25 tools) | 68,483 | 68,258 | 71,923 | 71,690 |
+| `full` (82 tools) | 208,427 | 206,624 | 218,963 | 217,084 |
+| `core` (25 tools) | 68,519 | 68,258 | 71,963 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 208,327 characters (about 52.1k tokens
-  at chars/4) over 82 tools, and core = 68,483 (about 17.1k) over 25,
+- Serialised tool JSON: full = 208,427 characters (about 52.1k tokens
+  at chars/4) over 82 tools, and core = 68,519 (about 17.1k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 218,855 and
-  71,923. Against 0.15.0's figures (206,624 and 68,258 on 3.13), two
+  which also gives exactly 0.15.0's figures for its tree), 218,963 and
+  71,963. Against 0.15.0's figures (206,624 and 68,258 on 3.13), three
   changes moved them. The first, `create_backup` accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -338,9 +356,13 @@ schemas together, as below; the brief as `read_brief` returns it):
   them (1,645 and 233 on 3.11). The second, `export_refi_qda`'s
   sentence, which names its known faults instead of its removal: 126
   characters more in `full` on both interpreters (`core` does not serve
-  the tool). No other tool's entry changed. The full brief says that
-  Exegete takes a backup before every change, rather than "unless the
-  researcher asks for none": 14 characters fewer.
+  the tool). The third, `list_backups`, `prune_backups` and
+  `restore_backup` say that backups leave out the audio and video
+  folders and that a restore keeps them: 100 characters more in `full`
+  and 36 in `core` (108 and 40 on 3.11). No other tool's entry
+  changed. The full brief says that Exegete takes a backup before every
+  change, rather than "unless the researcher asks for none": 14
+  characters fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
   16,384 through its tool search: in `full`, 32 descriptions pass 2,048
   (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096 (5 on

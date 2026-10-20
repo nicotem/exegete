@@ -512,6 +512,12 @@ def before_the_ignored_argument(name, description):
     return description
 
 
+# The descriptions v0.15.1's piece on audio and video in backups changed
+# as well, whose 0.15.0 words this piece's put-back cannot give back
+ALSO_CHANGED_BY_MEDIA_OUT = {"list_backups", "prune_backups",
+                             "restore_backup"}
+
+
 def test_the_descriptions_put_back_are_0150s():
     """A guard for the put-back the older tests use: with it, each
     description this piece changed is as 0.15.0 served it
@@ -520,8 +526,19 @@ def test_the_descriptions_put_back_are_0150s():
                                             _fingerprint)
     server._apply_toolset("full")
     for name in CHANGED_0151:
-        got = _fingerprint(before_the_ignored_argument(
-            name, server.mcp.original_descriptions[name]))
+        put_back = before_the_ignored_argument(
+            name, server.mcp.original_descriptions[name])
+        if name in ALSO_CHANGED_BY_MEDIA_OUT:
+            # v0.15.1, audio and video left out of backups, changed these
+            # too (tests/test_v0151_media_out.py pins their words): the
+            # put-back finds this piece's lines in list_backups and gives
+            # back 0.15.0's, and leaves the other two as they are
+            if name == "list_backups":
+                assert "Every write operation (apply_codings, " in put_back
+            else:
+                assert put_back == server.mcp.original_descriptions[name]
+            continue
+        got = _fingerprint(put_back)
         assert got[1:] == CHANGED_0150[name][1:], name
         if sys.version_info[:2] == (3, 13):
             assert got[0] == CHANGED_0150[name][0], name

@@ -100,8 +100,9 @@ EXEGETE_BACKUPS = (
 RETENTION = " (retention never touches QualCoder's own backups)"
 # Fix round 1: what a backup holds, always; what it adds on ai_data/, on
 # its sign, in the same note
-BACKUPS_HOLD = ("Backups hold the whole project folder, except lock files "
-                "and SQLite's working files.")
+# v0.15.1: and the audio and video folders, which backups leave out
+BACKUPS_HOLD = ("Backups hold the whole project folder, except its audio "
+                "and video folders, lock files and SQLite's working files.")
 AI_DATA = (
     "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
     "also holds its AI prompt library and chat history, which backups "

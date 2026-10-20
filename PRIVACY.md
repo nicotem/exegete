@@ -165,9 +165,9 @@ What stays local, always, unless a sync service copies the folder it is in:
   when the name came from its settings at creation), and the AI coder
   name in Exegete's settings at the time. It travels with the
   project folder, its backups and its workspace copies, and a restore
-  rolls it back with the rest of the project (all but its `Exegete`
-  folder, which a restore keeps). It is returned into the
-  conversation by create_project when it stores the name,
+  rolls it back with the rest of the project (all but its `Exegete`,
+  `audio` and `video` folders, which a restore keeps). It is returned
+  into the conversation by create_project when it stores the name,
   get_current_project, select_project and
   set_project_ai_coder_name, and the current name appears on every write
   result; treat the note like any other project text the model can read.
@@ -1174,7 +1174,8 @@ Seven cautions:
   reading the preview, keeps you asked each time. Codex's default mode
   runs it without asking.
 - **A file imported by mistake** stays in every backup taken after it,
-  since a backup copies the whole project. Restoring the backup taken
+  since a backup copies the project (all but its audio and video
+  folders). Restoring the backup taken
   just before the import takes it back while nothing else has changed.
 - **More of a document comes in than in QualCoder**: a Word,
   OpenDocument or RTF file's footnotes, endnotes, comments, headers and
@@ -2074,8 +2075,9 @@ will ask, and the summary above depends on them:
   touch, and where the names therefore stay, is stated by the tool's own
   preview as counts, and repeated here because it decides what you may
   send afterwards:
-  - **The backup.** Every run copies the whole project first, and that
-    copy holds the text as it was, real names included. Backups sit
+  - **The backup.** Every run copies the project first (all but its
+    audio and video folders), and that copy holds the text as it was,
+    real names included. Backups sit
     beside the project until you remove them; `list_backups` shows them
     and `prune_backups` removes Exegete's own. A project you are
     about to share is not pseudonymised while its backups are beside it.
@@ -2085,11 +2087,11 @@ will ask, and the summary above depends on them:
     the project (Exegete's, and QualCoder's if you use it).
     Exegete writes it only when asked, in QualCoder's own format,
     and removes or replaces it only by a restore: `restore_backup` rolls
-    the project back (all but its `Exegete` folder, which a restore
-    keeps), this file with it, so restoring a backup taken
-    before a save takes the file out of the project, and restoring one
-    that holds another version puts that one back. The restore result
-    says so when the file appears, disappears or changes, and the one
+    the project back (all but its `Exegete`, `audio` and `video`
+    folders, which a restore keeps), this file with it, so restoring a
+    backup taken before a save takes the file out of the project, and
+    restoring one that holds another version puts that one back. The
+    restore result says so when the file appears, disappears or changes, and the one
     the project had stays in the pre-restore safety backup, which
     `prune_backups` can remove; its preview names any backup it would
     remove that holds a `pseudonyms.json` which neither the project nor

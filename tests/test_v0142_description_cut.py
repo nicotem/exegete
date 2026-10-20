@@ -729,6 +729,13 @@ CHANGED_0150 = {
 # deprecation of create_backup=false (gone), list_backups' first
 # sentence and pseudonymise_source's sentence on its backup, which adds
 # that a run that changes nothing takes none
+# v0.15.1, audio and video left out of backups
+# (tests/test_v0151_media_out.py): list_backups and prune_backups say
+# that a backup holds the project but its audio and video folders, and
+# prune_backups that a backup copies pseudonyms.json "too" rather than
+# "the whole tree"; restore_backup that a restore keeps the two folders
+# as it keeps the Exegete folder. Their lines above stand for the
+# release they belong to.
 CHANGED_0151 = {
     "add_annotation": (1635, 1327, "4bbbbadf442ce4d9"),
     "add_journal_entry": (1075, 864, "12671d098694fc7f"),
@@ -742,15 +749,17 @@ CHANGED_0151 = {
     "delete_coding": (2772, 2226, "20b73b09f4af1cfc"),
     "import_text_file": (3979, 2949, "32c2ba85d34a6301"),
     "link_file_to_case": (1781, 1353, "5b8da085c5673f75"),
-    "list_backups": (2164, 1819, "2d9decd0dc2f1483"),
+    "list_backups": (2199, 1848, "6d8bf3c3ee42bdaf"),
     "move_category": (1398, 1072, "cbf3cb5c7691d6b2"),
     "move_code_to_category": (1735, 1370, "aaea0c1644efe794"),
+    "prune_backups": (3057, 2486, "5b72c196f9840739"),
     "pseudonymise_source": (17825, 13103, "e26b83009d0c054a"),
     "recolor_code": (1293, 1061, "1379964b6a5e9ead"),
     "rename_case": (2124, 1733, "39675c0d95087246"),
     "rename_category": (998, 808, "47f306f452b8c7d5"),
     "rename_code": (968, 778, "d44768fcb8687026"),
     "rename_file": (3469, 2859, "2a48298f73e57c30"),
+    "restore_backup": (2913, 2396, "d1d4e9ebe90c004e"),
     "set_attribute": (1747, 1411, "6926f03ebdf6151c"),
     "set_memo": (2610, 2080, "38ff500521558e9d"),
     "update_annotation": (1990, 1631, "ce66fc0d896a7302"),

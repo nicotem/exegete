@@ -544,10 +544,10 @@ It reads a project's SQLite database read-only; each tool that writes
 opens its own connection, after a backup Exegete takes itself, and refuses
 while the project's lock file is active (QualCoder 3.8.2 has the
 project open, or another conversation using Exegete is writing to it). Each backup copies the
-whole project folder, with any media stored in it, next to the project;
-`prune_backups` clears old ones. Install it with
-`pipx install "exegete[pdf-epub]"` (the part in brackets reads PDF and
-EPUB, with libraries under the AGPL; INSTALL.md says more);
+project folder, except its audio and video folders (a restore keeps the
+project's), next to the project; `prune_backups` clears old ones.
+Install it with `pipx install "exegete[pdf-epub]"` (the part in brackets
+reads PDF and EPUB, with libraries under the AGPL; INSTALL.md says more);
 [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)
 covers every host and setting,
 [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#available-tools)
@@ -556,7 +556,7 @@ every tool.
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
 | `full` | 82: all, creating a project and two renamed tools' earlier names included | about 208,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
-| `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Use the small tool set, for local models" |
+| `core` | 25: the coding loop and its safety tools | about 69,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Use the small tool set, for local models" |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:

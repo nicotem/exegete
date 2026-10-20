@@ -46,10 +46,6 @@ TWO_STEP_TOOLS = ("merge_codes", "delete_code", "delete_category",
                   "merge_category", "set_project_coder_name",
                   "pseudonymise_source", "restore_backup")
 
-PIECE_2_PART_TWO = ("turned on by piece 2, part two: audio and video "
-                    "are left out of backups and kept by a restore")
-
-
 class PromiseBroken(AssertionError):
     """The promise itself failed: a backup too many, one missing, or a
     row a refusal changed. The expected failures expect this alone."""
@@ -862,7 +858,6 @@ def media(folder):
     return found
 
 
-@pytest.mark.xfail(strict=True, raises=PromiseBroken, reason=PIECE_2_PART_TWO)
 def test_backups_leave_media_out(tmp_path):
     """A backup holds neither the audio nor the video folder, and a
     restore of it leaves both of the project's folders as they were,

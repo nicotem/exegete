@@ -318,6 +318,9 @@ class TestTheSixDescriptions:
         descriptions are as tests/test_v0142_description_cut.py pinned
         them before this change."""
         from test_v0142_description_cut import _fingerprint
+        # v0.15.1: restore_backup's sentence on the audio and video
+        # folders taken out too (tests/test_v0151_media_out.py)
+        from test_v0150_restore_keeps_folder import MEDIA_SENTENCE
         before = {"start_coding_session": (6042, 4908, "662931b185aced31"),
                   "restore_backup": (2877, 2367, "9014851203733822"),
                   "delete_coding": (2867, 2307, "be5e2d1ea0338a1e")}
@@ -327,7 +330,8 @@ class TestTheSixDescriptions:
         for name, (length, solid, digest) in before.items():
             text = put_back_the_lock_wording(
                 name, before_the_ignored_argument(
-                    name, server.mcp.original_descriptions[name]))
+                    name, server.mcp.original_descriptions[name]).replace(
+                        " " + MEDIA_SENTENCE, ""))
             got = _fingerprint(text)
             assert got[1:] == (solid, digest), name
             if sys.version_info[:2] == (3, 13):

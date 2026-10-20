@@ -790,9 +790,10 @@ def test_the_advanced_section_rests_on_the_code():
                   "(https://github.com/nicotem/exegete#where-your-data-goes))",
                   # v0.14.2, the README's first round of checks: what a
                   # backup is (backup_project, below)
-                  "Each backup copies the whole project folder, with any "
-                  "media stored in it, next to the project; `prune_backups` "
-                  "clears old ones.",
+                  # v0.15.1: but its audio and video folders
+                  "Each backup copies the project folder, except its audio "
+                  "and video folders (a restore keeps the project's), next "
+                  "to the project; `prune_backups` clears old ones.",
                   # (v0.15.1, the backup's moment: Exegete takes the
                   # backup itself, whatever the call asks)
                   "It reads a project's SQLite database read-only; each "

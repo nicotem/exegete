@@ -720,7 +720,7 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
         out = json.loads(H.execute_destructive(server.restore_backup, str(restore_point)))
         assert "success" not in out
         assert "safety backup" in out["error"]
-        assert "copy it back" in out["error"]
+        assert "copy its contents back" in out["error"]
         assert "recreate" in out["error"]
         self._assert_safety_report(out)
         assert Path(out["safety_backup"]).is_dir()

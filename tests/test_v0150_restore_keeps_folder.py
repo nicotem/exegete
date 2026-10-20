@@ -649,8 +649,9 @@ class TestAFailureInTheSwap:
         _, answer = _restore(backup)
         assert answer["error"] == (
             "Restore failed. The pre-restore state is preserved in the "
-            "safety backup; copy it back over the project folder to "
-            "recover. The project folder still holds its Exegete folder as "
+            "safety backup; copy its contents back into the project folder "
+            "to recover, leaving its audio and video folders as they are. "
+            "The project folder still holds its Exegete folder as "
             "it was; the safety backup's copy of it can lack some files, "
             "since backups leave out files named like lock files and "
             "database working files. When the researcher copies the safety "
@@ -1217,13 +1218,21 @@ SENTENCE = ("The project's Exegete folder (files the researcher fills in) "
             "when either has one.")
 
 
+# v0.15.1, audio and video left out of backups: the paragraph's second
+# sentence, taken out with it below
+MEDIA_SENTENCE = "So are its audio and video folders."
+
+
 def without_the_folder_paragraph(description):
     """restore_backup's description with this piece's paragraph taken out,
     as served on any interpreter (on 3.10 to 3.12 it keeps its
     indentation), so that a test of an earlier piece still compares with
-    what that piece measured."""
+    what that piece measured; the sentence v0.15.1 added at its end
+    (MEDIA_SENTENCE) goes with it."""
     words = [re.escape(word) for word in SENTENCE.split()]
-    pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words))
+    media = [re.escape(word) for word in MEDIA_SENTENCE.split()]
+    pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words)
+                         + r"(?:\s+" + r"\s+".join(media) + r")?")
     found = pattern.search(description)
     return (description if found is None
             else description[:found.start()] + description[found.end():])
@@ -1263,13 +1272,15 @@ class TestTheTexts:
         entry = entry[:entry.index(" - `", 4)]
         assert ("The project's `Exegete` folder (files the researcher fills "
                 "in) is kept as it is, never taken from the backup; the "
-                "preview says when either has one") in entry
+                "preview says when either has one. So are its `audio` and "
+                "`video` folders") in entry
         assert ("`list_backups` + `restore_backup` roll the project back "
-                "to a snapshot, all but its `Exegete` folder, which a "
-                "restore keeps.") in tools
+                "to a snapshot, all but its `Exegete`, `audio` and `video` "
+                "folders, which a restore keeps.") in tools
         assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete` folder, which a restore keeps): its preview does "
-                "not count codings by owner") in tools
+                "`Exegete`, `audio` and `video` folders, which a restore "
+                "keeps): its preview does not count codings by owner"
+                ) in tools
         assert "whole project back" not in tools
 
     def test_privacy(self):
@@ -1309,13 +1320,13 @@ class TestTheTexts:
         # exegete.json: rolled back with the rest of the project, not of
         # the folder
         assert ("a restore rolls it back with the rest of the project (all "
-                "but its `Exegete` folder, which a restore keeps).") in \
-            _flat(privacy)
+                "but its `Exegete`, `audio` and `video` folders, which a "
+                "restore keeps).") in _flat(privacy)
         # the passage on pseudonyms.json no longer says the whole folder
         assert "rolls the whole folder back" not in _flat(privacy)
         assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete` folder, which a restore keeps), this file with "
-                "it") in _flat(privacy)
+                "`Exegete`, `audio` and `video` folders, which a restore "
+                "keeps), this file with it") in _flat(privacy)
 
     def test_the_changelog(self):
         changelog = _flat(_read("CHANGELOG.md"))
@@ -1343,11 +1354,13 @@ class TestTheTexts:
         overview = _flat(server.explain_ai_coding_tools())
         assert "whole project back" not in overview
         assert ("list_backups + restore_backup roll the project back (all "
-                "but its Exegete folder, which a restore keeps).") in overview
+                "but its Exegete, audio and video folders, which a restore "
+                "keeps).") in overview
         workflow = _flat(server.explain_ai_coding_tools("apply_codings"))
         assert "whole project back" not in workflow
         assert ("restore_backup rolls the project back (all but its "
-                "Exegete folder, which a restore keeps)") in workflow
+                "Exegete, audio and video folders, which a restore keeps)"
+                ) in workflow
 
     def test_the_modules_own_words(self):
         words = _flat(private_files.__doc__)

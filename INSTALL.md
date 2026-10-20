@@ -1126,9 +1126,9 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 82 tools by
 default, and the serialised tool definitions alone measure about
-208,000 characters, roughly 52k tokens, against about 68,000
-characters, roughly 17k tokens, for the 25 tools of `core` (208,327
-and 68,483 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
+208,000 characters, roughly 52k tokens, against about 69,000
+characters, roughly 17k tokens, for the 25 tools of `core` (208,427
+and 68,519 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far
 past where small-model tool selection degrades. Set

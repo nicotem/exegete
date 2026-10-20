@@ -588,7 +588,11 @@ class TestTheSizes:
     # v0.15.1, the stale texts: export_refi_qda's sentence names its known
     # faults instead of its removal (ruling 85, item 2), 126 characters
     # more in `full`; `core` does not serve the tool.
-    NOW = {"full": 197_419, "core": 65_167}
+    # v0.15.1, audio and video left out of backups: list_backups,
+    # prune_backups and restore_backup name the two folders; all three
+    # are in the tables below already (100 characters more in `full`,
+    # 36 in `core`, where list_backups alone is served).
+    NOW = {"full": 197_519, "core": 65_203}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

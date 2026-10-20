@@ -1306,20 +1306,30 @@ class TestTheSmallerFixes:
         import exegete.database as database
         real = database._copy_database
 
-        def as_file(source, dest, report=None):
-            real(source, dest, report)
-            if report is not None:
+        def as_file(source, dest, report=None, copy_as_file=True):
+            real(source, dest, report, copy_as_file=copy_as_file)
+            if report is not None and copy_as_file:
                 report["database_copied_as_file"] = \
                     "DatabaseError SQLITE_NOTADB"
 
         monkeypatch.setattr(database, "_copy_database", as_file)
         folder = opened("v17")
         server.select_project(str(folder))
+        # A write's backup copies the database by SQLite alone, under the
+        # write's lock (v0.15.1): never as a file, so its answer never
+        # says so; a database SQLite cannot copy refuses the write
+        # (test_v0151_backup_moment.py)
         out = json.loads(server.set_memo("code", 1, "a memo"))
-        assert out["backup_database_copied_as_file"] == \
-            "DatabaseError SQLITE_NOTADB"
+        assert out["success"] is True, out
+        assert "backup_database_copied_as_file" not in out
+        # A whole backup taken outside a write, as the safety copy of a
+        # restore, still says it
+        report = {}
+        database.backup_project(folder, report=report)
+        assert server._skipped_symlinks_line(report).startswith(
+            "backup_database_copied_as_file: DatabaseError SQLITE_NOTADB. ")
         assert "may not be one committed state" in \
-            out["backup_database_copied_as_file_note"]
+            server._skipped_symlinks_line(report)
         copy = json.loads(server.copy_project_to_workspace(
             str(folder), new_name="Copy"))
         assert copy["database_copied_as_file"] == \

@@ -460,8 +460,10 @@ class TestSubcodeWriteDifferentials:
 
 def _mutate_during_backup(monkeypatch, project_path, mutation_sql, args=()):
     """Inject an external fulltext mutation into the post-validation,
-    pre-write window (the backup step)."""
-    original = QualcoderDatabase.backup_before_write
+    pre-write window: the backup's copy of the project tree, the step
+    before SQLite's write lock (v0.15.1), where another program can
+    still commit."""
+    original = QualcoderDatabase.start_backup_before_write
 
     def backup_and_mutate(self):
         result = original(self)
@@ -471,7 +473,7 @@ def _mutate_during_backup(monkeypatch, project_path, mutation_sql, args=()):
         conn.close()
         return result
 
-    monkeypatch.setattr(QualcoderDatabase, "backup_before_write",
+    monkeypatch.setattr(QualcoderDatabase, "start_backup_before_write",
                         backup_and_mutate)
 
 

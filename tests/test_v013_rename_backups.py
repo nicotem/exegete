@@ -88,6 +88,11 @@ def _in_a_backup(target):
     parts = re.split(r"[\\/]", str(target).split("?")[0].rstrip("/\\"))
     if len(parts) < 2:
         return False
+    if parts[-2].startswith(".") and "_partial_" in parts[-2]:
+        # The backup this write takes, being written under its hidden
+        # name (v0.15.1: one before every change, create_backup=false
+        # included), is not one of the backups the rename reads
+        return False
     return "_backup_" in parts[-2] or "_BKUP_" in parts[-2]
 
 
@@ -156,11 +161,14 @@ class TestTheBackupsAreOnlyRead:
                                                          monkeypatch):
         assert _file(5, "legacy2.txt")["changed"]
         seen = _spy_connections(monkeypatch)
-        before = _snapshot(_backups(legacy))
+        earlier = _backups(legacy)
+        before = _snapshot(earlier)
         assert _file(5, "legacy.txt", create_backup=False)["changed"]
         assert seen and all("?mode=ro&immutable=1" in t and uri
                             for t, uri in seen), seen
-        assert _snapshot(_backups(legacy)) == before
+        # The backups read are unchanged (the rename takes one of its
+        # own too, v0.15.1)
+        assert _snapshot(earlier) == before
 
     def test_P_wal_a_wal_backup_gains_no_files(self, legacy):
         """R1-2: a read-only open of a WAL database makes -shm and -wal;
@@ -284,10 +292,17 @@ class TestTheCarriedAnswerIsCheckedAgain:
         _reload()
         real = database.QualcoderDatabase.begin_immediate
 
+        linked = []
+
         def link_then_begin(self):
             # QualCoder's View AV relinks a recording by name (master
-            # view_av.py:205-212), here in the window before the lock.
-            _exec(project, "UPDATE source SET av_text_id = 5 WHERE id = 10")
+            # view_av.py:205-212), here in the window before the lock:
+            # before its first BEGIN IMMEDIATE, which every write now
+            # takes before its backup's database (v0.15.1)
+            if not linked:
+                linked.append(True)
+                _exec(project,
+                      "UPDATE source SET av_text_id = 5 WHERE id = 10")
             real(self)
         monkeypatch.setattr(database.QualcoderDatabase, "begin_immediate",
                             link_then_begin)
@@ -500,8 +515,16 @@ class TestAnEmptyOrUnreadableTextIsNoEvidence:
         assert _file(5, "P05.txt")["changed"]
         real = database.QualcoderDatabase.begin_immediate
 
+        emptied = []
+
         def begin(self_db):
-            _exec(legacy, "UPDATE source SET fulltext = NULL WHERE id = 5")
+            # Before the first BEGIN IMMEDIATE only, the window before the
+            # lock (v0.15.1: every write takes it before its backup's
+            # database)
+            if not emptied:
+                emptied.append(True)
+                _exec(legacy,
+                      "UPDATE source SET fulltext = NULL WHERE id = 5")
             real(self_db)
         monkeypatch.setattr(database.QualcoderDatabase, "begin_immediate",
                             begin)

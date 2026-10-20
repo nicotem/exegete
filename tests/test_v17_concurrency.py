@@ -62,20 +62,24 @@ class TestT18ApplyCodingsPrecondition:
         server.update_suggestion_status(sid, approve=[guid])
         before = _counts(qualcoder_db_path)
 
-        real_add_coding = QualcoderDatabase.add_coding
+        real_start = QualcoderDatabase.start_backup_before_write
         state = {"mutated": False}
 
-        def racing_add_coding(self, *args, **kwargs):
+        def racing_start(self, *args, **kwargs):
+            # The window an editor without a lock file still has: the
+            # backup's copy of the project tree, before SQLite's write
+            # lock (v0.15.1); from the lock to the commit it cannot save
+            started = real_start(self, *args, **kwargs)
             if not state["mutated"]:
                 state["mutated"] = True
                 # tail-append keeps the coded slice byte-identical, so
                 # add_coding's per-row seltext check passes and only the
                 # C7 whole-file fingerprint can catch the rewrite
                 _mutate_fulltext(qualcoder_db_path, FULLTEXT + " APPENDED")
-            return real_add_coding(self, *args, **kwargs)
+            return started
 
-        monkeypatch.setattr(QualcoderDatabase, "add_coding",
-                            racing_add_coding)
+        monkeypatch.setattr(QualcoderDatabase, "start_backup_before_write",
+                            racing_start)
         result = server.apply_codings(sid, create_backup=False)
         data = json.loads(result) if result.strip().startswith("{") else None
         blob = result.lower()
@@ -153,16 +157,19 @@ class TestT18CreateProposedCodesPrecondition:
         server.update_proposal_status(sid, approve=[guid])
         before = _counts(qualcoder_db_path)
 
-        real_add_code = QualcoderDatabase.add_code
+        real_start = QualcoderDatabase.start_backup_before_write
         state = {"mutated": False}
 
-        def racing_add_code(self, *args, **kwargs):
+        def racing_start(self, *args, **kwargs):
+            # Before SQLite's write lock, as above (v0.15.1)
+            started = real_start(self, *args, **kwargs)
             if not state["mutated"]:
                 state["mutated"] = True
                 _mutate_fulltext(qualcoder_db_path, FULLTEXT + " APPENDED")
-            return real_add_code(self, *args, **kwargs)
+            return started
 
-        monkeypatch.setattr(QualcoderDatabase, "add_code", racing_add_code)
+        monkeypatch.setattr(QualcoderDatabase, "start_backup_before_write",
+                            racing_start)
         out = json.loads(server.create_proposed_codes(
             sid, create_backup=False))
         assert out.get("success") is True, out

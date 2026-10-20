@@ -32,6 +32,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `pdf-epub`, now asks for a release below 7. An install from PyPI takes
   the same releases as before; a new major release of one of these waits
   for a release of Exegete that has been tried with it.
+- **Exegete takes one backup before every change, at the last moment.**
+  After a tool's checks, Exegete copies the project into the backup,
+  all but its database, while other programs can still save; then it
+  takes SQLite's write lock, copies the database and makes the change,
+  so the backup's database holds the project's records exactly as the
+  change found them. A change refused at that lock, because another
+  program is writing to the project, now says that the database is
+  busy and leaves no backup. While the database is copied, another
+  program's save waits, as it does during any change. A write whose
+  backup SQLite cannot copy whole is refused, rather than copying the
+  database file as it is. Deleting a coding or a note that carries a
+  private note no longer adds `backup_note` to the answer, since every
+  change takes a backup.
+
+### Fixed
+
+- **A backup cut short is no longer listed, kept by a prune or
+  restored.** A backup is made under a hidden name beside the project
+  and takes its name only once it is whole, so one left incomplete
+  because Exegete's process ended during the copy (an assistant app
+  quitting at that moment, for instance) is neither listed by
+  `list_backups`, counted by `prune_backups`, nor accepted by
+  `restore_backup`. The next backup of the project removes such a
+  leftover once it is an hour old. 0.15.0's notes named this among its
+  known limits.
 
 ### For contributors
 

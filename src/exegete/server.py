@@ -76,6 +76,7 @@ from .database import (
     backup_database_is_link,
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
+    _is_locked_error,
     default_workspace,
     earlier_workspace_holds_projects,
     workspace_setting_problem,
@@ -1928,21 +1929,6 @@ def _refuse_existing_row_change(kind: str, row_id: int, *,
     return None
 
 
-def _private_note_backup_note(result: Any, status: Dict[str, bool],
-                              create_backup: bool) -> None:
-    """State in a delete result that a backup was taken for a row carrying
-    a private note (S-P2 (a)); create_backup=false does not apply there."""
-    if not isinstance(result, dict) or "error" in result:
-        return
-    if status.get("private_note"):
-        result["backup_note"] = (
-            "A backup was taken before this delete because the row carried "
-            "a private note; create_backup=false does not apply to such "
-            "rows." if not create_backup else
-            "A backup was taken before this delete; the row carried a "
-            "private note, for which a backup is always taken.")
-
-
 def _attach_hidden_target_note(result: Any, key: Optional[str] = None) -> None:
     """Add the coder-visibility disclosure to a write echo for a hidden row.
 
@@ -3236,35 +3222,134 @@ def _with_backup(answer: Dict[str, Any], backup_path) -> Dict[str, Any]:
     return answer
 
 
-def _perform_write(op, create_backup: bool = True,
+def _take_write_lock(write_db) -> None:
+    """(5) of a write's order (v0.15.1): SQLite's write lock, taken by
+    BEGIN IMMEDIATE on the write connection after the backup's tree is
+    copied and before its database is. A database another program keeps
+    locked past the connection's wait raises DatabaseLockedError, which
+    each write answers with the lock's own text."""
+    try:
+        write_db.begin_immediate()
+    except sqlite3.OperationalError as e:
+        if getattr(e, "sqlite_errorcode", None) in (5, 6) or \
+                _is_locked_error(e):
+            raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
+        raise
+
+
+def _answer_of_check(write_db, check, backup_fail_detail: str
+                     ) -> Optional[Dict[str, Any]]:
+    """(6): the write's checks again, under SQLite's lock. None to go on;
+    otherwise the answer, and the write stops with no backup: a
+    ValueError or RuntimeError answers its text, a StateChangedError its
+    payload, a dict is the answer itself ("nothing changed"). A locked
+    database is raised as at (5)."""
+    try:
+        answer = check(write_db)
+    except DatabaseLockedError:
+        raise
+    except StateChangedError as e:
+        return dict(e.payload)
+    except (ValueError, RuntimeError) as e:
+        return {"error": str(e)}
+    except sqlite3.Error as e:
+        logger.error("SQLite error while checking a write: %s",
+                     error_label(e))
+        return {"error": _write_failed_text(
+            _rollback_if_open(write_db), backup_fail_detail, e)}
+    return answer
+
+
+def _backup_before_change(write_db, fail_message: str, check=None,
+                          backup_fail_detail: str = "nothing was written"):
+    """Steps (4) to (7) of every write's order (v0.15.1): Exegete, not
+    the assistant, takes one backup before each change.
+
+    (4) the backup's folder claimed under a hidden name and the project
+    copied into it but its database, outside SQLite's lock; (5) SQLite's
+    write lock; (6) `check`, the write's checks again under it; (7) the
+    backup's database, SQLite's own copy, which the write lock allows:
+    the state the checks saw; then the backup takes its name. Called
+    inside `hold_project_lock`; the change (8) and the commit (9)
+    follow.
+
+    Returns (backup_path, None) to go on, or (None, answer) when the
+    write stops here: every way out before (7) removes the backup's
+    folder, so a refusal leaves no backup.
+
+    Raises:
+        DatabaseLockedError: the database locked at (5) or (6)
+    """
+    try:
+        write_db.start_backup_before_write()
+    except Exception as e:
+        logger.error("Failed to create backup: %s", error_label(e))
+        return None, {"error": _backup_failed_text(
+            isinstance(e, DatabaseLockedError),
+            isinstance(e, BackupWithoutDatabaseError)),
+            "message": fail_message}
+    finished = False
+    try:
+        _take_write_lock(write_db)
+        if check is not None:
+            answer = _answer_of_check(write_db, check, backup_fail_detail)
+            if answer is not None:
+                return None, answer
+        try:
+            backup_path = write_db.backup_before_write()
+        except Exception as e:
+            logger.error("Failed to create backup: %s", error_label(e))
+            return None, {"error": _backup_failed_text(
+                isinstance(e, DatabaseLockedError),
+                isinstance(e, BackupWithoutDatabaseError)),
+                "message": fail_message}
+        finished = True
+        return backup_path, None
+    finally:
+        if not finished:
+            write_db.abandon_backup_before_write()
+
+
+def _perform_write(op, *, check=None,
                    backup_fail_detail: str = "nothing was written"):
     """Run a mutation under the full write-safety discipline.
 
     This is the single, uniform implementation of the write pattern every
-    write tool must follow: refuse on pre-v14 schema and while QualCoder
-    has the project open (heartbeat lock), upgrade to read-write, hold
-    QualCoder's project lock, back up before writing, run the mutation with
-    auto_commit deferred, re-check the lock to close the TOCTOU window,
-    commit, and downgrade to read-only on EVERY exit path including
-    exceptions.
+    write tool must follow, in this order (v0.15.1): (1) the tool's own
+    checks, read-only, before this is called; (2) refuse on pre-v14
+    schema and while QualCoder has the project open (heartbeat lock),
+    upgrade to read-write; (3) hold QualCoder's project lock; (4) to (7)
+    one backup, always (`_backup_before_change`): the project but its
+    database copied outside SQLite's lock, SQLite's write lock, `check`
+    under it, the backup's database; (8) the mutation with auto_commit
+    deferred; (9) re-check the lock to close the TOCTOU window, commit;
+    and downgrade to read-only on EVERY exit path including exceptions.
+    A refusal before (7), a database locked at (5) included, leaves no
+    backup; a failure after it names its backup.
 
     Args:
         op: Callable op(write_db) that performs the mutation with
             auto_commit=False and returns a JSON-serialisable success dict.
-        create_backup: Create a timestamped backup before writing.
+        check: Optional callable check(write_db), run under SQLite's write
+            lock before the backup's database is copied: None goes on; a
+            dict is the answer ("nothing changed"); a ValueError or
+            RuntimeError answers its text, a StateChangedError its
+            payload. Either way the write stops with no backup.
         backup_fail_detail: Tail of the "nothing was ..." message on backup
             failure (e.g. "nothing was deleted").
 
     Returns:
-        The op's success dict (with backup_path added when a backup was
-        made), or an {"error": ...} dict. Callers json.dumps the result.
+        The op's success dict (with backup_path added), or an
+        {"error": ...} dict. Callers json.dumps the result.
 
     Raises:
-        DatabaseLockedError: Only from before the backup is taken: QualCoder
-            grabbing the project between the write gate and the project
-            lock, or the database locked at the read-write upgrade (the
-            tool guard converts either to a friendly error). After the
-            backup it is answered in the returned dict with `backup_path`.
+        DatabaseLockedError: Only from before the backup is taken:
+            QualCoder grabbing the project between the write gate and the
+            project lock, the database locked at the read-write upgrade,
+            or another program holding SQLite's write lock at (5) (the
+            tool guard converts each to a friendly error, and no backup
+            is left). After the backup it is answered in the returned
+            dict with `backup_path`.
     """
     gate = _write_gate_error()
     if gate is not None:
@@ -3276,18 +3361,12 @@ def _perform_write(op, create_backup: bool = True,
     committed = False
     try:
         with hold_project_lock(project_folder) as lock_held:
-            if create_backup:
-                try:
-                    backup_path = write_db.backup_before_write()
-                except Exception as e:
-                    logger.error("Failed to create backup: %s", error_label(e))
-                    return {
-                        "error": _backup_failed_text(
-                            isinstance(e, DatabaseLockedError),
-                            isinstance(e, BackupWithoutDatabaseError)),
-                        "message": f"Aborting to protect your data: "
-                                   f"{backup_fail_detail}.",
-                    }
+            backup_path, stopped = _backup_before_change(
+                write_db, f"Aborting to protect your data: "
+                          f"{backup_fail_detail}.", check,
+                backup_fail_detail)
+            if stopped is not None:
+                return stopped
             try:
                 result = op(write_db)
                 _recheck_lock_before_commit(project_folder, lock_held)
@@ -11107,19 +11186,21 @@ def apply_codings(
 
     try:
         with hold_project_lock(project_folder) as lock_held:
-            # Create backup
-            if create_backup:
-                try:
-                    backup_path = write_db.backup_before_write()
-                except Exception as e:
-                    logger.error("Failed to create backup: %s", error_label(e))
-                    _downgrade_to_readonly()
-                    return json.dumps({
-                        "error": _backup_failed_text(
-                            isinstance(e, DatabaseLockedError),
-                            isinstance(e, BackupWithoutDatabaseError)),
-                        "message": "Aborting to protect your data: nothing was written."
-                    })
+            # One backup, always (v0.15.1): the project but its database
+            # copied, SQLite's write lock, the backup's database
+            try:
+                backup_path, stopped = _backup_before_change(
+                    write_db, "Aborting to protect your data: nothing was "
+                              "written.",
+                    backup_fail_detail="no codings were applied")
+            except BaseException:
+                _rollback_if_open(write_db)
+                _downgrade_to_readonly()
+                raise
+            if stopped is not None:
+                _rollback_if_open(write_db)
+                _downgrade_to_readonly()
+                return json.dumps(stopped)
 
             try:
                 for sugg in to_write:
@@ -11496,18 +11577,13 @@ def import_text_file(
     case_link = None
     try:
         with hold_project_lock(project_folder) as lock_held:
-            # Create backup
-            if create_backup:
-                try:
-                    backup_path = write_db.backup_before_write()
-                except Exception as e:
-                    logger.error("Failed to create backup: %s", error_label(e))
-                    return json.dumps({
-                        "error": _backup_failed_text(
-                            isinstance(e, DatabaseLockedError),
-                            isinstance(e, BackupWithoutDatabaseError)),
-                        "message": "Aborting to protect your data."
-                    })
+            # One backup, always (v0.15.1): the project but its database
+            # copied, SQLite's write lock, the backup's database
+            backup_path, stopped = _backup_before_change(
+                write_db, "Aborting to protect your data.",
+                backup_fail_detail="the file was not imported")
+            if stopped is not None:
+                return json.dumps(stopped)
 
             # Perform the import (the database layer re-validates: defense
             # in depth); commit only after re-checking the QualCoder lock
@@ -12068,15 +12144,13 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
     try:
         with hold_project_lock(project_folder) as lock_held:
             doc_import.sweep_temporary_copies(project_folder / "documents")
-            try:
-                backup_path = write_db.backup_before_write()
-            except Exception as e:
-                logger.error("Failed to create backup: %s", error_label(e))
-                return json.dumps({
-                    "error": _backup_failed_text(
-                        isinstance(e, DatabaseLockedError),
-                        isinstance(e, BackupWithoutDatabaseError)),
-                    "message": "Aborting to protect your data."})
+            # One backup, always (v0.15.1): the project but its database
+            # copied, SQLite's write lock, the backup's database
+            backup_path, stopped = _backup_before_change(
+                write_db, "Aborting to protect your data.",
+                backup_fail_detail="no file was imported")
+            if stopped is not None:
+                return json.dumps(stopped)
             try:
                 taken = doc_import.write_batch(
                     write_db.insert_imported_document, result, ctx, owner,
@@ -12328,8 +12402,7 @@ def link_file_to_case(
             "case_match": case_match,
         }
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="nothing was linked")
+    result = _perform_write(_op, backup_fail_detail="nothing was linked")
     return json.dumps(result, indent=2)
 
 
@@ -12405,7 +12478,6 @@ def delete_coding(coding_id: int, create_backup: bool = True,
         confirm_private_note_deletion=confirm_private_note_deletion)
     if refusal is not None:
         return json.dumps(refusal, indent=2)
-    status = get_db().existing_row_status("coding", coding_id) or {}
 
     # SEC C-1: route through _perform_write so the unconditional
     # rollback-if-uncommitted + downgrade discipline (its finally block)
@@ -12432,11 +12504,7 @@ def delete_coding(coding_id: int, create_backup: bool = True,
             "deleted_coding": deleted,
         }
 
-    # S-P2 (a): a row carrying a private note is always backed up first
-    result = _perform_write(
-        _op, create_backup=create_backup or bool(status.get("private_note")),
-        backup_fail_detail="nothing was deleted")
-    _private_note_backup_note(result, status, create_backup)
+    result = _perform_write(_op, backup_fail_detail="nothing was deleted")
     # The loop's undo tells the loop (v0.14, the claims audit's item 10)
     deleted = result.get("deleted_coding") if isinstance(result, dict) else None
     if (result.get("success") and isinstance(deleted, dict)
@@ -15376,8 +15444,7 @@ def create_proposed_codes(coding_session_id: str,
                            f"is coded yet",
                 "created_codes": created}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="no codes were created")
+    result = _perform_write(_op, backup_fail_detail="no codes were created")
 
     if "error" not in result:
         for p in approved:
@@ -15519,7 +15586,6 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
             **wdb.set_memo(target_type, target_id, memo, auto_commit=False,
                            allow_hidden_coder=allow_hidden_coder),
         },
-        create_backup=create_backup,
         backup_fail_detail="the memo was not changed",
     )
     return _ai_json(result, indent=2)
@@ -15566,7 +15632,6 @@ def add_journal_entry(name: str, entry: str,
             "journal_entry": wdb.add_journal_entry(
                 name, entry, owner, auto_commit=False),
         },
-        create_backup=create_backup,
         backup_fail_detail="the journal entry was not added",
     )
     return json.dumps(result, indent=2)
@@ -15715,8 +15780,8 @@ def create_code(name: str, category: Optional[str] = None,
             **disclosure,
         }
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the code was not created")
+    result = _perform_write(
+        _op, backup_fail_detail="the code was not created")
     return _ai_json(result, indent=2)
 
 
@@ -15781,8 +15846,8 @@ def rename_code(code_id: int, new_name: str,
         return {"success": True, "changed": True, "message": "Renamed code",
                 **wdb.rename_code(code_id, new_name, auto_commit=False)}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the code was not renamed")
+    result = _perform_write(
+        _op, backup_fail_detail="the code was not renamed")
     return json.dumps(result, indent=2)
 
 
@@ -15853,8 +15918,8 @@ def recolor_code(code_id: int, color: str,
         return {"success": True, "changed": True, "message": message,
                 **out, **disclosure}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the code colour was not changed")
+    result = _perform_write(
+        _op, backup_fail_detail="the code colour was not changed")
     return json.dumps(result, indent=2)
 
 
@@ -15963,8 +16028,7 @@ def move_code_to_category(code_id: int,
                 "message": f"Moved code '{moved['name']}' {where}",
                 "new_category": new_name, **moved}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the code was not moved")
+    result = _perform_write(_op, backup_fail_detail="the code was not moved")
     return json.dumps(result, indent=2)
 
 
@@ -16051,8 +16115,8 @@ def create_category(name: str, parent_category: Optional[str] = None,
                 "message": message,
                 "category": {**created, "parent_name": parent_name}}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the category was not created")
+    result = _perform_write(
+        _op, backup_fail_detail="the category was not created")
     return _ai_json(result, indent=2)
 
 
@@ -16114,8 +16178,8 @@ def rename_category(category_id: int, new_name: str,
                 **wdb.rename_category(category_id, new_name,
                                       auto_commit=False)}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the category was not renamed")
+    result = _perform_write(
+        _op, backup_fail_detail="the category was not renamed")
     return json.dumps(result, indent=2)
 
 
@@ -16202,8 +16266,8 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
                 "message": f"Moved category '{moved['name']}' {where}",
                 "new_parent": parent_name, **moved}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the category was not moved")
+    result = _perform_write(
+        _op, backup_fail_detail="the category was not moved")
     return json.dumps(result, indent=2)
 
 
@@ -16652,9 +16716,7 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
         if refusal is not None:
             return refusal
 
-    # Always back up before a destructive write (no create_backup=False here)
     result = _perform_write(_state_guarded(state_of, state, op_fn, tool),
-                            create_backup=True,
                             backup_fail_detail=backup_fail_detail)
     if isinstance(result, dict) and "error" not in result \
             and "collateral" in preview:
@@ -19780,8 +19842,8 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
             )
         return result
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the annotation was not added")
+    result = _perform_write(
+        _op, backup_fail_detail="the annotation was not added")
     return _ai_json(result, indent=2)
 
 
@@ -19840,7 +19902,6 @@ def update_annotation(annotation_id: int, memo: str,
                      **wdb.update_annotation(
                          annotation_id, memo, auto_commit=False,
                          allow_hidden_coder=allow_hidden_coder)},
-        create_backup=create_backup,
         backup_fail_detail="the annotation was not changed",
     )
     _attach_hidden_target_note(result)
@@ -19896,8 +19957,6 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
         confirm_private_note_deletion=confirm_private_note_deletion)
     if refusal is not None:
         return json.dumps(refusal, indent=2)
-    status = get_db().existing_row_status("annotation", annotation_id) or {}
-    # S-P2 (a): a row carrying a private note is always backed up first
     result = _perform_write(
         lambda wdb: {"success": True,
                      "message": "Deleted annotation",
@@ -19906,10 +19965,8 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
                          allow_hidden_coder=allow_hidden_coder,
                          confirm_private_note_deletion=(
                              confirm_private_note_deletion))},
-        create_backup=create_backup or bool(status.get("private_note")),
         backup_fail_detail="the annotation was not deleted",
     )
-    _private_note_backup_note(result, status, create_backup)
     _attach_hidden_target_note(result)
     return _ai_json(result, indent=2)
 
@@ -19984,8 +20041,8 @@ def create_case(name: str, memo: Optional[str] = None,
                 "message": f"Created case '{created['name']}'",
                 "case": created}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the case was not created")
+    result = _perform_write(
+        _op, backup_fail_detail="the case was not created")
     return _ai_json(result, indent=2)
 
 
@@ -20070,15 +20127,14 @@ RENAME_CASE_NOTE = (
     "date, notes, file links and attributes are kept.")
 
 
-def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
-                      backup_taken: bool = True) -> str:
+def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
     """rename_case's note (v0.15.0, piece 12): the places in Exegete
     always; each of QualCoder's places only on its sign (its count in
     old_name_left_in, a saved query, a QualCoder backup beside the
     project, the AI chat history); what QualCoder's imports and Merge
     Projects can bring back when the project's history with QualCoder is
-    not "none". "Including the one just taken" only when the rename took
-    a backup (`backup_taken`, its create_backup; fix round 1)."""
+    not "none". "Including the one just taken": Exegete takes a backup
+    before every change (v0.15.1)."""
     places = [
         "in notes, journal entries, file text and attribute values (the "
         "pseudonymisation preview counts those, notes and journal entries "
@@ -20095,8 +20151,7 @@ def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
         "in the names of files named after the case (their ids are in "
         "old_name_left_in.file_ids, and rename_file renames them)")
     places.append(
-        "in every backup"
-        + (", including the one just taken" if backup_taken else "")
+        "in every backup, including the one just taken"
         + " (list_backups lists them; prune_backups removes Exegete's"
         + (", and QualCoder's own _BKUP_ copies only the researcher can "
            "remove" if signs.qualcoder_backups else "") + ")")
@@ -20205,11 +20260,10 @@ def rename_case(case_id: int, new_name: str,
                 **renamed,
                 "old_name_left_in": left_in,
                 "note": _rename_case_note(left_in, _rename_signs(
-                    wdb, project_folder, qualcoder_seen),
-                    backup_taken=bool(create_backup))}
+                    wdb, project_folder, qualcoder_seen))}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the case was not renamed")
+    result = _perform_write(
+        _op, backup_fail_detail="the case was not renamed")
     return json.dumps(result, indent=2)
 
 
@@ -20221,17 +20275,14 @@ RENAME_FILE_NOTE = (
     "stored path, date, notes, codings and case links are kept.")
 
 
-def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns,
-                      backup_taken: bool = True) -> str:
+def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
     """rename_file's note (v0.15.0, piece 12): Exegete's places always;
     QualCoder's saved SQL queries when one is saved; what QualCoder's
     Merge Projects can bring back when the project's history with
-    QualCoder is not "none". "Including the one just taken" only when
-    the rename took a backup (`backup_taken`, its create_backup; fix
-    round 1)."""
-    note = (RENAME_FILE_NOTE + " Every backup"
-            + (", including the one just taken," if backup_taken else "")
-            + " keeps the old name, and so do "
+    QualCoder is not "none". "Including the one just taken": Exegete
+    takes a backup before every change (v0.15.1)."""
+    note = (RENAME_FILE_NOTE + " Every backup, including the one just "
+            "taken, keeps the old name, and so do "
             "Exegete's coding-session files"
             + (" and any of QualCoder's saved SQL queries that name it "
                "(not read here)" if signs.saved_queries else "")
@@ -20740,11 +20791,10 @@ def rename_file(file_id: int, new_name: str,
                 "old_name_left_in": left_in,
                 **index,
                 "note": _rename_file_note(left_in, _rename_signs(
-                    wdb, project_folder, qualcoder_seen),
-                    backup_taken=bool(create_backup))}
+                    wdb, project_folder, qualcoder_seen))}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the file was not renamed")
+    result = _perform_write(
+        _op, backup_fail_detail="the file was not renamed")
     if result.get("changed"):
         _forget_reading_copies([file_id])
     # A rename back that only a backup licensed goes in v0.15.1 (owner
@@ -20812,7 +20862,6 @@ def create_attribute_type(name: str, applies_to: str,
                      "attribute_type": wdb.add_attribute_type(
                          name, owner, applies_to, value_type=value_type,
                          memo=memo, auto_commit=False)},
-        create_backup=create_backup,
         backup_fail_detail="the attribute was not created",
     )
     if "error" not in result:
@@ -20873,7 +20922,6 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
                      "attribute": wdb.set_attribute_value(
                          target_type, target_id, attribute_name, value,
                          owner, auto_commit=False)},
-        create_backup=create_backup,
         backup_fail_detail="the attribute value was not changed",
     )
     return json.dumps(result, indent=2)

@@ -2849,7 +2849,8 @@ class _BackupBusy(Exception):
 
 
 def _copy_database(source: Path, dest: Path,
-                   report: Optional[Dict[str, Any]] = None) -> None:
+                   report: Optional[Dict[str, Any]] = None,
+                   copy_as_file: bool = True) -> None:
     """Write `source` (a project's data.qda) into `dest` consistently.
 
     SQLite's online backup, all pages in one step, from a read-only
@@ -2858,7 +2859,9 @@ def _copy_database(source: Path, dest: Path,
     another program holds the write lock the step returns busy; Python
     retries, and past BACKUP_BUSY_SECONDS this gives up with
     DatabaseLockedError. A database SQLite cannot read is copied as a
-    file with its side files (see above), and `report` says so.
+    file with its side files (see above), and `report` says so; without
+    `copy_as_file` (v0.15.1, a write's backup under the write's lock)
+    it raises OSError instead.
     """
     deadline = time.monotonic() + BACKUP_BUSY_SECONDS
 
@@ -2888,6 +2891,8 @@ def _copy_database(source: Path, dest: Path,
         failure = sqlite_error_label(e)
     except sqlite3.DatabaseError as e:
         failure = sqlite_error_label(e)
+    if not copy_as_file:
+        raise OSError(f"SQLite could not copy the database: {failure}")
     # Not readable as a database: the bytes as they are, side files too
     for name in ("-journal", "-wal", "-shm", ""):
         try:
@@ -2904,38 +2909,47 @@ def _copy_database(source: Path, dest: Path,
 
 
 def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
-                       report: Optional[Dict[str, Any]] = None) -> None:
+                       report: Optional[Dict[str, Any]] = None,
+                       database_later: bool = False) -> Optional[Path]:
     """Copy a project folder into `dest`, an empty folder the caller has
     just claimed (and removes on any failure): the database
     consistently, the rest as before. A data.qda that is a link inside
     the project is copied from the file it points to, which is then left
     out with its side files; one pointing outside the project, or to
     nothing, raises BackupWithoutDatabaseError before anything is
-    written (fix round 1)."""
+    written (fix round 1).
+
+    With `database_later` (v0.15.1, a backup's two steps) the database
+    is not copied here: the link checks are made as before, the
+    database and its side files are left out of the copy, and the file
+    to copy it from is returned, for `StartedBackup.finish` to copy by
+    `_copy_database` (None when the project has no data.qda)."""
     database = source / "data.qda"
     exclude_real: set = set()
-    database_copied = False
+    database_source: Optional[Path] = None
     if database.is_symlink():
         root_real = os.path.normcase(os.path.realpath(source))
         real = os.path.realpath(database)
         inside = os.path.normcase(real).startswith(root_real + os.sep)
         if not inside or not os.path.isfile(real):
             raise BackupWithoutDatabaseError(BACKUP_WITHOUT_DATABASE_MESSAGE)
-        _copy_database(Path(real), dest / "data.qda", report)
+        database_source = Path(real)
         exclude_real = {os.path.normcase(real + suffix)
                         for suffix in ("",) + _SIDE_SUFFIXES}
-        database_copied = True
-        if report is not None:
-            report["database_from_link"] = True
     elif database.is_file():
-        _copy_database(database, dest / "data.qda", report)
-        database_copied = True
+        database_source = database
+    if database_source is not None and not database_later:
+        _copy_database(database_source, dest / "data.qda", report)
+    if database_source is not None and report is not None and \
+            database_source is not database:
+        report["database_from_link"] = True
     shutil.copytree(
         source, dest, dirs_exist_ok=True,
         ignore=_copy_ignore(source, skipped,
-                            database_copied=database_copied,
+                            database_copied=database_source is not None,
                             exclude_real=exclude_real))
     _withhold_exegete_folder_links(source, skipped, report)
+    return database_source if database_later else None
 
 
 def _withhold_exegete_folder_links(source: Path, skipped: List[str],
@@ -2966,27 +2980,219 @@ def _withhold_exegete_folder_links(source: Path, skipped: List[str],
             report.pop("skipped_symlinks_in_exegete_folder", None)
 
 
-def backup_project(project_path: Union[str, Path],
-                   report: Optional[Dict[str, Any]] = None) -> Path:
-    """Create a timestamped backup of a Qualcoder project.
+# ----------------------------------------------------------------------------
+# A backup made whole before it takes its name (v0.15.1, from the
+# methods review of 20 October 2026)
+#
+# A backup used to be claimed under its final name and filled in place,
+# and removed only when an exception was raised: a process ended during
+# the copy (a host quitting, a power cut) left a folder that list_backups
+# listed as the newest, prune_backups could keep over the last whole one,
+# and restore_backup accepted. It is now filled under a hidden name,
+# `.<project>_backup_<time>_partial_<8 hex>.qda`, which nothing lists (a
+# leading dot, so neither the `<project>_backup_` nor the `_BKUP_` prefix
+# matches; `_backup_` and `.qda` in it, so the project list passes it by
+# as a backup), and given its name by one rename within the folder once
+# its database is in: a backup under its name is whole. A rename never
+# replaces a folder already under the chosen name: one there takes the
+# next counter (on Linux and macOS a folder made empty in the instant
+# between the check and the rename is the one case a rename replaces).
+# A hidden folder left by a process that ended is removed by the next
+# backup of that project once its time is BACKUP_LEFTOVER_SECONDS old:
+# never sooner, since another copy of Exegete may still be filling it.
+#
+# Its two steps (v0.15.1, the backup's moment): `start_backup` claims
+# the hidden folder and copies everything but the database, outside
+# SQLite's lock; `StartedBackup.finish` copies the database by SQLite's
+# own copy and names the folder, under the write's lock, so the backup
+# holds the state the write's checks saw; `abandon` removes it.
+# `backup_project` does both at once.
+# ----------------------------------------------------------------------------
+BACKUP_LEFTOVER_SECONDS = 3600
+_PARTIAL_BACKUP_REST = re.compile(
+    r"_backup_(\d{8}_\d{6})_partial_[0-9a-f]{8}\.qda")
+# On Windows a folder another program holds a handle in (a virus scanner
+# reading a file just written) cannot be renamed for a moment: the waits
+# before each new try, about a second in all.
+_RENAME_WAITS = (0.05, 0.1, 0.2, 0.25, 0.4)
+_BACKUP_NAME_TRIES = 1000
 
-    The whole project tree is copied, ai_data/ included, minus
-    BACKUP_IGNORE_PATTERNS (QualCoder's own backup ignore set plus
-    *.lock; see the constant above). Symlinks pointing outside the
-    project folder, dangling symlinks, and in-project symlink loops are
-    skipped rather than followed (S-P1, see _copy_ignore).
 
-    Args:
-        project_path: Path to the .qda project folder
-        report: Optional dict; on success receives "skipped_symlinks",
-                the project-relative paths of skipped symlinks
+def is_partial_backup_name(name: str, stem: str) -> bool:
+    """Whether a folder name is one a backup of the project called
+    `stem` has while it is being made."""
+    prefix = f".{stem}"
+    return (name.startswith(prefix) and _PARTIAL_BACKUP_REST
+            .fullmatch(name[len(prefix):]) is not None)
 
-    Returns:
-        Path to the backup folder
+
+def sweep_partial_backups(project_path: Union[str, Path],
+                          now: Optional[datetime] = None) -> int:
+    """Remove the hidden folders of this project's backups left
+    unfinished by a process that ended, once the time in their name is
+    more than BACKUP_LEFTOVER_SECONDS old; return how many went. A link
+    is never followed or removed, and a failure is passed over: a
+    leftover is never listed, so it waits for the next sweep."""
+    folder = Path(project_path)
+    if folder.name == "data.qda":
+        folder = folder.parent
+    now = now or datetime.now()
+    removed = 0
+    try:
+        entries = list(os.scandir(folder.parent))
+    except OSError:
+        return 0
+    for entry in entries:
+        if not is_partial_backup_name(entry.name, folder.stem):
+            continue
+        stamp = _PARTIAL_BACKUP_REST.fullmatch(
+            entry.name[len(folder.stem) + 1:]).group(1)
+        try:
+            when = datetime.strptime(stamp, "%Y%m%d_%H%M%S")
+            if (now - when).total_seconds() <= BACKUP_LEFTOVER_SECONDS:
+                continue
+            if entry.is_symlink() or not entry.is_dir(follow_symlinks=False):
+                continue
+        except (OSError, ValueError):
+            continue
+        shutil.rmtree(entry.path, ignore_errors=True)
+        if not os.path.lexists(entry.path):
+            removed += 1
+    if removed:
+        logger.info("Removed %d backup folder(s) left unfinished", removed)
+    return removed
+
+
+def _keep_folder_time(source: Path, dest: Path) -> None:
+    """Give the backup's folder the project's times again, as the copy
+    of the tree left them before the database was written into it (a
+    copy inherits the project folder's modification time)."""
+    try:
+        st = os.stat(source)
+        os.utime(dest, ns=(st.st_atime_ns, st.st_mtime_ns))
+    except OSError:
+        pass
+
+
+def _rename_folder(partial: Path, final: Path) -> None:
+    """One rename; on Windows, a refusal while another program holds a
+    handle in the folder is tried again for about a second."""
+    for wait in _RENAME_WAITS + (None,):
+        try:
+            os.rename(partial, final)
+            return
+        except FileExistsError:
+            raise
+        except PermissionError:
+            if wait is None or os.name != "nt" or os.path.lexists(final):
+                raise
+            time.sleep(wait)
+
+
+def _name_backup(partial: Path, project_path: Path) -> Path:
+    """Give a whole backup its name: `<project>_backup_<time>.qda`, the
+    time of this moment, `_2`, `_3` and so on when that name is taken.
+    A folder already under a name is never replaced (QA F2 / SEC D-3,
+    S-H5): the rename to it fails and the next counter is tried."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    for counter in range(1, _BACKUP_NAME_TRIES + 1):
+        name = (f"{project_path.stem}_backup_{timestamp}.qda" if counter == 1
+                else f"{project_path.stem}_backup_{timestamp}_{counter}.qda")
+        final = project_path.parent / name
+        if os.path.lexists(final):
+            continue
+        try:
+            _rename_folder(partial, final)
+        except OSError:
+            if os.path.lexists(final) and os.path.isdir(partial):
+                continue    # taken in the meantime: the next counter
+            raise
+        return final
+    raise FileExistsError(errno.EEXIST, "No free name for the backup")
+
+
+class StartedBackup:
+    """A backup begun by `start_backup`: everything but the database
+    copied into a folder under a hidden name. `finish` copies the
+    database and gives the folder its name; `abandon` removes it. The
+    first of the two to run settles it; the other then does nothing."""
+
+    def __init__(self, project_path: Path, partial: Path,
+                 database_source: Optional[Path], skipped: List[str],
+                 report: Optional[Dict[str, Any]]):
+        self.project_path = project_path
+        self.partial = partial
+        self.path: Optional[Path] = None
+        self._database_source = database_source
+        self._skipped = skipped
+        self._report = report
+        self._settled = False
+
+    def finish(self, copy_as_file: bool = True) -> Path:
+        """Copy the database into the backup and give it its name.
+
+        Without `copy_as_file` (a write's backup, taken under the
+        write's own lock), a database SQLite cannot copy is not copied
+        as a file: the file copy opens and closes the database file
+        outside SQLite, which on Linux and macOS drops every lock the
+        process holds on it. The backup then fails and is removed.
+
+        Raises:
+            DatabaseLockedError: Another program kept the database locked
+            OSError: The backup failed; it is removed
+        """
+        if self._settled:
+            raise RuntimeError("This backup is already finished or "
+                               "abandoned.")
+        try:
+            if self._database_source is not None:
+                _copy_database(self._database_source,
+                               self.partial / "data.qda", self._report,
+                               copy_as_file=copy_as_file)
+            _keep_folder_time(self.project_path, self.partial)
+            final = _name_backup(self.partial, self.project_path)
+        except DatabaseLockedError:
+            # Another program kept the database locked (v0.14): no
+            # backup, so nothing may be written; said as the lock it is
+            logger.error("Failed to create backup: the database stayed "
+                         "locked")
+            self.abandon()
+            raise
+        except Exception as e:
+            logger.error(f"Failed to create backup: {error_label(e)}")
+            self.abandon()
+            raise OSError(f"Backup failed: {error_label(e)}") from None
+        self._settled = True
+        self.path = final
+        suffix = final.name[len(self.project_path.stem):]
+        logger.info("Backup created successfully: (project folder name "
+                    "withheld)%s", suffix)
+        if self._report is not None:
+            self._report["skipped_symlinks"] = self._skipped
+        return final
+
+    def abandon(self) -> None:
+        """Remove the backup's folder, unless it is finished. A removal
+        that fails leaves it under its hidden name, never listed, for a
+        later backup's sweep."""
+        if self._settled:
+            return
+        self._settled = True
+        shutil.rmtree(self.partial, ignore_errors=True)
+
+
+def start_backup(project_path: Union[str, Path],
+                 report: Optional[Dict[str, Any]] = None) -> StartedBackup:
+    """The first of a backup's two steps (v0.15.1): claim a folder under
+    a hidden name beside the project and copy into it everything
+    `backup_project` copies but the database. Leftovers of earlier
+    backups are swept first.
 
     Raises:
         FileNotFoundError: If project doesn't exist
-        OSError: If backup fails
+        BackupWithoutDatabaseError: data.qda links outside the project
+        OSError: If the copy fails; nothing is left under the backup's
+            name, and the folder is removed
     """
     project_path = Path(project_path)
 
@@ -3000,16 +3206,11 @@ def backup_project(project_path: Union[str, Path],
     if not project_path.is_dir():
         raise ValueError(f"Project path must be a directory: {project_path}")
 
-    # Create backup with timestamp; uniquify on collision so two writes in
-    # the same second cannot abort each other (QA F2 / SEC D-3)
+    sweep_partial_backups(project_path)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_name = f"{project_path.stem}_backup_{timestamp}.qda"
-    backup_path = project_path.parent / backup_name
-    counter = 2
-    while backup_path.exists():
-        backup_name = f"{project_path.stem}_backup_{timestamp}_{counter}.qda"
-        backup_path = project_path.parent / backup_name
-        counter += 1
+    partial = project_path.parent / (
+        f".{project_path.stem}_backup_{timestamp}_partial_"
+        f"{uuid.uuid4().hex[:8]}.qda")
 
     # The seventh route (re-verification R-5). A backup folder's name is
     # `<project folder stem>_backup_<timestamp>.qda`, so logging it in
@@ -3024,19 +3225,19 @@ def backup_project(project_path: Union[str, Path],
     # part that carries the name rather than the line: what identifies
     # WHICH backup among a project's backups is the timestamped suffix,
     # and that is what is kept. The folder lives beside the project, so
-    # nothing that could be found before is unfindable now.
+    # nothing that could be found before is unfindable now. The hidden
+    # name is never logged.
     #
-    # The two `Failed to create backup` lines below log the error's kind
-    # only (v0.14): its text can carry the whole path, and the kind with
-    # the system's name for it (`PermissionError EACCES`) says what
-    # failed.
-    suffix = backup_name[len(project_path.stem):]
-    logger.info("Creating backup: (project folder name withheld)%s", suffix)
+    # The `Failed to create backup` lines log the error's kind only
+    # (v0.14): its text can carry the whole path, and the kind with the
+    # system's name for it (`PermissionError EACCES`) says what failed.
+    logger.info("Creating backup: (project folder name withheld)_backup_%s",
+                timestamp)
 
     skipped: List[str] = []
     try:
         # The claim: an atomic mkdir, before anything is written
-        backup_path.mkdir()
+        partial.mkdir()
     except FileExistsError as e:
         # The folder appeared under someone else's hand and is never
         # ours to remove (S-H5)
@@ -3046,31 +3247,50 @@ def backup_project(project_path: Union[str, Path],
         logger.error(f"Failed to create backup: {error_label(e)}")
         raise OSError(f"Backup failed: {error_label(e)}") from None
     try:
-        _copy_project_tree(project_path, backup_path, skipped, report)
-        logger.info("Backup created successfully: (project folder name "
-                    "withheld)%s", suffix)
-        if report is not None:
-            report["skipped_symlinks"] = skipped
-        return backup_path
-    except DatabaseLockedError:
-        # Another program kept the database locked (v0.14): no backup,
-        # so nothing may be written; said as the lock it is
-        logger.error("Failed to create backup: the database stayed locked")
-        shutil.rmtree(backup_path, ignore_errors=True)
-        raise
+        database_source = _copy_project_tree(project_path, partial, skipped,
+                                             report, database_later=True)
     except BackupWithoutDatabaseError:
         # The copy would hold no database (fix round 1): no backup, so
         # nothing may be written
         logger.error("Failed to create backup: data.qda links outside "
                      "the project")
-        shutil.rmtree(backup_path, ignore_errors=True)
+        shutil.rmtree(partial, ignore_errors=True)
         raise
     except Exception as e:
         logger.error(f"Failed to create backup: {error_label(e)}")
-        # Never leave a partial tree behind: list_backups would present
-        # it as a restorable backup (S-H5)
-        shutil.rmtree(backup_path, ignore_errors=True)
+        # Never leave a partial tree behind (S-H5); one a removal misses
+        # stays under its hidden name, never listed
+        shutil.rmtree(partial, ignore_errors=True)
         raise OSError(f"Backup failed: {error_label(e)}") from None
+    return StartedBackup(project_path, partial, database_source, skipped,
+                         report)
+
+
+def backup_project(project_path: Union[str, Path],
+                   report: Optional[Dict[str, Any]] = None) -> Path:
+    """Create a timestamped backup of a Qualcoder project: both of a
+    backup's steps at once (`start_backup`, then `finish`).
+
+    The whole project tree is copied, ai_data/ included, minus
+    BACKUP_IGNORE_PATTERNS (QualCoder's own backup ignore set plus
+    *.lock; see the constant above); the database by SQLite's own copy.
+    Symlinks pointing outside the project folder, dangling symlinks, and
+    in-project symlink loops are skipped rather than followed (S-P1, see
+    _copy_ignore).
+
+    Args:
+        project_path: Path to the .qda project folder
+        report: Optional dict; on success receives "skipped_symlinks",
+                the project-relative paths of skipped symlinks
+
+    Returns:
+        Path to the backup folder
+
+    Raises:
+        FileNotFoundError: If project doesn't exist
+        OSError: If backup fails
+    """
+    return start_backup(project_path, report).finish()
 
 
 def copy_project_to_workspace(
@@ -9356,8 +9576,15 @@ class QualcoderDatabase:
         sqlite3.Error handling. Used by the token guard to close the
         window between the read-only fingerprint and the mutation (H2);
         the flagship reuses it.
+
+        Since v0.15.1 every write takes it before its backup's database
+        is copied (`server._perform_write`), so a call inside the
+        transaction that started does nothing: SQLite refuses a BEGIN
+        within a transaction.
         """
         self._require_write_access()
+        if self.conn.in_transaction:
+            return
         self.conn.execute("BEGIN IMMEDIATE")
 
     def get_branch_cids(self, root_cid: int) -> List[int]:
@@ -11386,8 +11613,35 @@ class QualcoderDatabase:
             "row_created": existing is None,
         }
 
+    def start_backup_before_write(self) -> StartedBackup:
+        """The first step of a write's backup (v0.15.1): the project
+        copied but its database, outside SQLite's lock
+        (`start_backup`). `backup_before_write` finishes it once the
+        write holds SQLite's lock; the caller abandons it when the write
+        stops before that.
+
+        Raises:
+            BackupWithoutDatabaseError, OSError: as `start_backup`
+        """
+        self.last_backup_report = {}
+        self._started_backup = start_backup(
+            self.db_path, report=self.last_backup_report)
+        return self._started_backup
+
+    def abandon_backup_before_write(self) -> None:
+        """Remove the backup `start_backup_before_write` began, when the
+        write stops before `backup_before_write` finishes it: a refused
+        write leaves no backup. Nothing when none is pending."""
+        started = getattr(self, "_started_backup", None)
+        self._started_backup = None
+        if started is not None:
+            started.abandon()
+
     def backup_before_write(self) -> Path:
-        """Create a backup of the current project before making changes.
+        """Create a backup of the current project before making changes:
+        the backup `start_backup_before_write` began, finished (its
+        database copied by SQLite under the write's lock, then its
+        name), or a whole backup at once when none was begun.
 
         The copy report (skipped outward or dangling symlinks, S-P1) is
         kept on self.last_backup_report for the caller to surface, and
@@ -11402,9 +11656,14 @@ class QualcoderDatabase:
         Raises:
             OSError: If backup fails
         """
-        self.last_backup_report = {}
-        self.last_backup_path = backup_project(
-            self.db_path, report=self.last_backup_report)
+        started = getattr(self, "_started_backup", None)
+        self._started_backup = None
+        if started is None:
+            self.last_backup_report = {}
+            self.last_backup_path = backup_project(
+                self.db_path, report=self.last_backup_report)
+            return self.last_backup_path
+        self.last_backup_path = started.finish(copy_as_file=False)
         return self.last_backup_path
 
     # ======================================================================

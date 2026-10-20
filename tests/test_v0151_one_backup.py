@@ -46,8 +46,6 @@ TWO_STEP_TOOLS = ("merge_codes", "delete_code", "delete_category",
                   "merge_category", "set_project_coder_name",
                   "pseudonymise_source", "restore_backup")
 
-PIECE_2_PART_ONE = ("turned on by piece 2, part one: Exegete, not the "
-                    "argument, decides that a change takes a backup")
 PIECE_2_PART_TWO = ("turned on by piece 2, part two: audio and video "
                     "are left out of backups and kept by a restore")
 
@@ -777,7 +775,6 @@ async def each_change_without_a_backup(client, root):
     return calls
 
 
-@pytest.mark.xfail(strict=True, raises=PromiseBroken, reason=PIECE_2_PART_ONE)
 def test_create_backup_false_still_backs_up(tmp_path):
     server._apply_toolset("full")
     calls = host_session(lambda client: each_change_without_a_backup(

@@ -96,6 +96,15 @@ def _backups(project):
     return sorted(project.parent.glob(f"{project.stem}_backup_*"))
 
 
+def _without_backups(project):
+    """No backup shows the project as it was: each is removed, as a
+    prune would (v0.15.1: a rename takes one whatever create_backup
+    says, so "without a backup" is made by removing it)."""
+    import shutil
+    for backup in _backups(project):
+        shutil.rmtree(backup)
+
+
 def _dump(project):
     """Every row of every table, as text, keyed by table."""
     con = _con(project)
@@ -334,8 +343,15 @@ class TestRenameCaseRaces:
         path, and nothing is written."""
         original = server.QualcoderDatabase.begin_immediate
 
+        raced = []
+
         def racing(self):
-            _add_case(project, "p01", 9)
+            # Before the first BEGIN IMMEDIATE, which every write now
+            # takes before its backup's database (v0.15.1); the rename's
+            # own call inside the transaction does nothing
+            if not raced:
+                raced.append(True)
+                _add_case(project, "p01", 9)
             original(self)
         monkeypatch.setattr(server.QualcoderDatabase, "begin_immediate",
                             racing)
@@ -362,8 +378,11 @@ class TestRenameCaseRaces:
         monkeypatch.setattr(server.QualcoderDatabase, "begin_immediate", spy)
         monkeypatch.setattr(server.QualcoderDatabase, "case_name_rows", rows)
         assert _case(1, "P01", create_backup=False)["changed"] is True
-        # The read-only pre-check, then the lock, then the re-check.
-        assert calls == [("rows", False), ("begin", False), ("rows", True)]
+        # The read-only pre-check, then the lock (taken before the
+        # backup's database, v0.15.1; the rename's own call inside the
+        # transaction does nothing), then the re-check.
+        assert calls == [("rows", False), ("begin", False), ("begin", True),
+                         ("rows", True)]
 
     def test_a_unique_failure_at_the_update_is_the_clash_answer(
             self, project):
@@ -656,8 +675,15 @@ class TestRenameFile:
                                                     monkeypatch):
         original = server.QualcoderDatabase.begin_immediate
 
+        raced = []
+
         def racing(self):
-            _add_file(project, 9, "P01.txt")
+            # Before the first BEGIN IMMEDIATE, which every write now
+            # takes before its backup's database (v0.15.1); the rename's
+            # own call inside the transaction does nothing
+            if not raced:
+                raced.append(True)
+                _add_file(project, 9, "P01.txt")
             original(self)
         monkeypatch.setattr(server.QualcoderDatabase, "begin_immediate",
                             racing)
@@ -1222,6 +1248,7 @@ class TestARenameBack:
         _reload()
         listing.append("legacy.txt")
         assert _file(5, "legacy2.txt", create_backup=False)["changed"]
+        _without_backups(project)
         out = _file(5, "legacy.txt")
         assert out["error"].startswith(
             "The project's documents folder already holds a file called "
@@ -1273,6 +1300,7 @@ class TestARenameBack:
         _add_file(project, 5, first)
         _reload()
         assert _file(5, second, create_backup=False)["changed"] is True
+        _without_backups(project)
         assert _file(5, first)["error"].startswith(opening)
 
     @pytest.mark.parametrize("name, mediapath, restored", [

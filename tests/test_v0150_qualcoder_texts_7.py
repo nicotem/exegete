@@ -45,6 +45,7 @@ a researcher who uses it:
 
 import json
 import os
+import shutil
 import sqlite3
 import sys
 from pathlib import Path
@@ -507,6 +508,11 @@ class TestANameThatClashesInTheDocumentsFolder:
         _reload()
         listing.append("legacy.txt")
         assert _rename(5, "legacy2.txt", create_backup=False)["changed"]
+        # No backup shows the earlier name: the one the rename took
+        # (Exegete takes one before every change, v0.15.1) is removed
+        for backup in Path(qualcoder_db_path).parent.glob(
+                f"{Path(qualcoder_db_path).stem}_backup_*"):
+            shutil.rmtree(backup)
         out = _rename(5, "legacy.txt")
         assert out["error"].startswith(
             "The project's documents folder already holds a file called "

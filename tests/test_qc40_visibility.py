@@ -694,9 +694,10 @@ class TestWriteEchoesRedactHiddenTargets:
         assert out["deleted_coding"]["hidden_coder_row"] is True
         assert out["deleted_coding"]["private_note_removed"] is True
         assert "memo" not in out["deleted_coding"]
-        # S-P2 (a): a backup exists even though create_backup=False
+        # S-P2 (a): a backup exists even though create_backup=False, as
+        # before every change since v0.15.1, so no note says so
         assert "backup_path" in out
-        assert "backup_note" in out
+        assert "backup_note" not in out
         assert len(_backups(visibility_db)) == 1
         assert _row(visibility_db,
                     "SELECT COUNT(*) FROM code_text WHERE ctid = 3")[0] == 0
@@ -847,14 +848,14 @@ class TestVisibilityGuardFailsClosed:
         assert "refused" not in out
         return out
 
-    def _rows_intact(self, project):
+    def _rows_intact(self, project, backups=0):
         assert _row(project,
                     "SELECT memo FROM code_text WHERE ctid = 3")[0] == \
             "hidden memo"
         assert _row(project,
                     "SELECT memo FROM annotation WHERE anid = 1")[0] == \
             "hidden annotation"
-        assert _backups(project) == []
+        assert len(_backups(project)) == backups
 
     @pytest.mark.parametrize("variant", sorted(_BROKEN_VIEWS))
     def test_helpers_raise_instead_of_answering_visible(self, visibility_db,
@@ -983,7 +984,10 @@ class TestVisibilityGuardFailsClosed:
                               allow_hidden_coder=True)
         out = self._assert_failed_closed(raw)
         assert "nothing was changed" in out["error"]
-        self._rows_intact(visibility_db)
+        # The view breaks after the checks, so the refusal comes inside
+        # the change, after the backup Exegete takes before every change
+        # whatever create_backup says (v0.15.1)
+        self._rows_intact(visibility_db, backups=1)
 
     def test_locked_database_surfaces_as_locked_not_hidden(
             self, visibility_db, monkeypatch):

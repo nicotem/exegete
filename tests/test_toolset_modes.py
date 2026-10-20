@@ -774,6 +774,15 @@ class TestThePublishedSchemaBudget:
         assert f"roughly {self.FULL_TOKENS} tokens" in install
         assert f"about {self.CORE_ROUNDED} characters, roughly " \
                f"{self.CORE_TOKENS} tokens" in install
+        # v0.15.1, the LM Studio route: Step 3 of the recipe gives both
+        # sets in one sentence, rounded and to the character, so a
+        # re-measure that moves these constants names that sentence too
+        assert (f"measure about {self.FULL_ROUNDED} characters, roughly "
+                f"{self.FULL_TOKENS} tokens, against about "
+                f"{self.CORE_ROUNDED} characters, roughly "
+                f"{self.CORE_TOKENS} tokens, for the 25 tools of `core` "
+                f"({self.FULL_CHARS} and {self.CORE_CHARS} characters, "
+                f"measured for 0.15.0 on Python 3.13;") in install
 
     # `pseudonymise_source`'s own share of the full figure, which
     # INSTALL.md states rounded to the nearest 500 (v0.13: the one-file
@@ -784,21 +793,17 @@ class TestThePublishedSchemaBudget:
     # from about 19,500 to about 20,000, and its fix round to 19,960;
     # the write tools' sentence (not presuming QualCoder, piece 5) then
     # took it to 19,841, still about 20,000.
-    FLAGSHIP_ROUNDED = "20,000"
-
-    def test_install_quotes_the_flagships_own_share(self):
+    # v0.15.1, the LM Studio route (the owner's word of 20 October 2026):
+    # the recipe's Step 3 gives the two sets' sizes in one sentence, and
+    # the aside that broke the figure down, this share with it, is gone;
+    # a reader installing LM Studio does not need it, and TOOLS.md keeps
+    # the measurement.
+    def test_install_no_longer_breaks_the_figure_down(self):
         install = self._read("INSTALL.md")
-        assert (f"accounts for about {self.FLAGSHIP_ROUNDED} characters of "
-                f"that on its own") in install
-        if not self._reference_environment():
-            return
-        tools = asyncio.run(server.mcp.list_tools())
-        flagship = next(t for t in tools if t.name == "pseudonymise_source")
-        share = len(json.dumps({"name": flagship.name,
-                                "description": flagship.description or "",
-                                "inputSchema": flagship.inputSchema}))
-        assert round(share / 500) * 500 == int(
-            self.FLAGSHIP_ROUNDED.replace(",", "")), share
+        for gone in ("accounts for about 20,000 characters of that on its "
+                     "own", "the 0.12 flagship", "the palette and "
+                     "idempotency notes"):
+            assert gone not in install, gone
 
     def test_install_advises_a_context_the_core_schema_fits_in(self):
         """Step 4's advice is arithmetic, not a number to swap: the old

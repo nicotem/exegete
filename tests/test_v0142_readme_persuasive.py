@@ -251,7 +251,12 @@ def _tools(mode="full"):
 # leads to the newest release. That takes 108 characters (the line
 # and its line break), and the limit is raised by that and no more:
 # 38,582.
-README_LIMIT = 38_582
+# v0.15.1, the LM Studio route (the owner's word of 20 October 2026):
+# "Other assistants" names LM Studio's recipe of its own, in seven steps
+# with the `core` tool set, and links straight to it in INSTALL.md. That
+# takes 270 characters, and the limit is raised by that and no more:
+# 38,852.
+README_LIMIT = 38_852
 
 
 def test_the_readme_stays_short():

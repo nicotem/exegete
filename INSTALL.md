@@ -185,9 +185,9 @@ from easiest to most private, and OpenAI's apps:
 The multi-host support (the core toolset and the recipes below) is
 **Experimental**: written from official documentation, functionally
 tested at the server level, but not yet exercised end to end on every
-host and not capability-evaluated on local models. The recipe for
-OpenAI's apps goes step by step; guides of that kind for Claude Code
-and LM Studio are considered on request: ask in
+host and not capability-evaluated on local models. The recipes for
+OpenAI's apps and for LM Studio go step by step; a guide of that kind
+for Claude Code is considered on request: ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
 **What the assistant is told (provisional).** Exegete gives the
@@ -1026,14 +1026,16 @@ depends on it.
 Requirements: a machine that can run a mid-size local model (16 GB RAM
 is a realistic minimum), LM Studio installed, Python 3.10+.
 
-**Step 1. Install Exegete** (same as for any host):
+**Step 1. Install Exegete**, with its optional part for PDF and EPUB:
 
 ```bash
-pipx install exegete
-# or: python3 -m venv ~/exegete-venv && ~/exegete-venv/bin/pip install exegete
+pipx install "exegete[pdf-epub]"
+# or: python3 -m venv ~/exegete-venv && ~/exegete-venv/bin/pip install "exegete[pdf-epub]"
 ```
 
-Find the absolute path of the command (`which exegete`). LM
+Without that part, Exegete refuses to import PDF and EPUB files ("PDF
+and EPUB: the optional part", above, says what it adds and under which
+licence). Find the absolute path of the command (`which exegete`). LM
 Studio launches MCP servers itself and may not see your shell's PATH,
 so the config below must use the absolute path.
 
@@ -1050,23 +1052,14 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 82 tools by
 default, and the serialised tool definitions alone measure about
-207,000 characters, roughly 52k tokens (measured for 0.15.0 under
-Python 3.13.5 with mcp 1.30.0, in an environment installed from the
-repository's lock file; `pseudonymise_source`, the 0.12 flagship,
-accounts for about 20,000 characters of that on its own, because a tool
-that rewrites the researcher's text has to say in its own definition
-what it rewrites, what it leaves behind and what the backup then
-holds; the paging, novelty-filter and sampling arguments added in 0.12
-account for about 5,000 more, and the palette and idempotency notes on
-the codebook tools for rather more of the growth since 0.11 than the
-methodology guidance does. Python 3.10 to 3.12 keep the docstring
-indentation that 3.13 strips, so on those interpreters the same
-definitions measure about five per cent more).
-That exceeds LM Studio's 8k default context several times over before
-you type a word, and tool counts this size are far past where
-small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
-(in the config of Step 5) to register only the 25-tool supervised
-coding set, measured at about 68,000 characters, roughly 17k tokens.
+207,000 characters, roughly 52k tokens, against about 68,000
+characters, roughly 17k tokens, for the 25 tools of `core` (206,624
+and 68,258 characters, measured for 0.15.0 on Python 3.13; TOOLS.md
+says how). The full set exceeds LM Studio's 8k default context several
+times over before you type a word, and tool counts this size are far
+past where small-model tool selection degrades. Set
+`EXEGETE_TOOLSET=core` (in the config of Step 5) to register only the
+25-tool supervised coding set.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
 17k tokens of schema exceed the 8k default context. When loading the
@@ -1088,7 +1081,7 @@ mcp.json notation, per <https://lmstudio.ai/docs/app/mcp>):
     "exegete": {
       "command": "/Users/YOUR_USERNAME/exegete-venv/bin/exegete",
       "env": {
-        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda",
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/Exegete projects/MyProject.qda",
         "EXEGETE_TOOLSET": "core",
         "EXEGETE_UPDATE_CHECK": "off"
       }
@@ -1104,6 +1097,15 @@ Exegete's check for new versions off; it is off when unset too, and
 writing it down documents it. Replace the paths with your own; if the
 file already has other entries under `mcpServers`, add only the
 `"exegete"` block. LM Studio loads the server when you save.
+
+**A first project.** `core` cannot create a project or bring documents
+into one. If you have no project yet, do both once: with `full` in this
+entry (`"EXEGETE_TOOLSET": "full"`, no `EXEGETE_PROJECT_PATH` line yet,
+and Step 4's 64k context; then `core` again), which makes it in
+`~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names another
+folder; with the Claude Desktop extension (its conversation goes to
+Anthropic); or in QualCoder if you use it. Then give the project's path
+in `EXEGETE_PROJECT_PATH`.
 
 **Step 6. Keep tool confirmations on.** When the model calls a tool, LM
 Studio shows a confirmation dialog where you can inspect and edit the

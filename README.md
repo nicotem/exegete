@@ -423,9 +423,12 @@ whose default tool set, `full`, can create a project too. There, new
 projects and copies go to `~/Documents/Exegete projects`, which iCloud
 or OneDrive may sync, unless
 [`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
-names another folder. Claude Code opens files by itself ("Where your
-data goes", above), so for participants' data this project suggests
-Claude Desktop's chat.
+names another folder. LM Studio, with a model that runs on your own
+computer, has a recipe of its own in seven steps, with the `core` tool
+set:
+[INSTALL.md, "LM Studio (fully local) (Experimental)"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#lm-studio-fully-local-experimental).
+Claude Code opens files by itself ("Where your data goes", above), so
+for participants' data this project suggests Claude Desktop's chat.
 
 **Updating.** Updates are never installed by themselves and never
 touch your projects. In the extension, Exegete tells you when a new

@@ -565,6 +565,21 @@ SUBCODES_NEED_CASCADE = (
     "branch and all its codings.")
 
 
+# The safety sentence of every text that sends the researcher to copy a
+# backup back by hand, which is the way while the database will not
+# open and no tool can restore (v0.15.1, fix round 1): a backup put in
+# the project's place would leave it without its recordings, which
+# Exegete's backups leave out (MEDIA_FOLDERS), and a backup that holds
+# the folders (an earlier version's, or QualCoder's) would replace the
+# project's.
+BACKUP_BY_HAND_KEEPS_MEDIA = (
+    "To copy one back, copy everything in it except any audio or video "
+    "folder into the project folder, leaving the project's own audio and "
+    "video folders where they are: Exegete's backups leave those folders "
+    "out, so a backup put in the project's place would leave the project "
+    "without its recordings.")
+
+
 # The plain refusal of a database whose project table has no row (v0.14,
 # the create-project study's finding 7): not a usable QualCoder project.
 NO_PROJECT_ROW_MESSAGE = (
@@ -572,7 +587,7 @@ NO_PROJECT_ROW_MESSAGE = (
     "empty), so it is not a usable project, and neither Exegete nor "
     "QualCoder will open it. If it was left by a project creation that did not "
     "finish, it may be deleted by hand; otherwise restore it from a "
-    "backup.")
+    "backup. " + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 
 # The way through for a project from a QualCoder older than 3.8, which
@@ -4589,9 +4604,10 @@ class QualcoderDatabase:
                             f"which that schema has, so it may have been "
                             f"damaged or altered; Exegete cannot read it as "
                             f"it is or repair it itself. A copy from before "
-                            f"the change (a backup folder beside it, "
-                            f"selected in its place, for example) may have "
-                            f"them; otherwise ")
+                            f"the change may have them: a backup folder "
+                            f"beside it, for example, copied back by hand "
+                            f"while no program has the project open. "
+                            + BACKUP_BY_HAND_KEEPS_MEDIA + " Otherwise, ")
                     else:
                         # "Appears": the missing columns are the sign, and
                         # a damaged copy can lack them too (documents

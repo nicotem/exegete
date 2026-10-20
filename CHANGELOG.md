@@ -159,7 +159,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   are then only in the safety backup 0.15.0 takes first. When a restore
   fails and cannot put the project back, its answer now says to copy
   the safety backup's contents into the project folder, leaving the
-  audio and video folders as they are.
+  audio and video folders as they are. The answers that send you to
+  copy a backup back by hand, when the database will not open or a
+  project cannot be read, now say the same: copy everything in it
+  except any audio or video folder into the project folder, leaving the
+  project's own where they are, since a backup put in the project's
+  place would leave the project without its recordings. A restore that
+  fails after another program removed the project folder says that the
+  project recovered from the safety backup has no audio or video
+  folders, rather than that nothing was lost. Restoring one of
+  QualCoder's backups always says that the project's audio and video
+  folders are kept as they are.
 
 ### Fixed
 

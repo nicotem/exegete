@@ -90,6 +90,16 @@ def missing_columns(schema, columns="code_text.important"):
             f"itself. " + ROUTE + " " + NO_QUALCODER)
 
 
+# How to copy a backup back without losing the project's recordings,
+# which v0.15.1's backups leave out (tests/test_v0151_media_out.py)
+KEEPS_MEDIA = (
+    "To copy one back, copy everything in it except any audio or video "
+    "folder into the project folder, leaving the project's own audio and "
+    "video folders where they are: Exegete's backups leave those folders "
+    "out, so a backup put in the project's place would leave the project "
+    "without its recordings.")
+
+
 def damaged(version, columns="code_text.important"):
     """The refusal for a value from v14 on: a schema that has the
     columns, so not a project from before 3.8 (whole-branch review, round
@@ -97,9 +107,10 @@ def damaged(version, columns="code_text.important"):
     return (f"This project reports database schema {version} but lacks "
             f"column(s) {columns}, which that schema has, so it may have "
             f"been damaged or altered; Exegete cannot read it as it is or "
-            f"repair it itself. A copy from before the change (a backup "
-            f"folder beside it, selected in its place, for example) may "
-            f"have them; otherwise " + ROUTE + " " + NO_QUALCODER)
+            f"repair it itself. A copy from before the change may have "
+            f"them: a backup folder beside it, for example, copied back by "
+            f"hand while no program has the project open. " + KEEPS_MEDIA
+            + " Otherwise, " + ROUTE + " " + NO_QUALCODER)
 
 
 NOT_REPEATED = ("its database schema value is missing or not in "

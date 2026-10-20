@@ -102,11 +102,20 @@ NOT_KNOWN = (
 
 # Fix round 1: while the database will not open, no tool reaches the
 # backups, so the texts for that case say where they sit and that one
-# can be copied back by hand, as CONFIGURED below already did
+# can be copied back by hand, as CONFIGURED below already did; and, since
+# v0.15.1's backups leave out the audio and video folders, how to copy
+# one back without losing the project's recordings
+# (tests/test_v0151_media_out.py)
+KEEPS_MEDIA = (
+    "To copy one back, copy everything in it except any audio or video "
+    "folder into the project folder, leaving the project's own audio and "
+    "video folders where they are: Exegete's backups leave those folders "
+    "out, so a backup put in the project's place would leave the project "
+    "without its recordings.")
 BY_HAND = (
     "the project's backups, if any, sit beside the project folder under "
     "its name with _backup_ or _BKUP_, and one can be copied back by hand "
-    "while no program has the project open.")
+    "while no program has the project open. " + KEEPS_MEDIA)
 DAMAGED = (
     "The project database appears to be damaged or unreadable. If another "
     "program has it open, close it there and retry. Otherwise, while it "
@@ -125,7 +134,8 @@ CONFIGURED = (
     "there and retry. While the database will not open, no tool here can "
     "read, back it up or restore it: its backups, if any, sit beside the "
     "project folder under its name with _backup_ or _BKUP_, and one can be "
-    "copied back by hand while no program has the project open.")
+    "copied back by hand while no program has the project open. "
+    + KEEPS_MEDIA)
 ROLLED_BACK_LAST = (
     "If another program has the project open or is writing to it "
     "(QualCoder, if you use it), close it or wait a moment, then retry.")
@@ -266,7 +276,9 @@ class TestTheGuard:
 
     def test_no_old_phrase_is_in_an_answer(self):
         texts = answer_texts()
-        assert any(_flat(DB_UNAVAILABLE) in t for t in texts)
+        # the literal part: v0.15.1 adds KEEPS_MEDIA, a constant of its own
+        assert any(_flat(DB_UNAVAILABLE.removesuffix(" " + KEEPS_MEDIA))
+                   in t for t in texts)
         found = [(phrase, t[:120]) for phrase in OLD_IN_ANSWERS
                  for t in texts if phrase in t]
         assert not found, found

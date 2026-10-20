@@ -1154,7 +1154,7 @@ class TestAQualCoderBackup:
         assert preview["exegete_folder_note"] == KEPT_BACKUP_TOO
         assert answer["exegete_folder_note"] == KEPT_BACKUP_TOO
         # and one of QualCoder's own backups of it is still told apart
-        assert "QualCoder-made backup" in preview_qc["note"]
+        assert preview_qc["note"].startswith(server.MEDIA_KEPT_NOTE)
         assert preview_qc["exegete_folder_note"] == \
             KEPT_BACKUP_TOO + QUALCODER_PRUNES
 

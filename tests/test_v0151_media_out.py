@@ -11,15 +11,23 @@ they were (the same files, bytes and times), leaves an older backup's
 copies in that backup and never brings them in; when the restore fails
 part-way, the recovery keeps them too and "nothing was lost" stays true;
 when the recovery fails as well, the project folder stays, with them;
-the preview of restoring one of QualCoder's backups counts the files it
-holds there, never naming one; the import's note sizes the backup
-without them. Piece 1's `test_backups_leave_media_out`
-(tests/test_v0151_one_backup.py) pins the same through a host.
+the preview of restoring one of QualCoder's backups says that the
+project's are kept, and counts the files it holds there, never naming
+one; the import's note sizes the backup without them. Piece 1's
+`test_backups_leave_media_out` (tests/test_v0151_one_backup.py) pins
+the same through a host.
+
+Fix round 1: every text that sends the researcher to copy a backup back
+by hand, which is the way while the database will not open, says to
+leave the project's audio and video folders where they are; when the
+project folder itself has gone during a restore, the answer no longer
+says that nothing was lost.
 """
 
 import json
 import os
 import shutil
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -30,7 +38,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
-from exegete import database, reading_folder  # noqa: E402
+from exegete import database, new_project, reading_folder  # noqa: E402
 
 from test_v0150_restore_keeps_folder import (  # noqa: E402,F401
     RECOVERED, WINDOWS, FOLDS_CASE, _backup, _fill, _junction, _restore,
@@ -212,6 +220,38 @@ def test_when_the_recovery_fails_too_the_folder_stays_with_them(
     assert "over the project folder" not in answer["error"]
 
 
+def test_when_the_project_folder_has_gone_nothing_lost_is_not_said(
+        selected, monkeypatch):
+    """Another program removes the project folder during the restore: the
+    recovery copies the safety backup in its place, and that backup holds
+    no audio or video folders, so the recordings are not back and the
+    answer says so rather than that nothing was lost."""
+    _recordings(selected)
+    backup = _backup(selected)
+    real = shutil.copytree
+    target, source = selected.resolve(), backup.resolve()
+    removed = []
+
+    def copytree(src, dst, *args, **kwargs):
+        if Path(dst).resolve() == target and Path(src).resolve() == source:
+            shutil.rmtree(dst, ignore_errors=True)
+            removed.append(not os.path.lexists(dst))
+            raise OSError(2, "Injected: the project folder was removed")
+        return real(src, dst, *args, **kwargs)
+    monkeypatch.setattr(shutil, "copytree", copytree)
+    _, answer = _restore(backup)
+    if removed != [True]:
+        pytest.skip("this system kept the project folder (a file in it "
+                    "open)")
+    assert "success" not in answer
+    assert (selected / "data.qda").is_file()
+    assert _media(selected) == {}
+    assert _media(Path(answer["safety_backup"])) == {}
+    # the safety sentence is the fact: the recordings are not back
+    assert "nothing was lost" not in answer["error"]
+    assert "holds no audio or video folders" in answer["error"]
+
+
 # ---------------------------------------------------------------------------
 # What the answers say
 # ---------------------------------------------------------------------------
@@ -221,17 +261,22 @@ def test_a_qualcoder_backup_holding_them_is_counted_never_named(selected):
     qualcoders = selected.parent / f"{selected.stem}_BKUP_20261016_12.qda"
     shutil.copytree(selected, qualcoders)
     preview = json.loads(server.restore_backup(str(qualcoders)))
-    assert preview["note"] == server.MEDIA_KEPT_NOTE.format(files="3 files")
+    assert preview["note"].startswith(server.MEDIA_KEPT_NOTE)
+    assert "(3 files)" in preview["note"]
     assert "interview" not in json.dumps(preview)
     # one file is one file
     shutil.rmtree(qualcoders / "audio")
     preview = json.loads(server.restore_backup(str(qualcoders)))
-    assert preview["note"] == server.MEDIA_KEPT_NOTE.format(files="1 file")
-    # one without them keeps the earlier note
+    assert preview["note"].startswith(server.MEDIA_KEPT_NOTE)
+    assert "(1 file)" in preview["note"]
+    # one without them gets the same note, with no count, and not the
+    # earlier one, which read as a warning that the restore might leave
+    # the project without its recordings (fix round 1)
     for kind in ("audio", "video"):
         shutil.rmtree(qualcoders / kind, ignore_errors=True)
     preview = json.loads(server.restore_backup(str(qualcoders)))
-    assert "QualCoder-made backup" in preview["note"]
+    assert preview["note"] == server.MEDIA_KEPT_NOTE
+    assert "may not contain" not in preview["note"]
 
 
 def test_the_imports_note_sizes_the_backup_without_them(selected):
@@ -239,3 +284,71 @@ def test_the_imports_note_sizes_the_backup_without_them(selected):
     note = server._import_backup_note(selected, 0)
     assert note["backup_size_mb"] < 1
     assert server._folder_megabytes(selected) >= 3
+
+
+# ---------------------------------------------------------------------------
+# Copying a backup back by hand (fix round 1)
+# ---------------------------------------------------------------------------
+
+# The safety sentence is the fact here. While the database will not open
+# no tool can restore, so these texts send the researcher to copy a
+# backup back by hand; a backup put in the project's place would leave
+# the project without its recordings, which no later backup holds.
+KEEPS_MEDIA = (
+    "To copy one back, copy everything in it except any audio or video "
+    "folder into the project folder, leaving the project's own audio and "
+    "video folders where they are: Exegete's backups leave those folders "
+    "out, so a backup put in the project's place would leave the project "
+    "without its recordings.")
+
+
+def _refused(parent: Path, name: str, *statements: str) -> str:
+    """The refusal of a new project changed by `statements`."""
+    folder = parent / f"{name}.qda"
+    new_project.write_project(folder, new_project.creation_statements(
+        "carol", new_project.about_line("0.15.1"), "2026-10-20 10:00:00"))
+    conn = sqlite3.connect(str(folder / "data.qda"))
+    try:
+        for statement in statements:
+            conn.execute(statement)
+        conn.commit()
+    finally:
+        conn.close()
+    with pytest.raises(database.UnsupportedSchemaError) as raised:
+        database.QualcoderDatabase(str(folder))
+    return str(raised.value)
+
+
+def test_every_text_that_sends_to_a_backup_by_hand_says_to_keep_them(
+        tmp_path):
+    texts = {
+        "the database will not open": server.DB_UNAVAILABLE_ERROR,
+        "the configured project": server.CONFIGURED_PROJECT_UNAVAILABLE,
+        "a write not rolled back cleanly": server.WRITE_FAILED_UNCERTAIN,
+        "a write the database refused": server.WRITE_FAILED_REFUSED.format(
+            detail="no backup was taken", kind="IntegrityError"),
+        "a damaged database": server._project_open_failure_result(
+            str(tmp_path / "Nowhere.qda"))["error"],
+        "no project record": _refused(tmp_path, "Rowless",
+                                      "DELETE FROM project"),
+        "a schema lacking columns": _refused(
+            tmp_path, "Altered",
+            "ALTER TABLE code_text DROP COLUMN important",
+            "UPDATE project SET databaseversion = 'v14'"),
+    }
+    assert [where for where, text in texts.items()
+            if KEEPS_MEDIA not in text] == []
+    # and none sends the researcher to use a backup in the project's place
+    assert [where for where, text in texts.items()
+            if "in its place" in text] == []
+
+
+def test_tools_says_a_workspace_copy_keeps_them():
+    """TOOLS.md gives the workspace copy a backup's exclusions; since
+    backups leave the audio and video folders out and the copy keeps
+    them, it says so (fix round 1)."""
+    line = next(line for line in (REPO / "TOOLS.md").read_text(
+        encoding="utf-8").splitlines()
+        if line.startswith("- `copy_project_to_workspace("))
+    assert "the same exclusions as backups" in line
+    assert "keeping the audio and video folders" in line

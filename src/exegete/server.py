@@ -70,6 +70,7 @@ from .database import (
     MAX_CODER_NAME_LENGTH,
     backup_project,
     is_media_folder_entry,
+    BACKUP_BY_HAND_KEEPS_MEDIA,
     backup_sort_key,
     is_this_servers_backup_name,
     BACKUP_DATED_BY_NAME,
@@ -1287,7 +1288,8 @@ DB_UNAVAILABLE_ERROR = (
     "list_backups). While the database will not open, list_backups cannot "
     "read it either: the project's backups, if any, sit beside the project "
     "folder under its name with _backup_ or _BKUP_, and one can be copied "
-    "back by hand while no program has the project open."
+    "back by hand while no program has the project open. "
+    + BACKUP_BY_HAND_KEEPS_MEDIA
 )
 
 
@@ -1816,7 +1818,8 @@ CONFIGURED_PROJECT_UNAVAILABLE = (
     "retry. While the database will not open, no tool here can read, back "
     "it up or restore it: its backups, if any, sit beside the project folder "
     "under its name with _backup_ or _BKUP_, and one can be copied back by "
-    "hand while no program has the project open.")
+    "hand while no program has the project open. "
+    + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 
 class ConfiguredProjectError(ValueError):
@@ -3207,7 +3210,7 @@ WRITE_FAILED_UNCERTAIN = (
     "(select_project). If it will not open, no tool here can restore it: "
     "the project's backups, if any, sit beside the project folder under "
     "its name with _backup_ or _BKUP_, and one can be copied back by hand "
-    "while no program has the project open.")
+    "while no program has the project open. " + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 # The retry advice above is for a fault that waiting can cure: the
 # database was locked or busy, the disk was full, an I/O error. The
@@ -3227,7 +3230,7 @@ WRITE_FAILED_REFUSED = (
     "open, no tool here can restore it: the project's backups, if any, sit "
     "beside the project folder under its name with _backup_ or _BKUP_, and "
     "one can be copied back by hand while no program has the project "
-    "open.")
+    "open. " + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 # Which of the two texts a fault gets is decided on the exception class
 # and then on its message text. That is a HEURISTIC: SQLite's messages
@@ -4427,7 +4430,7 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
                  "can restore it: the project's backups, if any, sit "
                  "beside the project folder under its name with _backup_ "
                  "or _BKUP_, and one can be copied back by hand while no "
-                 "program has the project open."
+                 "program has the project open. " + BACKUP_BY_HAND_KEEPS_MEDIA
     }
     try:
         folder = Path(project_path)
@@ -13762,16 +13765,30 @@ def _copy_around_exegete_folder(source: Path, project_folder: Path,
                     dirs_exist_ok=True)
 
 
-# Said on the preview of restoring one of QualCoder's own backups that
-# holds files in its audio or video folder (v0.15.1)
+# Said on the preview of restoring one of QualCoder's own backups, with
+# MEDIA_HELD_NOTE when it holds files in its audio or video folder
+# (v0.15.1; one note whether or not it holds any, fix round 1)
 MEDIA_KEPT_NOTE = (
     "The project's audio and video folders are kept as they are, not taken "
-    "from the backup; the backup's copies ({files}) stay in it.")
+    "from the backup.")
+MEDIA_HELD_NOTE = "The backup's copies ({files}) stay in it."
+
+# Said when a failed restore found the project folder gone (another
+# program removed it) and copied the safety backup in its place: that
+# backup, like every backup Exegete makes, holds no audio or video
+# folders (v0.15.1, fix round 1)
+RECOVERED_WITHOUT_MEDIA = (
+    "The project folder had gone, so the safety backup was copied in its "
+    "place; that backup holds no audio or video folders, so any recordings "
+    "the project had are not in the recovered project.")
 
 
 def _media_kept_note(count: int) -> str:
-    """MEDIA_KEPT_NOTE with its count: "1 file", "3 files"."""
-    return MEDIA_KEPT_NOTE.format(
+    """MEDIA_KEPT_NOTE, then MEDIA_HELD_NOTE with its count when the backup
+    holds files there: "1 file", "3 files"."""
+    if not count:
+        return MEDIA_KEPT_NOTE
+    return MEDIA_KEPT_NOTE + " " + MEDIA_HELD_NOTE.format(
         files=f"{count} file" if count == 1 else f"{count} files")
 
 
@@ -13935,14 +13952,10 @@ def restore_backup(backup_path: str,
         }
         if qualcoder_made:
             # A restore keeps the project's audio and video folders and
-            # never takes the backup's (v0.15.1): said with a count when
-            # the backup holds files there, never a name
-            held = _media_files_in(backup_folder)
-            preview["note"] = (
-                _media_kept_note(held) if held else
-                "This is a QualCoder-made backup: depending on QualCoder's "
-                "settings it may not contain audio/video media files."
-            )
+            # never takes the backup's (v0.15.1): said always, with a
+            # count when the backup holds files there, never a name
+            preview["note"] = _media_kept_note(
+                _media_files_in(backup_folder))
         # P1-5: the preview is this tool's own ask rung. WARN-level only:
         # report the 4.0 GUI-open heuristics and ask, never refuse on
         # them (QA round 1, F18)
@@ -14098,6 +14111,7 @@ def restore_backup(backup_path: str,
         # safety-backup recovery always runs on a clean slate.
         logger.error("Restore failed mid-swap: %s", error_label(e))
         folder_kept = False
+        folder_gone = False
         try:
             if os.path.lexists(project_folder):
                 # Everything here but the Exegete folder was cleared or
@@ -14110,6 +14124,10 @@ def restore_backup(backup_path: str,
                 _copy_around_exegete_folder(safety_backup, project_folder,
                                             leave_out_folder=folder_kept)
             else:
+                # Another program removed the project folder, with its
+                # audio and video folders, which the safety backup does
+                # not hold (v0.15.1, fix round 1)
+                folder_gone = True
                 shutil.copytree(safety_backup, project_folder)
             switch_project(current_project_path)
             recovered: Dict[str, Any] = {
@@ -14133,6 +14151,12 @@ def restore_backup(backup_path: str,
                     "recovered project no longer contains those link "
                     "entries (what they pointed to is untouched); "
                     "recreate them by hand if they are needed.")
+            if folder_gone:
+                # "Nothing was lost" would be untrue: the recordings went
+                # with the folder
+                recovered["error"] = (
+                    recovered["error"].replace("; nothing was lost.", ".")
+                    + " " + RECOVERED_WITHOUT_MEDIA)
             _attach_skipped_symlinks(recovered, safety_report,
                                      prefix="safety_backup_",
                                      folder_kept=folder_kept)

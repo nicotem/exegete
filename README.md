@@ -311,9 +311,9 @@ a local model; its pages recommend 16 GB of memory or more.
    the file whose name starts with `exegete-` and ends in `.mcpb` from
    the newest release that has one under its Assets.
 3. **Install it**: double-click the file, click Install, then Install
-   again to fetch what it needs. Leave its "Tool set" setting as it
-   comes (`full`): `core`, the smaller set for local models, cannot
-   create a project
+   again to fetch what it needs. Leave its switch "Use the small tool
+   set, for local models" off, as it comes: the smaller set, `core`,
+   cannot create a project
    ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#claude-desktop-the-one-click-extension-recommended)).
 
 To check, click "+" in a new conversation, then Connectors: Exegete is
@@ -556,7 +556,7 @@ every tool.
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
 | `full` | 82: all, creating a project and two renamed tools' earlier names included | about 208,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
-| `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
+| `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Use the small tool set, for local models" |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:

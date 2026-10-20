@@ -1637,9 +1637,16 @@ def _uses_qualcoder_answer() -> str:
     """The researcher's answer to "Do you also use QualCoder on this
     computer?" (EXEGETE_USES_QUALCODER) as a project's history with
     QualCoder weighs it: yes, no or not sure. One reading for the
-    selected project's history and create_project's (v0.15.0)."""
+    selected project's history and create_project's (v0.15.0). Yes
+    whatever that says when the extension's switch "I use QualCoder on
+    this computer" (EXEGETE_I_USE_QUALCODER) is on (v0.15.1, ruling 83):
+    the switch never says no."""
+    switch_on, _switch_recognised = env_settings.read_switch(
+        env_settings.i_use_qualcoder_switch())
     answer, _recognised = qualcoder_history.read_setting(
         env_settings.uses_qualcoder())
+    if switch_on:
+        return qualcoder_history.YES
     return answer
 
 
@@ -1653,8 +1660,9 @@ def _qualcoder_history() -> Optional[qualcoder_history.History]:
     Worked out once, at the first consult after the project was
     installed (select_project consults it at once), with the process
     scan and the researcher's answer to "Do you also use QualCoder on
-    this computer?" (EXEGETE_USES_QUALCODER), and kept for the session,
-    in memory only. None, with nothing worked out or kept, when no
+    this computer?" (EXEGETE_USES_QUALCODER, or yes with the extension's
+    switch EXEGETE_I_USE_QUALCODER on: _uses_qualcoder_answer), and kept
+    for the session, in memory only. None, with nothing worked out or kept, when no
     project is selected or its path does not validate; a caller treats
     None as the level "none".
     """
@@ -23369,7 +23377,10 @@ def _install_folder() -> Optional[Path]:
 def _resolve_toolset_mode() -> str:
     """Read EXEGETE_TOOLSET (default full); `lifecycle`, the earlier name
     of `full`, is read as `full` in any letter case; unknown values
-    raise."""
+    raise, whatever the switch says. Then `core` when the extension's
+    switch "Use the small tool set, for local models"
+    (EXEGETE_SMALL_TOOLSET, v0.15.1, ruling 83) is on, and otherwise the
+    text's value: either one asking for the smaller set gives it."""
     reading = env_settings.read("toolset")
     raw = ("full" if reading.value is None else reading.value).strip().lower()
     raw = names.OLD_TOOLSET_NAMES.get(raw, raw)
@@ -23382,6 +23393,10 @@ def _resolve_toolset_mode() -> str:
             f"earlier name of 'full', is still read until "
             f"{names.OLD_SPELLINGS_UNTIL}."
         )
+    small_on, _recognised = env_settings.read_switch(
+        env_settings.small_toolset_switch())
+    if small_on:
+        return "core"
     return raw
 
 
@@ -23587,11 +23602,23 @@ def main(argv: Optional[List[str]] = None, *,
         logger.warning(LIFECYCLE_NOTE.format(setting=toolset_reading.name))
     # v0.15.0: "Do you also use QualCoder on this computer?" (ruling 73,
     # item 8); a word that is not yes, no or not sure is read as not
-    # sure, said here once, never its value, and never stops Exegete
+    # sure, said here once, never its value, and never stops Exegete.
+    # v0.15.1: with the switch "I use QualCoder on this computer" on, the
+    # answer is yes, and the line says so in place of "not sure".
     _answer, recognised = qualcoder_history.read_setting(
         env_settings.uses_qualcoder())
     if not recognised:
-        logger.warning(qualcoder_history.SETTING_NOT_RECOGNISED)
+        qualcoder_switch_on, _switch_recognised = env_settings.read_switch(
+            env_settings.i_use_qualcoder_switch())
+        logger.warning(
+            qualcoder_history.SETTING_NOT_RECOGNISED_SWITCH_ON
+            if qualcoder_switch_on else
+            qualcoder_history.SETTING_NOT_RECOGNISED)
+    # v0.15.1: the extension's two switches (ruling 83); a value that is
+    # not an on or off word is read as off, said here once, never its
+    # value, and never stops Exegete
+    for line in env_settings.switch_warnings():
+        logger.warning(line)
 
     # Check for optional pre-configured project (Option B: Fixed Project)
     # EXPERIMENTAL: reduced tool surface for local-model hosts. Fail

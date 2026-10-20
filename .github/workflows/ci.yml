@@ -295,6 +295,26 @@ jobs:
             HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/update-app-$way" --over "$RUNNER_TEMP/old.mcpb" $flag --expect-tools manifest
           done
 
+      # v0.15.1, the two switches: the update from the published 0.15.0
+      # package, both ways as above, with "Tool set" saying core kept
+      # from before and the new switch "Use the small tool set, for local
+      # models" at its default, off; then a fresh install with that
+      # switch on, as the app passes it. Each must list exactly the
+      # smaller set (exegete.server.CORE_TOOLSET, from this commit).
+      - name: Update over the published 0.15.0 package, an earlier value kept
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/v0150.mcpb" https://github.com/nicotem/exegete/releases/download/v0.15.0-alpha/exegete-0.15.0-alpha.mcpb
+          for way in kept emptied; do
+            home="$RUNNER_TEMP/update-0150-home-$way"
+            mkdir -p "$home"
+            flag=""; [ "$way" = emptied ] && flag="--emptied"
+            HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/update-0150-app-$way" --over "$RUNNER_TEMP/v0150.mcpb" $flag --set toolset=core --expect-tools core
+          done
+          home="$RUNNER_TEMP/switch-home"
+          mkdir -p "$home"
+          HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/switch-app" --set small_toolset=true --expect-tools core
+
   desktop-extension-same:
     name: desktop extension, the same bytes on every platform
     needs: desktop-extension

@@ -337,7 +337,10 @@ class TestTheSetting:
             # the researcher's own coder name
             "coder_name": "EXEGETE_CODER_NAME",
             # and "Do you also use QualCoder on this computer?"
-            "uses_qualcoder": "EXEGETE_USES_QUALCODER"}
+            "uses_qualcoder": "EXEGETE_USES_QUALCODER",
+            # v0.15.1: the extension's two switches
+            "small_toolset": "EXEGETE_SMALL_TOOLSET",
+            "i_use_qualcoder": "EXEGETE_I_USE_QUALCODER"}
         assert not set(names.NEW_ONLY_SETTINGS.values()) & {
             n for pair in names.SETTINGS.values() for n in pair}
 

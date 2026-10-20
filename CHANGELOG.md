@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   answer. A script or a saved instruction that passes
   `create_backup=false` to save time or disk space now takes a backup at
   each change: `prune_backups` removes old ones.
+- **Two switches in the extension's settings**, "Use the small tool
+  set, for local models" and "I use QualCoder on this computer", both
+  off after the update. "Tool set" and "Do you also use QualCoder on
+  this computer?" are still read, so nothing needs changing; but if
+  "Tool set" says `core`, the smaller set stays with the new switch
+  off: to have every tool, set it to `full` as well. After changing a
+  setting, quit Claude Desktop and open it again.
 
 ### Changed
 
@@ -199,6 +206,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   moved out of the project folder; beside `data.qda`, where a link is
   refused too, the project, backup or copy is refused, and a backup
   holding one is marked unclean.
+
+### Two settings as switches in the extension
+
+- **"Use the small tool set, for local models"**, a switch on the
+  desktop extension's settings page, off by default. On, Exegete
+  registers `core`, the smaller set for local models, which cannot
+  create a project; off, "Tool set" decides, as before. If either asks
+  for the smaller set, it is used.
+- **"I use QualCoder on this computer"**, a switch beside it, off by
+  default. On, Exegete takes it that you use QualCoder here, and its
+  answers carry the notes that matter only if you also open your
+  projects in QualCoder; off, "Do you also use QualCoder on this
+  computer?" decides, as before. If either says yes, the answer is yes;
+  no can be given only in the text setting. Whatever either says,
+  Exegete still refuses to write while QualCoder 3.8.2 has a project
+  open, and still warns when it sees signs that QualCoder 4.0 may have
+  one open.
+- **The text settings stay**, with their keys, titles and defaults, so a
+  value saved in 0.15.0 keeps working, and the Terminal routes are
+  unchanged. The extension passes the switches as
+  `EXEGETE_SMALL_TOOLSET` and `EXEGETE_I_USE_QUALCODER`, which can also
+  be set by hand: `on`, `true` or `1`, in any letter case, is on;
+  `off`, `false`, `0`, unset or blank is off. Any other value is read as
+  off, and the log says so once at start, naming the setting and never
+  its value; it never stops Exegete.
 
 ### For contributors
 

@@ -7,8 +7,10 @@ read in the package). Each has a new spelling, starting EXEGETE_, and
 the earlier one, which is still read until v1.0 (names.SETTINGS); the
 settings that never had an earlier spelling have the new one only
 (names.NEW_ONLY_SETTINGS, read by update_check, installed_as,
-call_seconds, coder_name, the researcher's own coder name, and
-uses_qualcoder). The one other read here is not a setting: Windows' own
+call_seconds, coder_name, the researcher's own coder name,
+uses_qualcoder, and the desktop extension's two switches (v0.15.1),
+small_toolset_switch and i_use_qualcoder_switch, which read_switch
+reads). The one other read here is not a setting: Windows' own
 folder, SystemRoot, from which the transition check starts PowerShell
 by its full path.
 
@@ -33,7 +35,8 @@ the spelling chosen, so it behaves exactly as it did before the rename.
 
 import os
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional
+from typing import (Any, Callable, Dict, List, Mapping, NamedTuple, Optional,
+                    Tuple)
 
 from . import names
 
@@ -232,6 +235,70 @@ def uses_qualcoder(environ: Optional[Mapping[str, str]] = None
     qualcoder_history.read_setting says what each value means."""
     env = os.environ if environ is None else environ
     return env.get(names.NEW_ONLY_SETTINGS["uses_qualcoder"])
+
+
+# The words that switch a setting on or off (v0.15.1: one list for the
+# check for new versions, updates.read_setting, and the extension's two
+# switches, read_switch), stripped and in any letter case.
+SWITCH_ON = ("on", "true", "1")
+SWITCH_OFF = ("off", "false", "0")
+
+
+def small_toolset_switch(environ: Optional[Mapping[str, str]] = None
+                         ) -> Optional[str]:
+    """EXEGETE_SMALL_TOOLSET, the extension's switch "Use the small tool
+    set, for local models", which has one spelling only (names.
+    NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
+    read_switch says what each value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["small_toolset"])
+
+
+def i_use_qualcoder_switch(environ: Optional[Mapping[str, str]] = None
+                           ) -> Optional[str]:
+    """EXEGETE_I_USE_QUALCODER, the extension's switch "I use QualCoder on
+    this computer", which has one spelling only (names.
+    NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
+    read_switch says what each value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["i_use_qualcoder"])
+
+
+def read_switch(raw: Any) -> Tuple[bool, bool]:
+    """(on, recognised) for a switch's raw value. Unset, blank, or a
+    placeholder the app left unfilled (`${...}`, once stripped) is off,
+    recognised; an on word (SWITCH_ON), stripped, in any letter case, is
+    on; an off word (SWITCH_OFF) is off; anything else, a value that is
+    not text included, is off, not recognised. It never raises."""
+    if raw is None:
+        return False, True
+    if not isinstance(raw, str):
+        return False, False
+    word = raw.strip().lower()
+    if not word or word.startswith("${"):
+        return False, True
+    if word in SWITCH_ON:
+        return True, True
+    if word in SWITCH_OFF:
+        return False, True
+    return False, False
+
+
+def switch_warnings(environ: Optional[Mapping[str, str]] = None
+                    ) -> List[str]:
+    """One start-up log line for each switch whose value is not
+    recognised, naming the switch and never its value; it is read as off
+    and never stops Exegete."""
+    readers = (("small_toolset", small_toolset_switch),
+               ("i_use_qualcoder", i_use_qualcoder_switch))
+    lines = []
+    for key, reader in readers:
+        _on, recognised = read_switch(reader(environ))
+        if not recognised:
+            lines.append(
+                f"{names.NEW_ONLY_SETTINGS[key]} is not one of on, off, "
+                f"true, false, 1 or 0, so it is read as off.")
+    return lines
 
 
 def windows_system_root() -> str:

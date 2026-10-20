@@ -160,10 +160,12 @@ class TestTheExtensionsSettings:
 
     def test_they_come_after_the_folder(self):
         # v0.15.0: "Do you also use QualCoder on this computer?" follows
-        # them, in the long description's order
+        # them, in the long description's order; v0.15.1: each of the
+        # two switches just before the text setting it stands beside
         assert list(TEMPLATE["user_config"]) == [
-            "toolset", "projects_folder", "coder_name", "ai_coder_name",
-            "uses_qualcoder", "update_check"]
+            "small_toolset", "toolset", "projects_folder", "coder_name",
+            "ai_coder_name", "i_use_qualcoder", "uses_qualcoder",
+            "update_check"]
 
     def test_the_variables_they_set(self):
         env = TEMPLATE["server"]["mcp_config"]["env"]
@@ -816,12 +818,16 @@ class TestTheDocuments:
                 "settings itself (the tool set, the two for the workspace "
                 "and the AI coder name), always to the same value.") \
             in install
-        # v0.15.0: and "Do you also use QualCoder on this computer?"
-        assert ("Five settings are new and have one spelling only: the two "
-                "of the check for new versions (`EXEGETE_UPDATE_CHECK` and "
-                "`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS`, "
-                "`EXEGETE_CODER_NAME` and `EXEGETE_USES_QUALCODER`, all "
-                "below.") in install
+        # v0.15.0: and "Do you also use QualCoder on this computer?";
+        # v0.15.1: and the extension's two switches. The count and the
+        # names are the code's (names.NEW_ONLY_SETTINGS)
+        start = install.index("Seven settings are new and have one "
+                              "spelling only:")
+        sentence = install[start:install.index("all below.", start)]
+        assert len(names.NEW_ONLY_SETTINGS) == 7
+        for variable in names.NEW_ONLY_SETTINGS.values():
+            assert f"`{variable}`" in sentence, variable
+        assert "Five settings are new" not in install
         assert "Four settings are new" not in install
         assert "The two settings of the check for new versions," \
             not in install

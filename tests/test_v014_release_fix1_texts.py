@@ -95,10 +95,11 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
                             flat.index("### ChatGPT's desktop app")]
     # v0.15.0: one set, `full`, every tool, the default on every route;
-    # the one other set is named for what it cannot do
-    assert ("Leave its \"Tool set\" setting as it comes (`full`): `core`, "
-            "the smaller set for local models, cannot create a project"
-            ) in one_click_readme
+    # the one other set is named for what it cannot do. v0.15.1: by the
+    # extension's switch, left off as it comes
+    assert ("Leave its switch \"Use the small tool set, for local models\" "
+            "off, as it comes: the smaller set, `core`, cannot create a "
+            "project") in one_click_readme
     assert "whose standard tool set cannot create a project unless switched " \
         "on" not in flat
     assert ("whose default tool set, `full`, can create a project "

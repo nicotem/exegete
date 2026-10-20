@@ -250,8 +250,9 @@ class TestTheExtensionSetsBothSpellings:
         # three more, the AI coder name under both spellings and the
         # researcher's own coder name, with one; and one more with one
         # spelling, "Do you also use QualCoder on this computer?" (four
-        # with one spelling only)
-        assert len(env) == 12
+        # with one spelling only); v0.15.1: two more with one spelling,
+        # the extension's two switches (six with one spelling only)
+        assert len(env) == 14
         # A departure, v0.15.0: EXEGETE_CALL_SECONDS, a setting with one
         # spelling, is kept out of the manifest, since the extension's
         # time per import call is measured for it, not offered in its

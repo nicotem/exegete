@@ -29,6 +29,8 @@
         "QUALCODER_MCP_AI_CODER_NAME": "${user_config.ai_coder_name}",
         "EXEGETE_CODER_NAME": "${user_config.coder_name}",
         "EXEGETE_USES_QUALCODER": "${user_config.uses_qualcoder}",
+        "EXEGETE_SMALL_TOOLSET": "${user_config.small_toolset}",
+        "EXEGETE_I_USE_QUALCODER": "${user_config.i_use_qualcoder}",
         "EXEGETE_UPDATE_CHECK": "${user_config.update_check}",
         "EXEGETE_INSTALLED_AS": "extension"
       }
@@ -45,10 +47,17 @@
     ]
   },
   "user_config": {
+    "small_toolset": {
+      "type": "boolean",
+      "title": "Use the small tool set, for local models",
+      "description": "Off: every tool, creating a new project included (recommended). On: a smaller set for local models, which cope less well with many tools; it cannot create a project. Typing core in \"Tool set\" does the same: if either asks for the smaller set, it is used. After changing a setting, quit Claude Desktop and open it again.",
+      "default": false,
+      "required": false
+    },
     "toolset": {
       "type": "string",
       "title": "Tool set",
-      "description": "Type one of two words. full: every tool, creating a new project included (recommended). core: a smaller set for local models. If this shows lifecycle, the earlier name of full, it works as full. Any other word stops the extension from starting. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "Type one of two words. full: every tool, creating a new project included (recommended). core: a smaller set for local models. If this shows lifecycle, the earlier name of full, it works as full. Any other word stops the extension from starting. If the switch \"Use the small tool set, for local models\" is on, the smaller set is used whatever this says. After changing a setting, quit Claude Desktop and open it again.",
       "default": "full",
       "required": false
     },
@@ -73,10 +82,17 @@
       "default": "",
       "required": false
     },
+    "i_use_qualcoder": {
+      "type": "boolean",
+      "title": "I use QualCoder on this computer",
+      "description": "On: Exegete takes it that you use QualCoder here and adds some notes that matter only if you also open your projects in QualCoder (such as whether an open QualCoder window shows Exegete's changes). Off: Exegete decides from what it finds on each project and on this computer, unless \"Do you also use QualCoder on this computer?\" says yes or no; if either says yes, the answer is yes. Whatever this says, Exegete still refuses to write while QualCoder 3.8.2 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open. After changing a setting, quit Claude Desktop and open it again.",
+      "default": false,
+      "required": false
+    },
     "uses_qualcoder": {
       "type": "string",
       "title": "Do you also use QualCoder on this computer?",
-      "description": "Type yes, no or not sure. With yes, Exegete adds some notes that matter only if you also open your projects in QualCoder (such as whether an open QualCoder window shows Exegete's changes, or the backups QualCoder 3.8 may keep elsewhere); with no, it leaves those out, unless a project shows signs that QualCoder may have opened it or QualCoder is running when a project is selected; with not sure, it decides from what it finds on each project and on this computer. Notes worded \"if the project is opened in QualCoder\", such as the one on emoji and Windows line breaks, are given with any answer, and so is the line saying that a new project is in QualCoder's format. Whatever you answer, Exegete still refuses to write while QualCoder 3.8.2 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open: an answer can be out of date (a colleague's project, QualCoder installed later), and a write into a project open in QualCoder can lose work. Any other word is read as not sure. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "Type yes, no or not sure. With yes, Exegete adds some notes that matter only if you also open your projects in QualCoder (such as whether an open QualCoder window shows Exegete's changes, or the backups QualCoder 3.8 may keep elsewhere); with no, it leaves those out, unless a project shows signs that QualCoder may have opened it or QualCoder is running when a project is selected; with not sure, it decides from what it finds on each project and on this computer. Notes worded \"if the project is opened in QualCoder\", such as the one on emoji and Windows line breaks, are given with any answer, and so is the line saying that a new project is in QualCoder's format. Whatever you answer, Exegete still refuses to write while QualCoder 3.8.2 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open: an answer can be out of date (a colleague's project, QualCoder installed later), and a write into a project open in QualCoder can lose work. Any other word is read as not sure. If the switch \"I use QualCoder on this computer\" is on, the answer is yes whatever this says; no can be given only here. After changing a setting, quit Claude Desktop and open it again.",
       "default": "not sure",
       "required": false
     },

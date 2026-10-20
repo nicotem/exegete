@@ -377,8 +377,10 @@ class TestTheSmallerPoints:
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
         install = _flat(_read("INSTALL.md"))
-        for words in ("setting, whose default is `full`. Any other value "
-                      "stops Exegete at start-up",
+        # v0.15.1: the switch's sentence now comes between "whose
+        # default is `full`." and "Any other value"
+        for words in ("setting, whose default is `full`.",
+                      "Any other value stops Exegete at start-up",
                       "used, and the log says so once at start; it never "
                       "stops Exegete. The desktop extension's settings do "
                       "not offer it.",

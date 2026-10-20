@@ -33,8 +33,9 @@ of a project from the conversation. It runs as an MCP server.
 
 - `src/exegete/server.py`: the MCP server, with its tools, resources,
   prompts, help topics and the assistant's brief. Tool sets: `full`
-  and `core` (`EXEGETE_TOOLSET`); `lifecycle`, the earlier name of
-  `full`, is read as `full`.
+  and `core` (`EXEGETE_TOOLSET`, or the extension's switch
+  (`EXEGETE_SMALL_TOOLSET`)); `lifecycle`, the earlier name of `full`,
+  is read as `full`.
 - `database.py`: the project database, in QualCoder's format (schema
   v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.
 - `preview_tokens.py`: preview before confirm. `memo_privacy.py`: the
@@ -44,8 +45,9 @@ of a project from the conversation. It runs as an MCP server.
 - `path_identity.py`: containment checks by folder identity.
   `qualcoder_history.py`: a project's history with QualCoder (the
   traces, and the researcher's answer to "Do you also use QualCoder on
-  this computer?", that decide whether a text's notes about QualCoder
-  apply), worked out once per selection.
+  this computer?" or the switch "I use QualCoder on this computer",
+  that decide whether a text's notes about QualCoder apply), worked out
+  once per selection.
 - `doc_import.py`, `doc_readers.py`, `import_reading.py` and their
   neighbours (`import_*.py`, `garbled_text.py`, `kept_texts.py`, the
   text a preview read, kept for its import): bringing documents in

@@ -67,7 +67,8 @@ Issues help everyone, permanently. Please use
   `core`, or `full` when the variable is not set; `lifecycle` is the
   earlier name of `full`, before 0.15.0). With the Claude Desktop
   extension, the version is in the name of the `.mcpb` file you
-  installed, and the toolset is its Tool set setting (`full` unless you
-  changed it; an extension installed before 0.15.0 may show
-  `lifecycle`, which works as `full`). The bug report template asks for
-  all of these.
+  installed, and the toolset is `core` when its switch "Use the small
+  tool set, for local models" is on or its Tool set setting says
+  `core`, and `full` otherwise (an extension installed before 0.15.0
+  may show `lifecycle`, which works as `full`). The bug report template
+  asks for all of these.

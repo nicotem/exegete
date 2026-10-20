@@ -173,13 +173,15 @@ class TestTheToolsAreTheServers:
 
 class TestTheSettings:
 
-    def test_six_settings_and_nothing_secret(self):
+    def test_eight_settings_and_nothing_secret(self):
         config = TEMPLATE["user_config"]
         # v0.15.0: the two coder names joined the first three, and "Do
-        # you also use QualCoder on this computer?"
-        assert set(config) == {"toolset", "projects_folder", "coder_name",
-                               "ai_coder_name", "uses_qualcoder",
-                               "update_check"}
+        # you also use QualCoder on this computer?"; v0.15.1: the two
+        # switches
+        assert set(config) == {"small_toolset", "toolset",
+                               "projects_folder", "coder_name",
+                               "ai_coder_name", "i_use_qualcoder",
+                               "uses_qualcoder", "update_check"}
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
@@ -256,6 +258,10 @@ class TestTheSettings:
         # and "Do you also use QualCoder on this computer?" (v0.15.0)
         expected[names.NEW_ONLY_SETTINGS["uses_qualcoder"]] = \
             "${user_config.uses_qualcoder}"
+        # and the two switches (v0.15.1)
+        for key in ("small_toolset", "i_use_qualcoder"):
+            expected[names.NEW_ONLY_SETTINGS[key]] = \
+                "${user_config." + key + "}"
         assert env == expected
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
@@ -265,6 +271,9 @@ class TestTheSettings:
                            "project_settings.py").read_text(encoding="utf-8")
         assert "env_settings.coder_name(environ)" in settings_source
         assert source.count("env_settings.uses_qualcoder()") == 2
+        # v0.15.1: each switch read where its text setting is read
+        assert "env_settings.small_toolset_switch()" in source
+        assert "env_settings.i_use_qualcoder_switch()" in source
         assert database.WORKSPACE_ENV == "EXEGETE_WORKSPACE"
         assert database.WORKSPACE_REQUIRED_ENV == "EXEGETE_WORKSPACE_REQUIRED"
 

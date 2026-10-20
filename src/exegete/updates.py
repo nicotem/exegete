@@ -566,8 +566,10 @@ def _attempted(now: float, published: Optional[Published],
 # The setting and the way Exegete was installed
 # ---------------------------------------------------------------------------
 
-_ON = ("on", "true", "1")
-_OFF = ("off", "false", "0")
+# The words for on and off, one list with the extension's switches
+# (v0.15.1: env_settings, which this module imports, never the reverse).
+_ON = env_settings.SWITCH_ON
+_OFF = env_settings.SWITCH_OFF
 
 EXTENSION = "extension"
 OLD_NAME = "old name"

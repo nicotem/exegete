@@ -269,7 +269,11 @@ def _tools(mode="full"):
 # that and no more: 40,445. Its fix round: the backup before each change
 # to the project's database, and PRIVACY's heading on Exegete's log, 23
 # characters more: 40,468.
-README_LIMIT = 40_468
+# v0.15.1, the two switches: "Getting started" leaves the switch "Use
+# the small tool set, for local models" off, and the tool sets' table
+# names it beside `EXEGETE_TOOLSET=core`. That takes 80 characters, and
+# the limit is raised by that and no more: 40,548.
+README_LIMIT = 40_548
 
 
 def test_the_readme_stays_short():
@@ -737,7 +741,10 @@ def test_the_tool_set_table():
     assert rows["full"][4] == "every route"
     assert ("`lifecycle`, the earlier name of `full` in the extension, is "
             "still accepted and means `full`.") in _flat(section)
-    assert rows["core"][4] == "none: set `EXEGETE_TOOLSET=core`"
+    # v0.15.1: the variable, or the extension's switch by its title
+    assert rows["core"][4].startswith("none: set `EXEGETE_TOOLSET=core`")
+    assert manifest["user_config"]["small_toolset"]["title"] in \
+        rows["core"][4]
     assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
     # the sentence under it, with the interpreters and the per cent
     # (v0.14.2, the README's second round of checks: shorter, the same

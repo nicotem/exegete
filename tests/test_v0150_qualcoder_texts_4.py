@@ -68,8 +68,8 @@ DESCRIPTION = (
     "signs that QualCoder 4.0 may have one open: an answer can be out of "
     "date (a colleague's project, QualCoder installed later), and a write "
     "into a project open in QualCoder can lose work. Any other word is "
-    "read as not sure."
-    " After changing a setting, quit Claude Desktop and open it again.")
+    "read as not sure.")
+RESTART = " After changing a setting, quit Claude Desktop and open it again."
 LONG_DESCRIPTION_END = (
     "The settings choose the tool set (every tool, or a smaller set for "
     "local models), the folder where new projects and working copies are "
@@ -353,9 +353,19 @@ class TestTheField:
 class TestTheExtensionsSetting:
 
     def test_the_entry_its_title_description_and_default(self):
-        assert TEMPLATE["user_config"]["uses_qualcoder"] == {
-            "type": "string", "title": TITLE, "description": DESCRIPTION,
-            "default": "not sure", "required": False}
+        option = dict(TEMPLATE["user_config"]["uses_qualcoder"])
+        description = option.pop("description")
+        assert option == {"type": "string", "title": TITLE,
+                          "default": "not sure", "required": False}
+        # v0.15.1: the words of 0.15.0, then the switch "I use QualCoder
+        # on this computer", by its title: on, it gives yes whatever this
+        # says, and no can be given only here; the restart sentence last
+        assert description.startswith(DESCRIPTION)
+        switch = TEMPLATE["user_config"]["i_use_qualcoder"]["title"]
+        assert (f"If the switch \"{switch}\" is on, the answer is yes "
+                f"whatever this says; no can be given only here.") in \
+            description
+        assert description.endswith(RESTART)
 
     def test_its_variable(self):
         env = TEMPLATE["server"]["mcp_config"]["env"]
@@ -594,15 +604,18 @@ class TestFixRoundOneTheDocuments:
                  "`qualcoder_history` when the project or this computer "
                  "shows a trace of QualCoder, or when the answer to \"Do "
                  "you also use QualCoder on this computer?\" in Exegete's "
-                 "settings is yes or no, with that answer as its "
-                 "`setting`"),
+                 "settings is yes or no"),
                 ("get_current_project()",
                  "when there are any or when the answer to \"Do you also "
-                 "use QualCoder on this computer?\" is yes or no, with "
-                 "that answer as `setting`")):
+                 "use QualCoder on this computer?\" is yes or no")):
             line = next(row for row in tools.splitlines()
                         if row.startswith(f"- `{tool}`"))
             assert words in line, tool
+            # v0.15.1: yes also when the switch, by its title, is on
+            switch = TEMPLATE["user_config"]["i_use_qualcoder"]["title"]
+            assert f"yes also when the switch \"{switch}\" is on" in line, \
+                tool
+            assert "with that answer as" in line, tool
 
     def test_privacy_says_the_answer_enters_the_conversation(self):
         privacy = (REPO / "PRIVACY.md").read_text(encoding="utf-8")
@@ -633,11 +646,16 @@ class TestFixRoundOneTheDocuments:
 class TestFixRoundOneTheNoteSaysWhatSettingIs:
 
     def test_the_note_names_the_answer(self):
+        # v0.15.1: yes when the switch is on, by its title; otherwise the
+        # text setting, by its title; when it weighs, as before
+        switch = TEMPLATE["user_config"]["i_use_qualcoder"]["title"]
         assert ("The field's setting is the researcher's answer in "
-                "Exegete's settings to \"Do you also use QualCoder on this "
-                "computer?\" (not sure unless they changed it); it weighs "
-                "only when the project shows no sign of QualCoder and "
-                "QualCoder is not running.") in REPORT_NOTE
+                "Exegete's settings: ") in REPORT_NOTE
+        assert f"yes when the switch \"{switch}\" is on" in REPORT_NOTE
+        assert (f"otherwise their answer to \"{TITLE}\" (not sure unless "
+                f"they changed it)") in REPORT_NOTE
+        assert ("it weighs only when the project shows no sign of "
+                "QualCoder and QualCoder is not running.") in REPORT_NOTE
 
     def test_the_note_reaches_the_answers(
             self, setup_server, qualcoder_db_path, monkeypatch):
@@ -747,6 +765,9 @@ class TestFixRoundTwoTheWords:
         claude = _flat((REPO / "CLAUDE.md").read_text(encoding="utf-8"))
         assert ("`qualcoder_history.py`: a project's history with QualCoder "
                 "(the traces, and the researcher's answer to \"Do you also "
-                "use QualCoder on this computer?\", that decide whether a "
-                "text's notes about QualCoder apply), worked out once per "
-                "selection.") in claude
+                "use QualCoder on this computer?\"") in claude
+        # v0.15.1: or the switch, by its title
+        switch = TEMPLATE["user_config"]["i_use_qualcoder"]["title"]
+        assert (f"or the switch \"{switch}\", that decide whether a text's "
+                f"notes about QualCoder apply), worked out once per "
+                f"selection.") in claude

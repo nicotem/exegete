@@ -49,8 +49,8 @@ SETTING_DESCRIPTION = (
     "Type one of two words. full: every tool, creating a new project "
     "included (recommended). core: a smaller set for local models. If "
     "this shows lifecycle, the earlier name of full, it works as full. Any "
-    "other word stops the extension from starting."
-    " After changing a setting, quit Claude Desktop and open it again.")
+    "other word stops the extension from starting.")
+RESTART = " After changing a setting, quit Claude Desktop and open it again."
 
 SETTINGS_CLAUSE = ("The settings choose the tool set (every tool, or a "
                    "smaller set for local models)")
@@ -349,7 +349,14 @@ class TestTheExtension:
         option = MANIFEST["user_config"]["toolset"]
         assert option["type"] == "string"
         assert option["default"] == "full"
-        assert option["description"] == SETTING_DESCRIPTION
+        # v0.15.1: the words, as before; then the switch "Use the small
+        # tool set, for local models", named by its title, gives the
+        # smaller set whatever this says; the restart sentence last
+        assert option["description"].startswith(SETTING_DESCRIPTION)
+        assert option["description"].endswith(RESTART)
+        switch = MANIFEST["user_config"]["small_toolset"]["title"]
+        assert (f"If the switch \"{switch}\" is on, the smaller set is "
+                f"used whatever this says.") in option["description"]
 
     def test_the_long_description(self):
         text = MANIFEST["long_description"]
@@ -376,10 +383,15 @@ class TestTheExtension:
         assert ("description: \"`full` is the default, every tool, creating "
                 "a project included; `core` is the reduced set for local "
                 "models; `lifecycle` was `full`'s name in the extension "
-                "before 0.15.0. With the Claude Desktop extension, it is the "
-                "extension's Tool set setting (`full` unless you changed "
-                "it; an extension installed before 0.15.0 may show "
-                "`lifecycle`, which works as `full`).\"") in block
+                "before 0.15.0.") in block
+        # v0.15.1: with the extension, `core` when the switch "Use the
+        # small tool set, for local models" is on or "Tool set" says
+        # `core`, `full` otherwise; `lifecycle` still works as `full`
+        switch = MANIFEST["user_config"]["small_toolset"]["title"]
+        assert (f"it is `core` when the extension's switch \\\"{switch}\\\" "
+                f"is on or its Tool set setting says `core`, and `full` "
+                f"otherwise") in block
+        assert ("may show `lifecycle`, which works as `full`).\"") in block
         options = re.findall(r"^        - (.+)$", block, re.M)
         # Fix round 1: the option no longer reads as a version the
         # researcher is not on, since 0.15.0 may still show `lifecycle`
@@ -387,8 +399,10 @@ class TestTheExtension:
                            "lifecycle (the earlier name of full)",
                            "Not sure"]
         support = _flat("SUPPORT.md")
-        assert ("the toolset is its Tool set setting (`full` unless you "
-                "changed it; an extension installed before 0.15.0 may show "
+        assert (f"the toolset is `core` when its switch \"{switch}\" is "
+                f"on or its Tool set setting says `core`, and `full` "
+                f"otherwise") in support
+        assert ("an extension installed before 0.15.0 may show "
                 "`lifecycle`, which works as `full`).") in support
 
 
@@ -619,9 +633,11 @@ class TestTheDocuments:
 
     def test_the_readme_sentences(self):
         readme = _flat("README.md")
-        assert ("Leave its \"Tool set\" setting as it comes (`full`): "
-                "`core`, the smaller set for local models, cannot create a "
-                "project") in readme
+        # v0.15.1: the switch, by its title, left off as it comes; the
+        # smaller set, `core`, cannot create a project
+        switch = MANIFEST["user_config"]["small_toolset"]["title"]
+        assert (f"Leave its switch \"{switch}\" off, as it comes: the "
+                f"smaller set, `core`, cannot create a project") in readme
         assert ("whose default tool set, `full`, can create a project "
                 "too.") in readme
         assert "| Create a project | Yes | Yes |" in readme

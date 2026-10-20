@@ -32,11 +32,18 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    fetch a few dependencies. The first install takes a minute or two.
 4. **Look at its settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
+   - **Use the small tool set, for local models**: off unless you
+     switch it on. Off, Exegete offers every tool, creating a new
+     project included (recommended); on, a smaller set for local
+     models, which cannot create a project. Typing `core` in "Tool set"
+     does the same: if either asks for the smaller set, it is used.
    - **Tool set**: `full` (the default) gives every tool, creating a
      new project included (recommended); `core` a smaller set for local
      models. Type one of the two words: any other word stops the
      extension from starting. Installed before 0.15.0, it may show
-     `lifecycle`, the earlier name of `full`; it works as `full`.
+     `lifecycle`, the earlier name of `full`; it works as `full`. If
+     the switch "Use the small tool set, for local models" is on, the
+     smaller set is used whatever this says.
    - **Folder for projects**: where new projects are created and
      working copies of projects are kept. The default,
      `~/Exegete projects` (a folder called "Exegete projects" in
@@ -74,6 +81,15 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      needs it. A project that already has an AI coder name keeps it,
      and Claude asks you once whether to switch. It must differ from
      your coder name, and the same limits apply.
+   - **I use QualCoder on this computer**: off unless you switch it
+     on. On, Exegete takes it that you use QualCoder here and adds the
+     notes that matter only if you also open your projects in
+     QualCoder; off, it decides from what it finds on each project and
+     on this computer, unless "Do you also use QualCoder on this
+     computer?" says yes or no. If either says yes, the answer is yes.
+     Whatever they say, Exegete still refuses to write while QualCoder
+     3.8.2 has a project open, and still warns when it sees signs that
+     QualCoder 4.0 may have one open.
    - **Do you also use QualCoder on this computer?**: not sure unless
      you change it. Type yes, no or not sure. With yes, Exegete adds
      some notes that matter only if you also open your projects in
@@ -87,7 +103,8 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      the line saying that a new project is in QualCoder's format. Whatever
      you answer, Exegete still refuses to write while QualCoder 3.8.2
      has a project open, and still warns when it sees signs that QualCoder
-     4.0 may have one open.
+     4.0 may have one open. With the switch on, the answer is yes
+     whatever this says; no can be given only here.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
      small file from its website on GitHub to see whether a newer
@@ -714,10 +731,11 @@ spaces in the workspace, the project path and
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
 desktop extension sets both spellings of these four settings itself
 (the tool set, the two for the workspace and the AI coder name), always
-to the same value. Five settings are new and have one spelling only:
+to the same value. Seven settings are new and have one spelling only:
 the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
-`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS`, `EXEGETE_CODER_NAME`
-and `EXEGETE_USES_QUALCODER`, all below.
+`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS`, `EXEGETE_CODER_NAME`,
+`EXEGETE_USES_QUALCODER` and the extension's two switches,
+`EXEGETE_SMALL_TOOLSET` and `EXEGETE_I_USE_QUALCODER`, all below.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -738,8 +756,17 @@ and `EXEGETE_USES_QUALCODER`, all below.
   extension's default before 0.15.0), is read as `full` until v1.0, and
   Exegete names it in its log at each start. The desktop extension sets
   this variable from its "Tool set" setting, whose default is `full`.
+  It also sets `EXEGETE_SMALL_TOOLSET` from its switch; either one
+  asking for `core` gives `core`.
   Any other value stops Exegete at start-up with an error naming the
   valid values. Resources and prompts are not affected.
+- `EXEGETE_SMALL_TOOLSET` (0.15.1): the extension's switch "Use the
+  small tool set, for local models". `on`, `true` or `1`, in any letter
+  case, gives `core` whatever `EXEGETE_TOOLSET` says; `off`, `false`,
+  `0`, unset or blank leaves the choice to `EXEGETE_TOOLSET`. Any other
+  value is read as off, and the log says so once at start, never the
+  value; it never stops Exegete. Configuring Exegete yourself,
+  `EXEGETE_TOOLSET=core` is the usual way.
 - `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
@@ -855,7 +882,16 @@ and `EXEGETE_USES_QUALCODER`, all below.
   4.0 may have one open: an answer can be out of date (a colleague's
   project, QualCoder installed later), and a write into a project open
   in QualCoder can lose work. The desktop extension sets it from its
-  setting "Do you also use QualCoder on this computer?".
+  setting "Do you also use QualCoder on this computer?". It also sets
+  `EXEGETE_I_USE_QUALCODER` from its switch; either one saying yes
+  gives yes.
+
+- `EXEGETE_I_USE_QUALCODER` (0.15.1): the extension's switch "I use
+  QualCoder on this computer". `on`, `true` or `1` gives the answer yes
+  whatever `EXEGETE_USES_QUALCODER` says; `off`, `false`, `0`, unset
+  or blank leaves the answer to it. Any other value is read as off, and
+  the log says so once at start, never the value; it never stops
+  Exegete, and never changes the refusal or the warnings above.
 
 - `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release

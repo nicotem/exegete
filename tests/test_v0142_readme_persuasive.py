@@ -247,7 +247,11 @@ def _tools(mode="full"):
 # names file among what an assistant that opens files can reach. That
 # takes 32 characters, and the limit is raised by that and no more:
 # 38,474.
-README_LIMIT = 38_474
+# v0.15.1, the record on Zenodo: a third badge, the DOI that always
+# leads to the newest release. That takes 108 characters (the line
+# and its line break), and the limit is raised by that and no more:
+# 38,582.
+README_LIMIT = 38_582
 
 
 def test_the_readme_stays_short():

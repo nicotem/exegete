@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Each release's record on Zenodo is submitted to the
   [Exeter Data Studies](https://zenodo.org/communities/datastudies)
   community**, from this release.
+- **The README's badge and `CITATION.cff` give Exegete's DOI on
+  Zenodo**, 10.5281/zenodo.23496246, which always leads to the newest
+  release.
 
 ## [0.15.0-alpha] - 2026-10-20
 

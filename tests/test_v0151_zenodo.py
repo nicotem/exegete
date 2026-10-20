@@ -13,9 +13,11 @@ Pinned here: the file parses as JSON, with no key given twice; it names
 the community datastudies; it agrees with CITATION.cff on the type, the
 title, the description (the abstract), the creators (family and given
 names, ORCID and affiliation), the licence (in the lower case Zenodo
-uses) and the keywords; it holds no version and no date, which Zenodo
-takes from the release; it contains no em dash. CITATION.cff's own
-version and date are held to the release in tests/test_updates.py.
+uses) and the keywords; it holds no version, no date and no DOI, which
+Zenodo gives each release itself; it contains no em dash. The README's
+badge and CITATION.cff's doi give the concept DOI, the one that always
+leads to the newest release, never one release's own. CITATION.cff's
+own version and date are held to the release in tests/test_updates.py.
 """
 
 import json
@@ -23,6 +25,13 @@ import re
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
+
+# The concept DOI: Zenodo's identifier for every version of Exegete,
+# which always leads to the newest release. Each release has its own
+# DOI besides (0.15.0's is 10.5281/zenodo.23496247), which would point a
+# reader at an old release once the next one is out.
+CONCEPT_DOI = "10.5281/zenodo.23496246"
+DOI_OF_0150 = "10.5281/zenodo.23496247"
 
 
 def _read(name):
@@ -113,6 +122,12 @@ class TestTheFile:
                  if "version" in key.lower() or "date" in key.lower()]
         assert named == []
 
+    def test_it_holds_no_doi(self):
+        # Zenodo mints each release's DOI itself
+        named = [key for key in _keys(_record()) if "doi" in key.lower()]
+        assert named == []
+        assert "10.5281/" not in _read(".zenodo.json")
+
     def test_it_has_no_em_dash(self):
         assert "—" not in _read(".zenodo.json")
         assert "—" not in json.dumps(_record(), ensure_ascii=False)
@@ -150,3 +165,20 @@ class TestTheFileAgreesWithTheCitation:
 
     def test_the_keywords(self):
         assert _record().get("keywords", []) == _citation_keywords()
+
+
+class TestTheConceptDoi:
+
+    def test_the_readme_has_its_badge(self):
+        badges = re.findall(
+            r"\[!\[DOI\]\(https://zenodo\.org/badge/DOI/(10\.5281/[^)]+)"
+            r"\.svg\)\]\(https://doi\.org/(10\.5281/[^)]+)\)",
+            _read("README.md"))
+        assert badges == [(CONCEPT_DOI, CONCEPT_DOI)]
+
+    def test_the_citation_gives_it(self):
+        assert _citation("doi") == CONCEPT_DOI
+
+    def test_no_release_of_its_own_is_named(self):
+        for name in ("README.md", "CITATION.cff"):
+            assert DOI_OF_0150 not in _read(name), name

@@ -7,6 +7,7 @@ AI assistant, compatible with QualCoder.**
 
 [![PyPI](https://img.shields.io/pypi/v/exegete)](https://pypi.org/project/exegete/)
 [![Licence: LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-blue)](https://github.com/nicotem/exegete/blob/main/COPYING.LESSER)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23496246.svg)](https://doi.org/10.5281/zenodo.23496246)
 
 Analyse your interviews by asking, in your own words. Your AI assistant
 reads, searches and suggests; you decide. Every suggested coding quotes

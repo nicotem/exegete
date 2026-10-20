@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
-## [0.15.0-alpha] - 2026-10-19
+## [0.15.0-alpha] - 2026-10-20
 
 v0.15.0, the first of three v0.15 releases: v0.15.1 brings the safety
 net (undoing what a session did, choosing what a pseudonymisation run

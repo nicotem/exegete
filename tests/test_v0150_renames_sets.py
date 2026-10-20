@@ -523,7 +523,9 @@ class TestTheDocuments:
         # and the REFI-QDA export's sentence on its known faults (the stale
         # texts): 208,327, and the audio and video folders left out of
         # backups: 208,427, about 208,000, and its fix round 2: 208,927,
-        # about 209,000
+        # about 209,000; and the ai_data folder named in create_project's
+        # and copy_project_to_workspace's descriptions (the small
+        # corrections): 209,145, about 209,000
         assert (rounded, tokens) == ("209,000", "52k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "

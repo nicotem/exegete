@@ -338,6 +338,14 @@ class TestTheCount:
 # 9. The documents
 # ---------------------------------------------------------------------------
 
+def _rounded_full():
+    """`full`'s measured size as the documents round it, from the pin
+    test_toolset_modes.py holds to the measurement."""
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_toolset_modes import TestThePublishedSchemaBudget as Budget
+    return f"{round(Budget.FULL_MEASURED / 1000) * 1000:,}"
+
+
 class TestInstall:
 
     def test_the_codex_recipe_has_no_table_for_the_tool(self):
@@ -401,12 +409,15 @@ class TestInstall:
         install = _flat(_read("INSTALL.md"))
         assert "On Python 3.13, 4 of `full`'s 82 descriptions" in install
         assert "`full` (default) registers 82 tools" in install
+        # v0.15.1: the rounded figure held to the measured pin
+        # (test_toolset_modes.py): about 208,000 with create_backup
+        # accepted and ignored, then about 209,000 with audio and video
+        # left out of backups, as the small corrections leave it
+        rounded = _rounded_full()
         assert ("Exegete offers 82 tools by default, and the serialised "
-                "tool definitions alone measure about 209,000 characters, "
+                f"tool definitions alone measure about {rounded} characters, "
                 "roughly 52k tokens") in install
-        # v0.15.1: about 208,000 (create_backup accepted and ignored),
-        # then about 209,000 (audio and video left out of backups)
-        assert "(about 209,000 characters with `full`;" in install
+        assert f"(about {rounded} characters with `full`;" in install
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
                 if len(t.description or "") > 4096]
@@ -427,8 +438,8 @@ class TestToolsReadmePrivacy:
     def test_readme(self):
         readme = _read("README.md")
         assert ("| `full` | 82: all, creating a project and two renamed "
-                "tools' earlier names included | about 209,000 characters, "
-                "52k tokens |") in readme
+                "tools' earlier names included | about "
+                f"{_rounded_full()} characters, 52k tokens |") in readme
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "

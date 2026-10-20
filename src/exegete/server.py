@@ -6581,11 +6581,12 @@ def copy_project_to_workspace(
     prompt library and chat history are user data), but omits the
     regenerable ai_data/search.sqlite, sqlite sidecar files (the
     database's journal and WAL files included) and lock files, like
-    backups, but keeps the audio and video folders. The database is
-    copied with SQLite's own online backup, so a copy taken while
-    QualCoder is writing holds what was last committed; QualCoder's own saves wait while it runs, and on
-    a database of about 4 GB or more a save in an open QualCoder window
-    can fail. QualCoder rebuilds search.sqlite when it opens the copy. Symlinks inside the project
+    backups, but keeps the audio and video folders. A copy of a project
+    without an ai_data folder gets an empty one, as a new project does.
+    The database is copied with SQLite's own online backup, so a copy taken
+    while QualCoder is writing holds what was last committed; QualCoder's own
+    saves wait while it runs, and on a database of about 4 GB or more a save
+    in an open QualCoder window can fail. QualCoder rebuilds search.sqlite when it opens the copy. Symlinks inside the project
     that point outside the project folder (or dangle) are not followed:
     they are skipped and reported (skipped_symlinks, with names), so a
     shared or untrusted project folder cannot pull outside files into
@@ -23270,9 +23271,11 @@ def create_project(name: str, directory: Optional[str] = None,
 
     Makes the project folder "<name>.qda", in directory or in the folder set
     for projects (get_current_project's projects_folder), with its four
-    subfolders and a database in QualCoder 4.0's format, exactly as QualCoder
-    4.0's own New Project makes them, then selects the project so material can
-    be imported at once. Nothing existing is ever changed: a name already in
+    subfolders and a database in QualCoder 4.0's format, as QualCoder 4.0's
+    own New Project makes them, and an empty ai_data folder (QualCoder makes
+    it when it first opens a project; made here so that QualCoder 4.0's
+    first open finds it), then selects the project so material can be
+    imported at once. Nothing existing is ever changed: a name already in
     use is refused, never replaced or given a "_1".
 
     THE RESEARCHER'S CODER NAME: do not ask for it before the first call.

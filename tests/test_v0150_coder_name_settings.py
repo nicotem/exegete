@@ -923,13 +923,17 @@ class TestTheDocuments:
             in privacy
 
     def test_quickstart(self):
+        # v0.15.1, the small corrections: the restart the setting needs is
+        # said after it (tests/test_v0151_small_corrections.py)
+        quick = _doc("QUICKSTART.md")
         assert ("Exegete asks the assistant to check your coder name with "
                 "you first (the name your own codings will carry) and to say "
                 "where the project will be made, unless your coder name is "
                 "already set (`EXEGETE_CODER_NAME` in the `env` section "
-                "above, or \"Your coder name\" in the extension's settings): "
-                "then the project is made with that name at once, and the "
-                "answer says where.") in _doc("QUICKSTART.md")
+                "above, or \"Your coder name\" in the extension's settings")\
+            in quick
+        assert ("then the project is made with that name at once, and the "
+                "answer says where.") in quick
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

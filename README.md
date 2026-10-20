@@ -401,7 +401,8 @@ kept per project, under which Exegete writes what is done through the
 conversation, unless the project was made while it was filled in
 Exegete's settings. Both names, and whether you also use QualCoder on
 this computer, are set in Claude Desktop's Settings, Extensions,
-Exegete, or elsewhere as INSTALL.md's
+Exegete (after changing one, quit Claude Desktop and open it again), or
+elsewhere as INSTALL.md's
 [Environment variables the server reads](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
 says.
 

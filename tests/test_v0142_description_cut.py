@@ -771,8 +771,20 @@ CHANGED_0151 = {
     "set_memo": (2610, 2080, "38ff500521558e9d"),
     "update_annotation": (1990, 1631, "ce66fc0d896a7302"),
 }
+# And the small corrections (tests/test_v0151_small_corrections.py), in a
+# table of their own, since the ignored argument's guard reads the one
+# above as its own: the empty ai_data folder Exegete makes, named in
+# create_project's description (2,486 to 2,613 characters on 3.13), no
+# longer "exactly" as QualCoder 4.0's own New Project makes the project,
+# and in copy_project_to_workspace's, for a copy that has none (1,821 to
+# 1,909, after the audio and video piece's sentence on the two folders,
+# whose line above this one replaces)
+CHANGED_0151_TEXTS = {
+    "copy_project_to_workspace": (1909, 1569, "68e802ffd0fde4ef"),
+    "create_project": (2613, 2079, "41b00db6efcb9ba1"),
+}
 WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
-         **CHANGED_0151}
+         **CHANGED_0151, **CHANGED_0151_TEXTS}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to

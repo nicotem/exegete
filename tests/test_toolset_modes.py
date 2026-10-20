@@ -482,10 +482,16 @@ class TestThePublishedSchemaBudget:
     # the answers' fields that say which, and copy_project_to_workspace
     # that it keeps them, 500 characters more in `full` and 172 in `core`
     # (532 and 184 on 3.11).
-    FULL_MEASURED = 208_927          # 82 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_691           # 25 tools, same environment
-    FULL_MEASURED_310 = 219_495      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 72_147
+    # v0.15.1, the small corrections: create_project's and
+    # copy_project_to_workspace's descriptions name the empty ai_data
+    # folder Exegete makes, 129 and 89 characters more, 218 in `full` and
+    # 89 in `core`, which serves the copy alone (137 and 93, so 230 and
+    # 93, on 3.11). The rounded figures stay about 209,000 and 69,000
+    # characters, and the tokens 52k and 17k.
+    FULL_MEASURED = 209_145          # 82 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_780           # 25 tools, same environment
+    FULL_MEASURED_310 = 219_725      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 72_240
 
     # Why two per cent, away from the reference environment.
     #
@@ -512,8 +518,8 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "208,927"
-    CORE_CHARS = "68,691"
+    FULL_CHARS = "209,145"
+    CORE_CHARS = "68,780"
     FULL_ROUNDED = "209,000"
     CORE_ROUNDED = "69,000"
     FULL_TOKENS = "52k"

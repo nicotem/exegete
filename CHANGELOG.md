@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   before every change, whatever the argument says, so a call with
   `create_backup=false` takes one as well. The 22 tools that take it
   still accept every value they accepted before, so that saved
-  instructions keep working, until v0.15.2, the method release, removes
+  instructions keep working, until v0.15.3, the method release, removes
   it with the two tools' earlier names. A call that gives it is told so
   in every answer Exegete gives it, refusals included, under
   `create_backup_ignored` in an answer in JSON, or in a last paragraph
@@ -275,6 +275,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   off, and the log says so once at start, naming the setting and never
   its value; it never stops Exegete.
 
+### Changed: a few texts put right
+
+- **The `ai_data` folder Exegete makes is named where a new project's
+  folders are described.** `create_project`'s description now says that
+  Exegete makes an empty `ai_data` folder beside the four folders
+  QualCoder 4.0's own New Project makes: QualCoder makes it only when it
+  first opens a project, and made at creation it is there for QualCoder
+  4.0's first open. `copy_project_to_workspace`'s says that a copy of a
+  project without one gets an empty one, as a new project does. Exegete
+  has done both since 0.15.0; TOOLS.md's list of tools now says so too,
+  and NOTICE's entry on the project folder layout names the folder, the
+  two names in Exegete's code that carry it and QualCoder 4.0's lines.
+- **The README and the quick start say that a change in the extension's
+  settings reaches Exegete once Claude Desktop has been quit and opened
+  again**, as INSTALL.md does: in the README's "Two coder names", for
+  the two coder names and the QualCoder setting, and in the quick
+  start's first project, for the coder name.
+
 ### For contributors
 
 - **The links in the documents are checked on every push**
@@ -342,20 +360,20 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (82 tools) | 208,927 | 206,624 | 219,495 | 217,084 |
-| `core` (25 tools) | 68,691 | 68,258 | 72,147 | 71,690 |
+| `full` (82 tools) | 209,145 | 206,624 | 219,725 | 217,084 |
+| `core` (25 tools) | 68,780 | 68,258 | 72,240 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 208,927 characters (about 52.2k tokens
-  at chars/4) over 82 tools, and core = 68,691 (about 17.2k) over 25,
+- Serialised tool JSON: full = 209,145 characters (about 52.3k tokens
+  at chars/4) over 82 tools, and core = 68,780 (about 17.2k) over 25,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 219,495 and
-  72,147. Against 0.15.0's figures (206,624 and 68,258 on 3.13), three
+  which also gives exactly 0.15.0's figures for its tree), 219,725 and
+  72,240. Against 0.15.0's figures (206,624 and 68,258 on 3.13), four
   changes moved them. The first, `create_backup` accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -380,9 +398,15 @@ schemas together, as below; the brief as `read_brief` returns it):
   audio and video folders, that one made earlier may hold them, and
   that a restore keeps them, and `copy_project_to_workspace` that it
   keeps them: 600 characters more in `full` and 208 in `core` (640 and
-  224 on 3.11). No other tool's entry changed. The full brief says
-  that Exegete takes a backup before every change, rather than "unless
-  the researcher asks for none": 14 characters fewer.
+  224 on 3.11). The fourth, the `ai_data` folder named in two
+  descriptions: `create_project`'s, 129 characters more in `full` (137
+  on 3.11), and `copy_project_to_workspace`'s, 89 more in both sets (93
+  on 3.11), so 218 more in `full` and 89 in `core` (230 and 93 on
+  3.11). Rounded, the figures are about 209,000 and 69,000 characters,
+  still about 52k and 17k tokens. No other tool's entry changed. The
+  full brief says that Exegete takes a backup before every change,
+  rather than "unless the researcher asks for none": 14 characters
+  fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
   16,384 through its tool search: in `full`, 32 descriptions pass 2,048
   (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096 (5 on

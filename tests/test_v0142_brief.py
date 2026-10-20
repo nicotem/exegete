@@ -596,7 +596,11 @@ class TestTheSizes:
     # 0.15.1 on, and copy_project_to_workspace that it keeps the two
     # folders (500 characters more in `full`, 172 in `core`, which serves
     # list_backups and copy_project_to_workspace).
-    NOW = {"full": 198_019, "core": 65_375}
+    # v0.15.1, the small corrections: create_project's and
+    # copy_project_to_workspace's descriptions name the empty ai_data
+    # folder Exegete makes (218 characters more in `full`, 89 in `core`,
+    # which serves the copy alone; tests/test_v0151_small_corrections.py).
+    NOW = {"full": 198_237, "core": 65_464}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

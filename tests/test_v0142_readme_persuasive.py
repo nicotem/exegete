@@ -273,7 +273,12 @@ def _tools(mode="full"):
 # the small tool set, for local models" off, and the tool sets' table
 # names it beside `EXEGETE_TOOLSET=core`. That takes 80 characters, and
 # the limit is raised by that and no more: 40,548.
-README_LIMIT = 40_548
+# v0.15.1, the small corrections: "Two coder names" says that a change
+# in the extension's settings needs Claude Desktop quit and opened again
+# (the plan's split and the Codex setting were already in, with the stale
+# texts). That takes 60 characters, and the limit is raised by that and
+# no more: 40,608.
+README_LIMIT = 40_608
 
 
 def test_the_readme_stays_short():

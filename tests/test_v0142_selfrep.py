@@ -864,6 +864,13 @@ class TestNoDescriptionGrew:
         "export_refi_qda", "import_text_file", "merge_proposals",
         "pseudonymise_source", "rename_file", "search_files",
         "set_attribute"}
+    # and v0.15.1, the small corrections
+    # (tests/test_v0151_small_corrections.py; its words pinned in
+    # tests/test_v0142_description_cut.py,
+    # CHANGED_0151_TEXTS): copy_project_to_workspace says that a copy of a
+    # project without an ai_data folder gets an empty one, a sentence
+    # longer, as the design says (create_project is counted above)
+    CHANGED_IN_0151 = {"copy_project_to_workspace"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
@@ -875,7 +882,8 @@ class TestNoDescriptionGrew:
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
             if name in (self.CHANGED_IN_0143 | self.CHANGED_IN_0150
-                        | self.RENAMED_IN_0150 | self.REMOVALS_MOVED_0150):
+                        | self.RENAMED_IN_0150 | self.REMOVALS_MOVED_0150
+                        | self.CHANGED_IN_0151):
                 continue
             text = registered[name]
             if name in self.LENGTHENED_IN_0150:

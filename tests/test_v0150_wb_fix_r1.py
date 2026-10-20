@@ -413,11 +413,14 @@ class TestTheDocumentsOtherPoints:
                 ) in stays
 
     def test_where_the_settings_are(self):
+        # v0.15.1, the small corrections: the restart a change there needs
+        # sits between the two places (tests/test_v0151_small_corrections.py)
         readme = _flat(_read("README.md"))
         assert ("Both names, and whether you also use QualCoder on this "
                 "computer, are set in Claude Desktop's Settings, Extensions, "
-                "Exegete, or elsewhere as INSTALL.md's [Environment "
-                "variables the server reads]") in readme
+                "Exegete (") in readme
+        assert ("or elsewhere as INSTALL.md's [Environment variables the "
+                "server reads]") in readme
 
     def test_the_hidden_name_s_departure_is_named(self):
         tools = _flat(_read("TOOLS.md"))

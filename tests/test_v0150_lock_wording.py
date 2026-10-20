@@ -241,6 +241,12 @@ REQUEST = re.compile(
 # Sentences about QualCoder itself, which ask nothing before a write
 ABOUT_QUALCODER = re.compile(
     r"\bclos(?:e|ed|ing) and reopen|report the copy as not properly closed")
+# Quitting Claude Desktop, so that a change in the extension's settings
+# reaches Exegete, asks nothing of QualCoder (v0.15.1, the small
+# corrections: the README's sentence that names the settings, the
+# QualCoder one among them)
+QUITTING_CLAUDE_DESKTOP = re.compile(
+    r"\bquit Claude Desktop\b|\bClaude Desktop has been quit\b")
 
 
 def _blocks(text):
@@ -267,8 +273,8 @@ def unconditional_requests(text):
             if asked_of_users or "QualCoder" not in sentence \
                     or CONDITION_HERE.search(sentence):
                 continue
-            if REQUEST.search(sentence) and \
-                    not ABOUT_QUALCODER.search(sentence):
+            if REQUEST.search(QUITTING_CLAUDE_DESKTOP.sub("", sentence)) \
+                    and not ABOUT_QUALCODER.search(sentence):
                 found.append(sentence)
     return found
 
@@ -475,7 +481,9 @@ class TestTheChangelog:
                 # fix round 1: quitting, exiting, not running
                 "Quit QualCoder before restoring a backup.",
                 "Exit QualCoder first, then restore the backup.",
-                "QualCoder must not be running while you restore."):
+                "QualCoder must not be running while you restore.",
+                # v0.15.1: quitting Claude Desktop beside it excuses nothing
+                "Quit QualCoder and quit Claude Desktop before restoring."):
             assert unconditional_requests(sentence) == [sentence]
         # fix round 1: a condition about another program, or an "it" in
         # an earlier sentence, excuses nothing
@@ -495,7 +503,12 @@ class TestTheChangelog:
                 "QualCoder 3.8.2 has it open (if the researcher uses it, "
                 "ask them to close it there).",
                 "If you also use QualCoder, quit it before restoring. Make "
-                "sure QualCoder is not running."):
+                "sure QualCoder is not running.",
+                # v0.15.1: a request to quit Claude Desktop is not one to
+                # close QualCoder
+                "Whether you also use QualCoder is set in Claude Desktop's "
+                "settings (after changing one, quit Claude Desktop and open "
+                "it again)."):
             assert unconditional_requests(sentence) == []
 
     def test_the_six_descriptions(self):

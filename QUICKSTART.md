@@ -191,8 +191,9 @@ Exegete asks the assistant to check your coder name with you first
 (the name your own codings will carry) and to say where the project
 will be made, unless your coder name is already set
 (`EXEGETE_CODER_NAME` in the `env` section above, or "Your coder name"
-in the extension's settings): then the project is made with that name
-at once, and the answer says where. Then:
+in the extension's settings, which reaches Exegete once Claude Desktop
+has been quit and opened again): then the project is made with that
+name at once, and the answer says where. Then:
 
 ```
 Can you give me a summary of my project?

@@ -381,12 +381,20 @@ the format dictates.
     From: manage_files.py, lines 615-619, 1429-1434 and 3301-3308
     (3.8.2 manage_files.py, lines 2010-2020).
 
-36. The project folder layout and the project table's "about" marker.
-    Here: src/exegete/database.py, validate_qda_path and
-    QualcoderDatabase._check_version.
-    Here: src/exegete/new_project.py, SUBFOLDERS and about_line.
+36. The project folder layout, the name of QualCoder's AI folder
+    (ai_data) and the project table's "about" marker.
+    Here: src/exegete/database.py, validate_qda_path,
+    QualcoderDatabase._check_version and AI_DATA_FOLDER.
+    Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and
+    about_line.
     From: 3.8.2 __main__.py, lines 306, 2635 and 2700-2702; __main__.py,
-    lines 1767-1776, 1991 and 2011-2015.
+    lines 1767-1776, 1991 and 2011-2015; at the 4.0 tag, __main__.py,
+    lines 2193-2201, 2893 and 2895, ai_vectorstore.py, lines 576-577,
+    and ai_chat.py, lines 1693-1695.
+    Why: Exegete makes an empty ai_data folder when it creates a project
+    or copies one that has none, a named departure (QualCoder's New
+    Project makes only the four folders), so that QualCoder 4.0's first
+    open finds it.
 
 37. The name, entry shape and write format of pseudonyms.json.
     Here: src/exegete/database.py, PSEUDONYMS_JSON_NAME,

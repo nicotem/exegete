@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """QA round-3: adversarial verification of the session-start QualCoder check.
 
-Feature under test: e9cc67a — analyze_for_coding asks (session still created,
+Feature under test: e9cc67a — start_coding_session asks (session still created,
 banner + action_required), get_current_project is the re-check endpoint,
 write tools keep the hard refusal. These tests extend the developer's 7
 happy-path tests with the crafted-lock arsenal and gate-consistency sweeps.
@@ -45,7 +45,7 @@ def _sid(out: str) -> str:
 
 
 def _approved_session(project_path):
-    sid = _sid(server.analyze_for_coding([1], instruction="test"))
+    sid = _sid(server.start_coding_session([1], instruction="test"))
     rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
         "file_id": 1, "code_name": "Stress",
         "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -65,7 +65,7 @@ class TestSessionStartCraftedLocks:
                                                 qualcoder_db_path):
         _lock(qualcoder_db_path).write_text("", encoding="utf-8")
         try:
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             # QA6-1: qualcoder_open is ALWAYS present (false when clear) —
             # consistent with get_current_project; no banner, no directive
             env = json.loads(out)
@@ -83,7 +83,7 @@ class TestSessionStartCraftedLocks:
                                               qualcoder_db_path):
         _lock(qualcoder_db_path).write_bytes(b"\xff\xfe\x00garbage\x9c\n\xba\xdd")
         try:
-            out = server.analyze_for_coding([1], instruction="test")   # must not raise
+            out = server.start_coding_session([1], instruction="test")   # must not raise
             assert "STOP" not in out
             cur = json.loads(server.get_current_project())
             assert cur["qualcoder_open"] is False
@@ -91,17 +91,55 @@ class TestSessionStartCraftedLocks:
             _lock(qualcoder_db_path).unlink()
 
     def test_huge_lock_capped_fast_and_stale(self, setup_server,
-                                             qualcoder_db_path):
+                                             qualcoder_db_path, monkeypatch):
         """8 MiB single-line lock: the 4 KiB read cap (SEC S-3) must keep the
-        session-start check fast and memory-safe, and treat it stale."""
+        session-start check fast and memory-safe, and treat it stale.
+
+        Measured by count (the whole-branch review of v0.15.0, round 1: a
+        bound of 3 seconds missed by under a second on a slow Windows
+        runner): every read of the lock asks for the cap and gets no more;
+        the time is kept only as a guard against a hang, with a wide
+        margin."""
+        from exegete import database
+        reads = []
+        real_open = open
+
+        class _Counted:
+            def __init__(self, handle):
+                self._handle = handle
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return self._handle.__exit__(*exc)
+
+            def read(self, *args):
+                data = self._handle.read(*args)
+                reads.append((args, len(data)))
+                return data
+
+            def __getattr__(self, name):
+                return getattr(self._handle, name)
+
+        def counting_open(file, *args, **kwargs):
+            handle = real_open(file, *args, **kwargs)
+            if os.path.basename(str(file)) == QUALCODER_LOCK_FILENAME:
+                return _Counted(handle)
+            return handle
+        monkeypatch.setattr(database, "open", counting_open, raising=False)
         _lock(qualcoder_db_path).write_bytes(b"A" * (8 * 1024 * 1024))
         try:
             t0 = time.perf_counter()
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             elapsed = time.perf_counter() - t0
             assert "STOP" not in out
             assert "Session ID: `" in out
-            assert elapsed < 3.0                    # retry sleep only, no slurp
+            cap = database.LOCK_READ_MAX_BYTES
+            assert reads, "the lock was not read"
+            assert all(args == (cap,) and got <= cap
+                       for args, got in reads), reads
+            assert elapsed < 30.0          # a hang guard only
         finally:
             _lock(qualcoder_db_path).unlink()
 
@@ -112,7 +150,7 @@ class TestSessionStartCraftedLocks:
         payload = f"qc_user\n{time.time()}\n".encode() + b"B" * (2 * 1024 * 1024)
         _lock(qualcoder_db_path).write_bytes(payload)
         try:
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             assert "qualcoder_open: true" in out
             assert "qc_user" in out
         finally:
@@ -124,7 +162,7 @@ class TestSessionStartCraftedLocks:
         target.write_text(f"remote_user\n{time.time()}", encoding="utf-8")
         os.symlink(target, _lock(qualcoder_db_path))
         try:
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             assert "qualcoder_open: true" in out    # conservative: treat as open
             cur = json.loads(server.get_current_project())
             assert cur["qualcoder_open"] is True
@@ -136,7 +174,7 @@ class TestSessionStartCraftedLocks:
                                                 qualcoder_db_path, tmp_path):
         os.symlink(tmp_path / "ghost.lock", _lock(qualcoder_db_path))
         try:
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             assert "STOP" not in out
             cur = json.loads(server.get_current_project())
             assert cur["qualcoder_open"] is False
@@ -150,7 +188,7 @@ class TestSessionStartCraftedLocks:
         window (negative age) — must read as OPEN, not crash."""
         _lock(qualcoder_db_path).write_text(f"skewed\n{time.time() + 10}", encoding="utf-8")
         try:
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             assert "qualcoder_open: true" in out
         finally:
             _lock(qualcoder_db_path).unlink()
@@ -184,7 +222,7 @@ class TestNoBypassNoCaching:
         """Banner at session start must not poison the session: once the
         user closes QualCoder, the same session applies cleanly."""
         _fresh(qualcoder_db_path)
-        out = server.analyze_for_coding([1], instruction="test")
+        out = server.start_coding_session([1], instruction="test")
         assert "qualcoder_open: true" in out
         sid = _sid(out)
         _lock(qualcoder_db_path).unlink()            # user closed QualCoder
@@ -204,7 +242,7 @@ class TestNoBypassNoCaching:
         """The session created under a banner is a normal session (no hidden
         flag): stale-ward transition also unblocks it."""
         _fresh(qualcoder_db_path)
-        sid = _sid(server.analyze_for_coding([1], instruction="test"))
+        sid = _sid(server.start_coding_session([1], instruction="test"))
         _stale(qualcoder_db_path)                    # heartbeat aged out
         try:
             rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
@@ -227,7 +265,7 @@ class TestConcurrencyLadder:
 
     def test_warn_ask_refuse_all_fire_from_one_lock(self, setup_server,
                                                     qualcoder_db_path):
-        """One fresh lock: select_project WARNS, analyze_for_coding ASKS,
+        """One fresh lock: select_project WARNS, start_coding_session ASKS,
         every gated write tool REFUSES — and no gate was lost in the
         refactor."""
         # prepare an approved session and a backup before seeding the lock
@@ -243,8 +281,8 @@ class TestConcurrencyLadder:
             assert sel["success"] is True
             assert "ladder_user" in sel["warning"]
 
-            # rung 2: analyze_for_coding asks but creates the session
-            out = server.analyze_for_coding([1], instruction="test")
+            # rung 2: start_coding_session asks but creates the session
+            out = server.start_coding_session([1], instruction="test")
             assert "qualcoder_open: true" in out
             assert "action_required" in out
             assert server.session_manager.session_exists(_sid(out))
@@ -268,7 +306,7 @@ class TestConcurrencyLadder:
 
             # session-side tools (no DB writes) still function under the lock
             rec = json.loads(server.record_suggestions(_sid(
-                server.analyze_for_coding([1], instruction="test")), [{"reading": "explicit",
+                server.start_coding_session([1], instruction="test")), [{"reading": "explicit",
                     "file_id": 1, "code_name": "Coping",
                     "segment_text": "I cope by exercising"}]))
             assert rec["recorded_count"] == 1

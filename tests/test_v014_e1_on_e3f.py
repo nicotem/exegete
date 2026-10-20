@@ -36,7 +36,7 @@ COPE = "I cope by exercising."
 def _session(**args):
     args.setdefault("file_ids", [1])
     args.setdefault("instruction", "test")
-    return host_json("analyze_for_coding", args)["coding_session_id"]
+    return host_json("start_coding_session", args)["coding_session_id"]
 
 
 def _record(sid, *items, **extra):
@@ -113,7 +113,7 @@ class TestRecordingUnderBothRules:
 class TestArgumentsRemovedAndAdded:
 
     def test_a_leftover_min_confidence_is_refused_by_name(self, setup_server):
-        out = host_json("analyze_for_coding",
+        out = host_json("start_coding_session",
                         {"instruction": "test", "file_ids": [1], "min_confidence": 0.7})
         assert "no argument 'min_confidence'" in out["error"]
         assert out["unknown_arguments"] == ["min_confidence"]
@@ -146,7 +146,7 @@ class TestSessionFilesBothWays:
         suggestion whose coding was deleted (`removed`) and a proposal
         merged away (`merged`) both keep their passages in the session
         file, so both sessions are listed; neither is work to apply."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
         text = ("Maria said: I feel stressed about deadlines. "
@@ -162,7 +162,7 @@ class TestSessionFilesBothWays:
             await call("import_text_file", {"filename": "int1.txt",
                                             "content": text})
             await call("create_code", {"name": "Stress"})
-            undone = (await call("analyze_for_coding",
+            undone = (await call("start_coding_session",
                                  {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             guid = (await call("record_suggestions", {
                 "coding_session_id": undone, "suggestions": [
@@ -176,7 +176,7 @@ class TestSessionFilesBothWays:
                 .get_suggestion_by_guid(guid).applied_ctid
             deleted = await call("delete_coding", {"coding_id": ctid,
                                                    "create_backup": False})
-            merged = (await call("analyze_for_coding",
+            merged = (await call("start_coding_session",
                                  {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             proposed = await call("propose_codes", {
                 "coding_session_id": merged, "proposals": [
@@ -216,7 +216,7 @@ class TestCoreMarksOverTheLoopsTexts:
         server._apply_toolset("core")
         tools = {t.name: t for t in host_session(
             lambda c: c.list_tools()).tools}
-        described = " ".join(tools["analyze_for_coding"].description.split())
+        described = " ".join(tools["start_coding_session"].description.split())
         assert ("create_proposed_codes (not available in this tool set)"
                 in described)
         sid = _session()
@@ -275,7 +275,7 @@ class TestDeleteUnderTheOtherSpelling:
     TEXT = "Maria said: I feel stressed about deadlines. I cope by walking."
 
     def _run(self, tmp_path, name, recorded_as, applied_as, deleted_as):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir(parents=True)
 
@@ -292,7 +292,7 @@ class TestDeleteUnderTheOtherSpelling:
                                             "content": self.TEXT})
             await call("create_code", {"name": "Stress"})
             await call("select_project", {"project_path": spelt(recorded_as)})
-            sid = (await call("analyze_for_coding",
+            sid = (await call("start_coding_session",
                               {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             guid = (await call("record_suggestions", {
                 "coding_session_id": sid, "suggestions": [

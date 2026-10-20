@@ -112,7 +112,7 @@ class TestTheWayOn:
         assert "Call again with the same paths, without a token" not in note
 
     def test_with_a_file_ready_the_way_on_is_as_before(self):
-        note = doc_import.not_read_note(2, True, True)
+        note = doc_import.not_read_note(2, True, True, seconds=30)
         assert "Import the files above with the token" in note
         assert "leaving them out" in note
         assert "No file in this call is ready" not in note
@@ -248,7 +248,7 @@ def test_a_word_note_referred_to_twice_leaves_one_marker():
 @pytest.mark.parametrize("left, expected", [(0.5, None), (0.99, None),
                                             (1.0, 1.0), (5.0, 5.0)])
 def test_less_than_a_second_left_starts_no_file(left, expected):
-    budget = doc_import.PREVIEW_SECONDS
+    budget = doc_import.TERMINAL_CALL_SECONDS
     got = doc_import._time_for(30, budget, 0.0, False,
                                lambda: budget - left)
     assert got == (pytest.approx(expected) if expected else None)
@@ -399,14 +399,17 @@ class TestTheTexts:
 
     def test_qualcoder_is_offered_only_if_the_researcher_uses_it(self):
         assert import_words.FILE_REFUSALS["too_long"].endswith(
-            "For now, long books and reports come in through QualCoder, "
-            "if you use it.")
+            "For now, split it into parts and import each; QualCoder, if "
+            "you use it, imports it whole.")
         ctx = doc_import.Context(project_folder=Path("."), source_names={},
                                  documents_listing=[], refused_places=())
         # 0.14.3's second review: the list cannot be made in Exegete
-        # before a file is in, so the line says so
-        assert "(not in Exegete yet: in QualCoder, the Pseudonyms button " \
-            "in Manage Files)" in doc_import.names_list_line(ctx)
+        # before a file is in; v0.15.0: the line leads with
+        # pseudonymise_source and offers QualCoder's button to those who
+        # use it
+        assert "QualCoder, if you use it, can also make the list before " \
+            "importing (the Pseudonyms button in Manage Files)." in \
+            doc_import.names_list_line(ctx)
 
     def test_the_reading_page_names_qualcoder_if_you_use_it(self):
         source = (REPO / "src" / "exegete" / "reading_copy.py").read_text(

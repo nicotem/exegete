@@ -46,11 +46,13 @@ Issues help everyone, permanently. Please use
   provider at all with a fully local host). Prefer synthetic or
   consented data, and check your ethics/GDPR position before using real
   participant data; see [PRIVACY.md](PRIVACY.md).
-- Close the project in QualCoder before any writing. Writes are refused
-  while QualCoder 3.x has the project open, by design, through its
-  lock file. QualCoder 4.0 writes no lock file, so there Exegete can only report that the project appears to
-  be open (heuristics, which can miss an open window); never write while
-  any QualCoder window has the same project open.
+- If you also use QualCoder, close the project there before any
+  writing. Writes are refused while the project's lock file is active
+  (QualCoder 3.8.2 has the project open, or another conversation using
+  Exegete is writing to it). QualCoder 4.0 writes no lock file, so
+  there Exegete can only report signs that the project may be open,
+  which can miss an open window; a write into a project open in any
+  QualCoder window can lose work.
 - Include in bug reports: your QualCoder version, if you use QualCoder
   (a 3.8.x release or 4.0; see "Supported QualCoder versions" in
   TOOLS.md for the supported project schemas),
@@ -59,11 +61,13 @@ Issues help everyone, permanently. Please use
   (`exegete --version` in the environment you installed into, or
   `python -m exegete.server --version` for a git install; `pip
   show exegete`, `pipx list` and `uv tool list` still work and
-  spell `0.14.3-alpha` as `0.14.3a0`; an install made under the
+  spell `0.15.0-alpha` as `0.15.0a0`; an install made under the
   earlier name answers `qualcoder-mcp --version` too), your MCP host (Claude Desktop, Claude
   Code, LM Studio, other), and the toolset (`EXEGETE_TOOLSET`:
-  `core`, `lifecycle`, or `full` when the variable is not set). With the
-  Claude Desktop extension, the version is in the name of the `.mcpb`
-  file you installed, and the toolset is its Tool set setting
-  (`lifecycle` unless you changed it). The bug report template asks for
+  `core`, or `full` when the variable is not set; `lifecycle` is the
+  earlier name of `full`, before 0.15.0). With the Claude Desktop
+  extension, the version is in the name of the `.mcpb` file you
+  installed, and the toolset is its Tool set setting (`full` unless you
+  changed it; an extension installed before 0.15.0 may show
+  `lifecycle`, which works as `full`). The bug report template asks for
   all of these.

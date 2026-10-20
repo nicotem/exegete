@@ -36,7 +36,7 @@ Desktop extension it is the extension's "Folder for projects", by
 default:
 
 ```
-~/QualCoder projects/
+~/Exegete projects/
 ```
 
 Otherwise it is `~/Documents/Exegete projects/`, unless the host
@@ -49,22 +49,27 @@ the full path: use that one.
 2. Work only on the workspace copy
 3. Check the results, in the conversation or in QualCoder, before replacing the original
 
-### Close QualCoder First
+### One program at a time
 
-QualCoder 3.x marks an open project with a `project_in_use.lock`
-heartbeat file, and Exegete respects it: **every write operation is
-refused while QualCoder 3.x has the project open** ("This project
-is open in QualCoder (user ...). Close the project in QualCoder, then
-retry."). Reads still work, with a warning that data may change
-underneath.
+A project's lock file, `project_in_use.lock`, is active while another
+conversation using Exegete is writing to the project (Exegete writes
+the file during each of its own writes) or while QualCoder 3.8.2 has
+the project open (it keeps the file as a heartbeat), and **every write
+operation is refused while the project's lock file is active**. The
+refusal names both causes and the way through for each: "This project
+is in use by another program: its lock file is active (user ...), so
+QualCoder 3.8.2 has it open, or another conversation using Exegete is
+writing to it. Ask the researcher to close it in QualCoder, or wait a
+moment; once get_current_project shows qualcoder_open false, retry."
+Reads still work, with a warning that data may change underneath.
 
 QualCoder 4.0 writes no lock file. For it Exegete can only report
 that the project appears to be open (`qualcoder_gui_signals` in
-`select_project`, `get_current_project` and `analyze_for_coding`: a
-heuristic that can miss an idle window), so make sure yourself that no
-QualCoder window has the project open before writing. An open 4.0
-window will not show changes written by Exegete until the project
-is closed and reopened there.
+`select_project`, `get_current_project` and `start_coding_session`: a
+heuristic that can miss an idle window), so if you also use QualCoder,
+make sure yourself that no window has the project open before writing.
+An open 4.0 window will not show changes written by Exegete until the
+project is closed and reopened there.
 
 ### Backups
 
@@ -95,7 +100,7 @@ Copy my project "Interview Study.qda" to the workspace for AI coding
 
 Claude will:
 - Copy the entire project folder to the workspace (with the Claude
-  Desktop extension `~/QualCoder projects/` by default, otherwise
+  Desktop extension `~/Exegete projects/` by default, otherwise
   `~/Documents/Exegete projects/`, unless the host set another)
 - Create unique name if one already exists
 - Report the workspace path
@@ -104,13 +109,13 @@ Claude will:
 uses the extension's default folder):
 ```
 ✓ Copied project to workspace:
-  /Users/YOUR_NAME/QualCoder projects/Interview Study.qda
+  /Users/YOUR_NAME/Exegete projects/Interview Study.qda
 
   This is now your working copy for AI coding.
   Your original project is untouched.
 ```
 
-### Step 2: Create Analysis Session
+### Step 2: Start a Coding Session
 
 Ask Claude to analyse specific files with specific codes:
 
@@ -139,7 +144,7 @@ Only suggest a code where the participant says it in so many words
    session without an instruction but cannot tell whether it holds your
    answers: check the instruction the session records
    (`get_coding_session_info` shows it)
-2. Creates a new analysis session with unique ID (`analyze_for_coding`),
+2. Starts a new coding session with unique ID (`start_coding_session`),
    which hands Claude the public part of your project memo, the study in
    your own words
 3. Reads the specified files
@@ -293,8 +298,9 @@ Apply the approved codings to the project
 4. Writes each coding's reading (explicit or interpretive) first in its
    memo, then the reasoning
 5. Records the PROJECT's AI coder name as owner, which the researcher
-   chooses the first time a write needs it (`set_project_ai_coder_name`;
-   see "Choosing the AI coder name" in TOOLS.md). Before that choice is
+   chooses in Exegete's settings, for the projects Exegete creates, or
+   the first time a write needs it (`set_project_ai_coder_name`; see
+   "Choosing the AI coder name" in TOOLS.md). Before that choice is
    made the write stops and asks rather than guessing.
 6. Reports success with coding IDs (ctids)
 
@@ -338,7 +344,7 @@ In QualCoder, if you use it:
    open must close and reopen it to show the new codings)
 2. Open the workspace project, at the path the copy's answer gave (with
    the Claude Desktop extension's default,
-   `~/QualCoder projects/Interview Study.qda`; otherwise
+   `~/Exegete projects/Interview Study.qda`; otherwise
    `~/Documents/Exegete projects/Interview Study.qda`, unless the
    host set another folder)
 3. Go to **Coding > Code Text**
@@ -358,10 +364,10 @@ Copy "Focus Group Study.qda" to the workspace
 ```
 
 **Claude** (the path is the workspace's; here the Claude Desktop
-extension's default folder, `~/QualCoder projects/`):
+extension's default folder, `~/Exegete projects/`):
 ```
 ✓ Copied project to:
-  ~/QualCoder projects/Focus Group Study.qda
+  ~/Exegete projects/Focus Group Study.qda
 ```
 
 **You:**
@@ -678,7 +684,7 @@ Delete session abc123
 ```
 (`delete_coding_session`; `cleanup_old_sessions`, which deletes every
 project's old sessions with no preview, is deprecated and goes in
-v0.15)
+v0.15.1)
 
 ### Backup Management
 
@@ -695,11 +701,11 @@ Copy the project at <path> to the workspace   (copy_project_to_workspace;
 
 **Find backups:**
 Backups are in the same folder as your workspace projects (the
-workspace: with the Claude Desktop extension `~/QualCoder projects/` by
+workspace: with the Claude Desktop extension `~/Exegete projects/` by
 default, otherwise `~/Documents/Exegete projects/`, unless the
 host set another with `EXEGETE_WORKSPACE`):
 ```
-~/QualCoder projects/ProjectName_backup_TIMESTAMP.qda
+~/Exegete projects/ProjectName_backup_TIMESTAMP.qda
 ```
 
 **Restore from backup:**
@@ -781,7 +787,7 @@ The workspace is the folder the answer to `copy_project_to_workspace`
 named. With the Claude Desktop extension it is the extension's "Folder
 for projects" (Settings, Extensions, Exegete), by default:
 ```
-/Users/YOUR_NAME/QualCoder projects/
+/Users/YOUR_NAME/Exegete projects/
 ```
 Otherwise it is `/Users/YOUR_NAME/Documents/Exegete projects/`,
 unless the host sets another folder with `EXEGETE_WORKSPACE`. A

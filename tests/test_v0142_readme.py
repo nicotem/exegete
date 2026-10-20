@@ -150,8 +150,10 @@ def test_how_it_works_explains_before_it_instructs():
     data = _between(_readme(), "## Where your data goes", "## Start here")
     # v0.14.3: a document brought in through Exegete too, and what the
     # import's preview sends
-    assert ("Text you paste or attach goes in full; a document imported in "
-            "QualCoder or brought in through Exegete, only as far as the "
+    # (the whole-branch review, round 1: Exegete's route first)
+    assert ("Text you paste or attach goes in full; a document in the "
+            "project, brought in through Exegete or imported in QualCoder, "
+            "only as far as the "
             "assistant reads it: Exegete's preview of an import gives the "
             "assistant the documents' names, sizes, lengths and "
             "warnings, never their "
@@ -307,14 +309,20 @@ def test_a_first_session_names_both_coder_names():
     # without assuming that the reader uses QualCoder at all; since 0.14.3
     # (the review of the maintainer's sitting), a reader without QualCoder
     # chooses a name, and "say so" is for one who does not know theirs
+    # v0.15.0: unless the reader has filled it in Exegete's settings
+    # (tests/test_v0150_coder_name_settings.py); and the AI coder name
+    # likewise, for a project the assistant made (the coder names, piece
+    # 3, tests/test_v0150_ai_coder_name_setting.py)
     assert ("When it makes the project, the assistant asks for your own "
-            "coder name, which the project keeps so that your work and the "
+            "coder name, unless you have filled it in Exegete's settings; "
+            "the project keeps it so that your work and the "
             "AI's stay apart (QualCoder, if you use it, records your coding "
             "under it). Not using QualCoder? Any name you choose will do. "
             "Do not know yours? Say so. Before "
             "its first write, it asks for the AI coder name, kept per "
             "project, under which Exegete writes what is done through the "
-            "conversation.") in names
+            "conversation, unless the project was made while it was filled "
+            "in Exegete's settings.") in names
     assert "Not using QualCoder, or no coder name?" not in names
     assert "no QualCoder yet" not in names
     # the example on the first screen shows the second ask, before the
@@ -366,7 +374,7 @@ def test_the_approval_steps_are_named_where_the_readme_points():
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "
                        "suggestions: your host's settings are the safeguard",
                        "### Try some richer queries")
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     tools = {t.name for t in asyncio.run(server.mcp.list_tools())}
     newcomer = _read("README.md")[:_read("README.md").index(
         "\n## For advanced users\n")]
@@ -413,7 +421,10 @@ def test_latest_carries_the_date_it_was_checked():
     assert len(dated) == 1 and readme.count("\"Latest\"") == 1
     assert ("3.8.2 is listed just below 4.0, the release marked \"Latest\" "
             f"when this was checked, on {dated[0]}.") in readme
-    assert re.search(r"Checked on \d{1,2} \w+ \d{4}, Exegete ", readme)
+    # v0.15.0, the release review: QualCoder's side as checked, beside
+    # the Exegete the table's column describes
+    assert re.search(r"QualCoder 3\.8\.2 and 4\.0 as checked on \d{1,2} "
+                     r"\w+ \d{4}, beside Exegete 0\.\d+\.\d+:", readme)
 
 
 # ---------------------------------------------------------------------------
@@ -432,8 +443,11 @@ RELEASE_LABELS = (re.compile(r"\bNEW\b"),
 # the export being withdrawn
 VERSIONS_IN_PLACE = ("## What comes next", "## Disclaimer", "## Licence",
                      "## Acknowledgements")
+# (v0.15.0, the release review: the table's stamp gives QualCoder's
+# side its date and names the Exegete its column describes)
 DATED = re.compile(r"Exegete v?0\.\d+\.\d+ against QualCoder|"
-                   r"\(removed in 0\.\d+\)")
+                   r"beside Exegete v?0\.\d+\.\d+:|"
+                   r"\(removed in 0\.\d+(?:\.\d+)?\)")
 
 
 def _release_labels(text):
@@ -467,8 +481,9 @@ def test_the_label_check_would_notice():
         assert _release_labels(old), old
     for kept in ("QualCoder 3.8.2 and the 4.0 beta", "QualCoder 4.0's format",
                  "Checked on 1 October 2026, Exegete 0.14.2 against "
-                 "QualCoder 3.8.2", "Export only, being withdrawn (removed "
-                 "in 0.15)", "a name that starts with `exegete-` and ends "
+                 "QualCoder 3.8.2", "QualCoder 3.8.2 and 4.0 as checked on "
+                 "10 October 2026, beside Exegete 0.15.0:",
+                 "Export only, being withdrawn (removed in 0.15)", "a name that starts with `exegete-` and ends "
                  "in `.mcpb`"):
         assert not _release_labels(kept), kept
 

@@ -589,7 +589,7 @@ def _flat(name: str) -> str:
 
 class TestTheDocuments:
 
-    @pytest.mark.parametrize("mode", ["full", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full"])
     def test_the_description_names_the_switch_and_the_page(self, mode):
         import asyncio
         server._apply_toolset(mode)
@@ -598,7 +598,10 @@ class TestTheDocuments:
         assert len(description) <= 2048
         flat = " ".join(description.split())
         for said in ("files whose letters look garbled, are kept out",
-                     ARGUMENT + ": true on the researcher's word",
+                     # v0.15.0: the switches' lines give their default,
+                     # the paragraph says they move only on the
+                     # researcher's word (tests/test_v0150_lock_wording.py)
+                     ARGUMENT + ": default false",
                      "show_text: preview only; opens the garbled-looking "
                      "files' text on the researcher's screen",
                      "only on the researcher's word for this import, "

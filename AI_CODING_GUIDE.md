@@ -5,9 +5,10 @@ qualcoder-mcp), in the conversational workflow.
 
 > Codings are written directly to the project database after your
 > explicit approval; no import step is needed. (A REFI-QDA *export*
-> tool, `export_refi_qda`, is deprecated and goes in v0.15: it files
-> every coding under the AI coder name; QualCoder's own export,
-> Project, Export, REFI-QDA Project export, keeps each coder.) For the
+> tool, `export_refi_qda`, is deprecated and goes in v0.15.1: it files
+> every coding under the AI coder name. Exegete has no other REFI-QDA
+> export yet; QualCoder's own export, if you use QualCoder, keeps each
+> coder: Project, Export, REFI-QDA Project export.) For the
 > step-by-step walkthrough with example conversations, see
 > [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md).
 
@@ -15,7 +16,7 @@ qualcoder-mcp), in the conversational workflow.
 
 1. **You** ask Claude to analyse files for specific codes and answer
    the three questions it is told to ask; your answers become the
-   session's instruction (`analyze_for_coding` creates the session;
+   session's instruction (`start_coding_session` creates the session;
    `get_coding_session_info` shows the instruction it recorded)
 2. **Claude** reads the files and records its suggestions into the
    session (`record_suggestions`); every suggestion is verified against
@@ -28,10 +29,11 @@ qualcoder-mcp), in the conversational workflow.
    (`update_suggestion_status`)
 4. **Claude** writes only the approved suggestions to the database
    (`apply_codings`), after re-validating each one, creating a backup,
-   and checking QualCoder's lock file (a project open in QualCoder 3.x
-   is refused; a QualCoder 4.0 window writes no lock file and is detected
-   only heuristically, so confirm yourself that none has the project
-   open)
+   and checking the project's lock file (refused while QualCoder 3.8.2
+   has the project open or another conversation using Exegete is
+   writing to it; a QualCoder 4.0 window writes no lock file and is
+   seen only by its signs, so if you use QualCoder, confirm yourself
+   that none has the project open)
 5. **You** read the coded passages back in the conversation, ask
    Claude to open the file for reading (a page in your browser shows
    them highlighted in the text, which stays off the conversation), or
@@ -49,25 +51,29 @@ reports against what you said.
 
 - Exegete installed in your assistant (the one-click extension for
   Claude Desktop, or [INSTALL.md](INSTALL.md))
-- A project: a new one the assistant creates (the extension's default
-  tool set), or a copy of one you have, in the workspace: say "Copy my
-  project 'Interview Study' to the workspace"
+- A project: a new one the assistant creates (in the default tool set,
+  `full`, on every route), or a copy of one you have, in the workspace:
+  say "Copy my project 'Interview Study' to the workspace"
   (`copy_project_to_workspace`), then open the copy with `select_project`
-- **QualCoder closed** for the project you are writing to. Writes are
-  refused while QualCoder 3.x has the project open (its
-  `project_in_use.lock` heartbeat); QualCoder 4.0 writes no lock file,
-  so there Exegete can only report that the project appears to be
-  open (`qualcoder_gui_signals`, a heuristic that can miss an idle
-  window), and you must make sure no 4.0 window has it open
+- **If you also use QualCoder**, the project closed there before any
+  write. Writes are refused while the project's lock file is active
+  (QualCoder 3.8.2 has the project open, or another conversation using
+  Exegete is writing to it); QualCoder 4.0 writes no lock file, so
+  there Exegete can only report that the project appears to be open
+  (`qualcoder_gui_signals`, signs that can miss an idle window), and
+  you make sure no 4.0 window has it open
 - Codes to apply. The supervised loop applies your existing codebook;
   the AI can also propose new codes for your approval (`propose_codes`
   through `create_proposed_codes`), and the codebook tools
   (`create_code`, `rename_code`, `move_code_to_category`, ...) edit it
   from the conversation
 - A project schema from v14 (QualCoder 3.8.x) through v17 (QualCoder
-  4.0); see "Supported QualCoder versions"
-  in TOOLS.md. Older projects: open them once in QualCoder 3.8 or
-  newer, which updates them as they open
+  4.0); see "Supported QualCoder versions" in TOOLS.md. An older
+  project is refused until QualCoder 3.8 or newer has opened it once;
+  without QualCoder, someone who has it and may see the project's data
+  can do this and send you the updated copy, and without QualCoder at
+  all a new project made in Exegete from the original documents is a
+  way on, without the old project's coding
 
 ## Quick Start
 
@@ -99,27 +105,27 @@ before acting (in the four-way vocabulary allow, allow_with_caveat,
 reframe_and_ask, refuse, explained to you in plain words). Ask for
 `explain_ai_coding_tools("grounding_rules")` or
 `explain_ai_coding_tools("methodology_vocabulary")`, or read the
-`exegete://guidance/methods` resource, which also lists the method
-literature QualCoder's prompts cite, if you want to bring a method into
-a session. None of this replaces your approval of each suggestion.
+`exegete://guidance/methods` resource, which also lists some published
+approaches to prompting, if you want to bring a method into a
+session. None of this replaces your approval of each suggestion.
 
 ## Tool Reference (current)
 
 | Tool | Purpose |
 |---|---|
-| `analyze_for_coding(file_ids, code_names, instruction)` | Create an analysis session |
+| `start_coding_session(file_ids, code_names, instruction)` | Start a coding session |
 | `record_suggestions(coding_session_id, suggestions, replace)` | Persist Claude's suggestions (text-verified) |
 | `review_suggestions(coding_session_id, suggestion_guids, show_context)` | Inspect suggestions in detail |
 | `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` | Adjust a pending suggestion's span, code or reading before approval (session-only); a new code without a new reading clears the reading |
 | `update_suggestion_status(coding_session_id, approve, reject, reopen)` | Approve, reject, or reopen (back to pending, to edit and decide again) by GUID |
-| `apply_codings(coding_session_id, create_backup, owner: deprecated, removed in v0.15)` | **Write** approved suggestions (project-bound, validated, all-or-nothing). An approved suggestion whose identical coding already exists is left alone and reported by id; that check reads the base table, so on a project that hides the AI coder it discloses that one such row exists (PRIVACY.md) |
+| `apply_codings(coding_session_id, create_backup, owner: deprecated, removed in v0.15.1)` | **Write** approved suggestions (project-bound, validated, all-or-nothing). An approved suggestion whose identical coding already exists is left alone and reported by id; that check reads the base table, so on a project that hides the AI coder it discloses that one such row exists (PRIVACY.md) |
 | `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coded segment (on projects with the coder-visibility capability, QualCoder 3.8.2 and 4.0, schema v14 and later, a hidden coder's row, or a row whose memo carries a `#####` private note, is refused without the override) |
 | `list_backups()` / `restore_backup(backup_path, preview_token)` | List snapshots / guarded project restore (previews first, then the token the preview returns) |
-| `import_text_file(filename, content, memo, owner: deprecated, removed in v0.15, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add a new transcript, optionally linked to a case; `apply_project_pseudonyms=true` applies the project's own `pseudonyms.json` on the way in, as QualCoder does |
+| `import_text_file(filename, content, memo, owner: deprecated, removed in v0.15.1, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add a new transcript, optionally linked to a case; `apply_project_pseudonyms=true` applies the project's own `pseudonyms.json` on the way in, as QualCoder does |
 | `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` | **Write**: bring documents in from your computer by their paths or a folder's, their text never passing through the conversation; a preview first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
 | `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
-| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (deprecated, removed in v0.15; use QualCoder's own export) |
+| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (deprecated, removed in v0.15.1; QualCoder's own export, if you use QualCoder, keeps each coder) |
 | `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` / `cleanup_old_sessions` (deprecated) | Session management |
 | `copy_project_to_workspace(source_path, new_name)` | Copy a project into the safe workspace |
 
@@ -194,13 +200,20 @@ a session. None of this replaces your approval of each suggestion.
 - Reads are the default; every write tool re-opens the database
   read-only afterwards
 - Writes require a project schema from v14 (QualCoder 3.8.x) through
-  v17; older projects are refused (open and save them in QualCoder 3.8
-  once to upgrade), and schemas newer than v17 refuse writes until
+  v17; older projects are refused (until QualCoder 3.8 or newer has
+  opened them once, which brings them up to date with no save, and they
+  are selected again; Exegete cannot, but someone with QualCoder who may
+  see the data can do it and send the updated copy, and without
+  QualCoder at all a new project made in Exegete from the original
+  documents is a way on, without the old coding), and schemas newer
+  than v17 refuse writes until
   Exegete has been verified against them
-- Writes are refused while QualCoder 3.x has the project
-  open (its lock file), and Exegete holds the project lock itself
-  during its own writes; QualCoder 4.0 writes no lock file, so for it
-  Exegete only warns on heuristics (`qualcoder_gui_signals`)
+- Writes are refused while the project's lock file is active
+  (QualCoder 3.8.2 has the project open, or another conversation using
+  Exegete is writing to it, since Exegete holds the project lock itself
+  during its own writes); QualCoder 4.0 writes no lock file, so for it
+  Exegete only warns on signs of an open window
+  (`qualcoder_gui_signals`)
 - Memo text from the first `#####` marker onward (QualCoder 4.0's
   private-note convention) is never sent to the AI through Exegete (an
   assistant that opens a project's files by itself reads every memo
@@ -235,12 +248,15 @@ decide like any suggestion. The codebook tools (`create_code`,
 `create_category`, `merge_codes`, `delete_code`, ...) edit it directly.
 
 **Which coder name do AI codings carry?** The PROJECT's AI coder name,
-which you choose the first time a write needs it: the write stops and
-asks, and your answer is stored with the project
-(`set_project_ai_coder_name`; `AI Coding Assistant` is the built-in
-quick pick, and `EXEGETE_AI_CODER_NAME` in the host's
-configuration only declares a name to offer first). See "Choosing the
-AI coder name" in TOOLS.md. AI work stays distinguishable from yours,
+which you choose: in Exegete's settings ("AI coder name" in the
+extension, `EXEGETE_AI_CODER_NAME` on other routes), which give it to
+each project Exegete creates, without asking, and say so; or, in a
+project that has none, the first time a write needs it: the write stops
+and asks, with the setting offered first, and your answer is stored
+with the project (`set_project_ai_coder_name`; `AI Coding Assistant` is
+the built-in quick pick). A project that already has another AI coder
+name keeps it, and the next write asks you once whether to switch. See
+"Choosing the AI coder name" in TOOLS.md. AI work stays distinguishable from yours,
 in Exegete's reads and in QualCoder, and rows written under an earlier
 name keep it.
 
@@ -271,5 +287,5 @@ conversation or in QualCoder, before adopting changes.
 
 **Where are sessions stored?** `~/.exegete/sessions/` as JSON, one
 file per session. `delete_coding_session` removes one;
-`cleanup_old_sessions` (deprecated, removed in v0.15) deletes every
+`cleanup_old_sessions` (deprecated, removed in v0.15.1) deletes every
 project's old sessions with no preview.

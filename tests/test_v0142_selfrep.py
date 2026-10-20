@@ -36,7 +36,7 @@ sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server  # noqa: E402
 
-TOOL_SETS = ("full", "core", "lifecycle")
+TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
 TAGLINE = ("A qualitative analysis application you use in conversation "
            "with an AI assistant, compatible with QualCoder.")
@@ -211,7 +211,7 @@ def _messages():
 
 def _changelog_entry():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    return text[text.index("## [Unreleased]"):text.index(
+    return text[text.index("## [0.15.0-alpha]"):text.index(
         "## [0.14.1-alpha]")]
 
 
@@ -254,8 +254,10 @@ class TestWhatWasDecided:
     def test_the_opening_text_says_what_exegete_is(self):
         short = _flat(server.BRIEF_SHORT)
         assert short.startswith(OPENING + " ")
-        assert len(server.BRIEF_SHORT) < 2000
-        assert len(server.BRIEF_SHORT.encode("utf-8")) < 2000
+        # within the 2,048 that Claude Code keeps (under 2,000 until
+        # v0.15.0's rule 9, not presuming QualCoder, piece 5)
+        assert len(server.BRIEF_SHORT) <= 2048
+        assert len(server.BRIEF_SHORT.encode("utf-8")) <= 2048
         # The suggesting is the assistant's; the approving the
         # researcher's; Exegete only records it
         assert ("which you do only on the researcher's word: Exegete "
@@ -281,9 +283,12 @@ class TestWhatWasDecided:
                                "go:")
         assert BRIEF_SECTION_4 in full
         # The section's other points stay, with Exegete for "the server"
+        # The whole-branch review of v0.15.0, round 1: the lock file is
+        # not QualCoder's alone
         assert ("- Only one program should change a project at a time. "
-                "Exegete refuses to write while QualCoder 3.8.2 has the "
-                "project open;") in full
+                "Exegete refuses to write while the project's lock file is "
+                "active (QualCoder 3.8.2 has the project open, or another "
+                "conversation is writing to it);") in full
         assert ("- For how to do something in QualCoder itself, point the "
                 "researcher to QualCoder's own manual rather than guess at "
                 "its menus.") in full
@@ -335,8 +340,9 @@ class TestWhatWasDecided:
                 "program, one at a time.") in readme
         assert ("**Not in Exegete yet**, and done in QualCoder for now:"
                 in readme)
-        assert ("If your study needs any of these now, get QualCoder from "
-                "the start.") in readme
+        # A suggestion, not an instruction (whole-branch review, round 1)
+        assert ("If your study needs any of these now, you may want "
+                "QualCoder from the start.") in readme
         assert ("It is not QualCoder, nor an add-on or a remote control for "
                 "it, and it is not made or endorsed by QualCoder's "
                 "developers") in readme
@@ -430,7 +436,7 @@ class TestNothingSaysExegeteOpensAQualCoderProject:
 # a host. Anywhere else in what is served, and in the messages, "the
 # server" or "this server" would speak for Exegete (the sweep's
 # relationship check found it in the methods notes, in
-# analyze_for_coding's lines for the researcher and in a refusal of
+# start_coding_session's lines for the researcher and in a refusal of
 # rename_file, beside a brief that says "Exegete").
 THE_SERVER_AS_A_PROCESS = (
     "the server's own working folder",
@@ -503,7 +509,7 @@ class TestExegeteNotTheServer:
 
     def test_the_lines_for_the_researcher_say_exegete(self, setup_server):
         out = asyncio.run(server.mcp.call_tool(
-            "analyze_for_coding", {"file_ids": [1], "instruction": "test"}))
+            "start_coding_session", {"file_ids": [1], "instruction": "test"}))
         blocks = out[0] if isinstance(out, tuple) else out
         text = json.loads("".join(getattr(b, "text", "")
                                   for b in blocks))["instructions"]
@@ -514,15 +520,22 @@ class TestExegeteNotTheServer:
                 ) in for_the_user
 
 
-class TestTheMethodLiteratureIsQualCodersPrompts:
-    """The methods notes list the sources QualCoder 4.0's prompts cite,
-    for researchers who want to bring in a method; Exegete's rules are
-    not drawn from them (the sweep's truth check found four texts saying
-    that the notes "rest on" them)."""
+class TestTheMethodLiteratureSaysWhatItIs:
+    """The methods notes list some approaches to prompting in qualitative
+    analysis, two of them published, for researchers who want to bring in
+    a method; Exegete's rules are not drawn from them (the sweep's truth
+    check found four texts saying that the notes "rest on" them). Until
+    v0.15.0 the texts named the list by where it was found, "the method
+    literature QualCoder's prompts cite"; not presuming QualCoder, piece
+    13, names it by what it is (tests/test_v0150_qualcoder_texts_13.py)."""
 
-    CREDIT = "the method literature QualCoder's prompts cite"
+    OLD = "QualCoder's prompts cite"
+    FOR_WHOM = ", for researchers who want to bring in a method"
+    SAID = {"the resource's description":
+            "citations to method literature on prompting" + FOR_WHOM,
+            "the help": "citations to method literature" + FOR_WHOM}
 
-    def test_the_resource_and_the_help_say_whose_literature_it_is(self):
+    def test_the_resource_and_the_help_say_what_the_literature_is(self):
         for mode in TOOL_SETS:
             served = _served(mode)
             texts = {"the resource's description": served[
@@ -531,24 +544,29 @@ class TestTheMethodLiteratureIsQualCodersPrompts:
                 texts["the help"] = served["help methods_notes"]
             for where, text in texts.items():
                 flat = _flat(text)
-                assert self.CREDIT + ", for researchers who want to bring " \
-                    "in a method" in flat, (mode, where)
+                assert self.SAID[where] in flat, (mode, where)
+                assert self.OLD not in flat, (mode, where)
                 assert "rest on" not in flat, (mode, where)
-        assert "## Method literature QualCoder 4.0 ships prompts for" in \
-            server.METHODS_GUIDANCE
+        notes = _flat(server.METHODS_GUIDANCE)
+        assert ("## Method literature Some approaches to prompting in "
+                "qualitative analysis, two of them published, for "
+                "researchers who want to bring a method into") in notes
+        assert self.OLD not in notes
 
     def test_the_documents_say_the_same(self):
         tools = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
         entry = tools[tools.index("- `exegete://guidance/methods` -"):]
         entry = entry[:entry.index(" - `")]
-        assert self.CREDIT + ", for researchers who want to bring in a " \
-            "method; needs no project" in entry
+        assert ("citations to method literature on prompting, for "
+                "researchers who want to bring in a method; needs no "
+                "project") in entry
         guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
             encoding="utf-8"))
         assert ("read the `exegete://guidance/methods` resource, which also "
-                "lists " + self.CREDIT + ", if you want to bring a method "
-                "into a session.") in guide
+                "lists some published approaches to prompting, if you want "
+                "to bring a method into a session.") in guide
         for text in (tools, guide):
+            assert self.OLD not in text
             assert "literature the notes rest on" not in text
             assert "literature it rests on" not in text
 
@@ -660,7 +678,8 @@ class TestQualCoderIsOptional:
         install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
         assert "- **QualCoder, optional.** Today it does what Exegete does " \
                "not do yet:" in install
-        assert "- ✅ **A project, or the `lifecycle` tool set.**" in install
+        # v0.15.0: the default set creates a project on every route
+        assert "- ✅ **A project, or a new one.**" in install
         quick = _flat((REPO / "QUICKSTART.md").read_text(encoding="utf-8"))
         assert "- [ ] A project to work on (a `.qda` folder, in QualCoder's " \
                "format)" in quick
@@ -693,11 +712,13 @@ class TestQualCoderIsOptional:
 # it): its length on Python 3.13, its length on 3.11 (3.10 to 3.12 keep a
 # docstring's indentation alike), and its characters that are not white
 # space. Taken from the descriptions as registered, in the lifecycle set.
+# (read_pseudonym_list's row went with the tool, removed in v0.15.0: the
+# files design, piece 5.)
 BEFORE = {
     "add_annotation": (1697, 1781, 1406),
     "add_journal_entry": (1137, 1193, 943),
-    "analyze_file_with_coding": (1977, 2081, 1620),
-    "analyze_for_coding": (6101, 6345, 4958),
+    "read_file_with_codings": (1977, 2081, 1620),
+    "start_coding_session": (6101, 6345, 4958),
     "apply_codings": (2627, 2791, 2152),
     "cleanup_old_sessions": (842, 898, 684),
     "compare_coders": (3019, 3231, 2472),
@@ -747,7 +768,6 @@ BEFORE = {
     "prune_backups": (2994, 3198, 2430),
     "pseudonymise_source": (17365, 18449, 12728),
     "query_by_attribute": (2683, 2871, 1899),
-    "read_pseudonym_list": (1041, 1093, 861),
     "recolor_code": (1355, 1427, 1139),
     "record_suggestions": (4458, 4694, 3577),
     "rename_case": (2201, 2313, 1825),
@@ -778,20 +798,98 @@ class TestNoDescriptionGrew:
     # on purpose (tests/test_v0142_description_cut.py pins their words in
     # CHANGED_0143); every other description is still held to 0.14.1's
     NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
-    CHANGED_IN_0143 = {"analyze_file_with_coding", "import_text_file"}
+    CHANGED_IN_0143 = {"read_file_with_codings", "import_text_file"}
+    # and v0.15.0 lengthens two on purpose. As its design says (the
+    # renames, piece 2), list_available_projects names the extension's
+    # folder for projects and its earlier default among its places
+    # (tests/test_v0150_renames_folder.py; its words pinned in
+    # tests/test_v0142_description_cut.py, CHANGED_0150)
+    # And the coder names, piece 1 (tests/test_v0150_coder_name_settings.py;
+    # their words pinned in tests/test_v0142_description_cut.py,
+    # CHANGED_0150): create_project's paragraph on the researcher's coder
+    # name, which Exegete's settings may now give, and the setter's
+    # refusal of that name, each longer, as the design says
+    # And the coder names, piece 3 (tests/test_v0150_ai_coder_name_setting.py):
+    # create_project's sentence on the AI coder name in the settings, and
+    # export_refi_qda's name for that setting, each longer, as the design
+    # says
+    # And the files design, piece 1 (tests/test_v0150_private_files.py):
+    # get_current_project lists the files Exegete keeps for the project
+    # in its Exegete folder, a paragraph longer, as the design says
+    CHANGED_IN_0150 = {"list_available_projects", "create_project",
+                       "set_project_ai_coder_name", "export_refi_qda",
+                       "get_current_project"}
+    # And pseudonymise_source gains a paragraph on what pseudonymisation
+    # is for (not presuming QualCoder, piece 2,
+    # tests/test_v0150_qualcoder_texts_2.py, which pins it); the rest of
+    # it is still held to 0.14.1's length, measured with that paragraph
+    # taken out
+    LENGTHENED_IN_0150 = {"pseudonymise_source"}
+    # And the files design, piece 2 (tests/test_v0150_restore_keeps_folder.py,
+    # which pins it): restore_backup says a restore keeps the project's
+    # Exegete folder, a paragraph after the one on symlinks; the rest of
+    # it is still held to 0.14.1's length, measured with that paragraph
+    # taken out
+    FOLDER_KEPT_0150 = {"restore_backup"}
+    # and the renames, piece 3: two tools renamed (their lines above are
+    # under their new names), and the new names, word for word, in the
+    # descriptions that name them, where start_coding_session is two
+    # characters longer than analyze_for_coding; "Exegete's backups" in
+    # list_backups and prune_backups (tests/test_v0150_renames_tools.py;
+    # their words pinned in tests/test_v0142_description_cut.py,
+    # CHANGED_0150). Their earlier names are listed with one sentence.
+    RENAMED_IN_0150 = {"edit_suggestion", "list_backups", "propose_codes",
+                       "prune_backups", "record_suggestions",
+                       "review_suggestions", "update_suggestion_status"}
+    EARLIER_NAMES_0150 = {"analyze_for_coding", "analyze_file_with_coding"}
+    # and the coder names, piece 2: a new tool that corrects the
+    # researcher's own coder name (tests/test_v0150_coder_name_correction.py
+    # pins its description), whose sentence in create_project's
+    # description is counted with piece 1's change above; and the files
+    # design, piece 3: the names file's tool
+    # (tests/test_v0150_names_file.py pins its description), and piece 4:
+    # the names list's save (tests/test_v0150_save_names_list.py)
+    NEW_IN_0150 = {"set_project_coder_name", "prepare_names_list",
+                   "save_names_list"}
+    # and the whole-branch review of v0.15.0, round 1: every deprecation
+    # sentence now says "removed in v0.15.1" (ruling 70), two characters
+    # more, and the names list's leads with pseudonyms.json in the project
+    # folder (tests/test_v0150_wb_fix_r1.py; their words pinned in
+    # tests/test_v0142_description_cut.py, CHANGED_0150)
+    REMOVALS_MOVED_0150 = {
+        "apply_codings", "cleanup_old_sessions", "create_attribute_type",
+        "delete_code", "explain_ai_coding_tools", "export_code_report",
+        "export_refi_qda", "import_text_file", "merge_proposals",
+        "pseudonymise_source", "rename_file", "search_files",
+        "set_attribute"}
 
     def test_every_description_is_no_longer_than_before(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         assert set(registered) == set(BEFORE) | {"check_for_updates"} | \
-            self.NEW_IN_0143
+            self.NEW_IN_0143 | self.EARLIER_NAMES_0150 | self.NEW_IN_0150
         exact = sys.version_info[:2] == (3, 13)
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
-            if name in self.CHANGED_IN_0143:
+            if name in (self.CHANGED_IN_0143 | self.CHANGED_IN_0150
+                        | self.RENAMED_IN_0150 | self.REMOVALS_MOVED_0150):
                 continue
             text = registered[name]
+            if name in self.LENGTHENED_IN_0150:
+                sys.path.insert(0, str(Path(__file__).parent))
+                from test_v0150_qualcoder_texts_2 import \
+                    without_the_paragraph
+                taken_out = without_the_paragraph(text)
+                assert taken_out != text, name
+                text = taken_out
+            if name in self.FOLDER_KEPT_0150:
+                sys.path.insert(0, str(Path(__file__).parent))
+                from test_v0150_restore_keeps_folder import \
+                    without_the_folder_paragraph
+                taken_out = without_the_folder_paragraph(text)
+                assert taken_out != text, name
+                text = taken_out
             now_solid = len("".join(text.split()))
             if now_solid > solid:
                 grew.append(f"{name}: {now_solid} characters that are not "
@@ -803,17 +901,30 @@ class TestNoDescriptionGrew:
                             f"3.10 to 3.12")
         assert not grew, grew
 
+    # Reworded by 0.14.2 and removed in v0.15.0 (the files design, piece
+    # 5), with its rows in tests/test_v0142_description_cut.py
+    REMOVED_IN_0150 = {"read_pseudonym_list"}
+
     def test_the_reworded_ones_are_the_ones_the_changelog_counts(self):
-        """40 of the 74 tools 0.14.1 had, and read_brief."""
-        server._apply_toolset("lifecycle")
+        """40 of the 74 tools 0.14.1 had, and read_brief; one of the 40,
+        read_pseudonym_list, was removed in v0.15.0."""
+        server._apply_toolset("full")
         sys.path.insert(0, str(Path(__file__).parent))
         import test_v0142_description_cut as cut
         registered = server.mcp.original_descriptions
+        # A description changed after 0.14.2 (v0.15.0's, in
+        # cut.CHANGED_0150) no longer shows the words 0.14.2 served; for
+        # those, cut.REWORDED_0142 records whether 0.14.2 changed them.
+        later = set(cut.CHANGED_0150)
         reworded = {name for name, (length, solid, digest)
                     in cut.WORDS_0141.items()
-                    if cut._fingerprint(registered[name])[1:]
-                    != (solid, digest)}
-        assert len(reworded) == 40, sorted(reworded)
+                    if (name in cut.REWORDED_0142 if name in later
+                        else cut._fingerprint(registered[name])[1:]
+                        != (solid, digest))}
+        assert not reworded & self.REMOVED_IN_0150
+        assert not self.REMOVED_IN_0150 & set(registered)
+        assert len(reworded | self.REMOVED_IN_0150) == 40, sorted(reworded)
+        assert reworded == set(cut.REWORDED_0142)
         entry = _flat(_changelog_entry())
         assert ("rewritten in 40 of the 74 tools 0.14.1 had, each no longer "
                 "than 0.14.1's, and in `read_brief`") in entry

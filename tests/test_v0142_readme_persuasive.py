@@ -63,7 +63,7 @@ def _words(block):
     return " ".join("".join(c for c in block if c not in DRAWING).split())
 
 
-def _tools(mode="lifecycle"):
+def _tools(mode="full"):
     """The tools a set registers, the registry put back afterwards (the
     conftest's fixture restores it only between tests)."""
     registry = server.mcp._tool_manager._tools
@@ -199,7 +199,55 @@ def _tools(mode="lifecycle"):
 # flag that leaves the check off; a reader without QualCoder now chooses
 # any name, and "say so" is for one who does not know theirs. That takes
 # 30 characters, and the limit is raised by that and no more: 35,660.
-README_LIMIT = 35_660
+# v0.15.0's "What pseudonymisation is for" (not presuming QualCoder,
+# piece 2) adds to "Private notes and names" that replacing names
+# helps manage what is shared with other people, that it should not be
+# trusted blindly for what the assistant reads, and the safer way, with
+# a link to PRIVACY.md's section. That takes 512 characters, and the
+# limit is raised by that and no more: 36,172.
+# Its fix round names the two ways Exegete replaces names, says that
+# the project's folder still holds the originals and any names list,
+# that the tools return the pseudonyms only where names were replaced
+# (PRIVACY.md says what is not), and "the computer where the assistant
+# works". That takes 284 characters, and the limit is raised by that
+# and no more: 36,456.
+# v0.15.0's two coder names as settings (the coder names, piece 1):
+# "Two coder names" says the assistant asks for the reader's own coder
+# name unless they have filled it in Exegete's settings, and the measure
+# went to "207,000" characters. That takes 46 characters, and the limit
+# is raised by that and no more: 36,502.
+# The coder names, piece 3: "Two coder names" says the AI coder name is
+# not asked for when the project was made while it was filled in
+# Exegete's settings. That takes 71 characters (72 before its first fix
+# round's wording), and the limit is raised by that and no more: 36,573.
+# A project from a QualCoder older than 3.8, its first fix round: "A
+# project you already have" no longer gives QualCoder as the only way
+# through, adding that without QualCoder someone who has it and may see
+# the project's data can do this and send the updated copy. That takes
+# 112 characters, and the limit is raised by that and no more: 36,685.
+# The whole-branch review of v0.15.0, round 1: a way on without QualCoder
+# at all for a project from before 3.8; the kept preview texts in "What
+# stays on your computer"; where the settings are; Claude Code's limits
+# as they now are; the lock file's refusal not QualCoder's alone; the
+# removals in 0.15.1 and "What comes next" with v0.15.1 and v0.15.2; and
+# three sentences that presumed QualCoder. That takes 927 characters, and
+# the limit is raised by that and no more: 37,612.
+# Round 2: Claude Code's limits with tool search first and the one
+# description past 16,384 on both Pythons, importing and correcting your
+# own coder name among the previews, set_project_coder_name among the
+# guarded changes, and "More than 8,000" tests. That takes 526
+# characters, and the limit is raised by that and no more: 38,138.
+# The files design, piece 5 (read_pseudonym_list removed): "Private
+# notes and names" says the list can be one filled in on your own
+# computer, in a file Exegete prepares, and "What stays on your
+# computer" names the files you fill in for a project, such as the names
+# file. That takes 304 characters, and the limit is raised by that and
+# no more: 38,442.
+# Its fix round 1: "Replacing names helps" for "That helps", and the
+# names file among what an assistant that opens files can reach. That
+# takes 32 characters, and the limit is raised by that and no more:
+# 38,474.
+README_LIMIT = 38_474
 
 
 def test_the_readme_stays_short():
@@ -411,7 +459,7 @@ def test_the_example_shows_the_steps_the_software_takes():
     assert positions == sorted(positions)
     # the steps are the server's: the three questions, the two readings,
     # the counts it returns, and the name asked by the first write
-    questions = " ".join(server.analyze_for_coding.__doc__.split())
+    questions = " ".join(server.start_coding_session.__doc__.split())
     for words in ("What to look for", "How long a coded passage should be",
                   "Whether a passage may carry more than one code"):
         assert words in questions, words
@@ -580,9 +628,13 @@ def test_the_assistants_table():
             "written, the backups) do not apply to it.") in flat
     assert flat.index("**Assistants that open files by themselves.**") < \
         flat.index("| Assistant |")
-    # (the review of the redraft: the real names behind pseudonyms are not
-    # held back while a tool of the extension's default set sends them)
-    assert "read_pseudonym_list" in _tools("lifecycle")
+    # (the review of the redraft: the real names behind pseudonyms were
+    # not held back while a tool of the extension's default set sent
+    # them; v0.15.0 removed that tool (the files design, piece 5), and
+    # the paragraph still claims nothing for them, since an assistant
+    # that opens files by itself can read the project's list and the
+    # names file)
+    assert "read_pseudonym_list" not in _tools("full")
     assert "pseudonym" not in _between(
         flat, "**Assistants that open files by themselves.**",
         "| Assistant |")
@@ -611,19 +663,19 @@ def test_the_assistants_table():
 # ---------------------------------------------------------------------------
 
 def _measured():
-    # v0.14.3 moves the figures, so its entry carries them
-    # (test_toolset_modes.py pins them)
+    # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
+    # carries them (test_toolset_modes.py pins them)
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [0.14.3-alpha]",
-                           "## [0.14.2-alpha]"))
+    entry = _flat(_between(changelog, "## [0.15.0-alpha]",
+                           "## [0.14.3-alpha]"))
     measured = entry[entry.index("### Measured"):]
-    found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) .*? "
-                      r"lifecycle set = ([\d,]+)", measured)
-    full, core, lifecycle = (int(n.replace(",", "")) for n in found.groups())
-    # the 3.11 figures follow the environment named in brackets
-    later = re.search(r"on Python 3\.11\.13 \([^)]*`\.venv/`\), ([\d,]+),",
+    found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",
                       measured)
-    return ({"full": full, "core": core, "lifecycle": lifecycle},
+    full, core = (int(n.replace(",", "")) for n in found.groups())
+    # the 3.11 figures follow the environment named in brackets
+    later = re.search(r"on Python 3\.11\.13 \([^)]*\), ([\d,]+) and",
+                      measured)
+    return ({"full": full, "core": core},
             int(later.group(1).replace(",", "")))
 
 
@@ -635,7 +687,8 @@ def test_the_tool_set_table():
             in section)
     rows = {_cells(row)[0].strip("`"): _cells(row)
             for row in _rows(section, "| `")}
-    assert list(rows) == ["lifecycle", "full", "core"]
+    # v0.15.0: one set, `full`, every tool; `lifecycle` is its earlier name
+    assert list(rows) == ["full", "core"]
     sizes, full_on_311 = _measured()
     for mode, cells in rows.items():
         count = len(_tools(mode))
@@ -643,17 +696,16 @@ def test_the_tool_set_table():
         size = sizes[mode]
         assert cells[2] == (f"about {round(size / 1000) * 1000:,} "
                             f"characters, {round(size / 4000)}k tokens"), mode
-    assert "create_project" in _tools("lifecycle")
-    assert "create_project" not in _tools("full")
+    assert "create_project" in _tools("full")
+    assert "create_project" not in _tools("core")
     # the defaults: the extension's manifest, the server's own, and none
     manifest = json.loads(_read("packaging/desktop-extension/"
                                 "manifest.in.json"))
-    assert manifest["user_config"]["toolset"]["default"] == "lifecycle"
-    assert rows["lifecycle"][4] == ("the one-click extension; elsewhere, "
-                                    "set `EXEGETE_TOOLSET=lifecycle`")
-    assert "'lifecycle'" in inspect.getsource(server._resolve_toolset_mode)
+    assert manifest["user_config"]["toolset"]["default"] == "full"
     assert "(default full)" in server._resolve_toolset_mode.__doc__
-    assert rows["full"][4] == "the Terminal route"
+    assert rows["full"][4] == "every route"
+    assert ("`lifecycle`, the earlier name of `full` in the extension, is "
+            "still accepted and means `full`.") in _flat(section)
     assert rows["core"][4] == "none: set `EXEGETE_TOOLSET=core`"
     assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
     # the sentence under it, with the interpreters and the per cent
@@ -702,8 +754,10 @@ def test_the_advanced_section_rests_on_the_code():
                   "clears old ones.",
                   "It reads a project's SQLite database read-only; each "
                   "tool that writes opens its own connection, after a "
-                  "backup (by default), and refuses while QualCoder 3.8.2 "
-                  "has the project open.",
+                  "backup (by default), and refuses while the project's "
+                  "lock file is active (QualCoder 3.8.2 has the project "
+                  "open, or another conversation using Exegete is writing "
+                  "to it).",
                   "`pipx install exegete`"):
         assert words in opening, words
     with open(REPO / "pyproject.toml", "rb") as handle:
@@ -716,7 +770,7 @@ def test_the_advanced_section_rests_on_the_code():
     # every name in the list is a tool the assistant is given, or one of
     # the arguments it names
     beyond = _between(flat, "**Beyond the basics**", "**Tested.**")
-    tools = _tools("lifecycle")
+    tools = _tools("full")
     for name in re.findall(r"`([a-z_]+)`", beyond):
         assert name in tools or name in ("exclude_code_ids", "coder"), name
     for tool, arguments in ARGUMENTS.items():
@@ -741,9 +795,18 @@ def test_the_advanced_section_rests_on_the_code():
                  "**Analysis**", "**Guarded changes**", "**The brief**",
                  "**Resources**"):
         assert lead in beyond, lead
-    assert ("Claude Code shows only the first 2,048 characters of a tool's "
-            "description, so the rules that matter come first; the rest "
-            "reach the model through `read_brief` or the answers.") in beyond
+    # Claude Code's limits as they are since its version 2.1.296
+    # (whole-branch review, round 1), the default, tool search, first
+    # (round 2; tests/test_v0150_wb_fix_r2.py pins the long description)
+    assert ("Claude Code keeps the first 16,384 characters of a tool's "
+            "description when it finds the tool through its tool search, "
+            "as it does by default, and the first 4,096 when it loads the "
+            "tool at the start (2,048 before its version 2.1.296). So the "
+            "rules that matter come first in each description, within "
+            "2,048 characters; the rest reach the model through "
+            "`read_brief` or the answers.") in beyond
+    assert "Claude Code shows only the first 2,048" not in beyond
+    assert "Claude Code shows the first 4,096" not in beyond
     assert ("`pseudonymise_source` (these five also say whose work is "
             "affected), `restore_backup`, `prune_backups`") in beyond
     assert "def _pseudonymise_by_owner" in database
@@ -758,7 +821,9 @@ def test_the_advanced_section_rests_on_the_code():
 
 def test_how_it_is_tested_matches_the_workflow():
     flat = _flat(_section("For advanced users", "What comes next"))
-    assert ("More than 5,000 automated tests run on Windows, macOS and "
+    # (the whole-branch review of v0.15.0, round 2: both suites pass more
+    # than 8,300)
+    assert ("More than 8,000 automated tests run on Windows, macOS and "
             "Linux, with Python 3.10 and 3.13, on every change pushed; they "
             "test Exegete, not a researcher's use of it") in flat
     workflow = _read(".github/workflows/ci.yml")
@@ -779,8 +844,10 @@ def test_what_comes_next_is_plans():
     items = re.findall(r" - ([^ ]+(?: [^ ]+)?)", section)
     # v0.14.3: bringing documents in and reading a whole
     # file yourself are in Exegete, so they are no longer the next plan
+    # (the whole-branch review of v0.15.0, round 1: v0.15 in three
+    # releases, the safety net in v0.15.1 and method in v0.15.2)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15", "v0.16", "v0.17", "Later"]
+        "v0.15.1", "v0.15.2", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do

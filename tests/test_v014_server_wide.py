@@ -73,7 +73,7 @@ EXPECTED_HINTS = {
     "get_coded_segments": R, "search_files": R,
     "get_coding_frequencies": R, "search_memos": R,
     "export_code_report": R, "get_project_summary": R,
-    "analyze_file_with_coding": R, "list_attribute_types": R,
+    "read_file_with_codings": R, "list_attribute_types": R,
     "get_file_attributes": R, "get_case_attributes": R,
     "query_by_attribute": R, "compare_coders": R,
     "find_cooccurring_codes": R, "get_case_code_matrix": R,
@@ -83,10 +83,9 @@ EXPECTED_HINTS = {
     "explain_ai_coding_tools": R, "review_proposals": R,
     # the assistant's brief (v0.14.2): reads nothing from the project
     "read_brief": R,
-    # Changes nothing, but sends every real name in pseudonyms.json to the
-    # AI provider: marked as not read-only so that hosts ask before it
-    # runs, as the owner's v0.13 ruling intends (the lead's correction)
-    "read_pseudonym_list": (False, False, True, False),
+    # (read_pseudonym_list, which changed nothing and was marked not
+    # read-only so that hosts asked before it sent the names, was removed
+    # in v0.15.0: the files design, piece 5)
     # Changes nothing in a project, but fetches Exegete's version file
     # from the network and records the check: the one tool reaching
     # beyond the computer (the owner's ruling of 5 October 2026), not
@@ -95,11 +94,13 @@ EXPECTED_HINTS = {
     # adds, and a repeat changes nothing
     "select_project": A1, "create_case": A1, "create_category": A1,
     "create_code": A1, "create_project": A1,
+    # v0.15.0: makes the names file once; a repeat keeps it as it is
+    "prepare_names_list": A1,
     # 0.14.3: a repeat of the preview reads again, and a
     # repeat of the import finds its files there and its token spent
     "import_documents": A1,
     # adds
-    "copy_project_to_workspace": A, "analyze_for_coding": A,
+    "copy_project_to_workspace": A, "start_coding_session": A,
     "apply_codings": A, "create_proposed_codes": A,
     "add_journal_entry": A, "import_text_file": A,
     "link_file_to_case": A, "create_attribute_type": A,
@@ -124,8 +125,16 @@ EXPECTED_HINTS = {
     "delete_category": C, "delete_coding": C, "delete_annotation": C,
     # the same name again adds an entry to the name's history
     "set_project_ai_coder_name": C,
+    # v0.15.0: renames or removes the old name's row in the coder list
+    "set_project_coder_name": C,
     "set_attribute": C, "update_annotation": C,
     "pseudonymise_source": C, "restore_backup": C, "prune_backups": C,
+    # v0.15.0: replaces the project's pseudonyms.json with the names file
+    # (the files design, piece 4)
+    "save_names_list": C,
+    # the earlier names of the two tools renamed in 0.15.0, with the new
+    # tools' hints
+    "analyze_for_coding": A, "analyze_file_with_coding": R,
 }
 
 
@@ -144,11 +153,12 @@ def _listed(mode):
 class TestToolAnnotations:
     """Every tool declares its four hints, as the table says."""
 
-    def test_the_table_names_every_tool_of_the_lifecycle_set(self):
-        # lifecycle is the largest set: full plus create_project
-        assert set(_listed("lifecycle")) == set(EXPECTED_HINTS)
+    def test_the_table_names_every_tool_of_the_full_set(self):
+        # full is the largest set: every tool, create_project included
+        # since 0.15.0 (v0.14's `lifecycle` set until then)
+        assert set(_listed("full")) == set(EXPECTED_HINTS)
 
-    @pytest.mark.parametrize("mode", ["full", "core", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full", "core"])
     def test_every_listed_tool_carries_the_tables_hints(self, mode):
         listed = _listed(mode)
         wrong = {name: _hints(tool.annotations)
@@ -161,7 +171,7 @@ class TestToolAnnotations:
     def test_the_hints_reach_the_host_in_the_tool_list(self):
         # The wire form a host reads: tools/list serialises annotations
         # with the MCP field names.
-        listed = _listed("lifecycle")
+        listed = _listed("full")
         wire = listed["delete_code"].model_dump(by_alias=True,
                                                 exclude_none=True)
         assert wire["annotations"] == {
@@ -174,14 +184,17 @@ class TestToolAnnotations:
     def test_every_token_gated_tool_is_marked_destructive(self):
         # The tools that ask for a preview first (preview_token) are the
         # ones whose writes cannot be taken back by the next call.
-        listed = _listed("lifecycle")
+        listed = _listed("full")
         gated = [name for name, tool in listed.items()
                  if "preview_token" in tool.inputSchema.get("properties",
                                                             {})]
         assert sorted(gated) == sorted([
             "delete_category", "delete_code", "import_documents",
             "merge_category", "merge_codes", "prune_backups",
-            "pseudonymise_source", "restore_backup"])
+            "pseudonymise_source", "restore_backup",
+            # v0.15.0: correcting the researcher's own coder name, and
+            # saving the names list
+            "set_project_coder_name", "save_names_list"])
         for name in gated:
             if name == "import_documents":
                 # 0.14.3: a preview first for the researcher's approval of
@@ -192,49 +205,52 @@ class TestToolAnnotations:
             assert listed[name].annotations.destructiveHint is True, name
             assert listed[name].annotations.readOnlyHint is False, name
 
-    def test_the_name_list_is_not_marked_read_only(self):
-        """The host must ask before read_pseudonym_list sends the real
-        names: a read-only mark lets Cowork and the desktop Code sessions
-        in auto mode run it without asking."""
-        hints = _listed("lifecycle")["read_pseudonym_list"].annotations
-        assert hints.readOnlyHint is False
-        assert hints.destructiveHint is False
+    def test_the_name_list_is_in_no_set(self):
+        """The tool that sent the real names, which hosts had to ask
+        before (it was marked not read-only), was removed in v0.15.0 (the
+        files design, piece 5): no host has it to run."""
+        assert "read_pseudonym_list" not in _listed("full")
+        assert "read_pseudonym_list" not in _listed("core")
 
-    def test_the_name_list_asks_in_every_mode_where_honoured(self):
-        """Fix round 1: read_pseudonym_list's tools/list entry carries
+    def test_the_marked_tools_ask_in_every_mode_where_honoured(self):
+        """Fix round 1: the tools/list entries of the tools whose call
+        the researcher approves each time carry
         "anthropic/requiresUserInteraction": true (Claude Code 2.1.199
-        and later asks before every call of it in every mode), read over
-        the host's path; no other tool carries it."""
-        server._apply_toolset("lifecycle")
+        and later asks before every call of them in every mode), read
+        over the host's path; no other tool carries it."""
+        server._apply_toolset("full")
         listed = host_session(lambda client: client.list_tools()).tools
         marked = {tool.name: tool.meta for tool in listed if tool.meta}
-        # 0.14.3: and import_documents, whose two calls the researcher
-        # approves (the design's "Asking every time")
+        # 0.14.3: import_documents, whose two calls the researcher
+        # approves (the design's "Asking every time"); v0.15.0:
+        # save_names_list, whose list changes every later import; and no
+        # longer read_pseudonym_list, removed (the files design, piece 5)
         assert marked == {
-            "read_pseudonym_list": {
-                "anthropic/requiresUserInteraction": True},
             "import_documents": {
+                "anthropic/requiresUserInteraction": True},
+            "save_names_list": {
                 "anthropic/requiresUserInteraction": True}}
         wire = next(t for t in listed
-                    if t.name == "read_pseudonym_list").model_dump(
+                    if t.name == "save_names_list").model_dump(
                         by_alias=True, exclude_none=True)
         assert wire["_meta"]["anthropic/requiresUserInteraction"] is True
 
-    def test_privacy_says_when_the_host_asks_for_the_name_list(self):
-        """Fix round 2: PRIVACY.md no longer says a host asks before the
-        name list runs, whatever the host and mode."""
+    def test_privacy_says_no_tool_returns_the_names(self):
+        """Fix round 2 made PRIVACY.md say when a host asked before the
+        name list ran; v0.15.0 removed the tool (the files design, piece
+        5), so PRIVACY.md says that no tool returns the names, and where
+        the researcher sees the list instead."""
         privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md")
                            .read_text(encoding="utf-8").split())
         assert "so a host asks the researcher's approval for it" \
             not in privacy
-        assert ("It carries `anthropic/requiresUserInteraction`, so Claude "
-                "Code (2.1.199 and later) asks the researcher before every "
-                "call of it, in every permission mode but `dontAsk`, which "
-                "refuses it. Earlier Claude Code, and another host in an "
-                "auto mode or with approvals skipped, can run it without "
-                "asking") in privacy
-        assert ("for a project with a pseudonyms file keep the host in its "
-                "asking mode") in privacy
+        assert "Each call writes one line to the server's log" \
+            not in privacy
+        assert ("No tool returns the names (`read_pseudonym_list` was "
+                "removed in 0.15.0): you see and change the list in the "
+                "names file on your own computer (`prepare_names_list`, "
+                "then `save_names_list`), whose preview gives counts and "
+                "line numbers, never a name.") in privacy
 
     def test_install_says_what_the_modes_do(self):
         install = " ".join((Path(__file__).parent.parent / "INSTALL.md")
@@ -249,15 +265,17 @@ class TestToolAnnotations:
                        # fix round 2: dontAsk refuses; the version
                        "in every one of these modes but `dontAsk`, which "
                        "refuses it",
+                       # v0.15.0: the tools carrying the mark, the one
+                       # that returned the names list removed
                        "except, in Claude Code 2.1.199 and later, "
-                       "`read_pseudonym_list`"):
+                       "`import_documents` and `save_names_list`"):
             assert needed in section, needed
 
     def test_one_tool_alone_claims_the_open_world(self):
         # check_for_updates, which fetches Exegete's version file (the
         # owner's ruling of 5 October 2026); every other tool works on
         # this computer's files and nothing else
-        open_world = sorted(name for name, tool in _listed("lifecycle")
+        open_world = sorted(name for name, tool in _listed("full")
                             .items() if tool.annotations.openWorldHint)
         assert open_world == ["check_for_updates"]
 
@@ -268,7 +286,7 @@ class TestUnknownArgumentsRefused:
 
     def test_every_tool_refuses_an_extra_argument_and_changes_nothing(
             self, setup_server, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         selected = server.current_project_path
         before = tree(tmp_path)
 
@@ -333,7 +351,7 @@ class TestUnknownArgumentsRefused:
             assert conn.execute(sources).fetchone()[0] == n_before
 
     def test_every_input_schema_says_no_other_argument(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         listed = host_session(lambda client: client.list_tools()).tools
         assert len(listed) == len(EXPECTED_HINTS)
         for tool in listed:
@@ -374,7 +392,7 @@ class TestPseudonymsFileAdvice:
                                  "content": "Thomas said yes.",
                                  "apply_project_pseudonyms": True}))
         error = json.loads(text_of(result))["error"]
-        assert "could not be parsed" in error
+        assert "could not be read" in error
         assert "import without apply_project_pseudonyms" in error
         assert "pseudonymise_source on the new file" in error
         assert "give the mapping in the call instead" not in error
@@ -387,7 +405,7 @@ class TestPseudonymsFileAdvice:
             "pseudonymise_source", {"file_id": 1,
                                     "use_project_pseudonyms": True}))
         error = json.loads(text_of(result))["error"]
-        assert "could not be parsed" in error
+        assert "could not be read" in error
         assert "give the mapping in the call instead" in error
 
 
@@ -433,7 +451,7 @@ def all_tool_names():
 
 def argument_names():
     names = set()
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     for tool in server.mcp._tool_manager._tools.values():
         names |= set(tool.parameters.get("properties", {}))
     return names
@@ -521,7 +539,7 @@ def _served_texts_now():
 class TestEveryNamedToolIsThere:
     """A model told to call a tool can call it, in every tool set."""
 
-    @pytest.mark.parametrize("mode", ["full", "core", "lifecycle"])
+    @pytest.mark.parametrize("mode", ["full", "core"])
     def test_every_tool_a_served_text_names_is_registered(self, mode):
         tools, arguments = all_tool_names(), argument_names()
         texts, registered = served_texts(mode)
@@ -795,7 +813,7 @@ async def call_every_tool(client, root, lock_check=False):
     await run("set_attribute", {"target_type": "case", "target_id": 1,
                                 "attribute_name": "Age", "value": "30"})
     # the suggestion loop
-    session = (await run("analyze_for_coding",
+    session = (await run("start_coding_session",
                          {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
     recorded = await run("record_suggestions", {
         "coding_session_id": session, "suggestions": [{"reading": "explicit",
@@ -821,6 +839,8 @@ async def call_every_tool(client, root, lock_check=False):
     await run("search_memos", {"query": "interview"})
     await run("export_code_report", {"code_name": "Doubt"})
     await run("get_project_summary", {})
+    await run("read_file_with_codings", {"file_id": 1})
+    # its earlier name, listed until the release on method (0.15.0)
     await run("analyze_file_with_coding", {"file_id": 1})
     await run("open_file_for_reading", {"file_id": 1})
     await run("list_attribute_types", {})
@@ -837,7 +857,17 @@ async def call_every_tool(client, root, lock_check=False):
     await run("get_codes_by_case", {"case_id": 1})
     await run("get_cases_by_code", {"code_id": 2})
     await run("explain_ai_coding_tools", {"tool_name": "apply_codings"})
-    await run("read_pseudonym_list", {})
+    # v0.15.0: the names file, made, shown and opened (the recorders)
+    await run("prepare_names_list", {})
+    # v0.15.0: the names file filled in, then saved as the project's
+    # names list, preview then save (the files design, piece 4)
+    names_file = run.folder / "Exegete" / "Names to replace.txt"
+    names_file.write_text(names_file.read_text(encoding="utf-8-sig")
+                          + "Zebedee Quill = Participant Z\n",
+                          encoding="utf-8")
+    names_preview = await run("save_names_list", {})
+    await run("save_names_list",
+              {"preview_token": names_preview["preview_token"]})
     # exports
     await run("export_refi_qda", {"output_path": str(exports / "s.qdpx")})
     await run("export_codebook", {"output_path": str(exports / "c.csv")})
@@ -848,8 +878,10 @@ async def call_every_tool(client, root, lock_check=False):
     await run("export_case_code_matrix_csv",
               {"output_path": str(exports / "m.csv")})
     # proposing codes
-    session_2 = (await run("analyze_for_coding",
+    session_2 = (await run("start_coding_session",
                            {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
+    # its earlier name, listed until the release on method (0.15.0)
+    await run("analyze_for_coding", {"instruction": "test", "file_ids": [1]})
     proposed = await run("propose_codes", {
         "coding_session_id": session_2, "proposals": [
             {"name": "Reliance", "memo": "Leaning on others",
@@ -898,6 +930,9 @@ async def call_every_tool(client, root, lock_check=False):
     await run("delete_category", {"category_id": 2})
     await run("merge_category", {"from_category_id": 2,
                                  "into_category": "Feelings"})
+    # v0.15.0: nothing is recorded under the researcher's own coder name
+    # in this project yet, so a correction is previewed
+    await run("set_project_coder_name", {"name": "Researcher R."})
     await run("pseudonymise_source", {
         "mapping": [{"original": "Maria", "pseudonym": "Joan"}],
         "file_id": 1, "researcher_keeps_mapping": True})
@@ -919,7 +954,7 @@ class TestEveryToolThroughTheHost:
     host's path, and does what its hints say."""
 
     def test_every_tool_answers_its_described_call(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         run = host_session(lambda client: call_every_tool(client,
                                                           tmp_path))
         assert run.problems == [], "\n".join(map(repr, run.problems))
@@ -930,7 +965,7 @@ class TestEveryToolThroughTheHost:
         left: refusals are fine here (the state has moved on), but no
         answer may send the model to a tool `core` does not register,
         unmarked."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             full = await call_every_tool(client, tmp_path)
@@ -974,10 +1009,15 @@ def args_section(description):
 def test_every_description_names_exactly_the_tools_arguments():
     """The audit's "true today" item 4: every argument a description's
     Args section names exists, and every argument is named there."""
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     listed = host_session(lambda client: client.list_tools()).tools
     differ = {}
     for tool in listed:
+        if tool.name in server.RENAMED_TOOLS:
+            # An earlier name's one sentence sends the model to the new
+            # name, whose description names them; its arguments are the
+            # new tool's (tests/test_v0150_renames_tools.py)
+            continue
         named = args_section(tool.description or "")
         schema = list(tool.inputSchema.get("properties", {}))
         if sorted(named) != sorted(schema):
@@ -1117,8 +1157,10 @@ class TestTextsThatSentTheAssistantNowhere:
         answer = host_json("list_available_projects")
         assert answer["searched"]["instead_of_the_usual_places"] is False
         # the usual places, expanded in the sandbox's home (the suite
-        # never names the real Documents folder)
-        assert len(answer["searched"]["folders"]) == 4
+        # never names the real Documents folder); six from v0.15.0, with
+        # the extension's folder and its earlier default
+        assert len(answer["searched"]["folders"]) == \
+            len(server._USUAL_SEARCH_PLACES) == 6
         assert all(Path(folder).is_relative_to(Path.home())
                    for folder in answer["searched"]["folders"])
         doc = server.mcp._tool_manager._tools[
@@ -1146,7 +1188,7 @@ class TestTextsThatSentTheAssistantNowhere:
         text = " ".join(server.METHODS_GUIDANCE.split())
         assert "once, for every future session" not in text
         # fix round 2 of the coding loop: the session's answer carries it
-        assert ("analyze_for_coding's answer carries the project memo's "
+        assert ("start_coding_session's answer carries the project memo's "
                 "public part (project_memo)") in text
 
     def test_readme_no_longer_says_a_journal_entry_is_updated(self):
@@ -1189,7 +1231,7 @@ async def _marker_project(client, root):
         "file_id": 1, "start_pos": 0, "end_pos": 5,
         "memo": "Researcher note about P3"})))
     session = json.loads(text_of(await client.call_tool(
-        "analyze_for_coding", {"instruction": "test", "file_ids": [1]})))["coding_session_id"]
+        "start_coding_session", {"instruction": "test", "file_ids": [1]})))["coding_session_id"]
     proposed = json.loads(text_of(await client.call_tool("propose_codes", {
         "coding_session_id": session, "proposals": [{
             "name": "Reliance", "memo": "Leaning on others",
@@ -1245,7 +1287,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
                                       "public text ##### private text"])
     def test_every_such_tool_refuses_and_changes_nothing(self, tmp_path,
                                                          text):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
@@ -1264,7 +1306,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
             assert unchanged, name
 
     def test_the_audits_three_runs_keep_the_notes(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
@@ -1295,7 +1337,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
         """A suggestion's reasoning or a proposal's definition recorded
         by an earlier release can hold the marker; the write that would
         cut it refuses first."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def setup(client):
             ids = await _marker_project(client, tmp_path)
@@ -1335,7 +1377,7 @@ class TestTheMarkerIsRefusedBeforeAnyWrite:
         assert work_tree(tmp_path) == before
 
     def test_every_such_tool_says_so_in_its_description(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         tools = server.mcp._tool_manager._tools
         for name in MARKER_TOOLS:
             doc = " ".join(tools[name].description.split())
@@ -1404,7 +1446,7 @@ class TestBackupsDatedByTheirNames:
         ago, the safety backup a restore takes inherits that date; it
         was listed last, ten days old, and prune_backups(older_than_days
         =5) offered it."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
         ten_days_ago = time.time() - 10 * 86400
@@ -1486,7 +1528,7 @@ class TestBackupsDatedByTheirNames:
         folder and flagged; the prune keeps the real newest, keeps the
         future-named folder (new by its folder), and never offers the
         copy, which it names."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -1537,7 +1579,7 @@ class TestBackupsDatedByTheirNames:
         to carry the time too; neither is a name this server gives, so
         both are listed as never removed and neither takes the newest's
         place."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -1679,7 +1721,7 @@ class TestSessionFilesAfterPseudonymising:
         after the run both are listed, their files still hold the name,
         and list_coding_sessions finds them by folder and by data.qda,
         under the folder's name."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -1695,7 +1737,7 @@ class TestSessionFilesAfterPseudonymising:
             await call("import_text_file", {"filename": "int2.txt",
                                             "content": TEXT_2})
             await call("create_code", {"name": "Trust"})
-            suggesting = (await call("analyze_for_coding",
+            suggesting = (await call("start_coding_session",
                                      {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": suggesting, "suggestions": [{"reading": "explicit",
@@ -1705,7 +1747,7 @@ class TestSessionFilesAfterPseudonymising:
             await call("update_suggestion_status", {
                 "coding_session_id": suggesting,
                 "reject": [recorded["recorded"][0]["guid"]]})
-            proposing = (await call("analyze_for_coding",
+            proposing = (await call("start_coding_session",
                                     {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             await call("propose_codes", {
                 "coding_session_id": proposing, "proposals": [{
@@ -1717,7 +1759,7 @@ class TestSessionFilesAfterPseudonymising:
             finished = {}
             for outcome, name in (("reject", "Distrust"),
                                   ("create", "Loyalty")):
-                sid = (await call("analyze_for_coding",
+                sid = (await call("start_coding_session",
                                   {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
                 proposed = await call("propose_codes", {
                     "coding_session_id": sid, "proposals": [{
@@ -1733,7 +1775,7 @@ class TestSessionFilesAfterPseudonymising:
                                          {"coding_session_id": sid})
                     assert "error" not in created, created
                 finished[outcome] = sid
-            elsewhere = (await call("analyze_for_coding",
+            elsewhere = (await call("start_coding_session",
                                     {"instruction": "test", "file_ids": [2]}))["coding_session_id"]
             await call("record_suggestions", {
                 "coding_session_id": elsewhere, "suggestions": [{"reading": "explicit",
@@ -1821,7 +1863,7 @@ class TestHiddenCodersOnTheCodebook:
     behaviour together."""
 
     def _project(self, client_root):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = client_root / "projects"
         projects.mkdir()
 
@@ -1921,7 +1963,7 @@ class TestHiddenCodersOnTheCodebook:
 
         async def read(client):
             view = json.loads(text_of(await client.call_tool(
-                "analyze_file_with_coding", {"file_id": 1})))
+                "read_file_with_codings", {"file_id": 1})))
             found = {}
             for uri in ("exegete://files/list", "exegete://cases/list",
                         "exegete://journal"):
@@ -1991,7 +2033,7 @@ NOT_PROJECT_WRITES = {
                                  "database, as its description says",
     "copy_project_to_workspace": "reads the project, writes a copy",
     "prune_backups": "removes backups, never the project",
-    "analyze_for_coding": "session file", "record_suggestions": "session",
+    "start_coding_session": "session file", "record_suggestions": "session",
     "edit_suggestion": "session", "update_suggestion_status": "session",
     "propose_codes": "session", "update_proposal": "session",
     "update_proposal_status": "session", "merge_proposals": "session",
@@ -1999,10 +2041,14 @@ NOT_PROJECT_WRITES = {
     "export_refi_qda": "writes a file outside the project",
     "export_codebook": "file", "export_coded_segments_report": "file",
     "export_frequencies_csv": "file", "export_case_code_matrix_csv": "file",
-    "read_pseudonym_list": "reads only (marked so that hosts ask)",
+    "prepare_names_list": "writes the names file in the project's "
+                          "Exegete folder, which the project's format "
+                          "never reads, and never touches the database",
     "open_file_for_reading": "writes a page or a copy in the reading "
                              "folder, outside the project, and works "
                              "while QualCoder has it open, as reads do",
+    "analyze_for_coding": "session file (the earlier name of "
+                          "start_coding_session)",
 }
 
 
@@ -2031,7 +2077,7 @@ class TestPromisesKeptOverEveryTool:
         it is named above with its reason: each call of the run above,
         made first while QualCoder 3.x holds the project, is refused and
         leaves the database and its backups as they were."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         run = host_session(lambda client: call_every_tool(
             client, tmp_path, lock_check=True))
         assert run.problems == [], "\n".join(map(repr, run.problems))
@@ -2044,7 +2090,7 @@ class TestPromisesKeptOverEveryTool:
         """Every read-only tool, called as above, and every resource, on a
         project with a private part in every kind of note: the private
         text is never in an answer."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         secret = "PRIVATE-7f3a"
 
         async def drive(client):
@@ -2094,7 +2140,7 @@ class TestCoreAnswersAreMarked:
     marks, in a reduced set, the tools the set does not register."""
 
     def _project(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -2160,8 +2206,8 @@ class TestCoreAnswersAreMarked:
         async def read(client):
             async def call(name, args):
                 return body_of(text_of(await client.call_tool(name, args)))
-            view = await call("analyze_file_with_coding", {"file_id": 1})
-            session = (await call("analyze_for_coding",
+            view = await call("read_file_with_codings", {"file_id": 1})
+            session = (await call("start_coding_session",
                                   {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": session, "suggestions": [{"reading": "explicit",
@@ -2239,8 +2285,9 @@ def _core_reachable_texts():
             if isinstance(node, ast.Name) and isinstance(node.ctx, ast.Load):
                 uses.setdefault(node.id, []).append(id(node) in marked)
     # SERVER_INSTRUCTIONS is marked by _refresh_served_texts whenever a
-    # set is applied; LIFECYCLE_TOOLS is a list of names, never sent
-    settled = {"SERVER_INSTRUCTIONS", "LIFECYCLE_TOOLS"}
+    # set is applied (v0.15.0: LIFECYCLE_TOOLS, a list of names never
+    # sent, went with the `lifecycle` set)
+    settled = {"SERVER_INSTRUCTIONS"}
 
     def refs(node):
         out = set()
@@ -2368,7 +2415,7 @@ class TestOneProjectUnderTwoSpellings:
         """A project made by create_project; a suggestion recorded while
         it is selected under one spelling; then the session's own check,
         the session list and the pseudonymising run under the other."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         projects = tmp_path / "projects"
         projects.mkdir()
 
@@ -2385,7 +2432,7 @@ class TestOneProjectUnderTwoSpellings:
             await call("create_code", {"name": "Trust"})
             await call("select_project", {"project_path": str(
                 folder.parent / recorded_as(folder.name))})
-            session = (await call("analyze_for_coding",
+            session = (await call("start_coding_session",
                                   {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
             recorded = await call("record_suggestions", {
                 "coding_session_id": session, "suggestions": [{"reading": "explicit",
@@ -2472,7 +2519,7 @@ class TestTheMarkerChecksHoldForEveryShape:
     the session file's bytes are unchanged in each case."""
 
     def _session(self, tmp_path):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
 
         async def drive(client):
             ids = await _marker_project(client, tmp_path)
@@ -2593,7 +2640,7 @@ def test_a_replace_of_items_already_in_the_session_replaces_as_before(
     whose items are all such keeps nothing back: the pending suggestion
     goes, as it did before fix round 1, and no answer says an item was
     refused."""
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
 
     async def drive(client):
         async def call(name, args):
@@ -2631,7 +2678,7 @@ def test_a_null_note_is_stored_empty_never_as_none(tmp_path):
     """Fix round 2 (QA's m2): a reasoning, a rationale or a definition
     sent as null is empty; no memo the project holds reads "None" after
     the suggestion is applied and the proposal created."""
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
 
     async def drive(client):
         async def call(name, args):

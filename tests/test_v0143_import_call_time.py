@@ -8,7 +8,9 @@ within a time counted from its start, under 50 seconds, and says what it
 did and how to go on: the preview reads for 30 seconds, and leaves the
 files it has no time for, or whose reading the time left cut short, for
 the next call; the import, which reads the same files again from their
-copies, works for 45, imports the files done, and leaves the rest. The
+copies, works for 45, imports the files done, and leaves the rest
+(v0.15.0: within the same time as the preview, the call's figure,
+doc_import.call_seconds, 30 on these tests' route). The
 first file a call reads always has its whole time (30 seconds at the
 preview, 40 at the import), so every call reads at least one file; a
 file over its own time is refused, as before. When every file a preview
@@ -119,10 +121,15 @@ def _rows(project):
 
 
 def test_the_times_keep_every_call_under_fifty_seconds():
-    assert import_reading.READ_TIMEOUT_SECONDS <= doc_import.PREVIEW_SECONDS
-    assert import_reading.READ_TIMEOUT_SECONDS < doc_import.IMPORT_FILE_SECONDS
-    assert doc_import.PREVIEW_SECONDS < doc_import.IMPORT_SECONDS < 50
-    assert doc_import.IMPORT_FILE_SECONDS < 50
+    assert import_reading.READ_TIMEOUT_SECONDS \
+        <= doc_import.CALL_SECONDS_LEAST \
+        <= doc_import.TERMINAL_CALL_SECONDS < 50
+    assert import_reading.READ_TIMEOUT_SECONDS \
+        < doc_import.IMPORT_FILE_SECONDS < 50
+    # v0.15.0: the extension's figure, measured, within the setting's
+    # bounds
+    assert doc_import.CALL_SECONDS_LEAST \
+        <= doc_import.EXTENSION_CALL_SECONDS <= doc_import.CALL_SECONDS_MOST
 
 
 class TestThePreview:
@@ -131,7 +138,7 @@ class TestThePreview:
             self, project, folder, clock):
         _files(folder, *[(10, 10)] * 5)
         preview, took = _call(clock, paths=[str(folder)])
-        assert took <= doc_import.PREVIEW_SECONDS
+        assert took <= doc_import.TERMINAL_CALL_SECONDS
         assert preview["summary"] == "3 files ready; 2 not read this time."
         assert [f["file"] for f in preview["files"]] == [
             "P01.txt", "P02.txt", "P03.txt"]
@@ -148,7 +155,7 @@ class TestThePreview:
             self, project, folder, clock):
         _files(folder, (10, 10), (25, 25))
         preview, took = _call(clock, paths=[str(folder)])
-        assert took <= doc_import.PREVIEW_SECONDS
+        assert took <= doc_import.TERMINAL_CALL_SECONDS
         assert preview["summary"] == "1 file ready; 1 not read this time."
         assert preview["not_read_this_time"]["files"] == ["P02.txt"]
         assert "refused" not in preview
@@ -165,7 +172,7 @@ class TestThePreview:
                                                  clock):
         _files(folder, (35, 35), (5, 5))
         preview, took = _call(clock, paths=[str(folder)])
-        assert took <= doc_import.PREVIEW_SECONDS + 1
+        assert took <= doc_import.TERMINAL_CALL_SECONDS + 1
         (refused,) = preview["refused"]
         assert refused["file"] == "P01.txt"
         assert "longer than 30 seconds" in refused["reason"]
@@ -178,7 +185,11 @@ class TestThePreview:
         assert "preview_token" not in preview
 
 
+@pytest.mark.usefixtures("keeping_off")
 class TestTheImport:
+    """With no kept text (v0.15.0's reading once switched off), so that
+    these go on proving the import's own reading, which it falls back on
+    when a kept text cannot be used."""
 
     def test_what_the_preview_read_goes_in_and_the_rest_follows(
             self, project, folder, clock):
@@ -186,7 +197,7 @@ class TestTheImport:
         preview, _took = _call(clock, paths=[str(folder)])
         done, took = _call(clock, paths=[str(folder)],
                            preview_token=preview["preview_token"])
-        assert took <= doc_import.IMPORT_SECONDS
+        assert took <= doc_import.TERMINAL_CALL_SECONDS
         assert done["success"] is True
         assert [f["name"] for f in done["files"]] == [
             "P01.txt", "P02.txt", "P03.txt"]
@@ -197,7 +208,7 @@ class TestTheImport:
         assert _rows(project) == ["P01.txt", "P02.txt", "P03.txt"]
         # The way on: the same paths again, the imported files skipped
         preview, took = _call(clock, paths=[str(folder)])
-        assert took <= doc_import.PREVIEW_SECONDS
+        assert took <= doc_import.TERMINAL_CALL_SECONDS
         assert preview["summary"].startswith("2 files ready")
         assert preview["already_in_the_project"] == [
             "P01.txt", "P02.txt", "P03.txt"]
@@ -211,30 +222,38 @@ class TestTheImport:
     def test_it_stops_between_files_and_imports_what_it_did(
             self, project, folder, clock):
         """Slower at the import than at the preview: the import stops
-        within its time, the files done go in, and the rest are left."""
+        within its time, the files done go in, and the rest are left.
+        (v0.15.0: within the call's 30 seconds, 2 files; 0.14.3's 45
+        took 3.)"""
         _files(folder, *[(5, 15)] * 5)
         preview, _took = _call(clock, paths=[str(folder)])
         assert preview["summary"] == "5 files ready."
         done, took = _call(clock, paths=[str(folder)],
                            preview_token=preview["preview_token"])
-        assert took <= doc_import.IMPORT_SECONDS
+        assert took <= doc_import.TERMINAL_CALL_SECONDS
         assert done["success"] is True
-        assert done["message"].startswith("3 files imported")
+        assert done["message"].startswith("2 files imported")
         assert done["message"].endswith(
-            "2 more were not imported this time (below).")
+            "3 more were not imported this time (below).")
         assert done["not_imported_this_time"]["files"] == [
-            "P04.txt", "P05.txt"]
-        assert _rows(project) == ["P01.txt", "P02.txt", "P03.txt"]
+            "P03.txt", "P04.txt", "P05.txt"]
+        assert _rows(project) == ["P01.txt", "P02.txt"]
         assert sorted(p.name for p in (project / "documents").iterdir()) \
-            == ["P01.txt", "P02.txt", "P03.txt"]
+            == ["P01.txt", "P02.txt"]
 
     def test_a_reading_cut_short_at_the_import_leaves_no_copy(
             self, project, folder, clock):
-        _files(folder, (5, 15), (5, 15), (5, 20), (5, 5))
+        """The third file's reading starts with 10 seconds left of the
+        call's 30 and needs 20: it is cut short, and neither it nor the
+        file after it goes in."""
+        _files(folder, (5, 10), (5, 10), (5, 20), (5, 5))
         preview, _took = _call(clock, paths=[str(folder)])
         done, took = _call(clock, paths=[str(folder)],
                            preview_token=preview["preview_token"])
-        assert took <= doc_import.IMPORT_SECONDS
+        assert took <= doc_import.TERMINAL_CALL_SECONDS
+        third, timeout = clock.reads[-1]
+        assert third.startswith("preview=5 import=20")
+        assert timeout == pytest.approx(10)
         assert done["success"] is True
         assert done["not_imported_this_time"]["files"] == [
             "P03.txt", "P04.txt"]
@@ -315,7 +334,7 @@ class TestAFileKeptOnlineOnly:
         assert fetched == ["P01.txt", "P02.txt", "P03.txt"]
         assert "refused" not in preview
         assert took == pytest.approx(61)
-        assert took > doc_import.PREVIEW_SECONDS
+        assert took > doc_import.TERMINAL_CALL_SECONDS
         # The import downloads every file of the batch again
         fetched.clear()
         done, took = _call(clock, paths=[str(folder)],
@@ -323,7 +342,7 @@ class TestAFileKeptOnlineOnly:
         assert done["success"] is True
         assert [f["name"] for f in done["files"]] == ["P01.txt"]
         assert sorted(set(fetched)) == ["P01.txt", "P02.txt", "P03.txt"]
-        assert took > doc_import.IMPORT_SECONDS
+        assert took > doc_import.TERMINAL_CALL_SECONDS
         assert _rows(project) == ["P01.txt"]
 
 

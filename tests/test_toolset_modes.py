@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """QUALCODER_MCP_TOOLSET modes (EXPERIMENTAL, multi-host plan section 3.1).
 
-Default full = the backward-compatible full surface. core = the 23-tool
+Default full = the backward-compatible full surface. core = the 25-tool
 supervised-coding-loop subset for local-model hosts. Unknown values fail
 loudly at startup. The functional smoke drives a core-mode server over the
 REAL stdio transport through the whole suggest -> apply loop, proving the
@@ -25,6 +25,7 @@ from track5_helpers import write_fixture_sidecar
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -32,9 +33,8 @@ from mcp.client.stdio import stdio_client
 REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
-EXPECTED_FULL = 77              # 73, plus read_brief and check_for_updates (v0.14.2), open_file_for_reading and import_documents (v0.14.3)
-EXPECTED_CORE = 23              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3); check_for_updates and import_documents are not in core
-EXPECTED_LIFECYCLE = 78          # full plus create_project (v0.14)
+EXPECTED_FULL = FULL_TOOLS      # tests/tool_counts.py
+EXPECTED_CORE = 25              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), and the earlier names of the two tools renamed in 0.15.0; check_for_updates, import_documents and create_project are not in core
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -109,8 +109,9 @@ class TestToolsetResolution:
         assert server._resolve_toolset_mode() == "full"
 
     def test_explicit_values_case_insensitive(self, monkeypatch):
+        # v0.15.0: `lifecycle`, the earlier name of `full`, is read as `full`
         for raw, expect in [("core", "core"), ("FULL", "full"),
-                            (" Core ", "core"), ("Lifecycle", "lifecycle")]:
+                            (" Core ", "core"), ("Lifecycle", "full")]:
             monkeypatch.setenv("QUALCODER_MCP_TOOLSET", raw)
             assert server._resolve_toolset_mode() == expect
 
@@ -120,9 +121,10 @@ class TestToolsetResolution:
             server._resolve_toolset_mode()
         msg = str(ei.value)
         assert "banana" in msg and "core" in msg and "full" in msg
-        assert "'lifecycle'" in msg
-        # `full` is no longer every tool once `lifecycle` exists (v0.14)
-        assert "all tools" not in msg
+        # v0.15.0: `full` is every tool again, and `lifecycle` is named
+        # only as its earlier name
+        assert "'lifecycle', the earlier name of 'full'" in msg
+        assert "'full' (every tool, creating a project included" in msg
 
     def test_default_surface_is_backward_compatible(self):
         """No env var -> the full surface, untouched."""
@@ -153,43 +155,36 @@ class TestToolsetResolution:
         assert server.CORE_TOOLSET <= names
 
 
-class TestLifecycleToolset:
-    """`lifecycle` (v0.14): the full set plus create_project, registered
-    only in that mode, so every count taken at import stays 75."""
+class TestTheMergedSet:
+    """v0.15.0: `full` holds create_project, registered at import like
+    every other tool (v0.14's `lifecycle` set added it at start-up);
+    `lifecycle` is read as `full`."""
 
-    def test_membership_is_full_plus_create_project(self):
+    def test_full_holds_create_project_at_import(self):
         full = {t.name for t in asyncio.run(server.mcp.list_tools())}
-        assert "create_project" not in full and len(full) == EXPECTED_FULL
-        server._apply_toolset("lifecycle")
+        assert "create_project" in full and len(full) == EXPECTED_FULL
+        assert server._apply_toolset("full") == {}
         names = {t.name for t in asyncio.run(server.mcp.list_tools())}
-        assert names == full | {"create_project"}
-        assert len(names) == EXPECTED_LIFECYCLE
-        assert set(server.LIFECYCLE_TOOLS) == {"create_project"}
+        assert names == full
 
     def test_applying_it_twice_changes_nothing(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         once = dict(server.mcp._tool_manager._tools)
-        assert server._apply_toolset("lifecycle") == {}
+        assert server._apply_toolset("full") == {}
         assert server.mcp._tool_manager._tools == once
 
     def test_core_gains_nothing(self):
-        assert not set(server.LIFECYCLE_TOOLS) & server.CORE_TOOLSET
+        assert "create_project" not in server.CORE_TOOLSET
 
-    def test_lifecycle_tools_are_module_functions_the_mode_registers(self):
-        """The drift guard's twin for LIFECYCLE_TOOLS: each name is a
-        module-level function of the server, absent from the registry
-        at import, and the mode registers that very function."""
-        for name in server.LIFECYCLE_TOOLS:
-            assert callable(getattr(server, name, None)), name
-            assert name not in server.mcp._tool_manager._tools, name
-        server._apply_toolset("lifecycle")
-        for name in server.LIFECYCLE_TOOLS:
-            tool = server.mcp._tool_manager._tools[name]
-            assert tool.fn is getattr(server, name)
+    def test_create_project_is_the_module_function(self):
+        """The drift guard's twin: the registered tool is the server's
+        module-level function, registered at import with its hints."""
+        tool = server.mcp._tool_manager._tools["create_project"]
+        assert tool.fn is server.create_project
+        assert tool.annotations == server.TOOL_ADDS_ONCE
 
     def test_the_tool_answers_through_the_guard(self):
         """Registered like every decorated tool: its errors are JSON."""
-        server._apply_toolset("lifecycle")
         tool = server.mcp._tool_manager._tools["create_project"]
         assert json.loads(tool.fn(12345))["success"] is False
         props = tool.parameters["properties"]
@@ -197,14 +192,14 @@ class TestLifecycleToolset:
         assert props["coder_name_not_known"]["type"] == "boolean"
         assert props["coder_name_not_known"]["default"] is False
 
-    def test_leak_1_a_lifecycle_test_that_forgets_to_undo(self):
-        """The first of a pair: applies the mode and never undoes it."""
-        server._apply_toolset("lifecycle")
-        assert len(server.mcp._tool_manager._tools) == EXPECTED_LIFECYCLE
+    def test_leak_1_a_core_test_that_forgets_to_undo(self):
+        """The first of a pair: applies `core` and never undoes it."""
+        server._apply_toolset("core")
+        assert len(server.mcp._tool_manager._tools) == EXPECTED_CORE
 
     def test_leak_2_does_not_leak_into_the_next_test(self):
         """The registry-restoring fixture in conftest put it back."""
-        assert "create_project" not in server.mcp._tool_manager._tools
+        assert "create_project" in server.mcp._tool_manager._tools
         assert len(asyncio.run(server.mcp.list_tools())) == EXPECTED_FULL
 
 
@@ -273,7 +268,7 @@ class TestCoreModeEndToEnd:
 
                     # full suggestion loop, S2-style
                     out = _text_of(await session.call_tool(
-                        "analyze_for_coding", {"instruction": "test", "file_ids": [1]}))
+                        "start_coding_session", {"instruction": "test", "file_ids": [1]}))
                     sid = out.split("Session ID: `")[1].split("`")[0]
 
                     out = _text_of(await session.call_tool(
@@ -346,54 +341,22 @@ class TestTheReadmeToolList:
         readme = (REPO / "TOOLS.md").read_text(encoding="utf-8")
         section = readme[readme.index("## Available Tools"):]
         section = section[:section.index("\n## ", 5)]
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         names = [t.name for t in asyncio.run(server.mcp.list_tools())]
-        assert len(names) == EXPECTED_LIFECYCLE
-        missing = [n for n in names if f"`{n}(" not in section]
+        assert len(names) == EXPECTED_FULL
+        # v0.15.0: the two earlier names have no entry of their own; the
+        # section after this one, "Earlier names", names each beside its
+        # new name (tests/test_v0150_renames_tools.py)
+        missing = [n for n in names if f"`{n}(" not in section
+                   and n not in server.RENAMED_TOOLS]
         assert missing == []
-        assert f"registers {EXPECTED_FULL} tools" in section
-        assert f"`EXEGETE_TOOLSET=lifecycle`" in section
-        assert f"plus `create_project`, {EXPECTED_LIFECYCLE} tools" in \
-            " ".join(section.replace("\n>", " ").split())
-
-
-class TestLifecycleModeEndToEnd:
-
-    def test_lifecycle_mode_creates_a_project_over_stdio(self, tmp_path):
-        """Started with QUALCODER_MCP_TOOLSET=lifecycle, the server lists
-        76 tools and creates a project in its workspace, which it then
-        has selected (the real transport, the real start-up path)."""
-        project = _build_project(tmp_path)
-        home = tmp_path / "home"
-        home.mkdir()
-        params = StdioServerParameters(
-            command=str(VENV_PY),
-            args=["-m", "exegete.server"],
-            env=_server_env(home, project, toolset="lifecycle"),
-        )
-
-        async def drive():
-            async with stdio_client(params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
-                    tools = await session.list_tools()
-                    names = {t.name for t in tools.tools}
-                    assert len(names) == EXPECTED_LIFECYCLE
-                    assert "create_project" in names
-                    out = json.loads(_text_of(await session.call_tool(
-                        "create_project",
-                        {"name": "Stdio study", "coder_name": "carol"})))
-                    assert out["created"] is True, out
-                    current = json.loads(_text_of(await session.call_tool(
-                        "get_current_project", {})))
-                    return out, current
-
-        out, current = asyncio.run(drive())
-        folder = home / "Documents" / "Exegete projects" / \
-            "Stdio study.qda"
-        assert Path(out["project_path"]).resolve() == folder.resolve()
-        assert (folder / "data.qda").is_file()
-        assert Path(current["current_project"]).resolve() == folder.resolve()
+        assert set(server.RENAMED_TOOLS) <= set(names)
+        assert set(server.RENAMED_TOOLS.values()) <= set(names)
+        flat = " ".join(section.replace("\n>", " ").split())
+        assert f"registers {EXPECTED_FULL} tools" in flat
+        # v0.15.0: one set; `lifecycle` only as `full`'s earlier name
+        assert "`lifecycle`, the earlier name of `full`" in flat
+        assert "`EXEGETE_TOOLSET=lifecycle`" not in flat
 
 
 class TestThePublishedSchemaBudget:
@@ -429,13 +392,81 @@ class TestThePublishedSchemaBudget:
     # The published measurement, to the character. Re-measure every tree
     # the same way before changing these, and say in the CHANGELOG which
     # interpreter and which environment directory it was taken in.
-    FULL_MEASURED = 201_739          # 77 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 67_225           # 23 tools, same environment
-    FULL_MEASURED_310 = 211_611      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 70_617
-    # v0.14's opt-in `lifecycle` set: `full` plus create_project.
-    LIFECYCLE_MEASURED = 204_244     # 78 tools, same environment
-    LIFECYCLE_MEASURED_310 = 214_248
+    # v0.15.0: `full` and `lifecycle` became one set, `full`, which
+    # starts from what `lifecycle` measured at 0.14.3 (the same 78
+    # descriptions, none marked, in another order); the names list's new
+    # wording in three descriptions (not presuming QualCoder, piece 1)
+    # then took 19 characters off it, 23 on 3.11, and 2 off `core`, 6 on
+    # 3.11; the extension's folder for projects and its earlier default,
+    # named among list_available_projects' places (the renames, piece 2),
+    # added 143 to both sets, 147 on 3.11. What pseudonymisation is for
+    # (not presuming QualCoder, piece 2), a paragraph in
+    # pseudonymise_source's description, then added 457 to `full`, 485 on
+    # 3.11 (`core` does not serve the tool), and its fix round 126 more,
+    # 134 on 3.11 (where names were not replaced, and not to open
+    # originals to work round a problem).
+    # The two tools renamed (the renames, piece 3), their earlier
+    # names listed with one sentence each, added 1,243 to `full` and
+    # 1,245 to `core` (1,239 and 1,245 on 3.11).
+    # The two coder names as settings (the coder names, piece 1):
+    # create_project's paragraph on the researcher's coder name added
+    # 317 to `full`, 333 on 3.11 (`core` does not serve the tool), and
+    # the setter's refusal of the settings' name 58 to both sets, 62 on
+    # 3.11.
+    # Correcting the researcher's own coder name (the coder names, piece
+    # 2): the new tool's entry added 1,530 characters to `full`, 1,602 on
+    # 3.11 (`core` does not serve it), and create_project's sentence on
+    # it 148, 156 on 3.11.
+    # The AI coder name in the settings, given to each new project (the
+    # coder names, piece 3): create_project's sentence on it added 115 to
+    # `full`, 123 on 3.11, and export_refi_qda's name for the setting 17,
+    # 21 on 3.11 (`core` serves neither).
+    # The write tools' sentence (not presuming QualCoder, piece 5): the
+    # closing paragraph of 26 descriptions, apply_codings' and
+    # restore_backup's, each one sentence now, took 3,302 characters off
+    # `full` and 494 off `core` (3,082 and 470 on 3.11).
+    # The four outcomes without their attribution to QualCoder 4.0's
+    # assistant (not presuming QualCoder, piece 13), in the text
+    # start_coding_session's description shares, took 55 characters off
+    # both sets, on both interpreters.
+    # The removals announced for v0.15 moved to v0.15.1 in every
+    # deprecation sentence, and the names list's leads with
+    # pseudonyms.json (whole-branch review, round 1): 105 characters more
+    # in `full` and 4 in `core`, on both interpreters.
+    # The REFI-QDA export's, the journals' and the rename back's notes
+    # naming QualCoder's feature only for researchers who use it, and
+    # import_text_file's sentence on what pseudonymisation is for
+    # (whole-branch review, round 2): 195 and 164 characters more in
+    # `full` (195 and 176 on 3.11); `core` serves none of the five tools.
+    # The files design, piece 1: get_current_project's paragraph on the
+    # files Exegete keeps for the project in its Exegete folder
+    # (files_exegete_keeps), 151 characters more in both sets (163 on
+    # 3.11).
+    # The files design, piece 2: restore_backup's sentence on the
+    # project's Exegete folder, which a restore keeps as it is, 151
+    # characters more in `full` (163 on 3.11); `core` does not serve it.
+    # The fourth reading of the documents: the descriptions that gave the
+    # lock file's refusal as QualCoder's alone name both of its causes,
+    # 43 characters fewer in `full` and 17 in `core`, on both
+    # interpreters (tests/test_v0150_lock_wording.py); its fix round 1,
+    # the renames' "may miss a 4.0 window", 4 fewer in `full`.
+    # The files design, piece 3: prepare_names_list's entry, with its
+    # separator, 872 characters more in `full` (916 on 3.11); `core`
+    # does not serve it.
+    # The files design, piece 4: save_names_list's entry, with its
+    # separator, 1,272 characters more in `full` (1,336 on 3.11), and
+    # prepare_names_list's pointer to it, 27 more (27 on 3.11); `core`
+    # serves neither. Its fix round 1: the description names
+    # import_documents as the import that applies the list, 22 more in
+    # `full` on both interpreters.
+    # The files design, piece 5: read_pseudonym_list removed, its entry
+    # and separator, 1,310 characters fewer in `full` (1,362 on 3.11);
+    # `core` did not serve it, and get_current_project's description is
+    # unchanged (its answer's note changed).
+    FULL_MEASURED = 206_624          # 82 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 68_258           # 25 tools, same environment
+    FULL_MEASURED_310 = 217_084      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 71_690
 
     # Why two per cent, away from the reference environment.
     #
@@ -450,8 +481,8 @@ class TestThePublishedSchemaBudget:
     # What the loose half does NOT do, stated plainly because the
     # previous version of this comment claimed the opposite: away from
     # the reference interpreter it does not report a single tool added
-    # or removed. The average tool contributes 2,343 characters, about
-    # 1.4 per cent, which is INSIDE two per cent; two tools, about 2.7
+    # or removed. The average tool contributes 2,570 characters, about
+    # 1.3 per cent, which is INSIDE two per cent; two tools, about 2.6
     # per cent, are outside it. So away from 3.13 this is an alarm for
     # large drift and not a gate on the figure.
     #
@@ -462,11 +493,11 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "201,739"
-    CORE_CHARS = "67,225"
-    FULL_ROUNDED = "202,000"
-    CORE_ROUNDED = "67,000"
-    FULL_TOKENS = "50k"
+    FULL_CHARS = "206,624"
+    CORE_CHARS = "68,258"
+    FULL_ROUNDED = "207,000"
+    CORE_ROUNDED = "68,000"
+    FULL_TOKENS = "52k"
     CORE_TOKENS = "17k"
 
     @staticmethod
@@ -507,8 +538,23 @@ class TestThePublishedSchemaBudget:
         reads in parts), so the current entry is the Unreleased one
         alone, and 0.14.2's figure is history (`_v0142_entry`). From the
         release on, the current entry is 0.14.3's, under an Unreleased
-        heading that says nothing yet.
+        heading that says nothing yet. v0.15.0 moves it again (`full` and
+        `lifecycle` become one set, `full`, of 78 tools, and the wording
+        of the names list changes in three descriptions, the first of
+        the pieces that stop presuming QualCoder), so the current entry
+        is the Unreleased one alone, and 0.14.3's figure is history
+        (`_v0143_entry`). From the release on, the current entry is
+        0.15.0's, under an Unreleased heading that says nothing yet.
         """
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3")]
+
+    @classmethod
+    def _v0143_entry(cls):
+        """The 0.14.3 entry, whose figure is history and stays put
+        (v0.15.0's one tool set and three reworded descriptions move the
+        figure, so the current entry is the Unreleased one, above the
+        0.14.3 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.14.3"):text.index("## [0.14.2")]
 
@@ -609,10 +655,6 @@ class TestThePublishedSchemaBudget:
         self._assert_matches("core", self.CORE_MEASURED,
                              self.CORE_MEASURED_310, EXPECTED_CORE)
 
-    def test_the_lifecycle_toolset_measures_its_pinned_figure(self):
-        self._assert_matches("lifecycle", self.LIFECYCLE_MEASURED,
-                             self.LIFECYCLE_MEASURED_310, EXPECTED_LIFECYCLE)
-
     def test_the_tolerance_is_a_real_comparison(self):
         """A tolerance nobody drives is a tolerance that passes anything.
 
@@ -646,19 +688,29 @@ class TestThePublishedSchemaBudget:
         assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
         # The environment, by path: this repository holds two, at
         # different interpreters, and a version alone does not say which
-        # was used. 0.14.3's figures were taken in separate environments
-        # with the same mcp and pydantic, and the entry says so, with the
-        # check that they give the repository's own figures exactly (the
-        # review of 12 October 2026 found it naming `venv/` instead).
+        # was used. v0.15.0's figures are taken in separate environments
+        # installed from the lock, and the entry says so, with the check
+        # that they give 0.14.3's figures exactly for 0.14.3's tree.
         flat = " ".join(entry.split())
+        assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a "
+                "separate environment installed from the repository's lock "
+                "file, not the repository's own `venv/`") in flat
+        assert "for 0.14.3's tree it gives exactly 0.14.3's figures" in flat
+        assert ("Python 3.11.13 (likewise a separate environment, which "
+                "also gives exactly 0.14.3's figures for its tree)") in flat
+        assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
+        # 0.14.3's own figures, as history: taken the same way, and
+        # checked against the repository's environments (the review of
+        # 12 October 2026 found it naming `venv/` instead).
+        v0143 = " ".join(self._v0143_entry().split())
         assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.14.1 in a "
                 "separate environment, not the repository's own `venv/`"
-                ) in flat
-        assert "gives exactly the figures measured in `venv/`" in flat
+                ) in v0143
+        assert "gives exactly the figures measured in `venv/`" in v0143
         assert ("Python 3.11.13 (likewise a separate environment, which "
                 "gives exactly the figures measured in the `.venv/`)"
-                ) in flat
-        assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
+                ) in v0143
+        assert "mcp 1.30.0 in the repository's own `venv/`" not in v0143
 
     def test_each_entry_carries_one_measurement_of_its_own(self):
         """The 0.12 entry used to state two, a batch apart, both in the
@@ -667,6 +719,10 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0143 = self._v0143_entry()
+        assert v0143.count("Serialised tool") == 1
+        assert "full = 201,739 characters" in v0143
+        assert self.FULL_CHARS not in v0143
         v0142 = self._v0142_entry()
         assert v0142.count("Serialised tool") == 1
         assert "full = 196,387 characters" in v0142
@@ -698,22 +754,15 @@ class TestThePublishedSchemaBudget:
         assert f"{self.FULL_MEASURED_310:,}" in entry
         assert f"{self.CORE_MEASURED_310:,}" in entry
 
-    LIFECYCLE_ROUNDED = "204,000"
-    LIFECYCLE_TOKENS = "51k"
-
-    def test_the_readme_quotes_the_lifecycle_measurement(self):
+    def test_the_readme_quotes_the_same_measurement(self):
         # v0.14.1: the README's measurement block moved to TOOLS.md
         readme = self._read("TOOLS.md")
-        assert (f"the `lifecycle` definitions run to about "
-                f"{self.LIFECYCLE_ROUNDED} characters, roughly "
-                f"{self.LIFECYCLE_TOKENS} tokens") in readme
-        assert round(self.LIFECYCLE_MEASURED / 1000) * 1000 == int(
-            self.LIFECYCLE_ROUNDED.replace(",", ""))
-        assert round(self.LIFECYCLE_MEASURED / 4000) == int(
-            self.LIFECYCLE_TOKENS[:-1])
-
-    def test_the_readme_quotes_the_same_measurement(self):
-        readme = self._read("TOOLS.md")
+        # v0.15.0: one figure for `full`, which holds creating a project;
+        # the `lifecycle` figure is gone with the set
+        assert "the `lifecycle` definitions run to" not in readme
+        assert round(self.FULL_MEASURED / 1000) * 1000 == int(
+            self.FULL_ROUNDED.replace(",", ""))
+        assert round(self.FULL_MEASURED / 4000) == int(self.FULL_TOKENS[:-1])
         assert f"about {self.FULL_ROUNDED} characters for `full`" in readme
         assert f"about {self.CORE_ROUNDED} characters for" in readme
         assert f"roughly {self.FULL_TOKENS} tokens" in readme
@@ -730,8 +779,12 @@ class TestThePublishedSchemaBudget:
     # INSTALL.md states rounded to the nearest 500 (v0.13: the one-file
     # signature and the file-text count moved it from about 10,500 to
     # about 11,500 characters without anything saying so, and Brief 1's
-    # fix round to about 12,500).
-    FLAGSHIP_ROUNDED = "19,500"
+    # fix round to about 12,500). v0.15.0: the paragraph on what
+    # pseudonymisation is for took it from 19,377 to 19,834 on 3.13, so
+    # from about 19,500 to about 20,000, and its fix round to 19,960;
+    # the write tools' sentence (not presuming QualCoder, piece 5) then
+    # took it to 19,841, still about 20,000.
+    FLAGSHIP_ROUNDED = "20,000"
 
     def test_install_quotes_the_flagships_own_share(self):
         install = self._read("INSTALL.md")

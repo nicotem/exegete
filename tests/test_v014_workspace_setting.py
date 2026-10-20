@@ -253,14 +253,19 @@ class TestTheListingFindsIt:
         assert answer["projects"] == []
         assert answer["default_search_paths"][0] == \
             str(tmp_path / "empty")
+        # v0.15.0: the extension's folder and its earlier default joined
+        # the usual places (tests/test_v0150_renames_folder.py)
         assert answer["default_search_paths"][1:] == [
             "~/Documents/QualCoder_projects", "~/Documents/QualCoder",
-            "~/QualCoder", "~/Documents"]
+            "~/QualCoder", "~/Exegete projects", "~/QualCoder projects",
+            "~/Documents"]
 
     @pytest.mark.parametrize("usual", ["~/Documents", "~/Documents/",
                                        "~/QualCoder",
                                        "~/Documents/QualCoder",
-                                       "~/Documents/QualCoder_projects"])
+                                       "~/Documents/QualCoder_projects",
+                                       "~/Exegete projects",
+                                       "~/QualCoder projects"])
     def test_a_usual_place_as_the_workspace_keeps_its_depth(
             self, monkeypatch, usual):
         """Fix round 1 (Security): a workspace that is one of the usual
@@ -281,10 +286,13 @@ class TestTheListingFindsIt:
         assert answer["project_count"] >= 1
 
     def test_unset_the_listing_is_as_before(self):
+        """The usual places alone; from v0.15.0 they include the
+        extension's folder and its earlier default."""
         answer = self._projects()
         assert answer["default_search_paths"] == [
             "~/Documents/QualCoder_projects", "~/Documents/QualCoder",
-            "~/QualCoder", "~/Documents"]
+            "~/QualCoder", "~/Exegete projects", "~/QualCoder projects",
+            "~/Documents"]
 
 
 class TestTheDescriptionsSayIt:
@@ -306,9 +314,10 @@ class TestTheDescriptionsSayIt:
         assert "get_current_project" in text
 
     def test_the_tool_set_error_is_neutral(self, monkeypatch):
-        """The extension's default is lifecycle, the variable's full: the
-        error says which is used when the variable is not set, not that
-        full is the default (fix round 1)."""
+        """The error says which set is used when the variable is not set,
+        not that it is the default (fix round 1, when the extension's
+        default was `lifecycle`, the earlier name of `full`, and the
+        variable's `full`)."""
         monkeypatch.setenv("QUALCODER_MCP_TOOLSET", "")
         with pytest.raises(ValueError) as caught:
             server._resolve_toolset_mode()
@@ -317,8 +326,10 @@ class TestTheDescriptionsSayIt:
 
     def test_the_listing_names_the_set_workspace(self):
         text = " ".join(server.list_available_projects.__doc__.split())
+        # v0.15.0: unless it is one of the usual places, as the
+        # extension's folder is under either default
         assert "the workspace folder, when the host set one (its top " \
-               "level only)" in text
+               "level only, unless it is one of the places below)" in text
 
 
 def test_an_ambient_setting_does_not_reach_the_suite(tmp_path):

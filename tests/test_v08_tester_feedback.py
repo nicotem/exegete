@@ -27,7 +27,7 @@ FULLTEXT = ("This is interview text. I feel stressed about deadlines. "
 def _make_session(setup_server):
     # Every file in the project: a v0.14 session refuses suggestions on
     # files outside it, and these tests add the file they code first
-    out = server.analyze_for_coding(
+    out = server.start_coding_session(
         [f["id"] for f in server.get_db().list_files()], instruction="test")
     return out.split("Session ID: `")[1].split("`")[0]
 
@@ -259,7 +259,7 @@ class TestF1bF2Guidance:
         assert "**Passage, in its paragraph**" in out
 
     def test_docstrings_carry_guidance(self):
-        analyze_doc = " ".join((server.analyze_for_coding.__doc__ or "").split())
+        analyze_doc = " ".join((server.start_coding_session.__doc__ or "").split())
         record_doc = " ".join((server.record_suggestions.__doc__ or "").split())
         # v0.14's second fix round: the span length and the pairings are
         # the researcher's answers, asked at the start of the session

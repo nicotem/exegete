@@ -2,8 +2,10 @@
 """Pytest configuration and shared fixtures."""
 
 import gc
+import hashlib
 import os
 import pytest
+import re
 import sqlite3
 import sys
 import tempfile
@@ -145,12 +147,162 @@ def _isolate_home(tmp_path, _sandbox_patch):
     for spellings in _names.SETTINGS.values():
         for name in spellings:
             _sandbox_patch.delenv(name, raising=False)
-    # And the settings with one spelling only (the update check)
+    # And the settings with one spelling only (the update check, the
+    # time per import call, the researcher's own coder name)
     for name in _names.NEW_ONLY_SETTINGS.values():
         _sandbox_patch.delenv(name, raising=False)
     assert Path.home().resolve() == home.resolve()
     assert _database.default_workspace().resolve().is_relative_to(
         tmp_path.resolve())
+
+
+@pytest.fixture(autouse=True)
+def _no_time_machine_request(_sandbox_patch):
+    """v0.15.0: making the folder of kept texts asks Time Machine, on a
+    Mac, to leave it out, through `tmutil`, which can take seconds; no
+    test makes that request unless it asks for it (the tests of the
+    request call the real function, with `subprocess.run` replaced).
+    Each test also starts with no folder problem already logged, and as
+    a run that has not yet asked Time Machine about an existing folder
+    (the question asked again once in each run, whole-branch review,
+    security, round 1, stood aside the same way)."""
+    from exegete import kept_texts
+    _sandbox_patch.setattr(kept_texts, "_exclude_from_backups",
+                           lambda path, platform=None: False)
+    _sandbox_patch.setattr(kept_texts, "_exclude_again",
+                           lambda path, platform=None: False)
+    _sandbox_patch.setattr(kept_texts, "_time_machine_asked", False)
+    kept_texts._warned.clear()
+
+
+@pytest.fixture(autouse=True)
+def _no_process_scan(request, _sandbox_patch):
+    """v0.15.0: no test sees a QualCoder that happens to run on the
+    developer's computer, nor a scan that saw every process and found
+    none (which leaves out the chat history's sign): the process scan
+    answers None, "the scan did not run", and its cache is empty at the
+    start and the end of every test. The selected project's history with
+    QualCoder starts not worked out. A test marked `real_process_scan`
+    runs the real scan, with whatever it replaces itself."""
+    _database._process_scan_cache.update(at=None, scan=None)
+    _sandbox_patch.setattr(server, "_qualcoder_history_cache", None)
+    if request.node.get_closest_marker("real_process_scan") is None:
+        _sandbox_patch.setattr(_database, "_qualcoder_process_scan",
+                               lambda: None)
+    yield
+    _database._process_scan_cache.update(at=None, scan=None)
+
+
+@pytest.fixture
+def keeping_off(monkeypatch):
+    """v0.15.0: the preview keeps no text and the import reads every file
+    again, as 0.14.3 did; for the tests of that path."""
+    from exegete import kept_texts
+    monkeypatch.setattr(kept_texts, "KEEPING", False)
+
+
+# v0.15, the groundwork: the suite in parts. CI runs Windows' suite in
+# three jobs, a part each, as one job took 40 to 60 minutes there
+# (.github/workflows/ci.yml says why not pytest-xdist).
+# EXEGETE_TEST_SHARD="k/n" keeps part k of n, n at most 100; unset or
+# empty, every test runs; anything else stops the run before it starts.
+# A part is made of whole files, so a file's tests stay together and run
+# in their usual order. Each file is weighed by the number of tests
+# collected in it: the files are taken largest first (ties by path), each
+# into the part with the fewest tests so far (ties to the lower number),
+# so the jobs of one Python, which collect alike, make the same parts.
+# No job checks that they did: each part ends its summary with a line,
+# "test part: 2 of 3, ...", giving its share and a fingerprint of the
+# whole split, which CI copies into the step summary and an annotation.
+# The same fingerprint in the three parts of one Python means each file
+# ran in exactly one of them; the three are compared by eye, from the
+# run page.
+# Parts of equal counts are not of equal times, as some files are slower
+# than others; parts by time would need a table of each file's time,
+# kept up to date.
+TEST_PART_VARIABLE = "EXEGETE_TEST_SHARD"
+TEST_PART_KEY = pytest.StashKey()
+TEST_PART_LINE_KEY = pytest.StashKey()
+MOST_TEST_PARTS = 100
+# three digits at most, so that a number too long for int() is refused
+# here like any other value
+_TEST_PART = re.compile(r"([0-9]{1,3})/([0-9]{1,3})")
+
+
+def parse_test_part(value):
+    """`(k, n)` for "k/n" with 1 <= k <= n <= 100; None when unset or
+    empty."""
+    if not value:
+        return None
+    match = _TEST_PART.fullmatch(value)
+    if match is not None:
+        part, parts = int(match[1]), int(match[2])
+        if 1 <= part <= parts <= MOST_TEST_PARTS:
+            return part, parts
+    raise pytest.UsageError(
+        f"{TEST_PART_VARIABLE} is {value!r}: give the part to run as "
+        f"\"k/n\", k from 1 to n and n at most {MOST_TEST_PARTS} (\"2/3\" "
+        f"runs the second of three parts), or leave it empty to run every "
+        f"test.")
+
+
+def parts_of(nodeids, parts):
+    """The part, from 1 to `parts`, of each node id, in the order given."""
+    sizes = {}
+    for nodeid in nodeids:
+        path = nodeid.split("::", 1)[0]
+        sizes[path] = sizes.get(path, 0) + 1
+    totals = [0] * parts
+    part_of = {}
+    for path in sorted(sizes, key=lambda path: (-sizes[path], path)):
+        smallest = min(range(parts), key=lambda index: totals[index])
+        part_of[path] = smallest + 1
+        totals[smallest] += sizes[path]
+    return [part_of[nodeid.split("::", 1)[0]] for nodeid in nodeids]
+
+
+def pytest_configure(config):
+    """Read the part to run, and take the variable out of the environment
+    at once: the suite's own inner runs copy the environment and load
+    this file, and given "2/3" one would split its single file in three
+    and fail (tests/test_v015_test_parts.py)."""
+    config.stash[TEST_PART_KEY] = parse_test_part(
+        os.environ.pop(TEST_PART_VARIABLE, None))
+
+
+def pytest_collection_modifyitems(config, items):
+    """Keep the chosen part's tests, in order; report the rest as
+    deselected, so the run's summary counts them."""
+    chosen = config.stash.get(TEST_PART_KEY, None)
+    if chosen is None:
+        return
+    part, parts = chosen
+    nodeids = [item.nodeid for item in items]
+    numbers = parts_of(nodeids, parts)
+    config.stash[TEST_PART_LINE_KEY] = _test_part_line(
+        nodeids, numbers, part, parts)
+    kept = [item for item, number in zip(items, numbers) if number == part]
+    left = [item for item, number in zip(items, numbers) if number != part]
+    if left:
+        config.hook.pytest_deselected(items=left)
+    items[:] = kept
+
+
+def _test_part_line(nodeids, numbers, part, parts):
+    """The line a part writes at the end of its run: its share of the
+    files and tests collected, and the first twelve hexadecimal digits of
+    the SHA-256 of the whole split (each file and its part, sorted),
+    which is the same in every part of one collection."""
+    part_of = {}
+    for nodeid, number in zip(nodeids, numbers):
+        part_of[nodeid.split("::", 1)[0]] = number
+    split = "".join(f"{path} {number}\n"
+                    for path, number in sorted(part_of.items()))
+    fingerprint = hashlib.sha256(split.encode("utf-8")).hexdigest()[:12]
+    files = sum(1 for number in part_of.values() if number == part)
+    return (f"test part: {part} of {parts}, {files} of {len(part_of)} "
+            f"files, {numbers.count(part)} of {len(nodeids)} tests, split "
+            f"{fingerprint}")
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
@@ -182,6 +334,11 @@ def pytest_terminal_summary(terminalreporter, exitstatus, config):
                         f"Python {sys.version_info[0]}."
                         f"{sys.version_info[1]}.{sys.version_info[2]}, "
                         f"test {key})")
+    # v0.15, the groundwork: a run in parts says which, and how the whole
+    # suite was split (the comment above parse_test_part).
+    line = config.stash.get(TEST_PART_LINE_KEY, None)
+    if line is not None:
+        terminalreporter.write_line(line)
 
 
 # The baseline for the guard below, and the proof that it was taken
@@ -223,7 +380,9 @@ def _nothing_is_written_to_the_real_workspace():
     the constants, and this one proves that no route into the
     researcher's own `~/Documents/Qualcoder MCP Projects` or
     the state folders (`~/.exegete`, and `~/.qualcoder_mcp`, its earlier
-    name) survived. In the spirit of the test-rot guard, it
+    name), or, from 0.15.0, the desktop extension's folders for projects
+    (`~/Exegete projects`, and `~/QualCoder projects`, its earlier
+    default) survived. In the spirit of the test-rot guard, it
     pins the ABSENCE, so a future test that reaches a real folder by
     another route (a hard-coded path, a `workspace=` argument built from
     Path.home(), an import-bound object nobody redirected, a re-import
@@ -473,14 +632,16 @@ def _isolate_session_manager(tmp_path, _sandbox_patch):
 def _restore_tool_registry():
     """Put the server's tool registry back as it was after every test.
 
-    v0.14's `lifecycle` toolset ADDS a tool at start-up, where `core`
+    v0.14's `lifecycle` toolset added a tool at start-up, where `core`
     only removes, and the tests that undo `_apply_toolset` by putting
-    back what it returned cannot see an addition: a lifecycle test that
-    forgot would leave `create_project` registered, and every later
-    count in that run would read one too many, in an order depending on which
-    tests were selected (the create-project study's check). Copying the
-    registry before a test and restoring it after undoes additions and
-    removals alike, whatever the test did.
+    back what it returned could not see an addition: a test that forgot
+    would leave a tool registered, and every later count in that run
+    would read one too many, in an order depending on which tests were
+    selected (the create-project study's check). Since 0.15.0 every
+    tool is registered at import and `lifecycle` is read as `full`, but
+    a test may still add or remove a tool or mark a description.
+    Copying the registry before a test and restoring it after undoes
+    additions and removals alike, whatever the test did.
     """
     tools = server.mcp._tool_manager._tools
     before = dict(tools)

@@ -253,7 +253,7 @@ def test_the_import_replaces_a_name_a_marker_falls_inside(project,
         assert "Maria" not in text and "Brown" not in text, name
         assert "neighbour Participant A[" in text, name
     for row in done["files"]:
-        whole = server.analyze_file_with_coding(row["file_id"],
+        whole = server.read_file_with_codings(row["file_id"],
                                                 without_codes=True)
         assert "Maria" not in whole and "Participant A" in whole
 
@@ -270,17 +270,16 @@ def test_after_an_import_with_no_list_only_working_ways_are_named(
     said = " ".join(done["for_the_researcher"])
     lead = {"none": "This project has no names list",
             "empty": "This project's names list is empty"}[state]
-    assert (lead + ", so the names in these files came in as written, and "
-            "a list made now does not change them. If these documents name "
-            "participants, replace the names before the assistant reads "
-            "them: run pseudonymise_source on each file (with the names "
-            "given in the call, or with the project's names list once it "
-            "is made), or restore the backup taken just before, make the "
-            "list (in QualCoder for now), and import again.") in said
+    # v0.15.0: the way every researcher has
+    assert (lead + ", so the names in these files came in as written. If "
+            "these documents name participants, replace the names before "
+            "the assistant reads them: run pseudonymise_source on each "
+            "file. A list made now does not change files already "
+            "stored.") in said
     assert "or make the list in QualCoder's Pseudonyms dialog." not in said
     # The finding's own steps: a list made now changes nothing stored.
     _names_list(project, [("Maria", "Ana Lopes")])
     again = _call(paths=[str(path)])
     assert again["summary"].startswith("0 files ready")
-    assert "Maria said" in server.analyze_file_with_coding(
+    assert "Maria said" in server.read_file_with_codings(
         done["files"][0]["file_id"], without_codes=True)

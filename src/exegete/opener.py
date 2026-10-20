@@ -5,8 +5,9 @@ folder (v0.14.3; the import and reading design, Part 7).
 Opening a file is launching a program by another name, so the rules are
 narrow:
 
-- only a file Exegete has just written into its own reading folder is
-  ever opened or shown (the caller checks that; `open_file` and
+- only a file Exegete has just written into its own reading folder, or
+  a file in the open project's Exegete folder (private_files), is ever
+  opened or shown (the caller checks that; `open_file` and
   `show_in_folder` check it again);
 - never a shell: each call is a list of arguments, with the program's
   full path where the system fixes one, the file's absolute path (so a
@@ -35,6 +36,7 @@ The calls, by system:
 
 import os
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -125,17 +127,34 @@ def _which(name: str) -> Optional[str]:
     return found if found and os.path.isabs(found) else None
 
 
-def _check(path: Path) -> Optional[str]:
+def _check(path: Path, within: Optional[Path] = None) -> Optional[str]:
     """The path must be absolute, inside Exegete's reading folder, and
-    name an existing ordinary file."""
+    name an existing ordinary file.
+
+    With `within` (a project's Exegete folder, private_files), the file
+    must instead sit right inside that folder, itself no link or
+    junction: not in a subfolder of it, not reached through a link."""
     from . import reading_folder
     from .path_identity import is_inside
     if not path.is_absolute():
         return "the file's place is not a full path"
-    if path.is_symlink() or not path.is_file():
+    if within is None:
+        if path.is_symlink() or not path.is_file():
+            return "the file is not there as an ordinary file"
+        if not is_inside(path, reading_folder.root()):
+            return "Exegete opens only files in its own reading folder"
+        return None
+    try:
+        info = os.lstat(path)
+    except OSError:
+        info = None
+    if info is None or stat.S_ISLNK(info.st_mode) or \
+            reading_folder.is_link(path) or not stat.S_ISREG(info.st_mode):
         return "the file is not there as an ordinary file"
-    if not is_inside(path, reading_folder.root()):
-        return "Exegete opens only files in its own reading folder"
+    within = Path(within)
+    if path.parent != within or reading_folder.is_link(within):
+        return ("Exegete opens only the files it keeps in the project's "
+                "Exegete folder")
     return None
 
 
@@ -148,11 +167,14 @@ def openable(path: Path, own_page: bool) -> bool:
 
 
 def open_file(path, own_page: bool = False,
-              platform: Optional[str] = None) -> Outcome:
-    """Ask the system to open `path` in the app it uses for that type."""
+              platform: Optional[str] = None,
+              within: Optional[Path] = None) -> Outcome:
+    """Ask the system to open `path` in the app it uses for that type
+    (`within`: the project's Exegete folder that holds it, for a file
+    the researcher fills in)."""
     platform = platform or sys.platform
     path = Path(path)
-    problem = _check(path) or screen(platform)
+    problem = _check(path, within) or screen(platform)
     if problem:
         return Outcome(False, problem)
     if not openable(path, own_page):
@@ -170,12 +192,14 @@ def open_file(path, own_page: bool = False,
         False, "the system did not open it")
 
 
-def show_in_folder(path, platform: Optional[str] = None) -> Outcome:
+def show_in_folder(path, platform: Optional[str] = None,
+                   within: Optional[Path] = None) -> Outcome:
     """Ask the system's file manager to show `path` selected in its
-    folder (on a Mac, the space bar then gives Quick Look)."""
+    folder (on a Mac, the space bar then gives Quick Look; `within` as
+    for `open_file`)."""
     platform = platform or sys.platform
     path = Path(path)
-    problem = _check(path) or screen(platform)
+    problem = _check(path, within) or screen(platform)
     if problem:
         return Outcome(False, problem)
     target = str(path)

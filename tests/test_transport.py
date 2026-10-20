@@ -14,7 +14,7 @@ subprocess and drives it over the genuine stdio JSON-RPC transport using the
      prompts/list (4).
   3. Real round-trip calls over the wire: select_project, get_project_summary,
      a LARGE read payload, and a full WRITE-path approval flow
-     (analyze_for_coding -> record_suggestions -> update_suggestion_status ->
+     (start_coding_session -> record_suggestions -> update_suggestion_status ->
      apply_codings) that actually mutates a synthetic .qda database.
   4. Error propagation: bad/missing/wrong-typed args, nonexistent project,
      oversized input, unknown tool -> proper MCP errors / structured error
@@ -42,6 +42,7 @@ from pathlib import Path
 import pytest
 
 from track5_helpers import write_fixture_sidecar
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -89,7 +90,7 @@ def _projects_dir() -> Path:
 def _home_dir() -> Path:
     return _run_dir() / "home"          # private HOME -> private sessions dir
 
-EXPECTED_TOOLS = 77              # read_brief and check_for_updates joined in v0.14.2; open_file_for_reading and import_documents in 0.14.3
+EXPECTED_TOOLS = FULL_TOOLS      # tests/tool_counts.py
 EXPECTED_CONCRETE_RESOURCES = 8   # six data resources + exegete://guidance/methods (0.12) + exegete://guidance/brief (0.14.2)
 EXPECTED_RESOURCE_TEMPLATES = 4      # the file resource's later parts (v0.14.3)
 EXPECTED_RESOURCES_TOTAL = 12
@@ -475,7 +476,8 @@ def test_initialize_carries_methodology_instructions():
         "Exegete is a qualitative analysis application for working with "
         "the researcher on their project, in QualCoder's format.")
     assert "call read_brief once" in instructions
-    assert len(instructions) < 2000
+    # within Claude Code's cut (v0.15.0's rule 9 took it past 2,000)
+    assert len(instructions) <= 2048
     assert "\u2014" not in instructions
 
 
@@ -530,14 +532,14 @@ def test_large_payload_transport(large_project):
 
 
 def test_write_path_approval_flow(write_project):
-    """analyze_for_coding -> record_suggestions -> approve -> apply_codings, then
+    """start_coding_session -> record_suggestions -> approve -> apply_codings, then
     verify the coding is really in the database over a fresh connection."""
     async def scenario():
         async with Client() as s:
             sel = await s.call_tool("select_project", {"project_path": write_project})
             assert json.loads(text_of(sel))["success"] is True
 
-            analyze = text_of(await s.call_tool("analyze_for_coding", {"instruction": "test", "file_ids": [1]}))
+            analyze = text_of(await s.call_tool("start_coding_session", {"instruction": "test", "file_ids": [1]}))
             m = re.search(r"Session ID: `([^`]+)`", analyze)
             assert m, f"no session id in analyze output:\n{analyze[:400]}"
             sid = m.group(1)

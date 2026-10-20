@@ -151,7 +151,7 @@ class TestAnnotations:
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) AS n FROM annotation "
                     "WHERE memo='same pos0 other file'")["n"] == 1
-        assert "error" not in json.loads(server.analyze_file_with_coding(1))
+        assert "error" not in json.loads(server.read_file_with_codings(1))
         assert "error" not in json.loads(server.search_memos("note"))
         assert "error" in json.loads(server.delete_annotation(424242))
 

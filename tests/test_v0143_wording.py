@@ -112,7 +112,7 @@ def _strings(value):
 
 def _new_tools_descriptions():
     texts = {}
-    for mode in ("full", "lifecycle"):
+    for mode in ("full",):
         server._apply_toolset(mode)
         for tool in asyncio.run(server.mcp.list_tools()):
             if tool.name in ("import_documents", "open_file_for_reading"):
@@ -134,9 +134,9 @@ def _answers_and_refusals():
         for ready in (True, False):
             for held in (True, False):
                 texts[f"not_read_note({count}, {ready}, {held})"] = \
-                    doc_import.not_read_note(count, ready, held)
+                    doc_import.not_read_note(count, ready, held, seconds=30)
         texts[f"not_imported_note({count})"] = \
-            doc_import.not_imported_note(count)
+            doc_import.not_imported_note(count, seconds=30)
     for name, text in server.IMPORT_DONE_LINES.items():
         texts[f"IMPORT_DONE_LINES[{name}]"] = text
     return texts
@@ -144,7 +144,7 @@ def _answers_and_refusals():
 
 def test_the_new_tools_descriptions_make_exegete_the_subject():
     texts = _new_tools_descriptions()
-    assert len(texts) == 4
+    assert len(texts) == 2      # v0.15.0: one set, `full`, holds both
     found = {name: SUBORDINATING.findall(text)
              for name, text in texts.items()}
     assert not {name: hits for name, hits in found.items() if hits}
@@ -165,16 +165,18 @@ def test_the_imports_answers_and_refusals_make_exegete_the_subject():
 def test_the_decided_import_and_reading_are_not_marked_provisional():
     """Rulings 59, 63, 67 and 68 decided the import and reading design,
     the garbled letters, the wording and the marker; the brief (a 0.14.2
-    matter), how long one call may run and the limits' figures stay
-    provisional."""
+    matter) and the limits' figures stay provisional. How long one call
+    may run, provisional in 0.14.3, was decided by ruling 71 (v0.15.0):
+    TOOLS.md no longer marks it so."""
     readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
     assert readme.count("provisional") == 1
     assert "**The brief** (provisional)" in readme
     tools = (REPO / "TOOLS.md").read_text(encoding="utf-8")
     assert "\n## Reading a whole file\n" in tools
     assert "\n## Document import: where it departs from QualCoder\n" in tools
-    assert "Each call stops between files within its time (provisional)" \
-        in _flat(tools)
+    assert "Each call stops between files within its time, counted from " \
+        "the call's start:" in _flat(tools)
+    assert "within its time (provisional)" not in _flat(tools)
     privacy = (REPO / "PRIVACY.md").read_text(encoding="utf-8")
     assert "\n## Bringing documents in (0.14.3)\n" in privacy
     unreleased = _flat(_changelog_parts()[0])

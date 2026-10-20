@@ -216,14 +216,14 @@ class TestTheWholeFileRead:
     @pytest.mark.parametrize("fid", range(80, 88))
     def test_qualcoders_codings_are_not_called_different(self, project,
                                                          fid):
-        result = host("analyze_file_with_coding", file_id=fid)
+        result = host("read_file_with_codings", file_id=fid)
         for segment in result["coded_segments"]:
             assert "stored_passage_differs" not in segment, segment
         assert "stored_passage_note" not in result
 
     @pytest.mark.parametrize("fid", [80, 86, 87])
     def test_each_says_where_its_words_stand(self, project, fid):
-        result = host("analyze_file_with_coding", file_id=fid)
+        result = host("read_file_with_codings", file_id=fid)
         text = result["full_text"]
         for segment in result["coded_segments"]:
             start, end = segment["text_start"], segment["text_end"]
@@ -235,7 +235,7 @@ class TestTheWholeFileRead:
         assert "text_start" in note and "Quote" in note
 
     def test_the_emoji_case_quotes_the_right_words(self, project):
-        result = host("analyze_file_with_coding", file_id=86)
+        result = host("read_file_with_codings", file_id=86)
         quoted = [result["full_text"][s["text_start"]:s["text_end"]]
                   for s in result["coded_segments"]]
         assert quoted == ["the café was closed", "more people",
@@ -243,7 +243,7 @@ class TestTheWholeFileRead:
 
     def test_a_coding_found_at_its_positions_has_no_second_place(
             self, project):
-        result = host("analyze_file_with_coding", file_id=85)  # cr_only
+        result = host("read_file_with_codings", file_id=85)  # cr_only
         for segment in result["coded_segments"]:
             assert "text_start" not in segment
         assert "qualcoder_positions_note" not in result
@@ -252,7 +252,7 @@ class TestTheWholeFileRead:
                                                             project):
         sql(project, "UPDATE code_text SET seltext = 'the harvest moon' "
             "WHERE fid = 80")
-        result = host("analyze_file_with_coding", file_id=80)
+        result = host("read_file_with_codings", file_id=80)
         (segment,) = result["coded_segments"]
         assert segment["stored_passage_differs"] is True
         assert "text_start" not in segment

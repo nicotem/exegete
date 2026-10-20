@@ -20,7 +20,9 @@ stored.
 """
 
 import hashlib
+import logging
 import os
+import re
 import secrets
 import stat
 import time
@@ -28,29 +30,74 @@ import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import (Any, Callable, Dict, List, Mapping, Optional, Sequence,
+                    Tuple)
 
-from . import doc_readers, garbled_text, import_paths, import_reading
+from . import doc_readers, env_settings, garbled_text, import_paths, names
+from . import import_reading
 from . import import_words as words
+from . import kept_texts
+
+logger = logging.getLogger(__name__)
 
 MAX_PATHS = 50
 MAX_BATCH = 50
 MAX_MEMO = 10_000
-# How long one call may read (provisional, 0.14.3): a host can stop a
-# tool call that runs long (Claude Desktop's own text is said to give
-# 180 seconds, and 60 to a local server added by hand; not yet timed), so
-# each call stops between files within these, counted from the call's
-# start, and says how to go on with the rest. The preview reads for 30
-# seconds, so that the import, which reads the same files again from
-# their copies, fits within its own 45; one file read at the import has
-# 40 seconds (the preview's 30 for a file, and a margin), and the first
-# file a call reads always has its whole time, so each call reads at
-# least one file.
-PREVIEW_SECONDS = 30
-IMPORT_SECONDS = 45
+# How long one call may take (rulings 69 and 71), counted from its start:
+# a host can stop a tool call that runs long, and a call stopped so loses
+# its answer. The desktop extension's figure comes from the owner's timing
+# of Claude Desktop (T, the earlier cut-off of his two runs, less the
+# larger of 30 seconds and a sixth of T, rounded down to a multiple of 10).
+# Measured on 19 October 2026: Cowork cuts an extension's call at 60
+# seconds and the ordinary chat at 240, so T is 60 and the figure 30, the
+# same as every other way of installing. EXEGETE_CALL_SECONDS, a whole number from CALL_SECONDS_LEAST to
+# CALL_SECONDS_MOST, sets it on any route. The preview reads within it;
+# the import, which uses the text the preview read (kept_texts), works
+# within the same time and reads a file again only when it must.
+EXTENSION_CALL_SECONDS = 30
+TERMINAL_CALL_SECONDS = 30
+CALL_SECONDS_LEAST = 30
+CALL_SECONDS_MOST = 600
+# One file read again at the import: the preview's 30 for a file and a
+# margin. The first file a call reads always has its whole time.
 IMPORT_FILE_SECONDS = 40
+# Keeping the preview's texts stops this long after the preview's own
+# time: a file not kept by then is read again at the import.
+KEEP_SECONDS = 5
 # Less time than this left in a call: no file is started.
 LEAST_SECONDS = 1.0
+# EXEGETE_CALL_SECONDS as it is used: ASCII digits only, so that a value
+# Python's int() or str.isdigit would also take (a sign, a fraction,
+# other scripts' digits) is not.
+_WHOLE_SECONDS = re.compile(r"[0-9]{1,4}")
+
+
+def call_seconds(environ: Optional[Mapping[str, str]] = None
+                 ) -> Tuple[int, Optional[str]]:
+    """How long one import_documents call may take, in seconds, and a
+    warning for the start-up log, or None. The figure for the way
+    Exegete was installed (EXTENSION_CALL_SECONDS in the desktop
+    extension, by its own mark; TERMINAL_CALL_SECONDS otherwise), unless
+    EXEGETE_CALL_SECONDS is a whole number from CALL_SECONDS_LEAST to
+    CALL_SECONDS_MOST: then that number. Unset, blank or a host's
+    unfilled placeholder (`${...}`): the route's figure, no warning.
+    Anything else: the route's figure and a warning that never repeats
+    the value."""
+    figure = (EXTENSION_CALL_SECONDS
+              if env_settings.installed_as_extension(environ)
+              else TERMINAL_CALL_SECONDS)
+    raw = env_settings.call_seconds(environ)
+    if raw is None or not raw.strip() or raw.strip().startswith("${"):
+        return figure, None
+    value = raw.strip()
+    if _WHOLE_SECONDS.fullmatch(value) and \
+            CALL_SECONDS_LEAST <= int(value) <= CALL_SECONDS_MOST:
+        return int(value), None
+    name = names.NEW_ONLY_SETTINGS["call_seconds"]
+    return figure, (
+        f"{name} is not a whole number from {CALL_SECONDS_LEAST} to "
+        f"{CALL_SECONDS_MOST}, so each import call takes {figure} seconds, "
+        f"the figure for the way Exegete was installed.")
 
 
 def clock() -> float:
@@ -159,8 +206,9 @@ class Context:
     # When the tool call began (clock()), from which its time is counted;
     # None: when the survey or the write begins.
     call_started: Optional[float] = None
-    preview_seconds: float = PREVIEW_SECONDS
-    import_seconds: float = IMPORT_SECONDS
+    # How long the call may take, its preview reading and its import
+    # alike (call_seconds, read once a call by the server).
+    call_seconds: float = TERMINAL_CALL_SECONDS
     home: Optional[Path] = None
     memo: str = ""
     # On Windows with long paths switched off: a place in the folder of
@@ -298,6 +346,48 @@ def apply_outcomes(result: "Survey", token: Any) -> None:
 def forget_outcomes(token: Any) -> None:
     if isinstance(token, str):
         _PREVIEW_OUTCOMES.pop(token, None)
+
+
+# ---------------------------------------------------------------------------
+# The texts the preview read, kept for the import (kept_texts)
+# ---------------------------------------------------------------------------
+
+def keep_texts(result: "Survey", ctx: "Context",
+               now: Optional[Callable[[], float]] = None) -> int:
+    """Keep each ready file's text as the preview read it, for the
+    import, once the preview's token is issued; how many were kept. No
+    more is kept once the call has run the preview's time and
+    KEEP_SECONDS: a file not kept is read again at the import. One
+    warning gives the number not kept, never a name or a text."""
+    if not kept_texts.KEEPING:
+        return 0
+    now = now or clock
+    started = ctx.call_started if ctx.call_started is not None else now()
+    ready = [item for item in result.items
+             if item.status == "ready" and item.read is not None]
+    kept = 0
+    for item in ready:
+        if now() - started >= ctx.call_seconds + KEEP_SECONDS:
+            break
+        if kept_texts.keep(item.digest, item.size, item.kind,
+                           ctx.max_characters, item.read):
+            kept += 1
+    if kept < len(ready):
+        logger.warning(
+            "%d of the %d files ready to import were not kept for the "
+            "import, which reads them again.", len(ready) - kept, len(ready))
+    return kept
+
+
+def forget_texts(result: "Survey", ctx: "Context") -> None:
+    """After a committed import: the kept texts of every file the preview
+    found ready, imported or left for the next call (which previews
+    afresh), are removed."""
+    for item in result.items:
+        if item.status == "ready" or (
+                item.status == "later"
+                and item.code == NOT_IMPORTED_THIS_TIME):
+            kept_texts.forget(item.digest, item.kind, ctx.max_characters)
 
 
 def _supported_suffixes() -> List[str]:
@@ -810,7 +900,7 @@ def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
     """The batch as the preview sees it. With `read_texts` false (the
     import's check of its token), files are hashed but not read.
 
-    The preview reads for `ctx.preview_seconds` from the call's start: a
+    The preview reads for `ctx.call_seconds` from the call's start: a
     file it has no time left for is left for the next call (status
     "later"), and so is one whose reading the time left cut short; the
     first file read always has its whole time."""
@@ -828,7 +918,7 @@ def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
         if not read_texts:
             continue
         timeout = _time_for(import_reading.READ_TIMEOUT_SECONDS,
-                            ctx.preview_seconds, started, first, now)
+                            ctx.call_seconds, started, first, now)
         if timeout is None:
             item.status, item.code = "later", NOT_READ_THIS_TIME
             continue
@@ -898,13 +988,22 @@ def held_back_entries(items: Sequence[Item]) -> Tuple[
 
 def names_list_line(ctx: Context) -> str:
     if ctx.names_list == "none":
+        # v0.15.0: the names file first, which every researcher has
+        # (prepare_names_list, the files design, piece 5), applied by later
+        # imports once save_names_list has saved it as the list (fix round
+        # 1: imports read pseudonyms.json, never the names file), then
+        # pseudonymise_source, and QualCoder's button only as a choice for
+        # a researcher who uses it.
         return ("This project has no names list. If these documents name "
-                "participants or places, make the list first (not in "
-                "Exegete yet: in QualCoder, the Pseudonyms button in Manage "
-                "Files); the import then replaces the names as the text "
-                "comes in. Or, once the files are in and before the "
-                "assistant reads them, run pseudonymise_source on each file "
-                "(which can save its names as the project's list).")
+                "participants or places, ask the assistant to prepare the "
+                "names file: you fill it in on your own computer, so the "
+                "names do not pass through the conversation, and once it "
+                "is saved as the project's names list (save_names_list), "
+                "later imports replace them as the text comes in. "
+                "pseudonymise_source can also replace names in a file "
+                "already in the project. QualCoder, if you use it, can also "
+                "make the list before importing (the Pseudonyms button in "
+                "Manage Files).")
     if ctx.names_list == "empty":
         return ("This project's names list is empty, so no names are "
                 "replaced.")
@@ -1035,7 +1134,8 @@ def preview_answer(result: Survey, ctx: Context,
         answer["not_read_this_time"] = {
             "files": [item_label(i) for i in unread],
             "note": not_read_note(len(unread), bool(ready),
-                                  bool(held or refused)),
+                                  bool(held or refused),
+                                  seconds=int(ctx.call_seconds)),
         }
     folders = []
     for folder in result.folders:
@@ -1088,12 +1188,14 @@ def preview_answer(result: Survey, ctx: Context,
     return answer
 
 
-def not_read_note(count: int, ready: bool, held_or_refused: bool) -> str:
-    """What the preview says of the files its time left unread: why,
-    and how to go on with them."""
+def not_read_note(count: int, ready: bool, held_or_refused: bool, *,
+                  seconds: int) -> str:
+    """What the preview says of the files its time left unread: why
+    (the call's time, `seconds`, the figure in use), and how to go on
+    with them."""
     files = f"{count} file{'s' if count != 1 else ''}"
     note = (f"{files} {'were' if count != 1 else 'was'} not read in this "
-            f"call: Exegete reads for about {PREVIEW_SECONDS} seconds a "
+            f"call: Exegete reads for about {seconds} seconds a "
             f"call, since an app can stop a call that runs longer. ")
     if ready:
         note += ("Import the files above with the token if the researcher "
@@ -1119,12 +1221,13 @@ def not_read_note(count: int, ready: bool, held_or_refused: bool) -> str:
     return note
 
 
-def not_imported_note(count: int) -> str:
-    """What the import says of the files left for the next call."""
+def not_imported_note(count: int, *, seconds: int) -> str:
+    """What the import says of the files left for the next call, with
+    the call's time in use (`seconds`)."""
     files = f"{count} file{'s' if count != 1 else ''}"
     return (f"{files} of this batch {'were' if count != 1 else 'was'} not "
             f"imported this time: Exegete works for about "
-            f"{IMPORT_SECONDS} seconds a call, since an app can stop a "
+            f"{seconds} seconds a call, since an app can stop a "
             f"call that runs longer, and leaves the rest for the next. "
             f"Call import_documents again with the same paths, without a "
             f"token, for a preview of them; the files imported now are "
@@ -1286,12 +1389,13 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
                 ctx: Context, owner: str, written: Written,
                 now: Optional[Callable[[], float]] = None) -> List[Item]:
     """Copy each file's original into the folder of originals under a
-    temporary name, check the copy, read its text from the copy's bytes,
-    and write its row through `insert_row`; then give the copies their
-    names. Raises BatchFailed; the caller rolls back and calls
-    `written.remove_all()`.
+    temporary name, check the copy, take its text as the preview read it
+    (kept_texts), or read it again from the copy's bytes only when that
+    text cannot be used, and write its row through `insert_row`; then
+    give the copies their names. Raises BatchFailed; the caller rolls
+    back and calls `written.remove_all()`.
 
-    The import works for `ctx.import_seconds` from the call's start: the
+    The import works for `ctx.call_seconds` from the call's start: the
     first file always has its whole time (IMPORT_FILE_SECONDS); after
     it, a file there is no time left for, or whose reading the time left
     cut short, stops the call there, and it and the files after it are
@@ -1314,7 +1418,7 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
         if item.status != "ready":
             continue
         timeout = None if stopped else _time_for(
-            IMPORT_FILE_SECONDS, ctx.import_seconds, started, not taken, now)
+            IMPORT_FILE_SECONDS, ctx.call_seconds, started, not taken, now)
         if timeout is None:
             stopped = True
             item.status, item.code = "later", NOT_IMPORTED_THIS_TIME
@@ -1339,8 +1443,16 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
             raise BatchFailed("not_copied") from None
         if copy is None or digest_of(copy) != item.digest:
             raise BatchFailed("not_copied")
-        _read_one(item, copy, ctx, timeout, IMPORT_FILE_SECONDS,
-                  NOT_IMPORTED_THIS_TIME)
+        # The text the preview read, kept under this very digest: the
+        # names list and every decision after it are today's, on the
+        # preview's own input.
+        kept = kept_texts.load(item.digest, item.size, item.kind,
+                               ctx.max_characters)
+        if kept is not None:
+            evaluate(item, kept, ctx)
+        else:
+            _read_one(item, copy, ctx, timeout, IMPORT_FILE_SECONDS,
+                      NOT_IMPORTED_THIS_TIME)
         if item.status == "later":
             # Its reading was cut short by the call's time: neither it
             # nor any file after it goes in this time.

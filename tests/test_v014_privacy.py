@@ -1041,7 +1041,7 @@ class TestEveryReadRechecksWhoIsHidden:
 
     @pytest.mark.parametrize("read", [
         "get_coded_segments", "search_coded_text", "get_coding_frequencies",
-        "find_cooccurring_codes", "analyze_file_with_coding",
+        "find_cooccurring_codes", "read_file_with_codings",
         "get_project_summary"])
     def test_every_read_of_codings_answers_as_a_fresh_connection_would(
             self, arriving, read):
@@ -1056,8 +1056,8 @@ class TestEveryReadRechecksWhoIsHidden:
             "get_coding_frequencies": lambda: server.get_coding_frequencies(),
             "find_cooccurring_codes": lambda: server.find_cooccurring_codes(
                 code_id=1),
-            "analyze_file_with_coding": lambda:
-                server.analyze_file_with_coding(file_id=1),
+            "read_file_with_codings": lambda:
+                server.read_file_with_codings(file_id=1),
             "get_project_summary": lambda: server.get_project_summary(),
         }[read]
         before = json.loads(call())
@@ -1463,7 +1463,7 @@ class TestPseudonymsJsonErrorsAreAnsweredByKind:
     @pytest.mark.parametrize("route", ["import_text_file",
                                        "pseudonymise_source",
                                        "get_current_project",
-                                       "read_pseudonym_list"])
+                                       "prepare_names_list"])
     def test_the_answer_names_the_kind_not_the_path(
             self, project, monkeypatch, route, kind):
         self._unreadable(project, monkeypatch, self.ERRORS[kind])
@@ -1474,13 +1474,16 @@ class TestPseudonymsJsonErrorsAreAnsweredByKind:
             "pseudonymise_source": lambda: server.pseudonymise_source(
                 file_id=1, use_project_pseudonyms=True),
             "get_current_project": lambda: server.get_current_project(),
-            "read_pseudonym_list": lambda: server.read_pseudonym_list(),
+            # v0.15.0: the names file's tool reads the list to copy it into
+            # the file, in place of the tool that returned it, removed (the
+            # files design, piece 5)
+            "prepare_names_list": lambda: server.prepare_names_list(),
         }[route]()
         assert MARK not in raw
         answer = json.loads(raw)
         label = dbmod.error_label(self.ERRORS[kind])
         expected = f"pseudonyms.json could not be read ({label})."
-        if route in ("get_current_project", "read_pseudonym_list"):
+        if route in ("get_current_project", "prepare_names_list"):
             assert expected in json.dumps(answer), answer
             assert "Failed to get project info" not in raw
         else:

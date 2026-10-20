@@ -417,7 +417,7 @@ class TestS7AnnotationAddenda:
             "VALUES (1, 0, 5, NULL, 'RefiCoder', '2024-01-15 00:00:00')")
         conn.commit()
         conn.close()
-        out = json.loads(server.analyze_file_with_coding(1))
+        out = json.loads(server.read_file_with_codings(1))
         anns = out["annotations"]
         assert len(anns) == 1
         assert anns[0]["memo"] == ""  # normalized, no crash

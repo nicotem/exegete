@@ -177,7 +177,11 @@ class TestEpubArchives:
         assert refused.value.code == "xml_entities"
 
 
+@pytest.mark.usefixtures("keeping_off")
 class TestTheBatchGoesInTogether:
+    """With no kept text (v0.15.0's reading once switched off): a file
+    the import reads again, when its kept text cannot be used, and which
+    reads otherwise then, still stops the whole batch."""
 
     def _flaky(self, monkeypatch, name, failing_reads):
         """The reading of `name` fails, as a time-out would, on the

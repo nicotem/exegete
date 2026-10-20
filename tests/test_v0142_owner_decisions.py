@@ -31,7 +31,8 @@ Pinned here:
 - the brief: the "fresh reading" line held back until the reading tool
   can read a file without its codes (0.14.3, which serves it,
   provisionally), "Do not agree to please" kept, and the opening text
-  under 2,000 characters.
+  under 2,000 characters (until v0.15.0, whose rule 9 takes it to 2,034,
+  within the 2,048 that Claude Code keeps).
 """
 
 import inspect
@@ -556,11 +557,11 @@ def test_the_fresh_reading_line_waits_for_its_option_and_honesty_kept():
     # the option (tests/test_v0143_reading_without_codes.py pins its
     # words); the short versions never carried it.
     assert "without_codes" in inspect.signature(
-        server.analyze_file_with_coding).parameters
+        server.read_file_with_codings).parameters
     for where, text in served.items():
         flat = " ".join(text.split())
         line = ("When the researcher wants a fresh reading, read the file "
-                "with analyze_file_with_coding(without_codes=true), which "
+                "with read_file_with_codings(without_codes=true), which "
                 "leaves their codings out, and tell them whether you have "
                 "seen any.")
         if where in ("full", "help topic"):
@@ -579,8 +580,10 @@ def test_the_fresh_reading_line_waits_for_its_option_and_honesty_kept():
         in " ".join(server.BRIEF_FULL.split())
 
 
-def test_the_opening_text_stays_under_two_thousand():
+def test_the_opening_text_stays_within_the_cut():
+    # under 2,000 characters until v0.15.0, whose rule 9 (not presuming
+    # QualCoder, piece 5) takes it to 2,034, within Claude Code's 2,048
     instructions = server.SERVER_INSTRUCTIONS
     assert instructions == server.BRIEF_SHORT
-    assert len(instructions) < 2000
-    assert len(instructions.encode("utf-8")) < 2000
+    assert len(instructions) <= 2048
+    assert len(instructions.encode("utf-8")) <= 2048

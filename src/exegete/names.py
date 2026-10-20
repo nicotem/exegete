@@ -41,16 +41,32 @@ SETTINGS = {
 }
 # Until when the earlier spellings are read, as messages say it.
 OLD_SPELLINGS_UNTIL = "v1.0"
+# The tool sets EXEGETE_TOOLSET names (v0.15.0): `full`, every tool, the
+# default; `core`, the smaller set for local models. `lifecycle` was the
+# larger set's name in the extension until 0.15.0 (`full` plus creating
+# a project); it is read as `full` until OLD_SPELLINGS_UNTIL.
+TOOLSETS = ("full", "core")
+OLD_TOOLSET_NAMES = {"lifecycle": "full"}
 # The settings that never had an earlier spelling (the check for new
-# versions, the owner's ruling of 5 October 2026): kept apart from
-# SETTINGS, whose pairs end at v1.0, and read only through
-# env_settings.update_check and env_settings.installed_as.
-# `installed_as` is the desktop extension's own mark, set in its manifest
-# so that the update steps fit the way Exegete was installed; nobody sets
-# it by hand.
+# versions, the owner's ruling of 5 October 2026, the time per import
+# call, v0.15.0, the researcher's own coder name, v0.15.0, ruling 73,
+# item 6, and "Do you also use QualCoder on this computer?", v0.15.0,
+# ruling 73, item 8): kept apart from SETTINGS, whose pairs end at v1.0,
+# and read only through env_settings.update_check,
+# env_settings.installed_as, env_settings.call_seconds,
+# env_settings.coder_name and env_settings.uses_qualcoder. `installed_as`
+# is the desktop extension's own mark, set in its manifest so that the
+# update steps and the time per import call fit the way Exegete was
+# installed; nobody sets it by hand. `coder_name` is the name
+# create_project gives each project it makes, without asking, when it is
+# filled in. `uses_qualcoder` is yes, no or not sure
+# (qualcoder_history.read_setting).
 NEW_ONLY_SETTINGS = {
     "update_check": "EXEGETE_UPDATE_CHECK",
     "installed_as": "EXEGETE_INSTALLED_AS",
+    "call_seconds": "EXEGETE_CALL_SECONDS",
+    "coder_name": "EXEGETE_CODER_NAME",
+    "uses_qualcoder": "EXEGETE_USES_QUALCODER",
 }
 
 # The state folder in the home folder, and the one it is moved from once,
@@ -61,11 +77,20 @@ OLD_STATE_FOLDER = ".qualcoder_mcp"
 
 # The workspace inside the Documents folder: where copies and new projects
 # go when no workspace is set (installs from PyPI or from the source; the
-# desktop extension always sets one, `~/QualCoder projects`). The earlier
-# one is never moved or emptied, and the project listing still finds its
-# projects (it walks ~/Documents).
+# desktop extension always sets one, by default `~/` +
+# EXTENSION_WORKSPACE_FOLDER below). The earlier one is never moved or
+# emptied, and the project listing still finds its projects (it walks
+# ~/Documents).
 WORKSPACE_FOLDER = "Exegete projects"
 OLD_WORKSPACE_FOLDER = "Qualcoder MCP Projects"
+
+# The desktop extension's "Folder for projects", in the home folder: its
+# default for new installs from 0.15.0, and the earlier one, still
+# searched (both are among the project listing's usual places). An
+# install whose setting names a folder keeps it: Exegete never writes
+# the setting, and never moves or empties either folder.
+EXTENSION_WORKSPACE_FOLDER = "Exegete projects"
+OLD_EXTENSION_WORKSPACE_FOLDER = "QualCoder projects"
 
 # The resources' address scheme; the earlier one is still answered, and
 # no longer listed, until v1.0. (QualCoder's own

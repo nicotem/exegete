@@ -31,10 +31,16 @@ When you start Claude Desktop, ask:
 List my available projects
 ```
 
-Claude will search these locations automatically:
+Exegete searches these places by default:
+- the folder `EXEGETE_WORKSPACE` names, when it is set (with the
+  desktop extension, its "Folder for projects", by default
+  `~/Exegete projects/`), at its top level only, unless it is one of
+  the places below
 - `~/Documents/QualCoder_projects/`
 - `~/Documents/QualCoder/`
 - `~/QualCoder/`
+- `~/Exegete projects/` and `~/QualCoder projects/` (the desktop
+  extension's default folder for projects, and its earlier default)
 - `~/Documents/`
 
 You'll get a list like:
@@ -211,13 +217,14 @@ Opens a project (a `.qda` folder)
 - `project_path`: Path to the `.qda` project folder (or to the `data.qda` file inside it)
 
 The result reports `qualcoder_gui_signals` (best-effort heuristics for an
-open QualCoder 4.0 window; a released QualCoder 3.x is detected through
-its lock file) and remembers the selection as the last-used project.
+open QualCoder 4.0 window; QualCoder 3.8.2 is detected through the
+project's lock file) and remembers the selection as the last-used project.
 
 ### 3. `get_current_project`
-Shows which project is currently open, whether a released QualCoder has
-it open (`qualcoder_open`, from its lock file) and the QualCoder 4.0
-heuristics (`qualcoder_gui_signals`)
+Shows which project is currently open, whether the project's lock file
+is active (`qualcoder_open`: QualCoder 3.8.2 has the project open, or
+another conversation using Exegete is writing to it) and the signs of
+an open QualCoder 4.0 window (`qualcoder_gui_signals`)
 
 **No parameters**
 

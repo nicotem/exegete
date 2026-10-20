@@ -30,15 +30,16 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    with its usual warning to install only extensions whose developer you
    trust; click Install, and Install again when Claude says it needs to
    fetch a few dependencies. The first install takes a minute or two.
-4. **Look at its three settings** (Settings, Extensions, Exegete).
+4. **Look at its settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
-   - **Tool set**: `lifecycle` (the default) gives every tool, creating
-     a new project included; `full` every tool except creating a
-     project; `core` a smaller set for local models. Type one of the
-     three words: any other word stops the extension from starting.
+   - **Tool set**: `full` (the default) gives every tool, creating a
+     new project included (recommended); `core` a smaller set for local
+     models. Type one of the two words: any other word stops the
+     extension from starting. Installed before 0.15.0, it may show
+     `lifecycle`, the earlier name of `full`; it works as `full`.
    - **Folder for projects**: where new projects are created and
      working copies of projects are kept. The default,
-     `~/QualCoder projects` (a folder called "QualCoder projects" in
+     `~/Exegete projects` (a folder called "Exegete projects" in
      your home folder), is outside Documents, which iCloud or OneDrive
      may sync; it is made when the first project needs it. Choose
      another with the folder button if you prefer, but not a folder a
@@ -46,6 +47,45 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      folder).
      Leaving it empty stops the extension from starting (it never
      falls back to Documents).
+     Installed before 0.15.0, a setting left at the earlier default,
+     `~/QualCoder projects`, is moved to `~/Exegete projects` by the
+     update. No project is moved, and both folders are searched, so
+     the projects in the earlier one are still found. To
+     keep new projects beside the earlier ones, set it back to
+     `~/QualCoder projects`.
+   - **Your coder name**: empty by default. It is the name your own
+     codings carry in a project, kept apart from the AI's. Filled in,
+     Exegete gives it to each new project it makes, without asking, and
+     says so; left empty, Claude asks for it each time. Projects that
+     already exist keep their coder name, or their lack of one. It must
+     differ from the AI coder name. If you also use QualCoder, use the
+     name its settings show as "Current coder", exactly as written there.
+     At most 80 characters; a line break or tab, an invisible formatting
+     character (the joiners some scripts need are allowed) or `#####`
+     stops the extension from starting.
+   - **AI coder name**: empty by default. It is the name Claude's work
+     in your projects is stored under, so that it stays apart from
+     yours; a model's name lets codings by different models be compared
+     later. Filled in, Exegete gives it to each project it creates,
+     without asking, and says so, and offers it first when another
+     project needs one; left empty, Claude asks the first time a project
+     needs it. A project that already has an AI coder name keeps it,
+     and Claude asks you once whether to switch. It must differ from
+     your coder name, and the same limits apply.
+   - **Do you also use QualCoder on this computer?**: not sure unless
+     you change it. Type yes, no or not sure. With yes, Exegete adds
+     some notes that matter only if you also open your projects in
+     QualCoder (whether an open QualCoder window shows Exegete's
+     changes, for example); with no, it leaves those out, unless a
+     project shows signs that QualCoder may have opened it or QualCoder
+     is running when a project is selected; with not sure, it decides
+     from what it finds on each project and on this computer. Notes
+     worded "if the project is opened in QualCoder", such as the one on
+     emoji and Windows line breaks, are given with any answer, and so is
+     the line saying that a new project is in QualCoder's format. Whatever
+     you answer, Exegete still refuses to write while QualCoder 3.8.2
+     has a project open, and still warns when it sees signs that QualCoder
+     4.0 may have one open.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
      small file from its website on GitHub to see whether a newer
@@ -55,6 +95,12 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      assistant uses Exegete it is told to say so. Switched off,
      Exegete itself makes no connection
      ([PRIVACY.md, "Checking for new versions"](PRIVACY.md#checking-for-new-versions)).
+
+   **After changing a setting, quit Claude Desktop and open it again.**
+   Exegete reads its settings when Claude Desktop starts it, so a
+   change reaches Exegete only at its next start. Until then Exegete
+   works with the settings it started with: a coder name filled in just
+   now is not yet given to a new project, for example.
 5. **Check it works**: in a new conversation, the "+" button, then
    Connectors, lists Exegete with its tools switched on. Ask
    "Using the Exegete tools, is a project open?" and allow the
@@ -148,9 +194,9 @@ and LM Studio are considered on request: ask in
 assistant a brief: how it expects the assistant to work with you
 (TOOLS.md, "What the assistant is told"). Hosts differ in what they
 pass on, so the brief reaches the assistant four ways. A short version
-is Exegete's opening text: Claude Code shows it (and keeps only the
-first 2,048 characters of any server's opening text; this one is
-shorter); Claude Desktop does not pass it on, in its chat or in Cowork
+is Exegete's opening text: Claude Code shows it (and keeps the first
+4,096 characters of a server's opening text, 2,048 before its version
+2.1.296; this one is 2,034); Claude Desktop does not pass it on, in its chat or in Cowork
 (checked on 9 October 2026); and LM Studio does not support it. The
 tool `read_brief`, in every tool set, has a description that asks the
 assistant to call it at the start of every conversation about a
@@ -177,15 +223,20 @@ Before starting, make sure you have:
   configured by hand (download from: https://claude.ai/download);
   recipes for Claude Code, LM Studio, and OpenAI's ChatGPT desktop app
   and Codex follow further down
-- ✅ **A project, or the `lifecycle` tool set.** On this route the
-  default tool set, `full`, has no tool that creates a project, so you
-  need an existing project (a folder ending in `.qda`, made by Exegete
-  or by QualCoder, with a `data.qda` database file inside; know where it
-  is), unless you add `EXEGETE_TOOLSET=lifecycle` ("Environment
-  variables the server reads", below), which lets the assistant create
-  one in the conversation. Projects in the formats of QualCoder 3.8.x
-  and 4.0 work
-  (project schemas v14 through v17); see "Supported QualCoder versions" in
+- ✅ **A project, or a new one.** The default tool set, `full`,
+  includes creating a project: the assistant can start one in the
+  conversation, in a new folder, never changing an existing one. On this
+  route new projects, and copies made by `copy_project_to_workspace`, go
+  to `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
+  another folder ("Environment variables the server reads", below).
+  iCloud (Desktop and Documents) or OneDrive may sync Documents, and a
+  sync service can copy a project's database and its journal separately:
+  consider naming a folder outside Documents, such as
+  `~/Exegete projects`. Or use an existing project (a folder ending in
+  `.qda`, made by Exegete or by QualCoder, with a `data.qda` database
+  file inside; know where it is). Projects in the formats of QualCoder
+  3.8.x and 4.0 work (project schemas v14 through v17); see "Supported
+  QualCoder versions" in
   [TOOLS.md](TOOLS.md#supported-qualcoder-versions)
 - **QualCoder, optional.** Today it does what Exegete does not do
   yet: bringing in images, audio and video, coding images, audio, video
@@ -563,6 +614,34 @@ The server behaves the same under any client; which tools are
 registered is decided by `EXEGETE_TOOLSET` (see "Environment
 variables the server reads" below), not by the client.
 
+**Long tool descriptions in Claude Code.** Claude Code keeps the first
+4,096 characters of a tool's description, or 16,384 for a tool it
+finds through its tool search, which it uses by default (Anthropic's
+page on MCP in Claude Code, read on 15 October 2026; before Claude
+Code 2.1.296, 2,048). Exegete puts the rules a model must not miss
+within each description's first 2,048 characters, a few named
+exceptions apart, which reach the model through `read_brief` or the
+tools' answers. Measured for 0.15.0, the descriptions are longer on
+Python 3.10 to 3.12 than on 3.13, which strips the indentation they are
+written with. On Python 3.13, 4 of `full`'s 82 descriptions are longer
+than 4,096 characters (`pseudonymise_source`, 17,791;
+`start_coding_session`, 6,038; `search_files`, 4,802;
+`record_suggestions`, 4,455); on 3.10 to 3.12, 5 are (the same four, at
+18,919, 6,282, 5,150 and 4,691, and `import_text_file`, 4,295).
+`pseudonymise_source` is longer than 16,384, so its last 1,407
+characters are cut even through tool search on 3.13, and its last
+2,535 on 3.10 to 3.12, its sentence on the lock file among them.
+Claude Code's own setting `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`
+(version 2.1.280 or later) replaces both limits with one figure:
+20000, for example, lets every Exegete description through whole on
+any Python, for every server's tools, at the cost of more of the
+model's context when a long description loads; a figure under 16,384
+lowers the limit for tools found through tool search, so it cuts
+more, not less. It is Claude Code's setting, not Exegete's:
+set it where Claude Code reads its own environment (in the shell before
+`claude`, or the `env` field of Claude Code's settings), not with `-e`
+on `claude mcp add`, which passes settings to Exegete.
+
 ---
 
 ## Environment variables the server reads
@@ -577,16 +656,19 @@ variable is optional.
 started `QUALCODER_MCP_` (and the first was `QUALCODER_PROJECT_PATH`):
 `QUALCODER_MCP_TOOLSET`, `QUALCODER_MCP_WORKSPACE`,
 `QUALCODER_MCP_WORKSPACE_REQUIRED`, `QUALCODER_MCP_AI_CODER_NAME`,
-`QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`. The
-server still reads them until v1.0, and its log says once per start
+`QUALCODER_MCP_ALLOW_UNKNOWN_SCHEMA` and `QUALCODER_PROJECT_PATH`.
+Exegete still reads them until v1.0, and its log says once per start
 which new spelling to use instead. If a setting is given under both
 spellings with different values (after the usual tidying: spaces, the
-tool set's letter case and a leading `~` do not count), the server
-does not start, and says which two disagree; if either spelling of
+tool set's letter case and a leading `~` do not count), Exegete does
+not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
-desktop extension sets both spellings of these three settings itself,
-always to the same value. The two settings of the check for new
-versions, below, are new and have one spelling only.
+desktop extension sets both spellings of these four settings itself
+(the tool set, the two for the workspace and the AI coder name), always
+to the same value. Five settings are new and have one spelling only:
+the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
+`EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS`, `EXEGETE_CODER_NAME`
+and `EXEGETE_USES_QUALCODER`, all below.
 
 - `EXEGETE_PROJECT_PATH`: a project to open at start-up (Option B
   above): the folder ending in `.qda`, or the `data.qda` file inside it.
@@ -597,38 +679,37 @@ versions, below, are new and have one spelling only.
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 77 tools;
-  `core` registers the 23-tool supervised coding set for local models
-  (see the LM Studio recipe); `lifecycle` (Experimental, v0.14)
-  registers the full set plus `create_project`, 78 tools, so that a
-  study can be started from the conversation (TOOLS.md, "Starting a
-  project from the conversation"). Configured by hand, creating
-  projects stays out of the default set, so that researchers opt in to
-  a tool that makes folders on their disk; the desktop extension sets
-  this variable from its "Tool set" setting, whose default is
-  `lifecycle`. Any other value stops the server at start-up with an error
-  naming the valid values. Resources and prompts are not affected.
-  In Claude Desktop, add `"EXEGETE_TOOLSET": "lifecycle"` to the
-  server's `env` block; for Claude Code, in the folder you start it in
-  (`~/claude-exegete`: started in your home folder, Claude Code could
-  read any study kept there without asking; "Alternative: Claude Code
-  and other MCP clients", above, says more):
-
-  ```bash
-  claude mcp add exegete -e EXEGETE_TOOLSET=lifecycle -- ~/Documents/exegete/venv/bin/python -m exegete.server
-  ```
+- `EXEGETE_TOOLSET`: `full` (default) registers 82 tools, every tool,
+  creating a project included, so that a study can be started from the
+  conversation (TOOLS.md, "Starting a project from the conversation");
+  two of them are the earlier names of two renamed tools (TOOLS.md,
+  "Earlier names"). `core` registers the 25-tool supervised coding set
+  for local models (see the LM Studio recipe), which cannot create a
+  project. `lifecycle`, the earlier name of `full` (the desktop
+  extension's default before 0.15.0), is read as `full` until v1.0, and
+  Exegete names it in its log at each start. The desktop extension sets
+  this variable from its "Tool set" setting, whose default is `full`.
+  Any other value stops Exegete at start-up with an error naming the
+  valid values. Resources and prompts are not affected.
 - `EXEGETE_WORKSPACE` (v0.14): the workspace, the folder where
   `create_project` makes a project when no folder is named and where
   `copy_project_to_workspace` puts its copies; `list_available_projects`
-  also searches its top level. A full path, or one starting with `~`.
+  also searches its top level, or three levels deep when it is one of
+  the usual places, as the extension's default folder is (the usual
+  places are listed under "No projects found in the usual places",
+  below). A full path, or one starting with `~`.
   Unset or blank, it is `~/Documents/Exegete projects` (until 0.14.0,
   `~/Documents/Qualcoder MCP Projects`, which is never moved or emptied,
   and whose projects the listing still finds). The desktop extension
   sets it from its "Folder for projects" setting,
-  whose default is `~/QualCoder projects`, because iCloud (Desktop and
-  Documents) and OneDrive may sync `~/Documents`. A relative path, or a
-  folder inside `~/.exegete` (or `~/.qualcoder_mcp`, its earlier
-  name), QualCoder's settings folder
+  whose default is `~/Exegete projects` (an update moves a setting left
+  at the earlier default, `~/QualCoder projects`, to it; no project is
+  moved, both folders are searched, and setting it back to
+  `~/QualCoder projects` keeps new projects beside the earlier ones),
+  because iCloud (Desktop and Documents) and OneDrive may sync
+  `~/Documents`.
+  A relative path, or a folder inside `~/.exegete` (or
+  `~/.qualcoder_mcp`, its earlier name), QualCoder's settings folder
   `~/.qualcoder`, a `.qda` project or the folder the server itself is
   installed in, or a path holding `|`, stops the server at start-up
   with "Error: EXEGETE_WORKSPACE ..." on stderr (naming no path).
@@ -637,29 +718,61 @@ versions, below, are new and have one spelling only.
   of falling back to `~/Documents/Exegete projects`. The desktop
   extension sets it, so an emptied "Folder for projects" never sends
   projects into a synced Documents folder.
-- `EXEGETE_AI_CODER_NAME`: this HOST's DECLARATION of the AI
-  coder name it would like to write under. Since v0.12 the name that
-  rows actually carry is the PROJECT's setting, which the researcher
-  chooses through `set_project_ai_coder_name` the first time a write
-  needs it (see "Choosing the AI coder name" in TOOLS.md); the declaration
-  is offered as the first quick pick in that question, and if it differs
-  from a name the project already has, the next write asks which to use
-  rather than re-attributing anything. Declare the model this host runs
-  (`"Qwen 3.8 6bit"`), or `AI Agent` to propose the exact name
-  QualCoder 4.0's built-in assistant writes under, which groups
-  Exegete's work with the assistant's under one coder in QualCoder's
-  per-coder visibility toggle, undo and reports. The value is trimmed
-  and must be non-empty, at most 80 characters, single-line plain text
+- `EXEGETE_CODER_NAME` (0.15.0): your own coder name, the name your
+  own codings carry in a project, kept apart from the AI's. Set, it is
+  given by `create_project` to each project it makes, without asking,
+  and the answer says the name came from the settings
+  (`coder_name_source`); unset or blank, the assistant asks for it at
+  each new project. Projects that already exist keep their coder name,
+  or their lack of one: Exegete gives it only to the projects it
+  creates from now on, and selecting a project that records another
+  name, or none, or whose AI coder name is this one, says so
+  (`coder_name_notes`). It must differ from the AI
+  coder name: with `EXEGETE_AI_CODER_NAME` the same, `create_project`
+  makes no project until one of them is changed, and
+  `set_project_ai_coder_name` refuses it as an AI coder name. If you
+  also use QualCoder, use the name its settings show as "Current
+  coder", exactly as written there. The value is trimmed and follows the rules for
+  `EXEGETE_AI_CODER_NAME`, below (at most 80 characters, single-line
+  plain text, no invisible formatting character, no `#####`); an
+  invalid value stops Exegete at start-up with "Error:
+  EXEGETE_CODER_NAME ..." on stderr, naming the setting, never its
+  value, and saying where to change it, or to leave it empty to be
+  asked for the name in each new project. The desktop extension sets it
+  from its "Your coder name" setting.
+- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's settings.
+  The name that rows actually carry is each PROJECT's own (see
+  "Choosing the AI coder name" in TOOLS.md). Set, it is given by
+  `create_project` to each project it makes, without asking, and the
+  answer says so (`ai_coder_name`, with the source `settings`); a
+  project made another way that has no AI coder name yet is asked for
+  one at the first write that needs it, with this name offered first.
+  A project that already has another AI coder name keeps it: the next
+  write asks once which to use there, rather than re-attributing
+  anything. Up to 0.14.3 it was offered first and checked against a
+  project's own AI coder name, but never stored by itself.
+  Give the model this host runs (`"Qwen 3.8 6bit"`), or `AI Agent` for
+  the exact name QualCoder 4.0's built-in assistant writes under, which
+  groups Exegete's work with the assistant's under one coder in
+  QualCoder's per-coder visibility toggle, undo and reports. `default`
+  and QualCoder's speaker coder are never stored as an AI coder name:
+  a new project is then made without one, and its answer says why; nor
+  are they, or your own coder name, offered when a project is asked
+  for one.
+  Empty or unset, no name is offered first. The value is
+  trimmed and must be at most 80 characters, single-line plain text
   (no control characters, no line or paragraph separators, and no
   invisible formatting character of Unicode category Cf, which covers
   every bidirectional control and every zero-width character; ZWNJ and
   ZWJ, which spell words in Persian and Indic scripts, are the two
   exceptions) and must not contain `#####`,
-  the QualCoder 4.0 private-memo marker. An invalid value stops the
-  server at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
-  stderr. Do not declare your own coder name: AI rows would then be
+  the QualCoder 4.0 private-memo marker. An invalid value stops
+  Exegete at start-up with "Error: EXEGETE_AI_CODER_NAME ..." on
+  stderr. It must differ from your own coder name (`EXEGETE_CODER_NAME`,
+  and each project's): AI rows would otherwise be
   indistinguishable from yours, in Exegete's reads and in QualCoder,
-  and the setter refuses that name anyway.
+  and the setter refuses that name anyway. The desktop extension sets
+  it, under both spellings, from its "AI coder name" setting.
 
   ```json
   "env": {
@@ -668,9 +781,30 @@ versions, below, are new and have one spelling only.
   ```
 
   A local-model host (LM Studio, for example) is the case this is for:
-  declare the model the host runs, and every project coded from that
-  host proposes that name first, so codings by different models can be
-  told apart and compared later.
+  give the model the host runs, and every project Exegete creates from
+  that host takes that name, and any other project without one is
+  offered it first, so codings by different models can be told apart
+  and compared later.
+
+- `EXEGETE_USES_QUALCODER` (0.15.0): your answer to "Do you also use
+  QualCoder on this computer?": `yes`, `no` or `not sure`, in any
+  letter case. Unset or blank, it is `not sure`, the default, as in the
+  desktop extension. With `yes`, Exegete adds some notes that matter
+  only if you also open your projects in QualCoder; with `no`, it
+  leaves those out, unless a project shows signs that QualCoder may
+  have opened it or QualCoder is running when a project is selected;
+  with `not sure`, it decides from what it finds on each project and on
+  this computer. Notes worded "if the project is opened in QualCoder",
+  such as the one on emoji and Windows line breaks, are given with any
+  answer, and so is the line saying that a new project is in
+  QualCoder's format. Any other value is read as `not sure`, and the log
+  says so once at start, never the value; it never stops Exegete.
+  Whatever it says, Exegete still refuses to write while QualCoder
+  3.8.2 has a project open, and still warns when it sees signs that QualCoder
+  4.0 may have one open: an answer can be out of date (a colleague's
+  project, QualCoder installed later), and a write into a project open
+  in QualCoder can lose work. The desktop extension sets it from its
+  setting "Do you also use QualCoder on this computer?".
 
 - `EXEGETE_ALLOW_UNKNOWN_SCHEMA`: expert override. Writes to a
   project whose database schema is newer than the schemas this release
@@ -694,10 +828,30 @@ versions, below, are new and have one spelling only.
   from "Install Certificates", in its folder in Applications, which is
   worth running once. A network that inspects encrypted connections
   gives the same answer.
+- `EXEGETE_CALL_SECONDS` (0.15.0): how many seconds one call of
+  `import_documents` may take, counted from its start, before it stops
+  between files and leaves the rest for the next call, whose answer
+  says how to go on: a whole number from 30 to 600. Unset, it is 30
+  seconds on every route, the desktop extension included: Claude
+  Desktop's Cowork stops waiting for an extension's call after 60
+  seconds, and its ordinary chat after 4 minutes (measured on 19
+  October 2026). A host stops a tool
+  call that runs past its own limit, and a call stopped so loses its
+  answer while Exegete reads on to the end; until a call has finished,
+  Exegete answers no other call, from any chat. So a higher figure
+  suits a host known to wait longer, and it is worth keeping well
+  below that host's limit: a call can run past the figure, since the
+  first file a call reads always has its whole time (30 seconds at the
+  preview, 40 when the import reads a file again), a preview spends up
+  to 5 seconds more keeping the texts it read, and a file kept online
+  only by a cloud drive is downloaded whole. Any other value is not
+  used, and the log says so once at start; it never stops Exegete.
+  The desktop extension's settings do not offer it.
 - `EXEGETE_INSTALLED_AS`: set by the desktop extension (to
   `extension`), so that the update steps Exegete gives fit the way it
   was installed. It also makes checking on by default, as the
-  extension's setting is. Do not set it yourself.
+  extension's setting is, and gives an import call the extension's
+  time (`EXEGETE_CALL_SECONDS`, above). Do not set it yourself.
 
 ---
 
@@ -872,12 +1026,12 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 77 tools by
+**Step 3. Use the core toolset.** Exegete offers 82 tools by
 default, and the serialised tool definitions alone measure about
-202,000 characters, roughly 50k tokens (measured for 0.14.3 under
-Python 3.13.5 with mcp 1.30.0, in the
-repository's own `venv/`; `pseudonymise_source`, the 0.12 flagship,
-accounts for about 19,500 characters of that on its own, because a tool
+207,000 characters, roughly 52k tokens (measured for 0.15.0 under
+Python 3.13.5 with mcp 1.30.0, in an environment installed from the
+repository's lock file; `pseudonymise_source`, the 0.12 flagship,
+accounts for about 20,000 characters of that on its own, because a tool
 that rewrites the researcher's text has to say in its own definition
 what it rewrites, what it leaves behind and what the backup then
 holds; the paging, novelty-filter and sampling arguments added in 0.12
@@ -889,15 +1043,15 @@ definitions measure about five per cent more).
 That exceeds LM Studio's 8k default context several times over before
 you type a word, and tool counts this size are far past where
 small-model tool selection degrades. Set `EXEGETE_TOOLSET=core`
-(in the config of Step 5) to register only the 23-tool supervised
-coding set, measured at about 67,000 characters, roughly 17k tokens.
+(in the config of Step 5) to register only the 25-tool supervised
+coding set, measured at about 68,000 characters, roughly 17k tokens.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
 17k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
 (that leaves about 15k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),
-or 64k if you must run the full surface (its schema alone is about 50k
+or 64k if you must run the full surface (its schema alone is about 52k
 tokens).
 Use the model load settings dialog or a per-model default
 (<https://lmstudio.ai/docs/app/advanced/per-model>).
@@ -1136,11 +1290,8 @@ tool_timeout_sec = 300
 default_tools_approval_mode = "writes"
 
 [mcp_servers.exegete.env]
-EXEGETE_TOOLSET = "lifecycle"
-EXEGETE_WORKSPACE = "~/QualCoder projects"
-
-[mcp_servers.exegete.tools.read_pseudonym_list]
-approval_mode = "prompt"
+EXEGETE_TOOLSET = "full"
+EXEGETE_WORKSPACE = "~/Exegete projects"
 ```
 
 What the lines do:
@@ -1155,14 +1306,14 @@ What the lines do:
   asking the tools that only add to a project, among them
   `import_text_file`, `apply_codings` and `create_proposed_codes`
   ("What hosts do with the tools' read and write marks", below).
-- `approval_mode = "prompt"` for `read_pseudonym_list`: Codex asks
-  before that tool whatever the line above says. It sends every real
-  name in the project's pseudonyms file to OpenAI.
-- `EXEGETE_TOOLSET = "lifecycle"`: every tool, creating a project
+- `EXEGETE_TOOLSET = "full"`: every tool, creating a project
   included, as in the Claude Desktop extension.
 - `EXEGETE_WORKSPACE`: where new projects and working copies go; here,
-  as in the extension, a folder called "QualCoder projects" in your
+  as in the extension, a folder called "Exegete projects" in your
   home folder, outside Documents, which iCloud or OneDrive may sync.
+  An entry written from the steps before 0.15.0, naming
+  `~/QualCoder projects`, the earlier default, keeps working, and the
+  projects there are still found.
   Codex passes Exegete only the settings its entry names ("Environment
   variables the server reads", above, lists them all), so a setting
   exported in a shell profile does not reach it (Codex's source code).
@@ -1177,7 +1328,10 @@ If the file already has an entry named `exegete` (because you added it
 in the app's settings screen or with `codex mcp add`, below), do not
 paste a second one: a second `[mcp_servers.exegete]` line makes the
 whole file unreadable. Add the lines it lacks to the entry that is
-there instead.
+there instead. An entry written from the steps before 0.15.0 may end
+with two more lines, `[mcp_servers.exegete.tools.read_pseudonym_list]`
+and `approval_mode = "prompt"` under it: that tool was removed in
+0.15.0, so you can delete both lines.
 
 **Other ways to add it.** The desktop app has a settings screen for
 this (Settings, MCP servers, Add server: the name `exegete`, STDIO, and
@@ -1185,15 +1339,14 @@ the full path from step 1 as the command; then Save), and the command
 line has one command:
 
 ```bash
-codex mcp add exegete --env EXEGETE_TOOLSET=lifecycle --env "EXEGETE_WORKSPACE=~/QualCoder projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
+codex mcp add exegete --env EXEGETE_TOOLSET=full --env "EXEGETE_WORKSPACE=~/Exegete projects" -- /Users/YOUR_USERNAME/exegete-venv/bin/exegete
 ```
 
-OpenAI does not document that either writes the approval lines, so
+OpenAI does not document that either writes the approval line, so
 after either one, open the file as above and add what it lacks:
 `default_tools_approval_mode = "writes"` on the line straight after
-`[mcp_servers.exegete]`; at the end of the file, the last two lines of
-the block above (the `read_pseudonym_list` table); and, if the settings
-screen had no place for them, the `[mcp_servers.exegete.env]` line with
+`[mcp_servers.exegete]`; and, if the settings screen had no place for
+them, the `[mcp_servers.exegete.env]` line with
 the two settings under it.
 
 **Step 3. Give Codex a folder of its own, restart, and check.** Codex
@@ -1225,8 +1378,9 @@ Windows, File Explorer opens your home folder when you type
 `%USERPROFILE%` in its address bar): the lines above end by starting
 `codex`, the command line, which the desktop app does not need. You
 open the folder in the app once Codex is chosen, below. Given your home
-folder, Documents, your projects folder (`~/QualCoder projects`) or a
-folder with transcripts or other study files instead, Codex would work
+folder, Documents, your projects folder (`~/Exegete projects`, or
+`~/QualCoder projects`, the earlier default) or a folder with
+transcripts or other study files instead, Codex would work
 among them: what it reads there goes to OpenAI without passing through
 Exegete, and what it changes there is changed without Exegete's
 approval step, preview or backup.
@@ -1272,9 +1426,9 @@ it is `/permissions`. The other two modes take the decision from you:
 that needs approval to an automatic reviewer, an AI, instead of you,
 and **Full access** runs every tool call without asking (Codex's source
 code). When Codex asks before an Exegete tool, it may offer to remember
-your answer for the session or for good; for the tools that write, and
-for `read_pseudonym_list`, answer each time, since a remembered answer
-lets later calls run unasked. On the command line, if Codex started in
+your answer for the session or for good; for the tools that write,
+answer each time, since a remembered answer lets later calls run
+unasked. On the command line, if Codex started in
 its read-only mode, you may keep it there (Exegete's tools work the
 same). Full access would run every tool call without asking you, so
 this project suggests leaving it aside.
@@ -1330,15 +1484,16 @@ safeguard", below, says holds in Codex too.
   `tool_timeout_sec`, and before asking again check whether the change
   was made (ask for the project summary, or the list of backups):
   Exegete may have finished it.
-- An `EXEGETE_TOOLSET` other than `full`, `core` or `lifecycle` stops
-  the server at start-up, and so does a relative path in
+- An `EXEGETE_TOOLSET` other than `full` or `core` stops Exegete at
+  start-up (`lifecycle`, the earlier name of `full`, is read as
+  `full`), and so does a relative path in
   `EXEGETE_WORKSPACE`; the error names the setting.
 - To switch Exegete off without removing it, add `enabled = false` on
   the line after `[mcp_servers.exegete]` (and delete it to switch it
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 204,000 characters with `lifecycle`; TOOLS.md says how that
+  (about 207,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1363,25 +1518,18 @@ treat them as untrusted, and Exegete's own safeguards (the approval
 of each suggestion, the preview before a deletion, the backups) do not
 depend on them.
 
-One tool that changes nothing is not marked read-only, on purpose:
-`read_pseudonym_list` sends every real name in the project's pseudonyms
-file to the AI provider, so the host should ask before it runs. It is
-in the `full` and `lifecycle` tool sets (the one-click extension's
-"Tool set" setting, `lifecycle` by default), not in `core`. It also
-carries `anthropic/requiresUserInteraction`, a mark Anthropic documents
-for Claude Code: from version 2.1.199, Claude Code asks before every
-call of such a tool in every permission mode, auto and
-`bypassPermissions` included, offers no "don't ask again", lets no
-allow rule skip it, and in `dontAsk` refuses it. Earlier versions ignore
-the mark. The tool is deprecated: v0.14 says so in its description
-and in every answer, and v0.15 removes it (QualCoder's Pseudonyms
-dialog, the button in Manage Files, shows the list without sending it
-anywhere).
+Some tools also carry `anthropic/requiresUserInteraction`, a mark
+Anthropic documents for Claude Code: `import_documents`, and
+`save_names_list`, which changes the names list every later import
+applies. From version 2.1.199, Claude Code asks before every call of
+such a tool in every permission mode, auto and `bypassPermissions`
+included, offers no "don't ask again", lets no allow rule skip it, and
+in `dontAsk` refuses it. Earlier versions ignore the mark.
 
-`check_for_updates` is not marked read-only either: it records each
+`check_for_updates` is not marked read-only: it records each
 check in Exegete's own folder, so a host that asks before a tool runs
-asks before it. It is in the `full` and `lifecycle` tool sets, not in
-`core`.
+asks before it. It is in the `full` tool set, the default on every
+route, not in `core`.
 
 What each host does, from Anthropic's pages as read on 27 September
 2026 ("Choose a permission mode" and the MCP page on code.claude.com;
@@ -1395,9 +1543,9 @@ What each host does, from Anthropic's pages as read on 27 September
   version 2.1.283, and before that on Pro, Max and Team plans.
   `bypassPermissions` runs everything, and `dontAsk` refuses anything
   that would ask. From 2.1.199, a tool marked
-  `anthropic/requiresUserInteraction` (here, `read_pseudonym_list`) is
-  asked about in every one of these modes but `dontAsk`, which refuses
-  it.
+  `anthropic/requiresUserInteraction` (here, `import_documents` and
+  `save_names_list`) is asked about in every one of these modes but
+  `dontAsk`, which refuses it.
 - **Cowork.** Each connector tool has its own setting (always allow,
   needs approval, blocked). In **Manual** mode, the default, a tool that
   needs approval is asked about. In **Auto**, a tool set to always allow
@@ -1434,27 +1582,26 @@ annotation, which takes priority)."). Under a server's default,
 `auto`, Codex asks before a tool that can replace or remove, runs a
 read-only tool without asking, and also runs without asking a tool that
 is neither but is marked as reaching nothing beyond this computer. Here
-that is the 16 tools that only add (`import_text_file`,
+that is the 18 tools that only add (`import_text_file`,
 `apply_codings`, `create_proposed_codes`, `create_code` and the rest,
-`open_file_for_reading` and `import_documents` among them from 0.14.3)
-and `read_pseudonym_list`, whose `anthropic/requiresUserInteraction`
-mark Codex does not read (`import_documents` carries it too). With
-`default_tools_approval_mode = "writes"` in the server's entry, Codex asks before every tool not
-marked read-only; the recipe above sets it, and asks before
-`read_pseudonym_list` whichever of the server's approval modes is set.
+`open_file_for_reading` and `import_documents` among them from 0.14.3,
+and `prepare_names_list` from 0.15.0). Codex does not read the
+`anthropic/requiresUserInteraction` mark that `import_documents` and
+`save_names_list` carry. `save_names_list` is also marked as changing
+what exists, so Codex asks before it under `auto` too. With
+`default_tools_approval_mode = "writes"` in the server's entry, Codex
+asks before every tool not marked read-only; the recipe above sets it.
 The desktop app's "Approve for me" sends what needs approval to an
 automatic reviewer instead of you, and "Full access" approves every
-call, `read_pseudonym_list` included. None of these marks covers the
+call. None of these marks covers the
 commands Codex runs by itself, which change files in its own folder and
 read files well beyond it (the recipe's steps 3 and 4).
 
 So, for work on real data, keep the host in its asking mode (Manual),
 with "allow once" for anything that writes. In an auto mode, a
-classifier, not you, decides on the writing tools, and on
-`read_pseudonym_list` in any host that does not honour its mark; in
-"Skip all approvals" or `bypassPermissions`, nothing is asked except,
-in Claude Code 2.1.199 and later, `read_pseudonym_list` and
-`import_documents`.
+classifier, not you, decides on the writing tools; in "Skip all
+approvals" or `bypassPermissions`, nothing is asked except, in Claude
+Code 2.1.199 and later, `import_documents` and `save_names_list`.
 
 Bringing documents in (`import_documents`, 0.14.3) takes
 two calls: the first only looks and changes nothing in the project (if
@@ -1572,10 +1719,13 @@ Analyse the transcript for file 1 with all its coding
 Exegete searches these locations by default:
 - the folder `EXEGETE_WORKSPACE` names, when it is set (with the
   desktop extension, its "Folder for projects", by default
-  `~/QualCoder projects`), at its top level only
+  `~/Exegete projects`), at its top level only, unless it is one of
+  the places below
 - `~/Documents/QualCoder_projects`
 - `~/Documents/QualCoder`
 - `~/QualCoder`
+- `~/Exegete projects` and `~/QualCoder projects` (the extension's
+  default folder, and its earlier default)
 - `~/Documents`
 
 Make sure your `.qda` project folder is in one of these locations, or tell Claude to search elsewhere:
@@ -1753,7 +1903,7 @@ Create a case-code matrix
 Updates are manual (a new release does not install itself). With the
 extension, Exegete tells you when one is out unless you switched that
 off; ask "How do I update Exegete?" for the steps (with the
-`lifecycle` or `full` tool set; with `core`, which has no check tool,
+`full` tool set; with `core`, which has no check tool,
 the notice links the update page). On the Terminal route the check is
 off unless you set `EXEGETE_UPDATE_CHECK` to `on` ("Environment
 variables the server reads").
@@ -1787,7 +1937,7 @@ steps again with the newer version.
 it fetched first, until the command names a version or uv's cache is
 cleared. To update, quit the client, change `exegete` (or the earlier
 name, qualcoder-mcp) in that entry to `exegete@` and the newest version
-as PyPI spells it (for example `exegete@0.14.3a0`), and open the client
+as PyPI spells it (for example `exegete@0.15.0a0`), and open the client
 again: it fetches that version when it next starts, which needs the
 internet that once. With the check for new versions on, "How do I
 update Exegete?" gives this step with the version filled in.
@@ -1827,7 +1977,7 @@ terminal:
 ```
 
 It prints `exegete` followed by the version and exits; version
-`0.14.3-alpha` shows as `0.14.3a0`, its normalised form. The server
+`0.15.0-alpha` shows as `0.15.0a0`, its normalised form. The server
 also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a
@@ -1924,7 +2074,11 @@ yet, and the first start after the update moves the server's own folder
   copies and new projects go there. `~/Documents/Qualcoder MCP Projects`
   is never moved or emptied, and `list_available_projects` still finds
   the projects in it; the first answer that names the workspace says so
-  once. The extension's folder, `~/QualCoder projects`, is unchanged.
+  once. The extension's folder was `~/QualCoder projects` until
+  0.15.0; new installs use `~/Exegete projects`, and an update moves a
+  setting left at the earlier default to it. No project is moved, both
+  folders are searched, and to keep new projects beside the earlier
+  ones, set it back to `~/QualCoder projects`.
 - **Your projects** are unchanged, except for one small file. Exegete
   keeps the AI coder name in `exegete.json` in the project folder. A
   project from before still has `qualcoder_mcp.json`, which is read as
@@ -2156,8 +2310,7 @@ around.
   see [SUPPORT.md](SUPPORT.md). Never paste research data into an
   issue; a redacted or synthetic example is enough. Include the
   Exegete version, your QualCoder version if you use it, your host (Claude Desktop,
-  Claude Code, LM Studio) and the toolset mode (full, core or
-  lifecycle).
+  Claude Code, LM Studio) and the toolset mode (full or core).
 - **MCP Documentation**: https://modelcontextprotocol.io/
 - **QualCoder Help**: https://github.com/ccbogel/QualCoder/wiki
 - **Claude Desktop**: https://claude.ai/help
@@ -2198,7 +2351,10 @@ If you want to remove the MCP server:
 
 3. **Optionally remove Exegete's own state**: `~/.exegete/`
    (and `~/.qualcoder_mcp`, the link to it left under its earlier name)
-   holds the AI-coding session files (`sessions/`), the last-used
+   holds the texts an import's preview read, kept for its import
+   (`import-texts.noindex/`, one file per document with its whole text
+   as read, before the names list; removed after the import), the
+   AI-coding session files (`sessions/`), the last-used
    project pointer (`mru_project.json`), the preview-token secret
    (`preview_secret`, which signs the tokens that authorise a destructive
    operation and keys the digests in the run manifests; deleting it
@@ -2232,7 +2388,8 @@ uninstalling, or by hand afterwards. Workspace copies made with
 (those made before 0.14.1, in `~/Documents/Qualcoder MCP Projects/`),
 or in the folder `EXEGETE_WORKSPACE` names (with the
 desktop extension, its "Folder for projects", by default
-`~/QualCoder projects/`).
+`~/Exegete projects/`, or `~/QualCoder projects/`, the earlier default,
+in an install that kept it).
 
 ---
 

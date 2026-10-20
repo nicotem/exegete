@@ -43,7 +43,7 @@ def _counts(project_path):
 
 
 def _make_session(setup_server):
-    out = server.analyze_for_coding([1], instruction="test")
+    out = server.start_coding_session([1], instruction="test")
     return out.split("Session ID: `")[1].split("`")[0]
 
 
@@ -179,14 +179,17 @@ class TestT17DocsPosture:
 
     def test_write_docstrings_name_the_master_gap(self):
         # P1-5 posture: 4.0 has no lock file; detection is best-effort
-        # heuristics, and every write docstring says so
+        # heuristics, and every write docstring says so. v0.15.0 (not
+        # presuming QualCoder, piece 5) says it in the write tools'
+        # sentence: for QualCoder 4.0, any signs of an open window, read
+        # with white space collapsed, since a line break may fall inside
         for tool in (server.apply_codings, server.set_memo,
                      server.import_text_file, server.delete_coding,
                      server.merge_codes, server.create_code,
                      server.restore_backup):
-            doc = tool.__doc__ or ""
-            assert "best-effort" in doc, tool.__name__
-            assert "4.0" in doc, tool.__name__
+            doc = " ".join((tool.__doc__ or "").split())
+            assert "signs of an open window" in doc, tool.__name__
+            assert "QualCoder 4.0" in doc, tool.__name__
 
     def test_select_project_names_the_limitation(self, setup_server,
                                                  qualcoder_db_path,
@@ -194,12 +197,21 @@ class TestT17DocsPosture:
         import shutil
         dest = tmp_path / "warn.qda"
         shutil.copytree(qualcoder_db_path, dest)
+        # v0.15.0 (not presuming QualCoder, piece 6): with no signals the
+        # limitation is named only when the project or this computer
+        # shows QualCoder has been used; an ai_data folder shows the
+        # project has been opened in it
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (dest / "ai_data").mkdir(exist_ok=True)
+        (dest / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         out = json.loads(server.select_project(str(dest)))
         warning = out.get("warning", "")
         # With no heuristic signals the limitation is named; with
         # signals the appears-open warning replaces it. Either way the
         # heuristic posture and 4.0 are named, never certainty.
-        assert ("best-effort" in warning
+        assert ("leaves no lock file" in warning
                 or "APPEARS to be open" in warning)
         assert "4.0" in warning
         assert "qualcoder_gui_signals" in out

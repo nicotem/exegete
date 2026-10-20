@@ -486,7 +486,7 @@ class TestThePageIsSafeByStructure:
 class TestWhatTheAssistantIsTold:
 
     def _description(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         return server.mcp.original_descriptions["open_file_for_reading"]
 
     def test_the_rules_come_first_and_within_the_cut(self):
@@ -506,7 +506,7 @@ class TestWhatTheAssistantIsTold:
             assert len(text) == 1187        # with without_codes
 
     def test_in_every_tool_set(self):
-        for mode in ("full", "core", "lifecycle"):
+        for mode in ("full", "core"):
             removed = server._apply_toolset(mode)
             try:
                 assert "open_file_for_reading" in server.mcp._tool_manager._tools
@@ -521,7 +521,7 @@ class TestWhatTheAssistantIsTold:
         assert "never open, read or look at them with any tool" in brief
 
     def test_import_text_file_says_its_text_goes_to_the_provider(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         text = " ".join(server.mcp.original_descriptions[
             "import_text_file"].split())
         assert text.startswith("Import text typed or pasted in the "

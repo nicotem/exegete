@@ -23,8 +23,8 @@ typed once elsewhere filled in: the version, author, licence,
 keywords, links and Python requirement from pyproject.toml, the
 extension's identifier from EXTENSION_NAME below (never from
 pyproject's name), and the tools from the server itself, started from
-the same files with the `lifecycle` tool set (the widest: `full` and
-`core` are subsets).
+the same files with the `full` tool set (the widest: `core` is a
+subset of `full`).
 
 It writes DIR/exegete-<version>.mcpb and the same files unpacked
 in DIR/exegete-<version>/, and prints the package's SHA-256 and the
@@ -79,9 +79,9 @@ PYTHON_VERSION = "3.13"
 # is typed once, in pyproject.toml or in the server's code.
 GENERATED = ("name", "version", "author", "repository", "homepage",
              "support", "keywords", "license", "tools")
-# The tool set whose tools the manifest lists: `lifecycle` is `full`
-# plus create_project, and `core` is a subset of `full`.
-LISTED_TOOLSET = "lifecycle"
+# The tool set whose tools the manifest lists: `full`, every tool, and
+# `core` is a subset of `full`.
+LISTED_TOOLSET = "full"
 EARLIEST_ZIP_TIME = 315532800          # 1980-01-01T00:00:00Z
 # Semantic Versioning 2.0.0's own pattern (semver.org), which the
 # specification asks of `version` and neither its schema nor the app

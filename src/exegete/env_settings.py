@@ -5,10 +5,12 @@ Every setting this server reads from its environment is read here and
 nowhere else (tests/test_v0141_compat.py forbids any other environment
 read in the package). Each has a new spelling, starting EXEGETE_, and
 the earlier one, which is still read until v1.0 (names.SETTINGS); the
-two settings of the check for new versions have the new spelling only
-(names.NEW_ONLY_SETTINGS, read by update_check and installed_as). The
-one other read here is not a setting: Windows' own folder, SystemRoot,
-from which the transition check starts PowerShell by its full path.
+settings that never had an earlier spelling have the new one only
+(names.NEW_ONLY_SETTINGS, read by update_check, installed_as,
+call_seconds, coder_name, the researcher's own coder name, and
+uses_qualcoder). The one other read here is not a setting: Windows' own
+folder, SystemRoot, from which the transition check starts PowerShell
+by its full path.
 
 The rule when both spellings are set:
 
@@ -23,9 +25,9 @@ The rule when both spellings are set:
 
 "The same thing" is judged after each value is tidied exactly as its
 read tidies it (spaces stripped where the read strips them, the tool set
-in lower case, a workspace path with `~` expanded, the two switches
-compared as "is it 1", the AI coder name after validate_coder_name), and
-a blank value counts as unset. The value then used is the raw text of
+in lower case, `lifecycle` read as `full`, a workspace path with `~`
+expanded, the two switches compared as "is it 1", the AI coder name
+after validate_coder_name), and a blank value counts as unset. The value then used is the raw text of
 the spelling chosen, so it behaves exactly as it did before the rename.
 """
 
@@ -52,7 +54,8 @@ def _blank(value: Optional[str]) -> bool:
 
 
 def _toolset(value: str) -> Any:
-    return value.strip().lower()
+    tidied = value.strip().lower()
+    return names.OLD_TOOLSET_NAMES.get(tidied, tidied)
 
 
 def _coder_name(value: str) -> Any:
@@ -122,8 +125,8 @@ def read(key: str, environ: Optional[Mapping[str, str]] = None) -> Reading:
     if not _blank(new_raw):
         return Reading(new_raw, new, False, False)
     # Neither says anything: a blank one is still handed on as it is, so
-    # a read that treats a blank value in its own way (a blank coder name
-    # stops the server) goes on doing so.
+    # a read that treats a blank value in its own way goes on doing so (a
+    # blank AI coder name means not set, v0.15.0: project_settings).
     if new_raw is not None:
         return Reading(new_raw, new, False, False)
     if old_raw is not None:
@@ -193,6 +196,44 @@ def installed_as(environ: Optional[Mapping[str, str]] = None
     return env.get(names.NEW_ONLY_SETTINGS["installed_as"])
 
 
+def installed_as_extension(environ: Optional[Mapping[str, str]] = None
+                           ) -> bool:
+    """Whether this copy runs as the desktop extension, by its own mark
+    (EXEGETE_INSTALLED_AS saying `extension`, spaces and letter case
+    aside), as updates.detect_route and the time per import call read
+    it."""
+    return (installed_as(environ) or "").strip().lower() == "extension"
+
+
+def call_seconds(environ: Optional[Mapping[str, str]] = None
+                 ) -> Optional[str]:
+    """EXEGETE_CALL_SECONDS, which has one spelling only (names.
+    NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
+    doc_import.call_seconds says what each value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["call_seconds"])
+
+
+def coder_name(environ: Optional[Mapping[str, str]] = None
+               ) -> Optional[str]:
+    """EXEGETE_CODER_NAME, the researcher's own coder name, which has one
+    spelling only (names.NEW_ONLY_SETTINGS): its raw value, or None when
+    it is not set. project_settings.settings_coder_name says what each
+    value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["coder_name"])
+
+
+def uses_qualcoder(environ: Optional[Mapping[str, str]] = None
+                   ) -> Optional[str]:
+    """EXEGETE_USES_QUALCODER, the answer to "Do you also use QualCoder on
+    this computer?", which has one spelling only (names.
+    NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
+    qualcoder_history.read_setting says what each value means."""
+    env = os.environ if environ is None else environ
+    return env.get(names.NEW_ONLY_SETTINGS["uses_qualcoder"])
+
+
 def windows_system_root() -> str:
     """Windows' own folder: SystemRoot, or C:\\Windows when it is unset
     or not a full path (a relative one would be looked up from the
@@ -230,3 +271,10 @@ def linux_display() -> bool:
     """Whether a Linux desktop session is reachable: DISPLAY (X11) or
     WAYLAND_DISPLAY is set."""
     return bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def wsl_distribution() -> bool:
+    """Whether WSL (Windows Subsystem for Linux) names the distribution
+    this process runs in: WSL_DISTRO_NAME is set. Inside WSL the list of
+    running programs holds none of Windows' (v0.15.0)."""
+    return bool(os.environ.get("WSL_DISTRO_NAME"))

@@ -28,6 +28,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server                   # noqa: E402
+from tool_counts import FULL_TOOLS  # noqa: E402
 from exegete import database, env_settings, names  # noqa: E402
 
 SETTINGS = names.SETTINGS
@@ -85,8 +86,9 @@ class TestTheReader:
         new, old = SETTINGS["ai_coder_name"]
         assert env_settings.read("ai_coder_name", {new: " ", old: "Ann"}) \
             == ("Ann", old, True, False)
-        # neither says anything: a blank is still handed on, so a blank
-        # coder name still stops the server as before
+        # neither says anything: a blank is still handed on, so the read
+        # that uses it decides what a blank means (v0.15.0: a blank AI
+        # coder name means not set, tests/test_v0150_coder_name_settings.py)
         assert env_settings.read("ai_coder_name", {old: ""}) \
             == ("", old, False, False)
 
@@ -244,14 +246,27 @@ class TestTheExtensionSetsBothSpellings:
     def test_the_six_entries_and_their_equality(self):
         env = self.TEMPLATE["server"]["mcp_config"]["env"]
         # Six for the three settings under both spellings, and two more
-        # with one spelling only: the check for new versions
-        assert len(env) == 8
+        # with one spelling only: the check for new versions; v0.15.0:
+        # three more, the AI coder name under both spellings and the
+        # researcher's own coder name, with one; and one more with one
+        # spelling, "Do you also use QualCoder on this computer?" (four
+        # with one spelling only)
+        assert len(env) == 12
+        # A departure, v0.15.0: EXEGETE_CALL_SECONDS, a setting with one
+        # spelling, is kept out of the manifest, since the extension's
+        # time per import call is measured for it, not offered in its
+        # settings (its mark, EXEGETE_INSTALLED_AS, gives it that time)
+        offered = set(names.NEW_ONLY_SETTINGS.values()) - {
+            names.NEW_ONLY_SETTINGS["call_seconds"]}
         assert set(env) - {n for pair in SETTINGS.values() for n in pair} \
-            == set(names.NEW_ONLY_SETTINGS.values())
-        for key in ("toolset", "workspace", "workspace_required"):
+            == offered
+        for key in ("toolset", "workspace", "workspace_required",
+                    "ai_coder_name"):
             new, old = SETTINGS[key]
             assert env[new] == env[old]
         assert env[SETTINGS["toolset"][0]] == "${user_config.toolset}"
+        assert env[SETTINGS["ai_coder_name"][0]] == \
+            "${user_config.ai_coder_name}"
 
     def test_it_starts_over_stray_old_values(self, tmp_path):
         import smoke_desktop_extension as smoke
@@ -265,7 +280,9 @@ class TestTheExtensionSetsBothSpellings:
         # the app lays the manifest's env over what it passes on
         proc = _run_server(home, {**stray, **config["env"]})
         assert proc.returncode == 0, proc.stderr
-        assert "Toolset mode: lifecycle" in proc.stderr
+        # v0.15.0: the extension's default is `full`, every tool
+        assert f"Toolset mode: full ({FULL_TOOLS} tools registered)" in \
+            proc.stderr
         assert "earlier spelling" not in proc.stderr
 
 

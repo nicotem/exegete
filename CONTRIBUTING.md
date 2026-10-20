@@ -20,9 +20,9 @@ When you report a bug, use the issue template. It asks for the
 Exegete version, the QualCoder version if you use QualCoder, the
 project's schema version (the `databaseversion` value in the `schema` block that
 `get_current_project` returns), your MCP host (Claude Desktop, Claude
-Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`,
-`lifecycle`, or `full` when the variable is not set) and your operating
-system.
+Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`, or
+`full` when the variable is not set; `lifecycle` is the earlier name of
+`full`, before 0.15.0) and your operating system.
 Never paste participant data, interview text or anything sensitive into
 an issue; describe the problem structurally ("a code name with an
 apostrophe", "a file of about 40k characters"). Security concerns take
@@ -61,15 +61,23 @@ is looked at first.
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
 5. **Continuous integration** runs on every pushed branch and on pull
-   requests to `main`: ten jobs. Six run the suite, on Ubuntu, Windows
-   and macOS, each on Python 3.10 and 3.13. Three build the desktop
+   requests to `main`: eighteen jobs. Ten run the suite, on Python 3.10
+   and 3.13: one job each on Ubuntu and on macOS, and three on Windows,
+   where the suite is slowest and runs in three parts made of whole test
+   files (`tests/conftest.py`). To run one part on your own computer,
+   set `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
+   three; left empty, every test runs. Three build the desktop
    extension, one on each system, and install and start it as Claude
    Desktop does (the Linux one also validates it with the official
    MCPB tool and checks that the lock has a wheel for every computer);
-   the tenth checks that the three builds are the same bytes. All ten
-   must be green. The workflow actions are pinned by commit SHA with a
-   version comment beside each pin; if you add or bump an action, keep
-   that shape (Dependabot maintains the pins). A bump also means
+   one checks that the three builds are the same bytes. Two compare the
+   text the import stores with QualCoder's own extraction: one against
+   QualCoder 4.0, and one watching QualCoder's newest code, whose
+   changes are a notice, never a failure. Two try the upgrade from the
+   package's earlier name, on Ubuntu and on Windows. Every job must be
+   green, the watch apart. The workflow actions are pinned by commit SHA
+   with a version comment beside each pin; if you add or bump an action,
+   keep that shape (Dependabot maintains the pins). A bump also means
    recording the new SHA against the tag it really is, in
    `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`;
    that module's docstring carries the two API calls that resolve it.
@@ -162,8 +170,8 @@ rather than fewer.
   and prompt descriptions, error strings, result notes, CHANGELOG
   entries and commit messages use British spelling (behaviour, colour,
   analyse, organise, initialise, licence as a noun). Identifiers are
-  never changed: tool names (`analyze_for_coding`, `sanitize_formulas`,
-  `recolor_code`), argument names, JSON result keys, environment
+  never changed: tool names (`sanitize_formulas`, `recolor_code`),
+  argument names, JSON result keys, environment
   variable names, file names, SQL, and proper names such as "GNU
   Lesser General Public License" keep their exact spelling, including
   when a sentence mentions them. Code comments follow the same rule when a line is
@@ -212,9 +220,11 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
 │   │   ├── path_identity.py     # Whether a path is inside a folder, by the folder's identity
+│   │   ├── qualcoder_history.py # A project's history with QualCoder, worked out once per selection (0.15.0)
 │   │   ├── doc_import.py        # import_documents: the survey, the preview and the write (0.14.3)
 │   │   ├── doc_readers.py       # Each format's text, as QualCoder 4.0 reads it, with every departure named
 │   │   ├── import_reading.py    # The separate, short-lived process each document is read in
+│   │   ├── kept_texts.py        # The text a preview read, kept owner-only for its import (0.15.0)
 │   │   ├── import_paths.py      # Where documents may be imported from
 │   │   ├── import_words.py      # What the import says, in fixed plain words
 │   │   ├── import_page.py       # The page for checking letters that look garbled
@@ -223,6 +233,8 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── reading_copy.py      # The reading page: a file's whole text and its codings
 │   │   ├── reading_folder.py    # The private reading folder, and its tidying
 │   │   ├── opener.py            # Opening a file in its own app, or showing it in its folder
+│   │   ├── private_files.py     # The files Exegete keeps, and the project's Exegete folder (0.15.0)
+│   │   ├── names_file.py        # The names file: its five lines, and how it is read back (0.15.0)
 │   │   ├── origin_mark.py       # The internet-origin mark, carried to a copy
 │   │   ├── parts.py             # Whole-file reads in parts
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
@@ -237,6 +249,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release
+│   ├── make_timing_documents.py  # Made-up Word files for timing how long an import's preview reads
 │   └── create_test_project.py  # Test project generator
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/

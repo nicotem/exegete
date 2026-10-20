@@ -408,7 +408,10 @@ class TestTheCoderName:
         assert answer["coder_name"] is None
         assert answer["coder_name_known"] is False
         assert server.CODER_NAME_NOT_KNOWN_WARNING in answer["warnings"]
-        assert ("QualCoder records it when it first opens the project"
+        # v0.15.0: set_project_coder_name gives it one; QualCoder, if
+        # they use it, still records it when it first opens the project
+        assert ("set_project_coder_name gives it one, and QualCoder, if "
+                "they use it, records it when it first opens the project"
                 in server.CODER_NAME_NOT_KNOWN_WARNING)
         assert _stored_coder(answer) == ("", [server.SPEAKER_SYSTEM_CODER])
 
@@ -544,9 +547,10 @@ class TestAfterCreation:
 
         def hits():
             calls.append(1)
-            return ["/usr/bin/python3 -m qualcoder"]
+            return database.ProcessScan(("/usr/bin/python3 -m qualcoder",),
+                                        True)
 
-        monkeypatch.setattr(database, "_qualcoder_process_hits", hits)
+        monkeypatch.setattr(database, "_qualcoder_process_scan", hits)
         answer = create("Quiet")
         assert calls == []
         assert answer["qualcoder_gui_signals"] == []
@@ -566,6 +570,10 @@ class TestAfterCreation:
                    for step in second["next_steps"])
 
     def test_what_each_build_does_on_first_open(self):
+        # v0.15.0 (not presuming QualCoder, piece 6): the account is
+        # given whole when this computer shows QualCoder (its settings
+        # folder in the scratch home)
+        (Path.home() / ".qualcoder").mkdir(exist_ok=True)
         known = create("Known")
         opening = known["opening_in_qualcoder"]
         assert "without a message and without changing its format" in \
@@ -578,7 +586,10 @@ class TestAfterCreation:
                       "labels, arrows and memo notes on graphs",
                       "goes back under its parent code",
                       "become ordinary codes with no category",
-                      "Work on this project in QualCoder 4.0"):
+                      # fix round 1 of piece 6: 4.0 suggested, not
+                      # prescribed
+                      "If the researcher opens it in QualCoder, suggest "
+                      "4.0, which avoids these changes."):
             assert words in opening["3.8.2"]
         unknown = json.loads(server.create_project(
             "Unknown", coder_name_not_known=True))
@@ -601,8 +612,8 @@ class TestAfterCreation:
         import_documents, which keeps their text off the conversation;
         import_text_file is for text typed or pasted in the conversation
         (its own description says so). create_project is served in the
-        lifecycle set, which has import_documents."""
-        server._apply_toolset("lifecycle")
+        full set (every tool since 0.15.0), which has import_documents."""
+        server._apply_toolset("full")
         assert "import_documents" in server.mcp._tool_manager._tools
         steps = create("Material")["next_steps"]
         (step,) = [s for s in steps if "import_documents" in s]
@@ -660,8 +671,9 @@ class TestAfterCreation:
         workspace holds the one folder."""
         answer = create("Bare")
         folder = Path(answer["project_path"])
+        # v0.15.0: and an empty ai_data (new_project.CREATED_FOLDERS)
         assert sorted(p.name for p in folder.iterdir()) == [
-            "audio", "data.qda", "documents", "images", "video"]
+            "ai_data", "audio", "data.qda", "documents", "images", "video"]
         assert [p.name for p in folder.parent.iterdir()] == ["Bare.qda"]
         conn = sqlite3.connect(str(folder / "data.qda"))
         try:
@@ -669,6 +681,36 @@ class TestAfterCreation:
                                 ).fetchone()[0] == 0
             assert conn.execute("SELECT memo FROM project").fetchone() == (
                 "",)
+        finally:
+            conn.close()
+
+    def test_with_the_ai_coder_name_setting_two_files_more(self,
+                                                          monkeypatch):
+        """v0.15.0 (the coder names, piece 3), the named departure: with
+        the AI coder name filled in Exegete's settings, creation also
+        writes exegete.json, holding that name, and qualcoder_mcp.json,
+        written already marked as moved and holding no name; nothing
+        else. Without the setting, the test above holds (the suite clears
+        it)."""
+        from exegete.names import SETTINGS
+        monkeypatch.setenv(SETTINGS["ai_coder_name"][0], "Qwen 3.8 6bit")
+        answer = create("Two")
+        folder = Path(answer["project_path"])
+        assert sorted(p.name for p in folder.iterdir()) == [
+            "ai_data", "audio", "data.qda", "documents", "exegete.json",
+            "images", "qualcoder_mcp.json", "video"]
+        assert [p.name for p in folder.parent.iterdir()] == ["Two.qda"]
+        stored = json.loads((folder / "exegete.json").read_text(
+            encoding="utf-8"))
+        assert stored["ai_coder_name"]["name"] == "Qwen 3.8 6bit"
+        marker = json.loads((folder / "qualcoder_mcp.json").read_text(
+            encoding="utf-8"))
+        assert marker["moved_to"] == "exegete.json"
+        assert "ai_coder_name" not in marker
+        conn = sqlite3.connect(str(folder / "data.qda"))
+        try:
+            assert conn.execute("SELECT count(*) FROM journal"
+                                ).fetchone()[0] == 0
         finally:
             conn.close()
 
@@ -879,8 +921,10 @@ class TestRoundTrip:
         name, import, a category, a code in it and a sub-code under it,
         suggest, approve and apply two codings, read them back; the
         project is still 4.0's format in everything QualCoder reads."""
-        monkeypatch.setattr(database, "_qualcoder_process_hits",
-                            lambda: ["/usr/bin/python3 -m qualcoder"])
+        monkeypatch.setattr(
+            database, "_qualcoder_process_scan",
+            lambda: database.ProcessScan(("/usr/bin/python3 -m qualcoder",),
+                                         True))
         made = create("Round trip", coder_name="carol")
         assert made["selected"] and "APPEARS" not in json.dumps(made)
         folder = Path(made["project_path"])
@@ -900,7 +944,7 @@ class TestRoundTrip:
         child = json.loads(server.create_code(
             "Exercise", parent_code_id=parent["code"]["id"]))
         assert child["created"] is True, child
-        session = server.analyze_for_coding([file_id], instruction="test")
+        session = server.start_coding_session([file_id], instruction="test")
         assert session.lstrip().startswith("{"), session[:300]
         sid = json.loads(session)["coding_session_id"]
         recorded = json.loads(server.record_suggestions(sid, [
@@ -1259,7 +1303,7 @@ class TestCleanUpRemovesOnlyItsOwn:
         assert caught.value.leftovers.replaced
         assert (victim / "data.qda").read_bytes() == before
         assert sorted(p.name for p in victim.iterdir()) == [
-            "audio", "data.qda", "documents", "images", "video"]
+            "ai_data", "audio", "data.qda", "documents", "images", "video"]
 
     def test_the_folder_swapped_for_a_link_after_the_claim(
             self, tmp_path, monkeypatch):

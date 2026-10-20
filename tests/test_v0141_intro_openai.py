@@ -67,8 +67,10 @@ def _how_it_works():
                     "## Where your data goes")
 
 
-def _lifecycle_tools():
-    server._apply_toolset("lifecycle")
+def _full_tools():
+    # `full`, every tool, creating a project included since 0.15.0 (v0.14's
+    # `lifecycle` set until then)
+    server._apply_toolset("full")
     return {t.name: t for t in asyncio.run(server.mcp.list_tools())}
 
 
@@ -167,10 +169,10 @@ class TestTheIntroduction:
         # v0.14.2, the README rewritten to persuade: the list of what it
         # covers is "What you can do", one bold-led item per feature
         covers = _what_you_can_do()
-        tools = _lifecycle_tools()
+        tools = _full_tools()
         # Each item the list names, and the tools that carry it
         claims = {
-            "**Start a project** in QualCoder's format (Experimental)": [
+            "**Start a project** in QualCoder's format, or work on": [
                 "create_project", "copy_project_to_workspace"],
             "sort them into cases with attributes such as age, role or "
             "site": ["create_case", "create_attribute_type",
@@ -181,7 +183,7 @@ class TestTheIntroduction:
             "or through the conversation; sort them into cases": [
                 "import_text_file"],
             "**Code the files you choose, with suggestions you approve**": [
-                "analyze_for_coding", "record_suggestions",
+                "start_coding_session", "record_suggestions",
                 "update_suggestion_status", "apply_codings"],
             # v0.14.2, the README's first round of checks: who proposes
             # the codes, and that they wait for approval
@@ -205,7 +207,7 @@ class TestTheIntroduction:
             # second round: who reads it, so that it is not taken for the
             # reading of a whole file yourself, which is in development
             "a whole transcript with its codings, read by the assistant": [
-                "analyze_file_with_coding"],
+                "read_file_with_codings"],
             # v0.14.3: and by the researcher, on a page (no longer
             # marked provisional once the owner decided the design)
             "or by you on a page in your browser.": [
@@ -226,7 +228,8 @@ class TestTheIntroduction:
             assert words in covers, words
             for name in needed:
                 assert name in tools, (words, name)
-        # Creating a project is in the extension's default set only
+        # Creating a project is in `full`, the default set, not in core
+        assert "create_project" in tools
         assert "create_project" not in server.CORE_TOOLSET
 
     def test_what_still_needs_qualcoder_is_named_and_true(self):
@@ -243,8 +246,8 @@ class TestTheIntroduction:
                 "bringing in images, audio and video; coding by selecting "
                 "text yourself; coding images, audio, video or an area of a "
                 "PDF page; graphs; and QualCoder's Reports menu. If your "
-                "study needs any of these now, get QualCoder from the "
-                "start.") in needs
+                "study needs any of these now, you may want QualCoder "
+                "from the start.") in needs
         for gone in ("documents other than text", "Word, PDF",
                      "coding highlighted", "in development"):
             assert gone not in needs, gone
@@ -256,7 +259,7 @@ class TestTheIntroduction:
         params = inspect.signature(server.import_text_file).parameters
         assert "content" in params and "path" not in params
         # No tool codes media or draws a graph
-        for name in _lifecycle_tools():
+        for name in _full_tools():
             assert not re.search(r"image|audio|video|media|graph", name), name
 
     def test_the_whole_life_of_a_project_is_the_aim(self):
@@ -417,7 +420,7 @@ class TestTheSettingsEntry:
         env = _entry()["env"]
         assert set(env) <= _new_setting_names()
         assert env["EXEGETE_TOOLSET"] in server._VALID_TOOLSET_MODES
-        assert env["EXEGETE_TOOLSET"] == "lifecycle"
+        assert env["EXEGETE_TOOLSET"] == "full"
         # The folder, as the extension's default, is one the server
         # starts with and uses (the sandbox's home stands in for yours)
         manifest = json.loads(_read("packaging/desktop-extension/"
@@ -426,15 +429,19 @@ class TestTheSettingsEntry:
             manifest["user_config"]["projects_folder"]["default"]
         monkeypatch.setenv("EXEGETE_WORKSPACE", env["EXEGETE_WORKSPACE"])
         assert server._workspace_start_problem() is None
+        # v0.15.0: the extension's default, and so the recipe's, is
+        # ~/Exegete projects (tests/test_v0150_renames_folder.py)
         assert database.default_workspace() == \
-            Path.home() / "QualCoder projects"
+            Path.home() / "Exegete projects"
 
     def test_the_approval_lines(self):
         entry = _entry()
         assert entry["default_tools_approval_mode"] == "writes"
-        assert entry["tools"] == {"read_pseudonym_list":
-                                  {"approval_mode": "prompt"}}
-        assert "read_pseudonym_list" in _lifecycle_tools()
+        # v0.15.0: no table for one tool; the one the recipe asked about
+        # whatever the server's mode, read_pseudonym_list, was removed
+        # (the files design, piece 5)
+        assert "tools" not in entry
+        assert "read_pseudonym_list" not in _full_tools()
         for key in ("startup_timeout_sec", "tool_timeout_sec"):
             assert isinstance(entry[key], int) and entry[key] > 0, key
 
@@ -490,23 +497,32 @@ class TestCodexAsksBeforeEveryChange:
         entry = _entry()
         mode = entry["default_tools_approval_mode"]
         per_tool = {name: settings["approval_mode"]
-                    for name, settings in entry["tools"].items()}
-        for name, tool in _lifecycle_tools().items():
+                    for name, settings in entry.get("tools", {}).items()}
+        assert per_tool == {}
+        for name, tool in _full_tools().items():
             asks = codex_asks(tool.annotations, per_tool.get(name, mode))
             assert asks == (not tool.annotations.readOnlyHint), name
 
     def test_without_it_the_adding_tools_run_unasked(self):
         """What INSTALL.md and README say Codex's default does."""
-        tools = _lifecycle_tools()
+        tools = _full_tools()
         unasked = sorted(name for name, tool in tools.items()
                          if not tool.annotations.readOnlyHint
                          and not codex_asks(tool.annotations, "auto"))
-        assert "read_pseudonym_list" in unasked
-        adding = [n for n in unasked if n != "read_pseudonym_list"]
+        # v0.15.0: every tool Codex runs unasked by default adds; the one
+        # that changed nothing yet was marked not read-only,
+        # read_pseudonym_list, was removed (the files design, piece 5)
+        assert "read_pseudonym_list" not in tools
+        adding = unasked
         # 0.14.3: open_file_for_reading and import_documents add, so
         # Codex's default mode runs them unasked too, which INSTALL.md
-        # says (allow the import once elsewhere)
-        assert len(adding) == 16
+        # says (allow the import once elsewhere); 0.15.0: and
+        # analyze_for_coding, the earlier name of start_coding_session,
+        # listed with its annotations; and prepare_names_list, which
+        # makes the names file once (the files design, piece 3)
+        assert len(adding) == 18
+        assert "prepare_names_list" in adding
+        assert {"start_coding_session", "analyze_for_coding"} <= set(adding)
         assert "import_documents" in adding
         for name in ("import_text_file", "apply_codings",
                      "create_proposed_codes", "create_code"):
@@ -516,11 +532,14 @@ class TestCodexAsksBeforeEveryChange:
             assert codex_asks(tools[name].annotations, "auto"), name
         marks = _between(_flat("INSTALL.md"), "**Codex** (the ChatGPT "
                          "desktop app", "So, for work on real data")
-        assert ("Here that is the 16 tools that only add "
+        assert ("Here that is the 18 tools that only add "
                 "(`import_text_file`, `apply_codings`, "
                 "`create_proposed_codes`, `create_code` and the rest, "
                 "`open_file_for_reading` and `import_documents` among them "
-                "from 0.14.3) and `read_pseudonym_list`") in marks
+                "from 0.14.3, and `prepare_names_list` from 0.15.0). Codex "
+                "does not read the `anthropic/requiresUserInteraction` mark "
+                "that `import_documents` and `save_names_list` carry."
+                ) in marks
 
     def test_the_rule_would_notice(self):
         from mcp.types import ToolAnnotations
@@ -541,8 +560,8 @@ class TestCodexAsksBeforeEveryChange:
                       "sends each request that needs approval to an "
                       "automatic reviewer, an AI, instead of you",
                       "**Full access** runs every tool call without asking",
-                      "for the tools that write, and for "
-                      "`read_pseudonym_list`, answer each time",
+                      # v0.15.0: no exception for the removed tool
+                      "for the tools that write, answer each time",
                       "This project has not yet run Exegete in any OpenAI "
                       "app",
                       "This project does not recommend it for a project "
@@ -624,7 +643,7 @@ class TestServedTextsAreHostNeutral:
     def test_no_description_or_guidance_addresses_claude(self):
         texts = {"instructions": server.SERVER_INSTRUCTIONS,
                  "methods notes": server.METHODS_GUIDANCE}
-        for name, tool in _lifecycle_tools().items():
+        for name, tool in _full_tools().items():
             texts[f"tool {name}"] = tool.description or ""
         for prompt in asyncio.run(server.mcp.list_prompts()):
             texts[f"prompt {prompt.name}"] = prompt.description or ""
@@ -659,7 +678,7 @@ class TestServedTextsAreHostNeutral:
 
     def test_the_session_start_says_the_assistant(self, setup_server):
         out = asyncio.run(server.mcp.call_tool(
-            "analyze_for_coding", {"file_ids": [1], "instruction": "test"}))
+            "start_coding_session", {"file_ids": [1], "instruction": "test"}))
         blocks = out[0] if isinstance(out, tuple) else out
         text = json.loads("".join(getattr(b, "text", "")
                                   for b in blocks))["instructions"]
@@ -815,8 +834,10 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "project for the chat.\" "
                 "(<https://learn.chatgpt.com/docs/projects>",
                 # (the owner, 1 October 2026: warn, don't prescribe)
+                # v0.15.0, fix round 1: both folders, as PRIVACY names them
                 "Given your home folder, Documents, your projects folder "
-                "(`~/QualCoder projects`) or a folder with transcripts or "
+                "(`~/Exegete projects`, or `~/QualCoder projects`, the "
+                "earlier default) or a folder with transcripts or "
                 "other study files instead, Codex would work among them: "
                 "what it reads there goes to OpenAI without passing through "
                 "Exegete",
@@ -1087,8 +1108,11 @@ class TestTheStepsANewcomerCanGetWrong:
         assert warning in first
         steps = first.replace(warning, "")
         assert re.findall(r"\bClaude\b(?! Desktop)", steps) == []
+        # (the whole-branch review of v0.15.0, round 1: "If you also use
+        # QualCoder, close the project there before the assistant changes
+        # it")
         for words in ("Ask the assistant to",
-                      "Before the assistant changes a project"):
+                      "before the assistant changes it"):
             assert words in first, words
 
 
@@ -1130,11 +1154,11 @@ class TestTheOtherFirstImpressions:
                         "AI-assisted qualitative analysis of QualCoder "
                         "projects"):
                 assert old not in text, (where, old)
+        # v0.15.0: the default set creates a project on every route
         assert ("- [ ] A project to work on (a `.qda` folder, in "
-                "QualCoder's format): the standard tool set this setup uses "
-                "cannot create one; the one-click extension can, and so can "
-                "this setup with `EXEGETE_TOOLSET=lifecycle` (INSTALL.md)"
-                ) in _flat("QUICKSTART.md")
+                "QualCoder's format), or none: the default tool set, `full`, "
+                "can create one in the conversation (INSTALL.md says where "
+                "it goes)") in _flat("QUICKSTART.md")
 
     def test_the_texts_the_first_pass_did_not_read(self):
         """v0.14.2 (the owner's ruling of 7 October 2026): the opening
@@ -1459,7 +1483,7 @@ class TestAssistantsOwnFileAccess:
                    for value in project.values())
         for name in ("list_available_projects", "select_project",
                      "get_current_project", "create_project"):
-            assert name in _lifecycle_tools(), name
+            assert name in _full_tools(), name
 
     def test_readme_links_to_the_hosts_section(self):
         link = ("[PRIVACY.md, \"Assistants that open files by themselves\"]"

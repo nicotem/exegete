@@ -28,8 +28,9 @@ of a project from the conversation. It runs as an MCP server.
 ## Where things are
 
 - `src/exegete/server.py`: the MCP server, with its tools, resources,
-  prompts, help topics and the assistant's brief. Tool sets: `full`,
-  `core` and `lifecycle` (`EXEGETE_TOOLSET`).
+  prompts, help topics and the assistant's brief. Tool sets: `full`
+  and `core` (`EXEGETE_TOOLSET`); `lifecycle`, the earlier name of
+  `full`, is read as `full`.
 - `database.py`: the project database, in QualCoder's format (schema
   v17, as QualCoder 4.0 writes it). `new_project.py`: creating a project.
 - `preview_tokens.py`: preview before confirm. `memo_privacy.py`: the
@@ -37,13 +38,21 @@ of a project from the conversation. It runs as an MCP server.
 - `project_settings.py`: the AI coder name file. `state_folder.py`: the
   state folder. `transition.py`: tidying up after the rename.
 - `path_identity.py`: containment checks by folder identity.
+  `qualcoder_history.py`: a project's history with QualCoder (the
+  traces, and the researcher's answer to "Do you also use QualCoder on
+  this computer?", that decide whether a text's notes about QualCoder
+  apply), worked out once per selection.
 - `doc_import.py`, `doc_readers.py`, `import_reading.py` and their
-  neighbours (`import_*.py`, `garbled_text.py`): bringing documents in
+  neighbours (`import_*.py`, `garbled_text.py`, `kept_texts.py`, the
+  text a preview read, kept for its import): bringing documents in
   (`import_documents`, 0.14.3; the optional part
   `pdf-epub` reads PDF and EPUB). `reading.py`, `reading_copy.py`,
   `reading_folder.py`, `opener.py`, `origin_mark.py`: reading a whole
   file on the researcher's screen (`open_file_for_reading`).
   `parts.py`: long files read in parts.
+  `private_files.py`: the four kinds of file Exegete keeps, and the
+  project's `Exegete` folder for files the researcher fills in (listed,
+  never read into an answer).
 - `refi_export.py`: REFI-QDA. `coder_comparison.py`: coder agreement.
 - `updates.py`: the check for new versions (`check_for_updates` and the
   notes given once). `release.py`: this release's version, date and
@@ -75,9 +84,10 @@ of a project from the conversation. It runs as an MCP server.
   only.
 - **Tool descriptions are measured.** Tests pin the size sent with every
   request. Rules a model must not miss sit within a description's first
-  2,048 characters, because Claude Code cuts there; the few left past the
-  cut, each with its reason, are listed in `LEFT_PAST_THE_CUT` in
-  `tests/test_v0142_description_cut.py`.
+  2,048 characters: Claude Code cut there before its version 2.1.296; it
+  now keeps 4,096 (16,384 through tool search), and 2,048 is kept as a
+  margin. The few left past it, each with its reason, are listed in
+  `LEFT_PAST_THE_CUT` in `tests/test_v0142_description_cut.py`.
 - **Documents:** plain UK English, no em dashes. Many sentences in the
   documents are pinned by tests, so move the pin with its sentence.
   Explain risks and suggest alternatives; do not prescribe.

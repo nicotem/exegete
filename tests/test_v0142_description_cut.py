@@ -5,7 +5,7 @@ Claude Code keeps only the first 2,048 characters of each tool
 description, and of the server's opening text, and tells the model
 nothing about the rest. In v0.14.1, 30 of the 73 descriptions were
 longer, and some of the rules a model must not miss sat past the cut
-(measured on 3.13.5; 3.10 to 3.12 had more past it): analyze_for_coding's
+(measured on 3.13.5; 3.10 to 3.12 had more past it): start_coding_session's
 judgement of requests (from character 3,489), the preview-then-confirm
 paragraphs of merge_codes and prune_backups, the refusal while QualCoder
 has the project open in five write tools, the private-note refusal in
@@ -17,10 +17,10 @@ places, nothing is reworded and nothing is shortened; the shortening is
 v0.15's. What this file pins:
 
 - every rule listed below sits wholly within the first 2,048 characters
-  of every description that carries it, in every tool set (full, core,
-  lifecycle), on the interpreter running the suite (3.10 to 3.12 keep
-  a docstring's indentation, so the same rule sits further in there,
-  and CI runs 3.10 and 3.13);
+  of every description that carries it, in every tool set (full and
+  core; lifecycle too until 0.15.0), on the interpreter running the
+  suite (3.10 to 3.12 keep a docstring's indentation, so the same rule
+  sits further in there, and CI runs 3.10 and 3.13);
 - the rules that do not fit are listed, each with its reason, and are
   checked to be past the cut, so the list cannot rot;
 - which tools carry each rule, so a rule dropped from a tool is seen;
@@ -52,16 +52,21 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server  # noqa: E402
 
-# Claude Code's cut, in characters (since its version 2.1.84)
+# Rules a model must not miss sit within a description's first 2,048
+# characters: Claude Code cut there from its version 2.1.84 until 2.1.296;
+# it now keeps 4,096 (16,384 through its tool search), and 2,048 is kept
+# as a margin (whole-branch review of v0.15.0, round 1)
 CUT = 2048
 
 # name: (kind, first words, last words, or None for the end of the
 # paragraph, or "." for the end of the sentence)
 RULES = {
     # Shared by many tools
+    # v0.15.0 (not presuming QualCoder, piece 5): one sentence, which
+    # names both causes of the lock file and the signs of a 4.0 window
     "qualcoder_open_refusal": (
-        "safety", "Refused while QualCoder has the project open",
-        "never write while any QualCoder window has this project open."),
+        "safety", "Refused while the project's lock file is active",
+        "ask the researcher before writing."),
     "private_note_marker": (
         "refusal", "Text containing '#####', QualCoder's private-note "
         "marker, is refused", None),
@@ -74,7 +79,7 @@ RULES = {
         "capability that hide coders)", None),
     "close_qualcoder_40_before_renaming": (
         "safety", "QualCoder 4.0 writes no lock file, so Exegete "
-        "cannot see a 4.0 window", None),
+        "may miss a 4.0 window", None),
     "relay_position_safety_warning": (
         "safety", "contains `position_safety_warning`", "."),
     # Grounding and the judgement of requests
@@ -119,27 +124,27 @@ RULES = {
     "approve_on_the_users_word": (
         "approval", "Use this to record the USER'S decisions", None),
     "proposal_workflow_approval": (
-        "approval", "WORKFLOW: analyze_for_coding creates a session", None),
+        "approval", "WORKFLOW: start_coding_session creates a session", None),
     "ask_for_the_coder_name": (
         "approval", "Covers codings, annotations, journal entries", None),
     "researchers_coder_name": ("approval", "THE RESEARCHER'S CODER NAME:",
                                None),
     # Writes, destructive tools and QualCoder being open
-    "qualcoder_open_stop": ("safety", "QUALCODER OPEN: if the result has",
+    "qualcoder_open_stop": ("safety", "IN USE: if `qualcoder_open` is true",
                             None),
-    "apply_refused_while_open": (
-        "safety", "Writes are refused while QualCoder has the project open",
-        "then retry."),
+    # apply_codings' own wording of the refusal ("Writes are refused
+    # while QualCoder has the project open ... then retry.") became, in
+    # v0.15.0 (not presuming QualCoder, piece 5), the write tools'
+    # sentence: qualcoder_open_refusal, whose carriers now include it
     "apply_other_project_refused": (
         "refusal", "The session must belong to the CURRENTLY OPEN project",
         "is refused."),
     "relay_open_warning": (
-        "safety", "The result may include a `warning`, for example that "
-        "QualCoder", None),
+        "safety", "The result may include a `warning`; RELAY it.", None),
     "where_the_next_write_lands": (
         "safety", "QualCoder 4.0 detection is best-effort", None),
     "open_signals": (
-        "safety", "Also reports whether QualCoder currently has this "
+        "safety", "Also reports whether another program may have this "
         "project open", None),
     "work_on_a_copy": (
         "safety", "IMPORTANT: work on a project in the workspace", None),
@@ -175,10 +180,11 @@ RULES = {
     "shared_name": ("safety", "Two people who share a name", None),
 }
 
-# Which tools carry each rule, in the lifecycle set (every tool)
+# Which tools carry each rule, in the full set (every tool)
 CARRIERS = {
     "qualcoder_open_refusal": {
-        "add_annotation", "add_journal_entry", "create_attribute_type",
+        "add_annotation", "add_journal_entry", "apply_codings",
+        "create_attribute_type",
         "create_case", "create_category", "create_code",
         "create_proposed_codes", "delete_annotation", "delete_category",
         "delete_code", "delete_coding", "import_text_file",
@@ -199,21 +205,21 @@ CARRIERS = {
     "hidden_coder_override": {"set_memo", "update_annotation"},
     "close_qualcoder_40_before_renaming": {"rename_case", "rename_file"},
     "relay_position_safety_warning": {
-        "add_annotation", "analyze_file_with_coding", "apply_codings",
+        "add_annotation", "read_file_with_codings", "apply_codings",
         "edit_suggestion", "propose_codes", "record_suggestions"},
-    "grounding_read": {"analyze_file_with_coding"},
+    "grounding_read": {"read_file_with_codings"},
     "grounding_record": {"record_suggestions"},
     "grounding_propose": {"propose_codes"},
-    "grounding_rules": {"analyze_for_coding"},
-    "methodological_judgement": {"analyze_for_coding"},
+    "grounding_rules": {"start_coding_session"},
+    "methodological_judgement": {"start_coding_session"},
     "not_intercoder_reliability": {"compare_coders"},
     "report_both_kappas": {"compare_coders"},
     "not_qualcoder_cooccurrence": {"find_cooccurring_codes"},
     "reading_and_code": {"edit_suggestion"},
     "reread_after_run": {"pseudonymise_source"},
-    "three_questions": {"analyze_for_coding"},
-    "coding_workflow_approval": {"analyze_for_coding"},
-    "session_pairings": {"analyze_for_coding"},
+    "three_questions": {"start_coding_session"},
+    "coding_workflow_approval": {"start_coding_session"},
+    "session_pairings": {"start_coding_session"},
     "suggestion_pairings": {"record_suggestions"},
     "approved_only": {"apply_codings"},
     "decide_again": {"edit_suggestion"},
@@ -221,8 +227,7 @@ CARRIERS = {
     "proposal_workflow_approval": {"propose_codes"},
     "ask_for_the_coder_name": {"set_project_ai_coder_name"},
     "researchers_coder_name": {"create_project"},
-    "qualcoder_open_stop": {"analyze_for_coding"},
-    "apply_refused_while_open": {"apply_codings"},
+    "qualcoder_open_stop": {"start_coding_session"},
     "apply_other_project_refused": {"apply_codings"},
     "relay_open_warning": {"select_project"},
     "where_the_next_write_lands": {"select_project"},
@@ -245,33 +250,36 @@ CARRIERS = {
 
 # What does not fit, and why. Moving words and nothing else, the first
 # 2,048 characters of these two descriptions cannot hold every rule
-# they carry: analyze_for_coding's grounding rules (1,394 characters)
+# they carry: start_coding_session's grounding rules (1,394 characters)
 # and judgement of requests (1,245) are 2,641 together, and ten of
 # pseudonymise_source's paragraphs are rules. The ones placed first are
 # the ones no other text gives the model. The rest reach the model
 # another way, named in each reason, and v0.15's shorter descriptions
 # are where they return.
 LEFT_PAST_THE_CUT = {
-    ("analyze_for_coding", "grounding_rules"):
+    ("start_coding_session", "grounding_rules"):
         "does not fit beside the judgement of requests; the short "
         "grounding rules sit within the cut of the three tools that read, "
-        "record and propose (analyze_file_with_coding, record_suggestions, "
+        "record and propose (read_file_with_codings, record_suggestions, "
         "propose_codes), and the opening text names them; one sentence, "
         "where the participant is unsure or contradicts themselves, is in "
         "none of those and reaches Claude Code only through read_brief, "
         "whose answer carries the grounding rules whole",
-    ("analyze_for_coding", "coding_workflow_approval"):
+    ("start_coding_session", "coding_workflow_approval"):
         "update_suggestion_status says within its cut to approve only "
         "what the user confirmed; the opening text and this tool's answer "
         "say the same",
-    ("analyze_for_coding", "qualcoder_open_stop"):
+    ("start_coding_session", "qualcoder_open_stop"):
         "the answer carries qualcoder_open and, when it is true, "
-        "action_required, which asks the user to close QualCoder",
-    ("analyze_for_coding", "session_pairings"):
+        "action_required, which names both causes of the lock file and "
+        "asks the researcher to close the project in QualCoder or to wait "
+        "a moment",
+    ("start_coding_session", "session_pairings"):
         "record_suggestions, where a pairing is recorded, carries its "
         "own rule on pairings within its cut",
     ("pseudonymise_source", "qualcoder_open_refusal"):
-        "the lock gate refuses the write under QualCoder 3.x; the rule "
+        "the lock gate refuses the write while the lock file is active; "
+        "the rule "
         "for 4.0 is in select_project and get_current_project, whose "
         "answers report the open state; a backup is always taken first",
     ("pseudonymise_source", "names_left_unrewritten"):
@@ -300,7 +308,7 @@ LEFT_PAST_THE_CUT = {
         "to relay it",
 }
 
-TOOL_SETS = ("full", "core", "lifecycle")
+TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
 
 def _words(text):
@@ -343,8 +351,8 @@ def _served(mode):
 def served():
     """Every tool set, measured once for the module. A module fixture is
     set up before conftest's per-test snapshot of the registry, so it
-    puts the registry and the opening text back itself: `lifecycle`
-    adds a tool that must not stay registered for later tests."""
+    puts the registry and the opening text back itself: `core` removes
+    tools and marks texts, which must not stay so for later tests."""
     tools = server.mcp._tool_manager._tools
     before = dict(tools)
     instructions = server.mcp._mcp_server.instructions
@@ -393,7 +401,7 @@ class TestTheRulesSitWithinTheCut:
                     f"take it off LEFT_PAST_THE_CUT")
 
     def test_each_rule_is_carried_by_the_tools_listed(self, served):
-        tools, _ = served["lifecycle"]
+        tools, _ = served["full"]
         for rule in RULES:
             carriers = {name for name, description in tools.items()
                         if _spans(rule, description)}
@@ -402,10 +410,10 @@ class TestTheRulesSitWithinTheCut:
         assert {rule for _, rule in LEFT_PAST_THE_CUT} <= set(RULES)
 
     def test_the_rules_the_brief_names_are_within_the_cut(self, served):
-        """The two the mandate names, spelled out: analyze_for_coding's
+        """The two the mandate names, spelled out: start_coding_session's
         judgement of requests and its three questions, in every set."""
         for mode, (tools, _) in served.items():
-            d = tools["analyze_for_coding"]
+            d = tools["start_coding_session"]
             assert server.METHODOLOGY_VOCABULARY in d
             assert (d.index(server.METHODOLOGY_VOCABULARY)
                     + len(server.METHODOLOGY_VOCABULARY)) <= CUT, mode
@@ -427,8 +435,8 @@ class TestTheRulesSitWithinTheCut:
 WORDS_0141 = {
     "add_annotation": (1697, 1406, "eb754cae1fd5fd0c"),
     "add_journal_entry": (1137, 943, "c3a73ee84df3096d"),
-    "analyze_file_with_coding": (1977, 1620, "c800e920aaa2fe59"),
-    "analyze_for_coding": (6101, 4958, "c774dca8502c1ab6"),
+    "read_file_with_codings": (1977, 1620, "c800e920aaa2fe59"),
+    "start_coding_session": (6101, 4958, "c774dca8502c1ab6"),
     "apply_codings": (2627, 2152, "f9afa83a8784cd88"),
     "cleanup_old_sessions": (842, 684, "e2e05fad8d2357ea"),
     "compare_coders": (3019, 2472, "de6c406b324c2ce9"),
@@ -478,7 +486,6 @@ WORDS_0141 = {
     "prune_backups": (2994, 2430, "b8ae6944043c1e4f"),
     "pseudonymise_source": (17365, 12728, "b6893aa71b9265ec"),
     "query_by_attribute": (2683, 1899, "ee3b00a292d0da3f"),
-    "read_pseudonym_list": (1041, 861, "ef606baddb82d7dd"),
     "recolor_code": (1355, 1139, "0fe80dae7a62d909"),
     "record_suggestions": (4458, 3577, "1ba15cb053d569d9"),
     "rename_case": (2201, 1825, "086ef404a0973106"),
@@ -512,8 +519,8 @@ WORDS_0141 = {
 REWORDED_0142 = {
     "add_annotation": (1697, 1405, "7e67b8e3fa3560e5"),
     "add_journal_entry": (1137, 942, "4c7856247accfc00"),
-    "analyze_file_with_coding": (1971, 1616, "a2610f4cbbf9c988"),
-    "analyze_for_coding": (6098, 4956, "552625d8365c92bd"),
+    "read_file_with_codings": (1971, 1616, "a2610f4cbbf9c988"),
+    "start_coding_session": (6098, 4956, "552625d8365c92bd"),
     "apply_codings": (2627, 2151, "17b1da5dbe428f09"),
     "compare_coders": (3006, 2460, "765d945ba6b6883d"),
     "copy_project_to_workspace": (1819, 1496, "aff3f80aba8508d9"),
@@ -535,7 +542,6 @@ REWORDED_0142 = {
     "propose_codes": (2692, 2141, "8ad7a5689cff30b5"),
     "prune_backups": (2990, 2427, "4ee76d2c6af4ce09"),
     "pseudonymise_source": (17353, 12719, "285a3cafd81577fe"),
-    "read_pseudonym_list": (1040, 860, "007d46e6ea19c2bf"),
     "record_suggestions": (4447, 3566, "0f2d93c94c263b3d"),
     "rename_case": (2197, 1822, "6de3b8bd6d406a77"),
     "rename_file": (3504, 2916, "b5af58742c3ce775"),
@@ -554,7 +560,7 @@ REWORDED_0142 = {
 
 # Every description as this release serves it
 # The descriptions v0.14.3 changes, as it serves them, on
-# top of 0.14.2's words: analyze_file_with_coding (reads in parts, the
+# top of 0.14.2's words: read_file_with_codings (reads in parts, the
 # `start` argument, and the `without_codes` argument, reading without
 # codes) and import_text_file (that its text passes through the
 # conversation, its pointer to import_documents, the deprecated
@@ -566,12 +572,150 @@ REWORDED_0142 = {
 # named rather than a default), copy_project_to_workspace and
 # import_text_file (the folder set for projects, likewise)
 CHANGED_0143 = {
-    "analyze_file_with_coding": (2293, 1878, "892912ccbe8f76ac"),
+    "read_file_with_codings": (2293, 1878, "892912ccbe8f76ac"),
     "copy_project_to_workspace": (1801, 1483, "997bac5f12875338"),
     "create_project": (1915, 1505, "3f93233739c71562"),
     "import_text_file": (4022, 2994, "f51bac7ab0c34434"),
 }
-WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143}
+# The descriptions v0.15.0 changes, as it serves them, on top of 0.14.3's
+# words. Not presuming QualCoder, piece 1 (the seven inaccurate texts,
+# tests/test_v0150_qualcoder_texts_1.py): the project's pseudonyms.json
+# is "its names list, applied at import", not QualCoder's import-time
+# list, in get_current_project, read_pseudonym_list and
+# pseudonymise_source's use_project_pseudonyms; get_current_project
+# also has one line rewrapped so that it is no longer than before, and
+# its fix round gave read_pseudonym_list get_current_project's words,
+# so that it too is shorter than before. The renames, piece 2
+# (tests/test_v0150_renames_folder.py): list_available_projects names the
+# desktop extension's folder for projects and its earlier default among
+# its places, and that the workspace is searched at its top level only
+# unless it is one of them; it grows by 142 characters, as its design
+# says. Not presuming QualCoder, piece 2 (what pseudonymisation is for,
+# tests/test_v0150_qualcoder_texts_2.py) adds a paragraph to
+# pseudonymise_source's description, after every rule pinned within the
+# first 2,048 characters (the owner's decision of 12 October 2026: no
+# ceiling on the tool texts; the size is reported in the CHANGELOG).
+# The renames, piece 3 (tests/test_v0150_renames_tools.py): two
+# tools renamed, start_coding_session and read_file_with_codings (their
+# lines above are under their new names), and the new names, word for
+# word, in every description that names them; explain_ai_coding_tools
+# drops its example "How do I use analyze_for_coding?"; list_backups and
+# prune_backups say "Exegete's backups" and the kind 'exegete'. Later
+# v0.15.0 pieces add their lines here. The files design, piece 5, removes
+# read_pseudonym_list (ruling 78): its rows, here and in the 0.14.1 and
+# 0.14.2 tables above, went with it.
+CHANGED_0150 = {
+    # the files design, piece 1: get_current_project lists the files
+    # Exegete keeps for the project in its Exegete folder
+    # (files_exegete_keeps), a paragraph after pseudonyms_json's; 1,920
+    # to 2,067 characters on 3.13 (tests/test_v0150_private_files.py)
+    "get_current_project": (2066, 1686, "eb39266c8cb70989"),
+    "list_available_projects": (904, 716, "0117f9141c0b48ea"),
+    # the renames, piece 3
+    "compare_coders": (3004, 2458, "d2d2e9480ae8fbae"),
+    "edit_suggestion": (3389, 2721, "8b47aab19f6e5052"),
+    "explain_ai_coding_tools": (635, 517, "3f1f40dd7c7cab17"),
+    "list_backups": (2168, 1823, "79414633203c51eb"),
+    "propose_codes": (2696, 2145, "9f80d0ddcfc067bd"),
+    "prune_backups": (3030, 2464, "d7d3ffb7136f16b2"),
+    "record_suggestions": (4455, 3574, "8eebddf228bc704c"),
+    "review_suggestions": (1327, 1093, "7175c61a45e95f8e"),
+    "search_files": (4802, 3796, "a3506c45c5cadeb7"),
+    # (start_coding_session's line moved to piece 13's, below)
+    "update_suggestion_status": (1537, 1263, "f885b390be42a9ab"),
+    # the coder names, piece 1: create_project's paragraph on the
+    # researcher's coder name, which now comes from Exegete's settings
+    # when it is filled in, and the setter's refusal of that name; piece
+    # 2: create_project's sentence on set_project_coder_name, which
+    # corrects the name while nothing is recorded under it (2,228 to
+    # 2,374 characters on 3.13); piece 3: create_project's sentence on
+    # the AI coder name in the settings, which the new project stores
+    # (2,374 to 2,486), and export_refi_qda's name for that setting, no
+    # longer "this host's declaration" (2,089 to 2,105;
+    # tests/test_v0150_ai_coder_name_setting.py pins both)
+    "create_project": (2486, 1975, "3de9483aca76e003"),
+    "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
+    "export_refi_qda": (2186, 1803, "26fdfe7d1edb6d62"),
+    # not presuming QualCoder, piece 5: the write tools' closing
+    # paragraph in 26 descriptions, apply_codings' lock sentence and
+    # first safety guarantee, and restore_backup's item 4, each now
+    # one sentence naming both causes of the lock file and the signs
+    # of a QualCoder 4.0 window; every one is shorter than before
+    # (tests/test_v0150_qualcoder_texts_5.py)
+    "add_annotation": (1576, 1295, "3bac821e2956808a"),
+    "add_journal_entry": (1016, 832, "5bd02446471b324d"),
+    "apply_codings": (2496, 2031, "8fb1ef18c49210c3"),
+    "create_attribute_type": (2042, 1637, "db6c8ce575e25836"),
+    "create_case": (1588, 1330, "322f18769bd3e363"),
+    "create_category": (1780, 1424, "1cb094331ffa608e"),
+    "create_code": (2824, 2302, "4afc8edcc457f115"),
+    "create_proposed_codes": (1808, 1495, "976135978c55cbf7"),
+    "delete_annotation": (1865, 1489, "d2b3b1e544c8747e"),
+    "delete_category": (1619, 1331, "80c54259987e993d"),
+    "delete_code": (2521, 2061, "d660dcbb1daf32a5"),
+    "delete_coding": (2867, 2307, "ad4e0e0cb8346094"),
+    "import_text_file": (4059, 3021, "481e0147558819b6"),
+    "link_file_to_case": (1721, 1321, "6bf63a6d149042d8"),
+    "merge_category": (2423, 1967, "42aeef5b97fcd7a6"),
+    "merge_codes": (2748, 2285, "0a59d4b7a163c90a"),
+    "move_category": (1339, 1040, "368688abac4d0ce5"),
+    "move_code_to_category": (1676, 1338, "2590d024f0b97c26"),
+    "pseudonymise_source": (17791, 13074, "3fbebb2123003b54"),
+    "recolor_code": (1234, 1029, "1d4326ac95cbd2d9"),
+    "rename_case": (2065, 1701, "f26e0f2c3e992401"),
+    "rename_category": (939, 776, "b0f0f61ac346d4c4"),
+    "rename_code": (909, 746, "39a4d64e6ae7eb33"),
+    "rename_file": (3410, 2827, "a8bc00ae39bed6cc"),
+    # (restore_backup's line moved to the files design's piece 2, below)
+    "set_attribute": (1688, 1379, "bc73c6300bbf0bd6"),
+    "set_memo": (2551, 2048, "3a417646b9157db2"),
+    "update_annotation": (1931, 1599, "1aa9c4205c15c2ec"),
+    # not presuming QualCoder, piece 6: select_project's sentence on the
+    # warning when no sign of an open window is found, which now comes
+    # only when this project or computer shows QualCoder or the setting
+    # says yes (its fix round 1 named the setting); the same length as
+    # before (tests/test_v0150_qualcoder_texts_6.py)
+    "select_project": (2403, 1987, "588a84f350aec6c9"),
+    # not presuming QualCoder, piece 13: the four outcomes' sentence in
+    # the text start_coding_session's description shares ("Four
+    # outcomes:", without the attribution to QualCoder 4.0's assistant),
+    # 54 characters fewer on 3.13 (tests/test_v0150_qualcoder_texts_13.py)
+    "start_coding_session": (6038, 4904, "753c9a5eb76d3f91"),
+    # The whole-branch review of v0.15.0, round 1: the removals announced
+    # in v0.14 for v0.15 now say v0.15.1 (ruling 70), two characters more
+    # in each description that carries a deprecation sentence; and the
+    # names list's deprecation now leads with pseudonyms.json in the
+    # project folder, which every researcher can read without sending it
+    # anywhere, before QualCoder's dialog (77 characters more). The lines
+    # above for those already changed in this release moved with them
+    # (tests/test_v0150_wb_fix_r1.py). Round 2: the REFI-QDA export's,
+    # the journals' and the rename back's deprecation sentences name
+    # QualCoder's feature only for researchers who use it, the gap said
+    # as Exegete's (export_refi_qda, create_attribute_type, set_attribute
+    # and rename_file), and import_text_file says what pseudonymisation
+    # is for (ruling 74); their lines above moved with them
+    # (tests/test_v0150_wb_fix_r2.py)
+    "cleanup_old_sessions": (844, 686, "843ad008664c1c1b"),
+    "export_code_report": (1563, 1265, "f254265202c3248d"),
+    "merge_proposals": (665, 561, "c20e837ad86f296b"),
+    # the files design, piece 2: restore_backup's sentence on the
+    # project's Exegete folder, which a restore keeps as it is, after its
+    # paragraph on symlinks; 2,730 to 2,877 characters on 3.13
+    # (tests/test_v0150_restore_keeps_folder.py)
+    # The fourth reading of the documents (tests/test_v0150_lock_wording.py):
+    # the lock file's cause is QualCoder 3.8.2 in the write tools'
+    # sentence (26 descriptions, apply_codings' first guarantee and
+    # restore_backup's item 4), with "if there are some" for "when there
+    # are some", so their lengths hold; get_current_project,
+    # select_project, start_coding_session, rename_case and rename_file
+    # name both causes of the lock file, or ask for QualCoder 4.0 to be
+    # closed only if the researcher uses it, each shorter than before
+    # (get_current_project 2,066 characters on 3.13, from 2,067); its
+    # fix round 1: the renames say Exegete "may miss" a 4.0 window, not
+    # that it "cannot see" one (rename_case 2,065, rename_file 3,410)
+    "restore_backup": (2877, 2367, "06cea91506d0e578"),
+}
+WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to
@@ -583,6 +727,18 @@ NEW_IN_0142 = {"read_brief", "check_for_updates"}
 # tests/test_v0143_reading.py pins, and the import tool, whose description
 # tests/test_v0143_import_hostile.py pins
 NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
+# and in v0.15.0: the earlier names of the two tools renamed then, whose
+# one-sentence description tests/test_v0150_renames_tools.py pins
+EARLIER_NAMES_0150 = {"analyze_for_coding", "analyze_file_with_coding"}
+# and the tool that corrects the researcher's own coder name (the coder
+# names, piece 2), whose description
+# tests/test_v0150_coder_name_correction.py pins word for word, and
+# the names file's tool (the files design, piece 3), whose description
+# tests/test_v0150_names_file.py pins word for word, and the names list's
+# save (piece 4), whose description tests/test_v0150_save_names_list.py
+# pins word for word
+NEW_IN_0150 = {"set_project_coder_name", "prepare_names_list",
+               "save_names_list"}
 
 
 def _fingerprint(description):
@@ -594,9 +750,10 @@ def _fingerprint(description):
 class TestTheDescriptionsKeepTheirWords:
 
     def test_every_description_keeps_its_words_and_length(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         registered = server.mcp.original_descriptions
-        assert set(registered) == set(WORDS) | NEW_IN_0142 | NEW_IN_0143
+        assert set(registered) == (set(WORDS) | NEW_IN_0142 | NEW_IN_0143
+                                   | EARLIER_NAMES_0150 | NEW_IN_0150)
         exact = sys.version_info[:2] == (3, 13)
         changed = []
         for name, (length, solid, digest) in sorted(WORDS.items()):
@@ -614,10 +771,10 @@ class TestTheDescriptionsKeepTheirWords:
     def test_what_moved_is_what_the_release_says(self):
         """The fourteen descriptions this release reorders: in each, a
         rule now comes before the text it was moved past."""
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         moved = {
-            "analyze_for_coding": ("METHODOLOGICAL JUDGEMENT",
+            "start_coding_session": ("METHODOLOGICAL JUDGEMENT",
                                    "It reads no file"),
             "apply_codings": ("Text containing '#####'",
                               "Safety guarantees:"),
@@ -626,7 +783,9 @@ class TestTheDescriptionsKeepTheirWords:
             "delete_code": ("Two-step by design.", "SUB-CODES"),
             "delete_coding": ("Two guards", "A backup is created first"),
             "edit_suggestion": ("READING AND CODE", "Edits are not"),
-            "merge_category": ("Refused while QualCoder",
+            # v0.15.0: the refusal's paragraph is one sentence now (not
+            # presuming QualCoder, piece 5), in the same place
+            "merge_category": ("Refused while the project's lock file",
                                "Source category memo"),
             "merge_codes": ("Two-step by design.",
                             "The codebook changes too"),
@@ -635,7 +794,7 @@ class TestTheDescriptionsKeepTheirWords:
                                     "One file per call"),
             "record_suggestions": ("Text containing '#####'",
                                    "Every suggestion is validated"),
-            "rename_file": ("Refused while QualCoder",
+            "rename_file": ("Refused while the project's lock file",
                             "Refused, each with its reason"),
             "select_project": ("QualCoder 4.0 detection",
                                "Use this tool to change"),
@@ -653,8 +812,10 @@ class TestTheDescriptionsKeepTheirWords:
             "### Changed: the rules a model must not miss come first"):]
         entry = entry[:entry.index("### ", 4)]
         assert "In fourteen descriptions" in entry
+        # 0.14.2's entry names start_coding_session by its earlier name
+        earlier = {new: old for old, new in server.RENAMED_TOOLS.items()}
         for name in moved:
-            assert f"`{name}`" in entry, name
+            assert f"`{earlier.get(name, name)}`" in entry, name
         assert "is as 0.14.1 served it" not in entry_0142
         assert ("each keeps the words 0.14.1 served (fourteen changed "
                 "order; see above), and none is longer" in entry_0142)
@@ -689,7 +850,7 @@ class TestTheOtherWaysInAreReal:
             con.commit()
         finally:
             con.close()
-        session = json.loads(_call("analyze_for_coding", file_ids=[70],
+        session = json.loads(_call("start_coding_session", file_ids=[70],
                                    instruction="test"))
         answer = json.loads(_call(
             "record_suggestions",
@@ -721,6 +882,6 @@ class TestTheOtherWaysInAreReal:
             for name, description in tools.items():
                 found = re.search(_words(sentence), description)
                 assert not found or found.end() > CUT, (mode, name)
-        reason = LEFT_PAST_THE_CUT[("analyze_for_coding", "grounding_rules")]
+        reason = LEFT_PAST_THE_CUT[("start_coding_session", "grounding_rules")]
         assert "unsure or contradicts themselves" in reason
         assert "only through read_brief" in reason

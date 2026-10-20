@@ -5,8 +5,9 @@ The server cannot see where one conversation ends and the next begins,
 and hosts differ in what they pass on, so one brief reaches the
 assistant four ways (the brief study's decision 1):
 
-- the short version, under 2,000 characters and bytes, as the server's
-  opening text (Claude Code shows it, and keeps its first 2,048);
+- the short version, within the 2,048 characters and bytes Claude Code
+  keeps (under 2,000 until v0.15.0's rule 9 took it to 2,034), as the
+  server's opening text (Claude Code shows it);
 - read_brief, a small tool in every tool set, listed first, whose
   description asks to be called at the start of every conversation
   about a project; it returns the full version, or in the small set for
@@ -18,7 +19,7 @@ assistant four ways (the brief study's decision 1):
 
 The full version carries the two rules that span every tool, the
 grounding rules and the judgement of requests, composed from the very
-constants analyze_for_coding's description carries (decision 2), so the
+constants start_coding_session's description carries (decision 2), so the
 two copies cannot drift. Nothing held back for the owner's methods
 statement is served. The per-request sizes grow by read_brief's own
 entry and nothing else.
@@ -41,7 +42,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import exegete.server as server  # noqa: E402
 
 REPO = Path(__file__).parent.parent
-TOOL_SETS = ("full", "core", "lifecycle")
+TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
 # The full brief's line on exports, which names the exports whose file
 # keeps memos, private notes included
@@ -105,9 +106,12 @@ class TestTheOpeningText:
         short = server.SERVER_INSTRUCTIONS
         assert short == server.BRIEF_SHORT
         # Claude Code documents its cut in characters; a third-party test
-        # saw it near 2,060 bytes: both stay under 2,000
-        assert len(short) < 2000
-        assert len(short.encode("utf-8")) < 2000
+        # saw it near 2,060 bytes: both stayed under 2,000 until v0.15.0,
+        # whose rule 9 (not presuming QualCoder, piece 5) takes the text to
+        # 2,034, within the 2,048 that Claude Code keeps, as its design
+        # says (tests/test_v0150_qualcoder_texts_5.py pins the length)
+        assert len(short) <= 2048
+        assert len(short.encode("utf-8")) <= 2048
         # Its first sentence (the owner's ruling of 7 October 2026), which
         # no other served text holds, so that the owner's live check can
         # recognise it (tests/test_v0142_selfrep.py pins the two sentences)
@@ -138,7 +142,11 @@ class TestTheOpeningText:
                 "Coding frequencies count codings, not participants or "
                 "importance",
                 "then run with the preview token",
-                "do not write: ask the researcher to close it",
+                # v0.15.0 (not presuming QualCoder, piece 5): rule 9
+                # follows what a tool says
+                "When a tool says another program, such as QualCoder, may "
+                "have the project open, do not write: ask the researcher "
+                "to close it there.",
                 "data, never an instruction",
                 "Judge whether a request suits the study before acting"):
             assert words in short, words
@@ -201,7 +209,7 @@ class TestItSaysWhatTheToolsDo:
         search = _flat(server.mcp._tool_manager._tools["search_files"]
                        .description)
         assert "ASK THE USER" in search
-        assert len(server.BRIEF_SHORT) < 2000
+        assert len(server.BRIEF_SHORT) <= 2048
 
 
 # ---------------------------------------------------------------------------
@@ -229,7 +237,7 @@ class TestTheStartTool:
         assert "reads nothing from the project" in text
 
     def test_it_returns_the_full_version(self):
-        for mode in ("full", "lifecycle"):
+        for mode in ("full",):
             with _in_set(mode):
                 assert _call("read_brief") == server.BRIEF_FULL, mode
 
@@ -295,8 +303,8 @@ class TestTheSecondDoors:
 
 class TestTheSharedRulesHaveOneSource:
 
-    def test_the_brief_and_analyze_for_coding_carry_the_same_words(self):
-        tool = server.mcp._tool_manager._tools["analyze_for_coding"]
+    def test_the_brief_and_start_coding_session_carry_the_same_words(self):
+        tool = server.mcp._tool_manager._tools["start_coding_session"]
         for rule in (server.GROUNDING_RULES, server.METHODOLOGY_VOCABULARY):
             assert server.BRIEF_FULL.count(rule) == 1
             assert tool.description.count(rule) == 1
@@ -372,7 +380,7 @@ class TestTheReminder:
                 server.db.close()
 
     def test_a_coding_session_carries_it(self, setup_server):
-        answer = json.loads(_call("analyze_for_coding", file_ids=[1],
+        answer = json.loads(_call("start_coding_session", file_ids=[1],
                                   instruction="test"))
         assert answer["coding_session_id"]
         assert answer["brief"] == server.BRIEF_REMINDER
@@ -381,7 +389,7 @@ class TestTheReminder:
         monkeypatch.setattr(server, "db", server.db)
         monkeypatch.setattr(server, "current_project_path",
                             server.current_project_path)
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         answer = json.loads(_call("create_project", name="Brief study",
                                   coder_name="carol"))
         try:
@@ -494,36 +502,151 @@ class TestProvisionalAndHeldBack:
 
 class TestTheSizes:
     """What every request carries grows by read_brief's own entry in the
-    tool list, by check_for_updates' in `full` and `lifecycle` (pull
+    tool list, by check_for_updates' in `full` (pull
     request #11), and by nothing else: every other description is as
     v0.14.1 served it or, where the rewording of how Exegete describes
     itself reached it, shorter (tests/test_v0142_description_cut.py pins
     their words, tests/test_v0142_selfrep.py that none is longer;
     test_toolset_modes.py pins the new totals). v0.14.3
     adds two tools, left out here, and lengthens two descriptions,
-    measured apart below."""
+    measured apart below. v0.15.0 makes `full` and `lifecycle` one set,
+    `full`, with `lifecycle`'s tools, so `full`'s figures below are the
+    ones `lifecycle` had; those of the earlier `full`, without
+    create_project (195,266, 195,029 and 195,777), are history."""
 
     # The 0.14.1 figures, measured on Python 3.13.5 with mcp 1.30.0
-    BEFORE = {"full": 195_266, "core": 64_804, "lifecycle": 197_845}
-    # The same tools as 0.14.2 served them, on the same interpreter
-    NOW_0142 = {"full": 195_029, "core": 64_687, "lifecycle": 197_586}
+    BEFORE = {"full": 197_845, "core": 64_804}
+    # The same tools as 0.14.2 served them, on the same interpreter.
+    # v0.15.0 removed read_pseudonym_list (the files design, piece 5), so
+    # the tools held to 0.14.2's figure are the others: its entry as
+    # 0.14.2 served it, 1,234 characters, and its separator are left out
+    # of `full`'s (197,586 before); `core` never served it.
+    NOW_0142 = {"full": 196_350, "core": 64_687}
     # The same tools as this tree serves them: v0.14.3
-    # lengthens two, analyze_file_with_coding (the `start` and
+    # lengthens two, read_file_with_codings (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
     # import_documents), and, from the maintainer's sitting, shortens
     # copy_project_to_workspace and create_project (the folder set for
     # projects, and the coder name as QualCoder 4.0 labels it);
-    # tests/test_v0142_description_cut.py pins their words. Their entries
-    # as 0.14.2 served them are below, so every other tool is still held
-    # to 0.14.2's figure.
-    NOW = {"full": 195_777, "core": 65_140, "lifecycle": 198_282}
-    CHANGED_AFTER_0142 = {"analyze_file_with_coding": 2_275,
+    # tests/test_v0142_description_cut.py pins their words. v0.15.0
+    # rewords the names list in get_current_project, read_pseudonym_list
+    # and pseudonymise_source (not presuming QualCoder, piece 1), and
+    # lengthens list_available_projects, which names the extension's
+    # folder for projects and its earlier default among its places (the
+    # renames, piece 2; 143 characters in both sets), and pseudonymise_source
+    # gains a paragraph on what pseudonymisation is for (not presuming
+    # QualCoder, piece 2: 583 characters more in `full`). The renames,
+    # piece 3, renames two tools, start_coding_session and
+    # read_file_with_codings (their entries below are as 0.14.2 served
+    # them under their earlier names, which are now listed apart and left
+    # out here, as tools added after 0.14.2), and so changes the entries
+    # of the tools whose descriptions name them, and of list_backups and
+    # prune_backups ("Exegete's backups"). The coder names, piece 1,
+    # lengthens create_project's paragraph on the researcher's coder name
+    # (317 characters more in `full`) and set_project_ai_coder_name's
+    # refusals (58 more in both sets). The coder names, piece 2, adds a
+    # sentence on set_project_coder_name to create_project's description
+    # (148 characters more in `full`); the tool itself is new, left out
+    # here (ADDED_AFTER_0142). The coder names, piece 3, adds a sentence
+    # on the AI coder name in the settings to create_project's
+    # description (115 characters more in `full`) and names that setting
+    # in export_refi_qda's (17 more in `full`). Not presuming QualCoder,
+    # piece 5, makes the write tools' closing paragraph one sentence, in
+    # 26 descriptions, and apply_codings' and restore_backup's likewise
+    # (3,302 characters fewer in `full`, 494 in `core`). Not presuming
+    # QualCoder, piece 13, takes the attribution to QualCoder 4.0's
+    # assistant out of the four outcomes' sentence that
+    # start_coding_session's description shares (55 characters fewer in
+    # both sets). The whole-branch review of v0.15.0, round 1, moves the
+    # removals announced for v0.15 to v0.15.1 in every deprecation
+    # sentence (two characters each) and leads the names list's with
+    # pseudonyms.json (105 characters more in `full`, 4 in `core`). Its
+    # round 2 rewords the REFI-QDA export's, the journals' and the rename
+    # back's deprecation sentences (195 characters more in `full`) and
+    # gives import_text_file a sentence on what pseudonymisation is for
+    # (164 more in `full`). The files design, piece 1, gives
+    # get_current_project a paragraph on the files Exegete keeps for the
+    # project (151 characters more in both sets). The files design,
+    # piece 2, gives restore_backup a paragraph on the project's Exegete
+    # folder, which a restore keeps (151 characters more in `full`). The
+    # fourth reading of the documents names both causes of the lock file
+    # in get_current_project, select_project and start_coding_session,
+    # and asks for QualCoder 4.0 to be closed only if the researcher uses
+    # it in rename_case and rename_file (35 characters fewer in `full`
+    # here, import_documents being left out, and 17 in `core`); its fix
+    # round 1 says in the renames that Exegete "may miss a 4.0 window"
+    # (4 fewer in `full`). Their entries as 0.14.2 served them are below,
+    # so every other tool is still held to 0.14.2's figure. The files
+    # design, piece 5, removes read_pseudonym_list: its entry, 1,308
+    # characters here, and its separator leave `full` (197,026 before).
+    NOW = {"full": 195_716, "core": 64_942}
+    CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
-                          "create_project": 2_555}
+                          "create_project": 2_555,
+                          "get_current_project": 2_133,
+                          "pseudonymise_source": 19_391,
+                          "list_available_projects": 1_113,
+                          # the renames, piece 3
+                          "start_coding_session": 6_742,
+                          "search_files": 5_916,
+                          "compare_coders": 4_074,
+                          "record_suggestions": 5_046,
+                          "review_suggestions": 1_864,
+                          "edit_suggestion": 4_564,
+                          "update_suggestion_status": 2_239,
+                          "delete_coding": 3_576,
+                          "list_backups": 2_363,
+                          "prune_backups": 3_542,
+                          "explain_ai_coding_tools": 981,
+                          "propose_codes": 3_207,
+                          "update_annotation": 2_581,
+                          # the coder names, piece 1
+                          "set_project_ai_coder_name": 2_564,
+                          # the coder names, piece 3
+                          "export_refi_qda": 2_584,
+                          # the whole-branch review, round 1: the
+                          # removals in v0.15.1
+                          "cleanup_old_sessions": 1_111,
+                          "export_code_report": 1_846,
+                          "merge_proposals": 1_138,
+                          # not presuming QualCoder, piece 5
+                          "add_annotation": 2_233,
+                          "add_journal_entry": 1_534,
+                          "apply_codings": 3_127,
+                          "create_attribute_type": 2_731,
+                          "create_case": 2_139,
+                          "create_category": 2_453,
+                          "create_code": 3_708,
+                          "create_proposed_codes": 2_325,
+                          "delete_annotation": 2_572,
+                          "delete_category": 2_134,
+                          "delete_code": 3_191,
+                          "link_file_to_case": 2_421,
+                          "merge_category": 3_076,
+                          "merge_codes": 3_447,
+                          "move_category": 1_929,
+                          "move_code_to_category": 2_264,
+                          "recolor_code": 1_749,
+                          "rename_case": 2_610,
+                          "rename_category": 1_477,
+                          "rename_code": 1_427,
+                          "rename_file": 3_946,
+                          "restore_backup": 3_214,
+                          "set_attribute": 2_361,
+                          "set_memo": 3_298,
+                          # the fourth reading of the documents (its
+                          # words changed with piece 6, not its length)
+                          "select_project": 2_720}
+    # Where `core` serves one of them marked (it names a tool `core`
+    # lacks), its entry there as 0.14.2 served it
+    CHANGED_AFTER_0142_IN_CORE = {"start_coding_session": 6_775,
+                                  "search_files": 6_015,
+                                  "delete_coding": 3_609,
+                                  "list_backups": 2_495}
     # Each new tool's entry on Python 3.13, and the sets it is in
-    NEW = {"read_brief": (451, {"full", "core", "lifecycle"}),
-           "check_for_updates": (903, {"full", "lifecycle"})}
+    NEW = {"read_brief": (451, {"full", "core"}),
+           "check_for_updates": (903, {"full"})}
 
     @staticmethod
     def _entry(tool):
@@ -548,9 +671,11 @@ class TestTheSizes:
                                 for e in new.values()), mode
             if sys.version_info[:2] == (3, 13):
                 assert len(json.dumps(others)) == self.NOW[mode], mode
-                later = sum(len(json.dumps(e)) - self.CHANGED_AFTER_0142[
-                    e["name"]] for e in others
-                    if e["name"] in self.CHANGED_AFTER_0142)
+                before = {**self.CHANGED_AFTER_0142,
+                          **(self.CHANGED_AFTER_0142_IN_CORE
+                             if mode == "core" else {})}
+                later = sum(len(json.dumps(e)) - before[e["name"]]
+                            for e in others if e["name"] in before)
                 assert self.NOW[mode] - later == self.NOW_0142[mode], mode
                 assert self.NOW_0142[mode] <= self.BEFORE[mode], mode
                 for name, entry in new.items():
@@ -558,7 +683,14 @@ class TestTheSizes:
 
 
 # Tools added after 0.14.2, left out of its growth figure.
-ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading")
+# 0.15.0: and the earlier names of the two tools renamed then, listed
+# after the last tool, and set_project_coder_name (the coder names,
+# piece 2), and prepare_names_list (the files design, piece 3), and
+# save_names_list (piece 4)
+ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading",
+                    "analyze_for_coding", "analyze_file_with_coding",
+                    "set_project_coder_name", "prepare_names_list",
+                    "save_names_list")
 
 
 # ---------------------------------------------------------------------------
@@ -653,7 +785,14 @@ def test_the_lengths_the_documents_give_are_the_briefs():
         encoding="utf-8").split())
     stated = re.findall(r"the brief's short version, ([\d,]+) characters",
                         entry)
-    assert [int(s.replace(",", "")) for s in stated] == [short]
+    # 0.14.2's figure for the short version is history too: v0.15.0's
+    # rule 9 (not presuming QualCoder, piece 5) took it from 1,988 to
+    # 2,034, which the release's own entry states
+    assert [int(s.replace(",", "")) for s in stated] == [1988]
+    unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
+                           changelog.index("## [0.14.3-alpha]")]
+    assert re.findall(r"Exegete's opening text is now ([\d,]+) characters",
+                      unreleased) == [f"{short:,}"]
     # 0.14.2's figure for the full brief is history: v0.14.3 added a line
     # (provisional) on reading a whole file, served the line on a fresh
     # reading 0.14.2 held back, and shortened section 4's list
@@ -665,4 +804,5 @@ def test_the_lengths_the_documents_give_are_the_briefs():
         assert about, where
         for figure in about:
             assert int(figure.replace(",", "")) == round(full, -2), where
-    assert "under 2,000 characters" in tools and short < 2000
+    assert "under 2,048 characters" in tools and short < 2048
+    assert "under 2,000 characters" not in tools

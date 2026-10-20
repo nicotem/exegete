@@ -685,6 +685,8 @@ class TestMergeCategoryProvenance:
                                                 qualcoder_db_path):
         # v14/v15 (no supercid): byte-exact with QualCoder 3.8.2, which
         # never wrote a category provenance memo; disclosed in the preview
+        # by its cause, the older schema (v0.15.0, not presuming
+        # QualCoder, piece 8: it named QualCoder 3.8.2)
         self._tree(qualcoder_db_path, with_supercid=False)
         _exec(qualcoder_db_path,
               "UPDATE code_cat SET memo = 'target note' WHERE catid = 1")
@@ -692,7 +694,10 @@ class TestMergeCategoryProvenance:
         assert server.db.capabilities.has_supercid is False
         preview = json.loads(server.merge_category(2, "Category A"))
         assert preview["preview"]["source_memo_carried_to_target"] is False
-        assert "3.8.2" in preview["preview"]["note"]
+        note = preview["preview"]["note"]
+        assert ("On this project's older schema (from before sub-codes) the "
+                "source category's memo is removed with its row") in note
+        assert "QualCoder" not in note
         out = json.loads(H.execute_destructive(server.merge_category, 2, "Category A"))
         assert out.get("merged") is True, out
         assert "provenance_memo_added" not in out
@@ -807,7 +812,7 @@ class TestReadPathsStrip:
         (server.list_attribute_types, (), "attr"),
         (server.get_case_attributes, (1,), "attr"),
         (server.get_file_attributes, (1,), "fattr"),
-        (server.analyze_file_with_coding, (1,), "ann"),
+        (server.read_file_with_codings, (1,), "ann"),
     ], ids=lambda v: getattr(v, "__name__", None) or str(v))
     def test_public_part_survives_per_kind(self, private_everywhere, fn,
                                            args, expected):
@@ -828,7 +833,7 @@ class TestReadPathsStrip:
             (server.get_project_summary, (), {}),
             (server.get_coded_segments, (1,), {}),
             (server.search_coded_text, ("stressed",), {}),
-            (server.analyze_file_with_coding, (1,), {}),
+            (server.read_file_with_codings, (1,), {}),
             (server.export_code_report, ("Stress",), {}),
             (server.list_attribute_types, (), {}),
             (server.get_case_attributes, (1,), {}),

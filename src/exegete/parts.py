@@ -2,7 +2,7 @@
 """Whole-file reads in parts (v0.14.3; the import and
 reading design, Part 3).
 
-`analyze_file_with_coding`, the file resource and the case resource
+`read_file_with_codings`, the file resource and the case resource
 returned a whole file's text with no limit: a 1,000,000-character file
 came back as about 250,000 tokens, ten times the 25,000-token cap Claude
 Code puts on one answer, which it then refused or cut. Imports will bring

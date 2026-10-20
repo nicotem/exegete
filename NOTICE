@@ -351,7 +351,7 @@ a project this server has written. They are restated in this project's
 own code; where the statement is a table or column list, it is the one
 the format dictates.
 
-32. QualCoder 3.8's lock file: its name, timeout and content.
+32. QualCoder 3.8.2's lock file: its name, timeout and content.
     Here: src/exegete/database.py, QUALCODER_LOCK_FILENAME,
     QUALCODER_LOCK_TIMEOUT and hold_project_lock.
     From: 3.8.2 __main__.py, lines 131, 2546-2547 and 2637.

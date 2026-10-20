@@ -347,7 +347,7 @@ class TestCooccurrencePerfHonest:
 
 class TestGuidanceEnvelope:
 
-    def test_analyze_for_coding_structured_and_prose(self, setup_server,
+    def test_start_coding_session_structured_and_prose(self, setup_server,
                                                      qualcoder_db_path):
         """The response carries real JSON fields AND the prose banner.
 
@@ -358,7 +358,7 @@ class TestGuidanceEnvelope:
         """
         # absent lock: envelope has coding_session_id + instructions; the open-signal
         # fields are omitted (absence == not open)
-        raw = server.analyze_for_coding([1], instruction="test")
+        raw = server.start_coding_session([1], instruction="test")
         payload = json.loads(raw)
         assert payload.get("qualcoder_open", False) is False
         assert isinstance(payload["coding_session_id"], str) and payload["coding_session_id"]
@@ -372,7 +372,7 @@ class TestGuidanceEnvelope:
         lock = validate_qda_path(qualcoder_db_path).parent / "project_in_use.lock"
         lock.write_text(f"gui_user\n{time.time()}", encoding="utf-8")
         try:
-            payload = json.loads(server.analyze_for_coding([1], instruction="test"))
+            payload = json.loads(server.start_coding_session([1], instruction="test"))
             assert payload["qualcoder_open"] is True
             assert payload["action_required"] and "gui_user" in payload["action_required"]
             assert "STOP" in payload["instructions"]
@@ -408,7 +408,7 @@ class TestGuidanceEnvelope:
               "INSERT INTO source (id, name, fulltext) VALUES (70, 'emoji.txt', ?)",
               (emoji,))
         _reload()
-        sid = json.loads(server.analyze_for_coding([70], instruction="test"))["coding_session_id"]
+        sid = json.loads(server.start_coding_session([70], instruction="test"))["coding_session_id"]
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 70, "code_name": "Stress",
             "segment_text": "I feel very stressed"}]))
@@ -427,10 +427,10 @@ class TestVersionHandshake:
         from importlib import metadata
         pkg = metadata.version("exegete")
         assert exegete.__version__ == pkg
-        # 0.14.3-alpha family (canary for a stale editable install; the
+        # 0.15.0-alpha family (canary for a stale editable install; the
         # release-prep rule: check it against a FRESH clone and venv, since
         # stale editable-install metadata passed a wrong canary in Batch A)
-        assert pkg.startswith("0.14.3")
+        assert pkg.startswith("0.15.0")
 
     def test_stdio_initialize_advertises_version(self):
         """A real MCP initialize handshake over the server advertises the

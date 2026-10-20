@@ -84,7 +84,7 @@ def projects_folder(tmp_path, monkeypatch):
 
 
 def _descriptions():
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     return server.mcp.original_descriptions
 
 
@@ -116,9 +116,18 @@ class TestTheCoderNameQuestion:
         # A researcher without QualCoder chooses a name; the flag is for
         # one who does not know it
         assert "do not use QualCoder" not in text
-        assert "If they do not know it, call again with " \
-               "coder_name_not_known=true instead." in text
+        # v0.15.0 (not presuming QualCoder, piece 5): or would rather
+        # not give one
+        assert "If they do not know it or would rather not give one, " \
+               "call again with coder_name_not_known=true instead." in text
         assert "never be guessed" in text
+        # v0.15.0: the question as it stands, then where the researcher
+        # can fill in the name to be spared it in later projects
+        # (tests/test_v0150_coder_name_settings.py)
+        assert text.startswith(
+            server.CODER_NAME_ASK + " To be spared this question in later "
+            "projects, the researcher can fill in EXEGETE_CODER_NAME in "
+            "the host's configuration for Exegete."), text
 
     def test_the_flag_still_creates_the_project(self, projects_folder):
         answer = json.loads(server.create_project(
@@ -128,11 +137,14 @@ class TestTheCoderNameQuestion:
 
     def test_the_description_asks_the_same_question(self):
         d = _flat(_descriptions()["create_project"])
-        assert ("THE RESEARCHER'S CODER NAME: ask the researcher what name "
-                "their own codings should carry; if they use QualCoder, the "
+        # v0.15.0: the question is the one the answer gives, when the
+        # researcher's own coder name is not in Exegete's settings
+        # (tests/test_v0150_coder_name_settings.py pins the paragraph)
+        assert ("the answer gives the question to ask: what name their own "
+                "codings should carry; if they use QualCoder, the "
                 'name in its settings ("Current coder"), exactly as there; '
                 "if not, any name they choose.") in d
-        assert "If they do not know it, pass coder_name_not_known=true" in d
+        assert "if they do not know it, pass coder_name_not_known=true" in d
         assert "do not use QualCoder" not in d
 
     def test_no_served_text_names_the_old_label(self):
@@ -263,13 +275,16 @@ class TestTheReviewsOfTheSittingWording:
         assert "will be made as" not in answer["error"]
 
     def test_the_question_warns_the_name_stays(self):
+        # v0.15.0: set_project_coder_name corrects the name while nothing
+        # is recorded under it (tests/test_v0150_coder_name_correction.py)
         text = json.loads(server.create_project("Study"))["error"]
-        assert ("Exegete cannot change it once the project is made "
-                "(QualCoder's settings can), so ask for the name as they "
-                "want it to stay.") in text
+        assert ("The name can be corrected later with "
+                "set_project_coder_name only while nothing is recorded under "
+                "it, so ask for the name as they want it to stay.") in text
+        assert "Exegete cannot change it" not in text
         assert server.CODER_NAME_ASK.endswith(
-            "If they do not know it, call again with "
-            "coder_name_not_known=true instead.")
+            "If they do not know it or would rather not give one, call "
+            "again with coder_name_not_known=true instead.")
 
     def test_import_text_files_rule_names_one_place(self):
         d = _flat(_descriptions()["import_text_file"])
@@ -287,8 +302,9 @@ class TestTheReviewsOfTheSittingWording:
 
     def test_tools_md_says_the_same(self):
         tools = _flat(_repo_text("TOOLS.md"))
-        assert ("Exegete cannot change it once the project is made "
-                "(QualCoder's settings can), so give it as you want it to "
-                "stay.") in tools
+        # v0.15.0, as the question says it
+        assert ("The name can be corrected later with "
+                "`set_project_coder_name` only while nothing is recorded "
+                "under it, so give it as you want it to stay.") in tools
         assert ("when `create_project` asks for the coder name, it also "
                 "gives the full path the project will be made as") in tools

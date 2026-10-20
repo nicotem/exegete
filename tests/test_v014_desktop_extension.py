@@ -120,10 +120,11 @@ class TestTypedOnce:
 
 class TestTheToolsAreTheServers:
 
-    def test_the_list_is_the_lifecycle_set_in_the_servers_order(self, built):
+    def test_the_list_is_the_full_set_in_the_servers_order(self, built):
+        # v0.15.0: `full`, every tool (v0.14's `lifecycle` until then)
         manifest, _, _ = built
         names = [t["name"] for t in manifest["tools"]]
-        assert names == _server_tools("lifecycle")
+        assert names == _server_tools("full")
         assert "create_project" in names
 
     def test_every_other_set_is_inside_it(self, built):
@@ -172,18 +173,24 @@ class TestTheToolsAreTheServers:
 
 class TestTheSettings:
 
-    def test_three_settings_and_nothing_secret(self):
+    def test_six_settings_and_nothing_secret(self):
         config = TEMPLATE["user_config"]
-        assert set(config) == {"toolset", "projects_folder", "update_check"}
+        # v0.15.0: the two coder names joined the first three, and "Do
+        # you also use QualCoder on this computer?"
+        assert set(config) == {"toolset", "projects_folder", "coder_name",
+                               "ai_coder_name", "uses_qualcoder",
+                               "update_check"}
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
-    def test_the_tool_set_defaults_to_lifecycle_and_names_the_others(self):
+    def test_the_tool_set_defaults_to_full_and_names_the_others(self):
         option = TEMPLATE["user_config"]["toolset"]
         assert option["type"] == "string"
-        assert option["default"] == "lifecycle"
+        # v0.15.0: `full`, every tool; `lifecycle` named as its earlier name
+        assert option["default"] == "full"
         for mode in server._VALID_TOOLSET_MODES:
             assert f"{mode}:" in option["description"]
+        assert "lifecycle, the earlier name of full" in option["description"]
 
     def test_an_empty_folder_stops_the_extension(self, monkeypatch):
         """Fix round 1: the app lays a saved empty value over the default,
@@ -227,25 +234,37 @@ class TestTheSettings:
 
     def test_each_setting_reaches_a_variable_the_server_reads(self):
         """v0.14.1: each of the three under both spellings, always the
-        same value, until v1.0 (tests/test_v0141_compat.py says why)."""
+        same value, until v1.0 (tests/test_v0141_compat.py says why);
+        v0.15.0: the AI coder name the same way, the fourth."""
         from exegete import names
         env = TEMPLATE["server"]["mcp_config"]["env"]
         expected = {}
         for key, value in (("toolset", "${user_config.toolset}"),
                            ("workspace", "${user_config.projects_folder}"),
-                           ("workspace_required", "1")):
+                           ("workspace_required", "1"),
+                           ("ai_coder_name", "${user_config.ai_coder_name}")):
             for name in names.SETTINGS[key]:
                 expected[name] = value
         # The check for new versions (the owner's ruling of 5 October
         # 2026): the box, and the extension's own mark, each with one
-        # spelling only
+        # spelling only; and the researcher's own coder name (v0.15.0)
         expected[names.NEW_ONLY_SETTINGS["update_check"]] = \
             "${user_config.update_check}"
         expected[names.NEW_ONLY_SETTINGS["installed_as"]] = "extension"
+        expected[names.NEW_ONLY_SETTINGS["coder_name"]] = \
+            "${user_config.coder_name}"
+        # and "Do you also use QualCoder on this computer?" (v0.15.0)
+        expected[names.NEW_ONLY_SETTINGS["uses_qualcoder"]] = \
+            "${user_config.uses_qualcoder}"
         assert env == expected
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
         assert 'env_settings.read("toolset")' in source
+        assert 'env_settings.read("ai_coder_name")' in source
+        settings_source = (REPO / "src" / "exegete" /
+                           "project_settings.py").read_text(encoding="utf-8")
+        assert "env_settings.coder_name(environ)" in settings_source
+        assert source.count("env_settings.uses_qualcoder()") == 2
         assert database.WORKSPACE_ENV == "EXEGETE_WORKSPACE"
         assert database.WORKSPACE_REQUIRED_ENV == "EXEGETE_WORKSPACE_REQUIRED"
 
@@ -818,7 +837,8 @@ class TestTheDocuments:
         # spellings (names.SETTINGS)
         from exegete import names
         read = {new for new, old in names.SETTINGS.values()}
-        # and the two with one spelling only (the check for new versions)
+        # and those with one spelling only (the check for new versions,
+        # the time per import call)
         read |= set(names.NEW_ONLY_SETTINGS.values())
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = _section(text, "## Environment variables the server reads")

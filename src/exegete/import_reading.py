@@ -44,8 +44,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 # One file's reading at the preview (provisional, 0.14.3): within the
-# preview's own time (doc_import's PREVIEW_SECONDS), so that no call runs
-# past what a host may allow; the import gives a file a margin over it.
+# preview's own time (doc_import's CALL_SECONDS_LEAST, the least a call is
+# given), so that no call runs past what a host may allow; the import
+# gives a file a margin over it.
 READ_TIMEOUT_SECONDS = 30.0
 MEMORY_CAP_BYTES = 1024 * 1024 * 1024
 MAX_ANSWER_BYTES = 16 * 1024 * 1024
@@ -387,6 +388,14 @@ def _checked_answer(raw: bytes) -> Dict[str, Any]:
         answer = json.loads(raw.decode("ascii"))
     except (UnicodeDecodeError, ValueError):
         raise ReadFailed("reader_failed") from None
+    return checked_result(answer)
+
+
+def checked_result(answer: Any) -> Dict[str, Any]:
+    """A parsed answer, its shape checked: the text, signs, notes,
+    character set and counts, or ReadFailed with the child's own code (or
+    `reader_failed`). The import checks a kept answer the same way
+    (kept_texts), wrapped as the child sends it."""
     if not isinstance(answer, dict) or not isinstance(answer.get("ok"), bool):
         raise ReadFailed("reader_failed")
     if not answer["ok"]:

@@ -162,7 +162,7 @@ def _owner_only(path: Path, mode: int) -> None:
         pass
 
 
-def _mark_not_indexed(path: Path) -> None:
+def mark_not_indexed(path: Path) -> None:
     """Windows: mark a folder or file "not content indexed"."""
     if sys.platform != "win32":
         return
@@ -245,7 +245,7 @@ def _make(path: Path) -> Path:
             f"({exc.strerror or 'it cannot be written'}).") from None
     _check_folder(path)
     _owner_only(path, 0o700)
-    _mark_not_indexed(path)
+    mark_not_indexed(path)
     return path
 
 
@@ -508,7 +508,7 @@ def _write_file(folder: Path, name: str, mode: int,
         if prepare is not None:
             prepare(temp)
         _owner_only(temp, mode)
-        _mark_not_indexed(temp)
+        mark_not_indexed(temp)
         if os.path.lexists(target):
             _remove(target)
         os.replace(temp, target)

@@ -495,7 +495,7 @@ class TestApplyCodingsFaults:
 
         result = server.apply_codings(sess.session_id, create_backup=True)
 
-        assert_structured_error(result, "open in QualCoder")
+        assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre
         assert env.backup_names() == before, "backup created despite lock refusal"
         assert env.lock.exists(), "foreign lock file was removed"
@@ -515,7 +515,7 @@ class TestApplyCodingsFaults:
 
         result = server.apply_codings(sess.session_id, create_backup=False)
 
-        assert_structured_error(result, "open in QualCoder")
+        assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "batch inserts survived the lock re-check abort"
         assert env.backup_names() == before
         assert env.lock.exists(), "foreign lock file was removed"
@@ -540,7 +540,7 @@ class TestImportTextFileFaults:
         result = server.import_text_file(
             "brand_new.txt", "Some new content.", create_backup=False)
 
-        assert_structured_error(result, "open in QualCoder")
+        assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "import survived the lock re-check abort"
         assert env.backup_names() == before
         assert env.lock.exists(), "foreign lock file was removed"
@@ -603,7 +603,7 @@ class TestImportTextFileFaults:
         result = server.import_text_file(
             "brand_new.txt", "Some new content.", create_backup=False)
 
-        assert_structured_error(result, "open in QualCoder")
+        assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "uncommitted INSERT survived the failed rollback"
         assert env.backup_names() == before
         assert env.lock.exists()
@@ -718,7 +718,7 @@ class TestLinkFileToCaseFaults:
         result = server.link_file_to_case(
             file_id=2, case_name="Case A", create_backup=False)
 
-        assert_structured_error(result, "open in QualCoder")
+        assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "case link survived the lock re-check abort"
         assert env.backup_names() == before
         assert env.lock.exists(), "foreign lock file was removed"
@@ -758,7 +758,7 @@ class TestLinkFileToCaseFaults:
         result = server.link_file_to_case(
             file_id=2, case_name="Case A", create_backup=False)
 
-        assert_structured_error(result, "locked")
+        assert_structured_error(result, "database is busy")
         assert env.hash() == pre
         assert env.backup_names() == before
         assert not env.lock.exists()
@@ -781,7 +781,7 @@ class TestLinkFileToCaseFaults:
         result = server.link_file_to_case(
             file_id=2, case_name="Case A", create_backup=False)
 
-        assert_structured_error(result, "locked")
+        assert_structured_error(result, "database is busy")
         assert env.hash() == pre
         assert env.backup_names() == before
         assert not env.lock.exists()
@@ -856,7 +856,7 @@ class TestDeleteCodingFaults:
 
         result = server.delete_coding(1, create_backup=False)
 
-        assert_structured_error(result, "open in QualCoder")
+        assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "DELETE survived the lock re-check abort"
         assert _count_codings(env) == 1
         assert env.backup_names() == before
@@ -895,7 +895,7 @@ class TestDeleteCodingFaults:
 
         result = server.delete_coding(1, create_backup=False)
 
-        assert_structured_error(result, "locked")
+        assert_structured_error(result, "database is busy")
         assert env.hash() == pre
         assert _count_codings(env) == 1
         assert env.backup_names() == before
@@ -918,7 +918,7 @@ class TestDeleteCodingFaults:
 
         result = server.delete_coding(1, create_backup=False)
 
-        assert_structured_error(result, "locked")
+        assert_structured_error(result, "database is busy")
         assert env.hash() == pre
         assert _count_codings(env) == 1
         assert env.backup_names() == before
@@ -1062,7 +1062,9 @@ def _partial_copytree_patch(monkeypatch, env: Env, unrecoverable: bool = False):
                 raise OSError(28, "Injected: no space left on device")
             return real_copytree(src, dst, *args, **kwargs)
         if dst_p == env.folder and src_p == env.backup_folder:
-            dst_p.mkdir()
+            # the project folder itself stays since v0.15.0 (a restore
+            # clears it around its Exegete folder), so it may be there
+            dst_p.mkdir(exist_ok=True)
             shutil.copy2(src_p / "data.qda", dst_p / "data.qda")
             raise OSError(28, "Injected: no space left on device (mid-copy)")
         return real_copytree(src, dst, *args, **kwargs)
@@ -1117,7 +1119,7 @@ class TestRestoreBackupFaults:
 
         result = H.execute_destructive(server.restore_backup, str(env.backup_folder))
 
-        assert_structured_error(result, "open in QualCoder")
+        assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre_hash
         assert env.state() == pre_state, "project folder changed despite refusal"
         # the safety backup made before the refusal is by design; it must
@@ -1417,7 +1419,14 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
             "Database error: the write did not complete, and the "
             "transaction could not be rolled back cleanly")
         assert "the project may be part-written" in out["error"]
-        assert "restore a backup (see list_backups)" in out["error"]
+        # v0.15.0 (not presuming QualCoder, piece 5, fix round 1): the
+        # backup is restored by hand if the project will not open, since
+        # list_backups and restore_backup cannot read it then; the
+        # envelope still names the backup taken before the write
+        assert ("If it will not open, no tool here can restore it: the "
+                "project's backups, if any, sit beside the project folder"
+                ) in out["error"]
+        assert "one can be copied back by hand" in out["error"]
         assert Path(out["backup_path"]).is_dir()
 
     def test_the_rollback_helper_answers_for_what_it_did(self, fi_env):
@@ -1471,7 +1480,7 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
 
         out = json.loads(server.create_code("Named after the lock"))
 
-        assert "open in QualCoder" in out["error"], out
+        assert "is in use by another program" in out["error"], out
         taken = env.backup_names() - before
         assert len(taken) == 1
         assert Path(out["backup_path"]).is_dir()
@@ -1489,7 +1498,7 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
 
         out = json.loads(server.import_text_file("named.txt", "some text"))
 
-        assert "open in QualCoder" in out["error"], out
+        assert "is in use by another program" in out["error"], out
         taken = env.backup_names() - before
         assert len(taken) == 1
         assert Path(out["backup_path"]).is_dir()
@@ -1578,7 +1587,7 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
 
         out = json.loads(server.apply_codings(sess.session_id))
 
-        assert "open in QualCoder" in out["error"], out
+        assert "is in use by another program" in out["error"], out
         assert out["applied_before_failure"] == 2
         taken = env.backup_names() - before
         assert len(taken) == 1

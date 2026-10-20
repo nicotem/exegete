@@ -446,10 +446,79 @@ def _check_pseudonym(value: Any, entry_index: int,
         raise MappingError(
             f"mapping entry {entry_index}: {shown} contains "
             f"characters beyond U+FFFF (emoji or similar) or a carriage "
-            f"return; QualCoder's editor would misplace positions in the "
-            f"rewritten file. Choose a pseudonym in the Basic Multilingual "
-            f"Plane.")
+            f"return; Exegete keeps a rewritten file free of them so that "
+            f"every program that reads the project's format counts its "
+            f"positions alike (if the project is opened in QualCoder, its "
+            f"editor would misplace them). Choose a pseudonym without "
+            f"emoji, other rare characters or line breaks.")
     return value
+
+
+# The rules a names list's entry must keep, by the code `rule_broken`
+# gives and the words the names list's preview shows beside a line
+# number (v0.15.0, the files design, piece 4). Each is one of the rules
+# `_check_name` and `_check_pseudonym` refuse, on the same constants and
+# patterns, but for the last: a backslash in a pseudonym, which this
+# engine writes as a letter and which a program applying the list with
+# Python's `re.sub`, QualCoder's import among them (`manage_files.py:
+# 3382-3384` in the 4.0 sources), reads as an instruction, a departure
+# stricter than QualCoder's Pseudonyms dialog, which accepts one. A side
+# with white space at an end is the engine's rule too; a line of the
+# names file never has one (its reader strips each side), so only an
+# entry kept from the list can meet it.
+RULE_WORDS = {
+    "name_too_short": (
+        f"the real name is shorter than {MIN_ORIGINAL_CHARS} characters"),
+    "name_too_long": (
+        f"the real name is longer than {MAX_FORM_CHARS} characters"),
+    "pseudonym_too_short": (
+        f"the pseudonym is shorter than {MIN_PSEUDONYM_CHARS} characters"),
+    "pseudonym_too_long": (
+        f"the pseudonym is longer than {MAX_PSEUDONYM_CHARS} characters"),
+    "hidden_characters": (
+        "a side holds an invisible control or direction character, a line "
+        "or paragraph separator, or five # in a row"),
+    "pseudonym_rare_characters": (
+        "the pseudonym holds an emoji or another character Exegete keeps "
+        "out of the text it writes"),
+    "pseudonym_backslash": (
+        "the pseudonym holds a backslash, which a program applying the "
+        "list with Python's re.sub, QualCoder's import among them, reads "
+        "as an instruction rather than a letter"),
+    "white_space_at_an_end": "a side begins or ends with white space",
+}
+
+
+def rule_broken(value: str, kind: str) -> Optional[str]:
+    """The first of RULE_WORDS' rules that `value` breaks as a real name
+    (`kind` "name") or as a pseudonym ("pseudonym"), in the order the
+    engine's own checks apply them, or None.
+
+    None for a real name exactly when `_check_name` accepts it; for a
+    pseudonym, None or "pseudonym_backslash" exactly when
+    `_check_pseudonym` accepts it. Never quotes the value.
+    """
+    if kind not in ("name", "pseudonym"):
+        raise ValueError("kind must be name or pseudonym.")
+    if value != value.strip():
+        return "white_space_at_an_end"
+    if _describe_bad_characters(value) is not None:
+        return "hidden_characters"
+    if kind == "name":
+        if len(value) < MIN_ORIGINAL_CHARS:
+            return "name_too_short"
+        if len(value) > MAX_FORM_CHARS:
+            return "name_too_long"
+        return None
+    if len(value) < MIN_PSEUDONYM_CHARS:
+        return "pseudonym_too_short"
+    if len(value) > MAX_PSEUDONYM_CHARS:
+        return "pseudonym_too_long"
+    if _has_astral(value) or "\r" in value:
+        return "pseudonym_rare_characters"
+    if "\\" in value:
+        return "pseudonym_backslash"
+    return None
 
 
 class Entry:

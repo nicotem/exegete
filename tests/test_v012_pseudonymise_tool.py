@@ -29,7 +29,9 @@ suite that builds one is testing its own invention.
 """
 
 import ast
+import asyncio
 import collections
+import itertools
 import json
 import logging
 import os
@@ -458,6 +460,13 @@ class TestResidue:
                     "1,'d','TestCoder')")
         con.commit()
         con.close()
+        # v0.15.0, not presuming QualCoder, piece 11: the note on the
+        # ai_data folder is given only when the project holds one
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (project / "ai_data").mkdir(exist_ok=True)
+        (project / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         server.db.close()
         server.db = QualcoderDatabase(str(project))
         residue = preview_of()["preview"]["residue"]
@@ -1856,7 +1865,7 @@ class TestJournal:
             "unset": "No AI coder name is set for this project yet",
             "unreadable": UNREADABLE_MESSAGE,
             "newer_format": NEWER_FORMAT_MESSAGE,
-            "mismatch": ("This host declares the AI coder name "
+            "mismatch": ("The AI coder name in Exegete's settings is "
                          "\"Other Model 9\""),
         }[shape]
         assert expected in ask["message"], ask["message"]
@@ -1875,8 +1884,8 @@ class TestJournal:
         if shape != "unset":
             assert "no ai coder name is set" not in warning[0].lower()
         if shape == "mismatch":
-            assert f"current AI coder name is \"{DEFAULT_AI_CODER_NAME}\"" \
-                in warning[0]
+            assert f"this project's AI coder name is " \
+                f"\"{DEFAULT_AI_CODER_NAME}\"" in warning[0]
         _house_rules(warning + [ask["message"]], ["warning", "ask"])
 
     def test_the_alternative_names_the_folder_this_run_uses(
@@ -2405,7 +2414,16 @@ class TestTheLabelsAndMemosTheResidueCounts:
         all twelve note fields since v0.14 (it reached three, and the
         note said so), with a hidden coder's notes left out; and
         `search_files` reads narrower than this block, so a researcher
-        sent there is told."""
+        sent there is told.
+
+        v0.15.0, not presuming QualCoder, piece 11: the clause on a coder
+        hidden in QualCoder is given only when the project hides one, so
+        this project hides one. Fix round 1: the clause names the setting
+        rather than presuming the researcher made it, and says which read
+        gives that coder's coding notes."""
+        hide_coder(project, "Hidden Coder")
+        server.db.close()
+        server.db = QualcoderDatabase(str(project))
         note = preview_of()["preview"]["residue"]["scope_note"]
         # Decision A, said once in the preview and once in the
         # description; since v0.13's Brief 2 the notes are named with the
@@ -2419,8 +2437,10 @@ class TestTheLabelsAndMemosTheResidueCounts:
         assert "Each count is two readings, wide and whole-word." in note
         assert ("search_memos searches the public part of all twelve "
                 "fields and names each result's kind; it leaves out the "
-                "coding notes and annotations of a coder hidden in "
-                "QualCoder, which are read there." in note)
+                "coding notes and annotations of a coder the project hides "
+                "(a visibility setting made in QualCoder); "
+                "get_coded_segments reads that coder's coding notes when "
+                "the coder is named." in note)
         assert ("search_files reads narrower than this block does (a plain "
                 "substring, no normalisation), so a name it does not find "
                 "may still be counted here." in note)
@@ -4537,40 +4557,42 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "the backup is the other half and holds the real names. "
             "Exegete does not keep the mapping unless asked. On this run it "
             "was saved into the project's own pseudonyms.json (3 entries "
-            "added), which QualCoder applies on every later text or "
-            "transcript import (not a PDF) and which travels into every "
-            "later backup; "
-            "store that file securely once the import work is done, as "
-            "QualCoder's own guidance says."]
+            "added), which later imports apply (Exegete's import_documents "
+            "by default, import_text_file when asked; QualCoder's text and "
+            "transcript imports always) and which travels into every later "
+            "backup; "
+            "store that file securely once the import work is done."]
         variants = [n for n in notes if n.startswith("The mapping had")]
         assert variants == [
             "The mapping had alternative spellings; each was written to "
             "pseudonyms.json as its own entry with the same pseudonym (1 "
-            "such entr(ies)). QualCoder's Pseudonyms dialog (the button in "
-            "Manage Files) will not add a second entry with a pseudonym "
-            "already in use, so change those entries in the file rather than "
-            "in the dialog."]
+            "such entr(ies)). To change those entries later, edit the file: "
+            "QualCoder's Pseudonyms dialog, if the researcher uses it, will "
+            "not add a second entry with a pseudonym already in use."]
         # Fix round 1, QA-B2-1: the claim that QualCoder applies such a
         # file "exactly as this run did" is gone, and what it does is said.
         assert not any("exactly as this run did" in n for n in notes)
         applying = [n for n in notes if n.startswith(
-            "QualCoder applies pseudonyms.json")]
+            "Later imports apply pseudonyms.json")]
         # Fix round 2: where QualCoder applies it (B2P-N1), and names that
         # overlap without nesting (Q-5); the merge with main: not a PDF,
-        # which QualCoder's text import skips (Q2-1).
+        # which QualCoder's text import skips (Q2-1). v0.15.0: Exegete's
+        # imports first, then QualCoder's text and transcript imports;
+        # what file order can do is said of QualCoder's alone.
         assert applying == [
-            "QualCoder applies pseudonyms.json on every later text or "
-            "transcript import (not a PDF) one entry at a time, in file "
-            "order and "
-            "case-sensitively (its survey import and text-file replacement "
-            "match differently). The new entries were written longest name "
-            "first, so a shorter name inside a longer one does not pre-empt "
-            "it; an entry already in the file can still (see the warnings), "
-            "two names that overlap without either containing the other "
-            "(Mary Ann and Ann Lee, in Mary Ann Lee) can still come out "
-            "differently, a pseudonym that contains a name from the mapping "
-            "is rewritten again, and under an insensitive case mode only the "
-            "spellings saved are replaced."]
+            "Later imports apply pseudonyms.json case-sensitively: "
+            "Exegete's (import_documents by default, import_text_file when "
+            "asked) in one pass, longest name first, so nothing they write "
+            "is replaced again; QualCoder's text and transcript imports one "
+            "entry at a time, in file order. For QualCoder's imports, the "
+            "new entries were written longest name first, so a shorter name "
+            "inside a longer one does not pre-empt it; there an entry "
+            "already in the file still can (see the warnings), two names "
+            "that overlap without either containing the other (Mary Ann and "
+            "Ann Lee, in Mary Ann Lee) can come out differently from this "
+            "run, and a pseudonym that contains a name from the mapping is "
+            "rewritten again. In Exegete as in QualCoder, under an "
+            "insensitive case mode only the spellings saved are replaced."]
         _house_rules(notes)
 
     # Security's ruling of 2026-09-24 (S-1, S-3), which supersedes the
@@ -4718,7 +4740,7 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert refused["error"].startswith(
             "The mapping cannot be saved into this project's pseudonyms.json: "
             "pseudonyms.json in the project folder is read-only for this "
-            "account, and QualCoder's own write would fail on it too.")
+            "account, and Exegete leaves it so.")
         assert refused["nothing_changed"] is True
         assert backups(project) == []
         assert _written(project) == before
@@ -4727,16 +4749,27 @@ class TestSavingTheMappingIntoPseudonymsJson:
         _house_rules([refused["error"]])
 
     def test_the_writer_sets_a_mode_on_the_descriptor_only(self):
-        """Read as syntax: no chmod by path (S-3) and no umask read."""
+        """Read as syntax: no chmod by path (S-3) and no umask read.
+        v0.15.0, piece 4: the writing is factored into
+        `_write_pseudonyms_json_data_tmp`, which the writer calls and
+        save_names_list shares; the same holds of both."""
         tree = ast.parse(Path(server.__file__).read_text(encoding="utf-8"))
-        node = next(n for n in ast.walk(tree)
-                    if isinstance(n, ast.FunctionDef)
-                    and n.name == "_write_pseudonyms_json_tmp")
-        called = {c.func.attr for c in ast.walk(node)
-                  if isinstance(c, ast.Call)
-                  and isinstance(c.func, ast.Attribute)}
-        assert "chmod" not in called and "umask" not in called
-        assert "fchmod" in called
+
+        def calls(name):
+            node = next(n for n in ast.walk(tree)
+                        if isinstance(n, ast.FunctionDef) and n.name == name)
+            return ({c.func.attr for c in ast.walk(node)
+                     if isinstance(c, ast.Call)
+                     and isinstance(c.func, ast.Attribute)},
+                    {c.func.id for c in ast.walk(node)
+                     if isinstance(c, ast.Call)
+                     and isinstance(c.func, ast.Name)})
+        writer, writer_names = calls("_write_pseudonyms_json_tmp")
+        data, _ = calls("_write_pseudonyms_json_data_tmp")
+        assert "_write_pseudonyms_json_data_tmp" in writer_names
+        for called in (writer, data):
+            assert "chmod" not in called and "umask" not in called
+        assert "fchmod" in data
 
     def test_a_variant_the_file_already_maps_is_a_conflict(self, project):
         """QA's Q4: QualCoder's check is on every original in the file,
@@ -4832,12 +4865,16 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert refused["nothing_changed"] is True
         assert refused["error"] == (
             "The mapping cannot be saved into this project's pseudonyms.json: "
-            "entry [1] maps a name the file already maps, and QualCoder's "
-            "Pseudonyms dialog (the button in Manage Files) refuses a "
-            "duplicate original as well. Nothing was written. Remove or "
-            "change the entry and preview again, or edit the file in the "
-            "dialog; or preview again without save_mapping_to_project and "
-            "execute with researcher_keeps_mapping=true instead.")
+            "entry [1] maps a name the file already maps, and the file holds "
+            "one pseudonym per name (QualCoder's Pseudonyms dialog refuses a "
+            "duplicate too). Nothing was written. Remove or change the entry "
+            "and preview again; or preview again without "
+            "save_mapping_to_project and execute with "
+            "researcher_keeps_mapping=true. (A researcher who uses QualCoder "
+            "can also remove the file's entry in its Pseudonyms dialog, "
+            "under Manage Files. Files already rewritten or imported with "
+            "that entry keep its pseudonym, so one person can end up with "
+            "two; keep a note of the entry first.)")
         # The file's own value is never quoted.
         assert "Zelda" not in json.dumps(out) + json.dumps(refused)
         assert backups(project) == []
@@ -4914,7 +4951,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert refused["reason"] == "pseudonyms_json_unreadable"
         assert refused["error"].startswith(
             "The mapping cannot be saved into this project's pseudonyms.json: "
-            "pseudonyms.json could not be parsed as QualCoder's list")
+            "the project's names list (pseudonyms.json, a list of "
+            "{original, pseudonym} entries in QualCoder's format) could not "
+            "be read")
         assert refused["error"].endswith(
             "Nothing was written. Fix the file and preview again, or preview "
             "again without save_mapping_to_project and execute with "
@@ -4923,7 +4962,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert backups(project) == []
         assert any(w.startswith("Warning: saving this mapping into "
                                 "pseudonyms.json would be refused: "
-                                "pseudonyms.json could not be parsed")
+                                "the project's names list (pseudonyms.json, "
+                                "a list of {original, pseudonym} entries in "
+                                "QualCoder's format) could not be read")
                    for w in out["warnings"])
 
     @POSIX_ONLY
@@ -5062,8 +5103,12 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "the run committed (PermissionError); nothing else was lost: the "
             "rewrite stands, the backup holds the real names, and the "
             "journal entry and the run record say the save was requested, "
-            "not made. Enter the mapping in QualCoder's Pseudonyms dialog "
-            "(the button in Manage Files) now.")
+            "not made. Make sure the researcher keeps the mapping now: save "
+            "it with a run on another file that still contains one of the "
+            "names, or write it into pseudonyms.json in the project folder "
+            "with a text editor, as a list of {original, pseudonym} "
+            "entries; or, if they use QualCoder, enter it in its "
+            "Pseudonyms dialog (the button in Manage Files).")
         record = json.loads(Path(result["manifest_path"]).read_text(
             encoding="utf-8"))
         assert record["mapping_retention"]["choice"] == "save_requested"
@@ -5099,8 +5144,9 @@ class TestSavingTheMappingIntoPseudonymsJson:
                          file_id=4)
         tail = (" The mapping would not be saved either, because no run "
                 "would happen. Pick a file that contains one of the names and "
-                "preview again, or enter the mapping in QualCoder's "
-                "Pseudonyms dialog (the button in Manage Files) directly.")
+                "preview again. (A researcher who uses QualCoder can also "
+                "enter the mapping in its Pseudonyms dialog, under Manage "
+                "Files.)")
         assert any(w.endswith("would rewrite nothing." + tail)
                    for w in out["warnings"]), out["warnings"]
         answered = execute_strictly(out)
@@ -5108,8 +5154,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert answered["message"].endswith(
             "no backup was taken. The mapping was not saved, because no run "
             "happened. Pick a file that contains one of the names and "
-            "preview again, or enter the mapping in QualCoder's Pseudonyms "
-            "dialog (the button in Manage Files) directly.")
+            "preview again. (A researcher who uses QualCoder can also enter "
+            "the mapping in its Pseudonyms dialog, under Manage Files.)")
         assert not (project / "pseudonyms.json").exists()
         assert backups(project) == []
         _house_rules([answered["message"]])
@@ -5177,8 +5223,10 @@ class TestTheMappingAcrossARestore:
         assert _written(project) == saved
         assert again["pseudonyms_json_note"].startswith(
             "The backup restored carries a pseudonyms.json that this project "
-            "did not have before the restore; QualCoder applies it on every "
-            "later text or transcript import (not a PDF).")
+            "did not have before the restore; its names are replaced on "
+            "later text or transcript imports: by Exegete's import_documents "
+            "unless apply_project_pseudonyms is false, and by QualCoder on "
+            "every one (not a PDF).")
 
     def test_a_restore_that_changes_the_file_says_so(self, project):
         _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"}])
@@ -5494,9 +5542,9 @@ class TestQualCoderAppliesTheSavedFileAsThisRunDid:
                    if "apply pseudonyms.json case-sensitively" in w]
         assert warning == [
             "Warning: this run replaces the names in any letter case "
-            "(case_mode insensitive), and QualCoder's text and transcript "
-            "imports (not PDFs) apply pseudonyms.json case-sensitively: the "
-            "next one "
+            "(case_mode insensitive), and later imports apply "
+            "pseudonyms.json case-sensitively, in Exegete as in QualCoder: "
+            "the next one "
             "replaces only the "
             "spellings saved, so a THOMAS or a thomas in a new transcript "
             "stays as it is. Add each spelling you expect as a variant, or "
@@ -5520,11 +5568,14 @@ class TestQualCoderAppliesTheSavedFileAsThisRunDid:
         assert len(warning) == 1 and warning[0].startswith(
             "Warning: entry [1] holds, as a word, a name that "
             "pseudonyms.json already lists.")
-        # Fix round 2, B2P-N1: said of the imports that match this way.
-        assert ("QualCoder's text and transcript imports (not PDFs) apply "
-                "the file one entry at a time, in file order, so on the next "
-                "one the entry already in the file replaces that word first"
-                in warning[0])
+        # Fix round 2, B2P-N1: said of the imports that match this way;
+        # v0.15.0: Exegete's own imports are not affected, and the trait
+        # is QualCoder's, for imports made there.
+        assert ("Exegete's imports apply the longest name first and are "
+                "not affected. If later imports are made in QualCoder, its "
+                "text and transcript imports (not PDFs) apply the file one "
+                "entry at a time, in file order, so the entry already in "
+                "the file replaces that word first" in warning[0])
         assert "Pnine" not in json.dumps(out)
         _house_rules(warning)
         # QualCoder's loop over the file as it would be saved shows why.
@@ -5564,10 +5615,10 @@ class TestQualCoderAppliesTheSavedFileAsThisRunDid:
 class TestTheInspectionRoutes:
     """Ruling 14b, and the owner's ruling of 2026-09-24 (Brief 2 fix round
     1): get_current_project reports the count and never a name, and does
-    not invite the call that returns them; the list has a tool of its
-    own, read_pseudonym_list, whose description says first that it sends
-    the real names to the AI provider, which is in the full toolset only,
-    and which leaves one value-free line in the log each time."""
+    not invite a call that returns them. The tool that returned the list,
+    read_pseudonym_list, was removed in v0.15.0 (ruling 78; the files
+    design, piece 5): no tool returns the names now, and the researcher
+    sees and changes the list in the names file."""
 
     ENTRIES = [{"original": "Thomas", "pseudonym": "Alex"},
                {"original": "Mary Ann", "pseudonym": "Sam"}]
@@ -5577,29 +5628,46 @@ class TestTheInspectionRoutes:
         return json.loads(server.get_current_project(**kwargs))
 
     @staticmethod
-    def _list():
-        # v0.14's coding-loop fix round 2 (owner ruling 25, question 3):
-        # every answer carries the deprecation sentence
-        out = json.loads(server.read_pseudonym_list())
-        assert out.pop("deprecated") == server.DEPRECATED_PSEUDONYM_LIST
-        return out
+    def _refused_as_unknown():
+        """A host's call of the removed tool: refused, with no list."""
+        from mcp.shared.memory import (
+            create_connected_server_and_client_session)
+
+        async def run():
+            async with create_connected_server_and_client_session(
+                    server.mcp._mcp_server) as client:
+                return await client.call_tool("read_pseudonym_list", {})
+        result = asyncio.run(run())
+        text = "\n".join(getattr(b, "text", "") for b in result.content)
+        assert result.isError is True
+        assert "Unknown tool: read_pseudonym_list" in text
+        return text
 
     def test_get_current_project_reports_presence_and_count_without_a_name(
             self, project):
         _sidecar_file(project, self.ENTRIES)
         out = self._report()
+        # v0.15.0, piece 5: in the full set the note sends the researcher
+        # to the names file
         assert out["pseudonyms_json"] == {
             "present": True, "entries": 2, "encoding": "utf-8",
             "note": (
-                "The project's own pseudonyms.json (QualCoder's import-time "
-                "list) is present with 2 entr(ies). Its contents are the "
-                "researcher's reverse key and are not returned here; "
-                "QualCoder's Pseudonyms dialog (the button in Manage Files) "
-                "shows them to the researcher.")}
+                "The project's pseudonyms.json (its list of real names and "
+                "their pseudonyms, applied when files are imported) is "
+                "present with 2 entr(ies). Its contents are the "
+                "researcher's reverse key and are never returned. To see "
+                "or change the list, the researcher uses the names file on "
+                "their own computer: prepare_names_list makes it from the "
+                "list (or keeps one already there, and says if the list "
+                "holds entries it lacks), shows and opens it, and "
+                "save_names_list saves it as the list. Entries that cannot "
+                "be written as one line of the names file stay in "
+                "pseudonyms.json, in the project folder, where the "
+                "researcher can see them.")}
         serialised = json.dumps(out)
         for name in ("Thomas", "Mary Ann", "Alex", "Sam"):
             assert name not in serialised, name
-        # It does not invite the call that returns the names.
+        # It does not invite a call that returns the names.
         assert "read_pseudonym_list" not in serialised
         assert "include_pseudonyms" not in serialised
         _house_rules([out["pseudonyms_json"]["note"]])
@@ -5613,55 +5681,48 @@ class TestTheInspectionRoutes:
 
     def test_it_reports_absence(self, project):
         assert self._report()["pseudonyms_json"] == {"present": False}
-        assert self._list() == {"pseudonyms_json": {"present": False}}
+        self._refused_as_unknown()
 
     def test_it_reports_an_unreadable_file_value_free(self, project):
         (project / "pseudonyms.json").write_text(
             '{"Thomas": "Alex"}', encoding="utf-8")
         expected = {"present": True, "entries": None, "error": (
-            "pseudonyms.json could not be parsed as QualCoder's list of "
-            "{original, pseudonym} entries: the file holds a dict, not a "
-            "list.")}
+            "The project's names list (pseudonyms.json, a list of "
+            "{original, pseudonym} entries in QualCoder's format) could not "
+            "be read: the file holds a dict, not a list.")}
         assert self._report()["pseudonyms_json"] == expected
-        assert self._list() == {"pseudonyms_json": expected}
+        assert "Thomas" not in self._refused_as_unknown()
 
-    def test_read_pseudonym_list_returns_the_list_and_logs_a_count(
-            self, project, caplog):
+    def test_no_tool_returns_the_list_and_none_logs_it(self, project,
+                                                       caplog):
+        """The route that returned the list, and logged a count each time,
+        is gone: a host's call is refused, and no name reaches the answer
+        or the log."""
         import logging
         _sidecar_file(project, self.ENTRIES)
         caplog.set_level(logging.DEBUG)
-        out = self._list()
-        assert out == {"pseudonyms_json": {
-            "present": True, "entries": 2, "encoding": "utf-8",
-            "entries_list": self.ENTRIES}}
-        lines = [r for r in caplog.records
-                 if "pseudonyms.json list" in r.getMessage()]
-        assert [(r.levelname, r.getMessage()) for r in lines] == [
-            ("INFO", "read_pseudonym_list returned the project's "
-                     "pseudonyms.json list (2 entries) to the "
-                     "conversation.")]
+        text = self._refused_as_unknown()
         logged = "\n".join(r.getMessage() for r in caplog.records)
-        for name in ("Thomas", "Mary Ann", "Alex", "Sam", "study"):
+        for name in ("Thomas", "Mary Ann", "Alex", "Sam"):
+            assert name not in text, name
             assert name not in logged, name
+        assert "pseudonyms.json list" not in logged
 
-    def test_its_description_says_first_that_it_sends_the_names(self):
-        tool = server.mcp._tool_manager._tools["read_pseudonym_list"]
-        assert tool.description.split("\n")[0] == (
-            "This sends every real name in the project's pseudonyms.json, "
-            "with its pseudonym, to the AI provider.")
-        flat = " ".join(tool.description.split())
-        assert ("Call it only when the researcher has asked, in this "
-                "conversation, to see or check the project's pseudonym "
-                "list." in flat)
-        _house_rules([tool.description])
+    def test_no_description_offers_the_names(self):
+        for name, tool in server.mcp._tool_manager._tools.items():
+            assert "read_pseudonym_list" not in (tool.description or ""), \
+                name
+            assert not (tool.description or "").startswith(
+                "This sends every real name"), name
 
-    def test_it_is_in_the_full_toolset_only(self):
+    def test_it_is_in_no_toolset(self):
         assert "read_pseudonym_list" not in server.CORE_TOOLSET
-        assert "read_pseudonym_list" in server.mcp._tool_manager._tools
+        assert "read_pseudonym_list" not in server.mcp._tool_manager._tools
+        assert not hasattr(server, "read_pseudonym_list")
 
-    def test_it_needs_an_open_project(self, project):
+    def test_it_is_refused_without_a_project_too(self, project):
         server.current_project_path = None
-        assert "error" in self._list()
+        self._refused_as_unknown()
 
 
 class TestTheSafeNameHelperOnWhatIsNotAName:
@@ -5975,12 +6036,20 @@ class TestTheDeclaredRoutesAreNarrowerThanAPosition:
         """
         rule = next(r for r in DECLARED_ROUTES
                     if r.path.pattern.startswith(r"^\.notes"))
+        # v0.15.0, not presuming QualCoder, piece 11: the window note and
+        # the AI files' note come on their signs, so every combination
+        # of signs is read, the fullest giving four notes
         for backup_name in ("study_backup_20260101_000000.qda", None):
-            notes = server._pseudonymise_notes(backup_name)
-            assert len(notes) == 4, notes
-            allowed = [text for text in notes if rule.text.match(text)]
-            assert len(allowed) == 1, notes
-            assert allowed[0].startswith("The backup taken before this run")
+            for seen, index, chat in itertools.product((True, False),
+                                                       repeat=3):
+                notes = server._pseudonymise_notes(
+                    backup_name, qualcoder_seen=seen, search_index=index,
+                    chat_history=chat)
+                assert len(notes) == 2 + seen + (index or chat), notes
+                allowed = [text for text in notes if rule.text.match(text)]
+                assert len(allowed) == 1, notes
+                assert allowed[0].startswith(
+                    "The backup taken before this run")
 
     def test_the_file_text_route_admits_the_name_and_nothing_else(self):
         """v0.13, ruling 12. The block's file name is declared; a form,
@@ -6457,7 +6526,7 @@ class TestConcurrencyAndFaults:
 class TestStaleSessions:
 
     def _session(self, project, file_id, status="pending"):
-        # The database file, as analyze_for_coding records it (db.db_path),
+        # The database file, as start_coding_session records it (db.db_path),
         # while the fixture selects the project by its folder, as
         # create_project and select_project do: until v0.14 these tests
         # recorded the folder and so matched a string real sessions
@@ -7600,7 +7669,7 @@ class TestProjectPseudonyms:
         (project / "pseudonyms.json").write_text(
             '[{"original": "Thomas",', encoding="utf-8")
         out = preview_of(mapping=None, use_project_pseudonyms=True)
-        assert "could not be parsed" in out["error"]
+        assert "could not be read" in out["error"]
         assert "Thomas" not in out["error"]
 
     def test_a_list_of_strings_is_refused(self, project):
@@ -7673,11 +7742,12 @@ class TestProjectPseudonyms:
 
     @POSIX_ONLY
     def test_a_directory_is_refused_value_free(self, project):
+        # get_current_project's report since the tool that returned the
+        # list was removed (v0.15.0, the files design, piece 5)
         (project / "pseudonyms.json").mkdir()
-        assert json.loads(server.read_pseudonym_list()) == {
-            "pseudonyms_json": {"present": True, "entries": None,
-                                "error": self.NOT_REGULAR},
-            "deprecated": server.DEPRECATED_PSEUDONYM_LIST}
+        assert json.loads(server.get_current_project())[
+            "pseudonyms_json"] == {"present": True, "entries": None,
+                                   "error": self.NOT_REGULAR}
 
     def test_a_huge_file_is_refused_value_free(self, project):
         """A 64 MB file at that name is refused with the size message;
@@ -7855,13 +7925,22 @@ class TestImportRider:
 
 class TestResultShape:
 
-    def test_the_result_carries_the_notes(self, project):
+    def test_the_result_carries_the_notes(self, project, monkeypatch):
         """The four notes of v0.12, and on the typed path the mapping note
-        of ruling 14d (Brief 2), by their opening words."""
+        of ruling 14d (Brief 2), by their opening words.
+
+        v0.15.0, not presuming QualCoder, piece 11: the window note comes
+        when the project or this computer shows QualCoder (here the
+        researcher's setting "yes"), and the AI files' note when the
+        project holds one of them (here both)."""
+        monkeypatch.setenv("EXEGETE_USES_QUALCODER", "yes")
+        (project / "ai_data").mkdir()
+        (project / "ai_data" / "search.sqlite").write_bytes(b"index")
+        (project / "ai_data" / "chat_history.sqlite").write_bytes(b"chat")
         result = execute_from(preview_of())
         assert [note.split(" ")[:3] for note in result["notes"]] == [
             ["Positions", "after", "the"], ["The", "backup", "taken"],
-            ["An", "open", "QualCoder"], ["QualCoder", "4.0's", "AI"],
+            ["If", "the", "project"], ["QualCoder", "4.0's", "AI"],
             ["The", "mapping", "you"]]
         joined = " ".join(result["notes"])
         assert ("Positions after the first replacement in this file have "
@@ -7870,8 +7949,8 @@ class TestResultShape:
         assert "Positions in these files have changed" not in joined
         assert "in these files" not in joined
         assert "backup" in joined
-        assert "open QualCoder window" in joined
-        assert "search index" in joined
+        assert "open in a QualCoder window" in joined
+        assert "search index" in joined and "chat history" in joined
         _house_rules(result["notes"])
 
     def test_the_result_reports_both_lengths_and_the_new_digest(
@@ -7906,14 +7985,14 @@ class TestResultShape:
         try:
             out = preview_of()
             assert out["preview"]["files"][0]["position_safe"] is False
-            assert any("already counts positions in them differently "
+            assert any("which QualCoder's editor counts differently "
                        "from Exegete" in w for w in out["warnings"])
             result = execute_from(out)
             assert result["success"] is True
             assert "position_safety_warning" in result
             # One file per call: said in the singular (fix round 1, QA-9).
-            assert "GUI-created codings in that file may not align" in \
-                result["position_safety_warning"]
+            assert "codings made in QualCoder in that file may not line " \
+                "up" in result["position_safety_warning"]
             assert "those files" not in result["position_safety_warning"]
         finally:
             server.db.close()
@@ -8548,11 +8627,12 @@ class TestTheDocumentsTellTheTruth:
         "`pseudonyms.json` in QualCoder's own format",
         "an audit record of which rows the run changed and not a way back "
         "(the backup is)",
-        # Brief 2 fix round 1, the owner's ruling: the list has a tool of
-        # its own.
-        "`read_pseudonym_list()` - **Sends real names to the AI "
-        "provider**: returns the entries of the project's own "
-        "`pseudonyms.json`",
+        # Brief 2 fix round 1, the owner's ruling, gave the list a tool
+        # of its own; v0.15.0 removed it (the files design, piece 5), and
+        # the brief list names the names file
+        "replace the names you list, or a list you fill in on your own "
+        "computer (`prepare_names_list`, `save_names_list`), as whole "
+        "words,",
         "`qualcoder_edit_parity` reproduces the walk QualCoder's "
         "coding-view editor applies, fed this tool's exact edit list (the "
         "editor's own diff may factor a shared prefix or suffix out of a "
@@ -8678,11 +8758,20 @@ class TestTheDocumentsTellTheTruth:
         "file holds every typed name under its typed pseudonym, which "
         "confirms an exact pair. Neither writes anything or takes a "
         "backup.",
-        "The names themselves reach the conversation only through a tool "
-        "of their own, `read_pseudonym_list` (in the full and lifecycle "
-        "tool sets, so in the desktop extension by default, and not in "
-        "core; deprecated, and removed in v0.15), whose description says "
-        "first that it sends the real names to the AI provider",
+        # v0.15.0, the files design, piece 5: the tool that returned the
+        # names was removed
+        "No tool returns the names (`read_pseudonym_list` was removed in "
+        "0.15.0): you see and change the list in the names file on your "
+        "own computer (`prepare_names_list`, then `save_names_list`), whose "
+        "preview gives counts and line numbers, never a name.",
+        # its fix round 1: an older names file, the entries it cannot
+        # hold, and which file QualCoder's guidance is about
+        "A names file made before the list last changed can lack some of "
+        "its entries, which `prepare_names_list` says, and entries that "
+        "cannot be written as one line of the file stay in "
+        "`pseudonyms.json`, where you can see them. QualCoder's own "
+        "guidance is to remove `pseudonyms.json` and store it securely once "
+        "the import is done",
         "each is an audit record of which rows a run changed and where the "
         "pseudonyms now sit, kept so a run can be accounted for afterwards. "
         "It is not a way back; the backup taken before the run is.",

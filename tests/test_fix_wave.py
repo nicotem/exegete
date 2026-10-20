@@ -37,7 +37,7 @@ FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by e
 
 
 def _make_session(setup_server, qualcoder_db_path, **kwargs):
-    out = server.analyze_for_coding([1], **{"instruction": "test", **kwargs})
+    out = server.start_coding_session([1], **{"instruction": "test", **kwargs})
     return out.split("Session ID: `")[1].split("`")[0]
 
 
@@ -154,10 +154,10 @@ class TestSessionStartQualcoderCheck:
         lock = _lock_file(qualcoder_db_path)
         lock.write_text(f"gemma\n{time.time()}", encoding="utf-8")
         try:
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             assert "qualcoder_open: true" in out
             assert "action_required" in out
-            assert "close QualCoder" in out
+            assert "close the project in QualCoder" in out
             assert "get_current_project" in out
             assert "gemma" in out
             # the session was still created
@@ -167,7 +167,7 @@ class TestSessionStartQualcoderCheck:
             lock.unlink()
 
     def test_absent_lock_consistent_shape(self, setup_server, qualcoder_db_path):
-        out = server.analyze_for_coding([1], instruction="test")
+        out = server.start_coding_session([1], instruction="test")
         # QA6-1: qualcoder_open is always present, false when clear; no
         # directive noise beyond that
         env = json.loads(out)
@@ -180,7 +180,7 @@ class TestSessionStartQualcoderCheck:
         lock = _lock_file(qualcoder_db_path)
         lock.write_text(f"gemma\n{time.time() - 60}", encoding="utf-8")
         try:
-            out = server.analyze_for_coding([1], instruction="test")
+            out = server.start_coding_session([1], instruction="test")
             env = json.loads(out)
             assert env["qualcoder_open"] is False
             assert "action_required" not in env
@@ -218,7 +218,7 @@ class TestSessionStartQualcoderCheck:
             lock.unlink()
 
     def test_docstring_mandates_the_stop(self):
-        doc = server.analyze_for_coding.__doc__ or ""
+        doc = server.start_coding_session.__doc__ or ""
         assert "qualcoder_open" in doc
         assert "STOP" in doc
         assert "get_current_project" in doc
@@ -395,7 +395,7 @@ class TestQualcoderLockProtocol:
         try:
             result = json.loads(server.import_text_file(
                 "new.txt", "some new content", create_backup=False))
-            assert "open in QualCoder" in result["error"]
+            assert "is in use by another program" in result["error"]
             assert "someone" in result["error"]
         finally:
             lock.unlink()
@@ -478,7 +478,7 @@ class TestRecoveryTools:
         shutil.copytree(qualcoder_db_path, qc_b)
         result = json.loads(server.list_backups())
         kinds = {b["kind"] for b in result["backups"]}
-        assert kinds == {"mcp", "qualcoder"}
+        assert kinds == {"exegete", "qualcoder"}   # v0.15.0: was "mcp"
 
     def test_restore_requires_confirmation(self, setup_server, qualcoder_db_path):
         parent = Path(qualcoder_db_path).parent

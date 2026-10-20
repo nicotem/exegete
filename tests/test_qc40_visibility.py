@@ -364,7 +364,7 @@ class TestVisibleReads:
 
     def test_analyze_file_excludes_hidden_segments_and_annotations(
             self, visibility_db):
-        out = json.loads(server.analyze_file_with_coding(1))
+        out = json.loads(server.read_file_with_codings(1))
         owners = {s["owner"] for s in out["coded_segments"]}
         assert HIDDEN not in owners
         ann_owners = {a["owner"] for a in out["annotations"]}
@@ -1085,17 +1085,26 @@ class TestTheCapabilityIsNotAVersion:
             self, visibility_db):
         out = json.loads(server.get_coded_segments(1))
         note = out["coder_visibility"]["note"]
-        assert "3.8.2" in note, note
+        # v0.15.0, not presuming QualCoder, piece 12: the note names
+        # where the setting lives and no version at all
+        assert note.startswith(
+            "This project hides 1 coder(s) (a visibility setting made in "
+            "QualCoder and stored in the project). Results follow that "
+            "setting;"), note
+        assert "4.0" not in note and "3.8.2" not in note, note
         assert not self._offends(note), note
 
     def test_the_override_disclosure_keeps_its_4_0_reference(
             self, visibility_db):
-        """The sibling branch is about the override QualCoder 4.0's own
-        AI uses, which is a fact about 4.0 rather than a version standing
-        in for the capability. It stays as it is."""
+        """The sibling branch was about the override QualCoder 4.0's own
+        AI uses; v0.15.0 (piece 12) drops that aside on parity, and the
+        note says what the filter read."""
         out = json.loads(server.get_coded_segments(1, coder=HIDDEN))
         note = out["coder_visibility"]["note"]
-        assert "QualCoder 4.0's own AI" in note
+        assert note == (
+            "This project hides 1 coder(s) (a visibility setting made in "
+            "QualCoder), but the explicit coder filter read that coder's "
+            "full data instead.")
         assert not self._offends(note), note
 
     def test_no_shipped_prose_makes_4_0_the_qualifier(self):
@@ -1376,11 +1385,20 @@ class TestTheClassCannotComeBack:
     # new project, the four views QualCoder 4.0 creates, which are what
     # every read of codings and annotations then goes through. The
     # f-string and its fixed tail are both string nodes, so both appear.
+    #
+    # v0.15.0, correcting the researcher's own coder name
+    # (set_project_coder_name): whether ONE name has a row, never its
+    # visibility (the plan of the change and its signed state; who is
+    # hidden comes from `coder_visibility_map` alone, and the preview's
+    # warning from the map as well), and the statement that removes the
+    # old name's row when the new name already has one, a write.
     EXPECTED = {
         "database.py": {
             "SELECT COUNT(DISTINCT name) FROM coder_names "
             "WHERE visibility = 0",
             "SELECT name, visibility FROM coder_names",
+            "SELECT 1 FROM coder_names WHERE name = ? LIMIT 1",
+            "DELETE FROM coder_names WHERE name = ?",
         },
         "new_project.py": {
             "CREATE VIEW \x00_visible AS SELECT t.* FROM \x00 t WHERE NOT "
@@ -1449,8 +1467,9 @@ class TestTheClassCannotComeBack:
     def test_the_sweep_finds_something(self):
         # An empty sweep would make the assertion above pass whatever
         # the source says. Two reads, and the two strings of the new
-        # project's view statement.
-        assert sum(len(v) for v in self._reads().values()) == 4
+        # project's view statement; and since v0.15.0 the correction's
+        # presence read and its removal of a row.
+        assert sum(len(v) for v in self._reads().values()) == 6
 
     def test_the_sweep_would_notice_a_per_name_read(self):
         assert self._reads(

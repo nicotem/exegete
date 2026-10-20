@@ -198,8 +198,7 @@ class TestTheTransportCoercesTheNewSwitches:
 # audio file whose fulltext is NULL, and there is no file 999.
 REFUSALS = [
     (2, "pdf_source",
-     "file 2 is a PDF source; this tool rewrites text sources only, as "
-     "QualCoder's own editor does."),
+     "file 2 is a PDF source; this tool rewrites text sources only."),
     (3, "no_fulltext",
      "file 3 has no stored text (a media file, or an empty source), so "
      "there is nothing to rewrite."),
@@ -315,7 +314,7 @@ class TestWhatWentWithTheList:
         than one file. Read from the syntax: no f-string in the server
         formats `len(files)` in front of " files", and the journal-name
         function no longer branches on how many files it was given.
-        (`analyze_for_coding` formats `len(files_to_analyze)`, another
+        (`start_coding_session` formats `len(files_to_analyze)`, another
         list for another purpose, which is why the argument is read.)"""
         tree = _server_tree()
         for node in ast.walk(tree):

@@ -33,10 +33,9 @@ is the easier start.
       Claude Code's reach, and what it opens goes to the AI provider,
       which may train on it while training is on (PRIVACY.md,
       "Assistants that open files by themselves")
-- [ ] A project to work on (a `.qda` folder, in QualCoder's format):
-      the standard tool set this setup uses cannot create one; the
-      one-click extension can, and so can this setup with
-      `EXEGETE_TOOLSET=lifecycle` (INSTALL.md)
+- [ ] A project to work on (a `.qda` folder, in QualCoder's format),
+      or none: the default tool set, `full`, can create one in the
+      conversation (INSTALL.md says where it goes)
 
 > Choosing between Claude plans, an API key, or a fully local model?
 > See "Choosing your AI host: data-governance options" in INSTALL.md
@@ -79,6 +78,9 @@ You can find it by:
 - In QualCoder, if you use it: the recent projects list
 - Searching for `.qda` folders: `find ~ -name "*.qda" -type d 2>/dev/null`
 
+**No project yet?** Skip this step: step 3 says what to leave out, and
+in step 5 you can ask the assistant to create one.
+
 ### 3. Configure Claude Desktop
 
 **Get the paths you'll need:**
@@ -111,7 +113,8 @@ Or via Claude Desktop: Settings > Developer > Edit Config
       "command": "/Users/yourname/Documents/exegete/venv/bin/python",
       "args": ["-m", "exegete.server"],
       "env": {
-        "EXEGETE_PROJECT_PATH": "/Users/yourname/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/yourname/Exegete projects/MyProject.qda",
+        "EXEGETE_CODER_NAME": "Your name"
       }
     }
   }
@@ -121,6 +124,37 @@ Or via Claude Desktop: Settings > Developer > Edit Config
 Replace:
 - `yourname` with your actual username
 - The paths with your actual paths from steps above
+- `Your name` with your own coder name, or leave that line out to be
+  asked when a project is made
+
+**No project yet?** Leave out the `EXEGETE_PROJECT_PATH` line, as
+below: Exegete then starts with no project selected, and in step 5 you
+can ask the assistant to create one.
+
+```json
+{
+  "mcpServers": {
+    "exegete": {
+      "command": "/Users/yourname/Documents/exegete/venv/bin/python",
+      "args": ["-m", "exegete.server"],
+      "env": {
+        "EXEGETE_CODER_NAME": "Your name"
+      }
+    }
+  }
+}
+```
+
+On this setup a new project goes to `~/Documents/Exegete projects`
+unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
+Documents) or OneDrive may sync Documents, and so copy the project,
+transcripts imported into it included, off the computer; a sync
+service can also copy a project's database and its journal separately.
+Consider naming a folder outside Documents, such as
+`~/Exegete projects`: add
+`"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"` as a line of
+the `env` block, with a comma after the line before it (INSTALL.md,
+"What You'll Need" and "Environment variables the server reads").
 
 ### 4. Restart Claude Desktop
 
@@ -142,7 +176,19 @@ that conversation.
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
 
-In Claude Desktop, try these prompts:
+In Claude Desktop, try these prompts: the first only if you have no
+project yet.
+
+```
+Create a new project in Exegete called Practice
+```
+
+Exegete asks the assistant to check your coder name with you first
+(the name your own codings will carry) and to say where the project
+will be made, unless your coder name is already set
+(`EXEGETE_CODER_NAME` in the `env` section above, or "Your coder name"
+in the extension's settings): then the project is made with that name
+at once, and the answer says where. Then:
 
 ```
 Can you give me a summary of my project?
@@ -165,7 +211,7 @@ change; then `cd` into the cloned folder, run `git pull`, then
 appear after the restart. Confirm the installed version with `venv/bin/python -m
 exegete.server --version`, which prints the version and exits
 (`venv/bin/pip show exegete` still works and spells
-`0.14.3-alpha` as `0.14.3a0`). Updates never touch your projects or
+`0.15.0-alpha` as `0.15.0a0`). Updates never touch your projects or
 backups (the server is code-only).
 
 ## Troubleshooting
@@ -177,10 +223,12 @@ If Claude can't connect:
 1. **Check the config file syntax** - make sure JSON is valid (commas, quotes, brackets)
 2. **Verify paths** - make sure all paths are absolute and correct
 3. **Check Python path** - activate venv and run `which python`
-4. **Check .qda project** - make sure the folder exists: `ls -ld /path/to/your/project.qda`
+4. **Check .qda project** - make sure the folder exists: `ls -ld /path/to/your/project.qda` (skip this if you have no project yet)
 5. **Restart Claude** - always restart after config changes
 
 ### Test the Server Manually
+
+Leave out the `export` line if you have no project yet.
 
 ```bash
 cd ~/Documents/exegete

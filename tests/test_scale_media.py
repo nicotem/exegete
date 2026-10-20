@@ -173,7 +173,7 @@ def read_surface(hot_code: int, big_fid: int, ordinary_fid: int):
         ("query_by_attribute(case)", lambda: server.query_by_attribute("Age", "30", attr_type="case", operator="gte")),
         ("list_attribute_types", lambda: server.list_attribute_types()),
         ("get_file_attributes", lambda: server.get_file_attributes(ordinary_fid)),
-        ("analyze_file_with_coding(BIG)", lambda: server.analyze_file_with_coding(big_fid)),
+        ("read_file_with_codings(BIG)", lambda: server.read_file_with_codings(big_fid)),
         ("get_file_content(BIG)", lambda: server.get_file_content(big_fid)),
     ]
 
@@ -376,20 +376,20 @@ class TestMedia:
         assert freq[1] == 0  # media-only code shows 0 text frequency
 
     def test_analyze_media_source_flagged(self, media_proj, scratch):
-        """Track6 LOW finding, FIXED: analyze_file_with_coding on a media
+        """Track6 LOW finding, FIXED: read_file_with_codings on a media
         source now carries is_text/type in file_info plus an explanatory
         note, so an empty full_text is no longer indistinguishable from a
         genuinely empty text file."""
         proj, stats = media_proj
         connect(proj, scratch / "sess_media")
-        img = json.loads(server.analyze_file_with_coding(4))  # image source
+        img = json.loads(server.read_file_with_codings(4))  # image source
         assert img.get("full_text") == "" and img["statistics"]["total_segments"] == 0
         fi = img["file_info"]
         assert fi["is_text"] is False
         assert fi["type"] == "image"
         assert "not" in img["note"] and "text" in img["note"]
         # a text source is flagged as text and carries no media note
-        txt = json.loads(server.analyze_file_with_coding(1))
+        txt = json.loads(server.read_file_with_codings(1))
         assert txt["file_info"]["is_text"] is True
         assert "note" not in txt
 
@@ -753,16 +753,16 @@ def _media_report(scratch):
                     "file_types lists image/audio/video sources.").format(
                         i=stats["image_codings"], a=stats["av_codings"])))
 
-    # OBSERVATION: analyze_file_with_coding on a media source doesn't flag non-text.
+    # OBSERVATION: read_file_with_codings on a media source doesn't flag non-text.
     # (image fid 4 in build_media_project has 4 code_image rows.)
-    img = json.loads(server.analyze_file_with_coding(4))
+    img = json.loads(server.read_file_with_codings(4))
     fi = img.get("file_info", {})
     analyze_flags_nontext = ("is_text" in fi) or ("type" in fi) or bool(img.get("note"))
     if not analyze_flags_nontext and (img.get("full_text") or "") == "":
         findings.append(dict(
             sev="LOW",
-            title="analyze_file_with_coding does not indicate a source is non-text",
-            detail=("Running analyze_file_with_coding on an image/audio/video source returns "
+            title="read_file_with_codings does not indicate a source is non-text",
+            detail=("Running read_file_with_codings on an image/audio/video source returns "
                     "full_text='' with all-zero statistics and NO is_text/type flag or note — "
                     "indistinguishable from a genuinely empty text file, and the source's "
                     "code_image/code_av codings are not surfaced. get_file_content on the same "
@@ -979,7 +979,7 @@ def _write_report(built, read_rows, refi_rows, write_rows, write_stats, media, c
     A("- The `code_text` self-join in `find_cooccurring_codes` and the "
       "`case_text ⋈ code_text` join in `get_case_code_matrix` / `get_codes_by_case` have no "
       "supporting index on `fid`; watch these as projects grow the number of codings per file.")
-    A("- `search_files(content)` and `analyze_file_with_coding` scan/return the full 500k-char "
+    A("- `search_files(content)` and `read_file_with_codings` scan/return the full 500k-char "
       "document; their peak heap tracks document size, not coding count.\n")
 
     (HERE / "report.md").write_text("\n".join(lines), encoding="utf-8")

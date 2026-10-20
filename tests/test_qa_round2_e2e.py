@@ -3,7 +3,7 @@
 
 The round-1 campaign found the loop could never be driven end-to-end through
 the MCP tool surface (suggestions had to be injected via the Python API).
-These tests drive analyze_for_coding -> record_suggestions ->
+These tests drive start_coding_session -> record_suggestions ->
 review_suggestions -> update_suggestion_status -> apply_codings exactly as an
 MCP client would — plus every unhappy path: wrong project mid-session, a
 QualCoder lock appearing mid-write (TOCTOU), position mismatches, and
@@ -24,6 +24,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 from exegete.database import (
     QualcoderDatabase,
     QUALCODER_LOCK_FILENAME,
@@ -38,16 +39,22 @@ EXPECTED_TOOLS = {
     # project management (5)
     "list_available_projects", "select_project", "get_current_project",
     "copy_project_to_workspace",
-    # v0.13 Brief 2 fix round 1 (the owner's ruling): the project's
-    # pseudonym list, a tool of its own, full toolset only
-    "read_pseudonym_list",
+    # (v0.13 Brief 2 fix round 1 gave the project's pseudonym list a tool
+    # of its own, read_pseudonym_list; v0.15.0 removed it: the names
+    # file below replaces it)
     # v0.12 B1: the project's AI coder name, asked for once and stored
     # beside data.qda
     "set_project_ai_coder_name",
+    # v0.15.0: the researcher's own coder name, corrected while nothing
+    # is recorded under it
+    "set_project_coder_name",
+    # v0.15.0: the names file, filled in on the researcher's computer,
+    # and its save as the project's names list
+    "prepare_names_list", "save_names_list",
     # read/analysis (15)
     "search_coded_text", "get_coded_segments", "search_files",
     "get_coding_frequencies", "search_memos", "export_code_report",
-    "get_project_summary", "analyze_file_with_coding", "list_attribute_types",
+    "get_project_summary", "read_file_with_codings", "list_attribute_types",
     "get_file_attributes", "get_case_attributes", "query_by_attribute",
     "find_cooccurring_codes", "get_case_code_matrix", "get_codes_by_case",
     # (16th read)
@@ -58,7 +65,7 @@ EXPECTED_TOOLS = {
     # v0.12 B3: the coder comparison (full toolset only, never core)
     "compare_coders",
     # AI coding loop (6)
-    "analyze_for_coding", "record_suggestions", "review_suggestions",
+    "start_coding_session", "record_suggestions", "review_suggestions",
     "edit_suggestion", "update_suggestion_status", "apply_codings",
     # writes & recovery (6)
     "import_text_file", "link_file_to_case", "delete_coding",
@@ -93,6 +100,12 @@ EXPECTED_TOOLS = {
     # the check for new versions (the owner's ruling of 5 October 2026),
     # full toolset only
     "check_for_updates",
+    # creating a project, in the full toolset since 0.15.0 (v0.14's
+    # `lifecycle` set until then)
+    "create_project",
+    # the earlier names of start_coding_session and
+    # read_file_with_codings, listed until the release on method (0.15.0)
+    "analyze_for_coding", "analyze_file_with_coding",
 }
 
 
@@ -118,7 +131,7 @@ class TestToolSurfaceRegistration:
         tools = asyncio.run(server.mcp.list_tools())
         names = {t.name for t in tools}
         assert names == EXPECTED_TOOLS
-        assert len(names) == 77          # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3)
+        assert len(names) == FULL_TOOLS    # tests/tool_counts.py
 
 
 class TestEndToEndLoop:
@@ -126,7 +139,7 @@ class TestEndToEndLoop:
     def test_full_loop_through_registered_tools(self, setup_server,
                                                 qualcoder_db_path):
         # 1. create the session
-        out = server.analyze_for_coding(
+        out = server.start_coding_session(
             [1], instruction="find stress and coping segments")
         sid = _session_id(out)
         assert "record_suggestions" in out  # workflow names the real next step
@@ -208,7 +221,7 @@ class TestUnhappyPaths:
                                                 qualcoder_db_path, tmp_path):
         """Session created in A, project B selected: every session-consuming
         write refuses and B is untouched."""
-        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
+        sid = _session_id(server.start_coding_session([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -246,7 +259,7 @@ class TestUnhappyPaths:
                                               qualcoder_db_path, monkeypatch):
         """A stale foreign lock lets the write proceed unheld; QualCoder
         'opening' between validation and commit must abort with rollback."""
-        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
+        sid = _session_id(server.start_coding_session([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -285,7 +298,7 @@ class TestUnhappyPaths:
 
     def test_fresh_lock_blocks_the_whole_flow_but_not_reads(
             self, setup_server, qualcoder_db_path):
-        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
+        sid = _session_id(server.start_coding_session([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -312,7 +325,7 @@ class TestUnhappyPaths:
                 lock.unlink()
 
     def test_position_mismatch_rejected_at_record_time(self, setup_server):
-        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
+        sid = _session_id(server.start_coding_session([1], instruction="test"))
         # "I " occurs twice in the fixture text; wrong positions + ambiguous
         # text must be rejected, not guessed
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
@@ -335,7 +348,7 @@ class TestUnhappyPaths:
                                                    qualcoder_db_path):
         """Simulates QualCoder (or anything) editing the text after the
         suggestion was recorded: apply must re-validate and refuse."""
-        sid = _session_id(server.analyze_for_coding([1], instruction="test"))
+        sid = _session_id(server.start_coding_session([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
@@ -369,7 +382,7 @@ class TestUnhappyPaths:
             "big_interview.txt", content, create_backup=False))
         fid = imp["file_id"]
 
-        sid = _session_id(server.analyze_for_coding([fid], instruction="test"))
+        sid = _session_id(server.start_coding_session([fid], instruction="test"))
         suggestions = []
         for i in range(200):
             snippet = f"Paragraph {i:03d} about workload"

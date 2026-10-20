@@ -15,8 +15,9 @@ COPY_A_PATH = (
     "hold Option, right-click and choose Copy as Pathname; on Windows 11, "
     "right-click it and choose Copy as path. Then paste it.")
 
-SAME_READING = ("QualCoder reads the file the same way, so both programs "
-                "read the same text.")
+SAME_READING = ("Exegete reads the file as QualCoder does, so if the same "
+                "file is also imported in QualCoder, both copies hold the "
+                "same text.")
 
 PATH_REFUSALS = {
     "missing": "There is no file or folder at this place on your "
@@ -66,6 +67,10 @@ PATH_REFUSALS = {
                     "holds no documents.",
     "reading_folder": "This is inside Exegete's reading folder, which "
                       "holds reading copies, not documents to import.",
+    "private_files": "This is a project's Exegete folder, or is in one. "
+                     "That folder holds files you fill in for the "
+                     "project; Exegete does not import from it. Bring "
+                     "documents in from where you keep them.",
 }
 
 OTHER_FORMATS = {
@@ -182,8 +187,8 @@ FILE_REFUSALS = {
                       "it too). Save it as Word (.docx) in its app, or "
                       "remove that character, then import that.",
     "too_long": "Its text is {characters} characters long, over Exegete's "
-                "limit of {limit}. For now, long books and reports come in "
-                "through QualCoder, if you use it.",
+                "limit of {limit}. For now, split it into parts and import "
+                "each; QualCoder, if you use it, imports it whole.",
     "reader_timeout": "Reading this file took longer than {seconds} "
                       "seconds, so it was stopped. An RTF file or a web "
                       "page saved as a Word document in its own app reads "
@@ -220,7 +225,7 @@ _WHY_NOT_UTF8 = (
     "so it is held back rather than read by a guess: a wrong guess reads "
     "accented letters as others, and a name from your list written with "
     "other letters would not be replaced. Saved as UTF-8, its letters "
-    "read the same way in QualCoder too.")
+    "read rightly here, and in QualCoder too if you use it.")
 _A_COPY = (
     " You could save a copy as UTF-8 under a new name, so that the "
     "original stays as it is until you have checked the copy, and import "
@@ -414,8 +419,9 @@ HELD_BACK = {
                    "text: this RTF file holds "
                    "letters written as UTF-8 straight into the file, "
                    "outside RTF's own escapes, and RTF's rule reads each "
-                   "such byte as a letter of its own, in QualCoder as "
-                   "here (\"Ã©\" for \"é\"). A name written that way is "
+                   "such byte as a letter of its own (\"Ã©\" for \"é\"); "
+                   "QualCoder, if you use it, reads it the same way. A name "
+                   "written that way is "
                    "not matched by a names list, though the assistant "
                    "still reads it. " + _CHECK_ON_SCREEN + " If the file "
                    "reads rightly in Word or LibreOffice, saving it from "
@@ -442,17 +448,19 @@ HELD_BACK = {
 # Said once for a file whose text a warning changes: why the import does
 # not mend what QualCoder's way of reading does, and why the ways round
 # are chosen as they are.
-WHY_AS_QUALCODER = (SAME_READING + " Each way round gives a file QualCoder "
-                    "reads the same way too.")
+WHY_AS_QUALCODER = (SAME_READING + " If you change the file as a warning "
+                    "here suggests (its \"Way round\"), both programs "
+                    "read the changed file alike too.")
 # Said instead when Exegete's reading of the file departs from
 # QualCoder's (the departures' lines say how).
 WHY_DEPARTED = ("Where QualCoder's own import would lose or garble this "
                 "file's content, Exegete keeps it, and the lines for "
                 "information name each departure.")
 READS_OTHERWISE = "qualcoder_reads_otherwise"
-WHY_SUBTITLES = ("QualCoder imports a subtitle file only as a recording's "
-                 "transcript, so it has no reading of this document to "
-                 "agree with.")
+WHY_SUBTITLES = ("A subtitle file is read as it stands, line by line. "
+                 "(QualCoder, if you use it, imports one only as a "
+                 "recording's transcript, so there is no QualCoder reading "
+                 "to match.)")
 
 
 def why_line(subtitles: bool, codes: Sequence[str] = ()) -> str:
@@ -498,7 +506,7 @@ WARNINGS = {
         "out."),
     "word_revisions": ("information",
         "It has tracked changes, read as if accepted (insertions in, "
-        "deletions out), as QualCoder reads them. To read it another way, "
+        "deletions out). To read it another way, "
         "accept or reject the changes in Word first."),
     "odt_spaces": ("information",
         "Runs of spaces are kept. QualCoder's own import would keep only "
@@ -538,8 +546,7 @@ WARNINGS = {
         "find no text in it and store the file's raw bytes instead."),
     "odt_tables": ("information",
         "Tables come in between \"=== TABLE ===\" and \"=== END TABLE "
-        "===\" lines, each cell a paragraph of its own, as QualCoder marks "
-        "them."),
+        "===\" lines, each cell a paragraph of its own."),
     "rtf_deleted": ("information",
         "Text deleted with tracked changes is left out. QualCoder's own "
         "import would keep it."),
@@ -561,13 +568,13 @@ WARNINGS = {
     READS_OTHERWISE: ("information",
         "So QualCoder's own import of this file would store other text: "
         "if the same file is also imported in QualCoder, codings made on "
-        "one copy will not line up on the other. In this project both "
-        "programs read the text Exegete stores."),
+        "one copy will not line up on the other. If this project is opened "
+        "in QualCoder, it reads the text Exegete stores."),
     "pdf_scanned": ("changes",
-        "This PDF is pictures of pages, with no words Exegete can read; "
-        "only QualCoder's area coding works on it. QualCoder imports it "
-        "the same way. Way round: run text recognition (OCR) on it in "
-        "another program, then import the result."),
+        "This PDF is pictures of pages, with no words Exegete can read or "
+        "code. Way round: run text recognition (OCR) on it in another "
+        "program, then import the result. (QualCoder, if you use it, can "
+        "code areas of its pages.)"),
     "pandoc_wrapped": ("changes",
         "Its lines are broken at 72 characters, as a converter such as "
         "pandoc leaves them; each break stays in the text. See "
@@ -585,23 +592,24 @@ WARNINGS = {
         "A subtitle file comes in line by line, with its timings and "
         "numbers; if your transcription tool can export a Word or text "
         "file, that reads more easily. Brought in as a document, it "
-        "cannot later be attached to its recording as QualCoder's "
-        "transcript, so its codings would stay on the document."),
+        "cannot later become a recording's transcript (a link QualCoder "
+        "makes when it imports a subtitle file with its recording), so its "
+        "codings stay on the document."),
     "near_limit": ("changes",
         "Its text is {characters} characters long, more than half "
         "Exegete's limit of {limit}."),
     "astral": ("information",
-        "It holds emoji or other rare characters ({count}); after the "
-        "first of them, QualCoder shows codings shifted."),
+        "It holds emoji or other rare characters ({count}); if the project "
+        "is opened in QualCoder, it shows codings after the first of them "
+        "shifted."),
     "invisible": ("information",
-        "It holds invisible control characters ({count}), kept as "
-        "QualCoder keeps them."),
+        "It holds invisible control characters ({count}), kept as they "
+        "are."),
     "spaces_only": ("information",
-        "Its text is only spaces and blank lines, as QualCoder would "
-        "store it."),
+        "Its text is only spaces and blank lines."),
     "pdf_notes": ("information",
-        "Its notes ({count}) join the file's memo, as QualCoder adds them; "
-        "names in them are not replaced."),
+        "Its notes ({count}) join the file's memo; names in them are not "
+        "replaced."),
     "pdf_markups": ("information",
         "It has highlight or underline marks ({count}). QualCoder would "
         "have offered to code them; nothing is coded without your "

@@ -4,7 +4,7 @@ decision of 1 October 2026.
 
 A fresh reading, by the assistant or by the researcher, meets nothing of
 the coding already done: `without_codes=true` on the whole-file read
-(`analyze_file_with_coding`) and on the reading page
+(`read_file_with_codings`) and on the reading page
 (`open_file_for_reading`) gives the file's text with no codings, no
 codes and no annotations. The file's memo is kept, as it describes the
 file; its private part (from #####) stays out, and the page says so.
@@ -37,7 +37,7 @@ def _code_names():
 class TestTheWholeFileRead:
 
     def test_the_text_without_codings_codes_or_annotations(self, project):
-        answer = host("analyze_file_with_coding", file_id=50,
+        answer = host("read_file_with_codings", file_id=50,
                       without_codes=True)
         assert answer["full_text"] == TEXT
         for key in ("coded_segments", "codes_used", "annotations",
@@ -47,7 +47,7 @@ class TestTheWholeFileRead:
         assert answer["statistics"] == {"text_length": len(TEXT)}
 
     def test_nothing_of_the_coding_reaches_the_answer(self, project):
-        text = raw("analyze_file_with_coding", file_id=50,
+        text = raw("read_file_with_codings", file_id=50,
                    without_codes=True)
         assert SECRET_MEMO not in text          # coding and annotation
         assert PRIVATE_MEMO not in text
@@ -55,7 +55,7 @@ class TestTheWholeFileRead:
             assert name not in text, name
 
     def test_it_says_what_it_left_out(self, project):
-        answer = host("analyze_file_with_coding", file_id=50,
+        answer = host("read_file_with_codings", file_id=50,
                       without_codes=True)
         left = answer["without_codes"]
         assert (left["codings_left_out"], left["annotations_left_out"]) \
@@ -65,13 +65,13 @@ class TestTheWholeFileRead:
 
     def test_the_files_memo_is_kept_without_its_private_part(self,
                                                               project):
-        answer = host("analyze_file_with_coding", file_id=50,
+        answer = host("read_file_with_codings", file_id=50,
                       without_codes=True)
         assert answer["file_info"]["memo"].startswith("About the file.")
         assert PRIVATE_MEMO not in json.dumps(answer)
 
     def test_by_default_the_codings_come_as_before(self, project):
-        answer = host("analyze_file_with_coding", file_id=50)
+        answer = host("read_file_with_codings", file_id=50)
         assert len(answer["coded_segments"]) == 3
         assert "without_codes" not in answer
 
@@ -84,20 +84,20 @@ class TestTheWholeFileRead:
         sql(folder, "INSERT INTO code_text (ctid, cid, fid, seltext, pos0, "
             "pos1, owner, date, memo, important) VALUES (630, 1, 63, "
             "'The ward', 0, 8, 'TestCoder', '2026-10-01', '', 0)")
-        first = host("analyze_file_with_coding", file_id=63,
+        first = host("read_file_with_codings", file_id=63,
                      without_codes=True)
         end = first["part"]["continues_at"]
         assert end and "without_codes=true" in first["part"]["note"]
         assert first["without_codes"]["codings_left_out"] == 1
-        second = host("analyze_file_with_coding", file_id=63, start=end,
+        second = host("read_file_with_codings", file_id=63, start=end,
                       without_codes=True)
         assert second["part_text"] == text[end:second["part"]["end"]]
         assert "coded_segments" not in second
 
     def test_the_description_names_the_option(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         text = " ".join(server.mcp.original_descriptions[
-            "analyze_file_with_coding"].split())
+            "read_file_with_codings"].split())
         assert "without_codes" in text
         assert text.index("without_codes") < 2048
 
@@ -168,7 +168,7 @@ class TestTheReadingPage:
         assert answer["shown"] == show
 
     def test_the_description_names_the_option(self):
-        server._apply_toolset("lifecycle")
+        server._apply_toolset("full")
         text = " ".join(server.mcp.original_descriptions[
             "open_file_for_reading"].split())
         assert "without_codes" in text
@@ -189,7 +189,7 @@ class TestTheBriefNamesTheOption:
 
     def test_the_line_names_the_whole_file_read_without_codes(self):
         assert ("When the researcher wants a fresh reading, read the file "
-                "with analyze_file_with_coding(without_codes=true), which "
+                "with read_file_with_codings(without_codes=true), which "
                 "leaves their codings out, and tell them whether you have "
                 "seen any.") in self._section_10()
 
@@ -201,4 +201,4 @@ class TestTheBriefNamesTheOption:
     def test_the_brief_names_an_argument_the_tool_has(self):
         import inspect
         assert "without_codes" in inspect.signature(
-            server.analyze_file_with_coding).parameters
+            server.read_file_with_codings).parameters

@@ -30,6 +30,7 @@ import exegete.server as server
 import exegete.database as database
 from exegete.database import (
     GUI_SIGNAL_FRESH_SECONDS,
+    ProcessScan,
     _filter_qualcoder_processes,
     qualcoder_gui_signals,
 )
@@ -37,8 +38,9 @@ from exegete.database import (
 
 @pytest.fixture
 def no_process_hits(monkeypatch):
-    """Make the process-scan signal deterministic (no live scan)."""
-    monkeypatch.setattr(database, "_qualcoder_process_hits", lambda: [])
+    """Make the process-scan signal deterministic (no live scan: v0.15.0,
+    a scan that did not run)."""
+    monkeypatch.setattr(database, "_qualcoder_process_scan", lambda: None)
 
 
 def _old(path: Path):
@@ -120,8 +122,8 @@ class TestSignals:
         assert qualcoder_gui_signals(proj) == []
 
     def test_process_hits_become_a_signal(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(database, "_qualcoder_process_hits",
-                            lambda: ["python qualcoder"])
+        monkeypatch.setattr(database, "_qualcoder_process_scan",
+                            lambda: ProcessScan(("python qualcoder",), True))
         proj = tmp_path / "p.qda"
         proj.mkdir()
         signals = qualcoder_gui_signals(proj)
@@ -129,8 +131,8 @@ class TestSignals:
         assert "looks like QualCoder is running" in signals[0]
 
     def test_signals_combine(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(database, "_qualcoder_process_hits",
-                            lambda: ["python qualcoder"])
+        monkeypatch.setattr(database, "_qualcoder_process_scan",
+                            lambda: ProcessScan(("python qualcoder",), True))
         proj = tmp_path / "p.qda"
         (proj / "ai_data").mkdir(parents=True)
         (proj / "data.qda-journal").write_bytes(b"j")
@@ -147,8 +149,8 @@ class TestSignals:
     def test_wording_is_never_certain(self, tmp_path, monkeypatch):
         # Every signal at once (hot journal, fresh WAL, fresh chat
         # store, process hit): none may claim an open window as fact
-        monkeypatch.setattr(database, "_qualcoder_process_hits",
-                            lambda: ["qualcoder gui"])
+        monkeypatch.setattr(database, "_qualcoder_process_scan",
+                            lambda: ProcessScan(("qualcoder gui",), True))
         proj = tmp_path / "p.qda"
         (proj / "ai_data").mkdir(parents=True)
         (proj / "data.qda-journal").write_bytes(b"j")
@@ -269,6 +271,7 @@ class TestProcessFilter:
         assert _filter_qualcoder_processes(lines) == [
             "/usr/bin/python3 -m qualcoder"]
 
+    @pytest.mark.real_process_scan
     def test_a_release_download_running_is_a_signal(self, monkeypatch,
                                                      tmp_path):
         """End to end through the fallback listing of this platform (ps,
@@ -288,24 +291,27 @@ class TestProcessFilter:
                        f"  {own + 3} tail -f /x/mcp-server-qualcoder.log\n")
 
         class Done:
+            returncode = 0
             stdout = listing.encode()
 
         monkeypatch.setattr(subprocess, "run", lambda *a, **k: Done())
         monkeypatch.setitem(sys.modules, "psutil", None)
-        database._process_scan_cache["at"] = 0.0
+        database._process_scan_cache["at"] = None
         try:
             signals = qualcoder_gui_signals(tmp_path)
         finally:
-            database._process_scan_cache["at"] = 0.0
+            database._process_scan_cache["at"] = None
         assert signals == [
             "a process that looks like QualCoder is running on this "
             "machine (2 match(es))"]
 
+    @pytest.mark.real_process_scan
     def test_scan_never_raises(self, monkeypatch):
-        # Whatever the platform offers, the scan returns a list
-        database._process_scan_cache["at"] = 0.0
-        hits = database._qualcoder_process_hits()
-        assert isinstance(hits, list)
+        # Whatever the platform offers, the scan returns what it saw, or
+        # None when it could not run (v0.15.0)
+        database._process_scan_cache["at"] = None
+        scan = database._qualcoder_process_scan()
+        assert scan is None or isinstance(scan, ProcessScan)
 
 
 # =============================================================================
@@ -349,9 +355,17 @@ class TestLadderWiring:
         import shutil
         dest = tmp_path / "clean.qda"
         shutil.copytree(qualcoder_db_path, dest)
+        # v0.15.0 (not presuming QualCoder, piece 6): the note comes only
+        # when the project or this computer shows QualCoder has been
+        # used; an ai_data folder shows the project has been opened in it
+        # v0.15.0: something in it; an empty ai_data, as Exegete
+        # makes at creation, is no sign of QualCoder
+        (dest / "ai_data").mkdir(exist_ok=True)
+        (dest / "ai_data" / "ai_prompts.yaml").write_bytes(
+            b"prompts: []\n")
         out = json.loads(server.select_project(str(dest)))
         assert out["qualcoder_gui_signals"] == []
-        assert "best-effort" in out["warning"]
+        assert "QualCoder 4.0 leaves no lock file" in out["warning"]
 
     def test_get_current_project_reports_signals(self, setup_server,
                                                  qualcoder_db_path,
@@ -371,7 +385,7 @@ class TestLadderWiring:
         ai = Path(qualcoder_db_path) / "ai_data"
         ai.mkdir()
         (ai / "chat_history.sqlite").write_bytes(b"c")
-        out = json.loads(server.analyze_for_coding([1], instruction="test"))
+        out = json.loads(server.start_coding_session([1], instruction="test"))
         assert out["qualcoder_open"] is False
         assert out["qualcoder_gui_signals"]
         assert "ASK THE USER" in out["qualcoder_gui_hint"]
@@ -424,8 +438,9 @@ class TestSelectProjectFailureWording:
 
     @pytest.fixture
     def one_process_hit(self, monkeypatch):
-        monkeypatch.setattr(database, "_qualcoder_process_hits",
-                            lambda: ["python -m qualcoder"])
+        monkeypatch.setattr(
+            database, "_qualcoder_process_scan",
+            lambda: ProcessScan(("python -m qualcoder",), True))
 
     def test_plain_directory_keeps_path_hint_despite_process_hit(
             self, setup_server, tmp_path, one_process_hit):
@@ -567,7 +582,9 @@ _ROOT = Path(__file__).parent.parent
 
 def _tools_running_the_process_scan():
     """Top-level functions in server.py that call qualcoder_gui_signals
-    without include_process_scan=False (the scan runs by default)."""
+    without include_process_scan=False (the scan runs by default), or
+    consult the project's history with QualCoder, whose first consult
+    after a selection runs the scan (v0.15.0)."""
     src = (_ROOT / "src" / "exegete" / "server.py").read_text(
         encoding="utf-8")
     callers = set()
@@ -575,6 +592,11 @@ def _tools_running_the_process_scan():
         if not isinstance(fn, ast.FunctionDef):
             continue
         for node in ast.walk(fn):
+            if isinstance(node, ast.Call) \
+                    and isinstance(node.func, ast.Name) \
+                    and node.func.id == "_qualcoder_history":
+                callers.add(_TOOL_OF_HELPER.get(fn.name, fn.name))
+                continue
             if not (isinstance(node, ast.Call)
                     and isinstance(node.func, ast.Name)
                     and node.func.id == "qualcoder_gui_signals"):
@@ -606,13 +628,29 @@ def _paragraph_after(text, marker):
 class TestProcessScanCallersAreDocumented:
 
     EXPECTED = {"select_project", "get_current_project",
-                "analyze_for_coding", "restore_backup", "import_documents"}
+                "start_coding_session", "restore_backup", "import_documents",
+                # v0.15.0: after a change, whether its answer mentions
+                # QualCoder (the project's history with QualCoder)
+                "set_project_coder_name",
+                # v0.15.0, not presuming QualCoder, piece 11: whether
+                # their notes speak of QualCoder (the same history)
+                "list_backups", "pseudonymise_source",
+                # v0.15.0, piece 12: whether their note says what
+                # QualCoder's imports and Merge Projects can bring back
+                "rename_case", "rename_file",
+                # v0.15.0, the names list's save (its fix round 1): the
+                # preview, the call without a token, passes on the signs
+                # as restore_backup's and import_documents' do
+                "save_names_list"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's
-        # callers are these five (restore_backup and import_documents:
-        # their previews, the calls without a token). Update PRIVACY.md
-        # and TOOLS.md when this set grows.
+        # callers are these eight (restore_backup and import_documents:
+        # their previews, the calls without a token;
+        # set_project_coder_name: the change, list_backups, and
+        # pseudonymise_source: the run, through the project's history
+        # with QualCoder). Update PRIVACY.md and TOOLS.md when this set
+        # grows.
         assert _tools_running_the_process_scan() == self.EXPECTED
 
     def test_privacy_doc_names_every_caller(self):

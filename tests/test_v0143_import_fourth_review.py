@@ -70,7 +70,7 @@ def _scratch_is_not_hidden(tmp_path, monkeypatch):
 def project(setup_server, qualcoder_db_path, monkeypatch):
     # No live scan of the computer's processes: the signs come from the
     # project folder alone.
-    monkeypatch.setattr(database, "_qualcoder_process_hits", lambda: [])
+    monkeypatch.setattr(database, "_qualcoder_process_scan", lambda: None)
     return Path(qualcoder_db_path)
 
 
@@ -122,13 +122,20 @@ class TestQualCoderFoursSigns:
                 "QualCoder 4.0 writes no lock, so the signs that it may "
                 "have the project open are passed on as a warning in the "
                 "preview") in changelog
-        assert ("Refused or kept out, saying why: while QualCoder 3.8.2 "
-                "has the project open;") in _description()
-        assert ("QualCoder 3.8.2's lock refuses the import before any "
-                "backup, and the signs that QualCoder 4.0 may have the "
-                "project open (it writes no lock) are passed on as a "
-                "warning in the preview (`qualcoder_gui_hint`)") in \
-            _doc("TOOLS.md")
+        # v0.15.0 (the fourth reading of the documents): the lock file
+        # has two causes, another conversation using Exegete or QualCoder
+        # 3.8.2 (tests/test_v0150_lock_wording.py)
+        assert ("Refused or kept out, saying why: while another "
+                "conversation using Exegete or QualCoder 3.8.2 has the "
+                "project in use (its lock file);") in _description()
+        assert ("The import is refused before any backup while the "
+                "project's lock file is active: another conversation using "
+                "Exegete is writing to the project (wait a moment and try "
+                "again), or QualCoder 3.8.2 has it open (if you use "
+                "QualCoder, close the project there). The signs that "
+                "QualCoder 4.0 may have the project open (it writes no lock "
+                "file) are passed on as a warning in the preview "
+                "(`qualcoder_gui_hint`)") in _doc("TOOLS.md")
 
 
 # ---------------------------------------------------------------------------
@@ -313,11 +320,15 @@ class TestTheNamesListLines:
                                  documents_listing=[], refused_places=[],
                                  names_list="none")
         line = doc_import.names_list_line(ctx)
-        assert ("make the list first (not in Exegete yet: in QualCoder, "
-                "the Pseudonyms button in Manage Files)") in line
-        assert ("Or, once the files are in and before the assistant reads "
-                "them, run pseudonymise_source on each file (which can save "
-                "its names as the project's list).") in line
+        # v0.15.0: the ways every researcher has first, the names file
+        # (the files design, piece 5) and then pseudonymise_source, and
+        # QualCoder's button for a researcher who uses it
+        assert ("ask the assistant to prepare the names file: you fill it "
+                "in on your own computer") in line
+        assert ("pseudonymise_source can also replace names in a file "
+                "already in the project.") in line
+        assert ("QualCoder, if you use it, can also make the list before "
+                "importing (the Pseudonyms button in Manage Files).") in line
 
     @pytest.mark.skipif(not fx.optional_part_installed(),
                         reason="needs the optional part")
@@ -391,7 +402,9 @@ class TestTheTexts:
         assert "on Windows 11, Copy as path" in readme
         assert ("an EPUB opened in Apple Books joins its library, and "
                 "iCloud if Books syncs") in readme
-        assert "Checked on 10 October 2026, Exegete 0.14.3 against" in readme
+        # v0.15.0, the release review: the stamp names 0.15.0's column
+        assert ("as checked on 10 October 2026, beside Exegete 0.15.0"
+                in readme)
 
     def test_the_small_wording_points(self):
         assert "into the selected project" in _description()

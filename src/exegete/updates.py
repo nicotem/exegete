@@ -639,8 +639,7 @@ def detect_route(started_as: Optional[str] = None, environ=None,
     extension's own mark, a git copy (under either name), uvx (under
     either name), the old name, uv tool or pipx, a virtual environment;
     otherwise unknown."""
-    if (env_settings.installed_as(environ) or "").strip().lower() == \
-            EXTENSION:
+    if env_settings.installed_as_extension(environ):
         return EXTENSION
     # A git copy is updated as a git copy, under either name
     if prefix is None and _source_folder() is not None:

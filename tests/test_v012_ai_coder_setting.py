@@ -163,7 +163,7 @@ def _house_rules(texts, labels=None):
         assert "\u2014" not in text, label
         lowered = text.lower()
         for word in forbidden_spellings:
-            # Identifiers are exempt by house rule (analyze_file_with_coding,
+            # Identifiers are exempt by house rule (read_file_with_codings,
             # honor_visibility, color): the word counts only when it is
             # prose, that is, not glued to another identifier character.
             pattern = r"(?<![A-Za-z_])" + word + r"(?![A-Za-z_])"
@@ -364,8 +364,8 @@ EXPECTED_ASK = (
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
     "models can then be compared later. Quick picks: \"AI Coding "
-    "Assistant\" (Exegete's built-in default), \"AI Agent\" (the name "
-    "QualCoder 4.0's built-in assistant uses). The name can be changed at "
+    "Assistant\" (Exegete's built-in default), or a name the researcher "
+    "chooses (the model's name, for example). The name can be changed at "
     "any time with the same tool; earlier rows keep the name they were "
     "written under.")
 
@@ -386,8 +386,8 @@ class TestTheAsk:
         assert out["action_required"] == "set_project_ai_coder_name"
         assert out["ai_coder_name"] is None
         assert out["free_text_allowed"] is True
-        assert out["quick_picks"] == [DEFAULT_AI_CODER_NAME,
-                                      KNOWN_AI_ASSISTANT_OWNER]
+        # v0.15.0, piece 12: "AI Agent" only on its sign
+        assert out["quick_picks"] == [DEFAULT_AI_CODER_NAME]
         for table, before in counts_before.items():
             assert _row(qualcoder_db_path,
                         f"SELECT COUNT(*) AS n FROM {table}")["n"] == before, \
@@ -560,18 +560,22 @@ class TestMismatchRule:
     def test_end_to_end_declare_refuse_switch_and_stop_nagging(
             self, setup_server_unset, qualcoder_db_path, monkeypatch):
         monkeypatch.delenv(AI_CODER_NAME_ENV, raising=False)
+        # v0.15.0: the words name the setting where the researcher changes
+        # it, here on a route other than the extension
+        monkeypatch.delenv("EXEGETE_INSTALLED_AS", raising=False)
         json.loads(server.set_project_ai_coder_name("A"))
         monkeypatch.setenv(AI_CODER_NAME_ENV, "B")
         out = json.loads(server.create_code("Blocked", create_backup=False))
         assert out["error"] == (
-            "This host declares the AI coder name \"B\" "
-            f"({AI_CODER_NAME_ENV}), but this project's current AI "
-            "coder name is \"A\". Nothing was written. Ask the user which "
-            "name to use here, then call set_project_ai_coder_name with "
-            "\"B\" to switch the project to it, or with \"A\" to keep it "
-            "(that records the choice, and this host will not ask again "
-            "while its declaration stays the same). Earlier rows keep the "
-            "name they were written under.")
+            "The AI coder name in Exegete's settings is \"B\", but this "
+            "project's AI coder name is \"A\". Nothing was written. Ask the "
+            "researcher which name to use here, then call "
+            "set_project_ai_coder_name with \"B\" to switch the project to "
+            "it, or with \"A\" to keep it (that records the choice, and "
+            "Exegete will not ask again here while the setting, "
+            f"{AI_CODER_NAME_ENV} in the host's configuration for Exegete, "
+            "stays the same). Earlier rows keep the name they were written "
+            "under.")
         assert out["quick_picks"] == ["B", "A"]
         assert _row(qualcoder_db_path, "SELECT COUNT(*) AS n FROM code_name "
                                        "WHERE name='Blocked'")["n"] == 0
@@ -604,12 +608,15 @@ class TestMismatchRule:
         assert "error" in out
         assert out["host_declared_ai_coder_name"] == "C"
 
-    def test_the_ask_carries_the_declaration_clause(
+    def test_the_ask_carries_the_settings_clause(
             self, setup_server_unset, qualcoder_db_path, monkeypatch):
+        # v0.15.0: the setting is called what it is, the AI coder name in
+        # Exegete's settings, no longer this host's declaration
         monkeypatch.setenv(AI_CODER_NAME_ENV, "Qwen 3.8 6bit")
         out = json.loads(server.create_code("Declared", create_backup=False))
-        assert ("\"Qwen 3.8 6bit\" (declared in this host's server "
-                "configuration)") in out["error"]
+        assert ("\"Qwen 3.8 6bit\" (the AI coder name in Exegete's "
+                "settings)") in out["error"]
+        assert "declared in this host's" not in out["error"]
         assert out["quick_picks"][0] == "Qwen 3.8 6bit"
 
     def test_fixed_project_mode_changes_nothing(self, setup_server_unset,
@@ -741,10 +748,11 @@ class TestSetterValidation:
         codername = server.db.get_project_info()["coder_name"]
         out = json.loads(server.set_project_ai_coder_name(codername))
         assert out["error"] == (
-            f"\"{codername}\" is this project's own coder name, so AI rows "
-            f"would be indistinguishable from the user's in QualCoder's "
-            f"coder lists, visibility toggle, undo and reports. Choose a "
-            f"different name. Nothing was changed.")
+            f"\"{codername}\" is this project's own coder name (the "
+            f"researcher's), so the AI's codings could not be told apart "
+            f"from the researcher's, in Exegete's coder filters and "
+            f"compare_coders as in QualCoder's coder lists and reports. "
+            f"Choose a different name. Nothing was changed.")
 
     def test_the_literal_default_is_refused(self, setup_server):
         out = json.loads(server.set_project_ai_coder_name("default"))

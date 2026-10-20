@@ -80,13 +80,13 @@ class TestWhatTheServerSays:
 def _served_texts():
     """Every text the server serves or answers with that is fixed in
     its code: the instructions, the methods notes, the notices, every
-    tool's description (the lifecycle set holds them all), every prompt,
+    tool's description (the full set holds them all), every prompt,
     and the message constants of the modules that answer."""
     texts = {"instructions": server.SERVER_INSTRUCTIONS,
              "methods notes": server.METHODS_GUIDANCE,
              "terminal notice": server.TTY_NOTICE,
              "old name's note": server.OLD_NAME_NOTE}
-    server._apply_toolset("lifecycle")
+    server._apply_toolset("full")
     for tool in asyncio.run(server.mcp.list_tools()):
         texts[f"tool {tool.name}"] = tool.description or ""
     for prompt in asyncio.run(server.mcp.list_prompts()):
@@ -99,9 +99,11 @@ def _served_texts():
     return texts
 
 
-# Where a served text may name the old name, and why.
+# Where a served text may name the old name, and why. (v0.15.0, not
+# presuming QualCoder, piece 8: "formerly qualcoder-mcp" left the last
+# served text that had it, the message on a settings file from a newer
+# version, so its entry went with it: a newer version is Exegete.)
 SERVED_LEDGER = [
-    (r"formerly qualcoder-mcp", "the earlier name, named as such"),
     (r"~/\.qualcoder_mcp, its earlier name", "the state folder's earlier "
      "name, which the guards still refuse"),
     (r"qualcoder-mcp is now called Exegete", "the old name's note"),

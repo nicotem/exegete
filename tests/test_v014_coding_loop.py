@@ -64,7 +64,7 @@ def rows(db_path, sql, params=()):
 def new_session(**args):
     args.setdefault("file_ids", [1])
     args.setdefault("instruction", "test")
-    return jcall("analyze_for_coding", **args)["coding_session_id"]
+    return jcall("start_coding_session", **args)["coding_session_id"]
 
 
 def session_file(sid):
@@ -300,7 +300,7 @@ class TestNoScoreInAnyText:
         assert "confidence" not in server.SERVER_INSTRUCTIONS.lower()
 
     def test_the_session_banner_asks_for_the_label(self, setup_server):
-        text = jcall("analyze_for_coding", file_ids=[1], instruction="test")["instructions"]
+        text = jcall("start_coding_session", file_ids=[1], instruction="test")["instructions"]
         assert '"reading": "explicit" or "interpretive"' in text
         assert "confidence" not in text.lower()
 
@@ -344,14 +344,14 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
             .get_suggestion_by_guid(guid).code_name == "Stress"
 
     def test_code_names_match_ignoring_letter_case(self, setup_server):
-        out = jcall("analyze_for_coding", file_ids=[1], code_names=["stress"], instruction="test")
+        out = jcall("start_coding_session", file_ids=[1], code_names=["stress"], instruction="test")
         session = server.session_manager.load_session(
             out["coding_session_id"])
         assert session.code_names == ["Stress"]
         assert "not_found" not in out
 
     def test_names_and_ids_that_match_nothing_are_listed(self, setup_server):
-        out = jcall("analyze_for_coding", file_ids=[1, 999],
+        out = jcall("start_coding_session", file_ids=[1, 999],
                     code_names=["Stress", "Nope"], instruction="test")
         assert out["not_found"] == {"file_ids": [999], "code_names": ["Nope"]}
         assert "NOT FOUND" in out["instructions"]
@@ -361,7 +361,7 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
         assert session.scope == {"file_ids": [1], "code_ids": [1]}
 
     def test_nothing_found_is_an_error_that_names_it(self, setup_server):
-        out = jcall("analyze_for_coding", file_ids=[1], code_names=["Nope"], instruction="test")
+        out = jcall("start_coding_session", file_ids=[1], code_names=["Nope"], instruction="test")
         assert "error" in out
         assert out["not_found"] == {"code_names": ["Nope"]}
 
@@ -611,8 +611,8 @@ class TestTheLoopsTextsSayWhatHappens:
     def _desc(name):
         return server.mcp._tool_manager._tools[name].description
 
-    def test_analyze_for_coding_says_it_starts_a_session(self):
-        text = self._desc("analyze_for_coding")
+    def test_start_coding_session_says_it_starts_a_session(self):
+        text = self._desc("start_coding_session")
         assert "It reads no file and returns no suggestion" in text
         assert "performs AI analysis" not in text
         assert "not_found" in text
@@ -623,11 +623,11 @@ class TestTheLoopsTextsSayWhatHappens:
         assert "automatically" not in blob
         assert "filters to stress-related codes only" not in blob
 
-    def test_analyze_file_with_coding_names_its_four_counts(
+    def test_read_file_with_codings_names_its_four_counts(
             self, setup_server):
-        text = self._desc("analyze_file_with_coding")
+        text = self._desc("read_file_with_codings")
         assert "coverage and density" not in text
-        stats = jcall("analyze_file_with_coding", file_id=1)["statistics"]
+        stats = jcall("read_file_with_codings", file_id=1)["statistics"]
         for key in stats:
             assert key in text, key
 
@@ -1284,7 +1284,7 @@ class TestFixRoundPromisesNowPinned:
         _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
              "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
              "'TestCoder', '2024-01-15', '#0000FF')")
-        out = jcall("analyze_for_coding", file_ids=[1], code_names=["STRESS"], instruction="test")
+        out = jcall("start_coding_session", file_ids=[1], code_names=["STRESS"], instruction="test")
         assert "error" in out and "coding_session_id" not in out
         sid = new_session()
         rec = record(sid, item(code="STRESS"))
@@ -1318,7 +1318,7 @@ class TestFixRoundTextsTrue:
         _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
              "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
              "'TestCoder', '2024-01-15', '#0000FF')")
-        out = jcall("analyze_for_coding", file_ids=[1],
+        out = jcall("start_coding_session", file_ids=[1],
                     code_names=["STRESS", "Coping"], instruction="test")
         assert out["ambiguous_code_names"] == {"STRESS": ["Stress", "stress"]}
         assert "not_found" not in out
@@ -1350,7 +1350,7 @@ class TestFixRoundTextsTrue:
         assert "created automatically before each write" not in guide
 
     def test_the_descriptions_say_what_happens(self):
-        afc = self._desc("analyze_for_coding")
+        afc = self._desc("start_coding_session")
         # shortened in fix round 2 to pay for the three questions
         assert "or create_proposed_codes approved proposals" in afc
         assert "ignoring letter case, spacing and Unicode form" in afc
@@ -1382,7 +1382,7 @@ class TestFixRound2TheStudyAtTheStart:
             self, setup_server, qualcoder_db_path):
         self._memo(qualcoder_db_path, "Nurses' burnout, read through job "
                    "demands and resources.\n#####my doubts about P3")
-        out = jcall("analyze_for_coding", file_ids=[1],
+        out = jcall("start_coding_session", file_ids=[1],
                     instruction="topics; whole sentences; one code each")
         assert out["project_memo"] == ("Nurses' burnout, read through job "
                                        "demands and resources.")
@@ -1394,7 +1394,7 @@ class TestFixRound2TheStudyAtTheStart:
     def test_an_empty_memo_asks_the_researcher(self, setup_server,
                                                qualcoder_db_path, memo):
         self._memo(qualcoder_db_path, memo)
-        out = jcall("analyze_for_coding", file_ids=[1],
+        out = jcall("start_coding_session", file_ids=[1],
                     instruction="topics; whole sentences; one code each")
         assert out["project_memo"] == ""
         # release preparation: a memo whose every word is private is not
@@ -1511,7 +1511,7 @@ class TestFixRound2StartingASession:
         args = {"file_ids": [1]}
         if instruction is not None:
             args["instruction"] = instruction
-        out = jcall("analyze_for_coding", **args)
+        out = jcall("start_coding_session", **args)
         assert out == {"error": server.INSTRUCTION_REQUIRED}
         assert "nothing was started" in out["error"]
         for words in ("What to look for", "How long a coded passage should "
@@ -1526,7 +1526,7 @@ class TestFixRound2StartingASession:
         assert session.instruction == "feelings; whole answers; one code"
 
     def test_the_description_asks_the_three_questions(self):
-        tool = server.mcp._tool_manager._tools["analyze_for_coding"]
+        tool = server.mcp._tool_manager._tools["start_coding_session"]
         text = " ".join(tool.description.split())
         for words in ("BEFORE CALLING, ask the researcher three things",
                       "their own codes, topics, people's own words, "
@@ -1855,23 +1855,24 @@ class TestFixRound2WhatGoesInV015:
     def _described(tool, sentence):
         description = server.mcp._tool_manager._tools[tool].description
         assert sentence in description, tool
-        assert sentence.startswith("Deprecated, removed in v0.15: ")
+        # ruling 70 moved the removals to v0.15.1 (the whole-branch
+        # review of v0.15.0, round 1)
+        assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
-        self._described("read_pseudonym_list",
-                        server.DEPRECATED_PSEUDONYM_LIST)
-        present = jcall("read_pseudonym_list")
-        assert present["deprecated"] == server.DEPRECATED_PSEUDONYM_LIST
-        assert "Pseudonyms dialog (the button in Manage Files)" in \
-            present["deprecated"]
-        server.current_project_path = None
-        server.db = None
-        closed = jcall("read_pseudonym_list")
-        assert "error" in closed
-        assert closed["deprecated"] == server.DEPRECATED_PSEUDONYM_LIST
-        # its marks stay: the host still asks before the names leave
-        assert server.mcp._tool_manager._tools[
-            "read_pseudonym_list"].annotations == server.TOOL_DISCLOSES
+        """v0.15.0 (ruling 78; the files design, piece 5): the name list
+        tool did not wait for v0.15.1. It is gone now, with its
+        deprecation sentence and its mark, and no other tool's
+        description or answer carries that sentence."""
+        tools = server.mcp._tool_manager._tools
+        assert "read_pseudonym_list" not in tools
+        assert not hasattr(server, "DEPRECATED_PSEUDONYM_LIST")
+        assert not hasattr(server, "TOOL_DISCLOSES")
+        for name, tool in tools.items():
+            assert "the list stays in pseudonyms.json" not in (
+                tool.description or ""), name
+        summary = json.dumps(jcall("get_current_project"))
+        assert "deprecated" not in summary.lower()
 
     def test_the_refi_qda_exports(self, setup_server, tmp_path):
         self._described("export_refi_qda", server.DEPRECATED_REFI_EXPORT)
@@ -2117,12 +2118,12 @@ class TestFixRound2TheMinors:
         _sql(qualcoder_db_path, "INSERT INTO code_name (cid, name, memo, "
              "catid, owner, date, color) VALUES (3, 'stress', '', 1, "
              "'TestCoder', '2024-01-15', '#0000FF')")
-        out = jcall("analyze_for_coding", file_ids=[1], instruction="test",
+        out = jcall("start_coding_session", file_ids=[1], instruction="test",
                     code_names=["STRESS"])
         assert "No codes found" not in out["error"]
         assert "matches two codes" in out["error"]
         assert out["ambiguous_code_names"] == {"STRESS": ["Stress", "stress"]}
-        both = jcall("analyze_for_coding", file_ids=[1], instruction="test",
+        both = jcall("start_coding_session", file_ids=[1], instruction="test",
                      code_names=["STRESS", "Nope"])
         assert "no code matches ['Nope']" in both["error"]
         assert "matches two codes" in both["error"]
@@ -2193,7 +2194,7 @@ class TestFixRound2TheMinors:
         assert "unless it is called with `create_backup=false`" in workflow
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()
-                    if l.startswith("- `analyze_for_coding("))
+                    if l.startswith("- `start_coding_session("))
         assert "`ambiguous_code_names`" in line
         assert "spacing and Unicode form" in line
         guide = (root / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")

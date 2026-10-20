@@ -9,8 +9,10 @@ import math
 import os
 import sqlite3
 import stat
+import sys
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Callable, Sequence, Tuple, Union
+from typing import (Optional, List, Dict, Any, Callable, NamedTuple,
+                    Sequence, Tuple, Union)
 import json
 import re
 import time
@@ -60,7 +62,10 @@ MAX_VERIFIED_SCHEMA = 17
 # commit of its tag, which the create-project oracle was made from.
 VERIFIED_QUALCODER = "QualCoder 4.0"
 VERIFIED_QUALCODER_COMMIT = "b95e021"
-_VERSION_STRING_RE = re.compile(r"^v(\d+)$")
+# QualCoder's form for the schema value, matched whole: `v` and one to
+# four of the digits 0 to 9 (not `\d`, which takes any script's
+# digits), read the same way by the log, the answers and the write gate.
+_VERSION_IN_FORM_RE = re.compile(r"v([0-9]{1,4})")
 # Environment override for the forward guard (v18+/unparseable versions);
 # the earlier spelling is read too, until v1.0 (env_settings).
 ALLOW_UNKNOWN_SCHEMA_ENV = names.SETTINGS["allow_unknown_schema"][0]
@@ -142,8 +147,10 @@ class SchemaCapabilities:
         }
 
 # Columns this server reads or writes that older QualCoder schemas lack.
-# If any are missing, the project must be opened and saved in QualCoder 3.8
-# (which migrates the schema) before this server can use it.
+# If any are missing, the project must first be opened once in QualCoder 3.8
+# or newer, which adds both columns and commits as it opens (3.8.2's
+# `__main__.py` 2765 to 2772 and 2812 to 2822; 4.0's, tag `4.0`, 2530 to
+# 2531 and 2577 to 2578): no save is needed, and Exegete does not migrate.
 # code_text.important: added in schema v3; project.codername: added in v5
 # and selected unconditionally by get_project_info.
 REQUIRED_COLUMNS = {
@@ -468,10 +475,31 @@ def nfc_ordered(text: str) -> str:
     return unicodedata.normalize("NFC", _ordered_mark_runs(text))
 
 
+# QualCoder holds no database lock while a project is merely open (see
+# the comment above QUALCODER_LOCK_FILENAME), so a busy database means a
+# program is writing to it, and the message names no program as the
+# only cause (v0.15.0).
 DB_LOCKED_MESSAGE = (
-    "The project database is locked; QualCoder may have it open. "
-    "Close the project in QualCoder (or wait a moment) and try again."
+    "The project database is busy: another program is writing to it "
+    "(another conversation using Exegete, a sync or backup service, or "
+    "QualCoder if you use it). Wait a moment and try again; if it goes "
+    "on, close the project in the program that has it open."
 )
+
+
+# The server's marking of the tools the current tool set does not
+# register (server._mark_unregistered), which the server installs here
+# when it loads. A text in this module that names a tool goes through
+# `_mark_unregistered`, so it is marked where it is written, as the
+# server's own texts are (tests/test_v014_server_wide.py pins that every
+# text a core tool can reach is). Before the server loads there is no
+# tool set, and the text is left as it is.
+_unregistered_marker: Callable[[str], str] = lambda text: text
+
+
+def _mark_unregistered(text: str) -> str:
+    """`text` with each tool the current tool set lacks marked."""
+    return _unregistered_marker(text)
 
 
 class CoderVisibilityUnreadable(RuntimeError):
@@ -526,6 +554,44 @@ NO_PROJECT_ROW_MESSAGE = (
     "backup.")
 
 
+# The way through for a project from a QualCoder older than 3.8, which
+# Exegete cannot bring up to date (v0.15.0, DESIGN_lock_2.md, section 2).
+# The refusals name QualCoder because the project's schema shows that
+# QualCoder made it, and only QualCoder 3.8 or newer can bring it up to
+# date; the route for a researcher without QualCoder comes with it, and so
+# does its cost: QualCoder writes the coder name set in it into every
+# project it opens (3.8.2 `__main__.py` 3028 to 3029 and 1250 to 1256; 4.0,
+# tag `4.0`, `__main__.py` 2870 to 2871 and `app.py` 1607 to 1613).
+# Whether a project can be written is worked out as it is selected, so
+# the route ends by selecting it again (gate review, round 1). It names
+# set_project_coder_name, so each refusal that gives it marks the name
+# where the tool set lacks it (_mark_unregistered).
+OLDER_QUALCODER_ROUTE = (
+    "QualCoder 3.8 or newer, if you use it, brings such a project up to "
+    "date the first time it opens it, with no need to save: open the "
+    "project there once, close it, then select it again in Exegete. If "
+    "you do not use QualCoder, someone who does and is allowed to see "
+    "this project's data (whoever shared it with you, for example) can do "
+    "this and send you the updated copy. As it opens a project, QualCoder "
+    "writes the coder name set in it into the project, as its current "
+    "coder and in its list of coders, so that person's name is added to "
+    "your project unless they first set their coder name in QualCoder to "
+    "yours (and back afterwards). Once you have the copy, "
+    "set_project_coder_name can put your name in place of theirs while "
+    "nothing is recorded under their name.")
+
+# A way on that needs no QualCoder at all, after the route in both
+# refusals of an older project (whole-branch review, round 1: the route
+# above runs through someone's QualCoder, and the owner's rule is never
+# to send the researcher to QualCoder as the only way through). It names
+# the two tools, so that where the tool set lacks them (core) the refusal
+# marks them, as it marks set_project_coder_name (round 2).
+NO_QUALCODER_ROUTE = (
+    "Without QualCoder at all, a new project made with create_project, the "
+    "original documents brought in with import_documents, is a way on, "
+    "without this project's coding.")
+
+
 class DatabaseOpenError(ValueError):
     """A well-formed project location whose data.qda SQLite would not open.
 
@@ -577,10 +643,19 @@ LOCK_READ_MAX_BYTES = 4096  # a real lock is two short lines; cap the read
 
 
 def qualcoder_open_message(holder: Optional[str]) -> str:
-    """Actionable message for a project currently open in QualCoder."""
+    """The refusal of every write while the lock file is active.
+
+    Exegete writes the same file during each of its own writes
+    (`hold_project_lock`), so an active lock file means QualCoder 3.8.2
+    has the project open or another conversation using Exegete is writing
+    to it; the message names both (v0.15.0).
+    """
     return (
-        f"This project is open in QualCoder (user "
-        f"{holder or 'unknown'}). Close the project in QualCoder, then retry."
+        f"This project is in use by another program: its lock file is "
+        f"active (user {holder or 'unknown'}), so QualCoder 3.8.2 has it "
+        f"open, or another conversation using Exegete is writing to it. "
+        f"Ask the researcher to close it in QualCoder, or wait a moment; "
+        f"once get_current_project shows qualcoder_open false, retry."
     )
 
 
@@ -656,7 +731,24 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
 #   A later open leaves an existing file as it is (the QA gate of brief
 #   C measured it in both builds). So a recent mtime means a first open,
 #   or the chat used, in either build; it is not worded as a 4.0 or AI
-#   signal (v0.14).
+#   signal (v0.14). v0.15.0: a recent change is also seen just after
+#   QualCoder has closed (the owner's sitting of 11 October 2026: a false
+#   "APPEARS to be open" a minute after QualCoder closed). No write at
+#   closing was found in 4.0's close path at the tag 4.0, which only
+#   closes the connection (__main__.py:2990-2991, ai_chat.py:1793-1796,
+#   1744-1753 and 1732-1742), so the change may be the session's own
+#   last write. Either way it says nothing about an open window once
+#   QualCoder has closed. So the sign is left out when the process scan
+#   ran, could read programs' command lines and found no QualCoder, and
+#   no line that may be one (ProcessScan.found_none); the file then
+#   counts as a trace in the project's history with QualCoder
+#   (qualcoder_history.py). Where the scan was not asked for, could not
+#   run, saw program names only (Windows' tasklist, which cannot see a
+#   QualCoder run from Python; psutil when a Python's command line was
+#   withheld; a Linux sandbox with a process list of its own, or WSL,
+#   which lists none of Windows' programs), found a line that may be a
+#   QualCoder it could not read (a path holding a space), or found a
+#   QualCoder, the sign is given as before.
 # - A best-effort local process scan for a running QualCoder
 #   (platform-guarded, optional, cached; never a hard dependency and
 #   never allowed to crash or block, including on Windows CI runners).
@@ -672,7 +764,9 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
 # argues for a tighter or looser value (re-examined in QA round 1, F2).
 GUI_SIGNAL_FRESH_SECONDS = 15 * 60
 _PROCESS_SCAN_CACHE_SECONDS = 5.0
-_process_scan_cache: Dict[str, Any] = {"at": 0.0, "lines": []}
+# "at": the monotonic time of the last scan (None before the first);
+# "scan": what it gave, None included (v0.15.0)
+_process_scan_cache: Dict[str, Any] = {"at": None, "scan": None}
 
 
 def _mtime_age_seconds(path: Path) -> Optional[float]:
@@ -727,20 +821,37 @@ def _program_and_arguments(line: str) -> Tuple[str, List[str]]:
     return (tokens[0], tokens[1:]) if tokens else ("", [])
 
 
+def _is_a_python(name: str) -> bool:
+    """Whether a program's own file name (no folder, `.exe` taken off,
+    in any letter case) is a Python, or Windows' launcher (`py -m
+    qualcoder`, as QualCoder's own README says to start it on
+    Windows)."""
+    return name.startswith("python") or name in ("py", "pyw")
+
+
+def _program_name(program: str) -> str:
+    """A program's own file name, in lower case, `.exe` taken off."""
+    name = program.replace("\\", "/").rsplit("/", 1)[-1].casefold()
+    return name[:-4] if name.endswith(".exe") else name
+
+
 def _process_is_qualcoder(line: str) -> bool:
     """Whether one process line is a running QualCoder (see above)."""
     program, arguments = _program_and_arguments(line)
-    name = program.replace("\\", "/").rsplit("/", 1)[-1].casefold()
-    if name.endswith(".exe"):
-        name = name[:-4]
+    return _program_is_qualcoder(program, arguments)
+
+
+def _program_is_qualcoder(program: str, arguments: List[str]) -> bool:
+    """Whether a program and its arguments are a running QualCoder: the
+    rule above, given the program apart (psutil's `cmdline[0]`, or what
+    `_program_and_arguments` reads off a line)."""
+    name = _program_name(program)
     own_names_out = name
     for own in _OWN_NAMES:
         own_names_out = own_names_out.replace(own, "")
     if "qualcoder" in own_names_out:
         return True
-    # a Python, or Windows' launcher (`py -m qualcoder`, as QualCoder's
-    # own README says to start it on Windows)
-    if not (name.startswith("python") or name in ("py", "pyw")):
+    if not _is_a_python(name):
         return False
     index = 0
     while index < len(arguments):
@@ -782,6 +893,137 @@ def _filter_qualcoder_processes(lines) -> List[str]:
     return hits
 
 
+# A looser reading of a process line (v0.15.0), used only to decide
+# whether a scan that found no QualCoder is trusted to say that none is
+# running, never to give the process sign. `ps` gives a command
+# line as one string, and the rule above takes its first word as the
+# program, so a QualCoder in a folder whose path holds a space is not
+# recognised: a Python ("/Users/x/My Apps/env/bin/python3 -m qualcoder"),
+# its `qualcoder` script, or one of QualCoder's Linux downloads
+# ("/home/x/Research Tools/QualCoder-4.0-beta-linux-executable"). With
+# Exegete's own names taken out, a line may be such a QualCoder when it
+# holds `-m qualcoder` (or `-mqualcoder`) or a word ending in
+# `qualcoder/__main__.py`, `/bin/qualcoder` or `\Scripts\qualcoder`
+# (`.exe` aside), or when the rule above says yes once the words that a
+# space may have split are joined again (fix round 2): the program's,
+# when the line begins with a path (`/`, `~`, `./`, `../` or a drive such
+# as `C:\`), and a Python's script's. A word that begins another one (an
+# option, or a path of its own) is never joined to the word before it,
+# and a program is joined only up to a word that holds a slash (a space
+# in a folder's name, not in the program's own), so `tail -f
+# .../mcp-server-qualcoder.log` and `vim /x/qualcoder/notes.txt` stay
+# out. A word made only of hyphens is no option there: it is part of a
+# folder's name such as "Apps - Linux" or "OneDrive - University" (fix
+# round 3, as are `./` and `../`). Still read as no QualCoder: a folder
+# name with a word that begins with a hyphen or a tilde ("Apps -old",
+# "Apps ~old"), a program started by a relative path that does not begin
+# with `./` or `../` (a bare first word may be an editor's name, as in
+# `less .qualcoder/QualCoder.log`), and a space in the program's own
+# name. A line that does not hold "qualcoder" is not read further.
+_MAY_BE_QUALCODER_MODULE = re.compile(r"-m\s*qualcoder")
+_MAY_BE_QUALCODER_ENDINGS = ("qualcoder/__main__.py", "/bin/qualcoder",
+                             "/scripts/qualcoder")
+# At most this many words of a line are joined again: a bound on the
+# work for a long command line.
+_MAY_BE_QUALCODER_WORDS = 32
+_BEGINS_A_PATH = re.compile(r"^(?:[/~]|\.\.?/|[a-z]:[\\/])",
+                            re.IGNORECASE)
+
+
+def _begins_another_word(word: str) -> bool:
+    """Whether a word cannot be the rest of a path that a space split:
+    an option, or a path of its own. A word made only of hyphens is
+    neither (fix round 3)."""
+    return ((word.startswith("-") and word.strip("-") != "")
+            or bool(_BEGINS_A_PATH.match(word)))
+
+
+def _python_script_index(arguments: List[str]) -> Optional[int]:
+    """Where a Python's script is among its arguments, found as
+    `_program_is_qualcoder` finds it; None when there is none (`-m`,
+    `-c`, or options only)."""
+    index = 0
+    while index < len(arguments):
+        token = arguments[index]
+        if token == "-c" or token.startswith("-m"):
+            return None
+        if token in _PYTHON_OPTIONS_WITH_A_VALUE:
+            index += 2
+            continue
+        if token.startswith("-"):
+            index += 1
+            continue
+        return index
+    return None
+
+
+def _qualcoder_once_joined(words: List[str]) -> bool:
+    """Whether the rule above says yes once the words that a space may
+    have split are joined again (see above)."""
+    words = words[:_MAY_BE_QUALCODER_WORDS]
+    if not words:
+        return False
+    programs = [1]
+    if _BEGINS_A_PATH.match(words[0]):
+        end = 1
+        while end < len(words) and not _begins_another_word(words[end]):
+            end += 1
+            if "/" in words[end - 1].replace("\\", "/"):
+                programs.append(end)
+    for end in programs:
+        program, arguments = " ".join(words[:end]), words[end:]
+        if _program_is_qualcoder(program, arguments):
+            return True
+        if not _is_a_python(_program_name(program)):
+            continue
+        # a Python's script, in a folder whose path holds a space
+        script = _python_script_index(arguments)
+        if script is None:
+            continue
+        stop = script + 1
+        while (stop < len(arguments)
+               and not _begins_another_word(arguments[stop])):
+            stop += 1
+            joined = (arguments[:script]
+                      + [" ".join(arguments[script:stop])]
+                      + arguments[stop:])
+            if _program_is_qualcoder(program, joined):
+                return True
+    return False
+
+
+def _may_be_qualcoder(line: str) -> bool:
+    """Whether one process line may be a QualCoder the rule above cannot
+    read (see above). Never raises."""
+    try:
+        text = line.casefold().replace("\\", "/")
+        for own in _OWN_NAMES:
+            text = text.replace(own, "")
+        if "qualcoder" not in text:
+            return False
+        if _MAY_BE_QUALCODER_MODULE.search(text):
+            return True
+        for word in text.split():
+            word = word.strip("\"'")
+            if word.endswith(".exe"):
+                word = word[:-4]
+            if word.endswith(_MAY_BE_QUALCODER_ENDINGS):
+                return True
+        return _qualcoder_once_joined(line.split())
+    except Exception:
+        return False
+
+
+def _possible_miss(lines) -> bool:
+    """Whether a line that is not a QualCoder by the rule above may still
+    be one by the looser reading."""
+    for line in lines:
+        if isinstance(line, str) and _may_be_qualcoder(line) \
+                and not _filter_qualcoder_processes([line]):
+            return True
+    return False
+
+
 def _listing_lines(output: str, own_pid: int, windows: bool) -> List[str]:
     """The process lines of a `ps -axo pid=,args=` listing, this process
     left out, or of `tasklist /fo csv /nh` (whose rows the filter reads
@@ -798,17 +1040,151 @@ def _listing_lines(output: str, own_pid: int, windows: bool) -> List[str]:
     return lines
 
 
-def _qualcoder_process_hits() -> List[str]:
+class ProcessScan(NamedTuple):
+    """What one look at this computer's processes saw (v0.15.0).
+
+    `hits`: the process lines that are a QualCoder, as
+    `_filter_qualcoder_processes` gives them. `saw_command_lines`: True
+    when the listing could read programs' command lines (`ps -axo
+    pid=,args=`; psutil, when at least one process gave its own and no
+    Python withheld its), so that a QualCoder run from Python could have
+    been seen; False for Windows' `tasklist /fo csv /nh`, the listing
+    there when psutil is absent, which gives program names only (a
+    QualCoder started with `py -m qualcoder`, as QualCoder's README
+    starts it on Windows, shows as py.exe or python.exe and is never
+    seen), for psutil when a process named like a Python gave no command
+    line, and on Linux in a sandbox with a process list of its own or
+    inside WSL (`_sees_only_its_own_processes`). `possible_miss`: a line
+    that is not a hit may still be a QualCoder by the looser reading
+    (`_may_be_qualcoder`), such as one run from a folder whose path
+    holds a space.
+    """
+    hits: Tuple[str, ...]
+    saw_command_lines: bool
+    possible_miss: bool = False
+
+    @property
+    def found_none(self) -> bool:
+        """The one case where the scan's negative is trusted: it could
+        read command lines, found no QualCoder, and found no line that
+        may be one."""
+        return (self.saw_command_lines and not self.hits
+                and not self.possible_miss)
+
+
+def _scan_from_listing(output: str, own_pid: int,
+                       windows: bool) -> Optional[ProcessScan]:
+    """What a `ps` listing (`windows` False) or a `tasklist` listing
+    (`windows` True) shows; None for an empty listing, which says
+    nothing. A pure function, so the `tasklist` path is tested on every
+    platform."""
+    if not output or not output.strip():
+        return None
+    lines = _listing_lines(output, own_pid, windows)
+    return ProcessScan(tuple(_filter_qualcoder_processes(lines)),
+                       not windows, _possible_miss(lines))
+
+
+# Files that say that this process runs in a sandbox whose process list
+# holds its own processes only (a Flatpak app's, a Docker or Podman
+# container's), on Linux: a QualCoder running on the computer outside it
+# is not in the listing (v0.15.0).
+_OWN_PROCESS_LIST_MARKERS = ("/.flatpak-info", "/.dockerenv",
+                             "/run/.containerenv")
+
+
+def _inside_wsl(release: Optional[str] = None,
+                environ: Optional[Dict[str, str]] = None) -> bool:
+    """Whether this Linux runs inside WSL (Windows Subsystem for Linux),
+    whose `ps` lists WSL's own programs and none of Windows', so a
+    QualCoder running on Windows is never in the listing (fix round 2):
+    the kernel's release name holds "microsoft" in WSL 1 and 2, and WSL
+    sets WSL_DISTRO_NAME (read through env_settings, or from `environ`
+    when one is given). No file is read."""
+    if release is None:
+        release = os.uname().release
+    if environ is None:
+        named = env_settings.wsl_distribution()
+    else:
+        named = bool(environ.get("WSL_DISTRO_NAME"))
+    return "microsoft" in release.casefold() or named
+
+
+def _sees_only_its_own_processes(platform: Optional[str] = None,
+                                 release: Optional[str] = None,
+                                 environ: Optional[Dict[str, str]] = None
+                                 ) -> bool:
+    """On Linux, whether one of the files above is there, or this is
+    WSL (`_inside_wsl`). Never raises."""
+    try:
+        if not (platform or sys.platform).startswith("linux"):
+            return False
+        return (any(os.path.exists(marker)
+                    for marker in _OWN_PROCESS_LIST_MARKERS)
+                or _inside_wsl(release, environ))
+    except Exception:
+        return False
+
+
+def _psutil_scan(psutil: Any, own_pid: int) -> Optional[ProcessScan]:
+    """What psutil's list of processes shows; None when it lists none.
+    Each program is read from its `cmdline[0]` and its arguments from the
+    rest, never from the list joined and split again, which cut a path
+    holding a space. A process that gives no command line is read by its
+    name; when that name is a Python's, the scan counts as names only,
+    since such a Python may be a QualCoder."""
+    hits: List[str] = []
+    listed = 0
+    saw_command_lines = False
+    python_unread = False
+    possible_miss = False
+    for proc in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            if proc.info.get("pid") == own_pid:
+                continue
+            cmdline = [str(part) for part in
+                       (proc.info.get("cmdline") or [])]
+            name = str(proc.info.get("name") or "")
+            listed += 1
+            if cmdline:
+                saw_command_lines = True
+                line = " ".join(cmdline)
+                if _program_is_qualcoder(cmdline[0], cmdline[1:]):
+                    hits.append(line.strip()[:200])
+                elif _may_be_qualcoder(line):
+                    possible_miss = True
+                continue
+            if _is_a_python(_program_name(name)):
+                python_unread = True
+            if _program_is_qualcoder(name, []):
+                hits.append(name.strip()[:200])
+        except Exception:
+            continue
+    if not listed:
+        return None
+    return ProcessScan(tuple(hits), saw_command_lines and not python_unread,
+                       possible_miss)
+
+
+def _qualcoder_process_scan() -> Optional[ProcessScan]:
     """Best-effort scan for running QualCoder processes (cached).
 
     psutil when available, else one short-lived ps/tasklist call with a
-    hard timeout. This process itself is left out. Any failure
-    whatsoever returns no hits.
+    hard timeout. This process itself is left out. None when the scan
+    could not run: any exception, a timeout, a listing call that exits
+    with an error or prints nothing, or psutil listing no process
+    (v0.15.0: until then a failed scan answered "no hits", which a
+    caller could not tell from a scan that saw every process and found
+    none). On Linux in a sandbox with a process list of its own, or
+    inside WSL, it counts as names only. The answer, None included, is kept for
+    _PROCESS_SCAN_CACHE_SECONDS. It never raises.
     """
     now = time.monotonic()
-    if now - _process_scan_cache["at"] < _PROCESS_SCAN_CACHE_SECONDS:
-        return _process_scan_cache["lines"]
-    lines: List[str] = []
+    cached_at = _process_scan_cache["at"]
+    if cached_at is not None and \
+            now - cached_at < _PROCESS_SCAN_CACHE_SECONDS:
+        return _process_scan_cache["scan"]
+    scan: Optional[ProcessScan] = None
     own_pid = os.getpid()
     try:
         try:
@@ -816,32 +1192,28 @@ def _qualcoder_process_hits() -> List[str]:
         except ImportError:
             psutil = None
         if psutil is not None:
-            for proc in psutil.process_iter(["pid", "name", "cmdline"]):
-                try:
-                    if proc.info.get("pid") == own_pid:
-                        continue
-                    cmdline = proc.info.get("cmdline") or []
-                    lines.append(" ".join(cmdline) if cmdline
-                                 else str(proc.info.get("name") or ""))
-                except Exception:
-                    continue
+            scan = _psutil_scan(psutil, own_pid)
         else:
             import subprocess
-            if os.name == "nt":
+            windows = os.name == "nt"
+            if windows:
                 cmd = ["tasklist", "/fo", "csv", "/nh"]
             else:
                 cmd = ["ps", "-axo", "pid=,args="]
             completed = subprocess.run(
                 cmd, capture_output=True, timeout=3, check=False)
-            lines = _listing_lines(
-                completed.stdout.decode("utf-8", errors="replace"),
-                own_pid, os.name == "nt")
+            if completed.returncode == 0:
+                scan = _scan_from_listing(
+                    completed.stdout.decode("utf-8", errors="replace"),
+                    own_pid, windows)
+        if scan is not None and scan.saw_command_lines \
+                and _sees_only_its_own_processes():
+            scan = scan._replace(saw_command_lines=False)
     except Exception:
-        lines = []
-    hits = _filter_qualcoder_processes(lines)
+        scan = None
     _process_scan_cache["at"] = now
-    _process_scan_cache["lines"] = hits
-    return hits
+    _process_scan_cache["scan"] = scan
+    return scan
 
 
 def qualcoder_gui_signals(project_dir: Union[str, Path],
@@ -853,11 +1225,18 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
     project APPEARS to be open, never that it certainly is. The
     file-based signals are traces of recent activity (a hot write,
     recent AI indexing or chat); an idle window leaves none, so only
-    the process scan can see one. This function never raises.
+    the process scan can see one. With `include_process_scan` the scan
+    runs first, and a recent change to the chat history is left out when
+    the scan could read programs' command lines and found no QualCoder
+    (`ProcessScan.found_none`; v0.15.0, see above). This function never
+    raises.
     """
     signals: List[str] = []
     try:
         project = Path(project_dir)
+        # The scan runs first: what it saw decides the chat sign (3)
+        scan = _qualcoder_process_scan() if include_process_scan else None
+        none_where_it_could_see = scan is not None and scan.found_none
 
         # 1. Hot write on the project database itself
         for sidecar in ("data.qda-journal", "data.qda-wal", "data.qda-shm"):
@@ -888,10 +1267,13 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
                         "unclean exit)")
                 break
 
-        # 3. Recent AI chat activity
+        # 3. Recent AI chat activity, left out when a scan that could
+        #    have seen a QualCoder run from Python found none: the change
+        #    then says nothing about an open window (v0.15.0, above)
         chat = ai_data / "chat_history.sqlite"
         age = _mtime_age_seconds(chat) if chat.exists() else None
-        if age is not None and age <= GUI_SIGNAL_FRESH_SECONDS:
+        if age is not None and age <= GUI_SIGNAL_FRESH_SECONDS \
+                and not none_where_it_could_see:
             signals.append(
                 f"the project's chat history file "
                 f"(ai_data/chat_history.sqlite) was modified "
@@ -900,12 +1282,10 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
                 f"changes when their AI chat is used")
 
         # 4. A QualCoder process is running on this machine
-        if include_process_scan:
-            hits = _qualcoder_process_hits()
-            if hits:
-                signals.append(
-                    f"a process that looks like QualCoder is running on "
-                    f"this machine ({len(hits)} match(es))")
+        if scan is not None and scan.hits:
+            signals.append(
+                f"a process that looks like QualCoder is running on "
+                f"this machine ({len(scan.hits)} match(es))")
     except Exception as e:  # never let a heuristic break a tool
         logger.debug(f"GUI-open heuristics failed: {error_label(e)}")
     return signals
@@ -1004,11 +1384,45 @@ def sqlite_error_label(error: BaseException) -> str:
 
 def _version_for_log(version: Any) -> str:
     """A project's `databaseversion` as a log line may carry it: the
-    value when it has QualCoder's shape (`v` and up to four digits),
-    otherwise a fixed phrase. The field is the project's own text."""
-    if isinstance(version, str) and re.fullmatch(r"v\d{1,4}", version):
+    value when it has QualCoder's shape (`v` and up to four digits, 0 to
+    9), otherwise a fixed phrase. The field is the project's own text."""
+    if isinstance(version, str) and _VERSION_IN_FORM_RE.fullmatch(version):
         return version
     return "(a value not in QualCoder's form, withheld)"
+
+
+def _version_for_answer(version: Any) -> Optional[str]:
+    """A project's `databaseversion` as an answer may repeat it: the value
+    when it has `_version_for_log`'s shape (`v` and one to four digits,
+    0 to 9), otherwise None (NULL, empty or anything else). The field is
+    the project's own text, and a trigger or a damaged project can put a
+    note's private part or a participant's name in it, so a refusal or a
+    warning repeats it only in QualCoder's form, as the log does
+    (DESIGN_lock_2.md, section 3; built with not presuming QualCoder,
+    piece 7, v0.15.0)."""
+    if isinstance(version, str) and _VERSION_IN_FORM_RE.fullmatch(version):
+        return version
+    return None
+
+
+# What the answers that describe a project give for a schema value that is
+# not in QualCoder's form (ruling 77, 14 October 2026).
+VERSION_NOT_IN_FORM = "not in QualCoder's form"
+
+
+def version_for_details(version: Any) -> Optional[str]:
+    """A project's `databaseversion` as the answers that describe the
+    project report it (`select_project`, `get_current_project`,
+    `get_project_summary` and the project's information resource): the
+    value when `_version_for_answer` lets an answer repeat it, None when
+    the field is NULL (there is nothing to repeat), and otherwise the fixed
+    phrase `VERSION_NOT_IN_FORM`. The field is the project's own text, so
+    these answers take the same care as the log and the refusals (ruling
+    77); nothing Exegete decides depends on the value."""
+    if version is None:
+        return None
+    said = _version_for_answer(version)
+    return said if said is not None else VERSION_NOT_IN_FORM
 
 
 def error_label(error: BaseException) -> str:
@@ -1056,18 +1470,20 @@ def error_text(error: BaseException) -> str:
     return error_label(error)
 
 
-def _raise_query_error(e: sqlite3.Error, where: str, message: str) -> None:
+def _raise_query_error(e: sqlite3.Error, where: str, message: str,
+                       error_type: type = RuntimeError) -> None:
     """Convert a sqlite3 error from a query into a typed, sanitised error.
 
     Locked databases get a distinct, actionable error; everything else is
     logged by its kind and SQLite's name for it, never its message (v0.14:
     a trigger or a note that is not UTF-8 can make the message a note),
-    and re-raised as a generic sanitised RuntimeError.
+    and re-raised as a generic sanitised RuntimeError, or as `error_type`
+    (a RuntimeError of its own) for a caller that must tell it apart.
     """
     if isinstance(e, sqlite3.OperationalError) and _is_locked_error(e):
         raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
     logger.error("Database error in %s: %s", where, sqlite_error_label(e))
-    raise RuntimeError(message) from None
+    raise error_type(message) from None
 
 # Workspace configuration. Users should work in this folder to keep
 # MCP-modified projects separate from originals.
@@ -1231,10 +1647,10 @@ PDF_PROBLEM_MESSAGES = {
     PDF_NO_TEXT_LAYER: (
         "This PDF has no text layer (a scanned PDF, or pages that are "
         "images): no text was stored for it, so there is nothing "
-        "here to read, search or code as text. QualCoder can code it only "
-        "by drawing regions in its PDF view. To code its words, run OCR "
+        "here to read, search or code as text. To code its words, run OCR "
         "on the PDF outside Exegete (it bundles none) and "
-        "import the result as a text file."),
+        "import the result as a text file. (QualCoder, if you use it, can "
+        "code it only by drawing areas in its PDF view.)"),
     PDF_STORED_AS_TEXT: (
         "QualCoder 3.8.2 appears to have stored this PDF file itself as "
         "its text (recognised by a heuristic: the PDF header near the "
@@ -1286,8 +1702,8 @@ def unusable_pdf_link_refusal(name: Any, problem: str) -> str:
     return (f"File '{name}' is a PDF with no usable text ({problem}), so "
             f"it is not linked to a case here: a case link covers a "
             f"file's text, and this file has none Exegete can use. "
-            f"{PDF_PROBLEM_MESSAGES[problem]} QualCoder itself can still "
-            f"link it to the case.")
+            f"{PDF_PROBLEM_MESSAGES[problem]} QualCoder, if you use it, "
+            f"can still link it to the case.")
 
 
 def validate_qda_path(db_path: str) -> Path:
@@ -1821,10 +2237,15 @@ def documents_clash_message(name: str, entry: Optional[str] = None) -> str:
 
 # The closing clause of every ending refusal (owner ruling of 2026-09-23,
 # dossier question 1, option b): QualCoder's own Rename can still do it.
+# v0.15.0 (not presuming QualCoder, piece 7): it says first that Exegete
+# leaves a name's ending as it is, and why, in words true for a name that
+# would gain, lose or swap an ending (documents review, round 1), and
+# names QualCoder's Rename for those who use it.
 _ENDING_STILL_POSSIBLE = (
-    " QualCoder's own Rename (Manage Files, the name's right-click menu, "
-    "\"Rename database entry\") can still make this change if it is "
-    "wanted.")
+    " Exegete leaves a name's ending as it is, to protect the project's "
+    "links and exports. If you use QualCoder and the change is wanted "
+    "all the same, its own Rename can make it (Manage Files, the name's "
+    "right-click menu, \"Rename database entry\").")
 
 
 def file_ending_problem(old: str, new: str, mediapath: Optional[str],
@@ -1944,12 +2365,12 @@ def validate_coder_name(value: Any, param_name: str = "owner") -> str:
         raise ValueError(
             f"{param_name} is {len(name)} characters long; the maximum is "
             f"{MAX_CODER_NAME_LENGTH}. Coder names appear in every coding "
-            f"row and in QualCoder's coder lists; keep them short.")
+            f"row and in the project's coder lists; keep them short.")
     forbidden = _forbidden_coder_name_char(name)
     if forbidden is not None:
         raise ValueError(
-            f"{param_name} contains {forbidden}; a QualCoder coder name "
-            f"must be plain single-line text.")
+            f"{param_name} contains {forbidden}; a coder name must be "
+            f"plain single-line text.")
     if PERSONAL_NOTE_MARK in name:
         raise ValueError(
             f"{param_name} contains '{PERSONAL_NOTE_MARK}', which QualCoder "
@@ -1969,6 +2390,49 @@ HARVEST_OWNER_TABLES = (
     "case_text", "attribute", "attribute_type", "source", "annotation",
     "journal", "manage_files_display", "files_filter",
 )
+
+# What "recorded under a coder name" covers when the researcher's own
+# coder name is corrected (v0.15.0, set_project_coder_name): each kind an
+# answer names, in this order, and the probes that find it. The owner
+# columns are the harvest list above, every one of them; a memo is
+# covered by its row's owner, except the note a merge leaves in the
+# surviving code's or category's memo ("Coder: {name}," in merge_codes
+# and merge_category), which `table.memo` probes find exactly.
+CODER_NAME_RECORD_KINDS = (
+    ("codings", ("code_text", "code_image", "code_av")),
+    ("annotations", ("annotation",)),
+    ("cases or case links", ("cases", "case_text")),
+    ("journal entries", ("journal",)),
+    ("codes or categories", ("code_name", "code_cat")),
+    ("files", ("source",)),
+    ("attributes", ("attribute", "attribute_type")),
+    ("file-list views saved by QualCoder",
+     ("manage_files_display", "files_filter")),
+    ("merge notes in memos that name it", ("code_name.memo",
+                                           "code_cat.memo")),
+)
+
+
+class CoderNameRecordsUnreadable(RuntimeError):
+    """A table did not answer whether work is recorded under a coder name.
+
+    Not "not found": the correction of a coder name is refused on it,
+    because a change made on a guess could change whose work the record
+    shows (v0.15.0)."""
+
+
+class CoderListUnreadable(RuntimeError):
+    """The project's coder list (`coder_names`) did not answer whether a
+    name has a row, so what correcting the coder name would do to it is
+    not known (v0.15.0). A RuntimeError, with the message every other
+    reader of the list gives, for callers that know no more."""
+
+
+def coder_name_record_kinds(found: Dict[str, bool]) -> List[str]:
+    """The kinds of record `coder_name_records` found, in the answer's
+    order, each named once and never counted."""
+    return [kind for kind, probes in CODER_NAME_RECORD_KINDS
+            if any(found.get(probe) for probe in probes)]
 
 # A note recorded beside a project's AI coder name (v0.12, D7 1.2): the
 # host and model version a researcher wants to remember about a choice.
@@ -2073,6 +2537,23 @@ QUALCODER_BACKUP_IGNORE_PATTERNS = (
     "*.sqlite-journal",
 )
 BACKUP_IGNORE_PATTERNS = ("*.lock",) + QUALCODER_BACKUP_IGNORE_PATTERNS
+
+# The folder QualCoder 3.8.2 and 4.0 keep their AI state in. QualCoder's
+# own New Project makes only images, audio, video and documents (4.0
+# __main__.py:2193-2201, at the tag 4.0); its open makes ai_data, and in
+# 4.0 makes it twice at once: open_project starts the vector store's
+# background loading (__main__.py:2893), which makes the folder for
+# search.sqlite (ai_vectorstore.py:576-577), then calls init_ai_chat
+# (__main__.py:2895), which checks for the folder and makes it without
+# exist_ok on the main thread (ai_chat.py:1693-1695). On a project with
+# no ai_data yet the two race and the open can end in FileExistsError.
+# A departure, named (v0.15.0): Exegete makes an empty ai_data when it
+# creates a project (new_project.write_project), and when a copy into
+# the workspace has none (copy_project_to_workspace), so that QualCoder
+# 4.0's first open finds it. Exegete never writes in the folder, so an
+# empty one is no sign that QualCoder has opened the project
+# (qualcoder_history.ai_data_found).
+AI_DATA_FOLDER = "ai_data"
 
 
 def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
@@ -2224,7 +2705,8 @@ BACKUP_WITHOUT_DATABASE_MESSAGE = (
     "This project's data.qda is a link to a file outside the project "
     "folder (or to nothing), so a backup or copy of the project would not "
     "hold its database; nothing was written or copied. Put the database "
-    "file itself in the project folder, as QualCoder makes it, and retry.")
+    "file itself in the project folder, where a project keeps it, and "
+    "retry.")
 
 
 def _side_file_is_live(path: str) -> bool:
@@ -2453,6 +2935,35 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
         ignore=_copy_ignore(source, skipped,
                             database_copied=database_copied,
                             exclude_real=exclude_real))
+    _withhold_exegete_folder_links(source, skipped, report)
+
+
+def _withhold_exegete_folder_links(source: Path, skipped: List[str],
+                                   report: Optional[Dict[str, Any]]) -> None:
+    """Take the skipped links in a project's Exegete folder out of
+    `skipped`, and count them in the report
+    ("skipped_symlinks_in_exegete_folder"), never named (v0.15.0): a
+    name the researcher gives an entry there may hold a participant's
+    name, and the folder's listing counts its entries without naming
+    them (private_files). Every other skipped link stays named."""
+    from . import private_files
+    kept: List[str] = []
+    withheld = 0
+    for rel in skipped:
+        try:
+            inside = private_files.in_a_projects_folder(Path(source) / rel)
+        except Exception:                               # noqa: BLE001
+            inside = True       # not known: counted, never named
+        if inside:
+            withheld += 1
+        else:
+            kept.append(rel)
+    skipped[:] = kept
+    if report is not None:
+        if withheld:
+            report["skipped_symlinks_in_exegete_folder"] = withheld
+        else:
+            report.pop("skipped_symlinks_in_exegete_folder", None)
 
 
 def backup_project(project_path: Union[str, Path],
@@ -2578,7 +3089,8 @@ def copy_project_to_workspace(
     project_in_use.lock would trigger QualCoder's "not properly
     closed" prompt on the copy). Symlinks pointing outside the project
     folder, dangling symlinks, and in-project symlink loops are skipped
-    rather than followed (S-P1, see _copy_ignore).
+    rather than followed (S-P1, see _copy_ignore). A copy that holds no
+    ai_data then gets an empty one (v0.15.0, AI_DATA_FOLDER).
 
     Args:
         source_path: Path to the source .qda project
@@ -2667,6 +3179,11 @@ def copy_project_to_workspace(
         # The database consistently, as a backup is made (v0.14): a copy
         # taken while QualCoder writes holds what was last committed
         _copy_project_tree(source_path, dest_path, skipped, report)
+        # A copy with no ai_data gets an empty one, as create_project
+        # makes (AI_DATA_FOLDER: spares QualCoder 4.0 a race on its first
+        # open); one the copy carries is left as it is
+        if not os.path.lexists(dest_path / AI_DATA_FOLDER):
+            (dest_path / AI_DATA_FOLDER).mkdir()
         logger.info("Project copied successfully (folder name withheld)")
         if report is not None:
             report["skipped_symlinks"] = skipped
@@ -2693,6 +3210,12 @@ def memo_has_private_zone(memo: Any) -> bool:
 
 
 PSEUDONYMS_JSON_NAME = "pseudonyms.json"
+# How each of the reader's four refusals opens (v0.15.0): the project's
+# list, in QualCoder's format, whichever program wrote it.
+_NAMES_LIST_UNREADABLE = (
+    f"The project's names list ({PSEUDONYMS_JSON_NAME}, a list of "
+    f"{{original, pseudonym}} entries in QualCoder's format) could not "
+    f"be read")
 # The sidecar is a short list of short strings. A megabyte is orders of
 # magnitude past any real one and stops a mistaken or hostile file being
 # read into memory whole.
@@ -2838,25 +3361,23 @@ def read_project_pseudonyms_with_raw(project_folder: Union[str, Path]
             text = raw.decode(encoding)
         except (UnicodeDecodeError, LookupError):
             raise ValueError(
-                f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-                f"list of {{original, pseudonym}} entries: it is neither "
-                f"UTF-8 nor this machine's default encoding ({encoding}). A "
-                f"file QualCoder wrote on Windows is usually in the Windows "
-                f"default encoding, which this machine cannot read; open it "
-                f"in a text editor and save it as UTF-8.") from None
+                f"{_NAMES_LIST_UNREADABLE}: it is neither UTF-8 nor this "
+                f"machine's default encoding ({encoding}). A file written "
+                f"on Windows, by QualCoder or another program, is usually "
+                f"in the Windows default encoding, which this machine "
+                f"cannot read; open it in a text editor and save it as "
+                f"UTF-8.") from None
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
         # `msg` names the syntax problem and the position; it never
         # carries a value out of the file.
         raise ValueError(
-            f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-            f"list of {{original, pseudonym}} entries: {e.msg} at line "
-            f"{e.lineno}.") from None
+            f"{_NAMES_LIST_UNREADABLE}: {e.msg} at line {e.lineno}."
+        ) from None
     if not isinstance(data, list):
         raise ValueError(
-            f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-            f"list of {{original, pseudonym}} entries: the file holds a "
+            f"{_NAMES_LIST_UNREADABLE}: the file holds a "
             f"{type(data).__name__}, not a list.")
     entries: List[Dict[str, str]] = []
     for index, item in enumerate(data):
@@ -2864,9 +3385,8 @@ def read_project_pseudonyms_with_raw(project_folder: Union[str, Path]
                 item.get("original"), str) or not isinstance(
                 item.get("pseudonym"), str):
             raise ValueError(
-                f"{PSEUDONYMS_JSON_NAME} could not be parsed as QualCoder's "
-                f"list of {{original, pseudonym}} entries: entry {index} is "
-                f"not an object with two text values.")
+                f"{_NAMES_LIST_UNREADABLE}: entry {index} is not an object "
+                f"with two text values.")
         entries.append({"original": item["original"],
                         "pseudonym": item["pseudonym"]})
     return entries, encoding, data, mode
@@ -3189,11 +3709,18 @@ class QualcoderDatabase:
         columns we know about; they cannot prove the absence of a future
         semantic change (v16 changed the MEANING of catid rows without
         touching a column we write), so the unknown is refused, not
-        allowlisted."""
-        match = _VERSION_STRING_RE.match(self.db_version or "")
-        if not match:
+        allowlisted.
+
+        The value is read as the answers read it (_version_for_answer),
+        and anything not in QualCoder's form is unknown: a line break
+        after it, digits of another script, a value that is not text or
+        one too long to read as a number. So the gate never takes for a
+        verified schema a value the answers call not in QualCoder's form,
+        and never fails on one (gate review, security, round 1)."""
+        version = _version_for_answer(self.db_version)
+        if version is None:
             return True
-        return int(match.group(1)) > MAX_VERIFIED_SCHEMA
+        return int(version[1:]) > MAX_VERIFIED_SCHEMA
 
     def write_support(self):
         """(supported, reason, overridden) for writing to this database.
@@ -3207,33 +3734,71 @@ class QualcoderDatabase:
         """
         caps = getattr(self, "capabilities", None)
         if caps is None or not caps.has_coder_names:
+            # The route names a tool, marked where the set lacks it
             return (False,
-                    "This project uses a pre-v14 schema; open it once in "
-                    "QualCoder 3.8 or newer to migrate it, then retry.",
+                    _mark_unregistered(
+                        "This project uses a pre-v14 schema, from a "
+                        "QualCoder older than 3.8: Exegete reads it but "
+                        "does not write to it, and cannot bring it up to "
+                        "date itself. " + OLDER_QUALCODER_ROUTE + " "
+                        + NO_QUALCODER_ROUTE),
                     False)
         if self._unknown_future_schema():
-            version = self.db_version or "unknown"
             if env_settings.value("allow_unknown_schema") == "1":
                 return (True, self._unknown_schema_warning(), True)
+            # The value is repeated only in QualCoder's form; any other
+            # value is the project's own text (_version_for_answer).
+            version = _version_for_answer(self.db_version)
+            if version is not None:
+                said = (f"This project reports database schema "
+                        f"'{version}', newer than the schemas Exegete is "
+                        f"verified against (v14 through "
+                        f"v{MAX_VERIFIED_SCHEMA}, up to "
+                        f"{VERIFIED_QUALCODER}). ")
+            else:
+                said = (f"This project's database schema value is missing "
+                        f"or not in QualCoder's form (`v` and up to four "
+                        f"digits), so it is not repeated here, and Exegete "
+                        f"cannot tell whether the project uses one of the "
+                        f"schemas it is verified against (v14 through "
+                        f"v{MAX_VERIFIED_SCHEMA}, up to "
+                        f"{VERIFIED_QUALCODER}). ")
+            # Such a value is no sign of a newer QualCoder (a trigger or a
+            # damaged project can put it there), so the safer way through,
+            # a backup from before, comes before the override (documents
+            # review, round 1). restore_backup is marked where a tool set
+            # lacks it.
+            safer = ("" if version is not None else _mark_unregistered(
+                "If the value was changed by mistake, a backup from before "
+                "has it (list_backups, restore_backup). "))
             return (False,
-                    f"This project reports database schema '{version}', "
-                    f"newer than the schemas Exegete is verified "
-                    f"against (v14 through v{MAX_VERIFIED_SCHEMA}, up to "
-                    f"{VERIFIED_QUALCODER}). "
-                    f"Writes are refused to protect the data. Set "
-                    f"{ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
+                    said +
+                    "Writes are refused to protect the data. " + safer +
+                    f"Set {ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
                     f"environment to override at your own risk.",
                     False)
         return (True, None, False)
 
     def _unknown_schema_warning(self) -> str:
-        return (f"WARNING: this project reports database schema "
-                f"'{self.db_version or 'unknown'}', newer than the verified "
-                f"ceiling (v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); "
-                f"writes proceeded only because "
-                f"{env_settings.read('allow_unknown_schema').name}=1 is "
-                f"set. Verify results in "
-                f"QualCoder and keep backups.")
+        variable = env_settings.read('allow_unknown_schema').name
+        version = _version_for_answer(self.db_version)
+        if version is not None:
+            # A schema newer than v17 is a sign: only a newer QualCoder
+            # writes one (not presuming QualCoder, piece 7).
+            return (f"WARNING: this project reports database schema "
+                    f"'{version}', newer than the verified ceiling "
+                    f"(v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); "
+                    f"writes proceeded only because {variable}=1 is set. "
+                    f"Verify results (in the newer QualCoder that upgraded "
+                    f"the project, for example) and keep backups.")
+        # A value not in QualCoder's form is no sign of a newer QualCoder.
+        return (f"WARNING: this project's database schema value is missing "
+                f"or not in QualCoder's form (`v` and up to four digits), "
+                f"so it is not repeated here, and Exegete cannot tell "
+                f"whether the project is within the verified ceiling "
+                f"(v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); writes "
+                f"proceeded only because {variable}=1 is set. Verify "
+                f"results and keep backups.")
 
     def schema_write_warning(self):
         """The override warning when writing to an unknown-future schema,
@@ -3249,7 +3814,7 @@ class QualcoderDatabase:
         Older QualCoder schemas (pre-3.8 / pre-v14) lack columns such as
         code_text.important, which every coding read and write here uses.
         Rather than crashing mid-operation (or half-working), refuse the
-        connection with instructions to upgrade the project in QualCoder.
+        connection, saying how such a project is brought up to date.
 
         Raises:
             UnsupportedSchemaError: If any required column is missing
@@ -3260,14 +3825,51 @@ class QualcoderDatabase:
                 existing = {row[1] for row in cursor.fetchall()}
                 missing = [c for c in columns if c not in existing]
                 if missing:
-                    version = self.db_version or "unknown"
-                    raise UnsupportedSchemaError(
-                        f"This project was created with an older QualCoder "
-                        f"(database schema {version}; missing column(s) "
-                        f"{', '.join(table + '.' + c for c in missing)}). "
-                        f"Open and save the project in QualCoder 3.8 to "
-                        f"upgrade it, then try again."
-                    )
+                    # The value only in QualCoder's form: the field is the
+                    # project's own text (_version_for_answer).
+                    version = _version_for_answer(self.db_version)
+                    schema = (
+                        f"database schema {version}" if version is not None
+                        else "its database schema value is missing or not "
+                             "in QualCoder's form, so it is not repeated "
+                             "here")
+                    columns_said = ', '.join(
+                        table + '.' + c for c in missing)
+                    if version is not None and int(version[1:]) >= 14:
+                        # A value from v14 on is a schema that has these
+                        # columns, so the project is not from before 3.8:
+                        # it may have been damaged or altered. QualCoder
+                        # adds a missing column as it opens a project,
+                        # whatever the value (3.8.2 `__main__.py` 2768 to
+                        # 2818; 4.0, tag `4.0`, 2527 to 2580), so the
+                        # route holds (whole-branch review, round 1, and
+                        # FIX_older-projects_R1.md, the lead's first
+                        # point). The backup tools need a selected
+                        # project, so a backup is reached by selecting it.
+                        said = (
+                            f"This project reports database schema "
+                            f"{version} but lacks column(s) {columns_said}, "
+                            f"which that schema has, so it may have been "
+                            f"damaged or altered; Exegete cannot read it as "
+                            f"it is or repair it itself. A copy from before "
+                            f"the change (a backup folder beside it, "
+                            f"selected in its place, for example) may have "
+                            f"them; otherwise ")
+                    else:
+                        # "Appears": the missing columns are the sign, and
+                        # a damaged copy can lack them too (documents
+                        # review, round 1).
+                        said = (
+                            f"This project appears to have been made with a "
+                            f"QualCoder older than 3.8 ({schema}; missing "
+                            f"column(s) {columns_said}), and Exegete cannot "
+                            f"read it as it is or bring it up to date "
+                            f"itself. ")
+                    # The route names a tool, marked where the set lacks
+                    # it; the way on without QualCoder at all follows.
+                    raise UnsupportedSchemaError(_mark_unregistered(
+                        said + OLDER_QUALCODER_ROUTE + " "
+                        + NO_QUALCODER_ROUTE))
         except sqlite3.OperationalError as e:
             if _is_locked_error(e):
                 raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
@@ -3287,7 +3889,9 @@ class QualcoderDatabase:
         row = cursor.fetchone()
         if row:
             return {
-                "database_version": row["databaseversion"],
+                # In QualCoder's form only (ruling 77)
+                "database_version": version_for_details(
+                    row["databaseversion"]),
                 "date": row["date"],
                 "memo": row["memo"],
                 "about": row["about"],
@@ -3356,12 +3960,12 @@ class QualcoderDatabase:
         if current != fingerprint:
             raise ValueError(
                 f"The text of file id {file_id} changed while this write "
-                f"was being prepared (another program, possibly an open "
-                f"QualCoder window, edited it). Nothing was written: "
-                f"re-read the file and retry. Note that QualCoder 4.0 "
-                f"builds write no lock file, so the lock gate cannot see "
-                f"them; check qualcoder_gui_signals in "
-                f"get_current_project and confirm with the user.")
+                f"was being prepared: another program edited it (another "
+                f"conversation using Exegete, or QualCoder if the "
+                f"researcher uses it). Nothing was written: re-read the "
+                f"file and retry. If get_current_project's "
+                f"qualcoder_gui_signals lists signs of a QualCoder window, "
+                f"ask the researcher to close it first.")
 
     def _hierarchy_maps(self):
         """(codes, cats) lookup maps for path/chain building.
@@ -3509,11 +4113,20 @@ class QualcoderDatabase:
                    and caps.visibility_declared()
                    else view in getattr(self, "_arrived_views", ()))
         if not (whole and present):
-            raise CoderVisibilityUnreadable(
-                "Could not determine coder visibility for this project "
-                "(one of its coder-visibility views is missing). Open "
-                "the project in QualCoder, which recreates them, and "
-                "try again")
+            # Exegete's own projects have these views (new_project.py),
+            # so a missing one is damage. QualCoder 4.0 recreates them:
+            # its open_project calls update_coder_names (__main__.py
+            # 2869-2870 at tag 4.0, b95e021), which creates the four
+            # with CREATE VIEW IF NOT EXISTS (app.py 1555-1669).
+            raise CoderVisibilityUnreadable(_mark_unregistered(
+                "Could not determine coder visibility for this project: "
+                "one of its coder-visibility views is missing, so the "
+                "project is damaged. A backup made before the damage "
+                "still has the views: restoring it (list_backups, "
+                "restore_backup) takes the project back to that "
+                "backup's state, all but its Exegete folder, which a "
+                "restore keeps; QualCoder 4.0, if you use it, recreates "
+                "the views when it opens the project."))
         return view
 
     def _visibility_in_force(self) -> Optional[bool]:
@@ -3809,6 +4422,170 @@ class QualcoderDatabase:
             answer[name] = found
         return answer
 
+    def coder_name_records(self, name: str) -> Dict[str, bool]:
+        """Whether work is recorded under this one coder name, probe by
+        probe (CODER_NAME_RECORD_KINDS), for the correction of the
+        researcher's own coder name (v0.15.0).
+
+        Each probe is a restricted EXISTS for the name given, never a
+        list of owners, so nothing here can enumerate a coder, hidden or
+        not. Owners are compared exactly; a merge note is found with
+        `instr`, which is exact too, where `LIKE` would ignore letter
+        case and read `%` and `_` as wildcards, and a NULL memo matches
+        nothing. A table the schema lacks is not probed (False); a table
+        that does not answer raises CoderNameRecordsUnreadable, unlike
+        `known_owner_presence`, which reads such a table as "not found".
+        """
+        caps = getattr(self, "capabilities", None)
+        found: Dict[str, bool] = {}
+        for _, probes in CODER_NAME_RECORD_KINDS:
+            for probe in probes:
+                table, _, column = probe.partition(".")
+                if caps is not None and not caps.table_exists(table):
+                    found[probe] = False
+                    continue
+                if column:
+                    sql = (f"SELECT 1 FROM {table} WHERE instr({column}, "
+                           f"'Coder: ' || ? || ',') > 0 LIMIT 1")
+                else:
+                    sql = f"SELECT 1 FROM {table} WHERE owner = ? LIMIT 1"
+                try:
+                    row = self.conn.execute(sql, (name,)).fetchone()
+                except sqlite3.Error as e:
+                    logger.error("Database error in coder_name_records: %s",
+                                 sqlite_error_label(e))
+                    raise CoderNameRecordsUnreadable(
+                        "a table of the project did not answer") from None
+                found[probe] = row is not None
+        return found
+
+    def coder_list_has(self, name: str) -> bool:
+        """Whether the name has a row in `coder_names` (False when the
+        project has no such table). Presence only: who is hidden is read
+        by `coder_visibility_map` alone. Raises CoderListUnreadable when
+        the table does not answer (DatabaseLockedError when it is
+        locked)."""
+        caps = getattr(self, "capabilities", None)
+        if caps is not None and not caps.table_exists("coder_names"):
+            return False
+        try:
+            row = self.conn.execute(
+                "SELECT 1 FROM coder_names WHERE name = ? LIMIT 1",
+                (name,)).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "coder_list_has",
+                               "Could not read this project's coder list",
+                               error_type=CoderListUnreadable)
+        return row is not None
+
+    def coder_list_change(self, old: Optional[str], new: str) -> str:
+        """What changing the project's coder name from `old` to `new`
+        does to `coder_names`: "renamed" (the old name's row takes the
+        new name, keeping its visibility), "removed_old" (the new name
+        already has a row, so the old one goes), "added" (the old name
+        has none, so the new name's row is added, visible) or
+        "unchanged" (the new name already has a row and the old none, or
+        the project has no coder list). Read-only."""
+        caps = getattr(self, "capabilities", None)
+        if caps is not None and not caps.table_exists("coder_names"):
+            return "unchanged"
+        has_old = old is not None and self.coder_list_has(old)
+        has_new = self.coder_list_has(new)
+        if has_old:
+            return "removed_old" if has_new else "renamed"
+        return "unchanged" if has_new else "added"
+
+    def preview_coder_name_change(self, new: str) -> Dict[str, Any]:
+        """What set_project_coder_name would do (read-only): the current
+        name (None for '' or NULL), the new one, what the change does to
+        `project` and `coder_names`, and the kinds of record that carry
+        the current name. No probe runs when there is no current name.
+        Raises CoderNameRecordsUnreadable when a table does not answer."""
+        current = (self.get_project_info() or {}).get("coder_name") or None
+        kinds = (coder_name_record_kinds(self.coder_name_records(current))
+                 if current is not None else [])
+        return {
+            "current_coder_name": current,
+            "new_coder_name": new,
+            "project_coder_name": {"from": current, "to": new},
+            "coder_list": self.coder_list_change(current, new),
+            "recorded_under_current_name": kinds,
+        }
+
+    def fingerprint_coder_name_change(self, new: str) -> Dict[str, Any]:
+        """The state a correction's token signs beside its preview: the
+        current name as stored, both names' rows in `coder_names`
+        (present, visibility), and a yes or no for each probe of the
+        current name, so that work recorded under it after the preview,
+        or the name changed meanwhile, refuses the change."""
+        stored = (self.get_project_info() or {}).get("coder_name")
+        current = stored or None
+        try:
+            visibility: Any = self.coder_visibility_map()
+        except CoderVisibilityUnreadable:
+            visibility = "unreadable"
+
+        def row(name):
+            if name is None:
+                return None
+            return [self.coder_list_has(name),
+                    visibility.get(name) if isinstance(visibility, dict)
+                    else visibility]
+        return {
+            "stored": stored,
+            "rows": [row(current), row(new)],
+            "probes": ({} if current is None
+                       else self.coder_name_records(current)),
+        }
+
+    def change_project_coder_name(self, old: Optional[str], new: str,
+                                  auto_commit: bool = True) -> Dict[str, Any]:
+        """Set the project's own coder name to `new` (v0.15.0).
+
+        It sets `project.codername`, as QualCoder's own settings
+        do; in `coder_names`, when the table exists, the old name's row
+        is renamed to the new one, keeping its visibility, or removed
+        when the new name already has a row, or, when the old name has
+        none, the new name's row is added with visibility 1, as
+        create_project adds it (without the visibility column, the name
+        alone). Nothing else changes. The caller has checked that nothing
+        is recorded under `old`.
+        """
+        self._require_write_access()
+        try:
+            change = self.coder_list_change(old, new)
+            self.conn.execute("UPDATE project SET codername = ?", (new,))
+            if change == "renamed":
+                self.conn.execute(
+                    "UPDATE coder_names SET name = ? WHERE name = ?",
+                    (new, old))
+            elif change == "removed_old":
+                self.conn.execute("DELETE FROM coder_names WHERE name = ?",
+                                  (old,))
+            elif change == "added":
+                columns = {r[1] for r in self.conn.execute(
+                    "PRAGMA table_info(coder_names)").fetchall()}
+                if "visibility" in columns:
+                    self.conn.execute(
+                        "INSERT OR IGNORE INTO coder_names (name, "
+                        "visibility) VALUES (?, 1)", (new,))
+                else:
+                    self.conn.execute(
+                        "INSERT OR IGNORE INTO coder_names (name) "
+                        "VALUES (?)", (new,))
+            if auto_commit:
+                self.conn.commit()
+        except sqlite3.Error as e:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
+            _raise_query_error(e, "change_project_coder_name",
+                               "Failed to change the project's coder name")
+        logger.info("Changed the project's own coder name (coder list: %s)",
+                    change)
+        return {"coder_list": change}
+
     def owner_case_variant(self, name: str) -> Optional[str]:
         """An existing owner that differs from `name` by letter case only.
 
@@ -3930,9 +4707,11 @@ class QualcoderDatabase:
         turn published a hidden coder when the table was damaged. It has
         been removed rather than documented, and
         `tests/test_qc40_visibility.py` pins that no second reader comes
-        back. Read-only either way: this server never inserts into
-        `coder_names`; QualCoder enrols names through its own harvest
-        the next time it opens the project (app.py:1480-1494).
+        back. Read-only either way: Exegete writes `coder_names` only
+        when it creates a project and when the researcher's own coder
+        name is corrected (set_project_coder_name, v0.15.0); QualCoder
+        enrols the other names through its own harvest the next time it
+        opens the project (app.py:1480-1494).
 
         The declaration is re-read here rather than taken from the
         connect-time probe; `_visibility_is_declared_now` says why.
@@ -6043,15 +6822,23 @@ class QualcoderDatabase:
                 if unusable_pdfs:
                     performance_info["unusable_pdfs_not_searched"] = \
                         unusable_pdfs
+                    # The clause on a PDF stored as the file itself, which
+                    # names QualCoder, only when a listed file has that
+                    # reason: the reason is the sign
+                    stored_as_text = ""
+                    if any(u.get("reason") == PDF_STORED_AS_TEXT
+                           for u in unusable_pdfs):
+                        stored_as_text = (
+                            f"; {PDF_STORED_AS_TEXT} is a PDF that QualCoder "
+                            f"3.8.2 stored as the file itself, recognised by "
+                            f"a heuristic; QualCoder 4.0's 'Restructure' in "
+                            f"its PDF view can repair it")
                     performance_info["unusable_pdf_note"] = (
                         f"{len(unusable_pdfs)} PDF source(s) were not "
                         f"content-searched, so finding nothing in them "
                         f"means nothing: {PDF_NO_TEXT_LAYER} is a PDF with "
                         f"no text layer (OCR it outside Exegete and "
-                        f"import the result); {PDF_STORED_AS_TEXT} is a "
-                        f"PDF that QualCoder 3.8.2 stored as the file "
-                        f"itself, recognised by a heuristic (repair it "
-                        f"with 'Restructure' in QualCoder 4.0's PDF view). "
+                        f"import the result){stored_as_text}. "
                         f"A search of any PDF covers its text layer only.")
 
             logger.info(f"File search found {len(results)} matches (searched {files_searched} files)")
@@ -7240,11 +8027,21 @@ class QualcoderDatabase:
                     "give parent_code_id or category_id, not both")
             caps = getattr(self, "capabilities", None)
             if caps is None or not caps.has_supercid:
+                # The sign is the project's format, not the program that
+                # saved it last: Exegete writes to such a project without
+                # changing its schema. The route that works now comes
+                # first; QualCoder 4.0 only as a choice (documents review,
+                # round 1).
                 raise ValueError(
                     "Sub-codes need a project with schema v16 or newer "
                     "(the code_name.supercid column); this project does "
-                    "not have it. Open the project in a QualCoder version "
-                    "that supports sub-codes to migrate it first.")
+                    "not have it. This project is in an older format of "
+                    "QualCoder's, from before sub-codes (schema older than "
+                    "v16), and Exegete cannot bring a project up to date "
+                    "yet. The code can be created now at the top level, or "
+                    "in a category with create_code's category; QualCoder "
+                    "4.0, if you use it, brings the project up to date "
+                    "when it opens it.")
             parent_code_id = validate_id(parent_code_id, "parent_code_id")
             parent_check = self.conn.execute(
                 "SELECT cid FROM code_name WHERE cid = ?", (parent_code_id,)
@@ -7999,9 +8796,12 @@ class QualcoderDatabase:
         except sqlite3.Error as e:
             _raise_query_error(e, "set_memo", "Failed to set memo")
         if row is None:
-            raise ValueError(
+            # restore_backup is marked where a tool set lacks it
+            raise ValueError(_mark_unregistered(
                 "This project has no project record, so it has no project "
-                "memo; QualCoder itself will not open it.")
+                "memo, and it is not a usable project in Exegete or in "
+                "QualCoder. Nothing was written; a backup made before the "
+                "record was lost has it (list_backups, restore_backup)."))
         stored_memo = merge_public_memo(row["memo"], memo)
         public_memo = extract_ai_memo(stored_memo)
         try:
@@ -8906,8 +9706,8 @@ class QualcoderDatabase:
             if self.would_create_category_cycle(category_id, new_supercatid):
                 raise ValueError(
                     "That move would make the category its own ancestor "
-                    "(a cycle), which would hide it and its codes from "
-                    "QualCoder's tree; refusing."
+                    "(a cycle), which would cut it and its codes off from "
+                    "the code tree; refusing."
                 )
             self.conn.execute(
                 "UPDATE code_cat SET supercatid = ? WHERE catid = ?",
@@ -9030,7 +9830,7 @@ class QualcoderDatabase:
                      "private)" if has_memo else
                      " (the source code has no memo to carry)")
             note += (". It lands before any private section the target "
-                     "has, as QualCoder 4.0's own merge records it.")
+                     "has.")
             subcodes = [
                 {"id": r[0], "name": r[1]} for r in self.conn.execute(
                     "SELECT cid, name FROM code_name WHERE supercid = ? "
@@ -9039,15 +9839,15 @@ class QualcoderDatabase:
             if subcodes:
                 out["subcodes_note"] = (
                     f"{len(subcodes)} sub-code(s) of '{src['name']}' move "
-                    f"under '{dest['name']}', with their own sub-codes, "
-                    f"as in QualCoder 4.0; their codings stay theirs.")
+                    f"under '{dest['name']}', with their own sub-codes; "
+                    f"their codings stay theirs.")
             graphs = self._code_graph_preview([from_code_id])
             if graphs is not None:
                 out["saved_graph_rows_removed"] = graphs
         elif has_memo:
-            note = ("The source code's memo is deleted with its row, as "
-                    "QualCoder 3.8.2's merge does on this project's "
-                    "schema; the backup made first keeps a copy. Copy "
+            note = ("On this project's older schema (from before "
+                    "sub-codes) the source code's memo is deleted with its "
+                    "row; the backup made first keeps a copy. Copy "
                     "anything you need from it before the merge.")
         else:
             note = "The source code has no memo; nothing is carried."
@@ -9214,9 +10014,9 @@ class QualcoderDatabase:
             preview["subcodes"] = sorted(r[0] for r in names)
             preview["note"] = (
                 f"{len(branch) - 1} sub-code(s) hang under this code. "
-                f"Deleting deletes the whole branch and all its codings, "
-                f"exactly as QualCoder's own delete, which asks once; "
-                f"execute_with carries cascade=true, so approving this "
+                f"Deleting deletes the whole branch and all its codings "
+                f"with one approval: execute_with carries cascade=true, so "
+                f"approving this "
                 f"preview approves the branch. Move the sub-codes first if "
                 f"they are needed.")
         return preview
@@ -9673,19 +10473,21 @@ class QualcoderDatabase:
         ).fetchone()[0]
         carries_memo = self._category_merge_carries_memo(into_category_id)
         if carries_memo:
+            # QualCoder's own category merge (code_tree.py:1413 at
+            # 9bddf17), cited in the answer until v0.15.0 (piece 8, fix
+            # round 1)
             memo_note = (" The source category's memo is carried into the "
-                         "target category's memo under a provenance note "
-                         "(master parity, code_tree.py:1413); a '#####' "
-                         "private section on the target stays private.")
+                         "target category's memo under a provenance note; "
+                         "a '#####' private section on the target stays "
+                         "private.")
         elif into_category_id is None:
             memo_note = (" Merging to the top level removes the source "
-                         "category's memo with its row (as QualCoder does); "
-                         "the mandatory backup keeps a copy.")
-        else:
-            memo_note = (" On this project's schema (pre-sub-code, matching "
-                         "QualCoder 3.8.2 exactly) the source category's "
-                         "memo is removed with its row; the mandatory backup "
+                         "category's memo with its row; the mandatory backup "
                          "keeps a copy.")
+        else:
+            memo_note = (" On this project's older schema (from before "
+                         "sub-codes) the source category's memo is removed "
+                         "with its row; the mandatory backup keeps a copy.")
         preview = {
             "from_category": {"id": from_category_id, "name": src_cat["name"]},
             "into_category": target_desc,
@@ -10170,6 +10972,47 @@ class QualcoderDatabase:
         if mediapath.startswith('/docs/'):
             return [mediapath[len('/docs/'):]]
         return []
+
+    # The saved places QualCoder keeps by text, which a rename does not
+    # reach, each with its tables in QualCoder 4.0's schema (the names
+    # new_project.TABLES carries, with its citation). v0.15.0, not
+    # presuming QualCoder, piece 11.
+    SAVED_PLACES: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+        ("saved_graphs", ("graph",)),
+        ("saved_displays_and_filters",
+         ("manage_files_display", "files_filter")),
+        ("saved_queries", ("stored_sql",)),
+    )
+
+    def saved_places_in_use(self) -> Dict[str, bool]:
+        """Whether each saved place holds a row (v0.15.0): saved_graphs
+        (`graph`), saved_displays_and_filters (`manage_files_display` or
+        `files_filter`) and saved_queries (`stored_sql`).
+
+        One `SELECT 1 ... LIMIT 1` per table the probed schema has, the
+        names from SAVED_PLACES alone: no column of any row is read and
+        nothing is written. A table this schema lacks says False; a read
+        that fails says True, so a text that names the place keeps it
+        (saying more is the safe direction)."""
+        found: Dict[str, bool] = {}
+        for key, tables in self.SAVED_PLACES:
+            in_use = False
+            for table in tables:
+                if not self.capabilities.table_exists(table):
+                    continue
+                try:
+                    row = self.conn.execute(
+                        f'SELECT 1 FROM "{table}" LIMIT 1').fetchone()
+                except sqlite3.Error as e:
+                    logger.debug("A saved place could not be read: %s",
+                                 sqlite_error_label(e))
+                    in_use = True
+                    break
+                if row is not None:
+                    in_use = True
+                    break
+            found[key] = in_use
+        return found
 
     def old_name_left_in(self, kind: str, row_id: int, old_name: str,
                          mediapath: Optional[str] = None) -> Dict[str, Any]:
@@ -11996,6 +12839,33 @@ class QualcoderDatabase:
         # normalisation and no separator flexibility, so a researcher
         # sent there gets a narrower answer than this block's and is
         # told so (cross-check, both corrections).
+        # v0.15.0, not presuming QualCoder, piece 11: each clause about
+        # QualCoder or a saved place only on its sign, a hidden coder
+        # (hidden_coder_count) or a saved place that holds a row
+        # (saved_places_in_use, read once per preview); the rest always.
+        # Hiding a coder is a setting QualCoder makes (Exegete writes
+        # every coder visible); get_coded_segments' `coder` reads that
+        # coder's codings with their notes, while no read of Exegete's
+        # gives a hidden coder's annotations (fix round 1)
+        hidden_coders = (
+            "; it leaves out the coding notes and annotations of a coder "
+            "the project hides (a visibility setting made in QualCoder); "
+            "get_coded_segments reads that coder's coding notes when the "
+            "coder is named"
+            if self.hidden_coder_count() > 0 else "")
+        places = self.saved_places_in_use()
+        unreached = [
+            "the stored copy and stored path of an imported file (the copy "
+            "in the project folder keeps the name it was imported under "
+            "and, for a document, the original text)"]
+        unreached += [words for key, words in (
+            ("saved_graphs", "saved graph labels"),
+            ("saved_displays_and_filters", "saved table displays and "
+                                           "filters"),
+            ("saved_queries", "QualCoder's saved SQL queries"))
+            if places[key]]
+        listed = (unreached[0] if len(unreached) == 1 else
+                  ", ".join(unreached[:-1]) + ", or " + unreached[-1])
         residue["scope_note"] = (
             "file_id chooses which file is rewritten. The notes and the "
             "report always cover the whole project. This block covers the "
@@ -12005,22 +12875,25 @@ class QualcoderDatabase:
             "file_text. Each count is two readings, wide and whole-word. "
             "To find the notes a count points at, search_memos searches "
             "the public part of all twelve fields and names each result's "
-            "kind; it leaves out the coding notes and annotations of a "
-            "coder hidden in QualCoder, which are read there. "
+            f"kind{hidden_coders}. "
             "search_files reads narrower than this block does (a plain "
             "substring, no normalisation), so a name it does not find may "
             "still be counted here. The labels include case and file "
             "names, which rename_case and rename_file change. A rename "
-            "does not reach, and this block does not read, the stored "
-            "copy and stored path of an imported file (the copy in the "
-            "project folder keeps the name it was imported under and, for "
-            "a document, the original text), saved graph labels, saved "
-            "table displays and filters, or QualCoder's saved SQL "
-            "queries.")
-        residue["ai_data_note"] = (
-            "QualCoder 4.0's ai_data folder (chat history and the search "
-            "index) is never read or written by Exegete and is not "
-            "scanned; it may still hold the previous text.")
+            "does not reach, and this block does not read, "
+            f"{listed}.")
+        # Only when the project holds the folder with something in it
+        # (piece 11; v0.15.0: not the empty one Exegete makes), by the
+        # history's own check; imported here, as that module imports
+        # this one
+        from . import qualcoder_history
+        if qualcoder_history.ai_data_found(folder):
+            # QualCoder's, not 4.0's alone: 3.8.2 makes the folder too
+            # (fix round 1)
+            residue["ai_data_note"] = (
+                "QualCoder's ai_data folder (chat history and the search "
+                "index) is never read or written by Exegete and is not "
+                "scanned; it may still hold the previous text.")
         if memo_plan is not None:
             residue["after_rewrite_note"] = self.PSEUDONYMISE_AFTER_REWRITE_NOTE
         try:
@@ -12411,9 +13284,12 @@ class QualcoderDatabase:
             "journal_entries_from_earlier_runs_note":
                 self.PSEUDONYMISE_MEMO_EARLIER_RUNS_NOTE,
             "memos_of_hidden_coders": totals["of_hidden_coders"],
-            "memos_of_hidden_coders_note":
-                self.PSEUDONYMISE_MEMO_HIDDEN_NOTE,
         }
+        # The note only when the count is above 0 (v0.15.0, not
+        # presuming QualCoder, piece 11); the count itself always.
+        if totals["of_hidden_coders"] > 0:
+            block["memos_of_hidden_coders_note"] = \
+                self.PSEUDONYMISE_MEMO_HIDDEN_NOTE
         if memo_plan["unreadable"]:
             block["unreadable"] = list(memo_plan["unreadable"])
         return block

@@ -6,6 +6,11 @@ sober: this tool makes the data flow explicit precisely so you can make
 an informed decision, which many AI tools do not. It is not legal
 advice.
 
+Two tools were renamed in 0.15.0, and their earlier names are still
+listed until a later release (planned as v0.15.2) removes them
+(TOOLS.md, "Earlier names"). What this document says of either tool
+holds under both its names.
+
 ## How your data flows
 
 **Exegete itself runs entirely on your machine.** It is a local
@@ -45,18 +50,20 @@ What stays local, always, unless a sync service copies the folder it is in:
   `<project>_backup_<timestamp>.qda` folders (the safety backup's name
   ends `_prerestore.qda`) placed next to the project folder
 - exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
-- project copies made by copy_project_to_workspace, in
+- new projects made by create_project and project copies made by
+  copy_project_to_workspace, in
   `~/Documents/Exegete projects/` by default (before 0.14.1,
   `~/Documents/Qualcoder MCP Projects/`, left as it was), or in the folder
   `EXEGETE_WORKSPACE` names, which the desktop extension sets
-  from its "Folder for projects", by default `~/QualCoder projects/`
-  (each carries the
-  same content as a backup, so the `ai_data/` and symlink rules below
+  from its "Folder for projects", by default `~/Exegete projects/`
+  (each copy carries
+  the same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
 - Exegete's own folder, `~/.exegete` (before 0.14.1,
   `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
-  the session files, the secret, the pointer and the run manifests
-  below, and `update_check.json` (when Exegete last checked for a new
+  the texts an import's preview read, the session files, the secret,
+  the pointer and the run manifests below, and `update_check.json`
+  (when Exegete last checked for a new
   version, what it found, which versions it has told you about, and
   the newest version that has run here; nothing from your projects;
   "Checking for new versions" says more). At the first start of 0.14.1
@@ -77,7 +84,11 @@ What stays local, always, unless a sync service copies the folder it is in:
   what to do. A link left under the old name after `~/.exegete` was
   removed by hand is left as it is, and a fresh `~/.exegete` is made.
   The export tools, `create_project` and the workspace setting refuse
-  both names, whether or not the old one exists, in every run.
+  both names, whether or not the old one exists, in every run. The
+  help's overview (`explain_ai_coding_tools()`) checks only whether
+  `~/.qualcoder_mcp` is there, as a folder or a link, to point the
+  assistant to the topic on the earlier name; nothing inside it is
+  listed or read.
 - the reading folder (v0.14.3), where Exegete writes the
   pages and read-only copies it opens for you to read a file, and the
   page on which you check an import's letters that look garbled:
@@ -86,6 +97,25 @@ What stays local, always, unless a sync service copies the folder it is in:
   `~/.cache/exegete/reading` on Linux; out of iCloud and OneDrive, not
   indexed by the computer's search, readable by your account only, and
   tidied ("Reading a whole file", below)
+- the project's `Exegete` folder (v0.15.0), with the files you fill in
+  for it: yours to keep or delete; never returned to the assistant
+  ("Files Exegete keeps on your computer")
+- the texts an import's preview read (v0.15.0), kept for its import in
+  `~/.exegete/import-texts.noindex`: one file for each document the
+  preview found ready, holding the document's whole text as the preview
+  read it, before your names list is applied, so it can hold the names
+  the document holds. The folder is readable by your account only, is
+  not indexed by the computer's search and, on a Mac, is left out of
+  Time Machine when Exegete could mark it so. The import uses a file for
+  up to an hour after the preview and removes it after the import; a
+  file left by a preview that was not imported goes at Exegete's next
+  start, or the next time it prepares an import, once that hour has
+  passed, so it can stay longer in an app that keeps Exegete running. Deleting the
+  folder changes nothing in any project (the next import reads the
+  documents again), and nothing in it is sent anywhere. Another backup
+  of your home folder can copy it, as it copies the documents
+  themselves: leaving this folder out of that backup keeps these copies
+  out of it
 - AI-coding session files (`~/.exegete/sessions/`), written
   atomically and created owner-only on POSIX systems (mode 0600)
 - the preview-token secret (`~/.exegete/preview_secret`): 64
@@ -122,12 +152,15 @@ What stays local, always, unless a sync service copies the folder it is in:
   `.qda` project folder; until 0.14.0 `qualcoder_mcp.json`, which the
   first change of name after the update carries into `exegete.json` and
   then keeps, marked as moved, with the name it held): the coder name or names you have chosen for
-  this project's AI writes, when each was set, an optional note you
-  typed (for example the host and model version), and the name declared
-  in the host's server configuration at the time. It travels with the
+  this project's AI writes, when each was set, an optional note (one
+  you typed, for example the host and model version, or Exegete's own
+  when the name came from its settings at creation), and the AI coder
+  name in Exegete's settings at the time. It travels with the
   project folder, its backups and its workspace copies, and a restore
-  rolls it back with the rest of the folder. It is returned into the
-  conversation by get_current_project, select_project and
+  rolls it back with the rest of the project (all but its `Exegete`
+  folder, which a restore keeps). It is returned into the
+  conversation by create_project when it stores the name,
+  get_current_project, select_project and
   set_project_ai_coder_name, and the current name appears on every write
   result; treat the note like any other project text the model can read.
   QualCoder never reads or writes this file. Deleting it makes the next
@@ -437,6 +470,173 @@ commands reading them, or its file tools in auto mode (above), which
 is why, for participants' data, this project suggests the chat above
 instead, on whichever plan or terms you use.
 
+## Files Exegete keeps on your computer
+
+Everything Exegete writes outside the conversation is one of four
+kinds, and it writes only into these places:
+
+- your project, and beside it (backups);
+- the folder for projects (`~/Exegete projects` in the desktop
+  extension, `~/Documents/Exegete projects` otherwise, or the folder
+  set with the extension's "Folder for projects" or
+  `EXEGETE_WORKSPACE`), or the folder you name when you create a
+  project;
+- where you ask an export to go;
+- its own two folders: `~/.exegete` and the reading folder ("Reading a
+  whole file");
+- while an import reads a document, a working folder in the system's
+  temporary folder, which it removes when that reading ends.
+
+Nowhere else. Some of these had other names in earlier versions. The
+state folder was `~/.qualcoder_mcp` before 0.14.1: since then Exegete
+keeps a link under that name pointing at `~/.exegete`, as "How your
+data flows" says. The folder for projects was
+`~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was; the
+extension's was `~/QualCoder projects` before 0.15.0, and an update
+moves a setting left at that default to `~/Exegete projects`. No
+project is moved, both folders are searched, and setting it back to
+`~/QualCoder projects` keeps new projects beside the earlier ones.
+
+| Kind | Where | What | Who deletes it |
+|---|---|---|---|
+| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read; the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says; coding sessions go at your word (`delete_coding_session`, `cleanup_old_sessions`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the pseudonymisation run records, and the secret that keys their digests |
+| Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page), as "Reading a whole file" says, so they can stay longer while Exegete is not running; the working folder as each reading ends; you, at any time |
+| Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
+| Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word) |
+
+For the length of each write, Exegete also writes a lock file into the
+project's folder (`project_in_use.lock`, the file QualCoder 3.8.2 uses
+to mark a project open), holding your computer account's name and the
+time; it removes the file when the write ends, though a write that is
+cut off can leave it behind.
+
+The files you fill in are never returned to the assistant: Exegete
+reports what is in the folder, never what the files hold, and its brief
+tells the assistant never to open them. Exegete names only the files it
+makes there (the note, and the files it gives you to fill in); anything
+you add yourself is counted, never named, since a name you give a file
+may hold a participant's name, and the count can include hidden files
+your system keeps there. A backup or a copy that leaves out a link kept
+there counts it the same way. Exegete shows the files in your file
+manager (Finder, File Explorer or your Linux desktop's), and opens them
+in their app, when you ask. They travel with the project into every
+backup (Exegete's, and QualCoder's if you use it) and every copy, apart
+from files whose names those leave out (lock files, `search.sqlite` and
+SQLite's side files, and in QualCoder's backups, audio and video when
+its settings say so), and to any service that syncs the project's
+folder.
+
+When a names file is already there, `prepare_names_list` reads it for
+counts only: the lines it read, the lines it could not read, and how
+many entries of the project's names list are on no line of it.
+Because those counts compare the list with the file, an assistant that
+adds a name to the list (with a typed mapping saved to it, for
+instance) can tell from the next count whether that name is in your
+names file; it learns nothing of names it does not already have. When
+you say the list is ready, `save_names_list` reads the file to check
+it: its preview gives counts, which compare the list with the file in
+the same way, and the numbers of the lines to correct, never a name;
+on your word, after a backup, it replaces the list in `pseudonyms.json`
+with the file's names, keeping only the list's entries the file cannot
+hold as a line, and the file itself stays as it is. The export tools
+refuse to write in any project's `Exegete` folder, so an export cannot
+replace a file you filled in. The names file opens in the app your
+computer uses for text files: if that app has an AI assistant of its
+own, what the file holds can reach that assistant's provider when it
+is used on the file, so you may prefer to fill the file in with an
+editor whose AI features are switched off.
+
+These rules govern what passes through Exegete, not what an assistant
+can reach by other routes. Imagine you tell the assistant that Exegete
+refused a file you filled in: one that can open files by itself may
+decide to look at the file to see why, and what it reads goes to its
+AI provider in full ("Assistants that open files by themselves",
+above). Filling a file in while no such assistant is working protects
+that moment only: afterwards the file stays in the project's folder,
+as `pseudonyms.json` and the originals do, and in every backup and copy
+of the project, where such an assistant can read it at any time.
+
+Some ways narrow that reach, though none closes it. You could keep the
+project in a folder no assistant with its own file access is given. How
+far that goes depends on the assistant: it keeps the project out of
+Cowork's reach when no folder connected to it holds the project, but
+Codex reads well beyond any folder of its own, Claude Code's read-only
+commands, and its file tools in auto mode, read beyond its working
+folders, and computer use sees whatever a window shows ("Assistants
+that open files by themselves" says which). Or you could move a file
+out of the project once Exegete has used it, and remove the backups and
+copies that still hold it: `list_backups` shows the backups,
+`prune_backups` deletes Exegete's own at your word, and QualCoder's
+backups, if you use it, and copies of the project are yours to delete.
+If you want to be sure that what you write never reaches an assistant,
+a safer way is to prepare pseudonymised copies elsewhere, before the
+documents come to this computer, as "What pseudonymisation is for"
+suggests: then no list of real names need be written on this computer
+at all.
+
+## What pseudonymisation is for
+
+The project's names list (`pseudonyms.json`) replaces participants'
+names as documents are imported, and `pseudonymise_source` replaces
+them in a file already in the project. They are useful for managing
+what you disclose to other people: a colleague or second coder you
+share the project with, a supervisor, or whoever receives an export.
+Sharing the project's folder itself, though, shares what it still
+holds, real names included: the imported documents' originals, copied
+unchanged into its folder of originals; `pseudonyms.json`, if you keep
+one, the reverse key at its root; and the names file, `Names to
+replace.txt` in the project's `Exegete` folder, if you made one, which
+holds real names and their pseudonyms in plain text as
+`pseudonyms.json` does. "Pseudonymising a project does not empty it of
+names", below, says what stays, the backups beside the project
+included. An export from Exegete carries the replaced text, but
+file and case names as they are, and notes in full, private parts
+included; an export made in QualCoder carries the unchanged originals.
+
+The list can be filled in on your own computer, in the names file
+Exegete prepares, so that the names do not pass through the
+conversation; an assistant that opens files by itself could still read
+that file ("Files Exegete keeps on your computer").
+
+For what reaches the AI assistant, the list and `pseudonymise_source`
+help, but they should not be trusted blindly. Once the names are
+replaced, what Exegete's tools return of the replaced text carries the
+pseudonyms. Not everything is replaced, though; among what still
+reaches the assistant through
+Exegete: a PDF's text, file and case names, attribute values, any name,
+or form of a name, that the list or the mapping does not match, and
+notes and journal entries unless you ask for them to be rewritten.
+Names you type into the conversation for a mapping reach the assistant
+as you type them. "What is not pseudonymised", in "Bringing documents
+in", and "Pseudonymising a project does not empty it of names", in
+"Practical mitigations", say what stays. And depending on how your
+assistant is set up, an assistant that meets a problem may work round
+it by a route outside Exegete, and what it reads that way goes to its
+AI provider in full ("Assistants that open files by themselves",
+above).
+
+An imagined example. You bring ten interview transcripts into a
+project, meaning to replace the names before any coding starts. One
+file is refused. The assistant, which in your set-up can open files on
+the computer by itself, sets out to find out why: it opens the
+original in your Downloads folder and reads its first page, real names
+included. Nothing in Exegete saw that read, and nothing in Exegete
+could have stopped it. Deleting the originals from Downloads after the
+import would not have closed that route: the nine that came in have
+unchanged copies, real names included, in the project's folder of
+originals, which such an assistant can read as easily.
+
+If an assistant has broad and deep access to the computer, there is
+little Exegete can do about what it reads. So, if you want to be sure
+that participants' real names never reach the assistant, a safer way
+is to replace them before the documents come to the computer where the
+assistant works: prepare pseudonymised copies elsewhere, on another
+computer or before the files are copied to this one, and bring only
+those copies here. Exegete's tools remain useful for a name that was
+missed, and for what you share with others. This is a suggestion to
+weigh with your ethics committee and your data protection officer,
+not a requirement.
+
 ## Keeping notes private from the AI: the '#####' memo convention
 
 QualCoder (3.8.2 and 4.0) uses a marker for memos: everything from the
@@ -534,8 +734,8 @@ Explorer. What reaches the AI provider:
 |---|---|---|
 | A reading copy (the default) | the file's id, the page's place on your computer (which includes the project's and the file's names), and counts of codings, codes, annotations and notes | the text, the memos |
 | The original, or the original in its folder | the file's id, its name and the place of the read-only copy | its contents |
-| The whole text in the chat (`analyze_file_with_coding` and the file and case resources, unchanged) | the text, a part at a time, with its codings | |
-| The whole text in the chat without codes (`analyze_file_with_coding` with `without_codes=true`) | the text, a part at a time, and the file's details, with counts of the codings and annotations left out | the codings, the codes, the annotations |
+| The whole text in the chat (`read_file_with_codings` and the file and case resources, unchanged) | the text, a part at a time, with its codings | |
+| The whole text in the chat without codes (`read_file_with_codings` with `without_codes=true`) | the text, a part at a time, and the file's details, with counts of the codings and annotations left out | the codings, the codes, the annotations |
 
 To talk about a passage you have read on the page, copy a few words of
 it into the conversation: those words go to the provider, like anything
@@ -620,12 +820,17 @@ distinguishable from yours, in Exegete's reads and in QualCoder (an
 attribute value it sets on a file or a journal entry included, where
 QualCoder's own edit keeps the row's earlier owner). AI rows are never
 written under a name the model chose by itself: the name is set per project by you,
-and the model can only ask. The first write that needs a name stops and
-asks; your answer is stored with the project and reported back by the
-project reads. The host's `EXEGETE_AI_CODER_NAME` setting declares
-a name, which is offered as a quick pick and checked for conflicts; it
-never attributes a row on its own. A name that belongs to a person (the
-project's own coder name) is refused, and the `owner` argument of
+and the model can only ask. You can choose it in advance, in Exegete's
+settings ("AI coder name" in the extension, `EXEGETE_AI_CODER_NAME` on
+other routes): Exegete stores it with each project it creates, without
+asking, and the answer that creates the project says so. The first
+write that needs a name stops and asks, in a project that has none yet,
+with the setting offered first; your answer is stored with the project
+and reported back by the project reads. A project that already has a
+name keeps it: a setting that differs is checked for conflicts, and the
+next write asks you once which to use; the setting never attributes a
+row in such a project on its own. A name that belongs to a person (the
+project's own coder name, or the one in Exegete's settings) is refused, and the `owner` argument of
 `apply_codings` and `import_text_file` can no longer be used to write
 rows under someone else's name.
 
@@ -773,7 +978,7 @@ project has the coder-visibility capability:
   the pseudonym rather than grown to contain it, which shrinks it; that
   too is classed `snapped` and needs the override (the
   `qualcoder_edit_parity` policy is deprecated: v0.14 says so whenever
-  it is used, and v0.15 removes it). The refusal names
+  it is used, and v0.15.1 removes it). The refusal names
   neither the coder nor a count. A row whose stored end lies past the
   end of the text is clamped first, as QualCoder clamps its own, and is
   counted under its own class rather than under one the exemption
@@ -869,8 +1074,10 @@ Seven cautions:
   any import.
 - **What is not pseudonymised**: the originals (copied unchanged into
   the project's folder of originals, as QualCoder does), a PDF's text
-  and its notes. A PDF holding names from your list, written as the
-  list writes them, is held back unless you say so for that import
+  and its notes, and the texts an import's preview read, kept outside
+  the project for its import ("How your data flows", above). A PDF
+  holding names from your list, written as the list writes them, is
+  held back unless you say so for that import
   (`import_pdfs_with_listed_names`). A name written otherwise in the
   PDF, in capitals ("MARIA BROWN"), split across two lines, or broken
   by a hyphen at a line's end, is not seen, and such a PDF comes in
@@ -956,6 +1163,9 @@ use no network. A document converted with another tool, such as a pandoc
 server, should be converted file to file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).
 
+The import uses the text its preview read, kept in Exegete's own folder
+(above), and reads a file again only when that text cannot be used.
+
 ## Backups, project copies, and the `ai_data/` folder
 
 QualCoder 4.0 keeps its AI state in `<project>/ai_data/`: the prompt
@@ -968,8 +1178,10 @@ retrieval), which matters to anyone sharing or syncing project
 folders.
 
 Exegete never writes into `ai_data/` (it is QualCoder's own
-territory). Its backups and workspace copies include `ai_data/` whole,
-minus exactly the files QualCoder 4.0's own backups skip
+territory). Since 0.15.0 it makes the folder, empty, when it creates a
+project or copies one that has none into the workspace, so that
+QualCoder 4.0's first open finds it. Its backups and workspace copies
+include `ai_data/` whole, minus exactly the files QualCoder 4.0's own backups skip
 (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`, `*.sqlite-wal` and
 `*.sqlite-journal`) and, in addition, any `*.lock` file (QualCoder 3.8's
 backups skipped those too, and a copied lock file would make QualCoder
@@ -977,7 +1189,14 @@ report the copy as not properly closed). That mirrors QualCoder's own backups, k
 non-regenerable prompt library and chat history safe in every backup,
 and avoids multiplying plaintext copies of your sources across backup
 folders. A restored or copied project without `search.sqlite` is
-normal: QualCoder rebuilds it on project open.
+normal: QualCoder rebuilds it on project open. A restore keeps the
+project's `Exegete` folder as it is, with every file in it, those whose
+names backups leave out included: it leaves the folder where it is. It
+leaves the backup's copy of that folder in the backup (QualCoder, if you
+use it, removes its own older backups when it closes a project, so a
+copy in one of those may not stay); when the project has no such
+folder, a restore does not bring the backup's back, and you can copy it
+into the project yourself.
 
 The project database is the one file not copied as a file (since
 0.14): `data.qda` is copied with SQLite's own online backup, from a
@@ -1000,15 +1219,16 @@ from the file it points to; one pointing outside the project is
 refused, and nothing is written. A damaged database is a different
 case: every tool here opens the database before it takes a backup, so
 none can back up or restore a project whose database will not open.
-Copy the whole project folder by hand, with QualCoder closed, before
-trying any repair, and keep that copy.
+Copy the whole project folder by hand, with no program using the
+project (QualCoder closed, if you use it), before trying any repair,
+and keep that copy.
 
 Besides `restore_backup`, which checks that no journal or WAL file
 sits beside the database of the backup you choose, opens it to check
 it, reads its first bytes for the preview and copies it back,
 one tool reads the backups' contents: `rename_file`, to recognise a
 rename back (a name, or an ending, the file had before; deprecated:
-v0.14 says so when it happens, and v0.15 removes it). Only when one of
+v0.14 says so when it happens, and v0.15.1 removes it). Only when one of
 its rules would refuse the new name, it opens the database of the
 project's own backups beside it, Exegete's `_backup_` copies and
 QualCoder's `_BKUP_` copies, newest first and at most 200, read-only and
@@ -1048,8 +1268,9 @@ Two further rules touch files on your disk:
 - **Process listing.** To warn when a QualCoder 4.0 window appears to
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
-  get_current_project, analyze_for_coding, and the restore_backup and
-  import_documents previews, each the call without a preview_token)
+  get_current_project, start_coding_session, also under its earlier
+  name, and the restore_backup, import_documents and save_names_list
+  previews, each the call without a preview_token)
   also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for
@@ -1074,27 +1295,106 @@ Two further rules touch files on your disk:
   This is a heuristic: it can miss an open window (an idle 4.0 window
   with no recent AI activity leaves no file trace, so only the process
   scan can see it; on Windows without psutil, a QualCoder run through
-  `python.exe` is not seen), and a recently modified chat history file
-  means a first open of the project by either QualCoder build, or its
-  AI chat used; a later open leaves the file as it is.
+  `python.exe` is not seen; without psutil, a QualCoder run through
+  Python, or one of QualCoder's Linux downloads, from a folder whose
+  path holds a space is not counted as running; in a Linux sandbox whose
+  process list holds only its own programs, such as a Flatpak app's or a
+  container's, a QualCoder outside it is not seen, and with Exegete
+  inside WSL (Windows Subsystem for Linux), a QualCoder running on
+  Windows is not seen; and a QualCoder open on another computer, on a
+  project in a synced or shared folder, is not seen, and since v0.15.0
+  the chat history's recent change no longer shows it when the scan
+  here finds no QualCoder), and a recently modified chat history file
+  means a first open of the project by either QualCoder build, or its AI
+  chat used; a later open leaves the file as it is. Since v0.15.0 that
+  file's recent change is not given as a sign when the process scan
+  could read programs' command lines and found no QualCoder (it then
+  says nothing about an open window). It is still given when a program
+  may be a QualCoder the scan could not read (one run through Python, or
+  one of QualCoder's Linux downloads, from a folder whose path holds a
+  space), when a running Python program's command line could not be
+  read, in such a sandbox, and inside WSL. Without psutil, a few such
+  paths are still read as no QualCoder, and the sign is then left out:
+  a folder whose name holds a word that begins with a hyphen or a tilde
+  (`Apps -old`, `Apps ~old`), a program started by a path relative to
+  the current folder that does not begin with `./` or `../`, a space in
+  the program's own file name, and a path of more than 32 words.
   `create_project` runs no process scan for the project it has just
-  made.
-- **Creating a project** (`create_project`, only with
-  `EXEGETE_TOOLSET=lifecycle`, which the desktop extension sets
-  by default, v0.14). It writes a new folder
-  with four empty subfolders and a new `data.qda`, and records the new
-  project as the last-used one (the pointer above, whose path is then
+  made. `select_project` and `get_current_project` also give the
+  project's history with QualCoder (`qualcoder_history`, v0.15.0),
+  worked out once when the project is selected and kept in memory for
+  the session, never on disk: whether the project folder holds
+  `ai_data/` with anything in it whose name does not begin with a dot
+  (its listing is read only until one is found, and no name in it is
+  kept; an empty one, as Exegete makes, does not count), and in it
+  `chat_history.sqlite` or `search.sqlite`; whether QualCoder's own
+  `_BKUP_` backups sit beside the project (the names, in the folder
+  that holds it, that begin with the project's name, as `list_backups`
+  reads them); whether its lock file is a
+  leftover; whether QualCoder's settings folder (`~/.qualcoder`)
+  exists; and whether the process scan found QualCoder. The field also
+  gives, as `setting`, the researcher's answer to "Do you also use
+  QualCoder on this computer?" in Exegete's settings (yes, no or not
+  sure; any other word typed there is read as not sure and never
+  given), and with a yes or a no it is given even when nothing was
+  found, so that answer enters the conversation, as a coder name in the
+  settings does. For the settings folder and the files in `ai_data`,
+  only presence is checked: the settings folder's contents (QualCoder's
+  settings and API keys) are never listed, opened or measured, and the
+  field holds plain sentences, a true or false and one of those three
+  answers (yes, no or not sure), never a path or a project's name.
+  `set_project_coder_name` reads the same history after a change it
+  has made, to decide whether its answer says how QualCoder treats the
+  name; when nothing has worked the history out since the project was
+  selected (straight after `create_project` or `restore_backup`, or for
+  a project set in the host's configuration), that reading runs the
+  process scan described above. `list_backups`, and `pseudonymise_source`
+  after a run, read the same history to decide whether their notes
+  speak of QualCoder (the further backups QualCoder 3.8.0 to 3.8.2 may
+  keep, a QualCoder window that will not refresh), and in the same
+  cases that reading runs the process scan too. So do `rename_case` and
+  `rename_file`, before a rename, to decide whether their note says what
+  QualCoder's imports and Merge Projects can bring back.
+- **Creating a project** (`create_project`, in the full tool set, the
+  default on every route, and not in `core`; v0.14). It writes a new
+  folder with four empty subfolders, an empty `ai_data` folder (since
+  0.15.0) and a new `data.qda`, and records
+  the new project as the last-used one (the pointer above, whose path is then
   offered as a recovery hint in another host's conversation before it
-  selects a project); nothing else: no backup, no `exegete.json`,
-  no entry in QualCoder's recent-project list. The database holds the researcher's own coder name when
+  selects a project); nothing else: no backup and no entry in
+  QualCoder's recent-project list. When the AI coder name is filled in
+  Exegete's settings, it is stored with the new project too, in
+  `exegete.json`, beside `qualcoder_mcp.json`, the file of Exegete's
+  earlier name,
+  written already marked as moved and holding no name, so that versions
+  0.12 to 0.14 refuse to write the project rather than ask for a name of
+  their own; the answer says so. Left empty, no
+  `exegete.json` is written. The database holds the researcher's own coder name when
   they give it (and QualCoder's speaker coder), and an "about" line
-  naming Exegete and its version. The coder name is asked for,
-  never read: Exegete does not open QualCoder's settings file
-  (`~/.qualcoder/config.ini`, which holds API keys in plain text), and a
-  test pins that. To refuse a name already in use, it lists the target
-  folder's entries and opens an existing project's database read-only;
-  the log line says only that a project was created, with no name or
-  path.
+  naming Exegete and its version. The coder name is asked for, or
+  taken from Exegete's own settings when the researcher has filled it
+  in there, never read from QualCoder's: Exegete does not open
+  QualCoder's settings file (`~/.qualcoder/config.ini`, which holds API
+  keys in plain text), and a test pins that. Both coder name settings,
+  the researcher's and the AI's, reach Exegete from the app that starts
+  it, as its other settings do (the extension's settings, or the host's
+  configuration). A coder name in the settings still enters the
+  conversation: `create_project`'s answers give it, so do the notes a
+  selection gives when they apply (`coder_name_notes`), for instance
+  when the project records another name or none, and so does
+  `set_project_coder_name`'s answer after a change when the setting
+  holds another name. A coder name that is
+  not the researcher's real name works as well, for a researcher who
+  would rather the AI provider did not see it. To refuse a name already
+  in use, `create_project` lists the target folder's entries and opens
+  an existing project's database read-only; the log line says only
+  that a project was created, with no name or path. A new project is
+  made in the folder the researcher names, or else in the folder for projects: the extension's "Folder for
+  projects"; on every other route `~/Documents/Exegete projects`,
+  unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
+  Documents) or OneDrive may sync Documents, and so copy the project,
+  imported originals included, off the computer: consider a folder
+  outside it (INSTALL.md, "What You'll Need").
 
 ## Your governance options, from default to fully local (Experimental)
 
@@ -1398,7 +1698,9 @@ the system's folders, the working folder and every folder at the top of
 your home folder except a short list that holds keys and credentials,
 such as `.ssh` and `.aws` (`windows-sandbox-rs/src/setup.rs`), and with
 its fallback sandbox, which limits only writing, any file your account
-can read. That takes in `~/QualCoder projects`, Documents and wherever
+can read. That takes in the extension's folder for projects
+(`~/Exegete projects`, or `~/QualCoder projects`, the earlier default),
+Documents and wherever
 else you keep projects and transcripts. OpenAI's page on permission
 modes (<https://learn.chatgpt.com/docs/permission-modes>, read 30
 September 2026) describes "Ask for approval" in words a reader may take
@@ -1668,6 +1970,9 @@ will ask, and the summary above depends on them:
 - **What stays on the computer, and for how long.** Copies stay on the
   computer you work on: the project, its backups and your exports; the
   lists of suggestions waiting for review (`~/.exegete/sessions/`);
+  the texts an import's preview read, until the import or, when none
+  follows, until Exegete's next start, or the next import it prepares,
+  an hour or more later (`~/.exegete/import-texts.noindex`);
   Claude Desktop's log of the extension, which keeps every request and
   answer, names and quoted text included (INSTALL.md, "Reading the
   server log"); Codex's session files (`~/.codex/sessions`) and Claude
@@ -1683,6 +1988,8 @@ will ask, and the summary above depends on them:
   from context (role, locality, events, relationships, distinctive
   phrasing). Treat pseudonymisation as risk-reduction only; synthetic or
   genuinely anonymised data is the safe path for experimentation.
+  The section "What pseudonymisation is for", above, says what it is
+  for and suggests a safer way to keep names from the assistant.
 - **Pseudonymising a project does not empty it of names.** The v0.12
   `pseudonymise_source` tool rewrites the stored text of the text
   sources you choose, one per call since v0.13, and moves every coding
@@ -1695,12 +2002,14 @@ will ask, and the summary above depends on them:
     beside the project until you remove them; `list_backups` shows them
     and `prune_backups` removes Exegete's own. A project you are
     about to share is not pseudonymised while its backups are beside it.
-  - **`pseudonyms.json`**, if you keep one. It is QualCoder's own
-    import-time list and it is the reverse key in plain text at the
-    project root, so it travels into every backup either tool makes.
+  - **`pseudonyms.json`**, if you keep one. It is the project's names
+    list, applied when files are imported, and it is the reverse key in
+    plain text at the project root, so it travels into every backup of
+    the project (Exegete's, and QualCoder's if you use it).
     Exegete writes it only when asked, in QualCoder's own format,
     and removes or replaces it only by a restore: `restore_backup` rolls
-    the whole folder back, this file with it, so restoring a backup taken
+    the project back (all but its `Exegete` folder, which a restore
+    keeps), this file with it, so restoring a backup taken
     before a save takes the file out of the project, and restoring one
     that holds another version puts that one back. The restore result
     says so when the file appears, disappears or changes, and the one
@@ -1742,27 +2051,31 @@ will ask, and the summary above depends on them:
     when the file holds every typed name under its typed pseudonym,
     which confirms an exact pair. Neither writes anything or takes a
     backup. `get_current_project` reports whether the file is present
-    and how many entries it has, never a name. The names themselves
-    reach the conversation only through a tool of their own,
-    `read_pseudonym_list` (in the full and lifecycle tool sets, so in
-    the desktop extension by default, and not in core; deprecated, and
-    removed in v0.15), whose description says first that it sends the
-    real names to the AI provider. It
-    carries `anthropic/requiresUserInteraction`, so Claude Code (2.1.199
-    and later) asks the researcher before every call of it, in every
-    permission mode but `dontAsk`, which refuses it. Earlier Claude
-    Code, and another host in an auto mode or with approvals skipped,
-    can run it without asking (whether Cowork or Claude Desktop's
-    ordinary chat honours the mark is not documented, and this project
-    has not yet checked either in use), so for a project with a pseudonyms file keep the host
-    in its asking mode (INSTALL.md, "What hosts do with the tools' read
-    and write marks"). Each call writes one line to the server's log
-    with the count and no name. QualCoder's own
-    guidance is to remove it and store it securely once the import is
-    done (`manage_files.py` at the 9bddf17 pin), and that applies here
-    too. `speakers.json` and `speaker_regex.json` can hold names as
-    well; the preview reports whether they are present and never reads
+    and how many entries it has, never a name. No tool returns the
+    names (`read_pseudonym_list` was removed in 0.15.0): you see and
+    change the list in the names file on your own computer
+    (`prepare_names_list`, then `save_names_list`), whose preview gives
+    counts and line numbers, never a name. A names file made before the
+    list last changed can lack some of its entries, which
+    `prepare_names_list` says, and entries that cannot be written as one
+    line of the file stay in `pseudonyms.json`, where you can see them.
+    QualCoder's own guidance is to remove `pseudonyms.json` and store it
+    securely once the import is done (`manage_files.py` at the 9bddf17
+    pin), and that applies here too. `speakers.json` and
+    `speaker_regex.json` can hold names as well; the preview reports whether they are present and never reads
     them.
+  - **The names file** (`Names to replace.txt`), if you made one with
+    `prepare_names_list`. It sits in the project's `Exegete` folder and
+    holds real names and their pseudonyms in plain text, the same
+    reverse key as `pseudonyms.json`; `pseudonymise_source`'s preview
+    does not report it. Exegete never deletes it, a restore keeps it as
+    it is, and every backup and copy of the project made while it is
+    there holds it, so a project you are about to share is not free of
+    names while it is there. You can move it out of the project before sharing, and remove
+    the backups and copies that still hold it ("Files Exegete keeps on
+    your computer"). Once it is out of a project's `Exegete` folder,
+    Exegete no longer refuses to import it, so you may prefer to keep it
+    in a folder you do not ask the assistant to bring documents from.
   - **Notes (twelve fields, the audio/video and image coding notes
     included), journal entries and their names, case names, file names,
     code names, category names, attribute-type names and attribute
@@ -1862,7 +2175,7 @@ will ask, and the summary above depends on them:
     graph labels, table displays and filters for the case or file it
     renamed; the saved SQL queries nothing in Exegete reads. Every
     backup, Exegete's session files, QualCoder's search index and
-    QualCoder 4.0's AI chat keep the old name too, and
+    QualCoder's AI chat history keep the old name too, and
     so do Exegete's pseudonymisation journal entries and run records,
     which keep a file's name as it was at the run unless that name
     carried a name from the mapping (they then name the file by its id),
@@ -1972,10 +2285,11 @@ will ask, and the summary above depends on them:
 - **Consult your institution's DPO or ethics board** if you are unsure,
   before the analysis, not after.
 - Remember that Exegete's safety features (read-only default,
-  automatic local backups, refuse-while-QualCoder-is-open through the
-  lock file QualCoder 3.x writes, and for
-  QualCoder 4.0 a best-effort check of this machine's process list that
-  reports only a count, never names or command lines) protect your
+  automatic local backups, refusing to write while the project's lock
+  file is active (QualCoder 3.8.2 keeps it while it has the project open,
+  and Exegete during each of its own writes), and for QualCoder 4.0 a
+  best-effort check of this machine's process list that reports only a
+  count, never names or command lines) protect your
   project's **integrity on disk**; they do not change what leaves the
   machine through the conversation.
 

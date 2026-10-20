@@ -1,6 +1,6 @@
 [project]
 name = "exegete"
-version = "0.14.3-alpha"
+version = "0.15.0-alpha"
 description = "Exegete: a qualitative analysis application you use in conversation with an AI assistant, compatible with QualCoder. An MCP server, formerly qualcoder-mcp."
 authors = [{name = "Niccolò Tempini", email = "n.tempini@exeter.ac.uk"}]
 # PEP 639 SPDX licence expression (setuptools >= 77). LGPL-3.0-or-later
@@ -87,9 +87,11 @@ Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 # Exegete's own code stays LGPL, and a PyPI install without the part is
 # untouched. lxml (which EbookLib needs) at 6.1.0 or newer, the release
 # that fixed its latest advisory; PyMuPDF at 1.26.7 or newer, for the
-# same reason.
+# same reason, and below 2 (0.15.0): PyMuPDF 2.0 brings new libraries of
+# its own and has not been looked at yet, so every route (pip, PyPI and
+# the extension's lock) reads PDFs with the 1.x the checks passed with.
 pdf-epub = [
-    "pymupdf>=1.26.7",
+    "pymupdf>=1.26.7,<2",
     "ebooklib>=0.20",
     "lxml>=6.1.0",
 ]
@@ -110,6 +112,7 @@ dev = [
 markers = [
     "giant: large 10k+ coding / 500k-char build; opt-in via TRACK6_GIANT=1",
     "slow: the rename's offline upgrade tests; run when RENAME_TEST_WHEELHOUSE names a folder of wheels (CI's rename-upgrade job)",
+    "real_process_scan: the test runs the real process scan; every other test sees a scan that did not run (tests/conftest.py)",
 ]
 # The per-test limit (v0.14): when one test, setup and teardown included,
 # has run for ten minutes, pytest writes every thread's stack to the
@@ -203,7 +206,7 @@ required-environments = [
 # it) is a Rust build without a wheel: without this, uv falls back to
 # compiling it, which downloads a Rust toolchain and then fails for want
 # of OpenSSL. With it, uv locks a version that has a wheel for each
-# computer: 50.0.1 in general, 48.0.1 on Intel Macs (the last with a
+# computer: 50.0.2 in general, 48.0.1 on Intel Macs (the last with a
 # universal2 wheel) and 46.0.3 on Windows on Arm (the last with a
 # win_arm64 wheel).
 no-build-package = ["cryptography"]

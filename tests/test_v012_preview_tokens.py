@@ -59,7 +59,7 @@ def _house_rules(texts, labels=None):
         assert "\u2014" not in text, label
         lowered = text.lower()
         for word in forbidden_spellings:
-            # Identifiers are exempt by house rule (analyze_file_with_coding,
+            # Identifiers are exempt by house rule (read_file_with_codings,
             # honor_visibility, color): the word counts only when it is
             # prose, that is, not glued to another identifier character.
             pattern = r"(?<![A-Za-z_])" + word + r"(?![A-Za-z_])"
@@ -186,7 +186,10 @@ class TestCanonicalJson:
             "merge_category", "restore_backup", "prune_backups",
             "pseudonymise_source",
             # 0.14.3: one row, as H1 promised
-            "import_documents"}
+            "import_documents",
+            # 0.15.0: and one more, correcting the researcher's own
+            # coder name, and one more, saving the names list
+            "set_project_coder_name", "save_names_list"}
         assert pt.canonical_args("delete_code", code_id=7) == {"code_id": 7}
         with pytest.raises(KeyError):
             pt.canonical_args("set_memo", target_id=1)

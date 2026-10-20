@@ -460,6 +460,22 @@ def _args_import_documents(kwargs):
             "memo": str(kwargs.get("memo") or "")}
 
 
+def _args_set_project_coder_name(kwargs):
+    """The researcher's own coder name a correction sets (v0.15.0), as
+    validated: the same name the preview was given, so a token issued
+    for one name never changes the project's name to another. The
+    current name is the state the token's MAC covers, never the bind."""
+    return {"name": str(kwargs["name"])}
+
+
+def _args_save_names_list(kwargs):
+    """Saving the names list (v0.15.0) takes no argument but the token:
+    what the names file and the project's list hold, and what the
+    preview said of them, are the state the token's MAC covers, never
+    the bind, so nothing a name could be guessed from is in it."""
+    return {}
+
+
 REGISTRY: Dict[str, Any] = {
     "merge_codes": _args_merge_codes,
     "delete_code": _args_delete_code,
@@ -469,6 +485,8 @@ REGISTRY: Dict[str, Any] = {
     "prune_backups": _args_prune_backups,
     "pseudonymise_source": _args_pseudonymise_source,
     "import_documents": _args_import_documents,
+    "set_project_coder_name": _args_set_project_coder_name,
+    "save_names_list": _args_save_names_list,
 }
 
 # The tools whose public `bind` is keyed with the secret. D3 3.2 declared

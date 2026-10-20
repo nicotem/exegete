@@ -118,7 +118,7 @@ class TestTheReadingPage:
 class TestTheWholeFileRead:
 
     def test_a_coding_across_a_line_break_is_not_flagged(self, project):
-        result = host("analyze_file_with_coding", file_id=70)
+        result = host("read_file_with_codings", file_id=70)
         (segment,) = result["coded_segments"]
         assert "stored_passage_differs" not in segment
         assert "stored_passage_note" not in result

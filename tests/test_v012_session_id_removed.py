@@ -19,6 +19,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 
 RESERVED_ARGUMENT_NAMES = {"session_id", "request_id", "conversation_id",
                            "user_id", "context", "metadata"}
@@ -30,12 +31,12 @@ RESERVED_ARGUMENT_NAMES = {"session_id", "request_id", "conversation_id",
 
 class TestSessionIdDuplicateRemoved:
 
-    @pytest.mark.parametrize("toolset", ["full", "lifecycle"])
+    @pytest.mark.parametrize("toolset", ["full"])
     def test_no_tool_argument_uses_a_reserved_routing_name(self, toolset):
         # Self-checking: without this the guard would pass on an emptied
-        # or half-registered registry. Also under `lifecycle` (v0.14),
-        # whose tool is registered after import and would otherwise be
-        # the one tool this guard never sees.
+        # or half-registered registry. `full` holds every tool since
+        # 0.15.0, create_project included (v0.14's `lifecycle` set added
+        # it after import, and was swept as a second set until then).
         server._apply_toolset(toolset)
         assert len(server.mcp._tool_manager._tools) == _count(toolset)
         for name, tool in server.mcp._tool_manager._tools.items():
@@ -43,7 +44,7 @@ class TestSessionIdDuplicateRemoved:
             assert not (props & RESERVED_ARGUMENT_NAMES), (name, props)
 
     def test_session_tool_responses_carry_only_coding_session_id(self, setup_server):
-        env = json.loads(server.analyze_for_coding([1], instruction="test"))
+        env = json.loads(server.start_coding_session([1], instruction="test"))
         sid = env["coding_session_id"]
         assert "session_id" not in env
 
@@ -73,7 +74,7 @@ class TestSessionIdDuplicateRemoved:
         assert deleted["coding_session_id"] == sid and "session_id" not in deleted
 
     def test_on_disk_session_format_is_unchanged(self, setup_server, tmp_path):
-        env = json.loads(server.analyze_for_coding([1], instruction="test"))
+        env = json.loads(server.start_coding_session([1], instruction="test"))
         sid = env["coding_session_id"]
         path = Path(server.session_manager.storage_dir) / f"session_{sid}.json"
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -87,13 +88,13 @@ class TestSessionIdDuplicateRemoved:
 # the live registry so a tool added later is covered without an edit here.
 # ===========================================================================
 
-TOOL_COUNT = 77          # pinned in tests/test_v012_cli.py too (check_for_updates, v0.14.2; open_file_for_reading and import_documents, v0.14.3)
+TOOL_COUNT = FULL_TOOLS  # tests/tool_counts.py
 
 
 def _count(toolset):
-    """The registry's size under `toolset` ("full" or "lifecycle")."""
-    extra = len(server.LIFECYCLE_TOOLS) if toolset == "lifecycle" else 0
-    return TOOL_COUNT + extra
+    """The registry's size under `toolset` ("full", every tool)."""
+    assert toolset == "full"
+    return TOOL_COUNT
 
 UNKNOWN_SESSION_ID = "00000000-0000-4000-8000-000000000000"
 
@@ -313,7 +314,7 @@ class TestNoResponseCarriesSessionId:
         # above, would pass vacuously on an emptied registry.
         assert len(server.mcp._tool_manager._tools) == TOOL_COUNT
 
-    @pytest.mark.parametrize("toolset", ["full", "lifecycle"])
+    @pytest.mark.parametrize("toolset", ["full"])
     def test_no_tool_response_anywhere_carries_session_id(
         self, setup_server, tmp_path, monkeypatch, toolset
     ):
@@ -366,11 +367,11 @@ class TestNoResponseCarriesSessionId:
         # the question is what was NOT redirected (fix round 4, W1).
         assert _module_paths_under(real_home, tmp_path) == []
 
-        # Under `lifecycle` (v0.14) the sweep also calls create_project,
-        # which a sweep of the registry at import would never see. Its
-        # probe arguments give no coder name, so it asks and makes no
-        # folder; it runs last all the same, so that a creation, were it
-        # ever to happen, could not change what the other tools see.
+        # The sweep also calls create_project, in `full` since 0.15.0 (in
+        # v0.14's `lifecycle` set before). Its probe arguments give no
+        # coder name, so it asks and makes no folder; it runs last all the
+        # same, so that a creation, were it ever to happen, could not
+        # change what the other tools see.
         server._apply_toolset(toolset)
         tools = server.mcp._tool_manager._tools
         assert len(tools) == _count(toolset)
@@ -378,12 +379,12 @@ class TestNoResponseCarriesSessionId:
         # A real session has to exist, or the not-found envelopes would
         # list nothing and the sweep would pass without seeing the shape
         # that carried the bug.
-        json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
+        json.loads(server.start_coding_session([1], instruction="test"))["coding_session_id"]
 
         scanned, envelopes, offenders = set(), set(), []
         excluded = {}
         order = sorted(tools.items(), key=lambda item: (
-            item[0] in server.LIFECYCLE_TOOLS, item[0]))
+            item[0] == "create_project", item[0]))
         for name, tool in order:
             try:
                 response = tool.fn(**_probe_arguments(tool, tmp_path))
@@ -434,7 +435,7 @@ class TestNoResponseCarriesSessionId:
         self, setup_server, tmp_path
     ):
         """The five envelopes of F1, each one run for real."""
-        real = json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
+        real = json.loads(server.start_coding_session([1], instruction="test"))["coding_session_id"]
 
         export_dir = tmp_path / "refi_out"
         export_dir.mkdir()
@@ -469,7 +470,7 @@ class TestNoResponseCarriesSessionId:
         self, setup_server, tmp_path
     ):
         """The manager hands the API key over; the tool just serialises it."""
-        real = json.loads(server.analyze_for_coding([1], instruction="test"))["coding_session_id"]
+        real = json.loads(server.start_coding_session([1], instruction="test"))["coding_session_id"]
         entries = server.session_manager.list_sessions()
         assert [entry["coding_session_id"] for entry in entries] == [real]
         assert all("session_id" not in entry for entry in entries)

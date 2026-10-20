@@ -41,7 +41,7 @@ def _changelog_entry():
 
 def test_the_span_hint_offers_the_shortcut_only_where_one_was_computed(
         setup_server):
-    out = server.analyze_for_coding(
+    out = server.start_coding_session(
         [f["id"] for f in server.get_db().list_files()], instruction="test")
     sid = out.split("Session ID: `")[1].split("`")[0]
     recorded = json.loads(server.record_suggestions(sid, [{
@@ -80,8 +80,8 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     # so the list starts with images, audio and video
     assert ("**Not in Exegete yet**, and done in QualCoder for now: "
             "bringing in images, audio and video;") in flat
-    assert ("If your study needs any of these now, get QualCoder from the "
-            "start.") in flat
+    assert ("If your study needs any of these now, you may want "
+            "QualCoder from the start.") in flat
     # v0.14.3: neither document says any longer that only
     # handed text comes in, nor that QualCoder is needed for Word or PDF
     # files
@@ -94,26 +94,34 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "Or you can import a document in QualCoder" not in flat
     one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
                             flat.index("### ChatGPT's desktop app")]
-    assert ("Leave its \"Tool set\" setting as it comes (`lifecycle`): the "
-            "other two choices cannot create a project") in one_click_readme
+    # v0.15.0: one set, `full`, every tool, the default on every route;
+    # the one other set is named for what it cannot do
+    assert ("Leave its \"Tool set\" setting as it comes (`full`): `core`, "
+            "the smaller set for local models, cannot create a project"
+            ) in one_click_readme
     assert "whose standard tool set cannot create a project unless switched " \
-        "on" in flat
-    for name in ("`full`", "`core`"):
-        assert name not in one_click_readme, name
+        "on" not in flat
+    assert ("whose default tool set, `full`, can create a project "
+            "too.") in flat
+    assert "`lifecycle`" not in one_click_readme
     one_click = install[install.index("## Claude Desktop: the one-click "
                                       "extension"):
                         install.index("## Choosing your AI host")]
-    assert ("`lifecycle` (the default) gives every tool, creating a new "
-            "project included; `full` every tool except creating a "
-            "project; `core` a smaller set") in " ".join(one_click.split())
+    assert ("`full` (the default) gives every tool, creating a new "
+            "project included (recommended); `core` a smaller set for local "
+            "models.") in " ".join(one_click.split())
+    assert ("Installed before 0.15.0, it may show `lifecycle`, the earlier "
+            "name of `full`; it works as `full`.") in " ".join(
+                one_click.split())
     install = _doc("INSTALL.md")
     assert "**Qualcoder installed** with at least one project created" \
         not in install
     needs = install[install.index("## What You'll Need"):
                     install.index("## Recommended: Install from PyPI")]
-    assert ("On this route the default tool set, `full`, has no tool that "
-            "creates a project") in needs
-    assert "unless you add `EXEGETE_TOOLSET=lifecycle`" in needs
+    flat_needs = " ".join(needs.split())
+    assert ("The default tool set, `full`, includes creating a project: "
+            "the assistant") in flat_needs
+    assert "EXEGETE_TOOLSET=lifecycle" not in needs
     # Since the owner's ruling of 7 October 2026: optional, with what it
     # does that Exegete does not do yet; v0.14.3: documents
     # come in through Exegete, so the list starts with images, audio and
@@ -123,16 +131,14 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             "do yet: bringing in images, audio and video") in flat_needs
     assert ("Since 0.14.3, Exegete brings in documents itself with "
             "`import_documents`") in flat_needs
-    # The facts it rests on: the extension's tool set defaults to
-    # lifecycle, which alone has create_project (not full, the default
-    # configured by hand, and not core), and a file is imported from text
-    # passed in the call
+    # The facts it rests on: the extension's tool set defaults to full,
+    # which has create_project since 0.15.0 on every route (not core), and
+    # a file is imported from text passed in the call
     manifest = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
-    assert manifest["user_config"]["toolset"]["default"] == "lifecycle"
-    assert "create_project" in server.LIFECYCLE_TOOLS
+    assert manifest["user_config"]["toolset"]["default"] == "full"
     assert "create_project" not in server.CORE_TOOLSET
-    assert "create_project" not in server.mcp._tool_manager._tools
+    assert "create_project" in server.mcp._tool_manager._tools
     params = inspect.signature(server.import_text_file).parameters
     assert "content" in params and "path" not in params
 
@@ -180,7 +186,7 @@ def test_the_changelog_names_no_book_and_quotes_the_memo_line():
     assert "to read through it" not in entry
     assert "the assistant to use it to focus its reading" in entry
     # the served line it reports
-    source = _flat(inspect.getsource(server.analyze_for_coding))
+    source = _flat(inspect.getsource(server.start_coding_session))
     assert 'use it to focus your " "reading' in source
 
 

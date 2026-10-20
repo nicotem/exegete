@@ -104,11 +104,17 @@ HISTORY_ECHO = 20
 # (fix round 4).
 SIDECAR_WRITE_MAX_BYTES = SIDECAR_READ_MAX_BYTES - 4096
 
-# The host declaration (v0.11's machine-wide setting, re-purposed by D7)
-# and this server's built-in default.
+# The AI coder name in Exegete's settings (v0.11's machine-wide setting,
+# re-purposed by D7; read by `host_declaration`, a name kept from then),
+# which v0.15.0 gives each project Exegete creates, and this server's
+# built-in default.
 # Read under both spellings (v0.14.1), through env_settings.
 AI_CODER_NAME_ENV = names.SETTINGS["ai_coder_name"][0]
 DEFAULT_AI_CODER_NAME = "AI Coding Assistant"
+# The researcher's own coder name in Exegete's settings (v0.15.0, ruling
+# 73, item 6), which create_project gives each project it makes, without
+# asking, when it is filled in. One spelling only.
+CODER_NAME_ENV = names.NEW_ONLY_SETTINGS["coder_name"]
 # QualCoder 4.0's built-in assistant's owner string, re-exported from
 # database.py (one definition, H3). Rows under it that this project has
 # not adopted are another coder's work; `known_ai_assistant` is a
@@ -133,9 +139,9 @@ _UNREADABLE = (
 
 _NEWER_FORMAT = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) was written by a newer version of Exegete "
-    f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
-    f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
+    "project folder) was written by a newer version of Exegete and this "
+    "one cannot write it safely. "
+    f"Upgrade {names.SERVER_NAME}, or ask the "
     "user to move the file aside; the next write will then ask for the "
     "name again. Nothing was written.")
 
@@ -165,9 +171,9 @@ _UNREADABLE_BESIDE_EARLIER = (
 
 _NEWER_FORMAT_BESIDE_EARLIER = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) was written by a newer version of Exegete "
-    f"({names.SERVER_NAME}, formerly qualcoder-mcp) and this one cannot "
-    f"write it safely. Upgrade {names.SERVER_NAME}, or ask the "
+    "project folder) was written by a newer version of Exegete and this "
+    "one cannot write it safely. "
+    f"Upgrade {names.SERVER_NAME}, or ask the "
     "user to move both {file} and {old} aside: {old} beside it is not "
     "marked as moved and still holds \"{held}\", so moving {file} aside "
     "alone would bring that name back without asking. Nothing was "
@@ -419,19 +425,26 @@ class SidecarState:
     A "newer_format" file whose current entry validates still reports its
     name, because reading it is safe; writing it is not. `earlier_marked`
     is True for a marked earlier file read with no exegete.json beside
-    it: "unset", with the names it holds in `history`.
+    it: "unset", with the names it holds in `history`. `history_dropped`
+    is True when the file holds a list of earlier names that the read
+    dropped (not a list, or an entry that fails validation): `history`
+    is then empty, and the project's earlier AI coder names are not
+    known (v0.15.0).
     """
 
-    __slots__ = ("status", "entry", "history", "path", "earlier_marked")
+    __slots__ = ("status", "entry", "history", "path", "earlier_marked",
+                 "history_dropped")
 
     def __init__(self, status: str, entry: Optional[Dict[str, Any]] = None,
                  history: Optional[List[Dict[str, Any]]] = None,
-                 path: Optional[Path] = None, earlier_marked: bool = False):
+                 path: Optional[Path] = None, earlier_marked: bool = False,
+                 history_dropped: bool = False):
         self.status = status
         self.entry = entry
         self.history = list(history or [])
         self.path = path
         self.earlier_marked = earlier_marked
+        self.history_dropped = history_dropped
 
     @property
     def name(self) -> Optional[str]:
@@ -535,10 +548,15 @@ def read_sidecar(project_folder: Any) -> SidecarState:
         # the researcher cares about.
         return SidecarState(SIDECAR_UNREADABLE, path=path)
     # A malformed history never costs the current name: it is
-    # informational, and the next set rebuilds it (B1.3).
-    history = _validated_history(data.get("ai_coder_name_history"))
+    # informational, and the next set rebuilds it (B1.3). That it was
+    # dropped is said, though: a check that needs every earlier name
+    # (set_project_coder_name) cannot be made without it (v0.15.0).
+    raw_history = data.get("ai_coder_name_history")
+    history = _validated_history(raw_history)
+    dropped = raw_history not in (None, []) and not history
     if version > newest:
-        return SidecarState(SIDECAR_NEWER_FORMAT, entry, history, path)
+        return SidecarState(SIDECAR_NEWER_FORMAT, entry, history, path,
+                            history_dropped=dropped)
     if path.name == OLD_SIDECAR_NAME and _is_marked(data):
         # A marked earlier file alone: exegete.json, which held every
         # name since the move, was removed or lost. The name here is the
@@ -548,10 +566,13 @@ def read_sidecar(project_folder: Any) -> SidecarState:
         # the history, so rows under them still count as this project's
         # AI work, and the next set carries them into exegete.json.
         return SidecarState(SIDECAR_UNSET, None, _held_entries(entry, history),
-                            path, earlier_marked=True)
+                            path, earlier_marked=True,
+                            history_dropped=dropped)
     if entry is None:
-        return SidecarState(SIDECAR_UNSET, None, history, path)
-    return SidecarState(SIDECAR_SET, entry, history, path)
+        return SidecarState(SIDECAR_UNSET, None, history, path,
+                            history_dropped=dropped)
+    return SidecarState(SIDECAR_SET, entry, history, path,
+                        history_dropped=dropped)
 
 
 def _validated_history(raw: Any) -> List[Dict[str, Any]]:
@@ -1071,14 +1092,16 @@ def _package_version() -> str:
 
 
 def mismatch(env: Optional[str], current: Optional[Dict[str, Any]]) -> bool:
-    """True when this host's declaration conflicts with the project (c2).
+    """True when the AI coder name in Exegete's settings conflicts with
+    the project (c2).
 
-    Rule c2 (ruling 1): a write is refused if and only if this host
-    declares a name AND the declaration is neither the project's current
-    name nor the declaration recorded when that name was set. So an
-    undeclared host never nags, a host whose declaration was acknowledged
-    once never nags again, and a host that declares a different name from
-    the one the project uses asks the user which to use.
+    Rule c2 (ruling 1): a write is refused if and only if the setting is
+    filled in AND it is neither the project's current name nor the
+    setting recorded when that name was set (`host_declaration`, the
+    field's name since v0.12). So an empty setting never nags, a setting
+    acknowledged once in a project never nags again there, and a setting
+    that differs from the name the project uses asks the researcher which
+    to use.
     """
     if env is None:
         return False
@@ -1091,18 +1114,64 @@ def mismatch(env: Optional[str], current: Optional[Dict[str, Any]]) -> bool:
     return True
 
 
+def setting_not_set(raw: Optional[str]) -> bool:
+    """Whether a coder name setting's raw value means "not set" (v0.15.0,
+    one rule for both coder name settings): missing, blank after
+    stripping, or starting `${` after stripping, an unfilled placeholder
+    such as the desktop extension's app may pass for a setting left
+    empty (updates.read_setting reads its own setting the same way).
+    Anything else is a value, checked by validate_coder_name."""
+    return raw is None or not raw.strip() or raw.strip().startswith("${")
+
+
+def settings_coder_name_problem(environ: Optional[Dict[str, str]] = None
+                                ) -> Optional[str]:
+    """Why EXEGETE_CODER_NAME cannot be used, in the validator's words,
+    which name the setting and never the value; None when it is not set
+    or valid. `main()` stops Exegete at start-up on it."""
+    raw = env_settings.coder_name(environ)
+    if setting_not_set(raw):
+        return None
+    try:
+        validate_coder_name(raw, CODER_NAME_ENV)
+    except ValueError as error:
+        return str(error)
+    return None
+
+
+def settings_coder_name(environ: Optional[Dict[str, str]] = None
+                        ) -> Optional[str]:
+    """The researcher's own coder name in Exegete's settings
+    (EXEGETE_CODER_NAME, stripped), or None when it is not set.
+
+    An invalid value reads as not set, as host_declaration's does:
+    `main()` refuses to start on one, so a bad value reaching this
+    function means Exegete was started another way (a test, an embedded
+    use)."""
+    raw = env_settings.coder_name(environ)
+    if setting_not_set(raw):
+        return None
+    try:
+        return validate_coder_name(raw, CODER_NAME_ENV)
+    except ValueError:
+        return None
+
+
 def host_declaration(environ: Optional[Dict[str, str]] = None) -> Optional[str]:
-    """This host's declared AI coder name, or None.
+    """The AI coder name in Exegete's settings, or None (the function
+    keeps its v0.12 name, from when the setting was this host's
+    declaration).
 
     Invalid values are treated as absent here: `main()` validates the
     variable at start-up and refuses to start on a bad one, so a bad
     value reaching this function means the server was started another way
-    (a test, an embedded use); a declaration we would refuse to write is
-    not one to compare against either.
+    (a test, an embedded use); a setting we would refuse to write is
+    not one to compare against either. An unfilled placeholder (`${...}`)
+    is not set (v0.15.0, setting_not_set).
     """
     reading = env_settings.read("ai_coder_name", environ)
     raw = reading.value
-    if raw is None:
+    if raw is None or raw.strip().startswith("${"):
         return None
     try:
         return validate_coder_name(raw, reading.name)
@@ -1127,16 +1196,16 @@ def ai_coder_names_for_project(
     3. `DEFAULT_AI_CODER_NAME`, always, because every pre-0.12 row this
        server wrote carries it and a name change never re-attributes
        rows;
-    4. this host's declaration, when set and valid, because v0.11 wrote
-       under it machine-wide.
+    4. the AI coder name in Exegete's settings, when set and valid,
+       because v0.11 wrote under it machine-wide.
 
     "AI Agent" enters the set only through those rules, that is, when the
-    researcher chose it for this project or this host declares it; it is
+    researcher chose it for this project or in Exegete's settings; it is
     never included on its own. "MCP Import" is an import label, not a
     coding owner, and is never included.
 
     Never refuses and never asks: reads do not ask, so an unset or
-    unreadable sidecar yields the built-in default (plus the declaration
+    unreadable sidecar yields the built-in default (plus the setting
     when there is one).
     """
     names: List[str] = []
@@ -1165,8 +1234,8 @@ def known_ai_set(project_folder: Any,
     Narrower than `ai_coder_names_for_project`: the migration probe of
     B1.12 asks whether a project already holds AI rows, and the answer
     may only ever name the built-in default, QualCoder 4.0's assistant
-    string and this host's declaration. It never selects distinct owners,
-    so it can never enumerate a human or a hidden coder.
+    string and the AI coder name in Exegete's settings. It never selects
+    distinct owners, so it can never enumerate a human or a hidden coder.
     """
     names: List[str] = [DEFAULT_AI_CODER_NAME, KNOWN_AI_ASSISTANT_OWNER]
     declared = host_declaration(environ)

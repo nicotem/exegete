@@ -9,7 +9,7 @@ on:
 
 jobs:
   test:
-    name: tests (${{ matrix.os }}, py${{ matrix.python-version }})
+    name: tests (${{ matrix.os }}, py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format(', part {0} of 3', matrix.part) || '' }})
     runs-on: ${{ matrix.os }}
     # A limit on the whole job (v0.14): GitHub's default is six hours, so
     # a hung test held a runner that long. In the 120 green runs from 7 to
@@ -32,6 +32,22 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.10", "3.13"]
+        # v0.15: Windows runs the suite in three parts, a job each, as one
+        # job there took 40 to 60 minutes; Linux and macOS keep one job,
+        # part 1 alone (the exclusions below). tests/conftest.py makes
+        # the parts from whole files, weighed by their number of tests.
+        # Not pytest-xdist: it would be a new dependency, and tests run
+        # side by side would slow the ones that measure time.
+        part: [1, 2, 3]
+        exclude:
+          - os: ubuntu-latest
+            part: 2
+          - os: ubuntu-latest
+            part: 3
+          - os: macos-latest
+            part: 2
+          - os: macos-latest
+            part: 3
 
     steps:
       # Actions are SHA-pinned (supply-chain hardening); the trailing
@@ -58,12 +74,15 @@ jobs:
 
       - name: Run test suite
         shell: bash
+        # "k/3" on Windows (tests/conftest.py); empty elsewhere: every test
+        env:
+          EXEGETE_TEST_SHARD: ${{ matrix.os == 'windows-latest' && format('{0}/3', matrix.part) || '' }}
         run: |
           set +e
           python -m pytest -ra --tb=short -q 2>&1 | tee pytest_output.txt
           code=${PIPESTATUS[0]}
           {
-            echo "### pytest: ${{ matrix.os }} / py${{ matrix.python-version }}"
+            echo "### pytest: ${{ matrix.os }} / py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format(', part {0} of 3', matrix.part) || '' }}"
             echo ""
             echo '```'
             grep -E "^[0-9]+ (passed|failed)| failed,| error" pytest_output.txt | tail -3
@@ -81,6 +100,10 @@ jobs:
             # v0.14 brief C: what Windows and SQLite do when a project is
             # created near Windows' path limit (the Windows jobs only).
             grep -E "^Windows path probe: " pytest_output.txt | head -3
+            # v0.15: on Windows, the part's share and the split's
+            # fingerprint, the same in the three parts of one Python when
+            # each file ran in exactly one (tests/conftest.py).
+            grep -E "^test part: " pytest_output.txt | head -1
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           # The same line as a check-run annotation: a job's step summary
@@ -91,6 +114,7 @@ jobs:
           sed -n 's/^file-text count rate: /::notice title=file-text count rate::/p' pytest_output.txt | head -3
           sed -n 's/^note pass rate: /::notice title=note pass rate::/p' pytest_output.txt | head -3
           sed -n 's/^Windows path probe: /::notice title=Windows path probe::/p' pytest_output.txt | head -3
+          sed -n 's/^test part: /::notice title=test part::/p' pytest_output.txt | head -1
           # The failures themselves as annotations, for the same reason:
           # a signed-out reader cannot open the job log, and can read
           # these through the API. Up to ten FAILED or ERROR lines, each
@@ -112,7 +136,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          name: pytest-${{ matrix.os }}-py${{ matrix.python-version }}
+          # a name used twice in one run is refused, so each part's own
+          name: pytest-${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format('-part{0}', matrix.part) || '' }}
           path: pytest_output.txt
 
   desktop-extension:
@@ -320,7 +345,11 @@ jobs:
         env:
           QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src
           EXEGETE_PARITY_GATE: ${{ matrix.which == 'gate' && '1' || '' }}
-        run: python -m pytest -ra tests/test_v0143_import_parity.py
+        # and QualCoder's backup, which copies the project folder whole,
+        # its Exegete folder included (v0.15.0, the files design); and the
+        # names list save_names_list writes, read and applied as
+        # QualCoder's import reads and applies it (piece 4)
+        run: python -m pytest -ra tests/test_v0143_import_parity.py tests/test_v0150_private_files_qualcoder.py tests/test_v0150_save_names_list_qualcoder.py
 
       - name: What QualCoder's newest code stores differently
         if: matrix.which == 'watch'

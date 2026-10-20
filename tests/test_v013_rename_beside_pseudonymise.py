@@ -15,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
+from tool_counts import FULL_TOOLS  # noqa: E402
 from exegete.database import QualcoderDatabase
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     execute_from, preview_of, project, query)
@@ -57,6 +58,23 @@ def test_the_residue_count_follows_the_rename(project):
 
 
 def test_the_preview_says_what_a_rename_cannot_reach(project):
+    # v0.15.0, not presuming QualCoder, piece 11: each saved place is
+    # named only when it holds a row, so this project saves one in each
+    # (its tables as QualCoder 4.0 creates them, new_project.TABLES)
+    con = sqlite3.connect(str(project / "data.qda"))
+    con.execute("CREATE TABLE manage_files_display (mfid integer primary "
+                "key, name text, tblrows text, tblcolumns text, owner text)")
+    con.execute("CREATE TABLE files_filter (filterid integer primary key, "
+                "name text, filter text, owner text)")
+    con.execute("INSERT INTO graph (grid, name) VALUES (1, 'A graph')")
+    con.execute("INSERT INTO manage_files_display (mfid, name) "
+                "VALUES (1, 'A display')")
+    con.execute("INSERT INTO stored_sql (title, ssql) "
+                "VALUES ('A query', 'select 1')")
+    con.commit()
+    con.close()
+    server.db.close()
+    server.db = QualcoderDatabase(str(project))
     residue = preview_of()["preview"]["residue"]
     note = residue["scope_note"]
     assert ("The labels include case and file names, which rename_case "
@@ -145,16 +163,14 @@ def test_the_documents_count_the_tools_the_server_registers():
     before, so a tool added without them would have left both stale."""
     import asyncio
     count = len(asyncio.run(server.mcp.list_tools()))
-    assert count == 77                 # check_for_updates (0.14.2), open_file_for_reading and import_documents (0.14.3)
-    # v0.14's release preparation: the default when configured by hand;
-    # the desktop extension's own default is `lifecycle`
-    assert f"(the default when you configure the server yourself, " \
-           f"`EXEGETE_TOOLSET=full`; the Claude Desktop extension " \
-           f"defaults to `lifecycle`) registers {count} tools" \
-        in _flat("TOOLS.md")
+    assert count == FULL_TOOLS    # tests/tool_counts.py
+    # v0.15.0: one set, `full`, the default everywhere ("Exegete", not
+    # "the server", in a line new in 0.15.0: whole-branch review, round 2)
+    assert f"(`EXEGETE_TOOLSET=full`, the default everywhere: in the " \
+           f"Claude Desktop extension and when you configure Exegete " \
+           f"yourself) registers {count} tools" in _flat("TOOLS.md")
     install = _flat("INSTALL.md")
-    # v0.14: `full` is no longer every tool once `lifecycle` exists
-    assert f"`full` (default) registers {count} tools" in install
+    assert f"`full` (default) registers {count} tools, every tool" in install
     assert f"registers all {count} tools" not in install
     assert f"Exegete offers {count} tools by default" in install
 
@@ -173,6 +189,18 @@ def test_every_rename_text_keeps_the_house_rules():
         ("a.txt", "a", None, ["a"]), ("a.pdf", "a", "/docs/a.pdf", []),
         ("a", "a.transcribed", None, []), ("a.mp3", "a", "/audio/a.mp3", []),
         ("a.txt", "a.docx", None, []))]
+    # v0.15.0, piece 12: the notes as built, with and without every sign,
+    # and (its fix round 1) with and without a backup just taken
+    import itertools
+    for flags in itertools.product((False, True), repeat=4):
+        signs = server._RenameSigns(*flags)
+        for left_in in ({}, {"saved_graph_labels": 1, "saved_filters": 2,
+                             "saved_table_displays": 1}):
+            for taken in (False, True):
+                texts += [server._rename_case_note(left_in, signs,
+                                                   backup_taken=taken),
+                          server._rename_file_note(left_in, signs,
+                                                   backup_taken=taken)]
     assert all(isinstance(t, str) and t for t in texts)
     _house_rules(texts)
 
@@ -180,7 +208,9 @@ def test_every_rename_text_keeps_the_house_rules():
 def test_the_records_this_server_keeps_are_named():
     """Fix round 1, S-3: this server's own pseudonymisation journal entry
     and run record keep the file's name as it was at the run."""
-    flat = " ".join(server.RENAME_FILE_NOTE.split())
+    # v0.15.0, piece 12: the note as built with no sign of QualCoder
+    flat = " ".join(server._rename_file_note(
+        {}, server._RenameSigns()).split())
     assert "Exegete's pseudonymisation journal entries and run " \
            "records, which keep the file's name as it was at the run " \
            "unless that name carried a name from the mapping" in flat
@@ -239,8 +269,12 @@ def test_the_fix_round_3_wording():
     assert "once per question, stopping at the first that shows the name" \
         in unreleased
     assert "at most once per call" not in unreleased
-    for note in (server.RENAME_CASE_NOTE, server.RENAME_FILE_NOTE):
+    # v0.15.0, piece 12: when a saved query is there, and only then
+    saved = server._RenameSigns(saved_queries=True)
+    for build in (server._rename_case_note, server._rename_file_note):
+        note = build({}, saved)
         assert "saved SQL queries" in note and "(not read here)" in note
+        assert "saved SQL queries" not in build({}, server._RenameSigns())
 
 
 def test_the_rename_notes_say_what_a_notes_run_leaves():
@@ -248,7 +282,9 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
     old name stays in a note only in its private part, which the
     preview never reads; and a later run with rewrite_memos rewrites
     the public part of the journal entries earlier runs wrote."""
-    case_note = " ".join(server.RENAME_CASE_NOTE.split())
+    # v0.15.0, piece 12: the notes as built with no sign of QualCoder
+    case_note = " ".join(server._rename_case_note(
+        {}, server._RenameSigns()).split())
     assert ("in notes, journal entries, file text and attribute values "
             "(the pseudonymisation preview counts those, notes and journal "
             "entries in their public part; the preview does not read "
@@ -256,7 +292,8 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
     assert "(the pseudonymisation preview counts those);" not in case_note
     tail = ("(they then name the file by its id), though a later run with "
             "{} rewrites the public part of those journal entries.")
-    file_note = " ".join(server.RENAME_FILE_NOTE.split())
+    file_note = " ".join(server._rename_file_note(
+        {}, server._RenameSigns()).split())
     assert tail.format("rewrite_memos") in file_note
     assert tail.format("`rewrite_memos`") in _flat("PRIVACY.md")
 

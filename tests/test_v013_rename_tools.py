@@ -237,7 +237,7 @@ class TestRenameCase:
         try:
             for args in ((1, "Case A"), (99, "x"), (1, "New")):
                 out = _case(*args)
-                assert "open in QualCoder (user gui_user)" in out["error"]
+                assert "lock file is active (user gui_user)" in out["error"]
         finally:
             lock.unlink()
         assert _backups(project) == []
@@ -289,7 +289,10 @@ def _save_filter(project, name, boolean, conditions):
 
 class TestRenameCaseReportsWhereTheOldNameStays:
 
-    def test_each_count_only_when_not_zero(self, project):
+    def test_each_count_only_when_not_zero(self, project, monkeypatch):
+        # v0.15.0, piece 12: the sentence on Merge Projects comes when
+        # the project's history with QualCoder is not "none"
+        monkeypatch.setenv("EXEGETE_USES_QUALCODER", "yes")
         _saved_places(project)
         _exec(project, "INSERT INTO gr_case_text_item (grid, caseid, "
                        "displaytext) VALUES (1, 1, 'CASE A'), "
@@ -303,7 +306,10 @@ class TestRenameCaseReportsWhereTheOldNameStays:
         assert out["old_name_left_in"] == {
             "saved_graph_labels": 2, "saved_table_displays": 1,
             "file_ids": [7, 8]}
-        assert out["note"] == server.RENAME_CASE_NOTE
+        assert out["note"].startswith(server.RENAME_CASE_NOTE + " ")
+        assert "in QualCoder's saved graph labels and table displays " \
+               "(counted in old_name_left_in)" in out["note"]
+        assert out["note"].endswith(server.OLD_NAME_LEFT_IN_NOTE)
         assert "Merge Projects" in out["note"]
 
     def test_missing_tables_are_skipped_and_nothing_found_is_empty(
@@ -388,11 +394,12 @@ class TestRenameCaseSurface:
     def test_the_descriptions_carry_both_qualcoder_paragraphs(
             self, tool, window):
         flat = " ".join(tool.__doc__.split())
+        # v0.15.0 (not presuming QualCoder, piece 5): the write tools'
+        # paragraph is one sentence, from these words
+        first = "Refused while the project's lock file is active"
         standard = " ".join(server.rename_code.__doc__.split()).split(
-            "Refused while QualCoder has the project open")[1].split(
-            "Args:")[0]
-        assert ("Refused while QualCoder has the project open"
-                + standard) in flat
+            first)[1].split("Args:")[0]
+        assert (first + standard) in flat
         assert " ".join(server._RENAME_QC40_PARAGRAPH.format(
             window=window).split()) in flat
 
@@ -401,8 +408,9 @@ class TestRenameCaseSurface:
             _add_case(project, name)
         _reload()
         out = json.loads(server.create_case("case one"))
-        assert "rename_case takes a case id; cases are merged in " \
-               "QualCoder, not here" in out["error"]
+        # v0.15.0 (not presuming QualCoder, piece 7)
+        assert "rename_case takes a case id; Exegete does not merge " \
+               "cases yet" in out["error"]
 
 
 # ===========================================================================
@@ -661,15 +669,22 @@ class TestRenameFile:
             [{"name": "interview.txt"}]
 
 
-STILL_POSSIBLE = ("QualCoder's own Rename (Manage Files, the name's "
-                  "right-click menu, \"Rename database entry\") can still "
-                  "make this change if it is wanted.")
+# v0.15.0 (not presuming QualCoder, piece 7): that Exegete leaves a
+# name's ending as it is, and why (words true for a name gaining, losing
+# or swapping an ending), and QualCoder's own Rename for a researcher who
+# uses it
+STILL_POSSIBLE = ("Exegete leaves a name's ending as it is, to protect "
+                  "the project's links and exports. If you use QualCoder "
+                  "and the change is wanted all the same, its own Rename "
+                  "can make it (Manage Files, the name's right-click "
+                  "menu, \"Rename database entry\").")
 
 
 class TestTheEndingRule:
     """The owner's ruling of 2026-09-23 (option b), case by case: refuse
     only a change QualCoder acts on, say why and that QualCoder's own
-    Rename can still do it; any other name changes freely."""
+    Rename can still do it, for a researcher who uses it; any other name
+    changes freely."""
 
     @pytest.fixture
     def media(self, project):
@@ -800,8 +815,10 @@ class TestWhatKeepsTheOldName:
         assert out["stored_copy"]["kind"] == kind
         assert out["stored_copy"]["stored_name"] == stored
         if kind == "in_project_folder":
-            assert "A later QualCoder import of a file called " \
-                   f"'{stored}' will overwrite" in out["stored_copy"]["note"]
+            # v0.15.0, piece 12: the sentence opens on QualCoder
+            assert f"If a file called '{stored}' is later imported in " \
+                   f"QualCoder, QualCoder overwrites this stored copy" \
+                   in out["stored_copy"]["note"]
             assert ("original text" in out["stored_copy"]["note"]) == \
                 (ext == "docx")
 
@@ -825,7 +842,7 @@ class TestWhatKeepsTheOldName:
             # original text too, and a later import may delete it.
             assert "the original document, whatever has been rewritten " \
                    "here since." in block["note"]
-            assert "may then delete it." in block["note"]
+            assert "(and may then delete it)." in block["note"]
         if kind == "named_after_it":
             # No QualCoder code reads documents/<name>.txt back by the
             # entry's name (QA-3): no "finds it" for this one.
@@ -846,7 +863,10 @@ class TestWhatKeepsTheOldName:
         _reload()
         note = _file(5, f"P01.{ext}", create_backup=False)[
             "stored_copy"]["note"]
-        assert "will overwrite this stored copy" in note
+        # v0.15.0, piece 12: "If a file called ... is later imported in
+        # QualCoder, QualCoder overwrites this stored copy"
+        assert "is later imported in QualCoder, QualCoder overwrites this " \
+               "stored copy" in note
         assert ("may then delete it" in note) is deletes
 
     def test_the_notes_and_the_counts(self, project):
@@ -859,13 +879,18 @@ class TestWhatKeepsTheOldName:
                        ["interview.txt"])])
         _add_file(project, 7, "interview_p1.jpg", mediapath="/images/x.jpg")
         _add_file(project, 8, "interview.txt_summary")
+        # v0.15.0, piece 12: the search index note comes on its sign
+        (project / "ai_data").mkdir()
+        (project / "ai_data" / "search.sqlite").write_bytes(b"")
         _reload()
         out = _file(1, "P01.txt", create_backup=False)
         # A text with no stored file is looked for whole: '.txt' is part
         # of its name, so 'interview_p1.jpg' is not named after it.
         assert out["old_name_left_in"] == {
             "saved_graph_labels": 1, "saved_filters": 1, "file_ids": [8]}
-        assert out["note"] == server.RENAME_FILE_NOTE
+        assert out["note"].startswith(server.RENAME_FILE_NOTE + " ")
+        # a saved filter counted: how filters were read, said
+        assert out["note"].endswith(server.OLD_NAME_LEFT_IN_NOTE)
         assert out["search_index_note"] == \
             server.RENAME_FILE_SEARCH_INDEX_NOTE
         assert "transcript_of" not in out and "linked_transcript" not in out
@@ -1203,9 +1228,10 @@ class TestARenameBack:
             "'legacy.txt'.")
         assert out["error"].endswith(
             "If it was this entry's own copy under a name it had before, "
-            "restore_backup or QualCoder's own Rename can put that name "
-            "back (restoring an earlier backup undoes everything done after "
-            "it, any pseudonymisation run included); Exegete recognises "
+            "restore_backup can put that name back (restoring an earlier "
+            "backup undoes everything done after it, any pseudonymisation "
+            "run included), or QualCoder's own Rename, if the researcher "
+            "uses it; Exegete recognises "
             "a rename back only from a "
             "backup that shows this entry with that name and, for its "
             "documents copy, the same text.")
@@ -1378,8 +1404,14 @@ class TestWhereTheOldNameStaysByWholeWords:
         assert out["old_name_left_in"] == {"file_ids": [6]}
 
     def test_both_notes_call_it_a_heuristic(self):
-        for note in (server.RENAME_CASE_NOTE, server.RENAME_FILE_NOTE):
+        # v0.15.0, piece 12: the notes as built; with a saved display or
+        # filter counted they end with the whole note
+        counted = {"saved_filters": 1}
+        for build in (server._rename_case_note, server._rename_file_note):
+            note = build(counted, server._RenameSigns())
             assert note.endswith(server.OLD_NAME_LEFT_IN_NOTE)
+            assert "old_name_left_in is a heuristic" in build(
+                {}, server._RenameSigns())
         assert server.OLD_NAME_LEFT_IN_NOTE.startswith(
             "old_name_left_in is a heuristic: it looks for the old name as "
             "a whole word, ignoring letter case")
@@ -1403,9 +1435,15 @@ class TestTheFiveBehavioursQAFoundUnpinned:
             for args in ((5, "no extension"), (99, "x.txt"), (1, "a/b"),
                          (1, "interview.pdf"), (1, "P01.txt")):
                 out = _file(*args)
-                assert out == {"error": "This project is open in QualCoder "
-                                        "(user gui_user). Close the project "
-                                        "in QualCoder, then retry."}, args
+                # v0.15.0: the lock file is also Exegete's own during
+                # each of its writes, so the refusal names both causes
+                assert out == {"error": (
+                    "This project is in use by another program: its lock "
+                    "file is active (user gui_user), so QualCoder 3.8.2 has "
+                    "it open, or another conversation using Exegete is "
+                    "writing to it. Ask the researcher to close it in "
+                    "QualCoder, or wait a moment; once get_current_project "
+                    "shows qualcoder_open false, retry.")}, args
         finally:
             lock.unlink()
         assert _backups(project) == []

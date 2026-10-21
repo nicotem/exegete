@@ -322,8 +322,12 @@ def test_the_scan_goes_through_psutil_and_reads_command_lines(
                              stdin=subprocess.DEVNULL,
                              stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL)
+    import psutil
     try:
         time.sleep(1)
+        # the child's command line as the system gives it (a Mac's
+        # framework Python starts its app's program in its place)
+        cmdline = psutil.Process(child.pid).cmdline()
         database._process_scan_cache["at"] = None
         scan = database._qualcoder_process_scan()
     finally:
@@ -331,8 +335,9 @@ def test_the_scan_goes_through_psutil_and_reads_command_lines(
         child.wait()
     assert calls, "the scan did not go through psutil"
     assert scan is not None
-    # the child's command line, as the scan keeps a hit (200 characters)
-    assert " ".join([sys.executable, str(script)])[:200] in scan.hits, scan
+    assert cmdline[-1] == str(script), cmdline
+    # the child, as the scan keeps a hit (200 characters)
+    assert " ".join(cmdline).strip()[:200] in scan.hits, scan
     sandboxed = database._sees_only_its_own_processes()
     if sys.platform in ("win32", "linux") and not sandboxed:
         assert scan.saw_command_lines, _pythons_unread()

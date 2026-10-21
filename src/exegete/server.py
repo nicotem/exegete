@@ -12224,7 +12224,7 @@ def import_documents(
         import_pdfs_with_listed_names: default false
         import_file_names_with_listed_names: default false
         import_files_with_garbled_letters: default false
-        character_sets: on the researcher's word, {file as previewed: its reading's character_set}
+        character_sets: on the researcher's word, {file as previewed: character_set}
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
         memo: a note for every file; at most 10,000 characters
     """

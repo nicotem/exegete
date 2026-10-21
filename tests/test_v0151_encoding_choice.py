@@ -127,7 +127,7 @@ def test_each_reading_round_trips(project, folder, key):
     name = doc_readers.READING_NAMES[key]
     (entry,) = preview["files"]
     assert entry["character_set"] == f"{name}, as chosen"
-    assert import_words.say(import_words.WARNINGS, "read_as_chosen",
+    assert import_words.say(import_words.WARNINGS, "chosen_reading",
                             name=name) in entry["for_information"]
     assert "changes_what_you_will_read" not in entry
     assert preview["character_sets_not_used"] == 0

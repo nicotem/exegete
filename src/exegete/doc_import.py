@@ -849,7 +849,7 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         add("garbled_letters", where=item.numbers.get("where", "in places"))
     chosen = chosen_name(result)
     if chosen is not None:
-        add("read_as_chosen", name=chosen)
+        add("chosen_reading", name=chosen)
     return out
 
 

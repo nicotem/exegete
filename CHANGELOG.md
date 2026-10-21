@@ -601,19 +601,19 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (79 tools; 82 in 0.15.0) | 202,828 | 206,624 | 213,196 | 217,084 |
+| `full` (79 tools; 82 in 0.15.0) | 202,814 | 206,624 | 213,182 | 217,084 |
 | `core` (26 tools; 25 in 0.15.0) | 71,685 | 68,258 | 75,349 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 202,828 characters (about 50.7k tokens
+- Serialised tool JSON: full = 202,814 characters (about 50.7k tokens
   at chars/4) over 79 tools, and core = 71,685 (about 17.9k) over 26,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 213,196 and
+  which also gives exactly 0.15.0's figures for its tree), 213,182 and
   75,349. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
   25 on 3.13), ten changes moved them. The first, `create_backup`
   accepted and ignored.
@@ -682,8 +682,8 @@ schemas together, as below; the brief as `read_brief` returns it):
   description says that one line of a file not in UTF-8 is shown and
   has a line for `character_sets`, its pointer to `import_text_file` and
   to the `converted_documents` topic gone to keep it within 2,048
-  characters, 18 characters more (22 on 3.11), and its schema gains
-  `character_sets`, 158 more: 176 more in `full` (180 on 3.11); `core`
+  characters, 4 characters more (8 on 3.11), and its schema gains
+  `character_sets`, 158 more: 162 more in `full` (166 on 3.11); `core`
   does not serve the tool. Rounded, the figures are about 203,000 and
   72,000 characters, about 51k and 18k tokens. No other tool's entry
   changed.

@@ -157,7 +157,11 @@ def test_how_it_works_explains_before_it_instructs():
             "assistant reads it: Exegete's preview of an import gives the "
             "assistant the documents' names, sizes, lengths and "
             "warnings, never their "
-            "text ([PRIVACY.md, \"Bringing documents in\"]"
+            # v0.15.1, the encoding choice: but one line of a file not
+            # saved as UTF-8 (tests/test_v0151_encoding_readings.py)
+            "text, but for one line of a file not saved as UTF-8, as each "
+            "character set reads it ([PRIVACY.md, \"Bringing documents "
+            "in\"]"
             "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
             "#bringing-documents-in-0143)).") in data
 

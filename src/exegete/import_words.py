@@ -633,7 +633,7 @@ WARNINGS = {
         "whenever an answer names the file, and the project's copy of "
         "the original keeps it."),
     # v0.15.1: a plain text file read in the character set chosen for it.
-    "read_as_chosen": ("information",
+    "chosen_reading": ("information",
         "Read as {name}, as chosen: its text is stored as UTF-8, and the "
         "original is copied unchanged."),
 }

@@ -2580,6 +2580,17 @@ def first_word(name: Any) -> Optional[str]:
     return word
 
 
+def _first_word_alternative(firsts: Sequence[str],
+                            parts: Sequence[str]) -> str:
+    """One group of first words as one alternative, a group of its own:
+    its first letters as written, then the rest of the word's parts,
+    joined by `_SEPARATOR_RUN`, in any case; every piece escaped."""
+    return ("((?:" + "|".join(re.escape(letter) for letter in sorted(firsts))
+            + ")(?i:" + _SEPARATOR_RUN.join(
+                [re.escape(parts[0][1:])]
+                + [re.escape(part) for part in parts[1:]]) + "))")
+
+
 class FirstNamesAlone:
     """Where the first word of a listed name shows alone, counted in the
     reader's reading of a text, as the wide reading reads its names.
@@ -2612,32 +2623,25 @@ class FirstNamesAlone:
             key = tuple(_fold(part) for part in parts)
             if not parts or key in listed:
                 continue
-            rest = _detector_alternative(form.split(None, 1)[1])
             group = groups.setdefault(key, {"firsts": set(), "parts": parts,
                                             "rests": set(), "word": word})
             group["firsts"].add(parts[0][0])
-            if rest:
-                group["rests"].add(rest)
+            group["rests"].add(form.split(None, 1)[1])
         ordered = sorted(groups.values(), key=lambda group: (
             -reading_length(group["word"]), group["word"]))
-        alternatives = []
-        self.rests: List[Optional["re.Pattern[str]"]] = []
-        for group in ordered:
-            parts = group["parts"]
-            firsts = sorted(group["firsts"])
-            first = (re.escape(firsts[0]) if len(firsts) == 1 else
-                     "(?:" + "|".join(re.escape(f) for f in firsts) + ")")
-            tail = _SEPARATOR_RUN.join(
-                [re.escape(parts[0][1:])]
-                + [re.escape(part) for part in parts[1:]])
-            alternatives.append("(" + first + "(?i:" + tail + "))")
-            rests = sorted(group["rests"], key=lambda r: (-len(r), r))
-            self.rests.append(re.compile(
-                _SEPARATOR_RUN + "(?i:" + "|".join(rests) + ")")
-                if rests else None)
+        # The rest of each name of a group as the reader reads it
+        # (`_detector_alternative`), longest first
+        self.rests: List["re.Pattern[str]"] = [
+            re.compile(_SEPARATOR_RUN + "(?i:" + "|".join(sorted(
+                {_detector_alternative(rest) for rest in group["rests"]},
+                key=lambda alternative: (-len(alternative), alternative)))
+                + ")")
+            for group in ordered]
         self.pattern: Optional["re.Pattern[str]"] = (
-            re.compile("(?<!\\w)(?:" + "|".join(alternatives) + ")(?!\\w)")
-            if alternatives else None)
+            re.compile("(?<!\\w)(?:" + "|".join(
+                _first_word_alternative(group["firsts"], group["parts"])
+                for group in ordered) + ")(?!\\w)")
+            if ordered else None)
         # Priced as `Compiled.form_units` prices the forms: a unit for
         # each started block of FORM_UNIT_CHARS characters of each first
         # word's reading
@@ -2670,8 +2674,7 @@ class FirstNamesAlone:
             spent += 1
             if max_matches is not None and spent > max_matches:
                 return {"count": found, "matches": spent, "stopped": True}
-            rest = self.rests[match.lastindex - 1]
-            if rest is not None and rest.match(seen, match.end()):
+            if self.rests[match.lastindex - 1].match(seen, match.end()):
                 continue
             found += 1
         return {"count": found, "matches": spent, "stopped": False}

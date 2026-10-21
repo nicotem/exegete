@@ -202,8 +202,12 @@ rather than fewer.
   without a limit of its own, takes an upper limit at its next major
   release when it is large or fast-moving, so an install from PyPI
   meets a new major release only with a release of Exegete tried with
-  it. Not bounded today: cryptography (the largest after PyMuPDF, never
-  loaded by Exegete, held per computer by `[tool.uv]`), pywin32
+  it. Not bounded today: cryptography (never loaded by Exegete, held per
+  computer by `[tool.uv]`), onnxruntime and numpy (which PyMuPDF 2
+  brings on Windows x64 and Linux; large, but loaded only by PyMuPDF
+  inside the reading process, never by Exegete's own code or at its
+  start; a new major release of either could stop PDFs being read
+  there, which the `newest-libraries` job would show), pywin32
   (Windows only), uvicorn, python-multipart and sse-starlette (a limit
   at their next minor release would hold back routine fixes),
   defusedxml, striprtf (already exact), EbookLib (small, about one

@@ -3,7 +3,8 @@
 
 The documents repeat values the code holds: the folder for projects,
 the places the project listing searches, the state folder, the time one
-import call may take, how many tools each set registers, the optional
+import call may take, the memory a file's reading is given, how many
+tools each set registers, the optional
 part an install needs for PDF and EPUB, the titles of the extension's
 settings, and the names of the tools, prompts and arguments. When the
 code changes one of them, every sentence that still gives the old one
@@ -51,6 +52,7 @@ except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
 from exegete import doc_import, import_reading, names, server
 
 REPO = Path(__file__).resolve().parents[1]
+GB = 1024 * 1024 * 1024
 
 MANIFEST = "packaging/desktop-extension/manifest.in.json"
 CHANGELOG = "CHANGELOG.md"
@@ -96,6 +98,9 @@ class Facts:
     import_file_seconds: int
     keep_seconds: int
     read_timeout_seconds: float
+    # the memory a file's reading is given, and a PDF's (v0.15.1)
+    memory_cap_bytes: int
+    pdf_memory_cap_bytes: int
     registered_tools: FrozenSet[str]
     core_tools: FrozenSet[str]
     earlier_names: FrozenSet[str]
@@ -143,6 +148,8 @@ def facts_from_the_code(root: Path = REPO) -> Facts:
         import_file_seconds=doc_import.IMPORT_FILE_SECONDS,
         keep_seconds=doc_import.KEEP_SECONDS,
         read_timeout_seconds=import_reading.READ_TIMEOUT_SECONDS,
+        memory_cap_bytes=import_reading.MEMORY_CAP_BYTES,
+        pdf_memory_cap_bytes=import_reading.PDF_MEMORY_CAP_BYTES,
         # the tools registered when exegete.server is imported: `full`
         registered_tools=frozenset(server.STANDARD_TOOL_NAMES),
         core_tools=frozenset(server.CORE_TOOLSET),
@@ -174,6 +181,10 @@ for _field in ("extension_call_seconds", "terminal_call_seconds",
                "import_file_seconds", "keep_seconds",
                "read_timeout_seconds"):
     QUANTITIES[_field] = ((_field,), lambda f, n=_field: getattr(f, n))
+del _field
+# the documents give the memory in GB (1024 MB)
+for _field in ("memory_cap_bytes", "pdf_memory_cap_bytes"):
+    QUANTITIES[_field] = ((_field,), lambda f, n=_field: getattr(f, n) / GB)
 del _field
 
 # Both routes' figure: the extension's and every Terminal route's
@@ -211,6 +222,12 @@ COUNT_PATTERNS = (
     # a CHANGELOG's table of measured sizes
     (r"`full`\s+\((?P<n>\d+)\s+tools;", {"n": ("full",)}),
     (r"`core`\s+\((?P<n>\d+)\s+tools;", {"n": ("core",)}),
+)
+# The memory a file's reading is given, and a PDF's (TOOLS.md's limits)
+MEMORY_PATTERNS = (
+    (r"\b(?P<n>\d+)\s+GB\s+of\s+memory\s+to\s+read\s+a\s+file"
+     r"\s+\((?P<m>\d+)\s+GB\s+for\s+a\s+PDF\)",
+     {"n": ("memory_cap_bytes",), "m": ("pdf_memory_cap_bytes",)}),
 )
 # A folder for projects: `~/`, then `Documents/` or nothing, then one
 # folder whose name ends in "projects", in any letter case, of at most
@@ -400,6 +417,10 @@ FACTS: Dict[str, Fact] = {
                    "CONTRIBUTING.md"),
         patterns=(CALL_FORM,) + TOOL_CLAIMS + (TOOL_NAMES_LIST,)
         + ARGUMENT_CLAIMS + (ARGUMENT_NAMES_LIST,)),
+    "the memory to read a file": Fact(
+        code="import_reading.py: MEMORY_CAP_BYTES, PDF_MEMORY_CAP_BYTES",
+        documents=("TOOLS.md",),
+        patterns=tuple(p for p, _ in MEMORY_PATTERNS)),
 }
 # The version and its date are held already: tests/test_updates.py and
 # tests/test_v0142_pages.py hold pyproject.toml, the CHANGELOG heading,
@@ -1083,6 +1104,8 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the install commands": check_install_commands,
     "the settings": check_settings,
     "the names": check_names,
+    "the memory to read a file": lambda facts, document: _check_numbers(
+        "the memory to read a file", MEMORY_PATTERNS, facts, document),
 }
 
 
@@ -1203,6 +1226,8 @@ CHANGES = (
     ("import_file_seconds", lambda f: f.import_file_seconds + 5),
     ("keep_seconds", lambda f: f.keep_seconds + 1),
     ("read_timeout_seconds", lambda f: f.read_timeout_seconds + 15),
+    ("memory_cap_bytes", lambda f: f.memory_cap_bytes * 2),
+    ("pdf_memory_cap_bytes", lambda f: f.pdf_memory_cap_bytes // 2),
     ("registered_tools", lambda f: f.registered_tools | {"one_tool_more"}),
     ("core_tools", lambda f: f.core_tools - {
         sorted(f.core_tools - f.earlier_names)[0]}),
@@ -1435,6 +1460,8 @@ SOURCES = {
     "import_file_seconds": (doc_import, "IMPORT_FILE_SECONDS"),
     "keep_seconds": (doc_import, "KEEP_SECONDS"),
     "read_timeout_seconds": (import_reading, "READ_TIMEOUT_SECONDS"),
+    "memory_cap_bytes": (import_reading, "MEMORY_CAP_BYTES"),
+    "pdf_memory_cap_bytes": (import_reading, "PDF_MEMORY_CAP_BYTES"),
     "registered_tools": (server, "STANDARD_TOOL_NAMES"),
     "core_tools": (server, "CORE_TOOLSET"),
     "earlier_names": (server, "RENAMED_TOOLS"),

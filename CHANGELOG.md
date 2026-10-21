@@ -194,7 +194,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   for a release of Exegete that has been tried with it.
 - **Each release's notes list what the desktop extension installs**,
   from this release: each library and its release, and the computers
-  that take it where they differ (cryptography, and pywin32 on Windows),
+  that take it where they differ (cryptography; pywin32 on Windows;
+  PyMuPDF, and the libraries PyMuPDF 2 brings on Windows x64 and Linux),
   so you can compare an install of your own with it. CI gives the table
   for every commit, from the lock's dry run on six computers
   (`scripts/extension_libraries.py`).
@@ -204,6 +205,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   authorities held an emSign root under which eight intermediate
   authorities' private keys were compromised); certifi comes with the
   MCP library, through httpx, and no other library in the lock moves.
+- **PDFs are read with PyMuPDF 2 on Windows x64 and Linux.** With
+  Python 3.11 to 3.14 there (the desktop extension's Python, 3.13,
+  among them), the optional part `pdf-epub` now brings PyMuPDF 2.0 and
+  the nine libraries it needs: onnxruntime, numpy, networkx, protobuf,
+  flatbuffers, psutil, PyYAML, tabulate and packaging (NOTICE gives
+  their licences). Macs, Windows on Arm, Python 3.10, and Python 3.15
+  and later keep PyMuPDF 1.x (1.28.2 in the extension): PyMuPDF 2 or
+  onnxruntime has no ready-made package there, or, on Apple silicon
+  Macs, needs macOS 14. Both releases read the test documents' PDFs to
+  the text QualCoder 4.0's own functions store, and CI checks Exegete's
+  text against QualCoder's with each. A PDF's reading is now given 2 GB
+  of memory, since PyMuPDF 2 needs more than the 1 GB every other kind
+  of file keeps, and a PDF refused for memory names 2048 MB. On Linux
+  the reading process starts with three fixed settings that keep the
+  memory its threads reserve small (`MALLOC_ARENA_MAX`,
+  `OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`). The cost on those
+  computers: about 75 to 90 MB more to download and 150 to 190 MB more
+  on disk in the extension, and 0.4 to 1 second more to start each
+  PDF's reading. INSTALL.md names the computers where pip cannot install
+  the part, with a way through. 0.15.0's notes named the hold to 1.x
+  among their known limits.
+- **Where psutil comes with PyMuPDF 2, the check for a running QualCoder
+  goes through it.** On Windows x64 and Linux with Python 3.11 to 3.14,
+  the desktop extension included, psutil now comes with the optional
+  part, and Exegete's look at the computer's programs, which already
+  went through psutil wherever it was installed, now does so there
+  instead of `tasklist` or `ps`. On Windows, programs' command lines are
+  now read, so a QualCoder started through Python is seen, and a recent
+  change to the project's chat history is no longer given as a sign
+  that QualCoder may have the project open when the look finds no
+  QualCoder, as on Linux and Macs already; a Python whose command line
+  is withheld (another user's, or one run as administrator) still keeps
+  the sign. On Linux each program's path is now read whole, so a
+  QualCoder in a folder whose path holds a space is found rather than
+  counted as a possible miss.
 - **Exegete takes one backup before every change, at the last moment.**
   After a tool's checks, Exegete copies the project into the backup,
   all but its database, while other programs can still save; then it

@@ -17,7 +17,7 @@
 - The rename job's wheelhouse takes Exegete's requirements from
   pyproject.toml, so the limits reach it.
 - What the documents and comments say of these is what is so: INSTALL.md
-  names the libraries with an upper limit and two without; the lock check
+  names the libraries with an upper limit and four without; the lock check
   catches a change of the requirements or the version, not of every line
   of pyproject.toml; anyio serves the one tool that waits in a thread; the
   newest job's limit rests on its measured run, and the job writes
@@ -31,6 +31,7 @@ from importlib import metadata
 from pathlib import Path
 
 import pytest
+from packaging.markers import Marker
 from packaging.requirements import Requirement
 from packaging.specifiers import SpecifierSet
 from packaging.utils import canonicalize_name
@@ -47,10 +48,13 @@ REPO = Path(__file__).resolve().parent.parent
 with open(REPO / "pyproject.toml", "rb") as _handle:
     PROJECT = tomllib.load(_handle)["project"]
 
-# Each bounded library's range, in pyproject.toml and in the lock.
+# Each bounded library's range, in pyproject.toml and in the lock; a
+# library named in several lines, each line's range in its order.
 LIMITS = {
     "mcp": ">=1.17.0,<2",        # fastest moving; 2.0 removed FastMCP
-    "pymupdf": ">=1.26.7,<2",    # the largest wheel; 2.0 not yet tried
+    # the largest wheel; 2.x where it has ready-made packages, 1.x
+    # elsewhere (v0.15.1, tests/test_v0151_pymupdf_two.py)
+    "pymupdf": (">=1.26.7,<2", ">=2.0,<3"),
     "lxml": ">=6.1.0,<7",        # compiled; EbookLib reads EPUBs with it
     "pydantic": ">=2.11.0,<3",   # imported by Exegete; the MCP library's
     "anyio": ">=4.5,<5",         # imported by Exegete; the MCP library's
@@ -77,11 +81,27 @@ LIBRARY_OF = {"fitz": "pymupdf"}
 IMPORT_ERRORS = {"ImportError", "ModuleNotFoundError"}
 
 
-def _requirements():
+def _requirement_lines():
+    """{library: [its Requirement for each line naming it, in order]}."""
     lines = PROJECT["dependencies"] + \
         PROJECT["optional-dependencies"]["pdf-epub"]
-    return {canonicalize_name(Requirement(line).name): Requirement(line)
-            for line in lines}
+    found = {}
+    for line in lines:
+        requirement = Requirement(line)
+        found.setdefault(canonicalize_name(requirement.name),
+                         []).append(requirement)
+    return found
+
+
+def _requirements():
+    """{library: its Requirement}; for a library named in several lines
+    (PyMuPDF, v0.15.1), the last, whose range is the newest."""
+    return {name: lines[-1] for name, lines in _requirement_lines().items()}
+
+
+def _ranges(name):
+    return (LIMITS[name],) if isinstance(LIMITS[name], str) \
+        else LIMITS[name]
 
 
 def _lock():
@@ -236,20 +256,21 @@ def test_the_wheelhouse_takes_exegetes_requirements_from_pyproject():
 
 @pytest.mark.parametrize("name", sorted(LIMITS))
 def test_each_bounded_library_keeps_below_its_next_major(name):
-    spec = _requirements()[name].specifier
-    assert spec == SpecifierSet(LIMITS[name])
-    upper = [s for s in spec if s.operator == "<"]
-    assert len(upper) == 1, spec
+    specs = [line.specifier for line in _requirement_lines()[name]]
+    assert specs == [SpecifierSet(each) for each in _ranges(name)]
     lock = _lock()
     ours = [p for p in lock["package"] if p["name"] == PROJECT["name"]]
     locked = [d for d in ours[0]["metadata"]["requires-dist"]
               if d["name"] == name]
-    assert len(locked) == 1, locked
-    assert SpecifierSet(locked[0]["specifier"]) == spec
+    assert sorted(str(SpecifierSet(d["specifier"])) for d in locked) == \
+        sorted(str(spec) for spec in specs), locked
     releases = [p["version"] for p in lock["package"] if p["name"] == name]
     assert releases, name
     for release in releases:
-        assert spec.contains(release), (name, release)
+        within = [spec for spec in specs if spec.contains(release)]
+        assert len(within) == 1, (name, release)
+        upper = [s for s in within[0] if s.operator == "<"]
+        assert len(upper) == 1, within[0]
         # the limit is the next major release after the locked one
         assert Version(upper[0].version).major == \
             Version(release).major + 1, (name, release)
@@ -305,10 +326,13 @@ def test_a_requirement_taken_away_is_found():
 # How INSTALL.md names each library it speaks of
 SHOWN_AS = {"mcp": "MCP library", "pydantic": "pydantic", "anyio": "anyio",
             "pymupdf": "PyMuPDF", "lxml": "lxml", "ebooklib": "EbookLib",
-            "starlette": "Starlette"}
-# Two libraries with no upper limit, which INSTALL.md names so: EbookLib
-# reads every EPUB, and the MCP library loads Starlette at every start.
-NOT_BOUNDED = {"ebooklib", "starlette"}
+            "starlette": "Starlette", "onnxruntime": "onnxruntime",
+            "numpy": "numpy"}
+# Libraries with no upper limit, which INSTALL.md names so: EbookLib
+# reads every EPUB, the MCP library loads Starlette at every start, and
+# PyMuPDF 2 brings onnxruntime and numpy (v0.15.1), neither of them among
+# Exegete's own requirements.
+NOT_BOUNDED = {"ebooklib", "starlette", "onnxruntime", "numpy"}
 # The newest job's first run, 20 October 2026 (run 39416267478): 28 min 15 s
 NEWEST_JOB_MINUTES = 28
 
@@ -339,17 +363,18 @@ def _comment_above(lines, at):
     return " ".join(reversed(above))
 
 
-def test_install_names_the_libraries_with_a_limit_and_two_without():
+def test_install_names_the_libraries_with_a_limit_and_those_without():
     """INSTALL.md names the libraries an install from PyPI holds below
-    their next major release, and warns that others, EbookLib and
-    Starlette among them, have no upper limit: checked against
-    pyproject.toml and the MCP library's own requirements."""
+    their next major release, and warns that others, EbookLib, Starlette,
+    onnxruntime and numpy among them, have no upper limit: checked
+    against pyproject.toml and the MCP library's own requirements."""
     requirements = _requirements()
     bounded = {name for name, requirement in requirements.items()
                if any(s.operator == "<" for s in requirement.specifier)}
     assert bounded == set(LIMITS)
     assert not _has_upper_limit(requirements["ebooklib"].specifier)
     assert "starlette" not in requirements
+    assert not {"onnxruntime", "numpy"} & set(requirements)
     by_mcp = [Requirement(line) for line in metadata.requires("mcp")
               if canonicalize_name(Requirement(line).name) == "starlette"]
     assert by_mcp and not any(_has_upper_limit(r.specifier) for r in by_mcp)
@@ -384,11 +409,28 @@ def test_what_the_lock_check_catches_is_said_as_it_is():
     declared = {(canonicalize_name(Requirement(line).name),
                  str(Requirement(line).specifier), "")
                 for line in PROJECT["dependencies"]}
+    marked = []
     for extra, lines in PROJECT["optional-dependencies"].items():
-        declared |= {(canonicalize_name(Requirement(line).name),
-                      str(Requirement(line).specifier),
-                      f"extra == '{extra}'") for line in lines}
-    assert recorded == declared
+        for line in map(Requirement, lines):
+            entry = (canonicalize_name(line.name), str(line.specifier))
+            if line.marker is None:
+                declared.add(entry + (f"extra == '{extra}'",))
+            else:
+                marked.append((entry, line.marker, extra))
+    assert {each for each in recorded
+            if each[:2] not in [entry for entry, _, _ in marked]} == declared
+    # A line with a marker of its own (PyMuPDF's two, v0.15.1): uv joins
+    # it with the extra and rewrites it, so the two are compared by what
+    # they decide over the grid (tests/test_v0151_pymupdf_two.py)
+    from test_v0151_pymupdf_two import grid, marker_environment
+    for entry, marker, extra in marked:
+        found = [each[2] for each in recorded if each[:2] == entry]
+        assert len(found) == 1, (entry, found)
+        for point in grid():
+            for given in (extra, ""):
+                env = marker_environment(*point, extra=given)
+                assert Marker(found[0]).evaluate(env) == (
+                    given == extra and marker.evaluate(env)), (entry, point)
     assert "description" not in ours[0]
     assert "description" not in ours[0]["metadata"]
 

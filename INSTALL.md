@@ -311,10 +311,13 @@ major release, on five libraries: the MCP library, pydantic and anyio,
 and, in the optional part for PDF and EPUB below, PyMuPDF and lxml. A
 new major release of one of these reaches you only with a release of
 Exegete that has been tried with it. Many others have no upper limit,
-EbookLib (which reads EPUBs) and Starlette (which the MCP library loads
-every time Exegete starts) among them, so a new release of one of them
-can reach you before Exegete has been tried with it, and could stop
-Exegete from starting or change what it reads from a document.
+EbookLib (which reads EPUBs), Starlette (which the MCP library loads
+every time Exegete starts), and onnxruntime and numpy (which the
+optional part brings on Windows x64 and Linux, below) among them, so a
+new release of one of them can reach you before Exegete has been tried
+with it, and could stop Exegete from starting or change what it reads
+from a document; a new major release of onnxruntime or numpy could stop
+PDFs being read at all, each then refused as damaged.
 
 If you would rather have the releases the tests ran with, the Claude
 Desktop extension above installs exactly those. Each release's notes,
@@ -352,13 +355,52 @@ above:
 $HOME\exegete-venv\Scripts\pip install "exegete[pdf-epub]"
 ```
 
+**Which PyMuPDF a computer takes.** With Python 3.11 to 3.14 on
+Windows x64 and on Linux (x86-64 and Arm), the part brings PyMuPDF 2,
+with nine more libraries it needs: onnxruntime, numpy, networkx,
+protobuf, flatbuffers, psutil, PyYAML, tabulate and packaging.
+Everywhere else it brings PyMuPDF 1.x, as before: where PyMuPDF 2 or
+onnxruntime has no ready-made package (Intel Macs, Windows on Arm, and
+Python 3.15 and later), since the Claude Desktop extension never
+compiles one; on Python 3.10, which PyMuPDF 2 does not support; and, for
+now, on Apple silicon Macs, where onnxruntime needs macOS 14 and a Mac
+on an earlier release could not install it. Both releases read the test
+documents' PDFs to the same text, the text QualCoder 4.0's own
+functions store. PyMuPDF 2 costs more: about 75 to 90 MB more to
+download and 150 to 190 MB more on disk in the Claude Desktop extension
+("What hosts do with the tools' read and write marks", below, gives
+each computer's figures; an environment with the development tools took
+about 180 to 215 MB more), and 0.4 to 1 second more to start reading
+each PDF.
+
+**Where pip cannot install the part.** pip chooses between the two
+releases by the system, the processor and the Python, and cannot tell
+some computers where PyMuPDF 2 has no ready-made package; there,
+installing the part makes pip try to build PyMuPDF 2 from its source,
+which needs build tools and usually fails. PyMuPDF 1.x has a ready-made
+package on three of them: Linux with musl (Alpine, for instance) on
+x86-64, 32-bit Python on Windows, and a free-threaded Python 3.14 on
+Linux x86-64. There, Exegete without the optional part for PDF and
+EPUB, then its three libraries with PyMuPDF 1.x, can be installed
+instead:
+
+```bash
+~/exegete-venv/bin/pip install exegete
+~/exegete-venv/bin/pip install "pymupdf>=1.26.7,<2" "ebooklib>=0.20" "lxml>=6.1.0,<7"
+```
+
+On Linux with a C library (glibc) older than 2.28, and with a
+free-threaded Python elsewhere, neither release has a ready-made
+package.
+
 **Its licence.** PyMuPDF and EbookLib are under the GNU Affero General
 Public License, version 3 (AGPL-3.0), so an install with this part is,
 taken as a whole, under the AGPL's terms, as QualCoder's own installs
 are; Exegete's own code stays under the LGPL (LGPL-3.0-or-later), and an
 install without the part is untouched. Neither library is inside
 Exegete's package or its extension file: both are fetched from PyPI on
-your computer. NOTICE lists them, with lxml (BSD-3-Clause). If your
+your computer. NOTICE lists them, with lxml (BSD-3-Clause), and the
+libraries PyMuPDF 2 brings, with their licences. If your
 institution or your project's terms rule out AGPL software, the Claude
 Desktop extension would not suit, since it always has the part; an
 install from PyPI without it keeps AGPL software off your computer.
@@ -1733,10 +1775,13 @@ hidden instructions could then have an assistant bring in another file
 unasked; allowing it once, after reading the preview, keeps you asked
 each time. PRIVACY.md, "Bringing documents in", says what reaches the AI
 provider. The Claude Desktop extension switches on the optional part
-for PDF and EPUB (PyMuPDF 1.28.2 and EbookLib 0.20, the releases it
-pins, with which Exegete's text is checked against QualCoder's; about
-24 to 35 MB more to
-download at the first start, AGPL-licensed); installed from PyPI
+for PDF and EPUB (AGPL-licensed), with the releases it pins, with which
+Exegete's text is checked against QualCoder's: on Windows x64 and Linux,
+PyMuPDF 2.0 and EbookLib 0.20, about 98 MB more to download at the
+first start on Windows and 114 to 118 MB on Linux (about 210 MB more on
+disk on Windows and 250 to 260 MB on Linux); on Macs and Windows on
+Arm, PyMuPDF 1.28.2 and EbookLib 0.20, about 24 to 33 MB more to
+download (62 to 77 MB on disk); installed from PyPI
 without it (`pip install exegete`), Exegete imports the other formats
 and says it cannot read PDF or EPUB yet ("PDF and EPUB: the optional
 part", above, says how to add it with pip, pipx and uv tool; for a copy

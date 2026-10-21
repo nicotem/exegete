@@ -292,6 +292,11 @@ def _ours(name: str, through_process: bool = False,
 
 
 def _same_library(name: str) -> bool:
+    """Whether the installed release of the library that reads `name` is
+    the one the record was made with, or one the record lists as giving
+    QualCoder's functions the same text (`same_text_with`, v0.15.1:
+    PyMuPDF 2.0, which the extension installs on Windows x64 and Linux
+    from Python 3.11, beside 1.28.2 elsewhere)."""
     library = DEPENDS_ON.get(name)
     if library is None:
         return True
@@ -299,7 +304,13 @@ def _same_library(name: str) -> bool:
         installed = metadata.version(library)
     except metadata.PackageNotFoundError:
         return False
-    return installed == EXPECTED["versions"].get(library)
+    return installed in _records_releases(library)
+
+
+def _records_releases(library: str) -> list:
+    """The release the record was made with, then those it lists."""
+    return [EXPECTED["versions"].get(library)] + \
+        EXPECTED.get("same_text_with", {}).get(library, [])
 
 
 def with_differences(name: str, qualcoders: str) -> str:
@@ -320,7 +331,8 @@ def _check(name: str, recorded: dict, ours: dict, live: bool = False
            ) -> None:
     """Exegete's outcome for `name` against QualCoder's. Against the
     record, a PDF's or EPUB's text is compared only at the library
-    release it was recorded with; against QualCoder's functions run
+    release it was recorded with, or one it lists as giving the same
+    text; against QualCoder's functions run
     afresh (`live`), both sides read with the one library installed, so
     the text is compared exactly whatever the release."""
     if name in DEPARTURES:
@@ -482,6 +494,7 @@ def test_a_live_comparison_is_exact_whatever_the_release(monkeypatch):
     recorded = dict(EXPECTED["files"][name])
     recorded["text"] = recorded["text"] + " words added"
     monkeypatch.setitem(EXPECTED["versions"], "pymupdf", "0.0.0")
+    monkeypatch.setitem(EXPECTED, "same_text_with", {})
     _check(name, recorded, _ours(name))
     with pytest.raises(AssertionError):
         _check(name, recorded, _ours(name), live=True)
@@ -490,9 +503,12 @@ def test_a_live_comparison_is_exact_whatever_the_release(monkeypatch):
 @pytest.mark.skipif(not os.environ.get("EXEGETE_PARITY_GATE"),
                     reason="only in CI's parity gate")
 def test_the_gate_reads_with_the_records_releases():
-    """CI's gate installs the PyMuPDF and EbookLib releases the record
-    names, the releases the extension pins, so the record's comparison of
-    PDF and EPUB text is never skipped there."""
+    """CI's gate reads with releases the record names, so its comparison
+    of PDF and EPUB text is never skipped there: the EbookLib release it
+    was made with, which the gate installs, and the PyMuPDF the lock
+    gives Ubuntu on Python 3.13 (2.0, listed in `same_text_with`, v0.15.1),
+    so the gate compares QualCoder's own functions with Exegete's under
+    it, and the suite compares each release with the record."""
     for library in sorted(set(DEPENDS_ON.values())):
-        assert metadata.version(library) == EXPECTED["versions"][library], \
+        assert metadata.version(library) in _records_releases(library), \
             library

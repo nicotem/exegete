@@ -393,16 +393,20 @@ jobs:
           python -m pip install --no-deps -e .
 
       # Both entries install from the lock (v0.15.1). The gate then
-      # reinstalls the PyMuPDF and EbookLib releases the record names,
-      # which the lock already holds (tests/test_v0150_lock.py), so their
-      # text is compared, not skipped, should the two ever part. The
+      # reinstalls the EbookLib release the record names, which the lock
+      # already holds (tests/test_v0150_lock.py), so its text is compared,
+      # not skipped, should the two ever part. PyMuPDF stays as the lock
+      # gives it here, 2.0 (v0.15.1), a release the record lists as
+      # giving QualCoder's functions the same text (`same_text_with`), so
+      # the gate compares QualCoder's own functions with Exegete's under
+      # 2.0 and the suite compares each release with the record. The
       # watch now watches QualCoder's newest code alone; the newest
       # library releases have a job of their own, newest-libraries.
-      - name: The record's PyMuPDF and EbookLib releases (gate)
+      - name: The record's EbookLib release (gate)
         if: matrix.which == 'gate'
         shell: bash
         run: |
-          pins=$(python -c "import json; v = json.load(open('tests/fixtures/import_expected.json'))['versions']; print('pymupdf==' + v['pymupdf'], 'ebooklib==' + v['ebooklib'])")
+          pins=$(python -c "import json; v = json.load(open('tests/fixtures/import_expected.json'))['versions']; print('ebooklib==' + v['ebooklib'])")
           pip install $pins
 
       - name: Exegete's text against QualCoder's

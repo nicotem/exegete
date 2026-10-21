@@ -34,6 +34,7 @@ the spelling chosen, so it behaves exactly as it did before the rename.
 """
 
 import os
+import sys
 from pathlib import Path
 from typing import (Any, Callable, Dict, List, Mapping, NamedTuple, Optional,
                     Tuple)
@@ -174,12 +175,26 @@ def old_spellings_in_use(environ: Optional[Mapping[str, str]] = None
     return lines
 
 
+# Three fixed settings for the reading process on Linux (v0.15.1), never
+# taken from the host: the address-space limit it sets on itself counts
+# what each thread reserves, and PyMuPDF 2.0 loads numpy and onnxruntime,
+# so the C library keeps two memory arenas rather than up to eight per
+# processor, and numpy's OpenBLAS and any OpenMP pool start one thread.
+READER_LINUX_SETTINGS = {"MALLOC_ARENA_MAX": "2",
+                         "OPENBLAS_NUM_THREADS": "1",
+                         "OMP_NUM_THREADS": "1"}
+
+
 def reader_process_environment() -> Dict[str, str]:
     """The few variables the document import's reading process is
     started with (0.14.3): the system path, the locale and,
-    on Windows, the system root; never the host's other settings."""
+    on Windows, the system root; never the host's other settings. On
+    Linux, READER_LINUX_SETTINGS as well, fixed here."""
     keep = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "SYSTEMROOT", "SystemRoot")
-    return {key: os.environ[key] for key in keep if key in os.environ}
+    env = {key: os.environ[key] for key in keep if key in os.environ}
+    if sys.platform.startswith("linux"):
+        env.update(READER_LINUX_SETTINGS)
+    return env
 
 
 def update_check(environ: Optional[Mapping[str, str]] = None

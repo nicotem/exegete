@@ -502,11 +502,12 @@ def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION):
                for p in platforms.split("."))
 
 
-def lock_wheel_gaps(lock, root, system, machine, root_extras=()):
-    """(package, version) the lock would install for `root` (with
-    `root_extras`) on that computer with no wheel that fits it."""
+def _lock_walk(lock, root, system, machine, root_extras=(),
+               python=build.PYTHON_VERSION):
+    """Each package the lock would install for `root` (with
+    `root_extras`) on that computer with CPython `python`, once."""
     from packaging.markers import Marker
-    environment = _marker_environment(system, machine)
+    environment = _marker_environment(system, machine, python)
     entries = {}
     for package in lock["package"]:
         entries.setdefault(package["name"], []).append(package)
@@ -519,7 +520,7 @@ def lock_wheel_gaps(lock, root, system, machine, root_extras=()):
         assert len(found) == 1, dependency
         return found[0]
 
-    gaps, seen = [], set()
+    seen, walked = set(), {}
     todo = [(entries[root][0], tuple(sorted(root_extras)))]
     while todo:
         package, extras = todo.pop()
@@ -536,13 +537,36 @@ def lock_wheel_gaps(lock, root, system, machine, root_extras=()):
                 continue
             todo.append((entry(dependency),
                          tuple(sorted(dependency.get("extra", [])))))
-        if package["name"] == root:
-            continue
+        if package["name"] != root:
+            walked[(package["name"], package["version"])] = package
+    return walked
+
+
+def lock_wheel_gaps(lock, root, system, machine, root_extras=(),
+                    python=build.PYTHON_VERSION):
+    """(package, version) the lock would install for `root` (with
+    `root_extras`) on that computer, with CPython `python`, with no
+    wheel that fits it."""
+    gaps = []
+    for (name, version), package in _lock_walk(
+            lock, root, system, machine, root_extras, python).items():
         wheels = [w["url"].rsplit("/", 1)[1]
                   for w in package.get("wheels", [])]
-        if not any(_wheel_fits(w, system, machine) for w in wheels):
-            gaps.append((package["name"], package["version"]))
+        if not any(_wheel_fits(w, system, machine, python) for w in wheels):
+            gaps.append((name, version))
     return sorted(set(gaps))
+
+
+def lock_walk_releases(lock, root, system, machine, root_extras=(),
+                       python=build.PYTHON_VERSION):
+    """{package: release} the same walk reaches (v0.15.1: PyMuPDF, and
+    numpy and networkx, are locked at two releases, one per computer and
+    Python)."""
+    walked = {}
+    for name, version in _lock_walk(lock, root, system, machine,
+                                    root_extras, python):
+        assert walked.setdefault(name, version) == version, name
+    return walked
 
 
 class TestAWheelForEveryComputer:
@@ -562,6 +586,8 @@ class TestAWheelForEveryComputer:
                     told.add((system, machine))
         assert told == set(ENVIRONMENTS)
         assert "cryptography" in settings["no-build-package"]
+        # v0.15.1: PyMuPDF 2.0 has only its source on some computers
+        assert "pymupdf" in settings["no-build-package"]
         assert self._lock()["required-markers"]
 
     def test_the_build_backend_is_pinned_for_uv(self):

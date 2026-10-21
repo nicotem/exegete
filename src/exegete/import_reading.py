@@ -65,6 +65,13 @@ from typing import Any, Dict, Optional, Tuple
 # gives a file a margin over it.
 READ_TIMEOUT_SECONDS = 30.0
 MEMORY_CAP_BYTES = 1024 * 1024 * 1024
+# A PDF's reading is given more (v0.15.1): PyMuPDF 2.0, which Windows x64
+# and Linux read PDFs with from Python 3.11, loads onnxruntime and numpy,
+# whose address space reached 1,242 MiB on Linux in the trial of 21
+# October 2026, where 1 GiB stopped it; 2 GiB keeps a PDF's own content
+# about the room 1.x has under 1 GiB. One figure for PDFs on every
+# system, whichever release reads them; every other kind keeps 1 GiB.
+PDF_MEMORY_CAP_BYTES = 2 * 1024 * 1024 * 1024
 MAX_ANSWER_BYTES = 16 * 1024 * 1024
 WATCH_INTERVAL_SECONDS = 0.05
 # The library Exegete reads each kind of file with (doc_readers), named
@@ -371,15 +378,24 @@ def reader_command() -> list:
     return [sys.executable, "-I", "-c", _CHILD_CODE, _package_parent()]
 
 
+def memory_cap_for(kind: str) -> int:
+    """The memory a reading of this kind of file is given: 2 GiB for a
+    PDF, 1 GiB for every other kind (v0.15.1)."""
+    return PDF_MEMORY_CAP_BYTES if kind == "pdf" else MEMORY_CAP_BYTES
+
+
 def read_in_process(kind: str, data: bytes, max_characters: int = 0,
                     timeout: float = READ_TIMEOUT_SECONDS,
-                    memory_cap: int = MEMORY_CAP_BYTES,
+                    memory_cap: Optional[int] = None,
                     character_set: Optional[str] = None) -> Dict[str, Any]:
     """Read one document's bytes in a reading process and return
     `doc_readers.read_document`'s answer, checked; or raise ReadFailed
-    with Exegete's own reason code. `character_set`: the reading the
+    with Exegete's own reason code. `memory_cap`: when not given, the
+    kind's own (`memory_cap_for`). `character_set`: the reading the
     researcher chose for a plain text file not saved as UTF-8 (a key of
     `doc_readers.READINGS`), sent only when given."""
+    if memory_cap is None:
+        memory_cap = memory_cap_for(kind)
     fields = {"kind": kind, "size": len(data), "memory": int(memory_cap),
               "max_characters": int(max_characters)}
     if character_set is not None:

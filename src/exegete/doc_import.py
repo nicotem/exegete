@@ -1129,7 +1129,9 @@ def _read_one(item: Item, data: bytes, ctx: Context,
         if failed.code == "reader_timeout":
             numbers["seconds"] = int(limit)
         if failed.code == "reader_memory":
-            numbers["limit_mb"] = import_reading.MEMORY_CAP_BYTES // MB
+            # the cap that applied: a PDF's is larger (v0.15.1)
+            numbers["limit_mb"] = \
+                import_reading.memory_cap_for(item.kind) // MB
         _refuse(item, failed.code, before_reading=False, **numbers)
         return
     evaluate(item, result, ctx)

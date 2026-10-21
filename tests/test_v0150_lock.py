@@ -21,9 +21,13 @@ These tests pin what the refresh of 13 October 2026 brought:
 - PyMuPDF held below 2 in the optional part `pdf-epub` (the lead's
   decision for 0.15.0, 19 October 2026): CI's suite installs with pip,
   not from the lock, and had begun to get PyMuPDF 2.0, which brings
-  libraries of its own and has not been looked at, while the lock and
-  the parity record hold 1.28.2; so every route reads PDFs with the 1.x
-  the checks passed with, and the lock records the same bound.
+  libraries of its own and had not been looked at, while the lock and
+  the parity record held 1.28.2. From v0.15.1 (the owner's ruling of 21
+  October 2026) the part names PyMuPDF in two lines, 1.x and 2.x, each
+  bounded below its next major release, the lock records the same two,
+  and its releases are those the parity record names (1.28.2, and 2.0
+  among the releases giving the same text); a real start loads neither
+  PyMuPDF nor the libraries PyMuPDF 2 brings.
 """
 
 import json
@@ -33,6 +37,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from packaging.markers import Marker
 from packaging.requirements import Requirement
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
@@ -42,6 +47,9 @@ sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server             # noqa: E402
 
+sys.path.insert(0, str(REPO / "tests"))
+import import_fixtures                       # noqa: E402
+
 try:
     import tomllib
 except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
@@ -50,8 +58,9 @@ except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
 with open(REPO / "pyproject.toml", "rb") as _handle:
     PYPROJECT = tomllib.load(_handle)
 ROOT = PYPROJECT["project"]["name"]
-PARITY = json.loads((REPO / "tests" / "fixtures" / "import_expected.json")
-                    .read_text(encoding="utf-8"))["versions"]
+RECORD = json.loads((REPO / "tests" / "fixtures" / "import_expected.json")
+                    .read_text(encoding="utf-8"))
+PARITY = RECORD["versions"]
 
 PYPI_INDEX = "https://pypi.org/simple"
 PYPI_FILES = "https://files.pythonhosted.org/packages/"
@@ -121,7 +130,12 @@ class TestTheReadersStay:
 
     @pytest.mark.parametrize("name", PARITY_LIBRARIES)
     def test_the_release_the_parity_record_names(self, name):
-        assert _versions(_lock(), name) == [PARITY[name]]
+        """The record's release, and for PyMuPDF the releases it lists as
+        giving QualCoder's functions the same text (v0.15.1)."""
+        named = [PARITY[name]] + RECORD.get("same_text_with", {}).get(
+            name, [])
+        assert sorted(_versions(_lock(), name), key=Version) == \
+            sorted(named, key=Version)
 
     def test_every_library_the_record_names_is_guarded(self):
         """A library the record gains later is guarded as well."""
@@ -165,40 +179,56 @@ class TestEveryPackageComesFromPyPI:
 
 
 def _extra_pymupdf():
-    """PyMuPDF's requirement in the optional part `pdf-epub`."""
+    """PyMuPDF's lines in the optional part `pdf-epub`, in their order:
+    1.x, then 2.x (v0.15.1)."""
     found = [Requirement(line) for line in
              PYPROJECT["project"]["optional-dependencies"]["pdf-epub"]
              if Requirement(line).name == "pymupdf"]
-    assert len(found) == 1, found
-    return found[0]
+    assert len(found) == 2, found
+    return found
 
 
-class TestPyMuPDFHeldBelowTwo:
+class TestPyMuPDFInTwoLines:
 
-    def test_the_extra_asks_for_a_release_below_2(self):
-        spec = _extra_pymupdf().specifier
-        for release in ("2.0", "2.0.1", "2.1"):
-            assert not spec.contains(release), release
-        # the release the lock and the parity record hold is allowed
-        assert spec.contains(PARITY["pymupdf"])
-        assert spec.contains("1.28.2")
-        # the floor that fixed PyMuPDF's advisory stays
-        assert not spec.contains("1.26.6")
-        assert spec.contains("1.26.7")
+    def test_each_line_keeps_below_its_next_major(self):
+        first, second = (line.specifier for line in _extra_pymupdf())
+        # 1.x: from the floor that fixed PyMuPDF's advisory, below 2
+        for release in ("1.26.7", "1.28.2", PARITY["pymupdf"]):
+            assert first.contains(release), release
+        for release in ("1.26.6", "2.0", "2.0.1", "2.1"):
+            assert not first.contains(release), release
+        # 2.x: from 2.0, below 3
+        for release in ("2.0", "2.1"):
+            assert second.contains(release), release
+        for release in ("1.28.2", "3.0"):
+            assert not second.contains(release), release
 
-    def test_the_lock_records_the_same_bound(self):
-        """`uv lock --check` compares these; the locked release keeps
-        within the bound."""
+    def test_the_lock_records_the_same_two(self):
+        """`uv lock --check` compares these. uv rewrites each line's
+        marker (python_full_version, reordered, joined with the extra),
+        so the markers are compared by what they decide over the grid
+        of computers and Pythons, not as text; each locked release keeps
+        within its line."""
+        from test_v0151_pymupdf_two import grid, marker_environment
         lock = _lock()
         ours = [p for p in lock["package"] if p["name"] == ROOT]
         locked = [d for d in ours[0]["metadata"]["requires-dist"]
                   if d["name"] == "pymupdf"]
-        assert len(locked) == 1, locked
-        assert locked[0]["marker"] == "extra == 'pdf-epub'"
-        assert SpecifierSet(locked[0]["specifier"]) == \
-            _extra_pymupdf().specifier
+        lines = _extra_pymupdf()
+        assert sorted(str(SpecifierSet(d["specifier"])) for d in locked) \
+            == sorted(str(line.specifier) for line in lines)
+        for line in lines:
+            entry = next(d for d in locked
+                         if SpecifierSet(d["specifier"]) == line.specifier)
+            for point in grid():
+                for extra in ("pdf-epub", ""):
+                    env = marker_environment(*point, extra=extra)
+                    assert Marker(entry["marker"]).evaluate(env) == (
+                        bool(extra) and line.marker.evaluate(env)), \
+                        (str(line.specifier), point, extra)
         for version in _versions(lock, "pymupdf"):
-            assert _extra_pymupdf().specifier.contains(version), version
+            assert sum(line.specifier.contains(version)
+                       for line in lines) == 1, version
 
     def test_the_changelog_says_so(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -232,18 +262,22 @@ def _child_env(home, mode):
 # nothing is fetched) and runs the stdio loop, which stops at once on an
 # empty input. What is loaded is read at exit, after all of that, and
 # written to a file rather than printed, since the stdio loop takes over
-# standard output. With it, whether the two libraries are there to be
+# standard output. With it, whether the libraries are there to be
 # loaded at all (if they were not, their absence would prove nothing).
+# v0.15.1: PyMuPDF too (under either of its names), and onnxruntime and
+# numpy, which PyMuPDF 2 brings and loads; a start loads none of them.
+WATCHED = ("jwt", "cryptography", "pymupdf", "fitz", "onnxruntime", "numpy")
 STARTED = """
 import atexit, importlib.util, json, sys
 report = sys.argv[1]
+watched = %r
 seen = {"returned": False}
 
 def write():
-    seen["installed"] = [n for n in ("jwt", "cryptography")
+    seen["installed"] = [n for n in watched
                          if importlib.util.find_spec(n) is not None]
     seen["loaded"] = sorted(m for m in sys.modules
-                            if m.split(".")[0] in ("jwt", "cryptography"))
+                            if m.split(".")[0] in watched)
     with open(report, "w", encoding="utf-8") as handle:
         json.dump(seen, handle)
 
@@ -253,7 +287,7 @@ import exegete.server as server
 seen["mode"] = server._resolve_toolset_mode()
 server.main()
 seen["returned"] = True
-"""
+""" % (WATCHED,)
 
 
 class TestStartingLoadsNeitherLibrary:
@@ -271,7 +305,16 @@ class TestStartingLoadsNeitherLibrary:
         answer = json.loads(report.read_text(encoding="utf-8"))
         assert answer["mode"] == mode
         assert answer["returned"], proc.stderr
-        assert answer["installed"] == ["jwt", "cryptography"]
+        installed = set(answer["installed"])
+        assert {"jwt", "cryptography"} <= installed
+        # PyMuPDF wherever the optional part is installed, and the
+        # libraries PyMuPDF 2 brings wherever its line applies, so that
+        # the check is not empty there (on Python 3.10 and on Macs,
+        # PyMuPDF alone is checked)
+        if import_fixtures.optional_part_installed():
+            assert "pymupdf" in installed
+            if _extra_pymupdf()[1].marker.evaluate():
+                assert {"onnxruntime", "numpy"} <= installed
         assert answer["loaded"] == [], proc.stderr
 
     def test_every_mode_is_covered(self):

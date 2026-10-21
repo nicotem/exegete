@@ -840,3 +840,34 @@ LGPL (the maintainer's decision of 6 October 2026, which also switches the
 part on in the Claude Desktop extension). None of these libraries is
 contained in Exegete's package or its Claude Desktop extension file:
 they are fetched from PyPI on the researcher's computer.
+
+With Python 3.11 to 3.14 on Windows x64 and on Linux (x86-64 and Arm),
+the part brings PyMuPDF 2 (from v0.15.1), and with it nine libraries
+more, fetched from PyPI likewise, under these licences as the licence
+files and metadata inside the packages the lock gives those computers
+state them:
+
+- onnxruntime: MIT, Microsoft Corporation; its packages also carry
+  Microsoft's notices for the third-party software they contain
+  (onnxruntime/ThirdPartyNotices.txt).
+- numpy: BSD-3-Clause, NumPy Developers, with parts under 0BSD, MIT,
+  Zlib and CC0-1.0; its packages for Windows and Linux also contain
+  OpenBLAS (BSD-3-Clause) with LAPACK (BSD-3-Clause-Open-MPI) and the
+  GCC runtime libraries (GPL-3.0-or-later with the GCC Runtime Library
+  Exception), and on Linux libquadmath (LGPL-2.1-or-later), each named
+  in the package's LICENSE.txt.
+- networkx: BSD-3-Clause, NetworkX Developers.
+- psutil: BSD-3-Clause, Jay Loden, Dave Daeschler and Giampaolo Rodola.
+- protobuf: BSD-3-Clause, Google Inc.
+- PyYAML: MIT, Ingy döt Net and Kirill Simonov.
+- tabulate: MIT, Sergey Astanin and contributors.
+- flatbuffers: Apache-2.0, as its metadata says (its package carries no
+  licence file).
+- packaging: Apache-2.0 or BSD-2-Clause, Donald Stufft and individual
+  contributors.
+
+Two packages more, pymupdf-layout and pymupdf4llm, are empty at 2.0:
+their code and its trained models are inside PyMuPDF's own package,
+under PyMuPDF's statement, "Dual Licensed - GNU AFFERO GPL 3.0 or
+Artifex Commercial License". Every other computer takes PyMuPDF 1.x and
+none of these.

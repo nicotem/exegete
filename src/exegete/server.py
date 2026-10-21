@@ -6103,6 +6103,19 @@ SAVE_NAMES_LIST_PATTERN = (
     "such a name may be left in the text, stop the import with an error, "
     "or replace other words. The researcher may want to check what those "
     "imports store.")
+# v0.15.1: the lines whose real name's first word has no line of its own
+# (pseudonymise.first_word), a warning that never blocks
+SAVE_NAMES_LIST_FIRST_NAMES = (
+    "Each real name is replaced only as written: the same capitals, whole "
+    "words, its words on one line. The lines in "
+    "names_without_a_line_for_their_first_name hold a name of several "
+    "words whose first word has no line of its own, so that word alone (a "
+    "first name, say) stays in the text. If the documents use it alone, "
+    "the researcher may give it a line with its pseudonym. Two cautions: a "
+    "first name that two people on the list share can carry one pseudonym "
+    "only, which then has to fit both, or no line; and a line for a title "
+    "(Dr, Mr) replaces that word everywhere. Each import counts, by file, "
+    "the places where a listed name may still show in another form.")
 # Fix round 1: QualCoder 4.0's window signs, passed on as the import's and
 # the restore's previews pass them on, never a refusal
 SAVE_NAMES_LIST_GUI_HINT = (
@@ -6335,6 +6348,13 @@ def _names_list_review(folder: Path) -> _NamesListReview:
     # backslash
     patterns = [line for line, real_name, _ in pairs
                 if _read_as_a_pattern(real_name)]
+    # v0.15.1: the lines whose real name has a first word that is the real
+    # name of no line and no kept entry, compared exactly, as the list
+    # compares; that word alone stays in the text
+    own_lines = set(lines_of) | set(kept_names)
+    first_names = [line for line, real_name, _ in pairs
+                   if (word := pseudo.first_word(real_name)) is not None
+                   and word not in own_lines]
     kept_backslash = sum(1 for index in kept
                          if "\\" in existing[index]["pseudonym"])
     # 6. The guard: the engine's own check of the list a save would write
@@ -6396,6 +6416,7 @@ def _names_list_review(folder: Path) -> _NamesListReview:
         "pseudonyms_putting_a_name_back": put_back_block,
         "pseudonyms_on_more_than_one_line": _capped(shared),
         "real_names_read_as_patterns": _capped(patterns),
+        "names_without_a_line_for_their_first_name": _capped(first_names),
         "kept_entries_with_a_backslash": kept_backslash,
         "effect": {
             "entries_after": len(items),
@@ -6421,6 +6442,8 @@ def _names_list_review(folder: Path) -> _NamesListReview:
         warnings.append(SAVE_NAMES_LIST_KEPT_BACKSLASH)
     if patterns:
         warnings.append(SAVE_NAMES_LIST_PATTERN)
+    if first_names:
+        warnings.append(SAVE_NAMES_LIST_FIRST_NAMES)
     rows = {"names_file": hashlib.sha256(raw_file).hexdigest(),
             "list": pseudonyms_json_fingerprint(folder)}
     return _NamesListReview(None, preview, rows, blocking, warnings,

@@ -150,6 +150,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   too long for it, is said to be not checked, never clean. PDFs are
   counted too: a name written otherwise in a PDF still does not hold it
   back. Nothing the import replaces or stores changes.
+- **The names file's first names.** `save_names_list`'s preview gives,
+  by line number, the lines whose real name has several words and whose
+  first word has no line of its own
+  (`names_without_a_line_for_their_first_name`), with a warning that
+  never blocks: that word alone (a first name, say) stays in the text
+  unless it is given a line with its pseudonym. The warning names two
+  cautions: a first name two people on the list share can carry one
+  pseudonym only, and a line for a title (Dr, Mr) replaces that word
+  everywhere. The preview's signed state holds the new count, so a token
+  from a preview made before the update is refused as changed; a new
+  preview mends it.
 
 ### Changed
 

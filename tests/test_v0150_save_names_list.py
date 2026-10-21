@@ -962,9 +962,15 @@ class TestTheWarnings:
         assert server.SAVE_NAMES_LIST_SHARED == SHARED
 
     def test_no_warning_on_a_clean_list(self, selected):
-        _write_names(selected, GOOD, "Brisemar Tull = Participant B")
+        # v0.15.1: each first name with a line of its own, its pseudonym
+        # distinct, so that no warning is due
+        _write_names(selected, GOOD, "Brisemar Tull = Participant B",
+                     "Quorvin = Participant Q2", "Brisemar = Participant B2")
         answer = _preview(selected)
         assert "warnings" not in answer
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"] == {
+                "count": 0, "lines": []}
         assert answer["preview"]["pseudonyms_putting_a_name_back"] == {
             "count": 0, "lines": []}
 
@@ -993,7 +999,8 @@ class TestTheWarnings:
         """Fix round 1: an older names file can change a pseudonym back,
         so a change warns as a removal does, and the researcher decides."""
         _write_list(selected, [("Quorvin Ashdale", "Participant Z")])
-        _write_names(selected, GOOD)
+        # v0.15.1: the first name with a line of its own
+        _write_names(selected, GOOD, "Quorvin = Participant Q2")
         answer = _preview(selected)
         assert answer["preview"]["effect"]["changed"] == 1
         assert answer["warnings"] == [server.SAVE_NAMES_LIST_CHANGES]
@@ -1057,13 +1064,68 @@ class TestTheWarnings:
             "said P today"
 
     def test_no_warning_on_a_clean_list_of_ordinary_names(self, selected):
+        # v0.15.1: each first word with a line of its own
         _write_names(selected, GOOD, "Jean-Paul O'Brien = Participant J",
-                     "Smith, Jane = Participant S")
+                     "Smith, Jane = Participant S",
+                     "Quorvin = Participant Q2", "Jean-Paul = Participant J2",
+                     "Smith = Participant S2")
         answer = _preview(selected)
         assert answer["preview"]["real_names_read_as_patterns"] == {
             "count": 0, "lines": []}
         assert answer["preview"]["kept_entries_with_a_backslash"] == 0
         assert "warnings" not in answer
+
+    # v0.15.1: a name of several words whose first word has no line of
+    # its own, which stays in the text alone; a warning, never blocking
+
+    def test_a_first_name_with_no_line_of_its_own(self, selected):
+        """Breaks: counted as blocking; the field dropped."""
+        _write_names(selected, GOOD, "Brisemar Tull = Participant B",
+                     "Brisemar = Participant B")
+        answer = _preview(selected)
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"] == {
+                "count": 1, "lines": [6]}
+        assert server.SAVE_NAMES_LIST_FIRST_NAMES in answer["warnings"]
+
+    def test_a_line_for_the_first_name_settles_it(self, selected):
+        _write_names(selected, GOOD, "Brisemar Tull = Participant B",
+                     "Brisemar = Participant B", "Quorvin = Participant Q2")
+        answer = _preview(selected)
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"] == {
+                "count": 0, "lines": []}
+        assert server.SAVE_NAMES_LIST_FIRST_NAMES not in answer["warnings"]
+
+    def test_the_first_name_is_compared_exactly_as_the_list_compares(
+            self, selected):
+        _write_names(selected, GOOD, "QUORVIN = Participant Q2",
+                     "de la Cruz = Participant C", "J Tull = Participant T")
+        answer = _preview(selected)
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"]["lines"] == [6]
+
+    def test_a_kept_entry_for_the_first_name_settles_it(self, selected):
+        """An entry of the list the names file cannot hold, kept as it is,
+        whose real name is the first word."""
+        _write_list(selected, [("Quorvin", "Mr = Q")])
+        _write_names(selected, GOOD)
+        answer = _preview(selected)
+        assert answer["preview"]["effect"][
+            "kept_entries_the_file_cannot_hold"] == 1
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"]["count"] == 0
+
+    def test_the_first_names_warning_says_what_and_its_cautions(self):
+        text = server.SAVE_NAMES_LIST_FIRST_NAMES
+        for words in ("names_without_a_line_for_their_first_name",
+                      "so that word alone (a first name, say) stays in the "
+                      "text",
+                      "a first name that two people on the list share can "
+                      "carry one pseudonym only",
+                      "a line for a title (Dr, Mr) replaces that word "
+                      "everywhere"):
+            assert words in text, words
 
 
 # ---------------------------------------------------------------------------

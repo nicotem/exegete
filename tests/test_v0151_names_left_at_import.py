@@ -20,6 +20,7 @@ outside the project's lock file and SQLite's write lock.
 import json
 import logging
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -122,6 +123,64 @@ class TestTheFirstWord:
             "count": 2, "matches": 3, "stopped": True}
         assert alone.work("x" * 10) == 10 * (
             alone.units + pseudo.RESIDUE_WORK_PER_CHARACTER)
+
+    def test_the_first_words_capture_nothing(self):
+        """Fix round 1: a capturing group for each first word made the
+        engine's cost at each position grow with the square of their
+        number, which the budgets' units, linear in it, do not price
+        (break: each alternative a capturing group again)."""
+        pairs = [(f"Qu{a}{b}rvin Ashdale", f"Participant {a}{b}")
+                 for a in "aeiou" for b in "lmnrst"]
+        alone = pseudo.FirstNamesAlone(_compiled(pairs))
+        assert len(alone.rests) == 30
+        assert alone.pattern.groups == 0
+        assert _alone(pairs, "Quamrvin said; QUAMRVIN ASHDALE too.") == 1
+
+    # First words whose matches only the order, or the case-insensitive
+    # matching of the dotted and dotless i, tell apart
+    TRICKY = [("Mary-Jane Doe", "Participant 1"),
+              ("Maryjane Smith", "Participant 2"),
+              ("Jim Kaya", "Participant 3"), ("Jım Demir", "Participant 4"),
+              ("Bora Kaya", "Participant 5"), ("Ali Yılmaz", "Participant 6"),
+              ("Élodie Brun", "Participant 7"),
+              ("Elodie Martin", "Participant 8")]
+    TRICKY_TEXT = ("MaryJane Doe and MaryJane Smith; MARY JANE spoke. "
+                   "Jım Kaya, JIM DEMIR, Jım, JİM. ALİ YILMAZ, ALİ, Ali. "
+                   "ÉLODIE MARTIN, Elodie Brun, ELODIE.")
+
+    def test_the_group_found_is_the_alternations_choice(self):
+        """Each match's group is the one a capturing group would name,
+        and the count the same (breaks: the groups with one key tried
+        last first; the dotted and dotless i not read as i)."""
+        alone = pseudo.FirstNamesAlone(_compiled(self.TRICKY))
+        reference = re.compile("(?<!\\w)(?:" + "|".join(
+            "(" + alternative + ")" for alternative in alone._alternatives)
+            + ")(?!\\w)")
+        seen = pseudo._reader_sees(self.TRICKY_TEXT)
+        found = 0
+        for match in reference.finditer(seen):
+            group = match.lastindex - 1
+            assert alone.group_of(match.group()) == group, match.group()
+            found += not alone.rests[group].match(seen, match.end())
+        assert found == alone.count(self.TRICKY_TEXT)["count"] == 10
+
+    def test_a_match_finds_its_group_by_its_key(self, monkeypatch):
+        """One check of a whole match for each match, the dotted capital
+        I and the dotless i included: the group is looked up, never
+        searched for (breaks: the lookup removed; the i's not read as
+        i)."""
+        alone = pseudo.FirstNamesAlone(_compiled(self.TRICKY))
+        checks = []
+        real = pseudo.FirstNamesAlone._matches_whole
+
+        def matches_whole(self, index, matched):
+            checks.append(matched)
+            return real(self, index, matched)
+        monkeypatch.setattr(pseudo.FirstNamesAlone, "_matches_whole",
+                            matches_whole)
+        result = alone.count(self.TRICKY_TEXT)
+        assert result["matches"] == 13
+        assert len(checks) == result["matches"]
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +431,20 @@ def test_the_note_and_the_line_come_once_with_any_count(project, tmp_path,
         done["for_the_researcher"]
 
 
+def test_the_hint_names_the_note_only_when_there_is_one(project, tmp_path):
+    """Break: listed_names_left_note named in every preview's hint."""
+    _names_list(project)
+    with_note = _call(paths=[str(_folder(tmp_path / "a",
+                                         {"P01.txt": "Quorvin said.\n"}))])
+    without = _call(paths=[str(_folder(tmp_path / "b",
+                                       {"P02.txt": "Nobody here.\n"}))])
+    assert "listed_names_left_note" in with_note
+    assert "listed_names_left_note" in with_note["hint"]
+    assert "listed_names_left_note" not in without
+    assert "listed_names_left_note" not in without["hint"]
+    assert "every warning" in without["hint"]
+
+
 # ---------------------------------------------------------------------------
 # The allowance, each call, under pseudonymise_source's four rules
 # ---------------------------------------------------------------------------
@@ -464,6 +537,22 @@ def test_a_count_stopped_part_way_says_at_least(monkeypatch, text):
     assert _said(item, "listed_names_left_at_least",
                  places=words.places_phrase(least))
     assert after.numbers["listed_names_left"] == {"not_checked": True}
+
+
+def test_a_first_file_not_checked_is_not_said_to_follow_others(
+        monkeypatch):
+    """The count could not be made, so the first file is not checked: the
+    words give no cause that is untrue of it (break: the words of an
+    allowance spent on the files before it)."""
+    def unusable(compiled):
+        raise ValueError("no")
+    monkeypatch.setattr(pseudo, "FirstNamesAlone", unusable)
+    (item,) = _count("Quorvin said.")
+    assert item.numbers["listed_names_left"] == {"not_checked": True}
+    assert _said(item, "listed_names_left_not_checked")
+    for text in (words.say(words.WARNINGS, "listed_names_left_not_checked"),
+                 words.LISTED_NAMES_LEFT_NOTE):
+        assert "files before it" not in text
 
 
 def test_the_words_for_the_counts():

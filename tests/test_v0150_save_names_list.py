@@ -1127,6 +1127,13 @@ class TestTheWarnings:
                       "everywhere"):
             assert words in text, words
 
+    def test_the_first_names_warning_names_the_tool_that_counts(self):
+        """import_text_file applies the list too and counts nothing
+        (break: "Each import counts")."""
+        text = server.SAVE_NAMES_LIST_FIRST_NAMES
+        assert "import_documents" in text
+        assert "import_text_file" not in text
+
 
 # ---------------------------------------------------------------------------
 # The effect against the list now

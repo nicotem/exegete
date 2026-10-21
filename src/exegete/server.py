@@ -6114,8 +6114,9 @@ SAVE_NAMES_LIST_FIRST_NAMES = (
     "the researcher may give it a line with its pseudonym. Two cautions: a "
     "first name that two people on the list share can carry one pseudonym "
     "only, which then has to fit both, or no line; and a line for a title "
-    "(Dr, Mr) replaces that word everywhere. Each import counts, by file, "
-    "the places where a listed name may still show in another form.")
+    "(Dr, Mr) replaces that word everywhere. Each import_documents call "
+    "counts, by file, the places where a listed name may still show in "
+    "another form.")
 # Fix round 1: QualCoder 4.0's window signs, passed on as the import's and
 # the restore's previews pass them on, never a refusal
 SAVE_NAMES_LIST_GUI_HINT = (
@@ -12363,12 +12364,15 @@ def _import_documents_preview(paths, ctx, stops, token_args,
     if "character_sets" in token_args:
         # Given back only when given (v0.15.1): the file labels and keys.
         arguments["character_sets"] = dict(token_args["character_sets"])
+    # The note is named only in a preview that carries it
+    shown = ("the summary, the names list line, listed_names_left_note and "
+             "every warning" if "listed_names_left_note" in preview else
+             "the summary, the names list line and every warning")
     try:
         payload = _issue_preview(
             "import_documents", token_args, preview, [],
-            "Show the researcher the summary, the names list line, "
-            "listed_names_left_note and every warning, and wait for their "
-            "word before calling again with the token.",
+            f"Show the researcher {shown}, and wait for their word before "
+            "calling again with the token.",
             arguments, state_preview=result.fingerprint(ctx))
     except PreviewSecretUnavailable:
         return json.dumps(

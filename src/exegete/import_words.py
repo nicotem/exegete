@@ -649,8 +649,8 @@ WARNINGS = {
         "there)."),
     "listed_names_left_not_checked": ("information",
         "Whether a name from your names list still shows here in a form "
-        "the list does not replace was not checked: this call's allowance "
-        "for the count was spent on the files before it."),
+        "the list does not replace was not checked in this call: the "
+        "count's allowance ran out, or the count could not be made."),
     "listed_names_left_too_large": ("information",
         "This file is too long to be checked, in any batch, against a "
         "names list of this size, so a name from the list may still show "
@@ -729,10 +729,9 @@ LISTED_NAMES_LEFT_NOTE = (
     "more. In a PDF no name is replaced: such a line holds the PDF back. "
     "A name broken by a line break, a tab or an invisible character "
     "cannot be a line, and no Exegete tool replaces it: it can be "
-    "corrected in the document before the import. A file not checked "
-    "because this call's allowance ran out is checked in a smaller "
-    "batch, with fewer or shorter files; one too long for a list of this "
-    "size is checked in no batch.")
+    "corrected in the document before the import. A file not checked in "
+    "this call may be checked in a smaller batch, with fewer or shorter "
+    "files; one too long for a list of this size is checked in no batch.")
 
 
 def places_phrase(count: int) -> str:

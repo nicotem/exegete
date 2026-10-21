@@ -2582,13 +2582,24 @@ def first_word(name: Any) -> Optional[str]:
 
 def _first_word_alternative(firsts: Sequence[str],
                             parts: Sequence[str]) -> str:
-    """One group of first words as one alternative, a group of its own:
-    its first letters as written, then the rest of the word's parts,
-    joined by `_SEPARATOR_RUN`, in any case; every piece escaped."""
-    return ("((?:" + "|".join(re.escape(letter) for letter in sorted(firsts))
+    """One group of first words as one alternative: its first letters as
+    written, then the rest of the word's parts, joined by
+    `_SEPARATOR_RUN`, in any case; every piece escaped. It captures
+    nothing: a capturing group for each alternative makes the engine's
+    cost at each position grow with the square of their number (fix
+    round 1), which the budgets' units, linear in it, do not price."""
+    return ("(?:" + "|".join(re.escape(letter) for letter in sorted(firsts))
             + ")(?i:" + _SEPARATOR_RUN.join(
                 [re.escape(parts[0][1:])]
-                + [re.escape(part) for part in parts[1:]]) + "))")
+                + [re.escape(part) for part in parts[1:]]) + ")")
+
+
+def _first_word_key(folded: str) -> str:
+    """The key that finds a match's group: casefolded letters and digits,
+    no separator, with the dotted and the dotless i read as i, since the
+    pattern's case-insensitive matching equates i, I, the dotted capital
+    and the dotless small i, which casefolding keeps apart."""
+    return folded.replace("i\u0307", "i").replace("\u0131", "i")
 
 
 class FirstNamesAlone:
@@ -2606,10 +2617,13 @@ class FirstNamesAlone:
     ("JANE DOE", Jane and Doe on two lines, "Jane Does", "Mary-Jane
     O'Neil" with a curly apostrophe where "Mary-Jane O'Neil" is listed)
     and is not counted here; the longer first words come first, so
-    "Mary-Jane" refused is never counted as "Mary".
-    `Compiled`, `NameDetector` and the rewrite are untouched."""
+    "Mary-Jane" refused is never counted as "Mary". The alternatives
+    capture nothing (fix round 1): a match's group is found from its
+    casefolded letters and digits (`group_of`). `Compiled`,
+    `NameDetector` and the rewrite are untouched."""
 
-    __slots__ = ("pattern", "rests", "units")
+    __slots__ = ("pattern", "rests", "units", "_alternatives", "_by_key",
+                 "_compiled")
 
     def __init__(self, compiled: "Compiled"):
         listed = {tuple(_fold(part) for part in _detector_parts(form))
@@ -2637,16 +2651,48 @@ class FirstNamesAlone:
                 key=lambda alternative: (-len(alternative), alternative)))
                 + ")")
             for group in ordered]
+        self._alternatives = [
+            _first_word_alternative(group["firsts"], group["parts"])
+            for group in ordered]
+        self._compiled: Dict[int, "re.Pattern[str]"] = {}
+        self._by_key: Dict[str, List[int]] = {}
+        for index, group in enumerate(ordered):
+            self._by_key.setdefault(_first_word_key("".join(
+                _fold(part) for part in group["parts"])), []).append(index)
         self.pattern: Optional["re.Pattern[str]"] = (
-            re.compile("(?<!\\w)(?:" + "|".join(
-                _first_word_alternative(group["firsts"], group["parts"])
-                for group in ordered) + ")(?!\\w)")
+            re.compile("(?<!\\w)(?:" + "|".join(self._alternatives)
+                       + ")(?!\\w)")
             if ordered else None)
         # Priced as `Compiled.form_units` prices the forms: a unit for
         # each started block of FORM_UNIT_CHARS characters of each first
         # word's reading
         self.units = sum(-(-reading_length(group["word"]) // FORM_UNIT_CHARS)
                          for group in ordered)
+
+    def _matches_whole(self, index: int, matched: str) -> bool:
+        pattern = self._compiled.get(index)
+        if pattern is None:
+            pattern = self._compiled[index] = re.compile(
+                self._alternatives[index])
+        return pattern.fullmatch(matched) is not None
+
+    def group_of(self, matched: str) -> int:
+        """The group whose alternative the pattern matched as `matched`.
+
+        The alternation chose the first alternative that matches
+        `matched` whole (an earlier one would have matched there
+        itself). Looked for first among the groups with its key, in
+        order, which hold that one unless the pattern's case-insensitive
+        matching equates a letter the key does not; failing them, among
+        all the groups, in order, which is the alternation's choice."""
+        key = _first_word_key(_SEPARATOR_SPLIT.sub("", matched).casefold())
+        for index in self._by_key.get(key, ()):
+            if self._matches_whole(index, matched):
+                return index
+        for index in range(len(self._alternatives)):
+            if self._matches_whole(index, matched):
+                return index
+        raise LookupError("no first word matches")
 
     def work(self, text: str, length: Optional[int] = None) -> int:
         """What counting `text` costs, in the budgets' units: nothing
@@ -2674,7 +2720,8 @@ class FirstNamesAlone:
             spent += 1
             if max_matches is not None and spent > max_matches:
                 return {"count": found, "matches": spent, "stopped": True}
-            if self.rests[match.lastindex - 1].match(seen, match.end()):
+            if self.rests[self.group_of(match.group())].match(
+                    seen, match.end()):
                 continue
             found += 1
         return {"count": found, "matches": spent, "stopped": False}

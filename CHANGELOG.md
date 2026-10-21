@@ -94,6 +94,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `known_faults` field, where 0.15.0 had `deprecated`; a script or saved
   instruction that read `deprecated` should read `known_faults`.
 
+### Added: choosing how a file not saved as UTF-8 is read
+
+- **The preview shows one line of a plain text file not saved as
+  UTF-8 as each character set that can read it reads it.** Such a
+  file (plain text, Markdown or subtitles) is still held back, with
+  the steps to save a copy as UTF-8; now, for the first five such
+  files in a preview, one line of each is shown in each of 24
+  character sets, in a fixed order: Windows', the Mac's, ISO's and
+  DOS's Western sets, the Central European, Cyrillic and Greek ones,
+  Japanese, Chinese and Korean, and UTF-16 and UTF-32 only after the
+  mark at the start of the file that names them, and then alone. A set
+  is left out when its reading fails, or holds a NUL or a control code
+  from U+0080 to U+009F; sets that read the whole file alike are one
+  choice; the line shown is the one whose readings differ most; the
+  names are those TextEdit shows. **These lines reach the AI
+  provider**, perhaps for a file never imported; no line is shown in
+  which a name from the names list appears in any reading, the list
+  switched off for the import included, but other names can be in it,
+  and so can a listed name in a file saved in a set not offered
+  (Turkish, Baltic, Hebrew, Arabic, Thai or Vietnamese, say), which
+  every set offered writes with other letters.
+- **`import_documents` takes `character_sets`.** On the researcher's
+  word, it names the reading picked for each such file ({the file as
+  the preview names it: that reading's `character_set`}); the preview
+  is asked again with it, and the import reads the file in that set
+  alone, stores its text as UTF-8, copies the original unchanged, and
+  writes a line in the file's memo saying how it was read, which the
+  import's answer says too. A file that set cannot read is held back
+  (`not_in_chosen_set`); a file valid as UTF-8 is read as UTF-8
+  whatever is chosen, and the preview counts the choices it did not use
+  (`character_sets_not_used`). A call without it imports as before. A
+  wrong pick reads accented letters as others, and a listed name
+  written with them is then not replaced: restoring the backup taken
+  just before takes the import back. QualCoder guesses a plain text
+  file's character set (charset-normalizer, then Windows Western, then
+  Latin-1); Exegete guesses nothing, shows every reading and lets the
+  researcher choose, a named departure (TOOLS.md, "Document import:
+  where it departs from QualCoder").
+
 ### Changed
 
 - **The approval token's tag is now under its signature.** The token a
@@ -562,21 +601,21 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (79 tools; 82 in 0.15.0) | 202,652 | 206,624 | 213,016 | 217,084 |
+| `full` (79 tools; 82 in 0.15.0) | 202,828 | 206,624 | 213,196 | 217,084 |
 | `core` (26 tools; 25 in 0.15.0) | 71,685 | 68,258 | 75,349 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 202,652 characters (about 50.7k tokens
+- Serialised tool JSON: full = 202,828 characters (about 50.7k tokens
   at chars/4) over 79 tools, and core = 71,685 (about 17.9k) over 26,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 213,016 and
+  which also gives exactly 0.15.0's figures for its tree), 213,196 and
   75,349. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
-  25 on 3.13), nine changes moved them. The first, `create_backup`
+  25 on 3.13), ten changes moved them. The first, `create_backup`
   accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -639,8 +678,15 @@ schemas together, as below; the brief as `read_brief` returns it):
   as announced in 0.14: `pseudonymise_source`'s entry without its
   deprecation sentence and without the policy's paragraph among its
   arguments, 700 characters fewer in `full` (732 on 3.11); `core` does
-  not serve the tool. Rounded, the figures are about 203,000 and 72,000
-  characters, about 51k and 18k tokens. No other tool's entry changed.
+  not serve the tool. The tenth, the encoding choice: `import_documents`'
+  description says that one line of a file not in UTF-8 is shown and
+  has a line for `character_sets`, its pointer to `import_text_file` and
+  to the `converted_documents` topic gone to keep it within 2,048
+  characters, 18 characters more (22 on 3.11), and its schema gains
+  `character_sets`, 158 more: 176 more in `full` (180 on 3.11); `core`
+  does not serve the tool. Rounded, the figures are about 203,000 and
+  72,000 characters, about 51k and 18k tokens. No other tool's entry
+  changed.
   The full brief says that
   Exegete takes a backup before every change, rather than "unless the
   researcher asks for none": 14 characters fewer.

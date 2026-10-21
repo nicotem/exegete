@@ -22,7 +22,10 @@ kept text is found only under that digest.
   says the folder is not left out).
 - One entry per text, `<name>.json` (0600): the name is keyed with the
   preview-token secret, so it confirms no guessed content; the content
-  is ASCII JSON signed with the same secret.
+  is ASCII JSON signed with the same secret. A file read in the
+  character set the researcher chose (v0.15.1) is kept under that
+  choice too, in the keyed name and the signed entry, so a text kept
+  from a preview with another choice, or none, is not used.
 - `load` returns the checked answer only when every check passes;
   otherwise None, and the import reads that file again as 0.14.3 did.
 - An entry is used for up to 65 minutes (the token's hour and its five
@@ -288,9 +291,14 @@ def _secret() -> Optional[bytes]:
 
 
 def _entry_name(secret: bytes, digest: str, kind: str,
-                max_characters: int) -> str:
-    """An entry's file name: keyed, so it confirms no guessed content."""
+                max_characters: int,
+                character_set: Optional[str] = None) -> str:
+    """An entry's file name: keyed, so it confirms no guessed content.
+    With a chosen character set (v0.15.1), keyed on it too; without one,
+    exactly as before."""
     said = f"{digest}|{kind}|{max_characters}|{__version__}"
+    if character_set is not None:
+        said += f"|{character_set}"
     return hmac.new(secret, said.encode("utf-8"),
                     hashlib.sha256).hexdigest()[:32] + ENTRY_SUFFIX
 
@@ -328,7 +336,8 @@ def _folder_bytes(path: Path, leaving: str) -> int:
 
 
 def keep(digest: str, size: int, kind: str, max_characters: int,
-         answer: Dict[str, Any]) -> bool:
+         answer: Dict[str, Any],
+         character_set: Optional[str] = None) -> bool:
     """Keep one file's checked answer for its import. False, and nothing
     kept, when keeping is off, the folder cannot be used, the entry or the
     folder would be too large, or the disk refuses (a replace Windows
@@ -348,12 +357,14 @@ def keep(digest: str, size: int, kind: str, max_characters: int,
             "sha256": digest, "size": size,
             "max_characters": max_characters, "kept_at": _now(),
             "answer": checked}
+    if character_set is not None:
+        rest["character_set"] = character_set
     entry = dict(rest, mac=_mac(secret, rest))
     data = json.dumps(entry, sort_keys=True, separators=(",", ":"),
                       ensure_ascii=True).encode("ascii")
     if len(data) > KEPT_MAX_BYTES:
         return False
-    name = _entry_name(secret, digest, kind, max_characters)
+    name = _entry_name(secret, digest, kind, max_characters, character_set)
     if _folder_bytes(path, name) + len(data) > KEEP_MAX_BYTES:
         return False
     temp = path / f"{TEMP_PREFIX}{secrets.token_hex(4)}"
@@ -409,14 +420,15 @@ def _is_int(value: Any) -> bool:
     return isinstance(value, int) and not isinstance(value, bool)
 
 
-def load(digest: str, size: int, kind: str,
-         max_characters: int) -> Optional[Dict[str, Any]]:
+def load(digest: str, size: int, kind: str, max_characters: int,
+         character_set: Optional[str] = None) -> Optional[Dict[str, Any]]:
     """The checked answer kept for this file, or None, when the import
     reads the file again as 0.14.3 does: keeping is off; the folder or
     the entry is absent; the folder fails its check; the entry is a link,
     not a regular file, or over its size limit; it is not a JSON object
-    of this format and this version of Exegete; its digest, size, kind
-    or length limit differs from what is asked; it was kept more than 65
+    of this format and this version of Exegete; its digest, size, kind,
+    length limit or chosen character set (v0.15.1) differs from what is
+    asked; it was kept more than 65
     minutes ago, or more than 5 minutes ahead of now; the secret cannot
     be loaded; its signature does not verify; or its answer fails the
     reading process's shape check."""
@@ -429,7 +441,7 @@ def load(digest: str, size: int, kind: str,
     if secret is None:
         return None
     data = _read_entry(path / _entry_name(secret, digest, kind,
-                                          max_characters))
+                                          max_characters, character_set))
     if data is None:
         return None
     try:
@@ -444,6 +456,7 @@ def load(digest: str, size: int, kind: str,
             or entry.get("sha256") != digest
             or not _is_int(entry.get("size")) or entry["size"] != size
             or entry.get("kind") != kind
+            or entry.get("character_set") != character_set
             or not _is_int(entry.get("max_characters"))
             or entry["max_characters"] != max_characters
             or not _is_int(kept_at)):
@@ -492,7 +505,8 @@ def sweep() -> int:
     return removed
 
 
-def forget(digest: str, kind: str, max_characters: int) -> None:
+def forget(digest: str, kind: str, max_characters: int,
+           character_set: Optional[str] = None) -> None:
     """Remove one file's entry; its absence is no matter."""
     path = folder()
     if not _usable(path):
@@ -501,6 +515,7 @@ def forget(digest: str, kind: str, max_characters: int) -> None:
     if secret is None:
         return
     try:
-        os.unlink(path / _entry_name(secret, digest, kind, max_characters))
+        os.unlink(path / _entry_name(secret, digest, kind, max_characters,
+                                     character_set))
     except OSError:
         pass

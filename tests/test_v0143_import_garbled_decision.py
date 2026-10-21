@@ -613,7 +613,8 @@ class TestTheDocuments:
         assert ("import_documents(paths, preview_token, "
                 "apply_project_pseudonyms, import_pdfs_with_listed_names, "
                 "import_file_names_with_listed_names, "
-                "import_files_with_garbled_letters, show_text, memo)") in tools
+                "import_files_with_garbled_letters, character_sets, "
+                "show_text, memo)") in tools
         row = tools[tools.index("| Letters that look garbled"):]
         row = row[:row.index("| XML entity declarations")]
         for gone in ("with no argument to bring it in",

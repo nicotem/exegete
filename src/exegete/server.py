@@ -11985,9 +11985,32 @@ def _reading_folder_root() -> Optional[Path]:
         return None
 
 
+def _readings_check(state, compiled, name_check, project_folder: Path):
+    """What the readings of a file not saved as UTF-8 are checked against
+    before the preview shows a line of them (v0.15.1): the compiled names
+    list, or what a list that cannot be used is checked with; with the
+    list switched off for the import, the list all the same, read for
+    this check alone, never applied and never stopping the import (a list
+    that cannot be read then shows no line). None: no list, or an empty
+    one."""
+    if state == "entries":
+        return compiled
+    if state == "unusable":
+        return name_check
+    if state != "off":
+        return None
+    try:
+        (_state, _count, off_compiled, _canonical, _stop,
+         off_check) = _import_names_list(True, project_folder)
+    except Exception:
+        return doc_import.EveryName()
+    return off_compiled if off_compiled is not None else off_check
+
+
 def _import_context(project_folder: Path, apply_pseudonyms: bool,
                     pdfs_with_names: bool, file_names_with_names: bool,
-                    memo: str, garbled_letters: bool = False):
+                    memo: str, garbled_letters: bool = False,
+                    character_sets: Optional[Dict[str, str]] = None):
     (state, count, compiled, canonical, names_stop,
      name_check) = _import_names_list(apply_pseudonyms, project_folder)
     db = get_db()
@@ -12017,7 +12040,10 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
         max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo,
         # The time this call may take, read afresh for each call; its
         # warning, if any, is logged once at start (main), never here.
-        call_seconds=doc_import.call_seconds()[0])
+        call_seconds=doc_import.call_seconds()[0],
+        readings_check=_readings_check(state, compiled, name_check,
+                                       project_folder),
+        character_sets=dict(character_sets or {}))
     return ctx, names_stop
 
 
@@ -12056,7 +12082,8 @@ def _import_backup_note(project_folder: Path, adding_bytes: int):
                           "keeps backups few."}
 
 
-def _import_arguments_error(paths, memo) -> Optional[str]:
+def _import_arguments_error(paths, memo,
+                            character_sets=None) -> Optional[str]:
     if (not isinstance(paths, list) or not paths
             or len(paths) > doc_import.MAX_PATHS):
         return (f"paths must be a list of 1 to {doc_import.MAX_PATHS} full "
@@ -12071,6 +12098,25 @@ def _import_arguments_error(paths, memo) -> Optional[str]:
     if len(memo) > doc_import.MAX_MEMO:
         return (f"memo is too long ({len(memo)} characters; limit "
                 f"{doc_import.MAX_MEMO}); nothing was done.")
+    if character_sets is not None:
+        # v0.15.1: {a file as the preview names it: the character_set of
+        # the reading picked}, the keys READINGS gives alone.
+        if (not isinstance(character_sets, dict)
+                or len(character_sets) > doc_import.MAX_BATCH):
+            return (f"character_sets must map at most "
+                    f"{doc_import.MAX_BATCH} files, each as the preview "
+                    f"names it, to the character_set of a reading the "
+                    f"preview shows; nothing was done.")
+        for given, key in character_sets.items():
+            if (not isinstance(given, str) or not 1 <= len(given) <= 4096
+                    or "\x00" in given):
+                return ("Each file in character_sets must be named as the "
+                        "preview names it; nothing was done.")
+            if not isinstance(key, str) or key not in \
+                    doc_readers.READING_NAMES:
+                return ("Each value in character_sets must be the "
+                        "character_set of a reading the preview shows; "
+                        "nothing was done.")
     return None
 
 
@@ -12116,6 +12162,15 @@ IMPORT_DONE_LINES = {
                         "the project's copy of the original keeps it."),
     "prune": ("The project's backups now take about {size} MB; "
               "prune_backups removes old ones."),
+    # v0.15.1: a file read in the character set chosen for it.
+    "chosen_sets": ("Files read in the character set you chose were stored "
+                    "as UTF-8, each with a line in its memo saying how; "
+                    "their originals are unchanged in the project's "
+                    "documents folder. To check one, open it with "
+                    "open_file_for_reading; if it reads wrongly, say so "
+                    "now: restoring the backup taken just before takes the "
+                    "import back, and the file can then come in with "
+                    "another choice."),
     "pdf_release": ("If this project is opened in QualCoder 4.0: it "
                     "checks a PDF's stored text against its own reading of "
                     "the PDF, which can differ with another release of the "
@@ -12148,18 +12203,19 @@ def import_documents(
     import_pdfs_with_listed_names: bool = False,
     import_file_names_with_listed_names: bool = False,
     import_files_with_garbled_letters: bool = False,
+    character_sets: Optional[Dict[str, str]] = None,
     show_text: bool = False,
     memo: str = ""
 ) -> str:
-    """Bring documents from the researcher's computer into the selected project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
+    """Bring documents from the researcher's computer into the selected project; their text never passes through the conversation, but one line of a file not in UTF-8. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
 
-    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
+    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never other text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
 
     Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The names list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
     Refused or kept out, saying why: while another conversation using Exegete or QualCoder 3.8.2 has the project in use (its lock file); paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
 
-    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
+    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure.
 
     Args:
         paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
@@ -12168,13 +12224,14 @@ def import_documents(
         import_pdfs_with_listed_names: default false
         import_file_names_with_listed_names: default false
         import_files_with_garbled_letters: default false
+        character_sets: on the researcher's word, {file as previewed: its reading's character_set}
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
         memo: a note for every file; at most 10,000 characters
     """
     # Each call's reading time is counted from here
     # (doc_import.call_seconds).
     call_started = doc_import.clock()
-    error = _import_arguments_error(paths, memo)
+    error = _import_arguments_error(paths, memo, character_sets)
     if error is None:
         marker = private_marker_refusal(memo, "memo")
         if marker is not None:
@@ -12195,7 +12252,7 @@ def import_documents(
     ctx, names_stop = _import_context(
         project_folder, apply_project_pseudonyms,
         import_pdfs_with_listed_names, import_file_names_with_listed_names,
-        memo, bool(import_files_with_garbled_letters))
+        memo, bool(import_files_with_garbled_letters), character_sets)
     ctx.call_started = call_started
     stops = []
     gate = _write_gate_error()
@@ -12216,7 +12273,7 @@ def import_documents(
         import_file_names_with_listed_names=(
             import_file_names_with_listed_names),
         import_files_with_garbled_letters=import_files_with_garbled_letters,
-        memo=memo)
+        character_sets=character_sets, memo=memo)
     if preview_token is None:
         # show_text is the preview's alone: it writes a page for the
         # researcher and decides nothing the token binds.
@@ -12251,23 +12308,26 @@ def _import_documents_preview(paths, ctx, stops, token_args,
         if page is not None:
             preview["page_to_check"] = page
         return json.dumps(preview, indent=2, ensure_ascii=False)
+    arguments = {
+        "paths": list(paths),
+        "apply_project_pseudonyms": token_args["apply_project_pseudonyms"],
+        "import_pdfs_with_listed_names": token_args[
+            "import_pdfs_with_listed_names"],
+        "import_file_names_with_listed_names": token_args[
+            "import_file_names_with_listed_names"],
+        "import_files_with_garbled_letters": token_args[
+            "import_files_with_garbled_letters"],
+        "memo": token_args["memo"]}
+    if "character_sets" in token_args:
+        # Given back only when given (v0.15.1): the file labels and keys.
+        arguments["character_sets"] = dict(token_args["character_sets"])
     try:
         payload = _issue_preview(
             "import_documents", token_args, preview, [],
             "Show the researcher the summary, the names list line and "
             "every warning, and wait for their word before calling again "
             "with the token.",
-            {"paths": list(paths),
-             "apply_project_pseudonyms": token_args[
-                 "apply_project_pseudonyms"],
-             "import_pdfs_with_listed_names": token_args[
-                 "import_pdfs_with_listed_names"],
-             "import_file_names_with_listed_names": token_args[
-                 "import_file_names_with_listed_names"],
-             "import_files_with_garbled_letters": token_args[
-                 "import_files_with_garbled_letters"],
-             "memo": token_args["memo"]},
-            state_preview=result.fingerprint(ctx))
+            arguments, state_preview=result.fingerprint(ctx))
     except PreviewSecretUnavailable:
         return json.dumps(
             _token_error("preview_secret_unavailable", "import_documents"))
@@ -12521,6 +12581,10 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
         lines.append(IMPORT_DONE_LINES["file_name_names"])
     if any(i.check_text is not None for i in taken):
         lines.append(IMPORT_DONE_LINES["garbled"])
+    # Keyed on the stored file's character set, never on the argument
+    # (v0.15.1); after the commit, so it cannot raise.
+    if any(doc_import.chosen_name(i.read) is not None for i in taken):
+        lines.append(IMPORT_DONE_LINES["chosen_sets"])
     if any(i.kind == doc_readers.PDF for i in taken):
         lines.append(IMPORT_DONE_LINES["pdf_release"].format(
             version=answer.get("pymupdf_version") or "unknown"))

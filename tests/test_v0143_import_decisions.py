@@ -307,7 +307,8 @@ class TestNotUtf8IsHeldBack:
 
 
 # ---------------------------------------------------------------------------
-# Nothing is guessed, and no character set can be named
+# Nothing is guessed, and only a reading the preview shows can be chosen
+# (v0.15.1: the encoding choice, tests/test_v0151_encoding_choice.py)
 # ---------------------------------------------------------------------------
 
 class TestNoGuessing:
@@ -336,12 +337,24 @@ class TestNoGuessing:
                                            NOT_UTF8["polish_iso.txt"])
         assert failed.value.code == "not_utf8"
 
-    def test_no_character_set_argument(self):
+    def test_no_character_set_argument(self, project, folder):
+        """v0.15.1: no `encoding` argument, and the description names
+        neither "encoding" nor a codec; `character_sets` takes only the
+        keys of the readings the preview shows, an unknown one refused
+        with nothing done."""
         parameters = inspect.signature(server.import_documents).parameters
         assert "encoding" not in parameters
+        assert "character_sets" in parameters
         description = server.import_documents.__doc__ or ""
         assert "encoding" not in description
         assert "cp1252" not in description
+        (folder / "P01.txt").write_bytes(NOT_UTF8["cp1252.txt"])
+        for key in ("cp1254", "windows-1252", "ascii", "utf-8", "mbcs"):
+            refused = _call(paths=[str(folder)],
+                            character_sets={"P01.txt": key})
+            assert set(refused) == {"error"}, key
+            assert "nothing was done" in refused["error"]
+        assert _stored(project) == {}
 
     def test_no_guesser_in_the_source_or_the_dependencies(self):
         for path in sorted((REPO / "src").rglob("*.py")):
@@ -527,14 +540,17 @@ class TestTheDocuments:
         assert ("import_documents(paths, preview_token, "
                 "apply_project_pseudonyms, import_pdfs_with_listed_names, "
                 "import_file_names_with_listed_names, "
-                "import_files_with_garbled_letters, show_text, "
-                "memo)") in tools
+                "import_files_with_garbled_letters, character_sets, "
+                "show_text, memo)") in tools
         for said in (
                 "| A plain text, Markdown or subtitle file not saved as "
                 "UTF-8 (a UTF-16 file among them) |",
-                "held back, with steps to save a copy as UTF-8 in Word, "
-                "TextEdit or Notepad; nothing is guessed, and no character "
-                "set can be named",
+                # v0.15.1: the readings and the choice
+                "Nothing is guessed, ranked or put first: on the "
+                "researcher's word, `character_sets` names the reading "
+                "picked",
+                "Without a choice the file stays held back, with steps to "
+                "save a copy as UTF-8 in Word, TextEdit or Notepad",
                 "| A web page not saved as UTF-8, whatever character set it "
                 "declares |",
                 "never read by its declaration, which can be wrong",
@@ -551,10 +567,12 @@ class TestTheDocuments:
     def test_privacy_md_says_what_is_held_back(self):
         privacy = _flat("PRIVACY.md")
         for said in (
-                "Plain text, Markdown, subtitle files and web pages are read "
-                "as UTF-8 alone",
-                "is never read by a guess, by a set you name, or by the set "
-                "a web page declares",
+                # v0.15.1: the readings and the choice
+                "Web pages are read as UTF-8 alone, and plain text, "
+                "Markdown and subtitle files as UTF-8 or in a character set "
+                "you choose",
+                "A file is never read by a guess or by the set a web page "
+                "declares",
                 "(`import_file_names_with_listed_names`)",
                 "that `maria_interview.docx` and `MariaB.docx` are caught"):
             assert said in privacy, said

@@ -192,7 +192,8 @@ Codex, no one with a local model. Text you paste or attach goes in
 full; a document in the project, brought in through Exegete or
 imported in QualCoder, only as far as the assistant reads it: Exegete's preview
 of an import gives the assistant the documents' names, sizes, lengths
-and warnings, never their text
+and warnings, never their text, but for one line of a file not saved as
+UTF-8, as each character set reads it
 ([PRIVACY.md, "Bringing documents in"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#bringing-documents-in-0143)).
 
 **Assistants that open files by themselves.** Exegete's answers hold

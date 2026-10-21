@@ -529,9 +529,17 @@ class TestThePublishedSchemaBudget:
     # `full` (732 on 3.11), none in `core`, which does not serve the tool.
     # The rounded figures stay about 203,000 and 72,000 characters, and
     # the tokens 51k and 18k.
-    FULL_MEASURED = 202_652          # 79 tools, Python 3.13.5, mcp 1.30.0
+    # v0.15.1, the encoding choice: import_documents' description says
+    # that one line of a file not in UTF-8 is shown and has an Args line
+    # for character_sets, its pointer to import_text_file and to the
+    # converted_documents topic gone to keep it within 2,048 characters,
+    # 18 characters more (22 on 3.11); its schema gains character_sets,
+    # 158 more: 176 more in `full` (180 on 3.11), none in `core`, which
+    # does not serve the tool. The rounded figures stay about 203,000 and
+    # 72,000 characters, and the tokens 51k and 18k.
+    FULL_MEASURED = 202_828          # 79 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 71_685           # 26 tools, same environment
-    FULL_MEASURED_310 = 213_016      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 213_196      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 75_349
 
     # Why two per cent, away from the reference environment.
@@ -559,7 +567,7 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "202,652"
+    FULL_CHARS = "202,828"
     CORE_CHARS = "71,685"
     FULL_ROUNDED = "203,000"
     CORE_ROUNDED = "72,000"

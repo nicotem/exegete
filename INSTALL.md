@@ -272,7 +272,8 @@ Before starting, make sure you have:
   or later): QualCoder offers none for older Intel Macs, and its notes
   there say how to open it the first time. Since 0.14.3,
   Exegete brings in documents itself with
-  `import_documents`, their text staying on the computer on the way in
+  `import_documents`, their text staying on the computer on the way in,
+  but for one line of a file not saved as UTF-8 that its preview shows
   (Word, OpenDocument, RTF, plain text, Markdown, web pages and
   subtitle files; PDF and EPUB need its optional part, below), and
   opens a page in your browser with a whole file's text and its codings
@@ -1127,7 +1128,7 @@ Experimental.
 **Step 3. Use the core toolset.** Exegete offers 79 tools by
 default, and the serialised tool definitions alone measure about
 203,000 characters, roughly 51k tokens, against about 72,000
-characters, roughly 18k tokens, for the 26 tools of `core` (202,652
+characters, roughly 18k tokens, for the 26 tools of `core` (202,828
 and 71,685 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far

@@ -2,8 +2,10 @@
 """The reading process: each document is read in a separate, short-lived
 Python process, so that a hostile or broken file cannot reach the server
 itself (0.14.3; the design's Part 5). The server reads no
-document itself: plain text and web pages are read as UTF-8 alone, so
-the names check searches the text this process returns, as stored.
+document itself: plain text and web pages are read as UTF-8, or plain
+text in the character set the researcher chose from the preview's
+readings (v0.15.1), so the names check searches the text this process
+returns, as stored.
 
 The contract, and why each part matters:
 
@@ -18,14 +20,18 @@ The contract, and why each part matters:
 - Answering in plain data: one JSON document of bounded size on its own
   standard output, which is a private pipe to the server (never the
   server's own channel to the host), checked before use; never Python's
-  pickled objects. Its error output is dropped; a library that writes to
-  standard output inside the process writes nowhere. A `damaged`
-  refusal may carry `cause`, {"kind", "library", "version"}: the class
-  of the exception behind it, by module and qualified name (`builtins.`
-  left out), the library Exegete reads that kind of file with
-  (READER_LIBRARIES, null for none) and the release of it this process
-  loaded, so that Exegete's log can say what kind of error lay behind
-  the verdict (v0.15.1).
+  pickled objects. A refusal carries no text, but for one: a plain text
+  file not saved as UTF-8 (`not_utf8`) carries its readings, lines of
+  the file as each character set reads them (v0.15.1), checked as
+  strictly and dropped, the refusal standing, when they are not as
+  Exegete writes them. Its error output is dropped; a library that
+  writes to standard output inside the process writes nowhere. A
+  `damaged` refusal may carry `cause`, {"kind", "library", "version"}:
+  the class of the exception behind it, by module and qualified name
+  (`builtins.` left out), the library Exegete reads that kind of file
+  with (READER_LIBRARIES, null for none) and the release of it this
+  process loaded, so that Exegete's log can say what kind of error lay
+  behind the verdict (v0.15.1).
 - Limits: a time limit, and a memory cap on every system (Linux: an
   address-space limit the process sets on itself before it reads
   anything; macOS, which honours no such limit: the server watches the
@@ -35,8 +41,10 @@ The contract, and why each part matters:
   too; Windows: a job object with a memory limit).
 
 No exception text, library message or process output is ever passed on:
-a refusal is one of Exegete's own codes, and a cause names a class and a
-release, never the exception's message, arguments, traceback or str().
+a refusal is one of Exegete's own codes (with, for `not_utf8`, the
+readings above, made by Exegete's own code from the file's bytes), and a
+cause names a class and a release, never the exception's message,
+arguments, traceback or str().
 """
 
 import json
@@ -81,13 +89,17 @@ class ReadFailed(Exception):
     and any numbers the words need."""
 
     def __init__(self, code: str, numbers: Optional[Dict[str, Any]] = None,
-                 cause: Optional[Dict[str, Any]] = None):
+                 cause: Optional[Dict[str, Any]] = None,
+                 readings: Optional[Dict[str, Any]] = None):
         super().__init__(code)
         self.code = code
         self.numbers = numbers or {}
         # What lay behind a "damaged" verdict, for Exegete's log alone:
         # never in args or str(), so no answer carries it.
         self.cause = cause
+        # A plain text file not saved as UTF-8: its readings, checked
+        # (checked_readings); never in `numbers`.
+        self.readings = readings
 
 
 # ---------------------------------------------------------------------------
@@ -183,14 +195,27 @@ def _damaged(behind: Optional[type], kind: str,
 def _read(header: Dict[str, Any], raw: bytes) -> Dict[str, Any]:
     from . import doc_readers
     kind = str(header["kind"])
+    chosen = {}
+    if "character_set" in header:
+        # The set the researcher chose (v0.15.1), sent only when given.
+        chosen["character_set"] = str(header["character_set"])
     try:
-        result = doc_readers.read_document(kind, raw)
+        result = doc_readers.read_document(kind, raw, **chosen)
     except doc_readers.ReadRefused as refused:
         answer = {"ok": False, "refusal": refused.code,
                   "numbers": {k: v for k, v in refused.numbers.items()
                               if isinstance(v, int)}}
         if refused.code == "damaged":
             return _damaged(_hidden_class(refused), kind, answer)
+        if (refused.code == "not_utf8" and not chosen
+                and kind in doc_readers.PLAIN_FORMATS):
+            # The readings the preview shows (v0.15.1); any failure here
+            # leaves the refusal as it was.
+            try:
+                answer["readings"] = doc_readers.readings_of(
+                    raw, int(header.get("max_characters", 0)))
+            except Exception:
+                pass
         return answer
     except MemoryError:
         return {"ok": False, "refusal": "reader_memory"}
@@ -348,14 +373,18 @@ def reader_command() -> list:
 
 def read_in_process(kind: str, data: bytes, max_characters: int = 0,
                     timeout: float = READ_TIMEOUT_SECONDS,
-                    memory_cap: int = MEMORY_CAP_BYTES) -> Dict[str, Any]:
+                    memory_cap: int = MEMORY_CAP_BYTES,
+                    character_set: Optional[str] = None) -> Dict[str, Any]:
     """Read one document's bytes in a reading process and return
     `doc_readers.read_document`'s answer, checked; or raise ReadFailed
-    with Exegete's own reason code."""
-    header = json.dumps({"kind": kind, "size": len(data),
-                         "memory": int(memory_cap),
-                         "max_characters": int(max_characters)},
-                        ensure_ascii=True).encode("ascii") + b"\n"
+    with Exegete's own reason code. `character_set`: the reading the
+    researcher chose for a plain text file not saved as UTF-8 (a key of
+    `doc_readers.READINGS`), sent only when given."""
+    fields = {"kind": kind, "size": len(data), "memory": int(memory_cap),
+              "max_characters": int(max_characters)}
+    if character_set is not None:
+        fields["character_set"] = str(character_set)
+    header = json.dumps(fields, ensure_ascii=True).encode("ascii") + b"\n"
     workdir = tempfile.mkdtemp(prefix="exegete-reader-")
     job = None
     try:
@@ -505,9 +534,13 @@ def checked_result(answer: Any, kind: Optional[str] = None
             raise ReadFailed("reader_failed")
         if not isinstance(numbers, dict):
             numbers = {}
+        readings = None
+        if code == "not_utf8" and "readings" in answer:
+            readings = checked_readings(answer["readings"])
         raise ReadFailed(code, {k: v for k, v in numbers.items()
                                 if isinstance(k, str) and isinstance(v, int)},
-                         cause=_checked_cause(answer.get("cause"), code, kind))
+                         cause=_checked_cause(answer.get("cause"), code, kind),
+                         readings=readings)
     result = answer.get("result")
     if not isinstance(result, dict):
         raise ReadFailed("reader_failed")
@@ -533,3 +566,52 @@ def checked_result(answer: Any, kind: Optional[str] = None
                       for n in notes],
             "charset": charset,
             "words": len(text.split()), "characters": len(text)}
+
+
+def checked_readings(readings: Any) -> Optional[Dict[str, Any]]:
+    """A `not_utf8` refusal's readings (v0.15.1), their shape checked:
+    `{"too_long": true}` alone, or at most one choice for each of
+    `doc_readers.READINGS`, each under a key of its own with its names
+    from the table and the same number of windows, at most READING_KEPT,
+    each a string of at most READING_WINDOW characters, and the sets not
+    offered, each a known key. Anything else: None, and the refusal
+    stands without them. Nothing about them is logged."""
+    from . import doc_readers
+    names = doc_readers.READING_NAMES
+    if not isinstance(readings, dict):
+        return None
+    if set(readings) == {"too_long"}:
+        return {"too_long": True} if readings["too_long"] is True else None
+    if set(readings) != {"choices", "not_offered"}:
+        return None
+    choices, not_offered = readings["choices"], readings["not_offered"]
+    if (not isinstance(choices, list) or not isinstance(not_offered, list)
+            or len(choices) > len(names)
+            or not all(isinstance(k, str) and k in names
+                       for k in not_offered)):
+        return None
+    seen, counts, out = set(), set(), []
+    for choice in choices:
+        if not isinstance(choice, dict) or set(choice) != {
+                "key", "names", "windows"}:
+            return None
+        key, said, windows = (choice["key"], choice["names"],
+                              choice["windows"])
+        if (not isinstance(key, str) or key not in names or key in seen
+                or not isinstance(said, list) or not said
+                or said[0] != names[key]
+                or not all(isinstance(n, str) and n in names.values()
+                           for n in said)
+                or not isinstance(windows, list)
+                or len(windows) > doc_readers.READING_KEPT
+                or not all(isinstance(w, str)
+                           and len(w) <= doc_readers.READING_WINDOW
+                           for w in windows)):
+            return None
+        seen.add(key)
+        counts.add(len(windows))
+        out.append({"key": key, "names": list(said),
+                    "windows": list(windows)})
+    if len(counts) > 1:
+        return None
+    return {"choices": out, "not_offered": list(not_offered)}

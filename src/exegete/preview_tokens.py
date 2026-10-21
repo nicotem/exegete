@@ -453,21 +453,32 @@ def _args_pseudonymise_source(kwargs):
 
 def _args_import_documents(kwargs):
     """The arguments that decide what a document import brings in (0.14.3):
-    the paths as given, the four switches and the memo.
+    the paths as given, the four switches and the memo, and from v0.15.1
+    the character sets chosen (`character_sets`, {a file as the preview
+    names it: a key of doc_readers.READINGS}, which the server checks),
+    its keys sorted; left out when none is given, so a call without a
+    choice binds as before and a token issued before the update still
+    verifies.
     All of them are already in the conversation, so the public bind is
     plain. What the files hold, the project's names and its folder of
     originals, and the names list, are the state the token's MAC covers
     (the server's fingerprint), never the bind."""
-    return {"paths": [str(p) for p in kwargs["paths"]],
-            "apply_project_pseudonyms": bool(
-                kwargs["apply_project_pseudonyms"]),
-            "import_pdfs_with_listed_names": bool(
-                kwargs["import_pdfs_with_listed_names"]),
-            "import_file_names_with_listed_names": bool(
-                kwargs["import_file_names_with_listed_names"]),
-            "import_files_with_garbled_letters": bool(
-                kwargs.get("import_files_with_garbled_letters", False)),
-            "memo": str(kwargs.get("memo") or "")}
+    bound = {"paths": [str(p) for p in kwargs["paths"]],
+             "apply_project_pseudonyms": bool(
+                 kwargs["apply_project_pseudonyms"]),
+             "import_pdfs_with_listed_names": bool(
+                 kwargs["import_pdfs_with_listed_names"]),
+             "import_file_names_with_listed_names": bool(
+                 kwargs["import_file_names_with_listed_names"]),
+             "import_files_with_garbled_letters": bool(
+                 kwargs.get("import_files_with_garbled_letters", False)),
+             "memo": str(kwargs.get("memo") or "")}
+    chosen = kwargs.get("character_sets")
+    if chosen:
+        # Checked by the server before this (keys of READINGS alone).
+        bound["character_sets"] = {str(name): str(chosen[name])
+                                   for name in sorted(chosen)}
+    return bound
 
 
 def _args_set_project_coder_name(kwargs):

@@ -283,7 +283,11 @@ def _tools(mode="full"):
 # annotations and journals name setting an attribute on a journal entry.
 # That takes 41 characters, and the limit is raised by that and no more:
 # 40,649.
-README_LIMIT = 40_649
+# v0.15.1, the encoding choice: the sentence on what the preview of an
+# import gives the assistant says that one line of a file not saved as
+# UTF-8 is shown, as each character set reads it. That takes 79
+# characters, and the limit is raised by that and no more: 40,728.
+README_LIMIT = 40_728
 
 
 def test_the_readme_stays_short():

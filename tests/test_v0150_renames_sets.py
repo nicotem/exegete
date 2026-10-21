@@ -535,7 +535,8 @@ class TestTheDocuments:
         # 204,000; and attributes on journal entries and the rename back
         # removed, as announced: 203,352, about 203,000; and the overlap
         # policy qualcoder_edit_parity removed: 202,652, still about
-        # 203,000
+        # 203,000; and the encoding choice (character_sets): 202,828,
+        # still about 203,000
         assert (rounded, tokens) == ("203,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "

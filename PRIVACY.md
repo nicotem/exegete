@@ -1065,12 +1065,13 @@ v14) are unaffected.
 following QualCoder's own import; where QualCoder's readers lose or
 garble content, Exegete keeps it, and names the departure (TOOLS.md
 lists each one). The documents'
-text does not pass through the conversation on the way in. What does reach the AI
-provider, and what does not:
+text does not pass through the conversation on the way in, but for one
+line of a plain text file not saved as UTF-8, as each character set
+reads it (below). What does reach the AI provider, and what does not:
 
 | Step | Sent to the AI provider | Not sent |
 |---|---|---|
-| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token; with `show_text`, where the page it opens on your screen is | the text, also when that page shows it to you; any library's or the document's own messages |
+| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token; with `show_text`, where the page it opens on your screen is; for the first five plain text files not saved as UTF-8, one line of each as each character set that can read it reads it, unless a name from your names list appears in that line in any reading | the rest of the text, also when that page shows it to you; any library's or the document's own messages |
 | The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's place | the text |
 | Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
 
@@ -1103,15 +1104,25 @@ Seven cautions:
   (`import_pdfs_with_listed_names`). A name written otherwise in the
   PDF, in capitals ("MARIA BROWN"), split across two lines, or broken
   by a hyphen at a line's end, is not seen, and such a PDF comes in
-  without a word. Plain
-  text, Markdown, subtitle files and web pages are read as UTF-8 alone:
-  a file saved in another character set is held back, with steps to
-  save a copy as UTF-8, under a new name so that the original stays as
-  it is until the copy is checked, in Word, TextEdit or Notepad (each
-  saying how to open it in the encoding it was saved in, should its
-  accents look wrong), and is never read by a guess, by a set you name,
-  or by the set a web page declares.
-  Read any of those ways, a listed name can come out with other letters
+  without a word. Web
+  pages are read as UTF-8 alone, and plain text, Markdown and subtitle
+  files as UTF-8 or in a character set you choose: a file saved in
+  another character set is held back, with steps to save a copy as
+  UTF-8, under a new name so that the original stays as it is until the
+  copy is checked, in Word, TextEdit or Notepad (each saying how to open
+  it in the encoding it was saved in, should its accents look wrong).
+  For such a plain text file the preview shows one line as each
+  character set that can read it reads it, and these lines reach the AI
+  provider, as the file's text would once imported, perhaps for a file
+  you then leave out: no line is shown in which a name from your names
+  list appears in any reading, the list switched off for the import
+  included, but other names can be in it, and so can a listed name in a
+  file saved in a set not offered there, which every set offered writes
+  with other letters. If you say which reading reads right, the file
+  comes in read in that set, its text stored as UTF-8, the original
+  copied unchanged, and a line in its memo saying how it was read. A
+  file is never read by a guess or by the set a web page declares.
+  Read in the wrong set, a listed name can come out with other letters
   ("Agnès" as "Agnčs"), which the list would then not replace. A file
   saved as UTF-16 or UTF-32 without the mark that names it, which reads
   as UTF-8 with an invisible character beside each letter, is held back

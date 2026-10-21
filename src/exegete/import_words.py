@@ -636,6 +636,30 @@ WARNINGS = {
     "chosen_reading": ("information",
         "Read as {name}, as chosen: its text is stored as UTF-8, and the "
         "original is copied unchanged."),
+    # v0.15.1: the places where a name from the list may still show in a
+    # form the list does not replace, counted by file and never named
+    # (doc_import.count_names_left); facts alone, since the remedies
+    # differ between the preview's note and the import's line
+    "listed_names_left": ("information",
+        "A name from your names list may still show here in a form the "
+        "list does not replace: {places} ({kinds})."),
+    "listed_names_left_at_least": ("information",
+        "A name from your names list may still show here in a form the "
+        "list does not replace: at least {places} (the count stopped "
+        "there)."),
+    "listed_names_left_not_checked": ("information",
+        "Whether a name from your names list still shows here in a form "
+        "the list does not replace was not checked: this call's allowance "
+        "for the count was spent on the files before it."),
+    "listed_names_left_too_large": ("information",
+        "This file is too long to be checked, in any batch, against a "
+        "names list of this size, so a name from the list may still show "
+        "here in a form the list does not replace; with fewer names in "
+        "the list it could be checked."),
+    "listed_names_left_too_large_any_list": ("information",
+        "This file is too long to be checked, in any batch, against the "
+        "names list, so a name from the list may still show here in a "
+        "form the list does not replace, whatever the list's size."),
 }
 
 # v0.15.1: the readings of a plain text file not saved as UTF-8, shown in
@@ -678,6 +702,49 @@ READ_AS_CHOSEN_MEMO = (
     "Read at its import as {name}, the character set chosen for it, as "
     "the assistant reported the researcher's choice; the original in the "
     "project's documents folder is unchanged.")
+
+# The kinds of place the count tells apart, in its order, each with its
+# fixed words (doc_import.count_names_left)
+NAMES_LEFT_KIND_WORDS = {
+    "other_capitals": "other capitals",
+    "other_characters": "other characters",
+    "joined_or_split_differently": "joined or split differently",
+    "inside_a_longer_word": "inside a longer word",
+    "put_back_by_a_pseudonym": "put back by a pseudonym",
+    "first_name_alone": "a first name alone",
+    "other": "other forms",
+}
+LISTED_NAMES_LEFT_NOTE = (
+    "The names list replaces each name only as it is written there: the "
+    "same capitals, whole words, its words on one line. A form it does "
+    "not hold stays in the stored text and reaches the AI provider "
+    "whenever the file is read: other capitals (JANE DOE), a first name "
+    "alone (Jane), a name joined or split differently (JaneDoe, Jane-Doe, "
+    "Jane and Doe on two lines), a name inside a longer word (Jane Does). "
+    "The counts read wider than the list, so a place can be another word "
+    "(a short name inside a longer one, a title), and no count promises "
+    "that no name shows. A form a line can hold is replaced once it has a "
+    "line of its own in the names file, with its pseudonym, and the list "
+    "is saved again (save_names_list); the next preview then counts it no "
+    "more. In a PDF no name is replaced: such a line holds the PDF back. "
+    "A name broken by a line break, a tab or an invisible character "
+    "cannot be a line, and no Exegete tool replaces it: it can be "
+    "corrected in the document before the import. A file not checked "
+    "because this call's allowance ran out is checked in a smaller "
+    "batch, with fewer or shorter files; one too long for a list of this "
+    "size is checked in no batch.")
+
+
+def places_phrase(count: int) -> str:
+    """A count of places with its noun: "1 place", "4 places"."""
+    return f"{count} place{'' if count == 1 else 's'}"
+
+
+def kinds_phrase(kinds: Dict[str, int]) -> str:
+    """The kinds counted, in fixed words and the count's order: "other
+    capitals 1, a first name alone 2"."""
+    return ", ".join(f"{NAMES_LEFT_KIND_WORDS[kind]} {kinds[kind]}"
+                     for kind in NAMES_LEFT_KIND_WORDS if kinds.get(kind))
 
 
 def say(table: Dict[str, Any], code: str, **numbers: Any) -> str:

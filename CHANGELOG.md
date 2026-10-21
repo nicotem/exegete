@@ -133,6 +133,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   researcher choose, a named departure (TOOLS.md, "Document import:
   where it departs from QualCoder").
 
+### Added: what the names list misses
+
+- **The names the list misses, counted by file.** The names list
+  replaces each name only as it is written there (the same capitals,
+  whole words, its words on one line), as QualCoder's import does, so a
+  name written otherwise came into the stored text without a word. The
+  import's preview and its answer now count, for each file, the places
+  where a name from the list may still show in a form the list does not
+  replace: in other capitals, joined or split differently (across a line
+  break, say), inside a longer word, put back by a pseudonym, or a first
+  name alone. Counts only, never a name, under `listed_names_left`, with
+  a warning in the file's `for_information`; a note in the preview
+  (`listed_names_left_note`) and a line in the import's answer say what
+  each form needs. A file the count's allowance does not reach, or one
+  too long for it, is said to be not checked, never clean. PDFs are
+  counted too: a name written otherwise in a PDF still does not hold it
+  back. Nothing the import replaces or stores changes.
+
 ### Changed
 
 - **The approval token's tag is now under its signature.** The token a

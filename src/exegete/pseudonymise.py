@@ -2541,6 +2541,141 @@ def names_left_in_text(compiled: "Compiled", text: str,
             "extra_work": extra_work}
 
 
+
+# v0.15.1, the names the list misses: a first name alone. The names list
+# replaces a name only as written, so the first word of a name of several
+# words, written alone ("Jane" of "Jane Doe"), stays in the stored text;
+# the wide reading above does not see it, since it reads whole names. The
+# import's preview and its answer count it beside the wide reading's
+# kinds, by file and never by name (doc_import.count_names_left).
+
+def _letter_or_digit(char: str, marks: bool = False) -> bool:
+    category = unicodedata.category(char)[0]
+    return category in "LN" or (marks and category == "M")
+
+
+def first_word(name: Any) -> Optional[str]:
+    """The first word of a real name or variant of at least two words:
+    its text before the first white space, with the characters other
+    than letters and digits taken off its ends (a combining mark after a
+    letter stays with it). None for a name of one word, or when the word
+    has fewer than `MIN_ORIGINAL_CHARS` characters or does not begin
+    with a capital ("de la Cruz", "van Gogh", "J Doe", scripts without
+    capitals). Its words after the first must hold a letter or a digit,
+    so "Jane ..." is a name of one word."""
+    if not isinstance(name, str):
+        return None
+    pieces = name.split(None, 1)
+    if len(pieces) < 2 or not _detector_parts(pieces[1]):
+        return None
+    word = pieces[0]
+    start, end = 0, len(word)
+    while start < end and not _letter_or_digit(word[start]):
+        start += 1
+    while end > start and not _letter_or_digit(word[end - 1], marks=True):
+        end -= 1
+    word = word[start:end]
+    if len(word) < MIN_ORIGINAL_CHARS or not word[0].isupper():
+        return None
+    return word
+
+
+class FirstNamesAlone:
+    """Where the first word of a listed name shows alone, counted in the
+    reader's reading of a text, as the wide reading reads its names.
+
+    Built once a call from a compiled list. A first word that is itself
+    a listed form, ignoring case and separators, is left out: the wide
+    reading counts it. The rest are grouped by their casefolded reading,
+    one alternative each, longest first: not after a word character, the
+    first letter as written (a capital), the rest of the word's parts
+    (`_detector_parts`) joined by `_SEPARATOR_RUN` in any case, and not
+    before a word character. A match followed by `_SEPARATOR_RUN` and the
+    rest of any name of its group, in any case, is the wide reading's
+    ("JANE DOE", Jane and Doe on two lines, "Jane Does", "Mary-Jane
+    O'Neil" with a curly apostrophe where "Mary-Jane O'Neil" is listed)
+    and is not counted here; the longer first words come first, so
+    "Mary-Jane" refused is never counted as "Mary".
+    `Compiled`, `NameDetector` and the rewrite are untouched."""
+
+    __slots__ = ("pattern", "rests", "units")
+
+    def __init__(self, compiled: "Compiled"):
+        listed = {tuple(_fold(part) for part in _detector_parts(form))
+                  for form, _ in compiled.forms}
+        groups: Dict[Tuple[str, ...], Dict[str, Any]] = {}
+        for form, _index in compiled.forms:
+            word = first_word(form)
+            if word is None:
+                continue
+            parts = _detector_parts(word)
+            key = tuple(_fold(part) for part in parts)
+            if not parts or key in listed:
+                continue
+            rest = _detector_alternative(form.split(None, 1)[1])
+            group = groups.setdefault(key, {"firsts": set(), "parts": parts,
+                                            "rests": set(), "word": word})
+            group["firsts"].add(parts[0][0])
+            if rest:
+                group["rests"].add(rest)
+        ordered = sorted(groups.values(), key=lambda group: (
+            -reading_length(group["word"]), group["word"]))
+        alternatives = []
+        self.rests: List[Optional["re.Pattern[str]"]] = []
+        for group in ordered:
+            parts = group["parts"]
+            firsts = sorted(group["firsts"])
+            first = (re.escape(firsts[0]) if len(firsts) == 1 else
+                     "(?:" + "|".join(re.escape(f) for f in firsts) + ")")
+            tail = _SEPARATOR_RUN.join(
+                [re.escape(parts[0][1:])]
+                + [re.escape(part) for part in parts[1:]])
+            alternatives.append("(" + first + "(?i:" + tail + "))")
+            rests = sorted(group["rests"], key=lambda r: (-len(r), r))
+            self.rests.append(re.compile(
+                _SEPARATOR_RUN + "(?i:" + "|".join(rests) + ")")
+                if rests else None)
+        self.pattern: Optional["re.Pattern[str]"] = (
+            re.compile("(?<!\\w)(?:" + "|".join(alternatives) + ")(?!\\w)")
+            if alternatives else None)
+        # Priced as `Compiled.form_units` prices the forms: a unit for
+        # each started block of FORM_UNIT_CHARS characters of each first
+        # word's reading
+        self.units = sum(-(-reading_length(group["word"]) // FORM_UNIT_CHARS)
+                         for group in ordered)
+
+    def work(self, text: str, length: Optional[int] = None) -> int:
+        """What counting `text` costs, in the budgets' units: nothing
+        when no first word is counted, else the reading's length times
+        the first words' units and, since the count reads the text again
+        (`_reader_sees`), the per-character term of its class."""
+        if self.pattern is None:
+            return 0
+        term = (RESIDUE_WORK_PER_CHARACTER if text.isascii()
+                else RESIDUE_WORK_PER_CHARACTER_NON_ASCII)
+        if length is None:
+            length = reading_length(text)
+        return length * (self.units + term)
+
+    def count(self, text: str, max_matches: Optional[int] = None
+              ) -> Dict[str, Any]:
+        """How many times a first word shows alone in `text`:
+        `{"count", "matches", "stopped"}`, each match charged one to
+        `max_matches`; past it the count stops, with the count so far."""
+        found = spent = 0
+        if self.pattern is None:
+            return {"count": 0, "matches": 0, "stopped": False}
+        seen = _reader_sees(text)
+        for match in self.pattern.finditer(seen):
+            spent += 1
+            if max_matches is not None and spent > max_matches:
+                return {"count": found, "matches": spent, "stopped": True}
+            rest = self.rests[match.lastindex - 1]
+            if rest is not None and rest.match(seen, match.end()):
+                continue
+            found += 1
+        return {"count": found, "matches": spent, "stopped": False}
+
 # The owner's ruling of 2026-09-23 on Brief 1's finding F-1: a pseudonym
 # that contains a name from the mapping is withheld, by the rule that
 # withholds a file name carrying one, from the run record and the journal

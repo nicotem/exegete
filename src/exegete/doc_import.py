@@ -40,6 +40,7 @@ from . import doc_readers, env_settings, garbled_text, import_paths, names
 from . import import_reading
 from . import import_words as words
 from . import kept_texts
+from . import pseudonymise as pseudo
 
 logger = logging.getLogger(__name__)
 
@@ -878,6 +879,180 @@ def _memo(item: Item, result: Dict[str, Any], ctx: Context) -> str:
     return memo
 
 
+# ---------------------------------------------------------------------------
+# The names the list misses (v0.15.1), counted by file and never named
+# ---------------------------------------------------------------------------
+
+# The count's allowance, each call, in the units of pseudonymise_source's
+# names-left count and at its figures (ruling 7's measurement): its work
+# and its matches. A file whose estimate passes the whole allowance is
+# too large to be checked; once a file passes what is left, it and every
+# later file are not checked.
+NAMES_LEFT_WORK = pseudo.MAX_RESIDUE_SCAN_WORK
+NAMES_LEFT_MATCHES = pseudo.MAX_RESIDUE_SCAN_MATCHES
+# The warnings the count gives, any of which brings the preview's note
+# and the import's line
+NAMES_LEFT_CODES = ("listed_names_left", "listed_names_left_at_least",
+                    "listed_names_left_not_checked",
+                    "listed_names_left_too_large",
+                    "listed_names_left_too_large_any_list")
+# names_left_in_text's kinds, under the names the answer gives them; a
+# PDF's whole words (whole_word_in_a_file_not_rewritten) are left out,
+# since listed_names_kept counts them already
+_NAMES_LEFT_KINDS = (("other_capitals", "case_only"),
+                     ("other_characters", "normalisation_variants"),
+                     ("joined_or_split_differently", "joined_differently"),
+                     ("inside_a_longer_word", "inside_a_longer_word"),
+                     ("put_back_by_a_pseudonym", "put_back_by_a_pseudonym"))
+
+
+def _names_left_text(item: Item) -> str:
+    """The text the count reads: the stored text, with the notes' markers
+    taken out for Word, OpenDocument and RTF (a reader sees
+    "Maria[Comment 1] Brown" as the name whole, as pseudonymise_source
+    counts it); for a PDF, its text and then each note's content on a
+    line of its own."""
+    if item.kind in doc_readers.MARKING_FORMATS:
+        return pseudo.without_markers(item.text, doc_readers.NOTE_MARKER)
+    if item.kind == doc_readers.PDF:
+        notes = (item.read or {}).get("notes") or []
+        return "\n".join([item.text] + [note["content"] for note in notes])
+    return item.text
+
+
+def _names_left(item: Item, numbers: Dict[str, Any], code: str,
+                **say: Any) -> None:
+    item.numbers["listed_names_left"] = numbers
+    item.warnings.append((words.WARNINGS[code][0],
+                          words.say(words.WARNINGS, code, **say)))
+    item.warning_codes.append(code)
+
+
+def _not_checked(item: Item) -> None:
+    _names_left(item, {"not_checked": True}, "listed_names_left_not_checked")
+
+
+def _counted_in_part(item: Item, at_least: int) -> None:
+    """A count stopped part way: at least `at_least` places, or, when the
+    places it had found by then are none (the count's matches were all a
+    name in a PDF written as the list writes it, which
+    listed_names_kept counts), not checked."""
+    if at_least > 0:
+        _names_left(item, {"at_least": at_least},
+                    "listed_names_left_at_least",
+                    places=words.places_phrase(at_least))
+    else:
+        _not_checked(item)
+
+
+def count_names_left(items: Sequence[Item], ctx: Context) -> None:
+    """Where a name from the names list may still show in each ready
+    file's stored text, in a form the list does not replace: the wide
+    reading pseudonymise_source counts (other capitals, a name joined or
+    split differently, inside a longer word, ...), and first names alone.
+    Numbers alone leave it, as `item.numbers["listed_names_left"]` and a
+    warning in Exegete's words: never a name, nor a word of the text.
+
+    Nothing without a usable list (none, empty, off, or one Exegete
+    cannot use). The allowance is the call's, under pseudonymise_source's
+    four rules: a file whose estimate passes the whole allowance is too
+    large and closes nothing; once a file passes what is left, it and
+    every later file are not checked; everything spent is charged; a
+    count stopped part way gives a lower bound. Any exception is caught:
+    that file and every later one are not checked, and the log names the
+    exception's class alone. Called by the preview after its survey and
+    by the import after its commit, so it writes nothing and changes no
+    decision."""
+    compiled = ctx.compiled
+    if compiled is None:
+        return
+    ready = [item for item in items if item.status == "ready"]
+    if not ready:
+        return
+    failed = False
+    try:
+        first_names = pseudo.FirstNamesAlone(compiled)
+    except Exception as e:                          # noqa: BLE001
+        logger.warning("The count of names left in the files was not "
+                       "made (%s).", type(e).__name__)
+        failed = True
+    work_done = 0
+    matches_left = NAMES_LEFT_MATCHES
+    past = False
+    for item in ready:
+        if failed:
+            _not_checked(item)
+            continue
+        try:
+            text = _names_left_text(item)
+            length = pseudo.reading_length(text,
+                                           stop_past_work=NAMES_LEFT_WORK)
+            work = (pseudo.residue_work(compiled, text, length)
+                    + first_names.work(text, length))
+            if work > NAMES_LEFT_WORK:
+                # Too large for this list, decided against the whole
+                # allowance, so it closes nothing for the files after it;
+                # too large even for a list of one name, fewer names
+                # would not help it
+                if pseudo.residue_work_at_one_form(
+                        text, length) > NAMES_LEFT_WORK:
+                    _names_left(item, {"too_large_to_check": True},
+                                "listed_names_left_too_large_any_list")
+                else:
+                    _names_left(item, {"too_large_to_check": True},
+                                "listed_names_left_too_large")
+                continue
+            if (past or matches_left <= 0
+                    or work_done + work > NAMES_LEFT_WORK):
+                past = True
+                _not_checked(item)
+                continue
+            stop: Dict[str, Any] = {}
+            found = pseudo.names_left_in_text(
+                compiled, text, list_longer_words=False,
+                rewritten_by_this_run=item.kind != doc_readers.PDF,
+                max_matches=matches_left,
+                max_extra_work=NAMES_LEFT_WORK - work_done - work,
+                stopped=stop)
+            spent = found if found is not None else stop
+            work_done += work + spent["extra_work"]
+            matches_left -= spent["matches"]
+            if found is None:
+                # A lower bound on the wide reading, whose whole words in
+                # a PDF are the list's own, which are not places here
+                _counted_in_part(item, stop["at_least"] - (
+                    item.numbers.get("listed_count") or 0
+                    if item.kind == doc_readers.PDF else 0))
+                continue
+            kinds = {name: 0 for name, _key in _NAMES_LEFT_KINDS}
+            for entry in found["entries"]:
+                for name, key in _NAMES_LEFT_KINDS:
+                    kinds[name] += entry[key]
+            alone = first_names.count(text, max_matches=matches_left)
+            matches_left -= alone["matches"]
+            kinds["first_name_alone"] = alone["count"]
+            kinds["other"] = found["unattributed"]
+            places = sum(kinds.values())
+            if alone["stopped"]:
+                _counted_in_part(item, places)
+                continue
+            shown = {name: count for name, count in kinds.items() if count}
+            if not places:
+                item.numbers["listed_names_left"] = {"places": 0}
+                continue
+            _names_left(item, {"places": places, **shown},
+                        "listed_names_left",
+                        places=words.places_phrase(places),
+                        kinds=words.kinds_phrase(shown))
+        except Exception as e:                      # noqa: BLE001
+            logger.warning("The count of names left in the files stopped "
+                           "(%s); this file and the later ones were not "
+                           "checked.", type(e).__name__)
+            failed = True
+            item.numbers.pop("listed_names_left", None)
+            _not_checked(item)
+
+
 # What the reader refuses that the import holds back, with the steps to
 # a file it reads: one not saved as UTF-8; and one that cannot be read in
 # the character set chosen for it (v0.15.1).
@@ -1232,6 +1407,10 @@ def file_entry(item: Item) -> Dict[str, Any]:
         entry["names_replaced"] = item.replacements
     if item.numbers.get("listed_count"):
         entry["listed_names_kept"] = item.numbers["listed_count"]
+    left = item.numbers.get("listed_names_left")
+    if left and left.get("places") != 0:
+        # v0.15.1: the places where a listed name may still show, by kind
+        entry["listed_names_left"] = dict(left)
     changes = [text for group, text in item.warnings if group == "changes"]
     information = [text for group, text in item.warnings
                    if group == "information"]
@@ -1307,6 +1486,9 @@ def preview_answer(result: Survey, ctx: Context,
                                      len(skipped), len(unread), len(later),
                                      bool(stops))
     answer["names_list"] = names_list_line(ctx)
+    if any(code in NAMES_LEFT_CODES for item in ready
+           for code in item.warning_codes):
+        answer["listed_names_left_note"] = words.LISTED_NAMES_LEFT_NOTE
     if held:
         answer["held_back"], steps = held_back_entries(held, ctx)
         if steps:

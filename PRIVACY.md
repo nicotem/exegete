@@ -1102,9 +1102,13 @@ Seven cautions:
   holding names from your list, written as the list writes them, is
   held back unless you say so for that import
   (`import_pdfs_with_listed_names`). A name written otherwise in the
-  PDF, in capitals ("MARIA BROWN"), split across two lines, or broken
-  by a hyphen at a line's end, is not seen, and such a PDF comes in
-  without a word. Web
+  PDF, in capitals ("MARIA BROWN") or split across two lines, does not
+  hold it back: the preview and the import count such places by file,
+  never naming them, or say that the file was not checked; one broken
+  by a hyphen at a line's end is not seen. In the other formats a name
+  written in a form the list does not hold (other capitals, a first
+  name alone, a name joined or split differently) stays in the stored
+  text, counted likewise. Web
   pages are read as UTF-8 alone, and plain text, Markdown and subtitle
   files as UTF-8 or in a character set you choose: a file saved in
   another character set is held back, with steps to save a copy as

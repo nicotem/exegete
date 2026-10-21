@@ -12156,6 +12156,22 @@ IMPORT_DONE_LINES = {
                 "you said: a name written with garbled letters is not "
                 "matched by a names list, so it reaches the AI provider "
                 "whenever that file is read."),
+    # v0.15.1: said when a file brought in carries any of the warnings of
+    # the count of names left (doc_import.count_names_left)
+    "listed_names_left": (
+        "In some of these files a name from your names list may still "
+        "show, in a form the list does not replace, as each file's count "
+        "says. Once a form a line can hold has a line of its own in the "
+        "names file and the list is saved again, later imports replace "
+        "it, and pseudonymise_source with the project's list replaces it "
+        "in a file already in the project (not in a PDF, where no tool "
+        "replaces a name). A name broken by a line break, a tab or an "
+        "invisible character cannot be a line, and no Exegete tool "
+        "replaces it. For a file not checked in this call, "
+        "pseudonymise_source's preview with the project's list counts, "
+        "within its own allowance, the names left in every file, the one "
+        "it names first (first names alone aside); a file too long for a "
+        "list of this size is not counted there either."),
     "file_name_names": ("A file came in under a name that holds a name from "
                         "your list, as you said: that name reaches the AI "
                         "provider whenever an answer names the file, and "
@@ -12289,6 +12305,9 @@ def import_documents(
 def _import_documents_preview(paths, ctx, stops, token_args,
                               show_text: bool = False) -> str:
     result = doc_import.survey(paths, ctx)
+    # v0.15.1: where a listed name may still show in a form the list does
+    # not replace, by file, over what the survey read
+    doc_import.count_names_left(result.items, ctx)
     adding = sum(i.size for i in result.items if i.status == "ready")
     preview = doc_import.preview_answer(
         result, ctx, stops,
@@ -12324,9 +12343,9 @@ def _import_documents_preview(paths, ctx, stops, token_args,
     try:
         payload = _issue_preview(
             "import_documents", token_args, preview, [],
-            "Show the researcher the summary, the names list line and "
-            "every warning, and wait for their word before calling again "
-            "with the token.",
+            "Show the researcher the summary, the names list line, "
+            "listed_names_left_note and every warning, and wait for their "
+            "word before calling again with the token.",
             arguments, state_preview=result.fingerprint(ctx))
     except PreviewSecretUnavailable:
         return json.dumps(
@@ -12512,6 +12531,9 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     """What the import answers: each file's id, name, length and
     warnings, the names replaced, the backup; then the lines for the
     assistant to show. Never the text."""
+    # v0.15.1: counted after the commit, outside the project's lock file
+    # and SQLite's write lock, over the texts the import stored
+    doc_import.count_names_left(taken, ctx)
     files = []
     for item in taken:
         entry = doc_import.file_entry(item)
@@ -12585,6 +12607,9 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     # (v0.15.1); after the commit, so it cannot raise.
     if any(doc_import.chosen_name(i.read) is not None for i in taken):
         lines.append(IMPORT_DONE_LINES["chosen_sets"])
+    if any(code in doc_import.NAMES_LEFT_CODES for i in taken
+           for code in i.warning_codes):
+        lines.append(IMPORT_DONE_LINES["listed_names_left"])
     if any(i.kind == doc_readers.PDF for i in taken):
         lines.append(IMPORT_DONE_LINES["pdf_release"].format(
             version=answer.get("pymupdf_version") or "unknown"))

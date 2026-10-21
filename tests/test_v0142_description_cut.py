@@ -815,11 +815,26 @@ ARGUMENTS_0151 = {
     "import_text_file": (3688, 2725, "0721b7099400ef2a"),
     "search_files": (4537, 3575, "dd59501a07c07301"),
 }
+# And attributes on journal entries and the rename back recognised from
+# backups, removed as announced in 0.14
+# (tests/test_v0151_journal_and_rename_back.py, whose
+# before_the_journal_and_rename_back puts these three back as they were
+# served before): create_attribute_type and set_attribute without the
+# journal attributes' deprecation sentence, their domains case or file;
+# rename_file without the rename back's sentence, its paragraph saying
+# that an ending the name of its stored file has may be put back and that
+# a name the project's backups show is not looked for
+JOURNAL_RENAME_0151 = {
+    "create_attribute_type": (1963, 1540, "b242c3dd182736b5"),
+    "rename_file": (3148, 2593, "5d0c29ef977f9433"),
+    "set_attribute": (1530, 1226, "cb66faba15a8c296"),
+}
 WORDS_BEFORE_ARGUMENTS_0151 = {name: words for name, words in {
     **WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
     **CHANGED_0151, **CHANGED_0151_TEXTS, **REMOVALS_0151}.items()
     if name not in REMOVED_0151}
-WORDS = {**WORDS_BEFORE_ARGUMENTS_0151, **ARGUMENTS_0151}
+WORDS = {**WORDS_BEFORE_ARGUMENTS_0151, **ARGUMENTS_0151,
+         **JOURNAL_RENAME_0151}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to

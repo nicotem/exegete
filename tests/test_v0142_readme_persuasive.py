@@ -278,7 +278,12 @@ def _tools(mode="full"):
 # (the plan's split and the Codex setting were already in, with the stale
 # texts). That takes 60 characters, and the limit is raised by that and
 # no more: 40,608.
-README_LIMIT = 40_608
+# v0.15.1, attributes on journal entries removed, as announced in 0.14:
+# the interoperability table's exceptions for cases, attributes, memos,
+# annotations and journals name setting an attribute on a journal entry.
+# That takes 41 characters, and the limit is raised by that and no more:
+# 40,649.
+README_LIMIT = 40_649
 
 
 def test_the_readme_stays_short():

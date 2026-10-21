@@ -2003,15 +2003,11 @@ class TestFixRound2WhatGoesInV015:
 
     def test_options_that_go_warn_only_when_used(self, setup_server,
                                                  qualcoder_db_path):
-        for tool, sentence in (
-                ("create_attribute_type",
-                 server.DEPRECATED_JOURNAL_ATTRIBUTES),
-                ("set_attribute", server.DEPRECATED_JOURNAL_ATTRIBUTES),
-                ("pseudonymise_source", server.DEPRECATED_EDIT_PARITY),
-                ("rename_file", server.DEPRECATED_RENAME_BACK)):
-            self._described(tool, sentence)
+        self._described("pseudonymise_source", server.DEPRECATED_EDIT_PARITY)
         # (v0.15.1: cascade, owner and search_memo went, as announced;
-        # test_arguments_that_went_are_refused above)
+        # test_arguments_that_went_are_refused above; so did attributes on
+        # journal entries and the rename back recognised from backups,
+        # test_journal_attributes_and_the_rename_back_went below)
         # (v0.15.1: the four help topics removed, as announced; each is
         # answered that it was, and no answer is marked deprecated)
         for topic in sorted(server.REMOVED_HELP_TOPICS):
@@ -2021,19 +2017,6 @@ class TestFixRound2WhatGoesInV015:
         for topic in (None, "grounding_rules", "methods_notes"):
             self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
                          server.HELP_TOPIC_REMOVED, False)
-        journal = server.DEPRECATED_JOURNAL_ATTRIBUTES
-        self._warned(jcall("create_attribute_type", name="Mood",
-                           applies_to=" Journal ", create_backup=False),
-                     journal, True)
-        self._warned(jcall("create_attribute_type", name="Age",
-                           applies_to="case", create_backup=False),
-                     journal, False)
-        self._warned(jcall("set_attribute", target_type="journal",
-                           target_id=1, attribute_name="Mood", value="x",
-                           create_backup=False), journal, True)
-        self._warned(jcall("set_attribute", target_type="case",
-                           target_id=1, attribute_name="Age", value="3",
-                           create_backup=False), journal, False)
         parity = server.DEPRECATED_EDIT_PARITY
         self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
                            file_id=1, overlap_policy="qualcoder_edit_parity"),
@@ -2049,8 +2032,29 @@ class TestFixRound2WhatGoesInV015:
         assert out["removed"]["search_memo"] == sentence.replace(
             "search_memos", "search_memos" + server.NOT_IN_THIS_TOOL_SET)
 
-    def test_a_rename_back_licensed_by_a_backup(self, setup_server,
-                                                qualcoder_db_path):
+    def test_journal_attributes_and_the_rename_back_went(
+            self, setup_server, qualcoder_db_path):
+        """v0.15.1: attributes on journal entries and the rename back
+        recognised from backups went, as announced
+        (tests/test_v0151_journal_and_rename_back.py): no description
+        carries their deprecation, a journal attribute is refused, a case
+        attribute is set as before, and a rename back to the name of the
+        text's copy in the documents folder is refused like any name
+        there."""
+        for tool in ("create_attribute_type", "set_attribute",
+                     "rename_file"):
+            description = server.mcp._tool_manager._tools[tool].description
+            assert "Deprecated" not in description, tool
+        sentence = server.JOURNAL_ATTRIBUTES_REMOVED
+        assert jcall("create_attribute_type", name="Mood",
+                     applies_to=" Journal ")["error"] == sentence
+        assert jcall("set_attribute", target_type="journal", target_id=1,
+                     attribute_name="Mood", value="x")["error"] == sentence
+        made = jcall("create_attribute_type", name="Place", applies_to="case")
+        assert made["success"] is True and "deprecated" not in made
+        changed = jcall("set_attribute", target_type="case", target_id=1,
+                        attribute_name="Age", value="3")
+        assert changed["success"] is True and "deprecated" not in changed
         project = Path(qualcoder_db_path)
         (project / "documents").mkdir(exist_ok=True)
         (project / "documents" / "legacy.txt").write_text("original")
@@ -2061,10 +2065,10 @@ class TestFixRound2WhatGoesInV015:
         server.switch_project(server.current_project_path)
         away = jcall("rename_file", file_id=5, new_name="legacy2.txt")
         assert away["changed"] is True and "deprecated" not in away
-        back = jcall("rename_file", file_id=5, new_name="legacy.txt",
-                     create_backup=False)
-        assert back["changed"] is True
-        assert back["deprecated"] == server.DEPRECATED_RENAME_BACK
+        back = jcall("rename_file", file_id=5, new_name="legacy.txt")
+        assert "already holds" in back["error"]
+        assert "restore_backup" in back["error"]
+        assert "deprecated" not in back
 
 
 class TestFixRound2TheCountWords:

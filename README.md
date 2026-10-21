@@ -488,7 +488,7 @@ beside Exegete 0.15.0:
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
 | Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting; not yet nesting an existing code under another |
-| Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
+| Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, setting an attribute on a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
 | Reports | Many, in its Reports menu | Some: codebook, coding report, frequencies, case-by-code matrix, co-occurrence |
 | REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, with known faults (every coding under the AI coder name; cases, annotations, journals and media left out); a later release is meant to fix them |
 | Comparing two coders | Per code, with a figure QualCoder labels Kappa | The same figure, and Cohen's kappa beside it; set against the AI coder name it is not agreement between independent coders |
@@ -556,7 +556,7 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 79: all, creating a project and two renamed tools' earlier names included | about 204,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `full` | 79: all, creating a project and two renamed tools' earlier names included | about 203,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 26: the coding loop and its safety tools | about 72,000 characters, 18k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Use the small tool set, for local models" |
 
 That is how much of a model's context a host uses when it sends every

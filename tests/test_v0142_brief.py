@@ -624,7 +624,12 @@ class TestTheSizes:
     # search_memo with their sentences (1,481 characters fewer in `full`
     # from 194,608; 771 in `core` from 65,332;
     # tests/test_v0151_removed_arguments.py).
-    NOW = {"full": 193_127, "core": 64_561}
+    # v0.15.1, attributes on journal entries and the rename back removed:
+    # create_attribute_type, set_attribute and rename_file lose their
+    # deprecation sentences (683 characters fewer in `full`, from
+    # 193,127; none in `core`, which serves none of the three;
+    # tests/test_v0151_journal_and_rename_back.py).
+    NOW = {"full": 192_444, "core": 64_561}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

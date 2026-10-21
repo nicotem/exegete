@@ -60,7 +60,9 @@ branch at commit 9bddf17f86aa457aff72c3a38dbc10a37f296ad2 unless marked
 October 2026), or given as at the root of QualCoder's repository. "Author", where given, is what QualCoder's file header or
 git history records for those lines; how a git identity maps to a
 person is for the QualCoder project to confirm. "Why" is the reason the
-item was copied.
+item was copied. An entry marked withdrawn keeps its number, so that the
+entries' references to each other stay true; the code it described is no
+longer in Exegete.
 
 
 Routines in the package
@@ -458,8 +460,7 @@ the format dictates.
 43. The names of QualCoder's sidecar files, of its _BKUP_ backup
     folders with the hour stamp in them, and of its settings folder.
     Here: src/exegete/database.py, _QUALCODER_BACKUP_STAMP,
-    backup_time_from_name, QualcoderDatabase.PSEUDONYMISE_SIDECARS and
-    QualcoderDatabase.earlier_name.
+    backup_time_from_name and QualcoderDatabase.PSEUDONYMISE_SIDECARS.
     Here: src/exegete/new_project.py, BACKUP_MARKERS,
     backup_siblings and check_parent_folder.
     Here: src/exegete/server.py, discover_projects,
@@ -495,20 +496,15 @@ the format dictates.
     QualcoderDatabase.documents_clash,
     QualcoderDatabase.documents_clashes and
     QualcoderDatabase.own_stored_names.
-    Here: src/exegete/server.py, _stored_copy_block and
-    _is_a_rename_back.
+    Here: src/exegete/server.py, _stored_copy_block.
     From: __main__.py, lines 1775-1776; manage_files.py, lines 2955 and
     3700-3707; refi.py, lines 2111-2117 (3.8.2 manage_files.py, lines
     2206-2207 and 2358-2366).
 
 47. That a file entry's id can be given again to a later entry, and
     that its date is set when the entry is created and is left as it is
-    by a rename.
-    Here: src/exegete/database.py, QualcoderDatabase.file_name_rows
-    and QualcoderDatabase.earlier_name.
-    From: __main__.py, lines 1790-1792; manage_files.py, lines
-    2600-2608; manage_files.py, line 1502 (3.8.2 __main__.py, lines
-    2350-2352).
+    by a rename (withdrawn).
+    Withdrawn in 0.15.1: the code it described was removed.
 
 48. The note columns of QualCoder's tables, the key each note is
     updated by, and the two kinds of note QualCoder dates when one is
@@ -701,7 +697,6 @@ QualCoder projects.
     Here: tests/test_v013_names_left_in_text.py.
     Here: tests/test_v013_one_file_per_call.py.
     Here: tests/test_v013_rename_tools.py.
-    Here: tests/test_v013_rename_backups.py.
     Here: tests/test_v08_attributes.py.
     Here: tests/test_qa_v08_d1d2_attack.py.
     Here: tests/test_v014_create_project.py.

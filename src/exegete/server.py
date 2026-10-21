@@ -333,27 +333,20 @@ REFI_EXPORT_KNOWN_FAULTS = (
 # What warns in v0.14 and goes in v0.15.1 (owner ruling 25, questions 3,
 # 7 and 8; ruling 70 moved the removals from v0.15 to v0.15.1): one
 # sentence, the same in the tool's description and in its answer, so a
-# test can pin one source of wording. The journals' and the rename
-# back's name QualCoder's own feature only for researchers who use it,
-# the gap said as Exegete's (whole-branch review, round 2). The tool that
+# test can pin one source of wording. The tool that
 # returned the names list, deprecated in v0.14 too, was removed in
 # v0.15.0 (ruling 78): the names file replaces it. The three tools and
 # the four help topics announced here went in 0.15.1, as announced (the
 # CHANGELOG names them): a call of one of the tools is refused as an
 # unknown tool, and a removed topic is answered below. So did the
 # arguments delete_code's cascade, the owner of apply_codings and
-# import_text_file, and search_files' search_memo (REMOVED_ARGUMENTS).
-DEPRECATED_JOURNAL_ATTRIBUTES = (
-    "Deprecated, removed in v0.15.1: attributes on journal entries, which "
-    "Exegete can set but never reads back (QualCoder's Journals window, "
-    "for researchers who use it, sets and shows them).")
+# import_text_file, and search_files' search_memo (REMOVED_ARGUMENTS),
+# attributes on journal entries (JOURNAL_ATTRIBUTES_REMOVED, below), and
+# the rename back recognised from the project's backups: rename_file no
+# longer reads them.
 DEPRECATED_EDIT_PARITY = (
     "Deprecated, removed in v0.15.1: overlap_policy qualcoder_edit_parity, "
     "which deletes codings on names and is not exact parity.")
-DEPRECATED_RENAME_BACK = (
-    "Deprecated, removed in v0.15.1: a rename back recognised from the "
-    "project's backups (QualCoder's own Rename, if the researcher uses it, "
-    "still makes one).")
 
 # The arguments removed in 0.15.1, as announced in 0.14: a call that
 # passes one is refused like any argument its tool does not declare
@@ -378,6 +371,16 @@ REMOVED_ARGUMENTS: Dict[Tuple[str, str], str] = {
         "search_memo was removed in 0.15.1: search_memos searches file "
         "memos and every other kind of note."),
 }
+
+# Attributes on journal entries, removed in 0.15.1, as announced in 0.14:
+# create_attribute_type with applies_to journal, and set_attribute with
+# target_type journal, answer this sentence as their first check, before
+# any other refusal, the lock and the backup. Journal attributes already
+# in a project stay as they are, and every read of them is as before.
+JOURNAL_ATTRIBUTES_REMOVED = (
+    "Attributes on journal entries were removed in 0.15.1: Exegete set "
+    "them but never read them back. Those already in the project stay as "
+    "they are. Nothing was written.")
 
 # The help topics explain_ai_coding_tools no longer has (0.15.1, as
 # announced in 0.14): asked for one, it answers with this sentence and the
@@ -21168,49 +21171,7 @@ def stored_file_name(mediapath: Optional[str]) -> Optional[str]:
     return re.split(r"[\\/]", tail)[-1] or None
 
 
-def _text_evidence_key(text: Any) -> Tuple[str, str]:
-    """The carried answer's key for a text: its type and a SHA-256 digest
-    of its bytes (fix round 4, F3A-3: a NULL text and the text 'None', or
-    a bytes text and the string of its repr, no longer share a key)."""
-    if text is None:
-        return ("NoneType", "")
-    data = text if isinstance(text, bytes) else \
-        str(text).encode("utf-8", "surrogatepass")
-    return (type(text).__name__, hashlib.sha256(data).hexdigest())
-
-
-def _is_a_rename_back(rows, file_id: int, clash: str, find_earlier) -> bool:
-    """Whether the documents/ file `clash` is this text's own copy under
-    a name it had before (the lead's ruling on QA-4).
-
-    A text with no stored path owns `documents/<its name>`; a backup that
-    shows this same entry (its id, its date and, since fix round 3, its
-    text) with a name matching `clash` is the evidence that the file was
-    its copy. Refused
-    all the same when any other entry claims the file now, by its stored
-    path or by its own name, compared as the documents/ rule compares;
-    that is checked first, so no backup is read for it.
-    """
-    key = documents_name_key(clash)
-    for other in rows:
-        if other["id"] == file_id:
-            continue
-        path = other["mediapath"]
-        if path and path.startswith("/docs/"):
-            claim = path[len("/docs/"):]
-        elif not path:
-            claim = other["name"]
-        else:
-            continue
-        if isinstance(claim, str) and documents_name_key(claim) == key:
-            return False
-    return find_earlier(("documents", key),
-                        lambda name: documents_name_key(name) == key,
-                        same_text=True) is not None
-
-
-def _file_rename_precheck(db, file_id: int, candidate: str,
-                          evidence: Optional[Dict[Any, Any]] = None):
+def _file_rename_precheck(db, file_id: int, candidate: str):
     """A result to answer without writing, or None to proceed.
 
     In order: the unknown id; the identical name, answered unchanged
@@ -21220,14 +21181,9 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
     compare); a text document's documents/ clash; the ending rule; and
     master's `unnamed_file_<n>` for a file n it would auto-rename.
 
-    `evidence` carries what the project's backups showed from the
-    read-only pre-check into the re-check inside the transaction, so the
-    backups are read once per question in a call (fix round 2, R1-4),
-    and a carried answer counts only if it still answers the question
-    as the re-check asks it (fix round 3, F2A-1).
+    Nothing here reads the project's backups (0.15.1): a rename back is
+    no longer recognised from them.
     """
-    if evidence is None:
-        evidence = {}
     rows = db.file_name_rows()
     by_id = {r["id"]: r for r in rows}
     row = by_id.get(file_id)
@@ -21252,42 +21208,10 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
                 "candidates": [{"id": r["id"], "name": r["name"]}
                                for r in others]}
     mediapath = row["mediapath"]
-
-    def find_earlier(tag, accept, same_text: bool = False) -> Optional[str]:
-        """A name this entry had before that `accept` accepts, read from
-        the project's backups only when a rule would refuse (QA-4: a
-        rename back), and once per call for each question. With
-        `same_text` (the documents/ half, F2A-2) the backup's row must
-        hold this entry's current text as well."""
-        text = db.current_text(file_id) if same_text else None
-        # No evidence from an empty, missing or unreadable text (fix
-        # round 4, F3A-1, F3A-2), decided before the carried answer or
-        # any backup is consulted.
-        if same_text and (text is None or text in (b"", "")
-                          or text is db.TEXT_UNREADABLE):
-            return None
-        tag = (tag, row.get("date"),
-               _text_evidence_key(text) if same_text else None)
-        if tag not in evidence:
-            evidence[tag] = db.earlier_name(file_id, row.get("date"), accept,
-                                            same_text=same_text, text=text)
-        name = evidence[tag]
-        # A name carried from the pre-check counts only if it still
-        # answers the question as the re-check asks it (fix round 3,
-        # F2A-1): the project may have changed in between, for example
-        # a recording linked to this text, and then an earlier ending
-        # must not license a transcript losing both of its own.
-        return name if name is not None and accept(name) else None
-
     if not mediapath or mediapath.startswith(("/docs/", "docs:")):
         clashes = db.documents_clashes(
             candidate, own_names=db.own_stored_names(mediapath, old))
         clash = clashes[0] if clashes else None
-        # Two files there that one disk folds into one cannot both be
-        # this entry's copy, so a rename back needs exactly one.
-        if len(clashes) == 1 and not mediapath and \
-                _is_a_rename_back(rows, file_id, clash, find_earlier):
-            clash = None
         if clash is not None:
             message = documents_clash_message(candidate, clash)
             if not mediapath:
@@ -21296,10 +21220,7 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
                             "name back (restoring an earlier backup undoes "
                             "everything done after it, any pseudonymisation "
                             "run included), or QualCoder's own Rename, if "
-                            "the researcher uses it; "
-                            "Exegete recognises a rename back only from a "
-                            "backup that shows this entry with that name "
-                            "and, for its documents copy, the same text.")
+                            "the researcher uses it.")
             return {"error": message}
     recordings = [r["name"] for r in rows
                   if r["av_text_id"] == file_id and r["id"] != file_id]
@@ -21308,12 +21229,6 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
     base = [stored] if stored else []
     ending = file_ending_problem(old_name, candidate, mediapath, recordings,
                                  earlier=base)
-    if ending is not None and find_earlier(
-            ("ending", candidate),
-            lambda name: file_ending_problem(
-                old_name, candidate, mediapath, recordings,
-                earlier=base + [name]) is None) is not None:
-        ending = None
     if ending is not None:
         return {"error": ending}
     for other in rows:
@@ -21333,7 +21248,6 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
 @_ignores_create_backup
 @_tool_guard
-@_with_guidance(DEPRECATED_RENAME_BACK, before="The result carries")
 def rename_file(file_id: int, new_name: str,
                 create_backup: Optional[bool] = None) -> str:
     """Rename a file's entry. THIS WRITES TO THE DATABASE. Only the name.
@@ -21370,12 +21284,10 @@ def rename_file(file_id: int, new_name: str,
     stored file's extension; a text with no stored file whose name ends
     in '.txt' or has no dot keeps it that way. QualCoder's own Rename can
     still make those changes. Any other name changes freely
-    ('Thomas.Jones' to 'P01'). A rename back is not refused: an ending
-    the file had before (its stored file's own name, or a project backup
-    showing this entry, same id and date) may be restored, except a
-    transcript losing both endings or a media file its extension; a text
-    with no stored file may take back its documents copy under a name
-    such a backup shows, with the same text.
+    ('Thomas.Jones' to 'P01'). An ending the name of its stored file has
+    may be put back, except a transcript losing both endings or a media
+    file its extension; a name the project's backups show is not looked
+    for.
 
     The result carries `changed: true`, `old_name`, `file_type`, and
     what kept the old name: `stored_copy` (an imported file's copy in the
@@ -21405,9 +21317,7 @@ def rename_file(file_id: int, new_name: str,
     if gate is not None:
         return json.dumps(gate)
     db = get_db()
-    # What the backups showed, carried into the re-check (R1-4).
-    evidence: Dict[Any, Any] = {}
-    answer = _file_rename_precheck(db, file_id, candidate, evidence)
+    answer = _file_rename_precheck(db, file_id, candidate)
     if answer is not None:
         return json.dumps(answer, indent=2)
     # What the notes say of QualCoder's places (v0.15.0, piece 12): the
@@ -21441,29 +21351,22 @@ def rename_file(file_id: int, new_name: str,
     # database (as rename_case, v0.15.1)
     result = _perform_write(
         _op, check=lambda wdb: _file_rename_precheck(
-            wdb, file_id, candidate, evidence),
+            wdb, file_id, candidate),
         backup_fail_detail="the file was not renamed")
     if result.get("changed"):
         _forget_reading_copies([file_id])
-    # A rename back that only a backup licensed goes in v0.15.1 (owner
-    # ruling 25, question 8)
-    if result.get("changed") and any(name is not None
-                                     for name in evidence.values()):
-        result["deprecated"] = DEPRECATED_RENAME_BACK
     return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS)
 @_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
-             when=lambda a: _is(a.get("applies_to"), "journal"))
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_attribute_type(name: str, applies_to: str,
                           value_type: str = "character",
                           memo: Optional[str] = None,
                           create_backup: Optional[bool] = None) -> str:
-    """Define a new attribute for cases, files or journals.
+    """Define a new attribute for cases or files.
 
     THIS WRITES TO THE DATABASE. Attributes are typed variables attached
     to every entity of one domain (e.g. a case attribute "Age" gives
@@ -21485,8 +21388,9 @@ def create_attribute_type(name: str, applies_to: str,
 
     Args:
         name: The attribute name (unique across ALL domains)
-        applies_to: 'case', 'file' or 'journal' (QualCoder's real domain
-                    set; there is no 'both')
+        applies_to: 'case' or 'file' ('journal', QualCoder's third
+                    domain, is refused: Exegete no longer sets attributes
+                    on journal entries)
         value_type: 'character' (default) or 'numeric'. Numeric values
                     are stored as text, checked to be finite numbers by
                     set_attribute and compared as numbers by
@@ -21499,6 +21403,10 @@ def create_attribute_type(name: str, applies_to: str,
     Example:
         "Add a numeric Age attribute for cases"
     """
+    # Removed in 0.15.1: the first check, before any other refusal, the
+    # lock and the backup
+    if _is(applies_to, "journal"):
+        return json.dumps({"error": JOURNAL_ATTRIBUTES_REMOVED}, indent=2)
     marker = private_marker_refusal(memo, "memo")
     if marker is not None:
         return json.dumps({"error": marker}, indent=2)
@@ -21528,11 +21436,9 @@ def create_attribute_type(name: str, applies_to: str,
 @mcp.tool(annotations=TOOL_CHANGES)
 @_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
-             when=lambda a: _is(a.get("target_type"), "journal"))
 def set_attribute(target_type: str, target_id: int, attribute_name: str,
                   value: str, create_backup: Optional[bool] = None) -> str:
-    """Set (or clear) an attribute value on a case, file or journal.
+    """Set (or clear) an attribute value on a case or a file.
 
     THIS WRITES TO THE DATABASE. The attribute must already exist (see
     create_attribute_type and list_attribute_types) and must belong to
@@ -21555,8 +21461,8 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     there are some, ask the researcher before writing.
 
     Args:
-        target_type: 'case', 'file' or 'journal'
-        target_id: The case ID, file ID or journal ID
+        target_type: 'case' or 'file'
+        target_id: The case ID or file ID
         attribute_name: The attribute to set (exact name; see
                         list_attribute_types)
         value: The value as a string ("" clears/unsets)
@@ -21566,6 +21472,10 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     Example:
         "Set Age to 34 for case 2"
     """
+    # Removed in 0.15.1: the first check, before the owner, the lock and
+    # the backup
+    if _is(target_type, "journal"):
+        return json.dumps({"error": JOURNAL_ATTRIBUTES_REMOVED}, indent=2)
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)

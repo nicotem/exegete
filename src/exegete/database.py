@@ -26,7 +26,6 @@ import uuid
 import shutil
 from datetime import datetime
 from contextlib import closing, contextmanager
-import glob
 
 from . import doc_readers, env_settings, names
 from .file_kinds import (
@@ -2672,12 +2671,11 @@ def file_ending_problem(old: str, new: str, mediapath: Optional[str],
     transcript. Every other name changes freely: a name with no
     recognised ending ('Thomas.Jones') has no rule.
 
-    `earlier` are names this file had before (its stored file's own name,
-    and its names in the project's backups): restoring an ending one of
-    them had is not refused (the lead's ruling on QA-4), where the rule
-    is about gaining an ending ('.pdf' either way, '.transcribed', a
-    declared file type) or swapping a transcript's '.txt' and
-    '.transcribed'. Losing both of a transcript's endings, or a media
+    `earlier` are names this file had before (its stored file's own
+    name): restoring an ending one of them had is not refused (the lead's
+    ruling on QA-4), where the rule is about gaining an ending ('.pdf'
+    either way, '.transcribed', a declared file type) or swapping a
+    transcript's '.txt' and '.transcribed'. Losing both of a transcript's endings, or a media
     file's stored extension, is refused whatever came before, because
     that is the change that breaks QualCoder's link or export.
     """
@@ -11792,14 +11790,13 @@ class QualcoderDatabase:
                 self.conn.execute("SELECT caseid, name FROM cases")]
 
     def file_name_rows(self) -> List[Dict[str, Any]]:
-        """Every file's id, name, stored path, transcript link and date,
-        one light query (the rename pre-check)."""
+        """Every file's id, name, stored path and transcript link, one
+        light query (the rename pre-check)."""
         return [{"id": r["id"], "name": r["name"],
-                 "mediapath": r["mediapath"], "av_text_id": r["av_text_id"],
-                 "date": r["date"]}
+                 "mediapath": r["mediapath"], "av_text_id": r["av_text_id"]}
                 for r in self.conn.execute(
-                    "SELECT id, name, mediapath, av_text_id, date FROM "
-                    "source ORDER BY id")]
+                    "SELECT id, name, mediapath, av_text_id FROM source "
+                    "ORDER BY id")]
 
     def documents_listing(self) -> List[str]:
         """The names in the project's documents/ folder ([] when it is
@@ -11844,120 +11841,6 @@ class QualcoderDatabase:
     def documents_name_taken(self, name: str) -> Optional[str]:
         """documents_clash with no own copy (a new entry has none)."""
         return self.documents_clash(name)
-
-    # How many of the project's backups, newest first, are read to
-    # recognise a rename back (fix round 1, QA-4).
-    EARLIER_NAMES_BACKUP_LIMIT = 200
-
-    # What current_text answers when the text cannot be read at all.
-    TEXT_UNREADABLE = object()
-
-    def current_text(self, file_id: int) -> Any:
-        """This entry's stored text as it is now, as the database's own
-        bytes (for earlier_name's same-text question), or None.
-
-        Read `CAST(fulltext AS BLOB)` (fix round 4, F3A-2), so a text
-        stored as text that is not UTF-8 is compared as it stands
-        instead of failing the decode; a read that still fails answers
-        TEXT_UNREADABLE, which is no evidence, so the ordinary refusal
-        answers and nothing of the text reaches a log line.
-        """
-        try:
-            row = self.conn.execute(
-                "SELECT CAST(fulltext AS BLOB) FROM source WHERE id = ?",
-                (file_id,)).fetchone()
-        except sqlite3.Error:
-            return self.TEXT_UNREADABLE
-        return row[0] if row else None
-
-    def earlier_name(self, file_id: int, current_date: Any,
-                     accept: Callable[[str], bool],
-                     same_text: bool = False,
-                     text: Any = None) -> Optional[str]:
-        """The first name `accept` accepts that this same entry has in one
-        of the project's backups, newest backup first, or None: this
-        server's `<project>_backup_*` and QualCoder's `<project>_BKUP_*`
-        copies beside the project, at most EARLIER_NAMES_BACKUP_LIMIT of
-        them.
-
-        The evidence rename_file uses to recognise a rename back (the
-        lead's ruling on QA-4): a backup keeps every earlier name. A
-        HEURISTIC for "the same entry": a backup's row counts only when
-        its id AND its date match the current row (fix round 2, R1-1):
-        QualCoder's `source.id` has no AUTOINCREMENT, so a deleted last
-        entry's id is given to the next one, and the date is set at
-        creation and by some later QualCoder actions (saving a
-        transcript, replacing a text, its 4.0 assistant's memo update),
-        never by a rename. With `same_text`, for the documents/ half
-        only, the row's text must equal `text` too (fix round 3, F2A-2:
-        QualCoder's Merge projects copies dates, so a different text can
-        match on id and date); the comparison runs inside SQLite
-        (`fulltext IS ?`), so no text is read out of a backup. No date,
-        no evidence (the safe direction: a rename back is then refused).
-        Each backup is opened read-only and immutable (R1-2), so no lock
-        is taken and no side file is made, a WAL backup included; a
-        backup with a `data.qda-journal` or `data.qda-wal` beside its
-        database is skipped (F2A-5); the scan stops at the first backup
-        that shows an accepted name (R1-4). A backup that cannot be read
-        is skipped. Nothing is
-        written; only the name and date of the row with this id are read.
-        """
-        if current_date is None or current_date == "":
-            return None
-        # An empty, missing or unreadable text says nothing about which
-        # entry this is (fix round 4, F3A-1, F3A-2): no evidence.
-        if same_text and (text is None or text == b"" or text == ""
-                          or text is self.TEXT_UNREADABLE):
-            return None
-        folder = Path(self.db_path).parent
-        backups = []
-        for prefix, to_the_hour in ((f"{folder.stem}_backup_", False),
-                                    (f"{folder.stem}_BKUP_", True)):
-            try:
-                for entry in folder.parent.glob(glob.escape(prefix) + "*.qda"):
-                    try:
-                        if entry.is_dir() and entry != folder:
-                            # Newest first by the time in the name (v0.14),
-                            # not the folder's date, which a copy inherits
-                            when, counter, _dated_from = backup_sort_key(
-                                entry, prefix, to_the_hour)
-                            backups.append(((when, counter), entry))
-                    except OSError:
-                        continue
-            except OSError:
-                continue
-        backups.sort(key=lambda item: item[0], reverse=True)
-        for _when, entry in backups[:self.EARLIER_NAMES_BACKUP_LIMIT]:
-            data = entry / "data.qda"
-            try:
-                if not data.is_file():
-                    continue
-                # A copy taken while a writer was mid-transaction, or a
-                # WAL database with frames not yet in the main file:
-                # immutable would read the main file as it stands and
-                # count a state that was never committed, so such a
-                # backup is skipped, as mode=ro alone would have refused
-                # it (fix round 3, F2A-5).
-                if unclean_backup_side_files(entry) or \
-                        backup_database_is_link(entry):
-                    continue
-                uri = _sqlite_ro_immutable_uri(data)
-                with closing(sqlite3.connect(uri, uri=True)) as con:
-                    if same_text:
-                        row = con.execute(
-                            "SELECT name, date FROM source WHERE id = ? "
-                            "AND CAST(fulltext AS BLOB) IS ?",
-                            (file_id, text)).fetchone()
-                    else:
-                        row = con.execute(
-                            "SELECT name, date FROM source WHERE id = ?",
-                            (file_id,)).fetchone()
-            except (sqlite3.Error, OSError, ValueError):
-                continue
-            if row and row[1] == current_date and \
-                    isinstance(row[0], str) and accept(row[0]):
-                return row[0]
-        return None
 
     @staticmethod
     def own_stored_names(mediapath: Optional[str],

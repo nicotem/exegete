@@ -842,8 +842,8 @@ can be deleted at any time.
 
 Every row Exegete writes carries one coder name, so AI work stays
 distinguishable from yours, in Exegete's reads and in QualCoder (an
-attribute value it sets on a file or a journal entry included, where
-QualCoder's own edit keeps the row's earlier owner). AI rows are never
+attribute value it sets on a file included, where QualCoder's own edit
+keeps the row's earlier owner). AI rows are never
 written under a name the model chose by itself: the name is set per project by you,
 and the model can only ask. You can choose it in advance, in Exegete's
 settings ("AI coder name" in the extension, `EXEGETE_AI_CODER_NAME` on
@@ -1290,22 +1290,8 @@ in either; and besides
 `prune_backups`, which reads the `pseudonyms.json` of each backup
 beside the project only to compare such fingerprints (no name in it is
 read out or returned; "Practical mitigations", on `pseudonyms.json`,
-says why), one tool reads the backups' contents: `rename_file`, to recognise a
-rename back (a name, or an ending, the file had before; deprecated:
-v0.14 says so when it happens, and v0.15.1 removes it). Only when one of
-its rules would refuse the new name, it opens the database of the
-project's own backups beside it, Exegete's `_backup_` copies and
-QualCoder's `_BKUP_` copies, newest first and at most 200, read-only and
-immutable (nothing is written into a backup, no side file is made; a
-backup with a journal or WAL file beside its database is skipped), once
-per question, stopping at the first that shows the name. It reads only
-the name and the date of the row with this file's id there; for a copy
-in the project's documents folder it also asks whether that row's text
-equals the file's current text, a comparison SQLite makes, so no text
-is read out of a backup. Taking that row for the same file is a
-heuristic: the date is set at creation and by some later QualCoder
-actions, and a rename never changes it. Nothing it reads is returned or
-logged: the only effect is whether the rename is accepted or refused.
+says why), no tool reads the backups' contents; in 0.15.0 and earlier,
+`rename_file` read the names in them to recognise a rename back.
 
 Two further rules touch files on your disk:
 
@@ -2266,9 +2252,6 @@ will ask, and the summary above depends on them:
     carried a name from the mapping (they then name the file by its id),
     though a later run with `rewrite_memos` rewrites the public part of
     those journal entries.
-    To recognise a rename back, `rename_file` reads this file's earlier
-    name from the project's backups (see "Backups, project copies, and
-    the `ai_data/` folder").
   - **QualCoder's `ai_data/` folder.** Its chat history may quote the
     previous text, and its search index (QualCoder 4.0's
     `search.sqlite`, or QualCoder 3.8's `vectorstore/faiss_store.bin`)

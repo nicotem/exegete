@@ -532,8 +532,9 @@ class TestTheDocuments:
         # about 205,000, and its fix round 1 (over a stale lock file none
         # is held): 205,516, about 206,000; and the arguments removed, as
         # announced (cascade, owner and search_memo): 204,035, about
-        # 204,000
-        assert (rounded, tokens) == ("204,000", "51k")
+        # 204,000; and attributes on journal entries and the rename back
+        # removed, as announced: 203,352, about 203,000
+        assert (rounded, tokens) == ("203,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "

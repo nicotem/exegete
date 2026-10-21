@@ -288,6 +288,22 @@ def _notice_entries():
     return entries
 
 
+def _notice_entry_texts():
+    """{entry number: the entry's text, its lines joined by spaces}."""
+    lines = (REPO / "NOTICE").read_text(encoding="utf-8").splitlines()
+    texts, current = {}, None
+    for line in lines:
+        opened = _ENTRY.match(line)
+        if opened:
+            current = int(opened.group(1))
+            texts[current] = []
+        elif not line.strip() or not line.startswith(" "):
+            current = None
+        if current is not None:
+            texts[current].append(line.strip())
+    return {number: " ".join(parts) for number, parts in texts.items()}
+
+
 def _defined_names(path):
     """Every function, class and module or class level name in a .py
     file, by qualified name ("Class.method", "Class.NAME")."""
@@ -323,7 +339,20 @@ def _defined_names(path):
 # entry dropped, the rest renumbered over it, or a Here line changed
 # fails the test until this snapshot is edited in the same change, so
 # that no item leaves NOTICE by accident.
+# v0.15.1, the removals of arguments, part two: rename_file no longer
+# reads the project's backups, so QualcoderDatabase.earlier_name and
+# server._is_a_rename_back are gone, leaving entries 43 and 46 with their
+# other places, entry 47 withdrawn (file_name_rows no longer reads the
+# date, which only the backup reader compared), and entry 69 without
+# tests/test_v013_rename_backups.py, which tested that reader and went
+# with it.
 NOTICE_ENTRIES = 81             # 0.14.3: document import, 79-81
+# Entries withdrawn in place (v0.15.1): the number and the title stay,
+# with "(withdrawn)", so that the entries' references to each other stay
+# true; the entry holds one line and no Here line.
+NOTICE_WITHDRAWN = {47}
+NOTICE_WITHDRAWN_LINE = (
+    "Withdrawn in 0.15.1: the code it described was removed.")
 NOTICE_HERE = (
     (1, "src/exegete/memo_privacy.py", "PERSONAL_NOTE_MARK",
      "_SEPARATOR_CHARS", "split_public_private_memo", "extract_ai_memo",
@@ -422,8 +451,7 @@ NOTICE_HERE = (
      "QualcoderDatabase._pseudonymise_rows",
      "QualcoderDatabase.add_attribute_type"),
     (43, "src/exegete/database.py", "_QUALCODER_BACKUP_STAMP",
-     "backup_time_from_name", "QualcoderDatabase.PSEUDONYMISE_SIDECARS",
-     "QualcoderDatabase.earlier_name"),
+     "backup_time_from_name", "QualcoderDatabase.PSEUDONYMISE_SIDECARS"),
     (43, "src/exegete/new_project.py", "BACKUP_MARKERS",
      "backup_siblings", "check_parent_folder"),
     (43, "src/exegete/server.py", "discover_projects",
@@ -440,10 +468,7 @@ NOTICE_HERE = (
      "QualcoderDatabase.documents_clash",
      "QualcoderDatabase.documents_clashes",
      "QualcoderDatabase.own_stored_names"),
-    (46, "src/exegete/server.py", "_stored_copy_block",
-     "_is_a_rename_back"),
-    (47, "src/exegete/database.py", "QualcoderDatabase.file_name_rows",
-     "QualcoderDatabase.earlier_name"),
+    (46, "src/exegete/server.py", "_stored_copy_block"),
     (48, "src/exegete/database.py",
      "QualcoderDatabase.PSEUDONYMISE_MEMO_FIELDS",
      "QualcoderDatabase.PSEUDONYMISE_MEMO_KEYS",
@@ -511,7 +536,6 @@ NOTICE_HERE = (
     (69, "tests/test_v013_names_left_in_text.py"),
     (69, "tests/test_v013_one_file_per_call.py"),
     (69, "tests/test_v013_rename_tools.py"),
-    (69, "tests/test_v013_rename_backups.py"),
     (69, "tests/test_v08_attributes.py"),
     (69, "tests/test_qa_v08_d1d2_attack.py"),
     (69, "tests/test_v014_create_project.py"),
@@ -548,7 +572,19 @@ class TestNoticeStaysTrue:
         entries = _notice_entries()
         assert sorted(entries) == list(range(1, len(entries) + 1)), \
             sorted(entries)
-        assert not [n for n, where in entries.items() if not where]
+        # but an entry withdrawn in place, which holds the one line
+        assert {n for n, where in entries.items() if not where} == \
+            NOTICE_WITHDRAWN
+        texts = _notice_entry_texts()
+        for number in NOTICE_WITHDRAWN:
+            # the title, "(withdrawn)" after it, then the one line
+            withdrawn = re.fullmatch(r"\d+\. (.+?) \(withdrawn\)\.? (.+)",
+                                     texts[number])
+            assert withdrawn, (number, texts[number])
+            assert withdrawn.group(2) == NOTICE_WITHDRAWN_LINE, number
+            assert not any(label in texts[number] for label in _LABELS)
+        assert not [n for n, text in texts.items()
+                    if n not in NOTICE_WITHDRAWN and "withdrawn" in text]
 
     def test_every_file_and_name_it_gives_exists(self):
         stale = []

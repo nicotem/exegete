@@ -90,15 +90,19 @@ class TestTheRemovalsInV0151:
         # its own, REFI_EXPORT_KNOWN_FAULTS, no longer a deprecation
         # (tests/test_v0151_refi_known_faults.py); 3 since v0.15.1 removed
         # cascade, owner and search_memo, as announced, with their
-        # sentences (tests/test_v0151_removed_arguments.py)
-        assert len(DEPRECATIONS) >= 3, DEPRECATIONS
+        # sentences (tests/test_v0151_removed_arguments.py); 1 since it
+        # removed attributes on journal entries and the rename back
+        # recognised from backups (tests/test_v0151_journal_and_rename_back.py)
+        assert len(DEPRECATIONS) >= 1, DEPRECATIONS
         assert "DEPRECATED_IMPORT_SKIP_BACKUP" not in DEPRECATIONS
         assert "DEPRECATED_REFI_EXPORT" not in DEPRECATIONS
         assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
         for gone in ("DEPRECATED_CODE_REPORT", "DEPRECATED_CLEANUP",
                      "DEPRECATED_MERGE_PROPOSALS", "DEPRECATED_HELP_TOPICS",
                      "DEPRECATED_CASCADE", "DEPRECATED_OWNER",
-                     "DEPRECATED_MEMO_SEARCH"):
+                     "DEPRECATED_MEMO_SEARCH",
+                     "DEPRECATED_JOURNAL_ATTRIBUTES",
+                     "DEPRECATED_RENAME_BACK"):
             assert gone not in DEPRECATIONS, gone
 
     @pytest.mark.parametrize("name", DEPRECATIONS)

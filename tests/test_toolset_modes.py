@@ -516,9 +516,16 @@ class TestThePublishedSchemaBudget:
     # since its sentence there marked search_memos as not served. The
     # rounded figures become about 204,000 and 72,000 characters, and the
     # tokens stay 51k and 18k.
-    FULL_MEASURED = 204_035          # 79 tools, Python 3.13.5, mcp 1.30.0
+    # v0.15.1, attributes on journal entries and the rename back removed:
+    # create_attribute_type and set_attribute without the journal
+    # attributes' deprecation sentence (139 and 219 characters fewer; 135
+    # and 215 on 3.11), rename_file without the rename back's (325 fewer;
+    # 329): 683 fewer in `full` (679 on 3.11), none in `core`, which
+    # serves none of the three. The rounded figures become about 203,000
+    # and 72,000 characters, and the tokens stay 51k and 18k.
+    FULL_MEASURED = 203_352          # 79 tools, Python 3.13.5, mcp 1.30.0
     CORE_MEASURED = 71_685           # 26 tools, same environment
-    FULL_MEASURED_310 = 214_427      # the same tree on Python 3.11.13
+    FULL_MEASURED_310 = 213_748      # the same tree on Python 3.11.13
     CORE_MEASURED_310 = 75_349
 
     # Why two per cent, away from the reference environment.
@@ -546,9 +553,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "204,035"
+    FULL_CHARS = "203,352"
     CORE_CHARS = "71,685"
-    FULL_ROUNDED = "204,000"
+    FULL_ROUNDED = "203,000"
     CORE_ROUNDED = "72,000"
     FULL_TOKENS = "51k"
     CORE_TOKENS = "18k"

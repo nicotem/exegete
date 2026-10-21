@@ -497,10 +497,15 @@ def before_the_ignored_argument(name, description):
     """`name`'s description as 0.15.0 served it, on any interpreter: the
     create_backup line and the texts that offered to skip a backup put
     back as they were (after the arguments v0.15.1 removed, owner among
-    them, are put back: tests/test_v0151_removed_arguments.py)."""
+    them, are put back: tests/test_v0151_removed_arguments.py, and the
+    journal attributes' and the rename back's sentences:
+    tests/test_v0151_journal_and_rename_back.py)."""
+    from test_v0151_journal_and_rename_back import \
+        before_the_journal_and_rename_back
     from test_v0151_removed_arguments import (DEPRECATED_OWNER_0150,
                                               before_the_removed_arguments)
-    description = before_the_removed_arguments(name, description)
+    description = before_the_removed_arguments(
+        name, before_the_journal_and_rename_back(name, description))
     found = list(NEW_ARGS_LINE.finditer(description))
     if found:
         assert len(found) == 1, name

@@ -96,15 +96,6 @@ def _backups(project):
     return sorted(project.parent.glob(f"{project.stem}_backup_*"))
 
 
-def _without_backups(project):
-    """No backup shows the project as it was: each is removed, as a
-    prune would (v0.15.1: a rename takes one whatever create_backup
-    says, so "without a backup" is made by removing it)."""
-    import shutil
-    for backup in _backups(project):
-        shutil.rmtree(backup)
-
-
 def _dump(project):
     """Every row of every table, as text, keyed by table."""
     con = _con(project)
@@ -1229,11 +1220,12 @@ class TestTheDocumentsRuleIsTheStrictestDisks:
 
 
 class TestARenameBack:
-    """Fix round 1, QA-4 (the lead's ruling): renaming back to a name
-    whose documents/ file is this entry's own copy is allowed, and
-    restoring an ending the entry had is not refused. The evidence is the
-    project's backups (every earlier name is in one) and the stored
-    file's own name; without it, the refusal says what can do it."""
+    """Fix round 1, QA-4 (the lead's ruling), as v0.15.1 leaves it: an
+    ending the stored file's own name has may be put back; a name or an
+    ending only the project's backups show is refused like any other
+    name the rules refuse, since rename_file no longer reads the backups
+    (tests/test_v0151_journal_and_rename_back.py), and the documents
+    folder's refusal says what can put the name back."""
 
     @pytest.fixture
     def listing(self, monkeypatch):
@@ -1242,22 +1234,24 @@ class TestARenameBack:
                             lambda self: list(names))
         return names
 
-    def test_a_legacy_text_takes_back_its_own_found_copy(self, project,
-                                                          listing):
+    def test_a_legacy_text_no_longer_takes_back_its_found_copy(
+            self, project, listing):
         _add_file(project, 5, "legacy.txt")
         _reload()
         listing.append("legacy.txt")
         assert _file(5, "legacy2.txt")["changed"] is True   # with a backup
+        before = _dump(project)
         out = _file(5, "legacy.txt", create_backup=False)
-        assert out["changed"] is True, out
+        assert out["error"].startswith(
+            "The project's documents folder already holds a file called "
+            "'legacy.txt'."), out
+        assert _dump(project) == before
 
-    def test_without_a_backup_the_refusal_says_what_can(self, project,
-                                                        listing):
+    def test_the_refusal_says_what_can(self, project, listing):
         _add_file(project, 5, "legacy.txt")
         _reload()
         listing.append("legacy.txt")
         assert _file(5, "legacy2.txt", create_backup=False)["changed"]
-        _without_backups(project)
         out = _file(5, "legacy.txt")
         assert out["error"].startswith(
             "The project's documents folder already holds a file called "
@@ -1267,10 +1261,7 @@ class TestARenameBack:
             "restore_backup can put that name back (restoring an earlier "
             "backup undoes everything done after it, any pseudonymisation "
             "run included), or QualCoder's own Rename, if the researcher "
-            "uses it; Exegete recognises "
-            "a rename back only from a "
-            "backup that shows this entry with that name and, for its "
-            "documents copy, the same text.")
+            "uses it.")
 
     def test_not_when_another_entry_claims_that_file_now(self, project,
                                                           listing):
@@ -1289,27 +1280,17 @@ class TestARenameBack:
         assert _file(5, "legacy2.txt")["changed"] is True
         assert "already holds" in _file(5, "legacy.txt")["error"]
 
-    @pytest.mark.parametrize("first, second", [
-        ("Thomas.Jones", "P01 notes"),               # a declared type
-        ("stray.transcribed", "stray.txt"),          # '.transcribed'
-    ])
-    def test_an_ending_it_had_is_restored(self, project, first, second):
-        _add_file(project, 5, first)
-        _reload()
-        assert _file(5, second)["changed"] is True          # a backup
-        assert _file(5, first, create_backup=False)["changed"] is True
-
     @pytest.mark.parametrize("first, second, opening", [
         ("Thomas.Jones", "P01 notes", "This text has no stored file"),
         ("stray.transcribed", "stray.txt",
          "The name would gain the ending '.transcribed'"),
     ])
-    def test_not_without_the_evidence(self, project, first, second,
-                                      opening):
+    def test_an_ending_only_a_backup_shows_is_refused(self, project, first,
+                                                      second, opening):
         _add_file(project, 5, first)
         _reload()
-        assert _file(5, second, create_backup=False)["changed"] is True
-        _without_backups(project)
+        assert _file(5, second)["changed"] is True   # a backup shows `first`
+        assert _backups(project)
         assert _file(5, first)["error"].startswith(opening)
 
     @pytest.mark.parametrize("name, mediapath, restored", [
@@ -1367,17 +1348,20 @@ class TestTheTranscriptRefusalByCase:
         assert "treats a transcript whose name does not end in '.txt' or " \
                "'.transcribed' as a broken link" in out["error"]
 
-    def test_a_swap_back_is_a_restore(self, av):
+    def test_a_swap_back_only_a_backup_shows_is_refused(self, av):
         # QualCoder's own Rename made the swap; a backup shows the
-        # transcript's earlier '.txt'.
+        # transcript's earlier '.txt', which v0.15.1 no longer reads
+        # (tests/test_v0151_journal_and_rename_back.py).
         _exec(av, "UPDATE source SET name = 'P01.mp3.txt' WHERE id = 11")
         _reload()
         assert _file(11, "P09.mp3.txt")["changed"] is True   # a backup
         _exec(av, "UPDATE source SET name = 'P01.mp3.transcribed' "
                   "WHERE id = 11")
         _reload()
+        before = _dump(av)
         out = _file(11, "P01.mp3.txt", create_backup=False)
-        assert out["changed"] is True, out
+        assert "swapping '.transcribed' for '.txt'" in out["error"], out
+        assert _dump(av) == before
 
     def test_losing_both_is_never_a_restore(self, av):
         _exec(av, "UPDATE source SET name = 'P01 transcript' WHERE id = 11")
@@ -1833,3 +1817,59 @@ class TestAGraphLabelIsReadTolerantly:
         out = _case(5, "P05 new", create_backup=False)
         assert out.get("changed") is True, out
         assert out["old_name_left_in"] == {"saved_graph_labels": 1}, out
+
+
+class _RecordingConnection:
+    """Stands in for a QualcoderDatabase's connection: records each SQL
+    statement, and can make the first one matching `fail` raise."""
+
+    def __init__(self, con, fail=None):
+        self._con, self.sql, self._fail = con, [], fail
+
+    def execute(self, sql, args=()):
+        self.sql.append(sql)
+        if self._fail and self._fail in sql:
+            raise sqlite3.OperationalError("simulated read failure")
+        return self._con.execute(sql, args)
+
+    def __getattr__(self, name):
+        return getattr(self._con, name)
+
+
+class TestHowTheSavedRowsAreRead:
+    """Fix round 4, F3B-1: old_name_left_in reads the saved rows as text,
+    and as bytes only when that read raises (kept from
+    tests/test_v013_rename_backups.py, which v0.15.1 removed with the
+    backup reader it tested)."""
+
+    @pytest.fixture
+    def saved_filter(self, project):
+        _add_file(project, 5, "legacy.txt")
+        _exec(project, "CREATE TABLE files_filter (filterid integer "
+                       "primary key, name text, filter text, owner text)")
+        _exec(project, "INSERT INTO files_filter (name, filter) VALUES "
+                       "('f', 'legacy.txt only')")
+        _reload()
+        return project
+
+    def _read(self, fail=None):
+        db = server.get_db()
+        real = db.conn
+        db.conn = _RecordingConnection(real, fail=fail)
+        try:
+            found = db.old_name_left_in("file", 5, "legacy.txt")
+            sql = db.conn.sql
+        finally:
+            db.conn = real
+        return found, sql
+
+    def test_saved_rows_are_read_as_text_first(self, saved_filter):
+        found, sql = self._read()
+        assert found.get("saved_filters") == 1
+        assert not [s for s in sql if "CAST(" in s], sql
+
+    def test_the_bytes_only_when_the_text_read_raises(self, saved_filter):
+        found, sql = self._read(fail="SELECT name, filter FROM")
+        assert found.get("saved_filters") == 1
+        assert any("CAST(name AS BLOB), CAST(filter AS BLOB)" in s
+                   for s in sql), sql

@@ -253,19 +253,13 @@ def test_privacy_says_rename_file_reads_the_backups():
            "backup beside the project only to compare such fingerprints" \
         in paragraph
     assert "no name in it is read out or returned" in paragraph
-    assert "one tool reads the backups' contents: `rename_file`, to " \
-           "recognise a rename back" in paragraph
-    assert "once per question, stopping at the first that shows the name. " \
-           "It reads only the name and the date of the row with this " \
-           "file's id there; for a copy in the project's documents folder " \
-           "it also asks whether that row's text equals the file's current " \
-           "text, a comparison SQLite makes, so no text is read out of a " \
-           "backup. Taking that row for the same file is a heuristic: the " \
-           "date is set at creation and by some later QualCoder actions, " \
-           "and a rename never changes it. Nothing it reads is returned or " \
-           "logged" in flat
-    assert "To recognise a rename back, `rename_file` reads this file's " \
-           "earlier name from the project's backups" in flat
+    # v0.15.1: rename_file no longer reads the backups, as announced
+    # (tests/test_v0151_journal_and_rename_back.py)
+    assert "says why), no tool reads the backups' contents; in 0.15.0 and " \
+           "earlier, `rename_file` read the names in them to recognise a " \
+           "rename back." in paragraph
+    assert "one tool reads the backups' contents" not in flat
+    assert "To recognise a rename back, `rename_file` reads" not in flat
 
 
 def test_the_fix_round_3_wording():

@@ -838,7 +838,9 @@ class TestExportsSayWhatTheyHold:
 
 class TestAFileValueRecordsTheAICoder:
 
-    @pytest.mark.parametrize("domain,target", [("file", 1), ("journal", 1)])
+    # (v0.15.1: no longer on a journal entry, as announced; the test
+    # below and tests/test_v0151_journal_and_rename_back.py)
+    @pytest.mark.parametrize("domain,target", [("file", 1)])
     def test_a_researcher_placeholder_takes_the_ai_name_and_date(
             self, setup_server, qualcoder_db_path, domain, target):
         sql(qualcoder_db_path, "INSERT INTO attribute_type VALUES "
@@ -860,6 +862,24 @@ class TestAFileValueRecordsTheAICoder:
             row = next(a for a in read["attributes"]
                        if a["name"] == "Setting")
             assert row["owner"] == H.DEFAULT_AI_CODER_NAME
+
+    def test_a_journal_placeholder_is_left_as_it_is(
+            self, setup_server, qualcoder_db_path):
+        """v0.15.1: attributes on journal entries were removed, as
+        announced; the researcher's row keeps its value, owner and date."""
+        sql(qualcoder_db_path, "INSERT INTO attribute_type VALUES "
+            "('Setting', '2024-01-15', 'Researcher', '', 'journal', "
+            "'character')")
+        sql(qualcoder_db_path, "INSERT INTO attribute (name, attr_type, "
+            "value, id, date, owner) VALUES ('Setting', 'journal', '', 1, "
+            "'2020-01-01 00:00:00', 'Researcher')")
+        out = host("set_attribute", target_type="journal", target_id=1,
+                   attribute_name="Setting", value="clinic",
+                   create_backup=False)
+        assert out["error"] == server.JOURNAL_ATTRIBUTES_REMOVED, out
+        assert sql(qualcoder_db_path, "SELECT value, owner, date FROM "
+                   "attribute WHERE name = 'Setting'") == [
+            ("", "Researcher", "2020-01-01 00:00:00")]
 
 
 class TestSubCodeMovesAndTheCascadeSayWhatHappens:

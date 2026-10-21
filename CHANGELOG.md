@@ -71,6 +71,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`core` has no note search.** `search_memos` is not in `core`, the
   tool set for local models, so with `search_memo` gone no tool there
   searches notes; `full`, the default, has `search_memos`.
+- **Attributes on journal entries.** `create_attribute_type` with
+  `applies_to` `journal`, and `set_attribute` with `target_type`
+  `journal`, are refused, nothing written. Journal attributes already in
+  a project stay as they are; QualCoder's Journals window, if you use
+  QualCoder, shows and sets them.
+- **A rename back is no longer recognised from backups.** `rename_file`
+  no longer opens the project's backups to see whether a name, or an
+  ending, was the file's before: a name its rules refuse is refused,
+  unless the name of the file's stored file has that ending.
+  `restore_backup`, which undoes everything done after the backup, or
+  QualCoder's own Rename, if you use it, can put an earlier name back.
 - **The REFI-QDA export stays.** `export_refi_qda` is no longer
   deprecated and is not removed: the maintainer means to fix it in a
   later release (his decision of 20 October 2026). Until then its
@@ -311,6 +322,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sentence naming what replaces it, which the answer also gives under
   `removed`. In `core`, where `search_memos` is not served, that
   sentence says so.
+- **Attributes on journal entries**, which Exegete set but never read
+  back. `create_attribute_type` with `applies_to` `journal` and
+  `set_attribute` with `target_type` `journal` (in any letter case, with
+  spaces at the ends) answer that they were removed, as their first
+  check: nothing is written and no backup is taken. Journal attributes
+  already in a project stay as they are, and `list_attribute_types`
+  lists them as before.
+- **A rename back recognised from the project's backups.** `rename_file`
+  no longer reads the project's backups, Exegete's or QualCoder's, to see
+  whether a name or an ending was the file's before. A text with no
+  stored file no longer takes back a name its copy has in the project's
+  documents folder: that is refused like any name already there, and the
+  refusal names `restore_backup` (which undoes everything done after the
+  backup), or QualCoder's own Rename, if you use it. An ending change
+  QualCoder acts on is refused unless the name of the file's stored file
+  has that ending. A rename's answer no longer carries `deprecated`.
 
 ### Changed: the REFI-QDA export is kept, its faults named
 
@@ -507,21 +534,21 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (79 tools; 82 in 0.15.0) | 204,035 | 206,624 | 214,427 | 217,084 |
+| `full` (79 tools; 82 in 0.15.0) | 203,352 | 206,624 | 213,748 | 217,084 |
 | `core` (26 tools; 25 in 0.15.0) | 71,685 | 68,258 | 75,349 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 204,035 characters (about 51.0k tokens
+- Serialised tool JSON: full = 203,352 characters (about 50.8k tokens
   at chars/4) over 79 tools, and core = 71,685 (about 17.9k) over 26,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 214,427 and
+  which also gives exactly 0.15.0's figures for its tree), 213,748 and
   75,349. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
-  25 on 3.13), seven changes moved them. The first, `create_backup`
+  25 on 3.13), eight changes moved them. The first, `create_backup`
   accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -572,14 +599,22 @@ schemas together, as below; the brief as `read_brief` returns it):
   characters fewer in `full` (1,525 on 3.11), and 771 in `core`, which
   serves `apply_codings` and `search_files` (795 on 3.11):
   `search_files`' entry there is 380 fewer (392), since its sentence on
-  `search_memo` marked `search_memos` as not in that set. Rounded, the
-  figures are about 204,000 and 72,000 characters, about 51k and 18k
-  tokens. No other tool's entry changed. The full brief says that
+  `search_memo` marked `search_memos` as not in that set. The eighth,
+  attributes on journal entries and the rename back removed, as
+  announced in 0.14: `create_attribute_type`'s and `set_attribute`'s
+  entries without the journal attributes' deprecation sentence and with
+  their domains as case or file, 139 and 219 characters fewer (135 and
+  215 on 3.11); `rename_file`'s without the rename back's sentence and
+  with its paragraph on an ending put back, 325 fewer (329). In all, 683
+  characters fewer in `full` (679 on 3.11); `core` serves none of the
+  three. Rounded, the figures are about 203,000 and 72,000 characters,
+  about 51k and 18k tokens. No other tool's entry changed. The full brief says that
   Exegete takes a backup before every change, rather than "unless the
   researcher asks for none": 14 characters fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
-  16,384 through its tool search: in `full`, 32 descriptions pass 2,048
-  (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096, on
+  16,384 through its tool search: in `full`, 31 descriptions pass 2,048,
+  as in 0.15.0 (35 on 3.11, where `update_annotation`'s now does), 4
+  pass 4,096, on
   3.11 too (`import_text_file`'s, without `owner`, no longer does), and
   one, `pseudonymise_source` (17,825 characters; 18,957 on 3.11), passes
   16,384.

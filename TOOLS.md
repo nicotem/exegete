@@ -166,9 +166,9 @@ Every row Exegete writes (codings, annotations, journal entries,
 imports, cases, codes, categories, attributes) is attributed to one
 coder name, so AI work stays distinguishable from yours, in Exegete's
 reads and in QualCoder.
-An attribute value it sets takes that name and the date on a file or a
-journal entry as on a case; QualCoder's own file and journal edits
-change the value alone and keep the row's earlier owner.
+An attribute value it sets takes that name and the date on a file as on
+a case; QualCoder's own file edits change the value alone and keep the
+row's earlier owner.
 From v0.12 that name belongs to the PROJECT and it is yours to choose.
 The first write that needs it stops and asks: the model relays the
 question, you answer, and it calls
@@ -1011,7 +1011,7 @@ declares, and each tool's own description says what each one does.
 > loudly at startup. Measured for 0.15.1 (the
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 204,000 characters for `full`, roughly 51k
+> definitions run to about 203,000 characters for `full`, roughly 51k
 > tokens at four characters per token, and about 72,000 characters for
 > `core`, roughly 18k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
@@ -1102,9 +1102,9 @@ still answers empty, and that answer is a finding.
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **WRITES TO DATABASE** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and names it)
 - `create_case(name, memo, create_backup)` - **WRITES TO DATABASE** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)
 - `rename_case(case_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a case, as QualCoder's Manage Cases does: the name only, the date untouched. A name another case has, ignoring letter case, spacing and Unicode form, is refused; the result says where the old name stays (saved graph labels, table displays and filters, files named after the case, backups)
-- `rename_file(file_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text). A rename back recognised from the project's backups is deprecated, removed in v0.15.1 (QualCoder's own Rename, if you use it, still makes one)
-- `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **WRITES TO DATABASE** - Define a new attribute for cases, files or journals. Attributes on journal entries are deprecated, removed in v0.15.1: Exegete can set them but never reads them back (QualCoder's Journals window, for researchers who use it, sets and shows them)
-- `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **WRITES TO DATABASE** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them). Journal attributes are deprecated (see `create_attribute_type`)
+- `rename_file(file_id, new_name, create_backup)` - **WRITES TO DATABASE** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text). A name the project's backups show is not looked for: `restore_backup`, or QualCoder's own Rename if you use it, can put an earlier name back
+- `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **WRITES TO DATABASE** - Define a new attribute for cases or files; attributes on journal entries were removed in 0.15.1, and those already in a project stay (QualCoder's Journals window, for researchers who use it, sets and shows them)
+- `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **WRITES TO DATABASE** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them); not on a journal entry (see `create_attribute_type`)
 
 **Recovery & Safety:**
 - `copy_project_to_workspace(source_path, new_name)` - Copy a project to the safe workspace for AI coding (the database copied consistently and the same exclusions as backups, but keeping the audio and video folders; a copy with no `ai_data` folder gets an empty one; reports skipped symlinks); a project kept in a project's `Exegete` folder is refused

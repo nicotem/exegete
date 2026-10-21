@@ -204,18 +204,11 @@ NOTES = {
         "Exegete has no other REFI-QDA export yet; QualCoder's own export "
         "(Project, Export, REFI-QDA Project export), for researchers who "
         "have QualCoder, keeps each coder, the cases, notes and media."),
-    "DEPRECATED_JOURNAL_ATTRIBUTES": (
-        "which Exegete can set but never reads back (QualCoder's Journals "
-        "window, for researchers who use it, sets and shows them)."),
-    "DEPRECATED_RENAME_BACK": (
-        "a rename back recognised from the project's backups (QualCoder's "
-        "own Rename, if the researcher uses it, still makes one)."),
+    # (v0.15.1: the journal attributes' and the rename back's notes went
+    # with what they announced; tests/test_v0151_journal_and_rename_back.py)
 }
 # Which tools' descriptions carry each
-CARRIERS = {"REFI_EXPORT_KNOWN_FAULTS": ("export_refi_qda",),
-            "DEPRECATED_JOURNAL_ATTRIBUTES": ("create_attribute_type",
-                                              "set_attribute"),
-            "DEPRECATED_RENAME_BACK": ("rename_file",)}
+CARRIERS = {"REFI_EXPORT_KNOWN_FAULTS": ("export_refi_qda",)}
 # What they said, with no condition
 UNCONDITIONAL = ("unmarked; QualCoder's own export",
                  "QualCoder's Journals window sets them",
@@ -265,11 +258,13 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
                 "Exegete has no other REFI-QDA export yet, and QualCoder's "
                 "own export (Project, Export, REFI-QDA Project export), for "
                 "researchers who have QualCoder, keeps them",
-                "is deprecated, removed in v0.15.1 (QualCoder's own Rename, "
-                "if you use it, still makes one)",
-                "Exegete can set them but never reads them back (QualCoder's "
-                "Journals window, for researchers who use it, sets and "
-                "shows them)",
+                # (v0.15.1: the rename back and journal attributes removed)
+                "A name the project's backups show is not looked for: "
+                "`restore_backup`, or QualCoder's own Rename if you use it, "
+                "can put an earlier name back",
+                "attributes on journal entries were removed in 0.15.1, and "
+                "those already in a project stay (QualCoder's Journals "
+                "window, for researchers who use it, sets and shows them)",
                 "rejected suggestions, unmarked. Exegete has no other "
                 "REFI-QDA export yet; QualCoder's own export (Project, "
                 "Export, REFI-QDA Project export), for researchers who have "

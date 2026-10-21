@@ -29,8 +29,7 @@ What is looked at, and nothing else:
    ai_vectorstore.py:582).
 2. QualCoder's own backups beside the project: the names in the
    project's parent folder that match `<stem>_BKUP_*.qda`, the stem
-   escaped for glob as `earlier_name` reads them, stopping at the first
-   that is a folder.
+   escaped for glob, stopping at the first that is a folder.
 3. A leftover lock file: `database.qualcoder_lock_state` says "stale"
    (it reads the first LOCK_READ_MAX_BYTES of the project's lock file,
    two short lines, with one retry after half a second, as every

@@ -154,8 +154,8 @@ class TestTheFirstWord:
         last first; the dotted and dotless i not read as i)."""
         alone = pseudo.FirstNamesAlone(_compiled(self.TRICKY))
         reference = re.compile("(?<!\\w)(?:" + "|".join(
-            "(" + alternative + ")" for alternative in alone._alternatives)
-            + ")(?!\\w)")
+            "(" + pseudo._first_word_alternative(firsts, parts) + ")"
+            for firsts, parts in alone._pieces) + ")(?!\\w)")
         seen = pseudo._reader_sees(self.TRICKY_TEXT)
         found = 0
         for match in reference.finditer(seen):

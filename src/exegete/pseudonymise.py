@@ -2622,7 +2622,7 @@ class FirstNamesAlone:
     casefolded letters and digits (`group_of`). `Compiled`,
     `NameDetector` and the rewrite are untouched."""
 
-    __slots__ = ("pattern", "rests", "units", "_alternatives", "_by_key",
+    __slots__ = ("pattern", "rests", "units", "_pieces", "_by_key",
                  "_compiled")
 
     def __init__(self, compiled: "Compiled"):
@@ -2651,17 +2651,20 @@ class FirstNamesAlone:
                 key=lambda alternative: (-len(alternative), alternative)))
                 + ")")
             for group in ordered]
-        self._alternatives = [
-            _first_word_alternative(group["firsts"], group["parts"])
-            for group in ordered]
+        # Each group's first letters and parts, in the pattern's order;
+        # every pattern is built from them by `_first_word_alternative`,
+        # which escapes every piece
+        self._pieces = [(group["firsts"], group["parts"])
+                        for group in ordered]
         self._compiled: Dict[int, "re.Pattern[str]"] = {}
         self._by_key: Dict[str, List[int]] = {}
-        for index, group in enumerate(ordered):
+        for index, (_firsts, parts) in enumerate(self._pieces):
             self._by_key.setdefault(_first_word_key("".join(
-                _fold(part) for part in group["parts"])), []).append(index)
+                _fold(part) for part in parts)), []).append(index)
         self.pattern: Optional["re.Pattern[str]"] = (
-            re.compile("(?<!\\w)(?:" + "|".join(self._alternatives)
-                       + ")(?!\\w)")
+            re.compile("(?<!\\w)(?:" + "|".join(
+                _first_word_alternative(firsts, parts)
+                for firsts, parts in self._pieces) + ")(?!\\w)")
             if ordered else None)
         # Priced as `Compiled.form_units` prices the forms: a unit for
         # each started block of FORM_UNIT_CHARS characters of each first
@@ -2673,7 +2676,7 @@ class FirstNamesAlone:
         pattern = self._compiled.get(index)
         if pattern is None:
             pattern = self._compiled[index] = re.compile(
-                self._alternatives[index])
+                _first_word_alternative(*self._pieces[index]))
         return pattern.fullmatch(matched) is not None
 
     def group_of(self, matched: str) -> int:
@@ -2689,7 +2692,7 @@ class FirstNamesAlone:
         for index in self._by_key.get(key, ()):
             if self._matches_whole(index, matched):
                 return index
-        for index in range(len(self._alternatives)):
+        for index in range(len(self._pieces)):
             if self._matches_whole(index, matched):
                 return index
         raise LookupError("no first word matches")

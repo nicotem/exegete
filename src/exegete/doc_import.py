@@ -291,6 +291,9 @@ class OriginalsOnly:
     def __init__(self, forms: Sequence[str]):
         from .pseudonymise import NameDetector
         self.detector = NameDetector(forms)
+        # As a compiled list gives them, for the readings' check of a
+        # first name alone (readings_withheld, v0.15.1)
+        self.forms = tuple((form, index) for index, form in enumerate(forms))
 
     def carries_a_name(self, value: Any) -> bool:
         return self.detector.contains(value)
@@ -1280,31 +1283,70 @@ def _shown_line(window: str) -> str:
     return left + window[at:at + 1] + right
 
 
-def shown_readings(item: Item, ctx: Optional[Context]) -> Dict[str, Any]:
+def readings_withheld(check: Any) -> Callable[[str], bool]:
+    """Whether a reading's window of a line is kept from the preview
+    (v0.15.1, ruling 93), as widely as the names-left count counts: it
+    holds a name from the list by Exegete's one rule for a name inside a
+    name (`name_holds_listed_name`: any case, across separators, inside
+    longer words), or the first word of a listed name alone, by the
+    count's own matcher (`pseudonymise.FirstNamesAlone`, built here once
+    from the list's forms). Nothing is withheld without a list; every
+    line under EveryName, and every line when the matcher cannot be
+    built or fails on a window: never a line unchecked, and the answer's
+    sentence says no line is shown. Nothing is logged."""
+    if check is None:
+        return lambda window: False
+    if isinstance(check, EveryName):
+        return lambda window: True
+    try:
+        first_names = pseudo.FirstNamesAlone(check)
+    except Exception:                               # noqa: BLE001
+        return lambda window: True
+
+    def withheld(window: str) -> bool:
+        if name_holds_listed_name(check, window):
+            return True
+        try:
+            return first_names.count(window)["count"] > 0
+        except Exception:                           # noqa: BLE001
+            return True
+    return withheld
+
+
+def shown_readings(item: Item, ctx: Optional[Context],
+                   withheld: Optional[Callable[[str], bool]] = None
+                   ) -> Dict[str, Any]:
     """What the preview shows of a held file's readings (v0.15.1): the
-    first of its lines in which no choice's whole window holds a name by
-    `readings_check` (Exegete's one rule for a name inside a name: any
-    case, across separators, inside longer words; none under EveryName),
+    first of its lines in which no choice's whole window is withheld
+    (`readings_withheld` over `readings_check`, or `withheld` when given),
     each choice's window then cut (`_shown_line`), with the sets that
-    cannot read the file; or instead why no line is shown. Nothing ranks
-    or marks a choice."""
+    cannot read the file; or, when every line is withheld, why no line is
+    shown, with the sets that can read it, each without a line (ruling
+    93: a choice can still be made by the file's name and theirs).
+    Nothing ranks or marks a choice."""
     readings = item.readings or {}
     if readings.get("too_long"):
         return {"readings_too_long": words.READINGS_TOO_LONG}
     choices = readings.get("choices") or []
     if not choices:
         return {"no_reading_offered": words.NO_READING_OFFERED}
-    check = ctx.readings_check if ctx is not None else None
+    if withheld is None:
+        withheld = readings_withheld(
+            ctx.readings_check if ctx is not None else None)
+    cannot = [doc_readers.READING_NAMES[key]
+              for key in readings.get("not_offered", [])
+              if key in doc_readers.READING_NAMES]
     line = None
-    if not isinstance(check, EveryName):
-        for index in range(len(choices[0]["windows"])):
-            if check is None or not any(
-                    name_holds_listed_name(check, c["windows"][index])
-                    for c in choices):
-                line = index
-                break
+    for index in range(len(choices[0]["windows"])):
+        if not any(withheld(c["windows"][index]) for c in choices):
+            line = index
+            break
     if line is None:
-        return {"no_line_shown": words.NO_LINE_SHOWN}
+        return {"no_line_shown": words.NO_LINE_SHOWN,
+                "readings": [{"character_set": choice["key"],
+                              "read_as": list(choice["names"])}
+                             for choice in choices],
+                "cannot_be_read_as": cannot}
     lines = [_shown_line(c["windows"][line]) for c in choices]
     shown = []
     for choice, text in zip(choices, lines):
@@ -1315,10 +1357,7 @@ def shown_readings(item: Item, ctx: Optional[Context]) -> Dict[str, Any]:
             # The texts differ, so this choice reads otherwise elsewhere.
             said["differs_elsewhere"] = True
         shown.append(said)
-    return {"readings": shown,
-            "cannot_be_read_as": [doc_readers.READING_NAMES[key]
-                                  for key in readings.get("not_offered", [])
-                                  if key in doc_readers.READING_NAMES]}
+    return {"readings": shown, "cannot_be_read_as": cannot}
 
 
 def held_back_entries(items: Sequence[Item], ctx: Optional[Context] = None
@@ -1333,12 +1372,17 @@ def held_back_entries(items: Sequence[Item], ctx: Optional[Context] = None
     answer reads no text, so its entries carry none."""
     entries: List[Dict[str, Any]] = []
     shown = 0
+    withheld: Optional[Callable[[str], bool]] = None
     for item in items:
         entry: Dict[str, Any] = {"file": item_label(item),
                                  "reason": refusal_words(item)}
         if item.readings is not None:
             if shown < READINGS_FILES:
-                entry.update(shown_readings(item, ctx))
+                if withheld is None:
+                    # Built once a call: the first names' pattern
+                    withheld = readings_withheld(
+                        ctx.readings_check if ctx is not None else None)
+                entry.update(shown_readings(item, ctx, withheld))
                 shown += 1
             else:
                 entry["readings_not_shown"] = words.READINGS_NOT_SHOWN

@@ -684,8 +684,12 @@ READINGS_NOTE = (
     "(saving_a_copy_as_utf8).")
 NO_LINE_SHOWN = (
     "No line of this file is shown: every line that tells its readings "
-    "apart holds a name from the project's names list in at least one "
-    "reading, or the list cannot be read.")
+    "apart holds, in at least one reading, a name from the project's "
+    "names list or a form of one the list does not replace (a first name "
+    "alone, say), or the list cannot be read. A reading can still be "
+    "chosen by the file's name and the sets' names given here. Such "
+    "forms stay in the text once imported; a form written on one line "
+    "can be added to the names file, so that the import replaces it.")
 NO_READING_OFFERED = (
     "No character set offered here reads this file without letters it "
     "cannot make or control codes no text holds, so no line is shown: it "

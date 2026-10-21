@@ -1071,7 +1071,7 @@ reads it (below). What does reach the AI provider, and what does not:
 
 | Step | Sent to the AI provider | Not sent |
 |---|---|---|
-| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token; with `show_text`, where the page it opens on your screen is; for the first five plain text files not saved as UTF-8, one line of each as each character set that can read it reads it, unless a name from your names list appears in that line in any reading | the rest of the text, also when that page shows it to you; any library's or the document's own messages |
+| The preview | the paths given (folder and file names); for a folder, the names of its documents and of its subfolders; each file's name (or, when its name holds a name from your names list, only its position), size, length, character set, warnings and refusals in Exegete's own words; counts; the token; with `show_text`, where the page it opens on your screen is; for the first five plain text files not saved as UTF-8, one line of each as each character set that can read it reads it, unless a name from your names list, or a form of one the import counts (a first name alone, say), appears in that line in any reading | the rest of the text, also when that page shows it to you; any library's or the document's own messages |
 | The import | the arguments, and the answer: ids, the names of the files imported and of those not imported (with the reason), counts, the backup's place | the text |
 | Afterwards | whatever later reads return, as for any file in the project; for a PDF, its notes too, which join the file's memo as QualCoder adds them | |
 
@@ -1119,10 +1119,15 @@ Seven cautions:
   character set that can read it reads it, and these lines reach the AI
   provider, as the file's text would once imported, perhaps for a file
   you then leave out: no line is shown in which a name from your names
-  list appears in any reading, the list switched off for the import
-  included, but other names can be in it, and so can a listed name in a
-  file saved in a set not offered there, which every set offered writes
-  with other letters. If you say which reading reads right, the file
+  list appears in any reading, nor one holding a form of it the import
+  counts (other capitals, a first name alone written with its capital, a
+  name joined or split differently), the list switched off for the
+  import included; when every line holds one, none is shown, and the
+  preview says so. Other names can be in a line, and so can a listed
+  person's surname alone (the end of a name split over two lines, say),
+  a first name in small letters, or a listed name in a file saved in a
+  set not offered there, which every set offered writes with other
+  letters. If you say which reading reads right, the file
   comes in read in that set, its text stored as UTF-8, the original
   copied unchanged, and a line in its memo saying how it was read. A
   file is never read by a guess or by the set a web page declares.

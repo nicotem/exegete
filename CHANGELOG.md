@@ -110,11 +110,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   choice; the line shown is the one whose readings differ most; the
   names are those TextEdit shows. **These lines reach the AI
   provider**, perhaps for a file never imported; no line is shown in
-  which a name from the names list appears in any reading, the list
-  switched off for the import included, but other names can be in it,
-  and so can a listed name in a file saved in a set not offered
-  (Turkish, Baltic, Hebrew, Arabic, Thai or Vietnamese, say), which
-  every set offered writes with other letters.
+  which a name from the names list appears in any reading, nor one
+  holding a form of it that the count of names left (below) counts:
+  other capitals, a first name alone written with its capital, a name
+  joined or split differently. The list switched off for the import is
+  read for this too. When every line holds one, no line is shown, the
+  preview says so and still names the sets that can read the file.
+  Other names can be in a line, and so can a listed person's surname
+  alone, a first name in small letters, or a listed name in a file
+  saved in a set not offered (Turkish, Baltic, Hebrew, Arabic, Thai or
+  Vietnamese, say), which every set offered writes with other letters.
 - **`import_documents` takes `character_sets`.** On the researcher's
   word, it names the reading picked for each such file ({the file as
   the preview names it: that reading's `character_set`}); the preview

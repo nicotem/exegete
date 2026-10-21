@@ -12,7 +12,9 @@ when it may fall out of step. A list changed after the preview makes the
 token stale. The restore holds the project's lock file, kept fresh, from
 its checks to the end of the copy: the clear keeps it, the copy leaves a
 backup's lock files out, and a lock another program takes over before
-the clear refuses the restore with nothing changed. A backup still being
+the clear refuses the restore with nothing changed; over a lock file
+already stale none is held, as before, and each text that says the
+project is in use to the restore's end says so. A backup still being
 made, under its hidden name, is refused as not a backup of the project.
 `restore_backup` is in the `core` set.
 """
@@ -60,7 +62,8 @@ PREVIEW_PARAGRAPH = (
     "has (counts), and what happens to the names list, pseudonyms.json "
     "(names_list_note). The project's lock file is held, kept fresh, for "
     "the whole restore, so QualCoder 3.8.2, or another conversation using "
-    "Exegete, finds the project in use until it ends.")
+    "Exegete, finds the project in use until it ends; over a stale lock "
+    "file, none is held and the restore removes that file.")
 
 
 def without_the_preview_paragraph(description: str) -> str:
@@ -378,15 +381,56 @@ def test_a_lock_taken_over_before_the_clear_refuses_the_restore(
         encoding="utf-8") == lines
 
 
-def test_over_a_stale_lock_nothing_is_held_as_before(selected):
-    """A guard: over another program's stale lock the restore holds
-    nothing and its clear removes that file, as before."""
+def test_over_a_stale_lock_nothing_is_held_as_before(selected,
+                                                     monkeypatch):
+    """A guard for what the texts say of this case (fix round 1): over
+    another program's stale lock the restore holds nothing, its clear
+    removes that file, as before, and the copy runs with no lock file in
+    place and no refresh."""
     backup = database.backup_project(selected)
     (selected / QUALCODER_LOCK_FILENAME).write_text(
         f"qc_foreign\n{time.time() - 3600}", encoding="utf-8")
+    seen = {"states": set(), "refresh": set()}
+    real = server._copy_around_exegete_folder
+
+    def watched_copy(source, project_folder, **kwargs):
+        seen["states"].add(database.qualcoder_lock_state(selected)[0])
+        seen["refresh"].add(len(_refresh_threads()))
+        return real(source, project_folder, **kwargs)
+    monkeypatch.setattr(server, "_copy_around_exegete_folder", watched_copy)
     _preview, answer = _restore(backup)
     assert answer.get("success") is True, answer
+    assert seen == {"states": {"absent"}, "refresh": {0}}
     assert not os.path.lexists(selected / QUALCODER_LOCK_FILENAME)
+
+
+# Each text that says the restore keeps the project in use to its end, by
+# where it is: the served description, TOOLS.md's entry, the CHANGELOG's
+# bullet. Over a lock file already stale none is held (the guard above),
+# so each says that too (the combined review, round 1)
+def _texts_that_say_the_lock_is_held():
+    server._apply_toolset("full")
+    tools = (REPO / "TOOLS.md").read_text(encoding="utf-8")
+    changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    entry = next(line for line in tools.splitlines()
+                 if line.startswith("- `restore_backup("))
+    bullet = changelog[changelog.index(
+        "- **A restore's preview says what it would bring back"):]
+    bullet = bullet[:bullet.index("\n- **")]
+    return {"description": server.mcp.original_descriptions[
+                "restore_backup"],
+            "TOOLS.md": entry, "CHANGELOG.md": bullet}
+
+
+@pytest.mark.parametrize("where", ["description", "TOOLS.md",
+                                   "CHANGELOG.md"])
+def test_each_text_says_no_lock_is_held_over_a_stale_one(where):
+    text = " ".join(_texts_that_say_the_lock_is_held()[where].split())
+    assert "finds the project in use until" in text, where
+    stale = re.search(r"[Oo]ver a (stale lock file|lock file already "
+                      r"stale)[^.;]*?,? (none|nothing) is held", text)
+    assert stale is not None, where
+    assert stale.start() > text.index("finds the project in use until")
 
 
 # ---------------------------------------------------------------------------

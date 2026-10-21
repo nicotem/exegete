@@ -416,7 +416,8 @@ class TestInstall:
         # accepted and ignored, then about 209,000 with audio and video
         # left out of backups, as the small corrections leave it, then
         # about 205,000 with the three tools removed, still about
-        # 205,000 with the restore's paragraph on its preview
+        # 205,000 with the restore's paragraph on its preview, and about
+        # 206,000 with its sentence on a stale lock file
         assert "On Python 3.13, 4 of `full`'s 79 descriptions" in install
         assert "`full` (default) registers 79 tools" in install
         rounded = _rounded_full()

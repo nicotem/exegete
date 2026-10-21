@@ -226,7 +226,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   project removed it, so the copy ran without one. QualCoder 3.8.2, or
   another conversation using Exegete, now finds the project in use
   until the restore ends, rather than being able to open it half
-  copied. A lock file another program takes over before the project is
+  copied. Over a lock file already stale (not refreshed for over 30
+  seconds, as one left by a program that stopped without removing it,
+  or by a write cut short), nothing is held, as before: the restore
+  removes that file and copies with no lock file in place, so a
+  program opening the project meanwhile is not told that it is in use.
+  A lock file another program takes over before the project is
   cleared (possible only once Exegete's has gone unrefreshed for 30
   seconds, as when the computer sleeps) refuses the restore with
   nothing removed, and the answer names the safety backup. A lock file in the backup is
@@ -458,20 +463,20 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (79 tools; 82 in 0.15.0) | 205,443 | 206,624 | 215,875 | 217,084 |
-| `core` (26 tools; 25 in 0.15.0) | 72,383 | 68,258 | 76,067 | 71,690 |
+| `full` (79 tools; 82 in 0.15.0) | 205,516 | 206,624 | 215,952 | 217,084 |
+| `core` (26 tools; 25 in 0.15.0) | 72,456 | 68,258 | 76,144 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 205,443 characters (about 51.4k tokens
-  at chars/4) over 79 tools, and core = 72,383 (about 18.1k) over 26,
+- Serialised tool JSON: full = 205,516 characters (about 51.4k tokens
+  at chars/4) over 79 tools, and core = 72,456 (about 18.1k) over 26,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 215,875 and
-  76,067. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
+  which also gives exactly 0.15.0's figures for its tree), 215,952 and
+  76,144. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
   25 on 3.13), six changes moved them. The first, `create_backup`
   accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
@@ -510,11 +515,12 @@ schemas together, as below; the brief as `read_brief` returns it):
   (184). In all, 4,101 characters fewer in `full` (4,273 on 3.11);
   `core` serves none of the three tools. The sixth, `restore_backup`:
   its description says what its preview gives and that the lock file
-  is held for the whole restore, 399 characters more in `full` (423 on
-  3.11); and `core` gains the tool, 3,733 characters (3,957 on 3.11),
+  is held for the whole restore, unless one already there is stale,
+  472 characters more in `full` (500 on 3.11); and `core` gains the
+  tool, 3,806 characters (4,034 on 3.11),
   while `list_backups`' and `delete_coding`'s descriptions lose the four
-  marks that said it was not in the set, 132 fewer: 3,603 more in
-  `core` (3,827 on 3.11). Rounded, the figures are about 205,000 and
+  marks that said it was not in the set, 132 fewer: 3,676 more in
+  `core` (3,904 on 3.11). Rounded, the figures are about 206,000 and
   72,000 characters, about 51k and 18k tokens. No other tool's entry
   changed. The full brief says that Exegete takes a backup before every
   change, rather than "unless the researcher asks for none": 14

@@ -503,11 +503,15 @@ class TestThePublishedSchemaBudget:
     # list_backups' and delete_coding's descriptions lose the four marks
     # that said it was not in the set: 3,603 more in `core` (3,827). The
     # rounded figures become about 205,000 and 72,000 characters, the
-    # tokens 51k and 18k.
-    FULL_MEASURED = 205_443          # 79 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 72_383           # 26 tools, same environment
-    FULL_MEASURED_310 = 215_875      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 76_067
+    # tokens 51k and 18k. Its fix round 1: the description says that over
+    # a lock file already stale none is held, 73 characters more in both
+    # sets (77 on 3.11): 472 more in `full` (500), 3,806 for the tool
+    # (4,034) and 3,676 more in `core` (3,904). The rounded figures
+    # become about 206,000 and 72,000 characters, the tokens 51k and 18k.
+    FULL_MEASURED = 205_516          # 79 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 72_456           # 26 tools, same environment
+    FULL_MEASURED_310 = 215_952      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 76_144
 
     # Why two per cent, away from the reference environment.
     #
@@ -534,9 +538,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,443"
-    CORE_CHARS = "72,383"
-    FULL_ROUNDED = "205,000"
+    FULL_CHARS = "205,516"
+    CORE_CHARS = "72,456"
+    FULL_ROUNDED = "206,000"
     CORE_ROUNDED = "72,000"
     FULL_TOKENS = "51k"
     CORE_TOKENS = "18k"
@@ -743,6 +747,15 @@ class TestThePublishedSchemaBudget:
         entry = self._current_entry()
         assert f"full = {self.FULL_CHARS} characters" in entry
         assert f"core = {self.CORE_CHARS}" in entry
+        # and the table's rows, on both interpreters (v0.15.1, the
+        # restore's fix round 1: a row could lag behind the prose)
+        for name, now, now_311 in (
+                ("full", self.FULL_MEASURED, self.FULL_MEASURED_310),
+                ("core", self.CORE_MEASURED, self.CORE_MEASURED_310)):
+            row = re.search(rf"\| `{name}` \([^)]*\) \| ([0-9,]+) \| "
+                            r"[0-9,]+ \| ([0-9,]+) \|", entry)
+            assert row is not None, name
+            assert row.groups() == (f"{now:,}", f"{now_311:,}"), name
         assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
         # The environment, by path: this repository holds two, at
         # different interpreters, and a version alone does not say which

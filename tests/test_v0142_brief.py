@@ -616,8 +616,10 @@ class TestTheSizes:
     # its lock file (399 characters more in `full`); in `core`, which it
     # joins and where it is left out here as a tool added to the set
     # after 0.14.2 (ADDED_TO_CORE_AFTER_0142), list_backups and
-    # delete_coding no longer mark it (132 characters fewer).
-    NOW = {"full": 194_535, "core": 65_332}
+    # delete_coding no longer mark it (132 characters fewer). Its fix
+    # round 1: the paragraph says that over a stale lock file none is
+    # held (73 characters more in `full`).
+    NOW = {"full": 194_608, "core": 65_332}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

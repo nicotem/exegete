@@ -529,8 +529,9 @@ class TestTheDocuments:
         # three tools and four help topics, as announced in 0.14: 79
         # tools, 205,044, about 205,000; and restore_backup's paragraph
         # on its preview and its lock file (the restore): 205,443, still
-        # about 205,000
-        assert (rounded, tokens) == ("205,000", "51k")
+        # about 205,000, and its fix round 1 (over a stale lock file none
+        # is held): 205,516, about 206,000
+        assert (rounded, tokens) == ("206,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "

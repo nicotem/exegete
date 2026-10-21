@@ -1126,9 +1126,9 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 79 tools by
 default, and the serialised tool definitions alone measure about
-205,000 characters, roughly 51k tokens, against about 72,000
-characters, roughly 18k tokens, for the 26 tools of `core` (205,443
-and 72,383 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
+206,000 characters, roughly 51k tokens, against about 72,000
+characters, roughly 18k tokens, for the 26 tools of `core` (205,516
+and 72,456 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far
 past where small-model tool selection degrades. Set
@@ -1600,7 +1600,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 205,000 characters with `full`; TOOLS.md says how that
+  (about 206,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

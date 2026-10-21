@@ -744,7 +744,8 @@ CHANGED_0150 = {
 # said "the same exclusions backups use".
 # v0.15.1, the restore (tests/test_v0151_restore.py): restore_backup's
 # paragraph on what its preview gives (the backup's time, the counts,
-# the names list) and on the lock file held for the whole restore.
+# the names list) and on the lock file held for the whole restore; its
+# fix round 1, that over a stale lock file none is held.
 CHANGED_0151 = {
     "add_annotation": (1635, 1327, "4bbbbadf442ce4d9"),
     "add_journal_entry": (1075, 864, "12671d098694fc7f"),
@@ -769,7 +770,7 @@ CHANGED_0151 = {
     "rename_category": (998, 808, "47f306f452b8c7d5"),
     "rename_code": (968, 778, "d44768fcb8687026"),
     "rename_file": (3469, 2859, "2a48298f73e57c30"),
-    "restore_backup": (3305, 2724, "7bbe8a15550f4acb"),
+    "restore_backup": (3377, 2782, "4f25a3b30c2dac2e"),
     "set_attribute": (1747, 1411, "6926f03ebdf6151c"),
     "set_memo": (2610, 2080, "38ff500521558e9d"),
     "update_annotation": (1990, 1631, "ce66fc0d896a7302"),

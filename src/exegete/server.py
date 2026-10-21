@@ -14113,7 +14113,8 @@ def restore_backup(backup_path: str,
     has (counts), and what happens to the names list, pseudonyms.json
     (names_list_note). The project's lock file is held, kept fresh, for
     the whole restore, so QualCoder 3.8.2, or another conversation using
-    Exegete, finds the project in use until it ends.
+    Exegete, finds the project in use until it ends; over a stale lock
+    file, none is held and the restore removes that file.
 
     Args:
         backup_path: Path to the backup folder (from list_backups)
@@ -14588,6 +14589,7 @@ def restore_backup(backup_path: str,
             "folder); nothing further was changed.")
         result.setdefault("safety_backup", str(safety_backup))
     return json.dumps(result, indent=2)
+
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard

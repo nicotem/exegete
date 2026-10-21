@@ -148,12 +148,13 @@ class TestClaudeCodesLimitsOnEveryPython:
         four = re.findall(r"`(\w+)`", said)
         assert len(four) == 4 and all(name in lengths for name in four)
         others = [name for length, name in over if name not in four]
-        assert len(others) == 1, others
+        # v0.15.1, the removed arguments: import_text_file, without owner,
+        # no longer passes 4,096 on 3.10 to 3.12, so the same four are all
+        # (tests/test_v0151_removed_arguments.py)
+        assert others == [], others
         same = (", ".join(f"{lengths[n]:,}" for n in four[:-1])
                 + f" and {lengths[four[-1]]:,}")
-        assert (f"on 3.10 to 3.12, {len(over)} are (the same four, at "
-                f"{same}, and `{others[0]}`, {lengths[others[0]]:,})"
-                ) in long
+        assert f"on 3.10 to 3.12, the same four are, at {same}." in long
         longest, name = over[0]
         assert name == "pseudonymise_source"
         # 1,441 since v0.15.1 (17,825 on 3.13)

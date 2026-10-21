@@ -554,7 +554,10 @@ class TestTheChangelog:
             four = [f"{len(served[name]):,}" for name in (
                 "pseudonymise_source", "start_coding_session",
                 "search_files", "record_suggestions")]
-            assert ("(the same four, at {}, {}, {} and {},".format(*four)
+            # v0.15.1, the removed arguments: import_text_file, without
+            # owner, no longer passes 4,096 there, so the four are all
+            # (tests/test_v0151_removed_arguments.py)
+            assert ("the same four are, at {}, {}, {} and {}.".format(*four)
                     in install)
 
     def test_the_measurement(self):

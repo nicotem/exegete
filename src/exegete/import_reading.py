@@ -32,6 +32,11 @@ The contract, and why each part matters:
   with (READER_LIBRARIES, null for none) and the release of it this
   process loaded, so that Exegete's log can say what kind of error lay
   behind the verdict (v0.15.1).
+- Usage reports off: PyMuPDF 2.0 loads onnxruntime, whose reports to
+  Microsoft are on by default. The small environment carries the setting
+  that stops them on Linux and macOS, and before a PDF is read the
+  process calls onnxruntime's own switch, the one Windows' reports heed,
+  which stops all but the one onnxruntime writes as it loads (v0.15.1).
 - Limits: a time limit, and a memory cap on every system (Linux: an
   address-space limit the process sets on itself before it reads
   anything; macOS, which honours no such limit: the server watches the
@@ -199,9 +204,34 @@ def _damaged(behind: Optional[type], kind: str,
     return answer
 
 
+def _onnxruntime_reports_off() -> None:
+    """Before PyMuPDF loads (v0.15.1). PyMuPDF 2.0 loads onnxruntime as
+    it is imported and starts its models, and onnxruntime's usage reports
+    to Microsoft are on by default. ORT_DISABLE_TELEMETRY
+    (env_settings.READER_SETTINGS) stops them all on Linux and macOS. On
+    Windows they go through the system's event tracing, which reads no
+    setting: onnxruntime's own switch, called here once it has loaded and
+    before PyMuPDF starts its models, stops every report after the one it
+    writes as it loads, which nothing in Python can reach (PRIVACY.md
+    says so). Where onnxruntime is not installed (PyMuPDF 1.x), nothing
+    is loaded; if it cannot load, PyMuPDF reads without it, as before."""
+    try:
+        import onnxruntime
+    except ImportError:
+        return
+    except Exception:
+        return
+    try:
+        onnxruntime.disable_telemetry_events()
+    except Exception:
+        pass
+
+
 def _read(header: Dict[str, Any], raw: bytes) -> Dict[str, Any]:
     from . import doc_readers
     kind = str(header["kind"])
+    if kind == "pdf":
+        _onnxruntime_reports_off()
     chosen = {}
     if "character_set" in header:
         # The set the researcher chose (v0.15.1), sent only when given.

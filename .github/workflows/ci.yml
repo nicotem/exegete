@@ -261,10 +261,14 @@ jobs:
       # summary, from the six reports above (scripts/extension_libraries.py
       # fails on a report with no install line). Each release's notes copy
       # the release commit's table under "What the extension installs".
+      # --check-pymupdf: it also fails when a computer's report does not
+      # install the PyMuPDF pyproject.toml gives it (2.x with onnxruntime
+      # on Windows x64 and Linux, 1.x elsewhere), since uv evaluates
+      # markers for a computer it is asked about, not the one it runs on.
       - name: List what the extension installs
         if: runner.os == 'Linux'
         shell: bash
-        run: python scripts/extension_libraries.py "$RUNNER_TEMP"/dry-run/*.txt >> "$GITHUB_STEP_SUMMARY"
+        run: python scripts/extension_libraries.py --check-pymupdf "$RUNNER_TEMP"/dry-run/*.txt >> "$GITHUB_STEP_SUMMARY"
 
       # Installed and started the way Claude Desktop 2.9939.2 does it
       # (scripts/smoke_desktop_extension.py says how), with that uv, in a

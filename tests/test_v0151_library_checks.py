@@ -13,7 +13,11 @@
   six dry run reports (one per computer) into one table, a row for each
   library and release, naming the computers when not all take it; a
   report with no install line fails rather than give an empty table.
-  Each release's notes copy the release commit's table.
+  Each release's notes copy the release commit's table. In CI it also
+  checks that each computer's report installs the PyMuPDF pyproject.toml
+  gives it (2.x with onnxruntime on Windows x64 and Linux from Python
+  3.11 to 3.14, 1.x elsewhere): uv, asked about Windows x64 from Linux,
+  names its processor "x86_64", where Windows' own Python says "AMD64".
 
 No test reaches the network: the request is replaced, and the reports
 are small samples in uv's own form.
@@ -28,6 +32,7 @@ import urllib.error
 from pathlib import Path
 
 import pytest
+from packaging.requirements import Requirement
 
 from test_v012_workflow_pins import WORKFLOWS, _jobs
 
@@ -319,6 +324,105 @@ def test_a_report_short_of_what_uv_announced_gives_no_table(reports, capsys):
     assert capsys.readouterr().out == ""
 
 
+def test_a_python_uv_installed_itself_is_named(tmp_path):
+    """uv names a Python it installed without "interpreter at"."""
+    path = tmp_path / "x86_64-unknown-linux-gnu.txt"
+    path.write_text(_report("x", [("anyio", "4.15.1")]).replace(
+        "Using CPython 3.13.16 interpreter at: /opt/python3.13",
+        "Using CPython 3.13.5"), encoding="utf-8")
+    assert libraries.read_report(path) == ([("anyio", "4.15.1")], "3.13")
+
+
+# Where pyproject.toml gives PyMuPDF 2, written out here rather than read
+# from the script, so that a change to either is seen.
+PYMUPDF_TWO = ("x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu",
+               "aarch64-unknown-linux-gnu")
+
+
+def _pymupdf_reports(tmp_path, python, changed=None):
+    """Six reports at one Python, each computer installing the PyMuPDF
+    pyproject.toml gives it, but for `changed`, {target: (release,
+    whether onnxruntime comes)}."""
+    minor = int(python.split(".")[1])
+    paths = []
+    for target in libraries.COMPUTERS:
+        two = target in PYMUPDF_TWO and 11 <= minor < 15
+        release, onnx = (changed or {}).get(
+            target, ("2.0" if two else "1.28.2", two))
+        installs = [("anyio", "4.15.1"), ("pymupdf", release)]
+        if onnx:
+            installs.append(("onnxruntime", "1.31.0"))
+        path = tmp_path / f"{target}.txt"
+        path.write_text(_report(target, installs).replace(
+            "CPython 3.13.16", f"CPython {python}.16"), encoding="utf-8")
+        paths.append(str(path))
+    return paths
+
+
+@pytest.mark.parametrize("python", ["3.10", "3.11", "3.13", "3.14", "3.15"])
+def test_each_computer_with_the_pymupdf_pyproject_gives_it_passes(
+        tmp_path, monkeypatch, capsys, python):
+    monkeypatch.setenv("GITHUB_SHA", "0123456789abcdef")
+    paths = _pymupdf_reports(tmp_path, python)
+    assert libraries.main(["--check-pymupdf"] + paths) == 0
+    assert "| pymupdf |" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("target, given", [
+    # what CI's dry run gave Windows x64 before both lines named "x86_64"
+    ("x86_64-pc-windows-msvc", ("1.28.2", False)),
+    ("aarch64-unknown-linux-gnu", ("2.0", False)),
+    ("aarch64-apple-darwin", ("1.28.2", True)),
+    ("aarch64-pc-windows-msvc", ("2.0", True)),
+])
+def test_a_computer_given_another_pymupdf_fails_the_check(
+        tmp_path, monkeypatch, capsys, target, given):
+    monkeypatch.setenv("GITHUB_SHA", "0123456789abcdef")
+    paths = _pymupdf_reports(tmp_path, "3.13", {target: given})
+    # without the check, the table is printed as before
+    assert libraries.main(paths) == 0
+    capsys.readouterr()
+    assert libraries.main(["--check-pymupdf"] + paths) == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert libraries.COMPUTERS[target] in captured.err
+
+
+# Each computer's system and processor as its own Python names them, and
+# as uv names them when asked about it from another computer (CI's dry
+# run, on Linux): Windows x64 is "AMD64" to Windows' Python, "x86_64" to
+# uv.
+MACHINE_NAMES = {
+    "aarch64-apple-darwin": ("darwin", ("arm64", "aarch64")),
+    "x86_64-apple-darwin": ("darwin", ("x86_64",)),
+    "x86_64-pc-windows-msvc": ("win32", ("AMD64", "x86_64")),
+    "aarch64-pc-windows-msvc": ("win32", ("ARM64", "aarch64")),
+    "x86_64-unknown-linux-gnu": ("linux", ("x86_64",)),
+    "aarch64-unknown-linux-gnu": ("linux", ("aarch64",)),
+}
+
+
+def test_the_checks_computers_are_those_pyprojects_second_line_names():
+    with open(REPO / "pyproject.toml", "rb") as handle:
+        part = tomllib.load(handle)["project"]["optional-dependencies"]
+    second, = [Requirement(line) for line in part["pdf-epub"]
+               if Requirement(line).name == "pymupdf"
+               and "2.0" in str(Requirement(line).specifier)]
+    assert libraries.PYMUPDF_TWO == PYMUPDF_TWO
+    low, high = libraries.PYMUPDF_TWO_PYTHONS
+    assert (low, high) == ((3, 11), (3, 15))
+    for target, (system, machines) in MACHINE_NAMES.items():
+        for machine in machines:
+            for minor in range(10, 16):
+                env = {"sys_platform": system, "platform_machine": machine,
+                       "python_version": f"3.{minor}",
+                       "python_full_version": f"3.{minor}.0"}
+                wanted = (target in PYMUPDF_TWO
+                          and low <= (3, minor) < high)
+                assert second.marker.evaluate(env) == wanted, \
+                    (target, machine, minor)
+
+
 # ---------------------------------------------------------------------------
 # The workflows
 # ---------------------------------------------------------------------------
@@ -352,7 +456,7 @@ def test_the_dry_run_keeps_each_report_and_the_table_follows_it():
     # the reports exist on Linux alone, so the table runs there alone
     for step in (dry_run, table):
         assert "if: runner.os == 'Linux'" in step
-    assert ('python scripts/extension_libraries.py '
+    assert ('python scripts/extension_libraries.py --check-pymupdf '
             '"$RUNNER_TEMP"/dry-run/*.txt >> "$GITHUB_STEP_SUMMARY"') in table
     assert names.index("Check the lock has a wheel for every computer") \
         < names.index("List what the extension installs") \

@@ -70,6 +70,10 @@ GUARDED = {
     # standard from Python 3.11; on 3.10 Exegete reads without it
     # (transition.py)
     "tomllib": "standard from Python 3.11, absent on 3.10",
+    # PyMuPDF 2's, never Exegete's own requirement: the reading process
+    # loads it first, where installed, to switch its usage reports off
+    # (import_reading.py, v0.15.1)
+    "onnxruntime": "comes with PyMuPDF 2, import-guarded, switched off",
 }
 
 # Standard from Python 3.11, absent from 3.10's list, the oldest Python

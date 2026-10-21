@@ -13,17 +13,25 @@ ruling of 21 October 2026), with a larger memory cap for PDFs.
   refused for memory names the cap that applied. On Linux the reading
   process starts with three fixed settings, and a child started as it
   is, under the PDF cap, reads a PDF with room to spare.
+- onnxruntime's usage reports, on by default, are switched off in the
+  reading process: its setting on every system (Linux and macOS heed
+  it), and its own switch before PyMuPDF loads (Windows heeds that
+  alone); a reading with 2.0 keeps nothing in a home it is given.
 - Where psutil is installed (it comes with PyMuPDF 2), the check for a
   running QualCoder goes through it and reads command lines.
 - NOTICE names every library PyMuPDF 2 brings, with its licence; the
   advisory check asks OSV about each locked release.
 """
 
+import importlib.abc
+import importlib.machinery
+import importlib.util
 import json
 import os
 import subprocess
 import sys
 import time
+import types
 from importlib import metadata
 from pathlib import Path
 
@@ -58,8 +66,12 @@ OPTIONAL = import_fixtures.optional_part_installed()
 SYSTEMS = ("darwin", "win32", "linux", "freebsd")
 MACHINES = ("arm64", "x86_64", "AMD64", "ARM64", "aarch64", "x86")
 PYTHONS = ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15")
-# Where the second line, PyMuPDF 2, applies: these, Python 3.11 to 3.14
-TWO_X = {("win32", "AMD64"), ("linux", "x86_64"), ("linux", "aarch64")}
+# Where the second line, PyMuPDF 2, applies: these, Python 3.11 to 3.14.
+# Windows x64 twice: "AMD64" as Windows' own Python names its processor,
+# "x86_64" as uv does when asked about Windows x64 from another computer
+# (CI's dry run, whose table and wheel check must see what Windows sees).
+TWO_X = {("win32", "AMD64"), ("win32", "x86_64"), ("linux", "x86_64"),
+         ("linux", "aarch64")}
 TWO_X_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 FIRST, SECOND = "1.28.2", "2.0"
 
@@ -160,7 +172,10 @@ class TestTheLockAgrees:
             found[(system, machine)] = lock_walk_releases(
                 lock, ROOT, system, machine, root_extras=("pdf-epub",),
                 python="3.13")["pymupdf"]
-        assert {k for k, v in found.items() if v == SECOND} == TWO_X
+        # the six computers by their own Pythons' names (Windows x64 as
+        # "AMD64")
+        assert {k for k, v in found.items() if v == SECOND} \
+            == TWO_X & set(ENVIRONMENTS)
         assert sorted(found.values()) == [FIRST] * 3 + [SECOND] * 3
 
     def test_the_locked_releases_are_exactly_the_two(self):
@@ -242,6 +257,105 @@ def test_three_fixed_settings_on_linux_alone(monkeypatch, platform):
     added = {key: env[key] for key in LINUX_SETTINGS if key in env}
     assert added == (LINUX_SETTINGS if platform == "linux" else {})
     assert env_settings.READER_LINUX_SETTINGS == LINUX_SETTINGS
+
+
+# ---------------------------------------------------------------------------
+# onnxruntime's usage reports, which PyMuPDF 2 brings, switched off
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("platform", ["linux", "darwin", "win32"])
+def test_onnxruntimes_reports_are_switched_off_on_every_system(
+        monkeypatch, platform):
+    """Fixed, never the host's: a host that sets it otherwise is not
+    followed."""
+    monkeypatch.setenv("ORT_DISABLE_TELEMETRY", "0")
+    monkeypatch.setattr(sys, "platform", platform)
+    env = env_settings.reader_process_environment()
+    assert env["ORT_DISABLE_TELEMETRY"] == "1"
+    assert env_settings.READER_SETTINGS == {"ORT_DISABLE_TELEMETRY": "1"}
+
+
+class _Watch(importlib.abc.MetaPathFinder):
+    """Notes PyMuPDF's import, and keeps the real one out."""
+
+    def __init__(self, seen):
+        self.seen = seen
+
+    def find_spec(self, name, path=None, target=None):
+        if name == "pymupdf":
+            self.seen.append("pymupdf")
+            raise ImportError("kept out by the test")
+        return None
+
+
+def _a_reading_watched(monkeypatch, kind, data):
+    """`_read` in this process, with an onnxruntime of the test's own
+    whose switch notes its call, and PyMuPDF's import noted: what
+    happened, in order."""
+    seen = []
+    fake = types.ModuleType("onnxruntime")
+    fake.__spec__ = importlib.machinery.ModuleSpec("onnxruntime", None)
+    fake.disable_telemetry_events = lambda: seen.append("switched off")
+    monkeypatch.setitem(sys.modules, "onnxruntime", fake)
+    for name in [name for name in sys.modules
+                 if name == "pymupdf" or name.startswith("pymupdf.")]:
+        monkeypatch.delitem(sys.modules, name)
+    monkeypatch.setattr(sys, "meta_path", [_Watch(seen)] + sys.meta_path)
+    answer = import_reading._read({"kind": kind, "size": len(data)}, data)
+    return seen, answer
+
+
+def test_a_pdfs_reading_switches_onnxruntimes_reports_off_before_pymupdf(
+        monkeypatch):
+    """On Windows, onnxruntime's own switch is the only one its reports
+    heed; PyMuPDF 2 starts onnxruntime's models as it is imported."""
+    seen, answer = _a_reading_watched(monkeypatch, "pdf", b"%PDF-1.4")
+    assert seen == ["switched off", "pymupdf"]
+    assert answer["ok"] is False      # PyMuPDF kept out: refused
+
+
+def test_no_other_kind_of_file_loads_onnxruntime(monkeypatch):
+    seen, _answer = _a_reading_watched(monkeypatch, "word", b"PK not a docx")
+    assert seen == []
+
+
+def test_privacy_says_what_onnxruntime_reports_on_windows():
+    """The one report onnxruntime makes on Windows as it loads, before
+    its switch can be reached, is said where reading is."""
+    text = (REPO / "PRIVACY.md").read_text(encoding="utf-8")
+    start = text.index("## Bringing documents in")
+    section = " ".join(text[start:text.index("\n## ", start + 1)].split())
+    assert "Exegete switches them off in the reading process" in section
+    assert "by then it has made one report" in section
+    assert "nothing from your documents" in section
+
+
+def _onnxruntime_installed():
+    return importlib.util.find_spec("onnxruntime") is not None
+
+
+@pytest.mark.skipif(not OPTIONAL or not _onnxruntime_installed(),
+                    reason="PyMuPDF 2 and onnxruntime needed")
+def test_a_reading_with_pymupdf_2_keeps_nothing_in_a_home_it_is_given(
+        monkeypatch, tmp_path):
+    """Given a home (Exegete gives it none, so onnxruntime would find the
+    account's own), the reading process keeps nothing there: no
+    onnxruntime device id or event store (Linux's .cache, macOS's
+    Library/Application Support/Microsoft)."""
+    home = tmp_path / "home"
+    home.mkdir()
+    small = import_reading._small_environment
+
+    def with_a_home():
+        env = small()
+        env["HOME"] = env["USERPROFILE"] = str(home)
+        return env
+    monkeypatch.setattr(import_reading, "_small_environment", with_a_home)
+    result = import_reading.read_in_process(
+        "pdf", import_fixtures.all_fixtures()["three_pages.pdf"])
+    assert result["words"] > 0
+    assert sorted(str(path.relative_to(home))
+                  for path in home.rglob("*")) == []
 
 
 # A child started as the reading process is (its Python, isolated, the
@@ -405,6 +519,22 @@ def test_notice_names_each_library_pymupdf_2_brings():
             "3.0 or Artifex Commercial License\"") in notice
     assert (REPO / "NOTICE").read_bytes() == \
         (REPO / "packaging/pypi-old-name/NOTICE").read_bytes()
+
+
+def test_notice_names_what_numpys_packages_bundle_where_they_do():
+    """As the locked numpy 2.4.6 and 2.5.4 packages hold them: Microsoft's
+    C++ runtime (numpy.libs/msvcp140-....dll) in every Windows package,
+    though their LICENSE.txt does not name it; libquadmath in the Linux
+    x86-64 packages alone (the Arm packages' LICENSE.txt names it, but
+    they hold no such file)."""
+    notice = " ".join((REPO / "NOTICE").read_text(encoding="utf-8")
+                      .split())
+    start = notice.index("- numpy:")
+    entry = notice[start:notice.index("- networkx:", start)]
+    assert "its packages for Windows also contain Microsoft's C++ runtime " \
+        "library (msvcp140.dll)" in entry
+    assert "on Linux x86-64 libquadmath (LGPL-2.1-or-later)" in entry
+    assert "on Linux libquadmath" not in entry
 
 
 def test_the_advisory_check_asks_about_both_releases():

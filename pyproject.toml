@@ -110,11 +110,15 @@ Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 # macOS 14 on Apple silicon and no marker tells macOS releases apart
 # safely. The first line is the exact complement of the second (markers
 # have no "not"), so every computer takes one, and neither reads the
-# system's release. The 2.x line comes second, since the newest-libraries
-# job's table (.github/workflows/ci.yml) keeps a library's last line.
+# system's release. Windows x64 is named both as Windows' own Python
+# reports it ("AMD64") and as uv does when asked about another computer
+# ("x86_64", as in CI's dry run for x86_64-pc-windows-msvc), so the dry
+# run installs what a real Windows x64 computer installs. The 2.x line
+# comes second, since the newest-libraries job's table
+# (.github/workflows/ci.yml) keeps a library's last line.
 pdf-epub = [
-    "pymupdf>=1.26.7,<2; python_version < '3.11' or python_version >= '3.15' or (sys_platform == 'win32' and platform_machine != 'AMD64') or (sys_platform == 'linux' and platform_machine != 'x86_64' and platform_machine != 'aarch64') or (sys_platform != 'win32' and sys_platform != 'linux')",
-    "pymupdf>=2.0,<3; python_version >= '3.11' and python_version < '3.15' and ((sys_platform == 'win32' and platform_machine == 'AMD64') or (sys_platform == 'linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64')))",
+    "pymupdf>=1.26.7,<2; python_version < '3.11' or python_version >= '3.15' or (sys_platform == 'win32' and platform_machine != 'AMD64' and platform_machine != 'x86_64') or (sys_platform == 'linux' and platform_machine != 'x86_64' and platform_machine != 'aarch64') or (sys_platform != 'win32' and sys_platform != 'linux')",
+    "pymupdf>=2.0,<3; python_version >= '3.11' and python_version < '3.15' and ((sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64')) or (sys_platform == 'linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64')))",
     "ebooklib>=0.20",
     "lxml>=6.1.0,<7",
 ]

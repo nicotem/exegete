@@ -220,7 +220,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   of file keeps, and a PDF refused for memory names 2048 MB. On Linux
   the reading process starts with three fixed settings that keep the
   memory its threads reserve small (`MALLOC_ARENA_MAX`,
-  `OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`). The cost on those
+  `OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`). onnxruntime's usage
+  reports to Microsoft, on by default, are switched off in the reading
+  process (`ORT_DISABLE_TELEMETRY`, and onnxruntime's own switch): on
+  Linux entirely; on Windows, where that switch can be reached only
+  once onnxruntime has loaded, all but the one report it makes as it
+  loads, which holds facts about the computer and nothing from your
+  documents (PRIVACY.md, "Bringing documents in"). The cost on those
   computers: about 75 to 90 MB more to download and 150 to 190 MB more
   on disk in the extension, and 0.4 to 1 second more to start each
   PDF's reading. INSTALL.md names the computers where pip cannot install

@@ -854,8 +854,11 @@ state them:
   Zlib and CC0-1.0; its packages for Windows and Linux also contain
   OpenBLAS (BSD-3-Clause) with LAPACK (BSD-3-Clause-Open-MPI) and the
   GCC runtime libraries (GPL-3.0-or-later with the GCC Runtime Library
-  Exception), and on Linux libquadmath (LGPL-2.1-or-later), each named
-  in the package's LICENSE.txt.
+  Exception), and on Linux x86-64 libquadmath (LGPL-2.1-or-later), each
+  named in the package's LICENSE.txt; its packages for Windows also
+  contain Microsoft's C++ runtime library (msvcp140.dll), Microsoft's
+  redistributable code under Microsoft's own terms, which LICENSE.txt
+  does not name.
 - networkx: BSD-3-Clause, NetworkX Developers.
 - psutil: BSD-3-Clause, Jay Loden, Dave Daeschler and Giampaolo Rodola.
 - protobuf: BSD-3-Clause, Google Inc.

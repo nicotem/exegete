@@ -1270,8 +1270,20 @@ Each document is read in a separate, short-lived process with a time
 limit and a memory cap, handed the file's bytes rather than its path;
 it runs without a sandbox (one, where the system offers it, is on the
 list of later work, with no release set). Import and reading
-use no network. A document converted with another tool, such as a pandoc
-server, should be converted file to file, never into the conversation
+use no network. Where PDFs are read with PyMuPDF 2 (Windows x64 and
+Linux, with Python 3.11 to 3.14; INSTALL.md), PyMuPDF loads onnxruntime,
+Microsoft's library for running trained models, whose usage reports to
+Microsoft are on by default; Exegete switches them off in the reading
+process. On Linux they are off before onnxruntime starts, so it keeps
+nothing on the computer and sends nothing. On Windows, onnxruntime
+reports through Windows' own diagnostic data, and its switch can be
+reached only once it has loaded: by then it has made one report, with
+onnxruntime's release and the computer's processor model, number of
+processors and memory, and nothing from your documents, which Windows
+passes to Microsoft or not as the computer's diagnostic data setting
+says; every later report is switched off. A document converted with
+another tool, such as a pandoc server, should be converted file to
+file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).
 
 The import uses the text its preview read, kept in Exegete's own folder

@@ -184,14 +184,28 @@ READER_LINUX_SETTINGS = {"MALLOC_ARENA_MAX": "2",
                          "OPENBLAS_NUM_THREADS": "1",
                          "OMP_NUM_THREADS": "1"}
 
+# One fixed setting for the reading process on every system (v0.15.1),
+# never taken from the host: PyMuPDF 2.0 loads onnxruntime as it is
+# imported, and onnxruntime's usage reports to Microsoft are on by
+# default. On Linux and macOS this stops them before anything is kept or
+# sent: no device id or event store in the account's home (where the
+# reading process, given no HOME, would find it from the account's own
+# entry), no upload. Windows' reports, through the system's event
+# tracing, do not read it: the reading process calls onnxruntime's own
+# switch before PyMuPDF starts its models
+# (import_reading._onnxruntime_reports_off).
+READER_SETTINGS = {"ORT_DISABLE_TELEMETRY": "1"}
+
 
 def reader_process_environment() -> Dict[str, str]:
     """The few variables the document import's reading process is
     started with (0.14.3): the system path, the locale and,
     on Windows, the system root; never the host's other settings. On
-    Linux, READER_LINUX_SETTINGS as well, fixed here."""
+    every system, READER_SETTINGS as well, and on Linux
+    READER_LINUX_SETTINGS, both fixed here."""
     keep = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "SYSTEMROOT", "SystemRoot")
     env = {key: os.environ[key] for key in keep if key in os.environ}
+    env.update(READER_SETTINGS)
     if sys.platform.startswith("linux"):
         env.update(READER_LINUX_SETTINGS)
     return env

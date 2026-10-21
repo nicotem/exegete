@@ -686,13 +686,13 @@ exceptions apart, which reach the model through `read_brief` or the
 tools' answers. Measured for 0.15.1, the descriptions are longer on
 Python 3.10 to 3.12 than on 3.13, which strips the indentation they are
 written with. On Python 3.13, 4 of `full`'s 79 descriptions are longer
-than 4,096 characters (`pseudonymise_source`, 17,825;
+than 4,096 characters (`pseudonymise_source`, 17,138;
 `start_coding_session`, 6,038; `search_files`, 4,537;
 `record_suggestions`, 4,455); on 3.10 to 3.12, the same four are, at
-18,957, 6,282, 4,873 and 4,691.
-`pseudonymise_source` is longer than 16,384, so its last 1,441
+18,238, 6,282, 4,873 and 4,691.
+`pseudonymise_source` is longer than 16,384, so its last 754
 characters are cut even through tool search on 3.13, and its last
-2,573 on 3.10 to 3.12, its sentence on the lock file among them.
+1,854 on 3.10 to 3.12, its sentence on the lock file among them.
 Claude Code's own setting `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`
 (version 2.1.280 or later) replaces both limits with one figure:
 20000, for example, lets every Exegete description through whole on
@@ -1127,7 +1127,7 @@ Experimental.
 **Step 3. Use the core toolset.** Exegete offers 79 tools by
 default, and the serialised tool definitions alone measure about
 203,000 characters, roughly 51k tokens, against about 72,000
-characters, roughly 18k tokens, for the 26 tools of `core` (203,352
+characters, roughly 18k tokens, for the 26 tools of `core` (202,652
 and 71,685 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far

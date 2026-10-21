@@ -157,8 +157,9 @@ class TestClaudeCodesLimitsOnEveryPython:
         assert f"on 3.10 to 3.12, the same four are, at {same}." in long
         longest, name = over[0]
         assert name == "pseudonymise_source"
-        # 1,441 since v0.15.1 (17,825 on 3.13)
-        assert (f"its last 1,441 characters are cut even through tool "
+        # 1,441 since v0.15.1 (17,825 on 3.13); 754 since it removed the
+        # overlap policy qualcoder_edit_parity (17,138 on 3.13)
+        assert (f"its last 754 characters are cut even through tool "
                 f"search on 3.13, and its last {longest - 16384:,} on 3.10 "
                 f"to 3.12, its sentence on the lock file among them") in long
 

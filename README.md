@@ -601,7 +601,7 @@ the extension, is still accepted and means `full`.
   matter come first in each description, within 2,048 characters, a
   few named exceptions apart; the rest reach the model through `read_brief` or the answers. One
   description is longer than 16,384 characters, `pseudonymise_source`'s
-  (17,825 on Python 3.13, 18,957 on 3.10 to 3.12):
+  (17,138 on Python 3.13, 18,238 on 3.10 to 3.12):
   [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients)
   says how to let it through whole.
 - **Resources** (`exegete://...`), prompts, and

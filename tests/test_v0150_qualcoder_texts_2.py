@@ -231,7 +231,9 @@ PARAGRAPH = (
     "To keep real names from the assistant altogether, suggest "
     "replacing them before the documents reach this computer (PRIVACY.md, "
     "\"What pseudonymisation is for\").")
-# (removed in v0.15.1 since the whole-branch review, round 1)
+# (removed in v0.15.1 since the whole-branch review, round 1; and gone
+# since v0.15.1 removed the option, as announced:
+# tests/test_v0151_one_overlap_policy.py)
 DEPRECATION = "Deprecated, removed in v0.15.1: overlap_policy"
 # The CHANGELOG entry's heading
 ENTRY = "### The names list, filled in on your computer, and what pseudonymisation is for"
@@ -487,12 +489,11 @@ class TestTheDescription:
             assert PARAGRAPH in flat, mode
             # past the first 2,048 characters, which do not move
             assert description.index("What it is for:") > CUT, mode
-            # the last paragraph before "Args:", but for the deprecation
-            # sentence the deprecated option adds there
+            # the last paragraph before "Args:" (the deprecation sentence
+            # the deprecated option added there went with it in v0.15.1)
             after = flat[flat.index(PARAGRAPH) + len(PARAGRAPH):]
-            assert after.startswith(" " + DEPRECATION), mode
-            after = after[after.index(DEPRECATION):]
-            assert after.index("Args:") == after.index(". ") + 2, mode
+            assert after.startswith(" Args:"), mode
+            assert DEPRECATION not in flat, mode
             served_paragraph = description[
                 description.index("What it is for:"):
                 description.index("for\").") + len("for\").")]
@@ -538,16 +539,19 @@ class TestTheDescription:
             assert length == 17339
 
     def test_its_line_in_changed_0150_is_what_is_served(self):
-        from test_v0142_description_cut import (CHANGED_0150, CHANGED_0151,
-                                                WORDS, _fingerprint)
+        from test_v0142_description_cut import (CHANGED_0150,
+                                                ONE_POLICY_0151, WORDS,
+                                                _fingerprint)
         # v0.15.1's ignored create_backup changed its sentence on the
-        # backup (its own line, CHANGED_0151): put back
+        # backup (its own line, CHANGED_0151), and its removal of the
+        # overlap policy qualcoder_edit_parity its arguments (its line,
+        # ONE_POLICY_0151): put back
         from test_v0151_ignored_argument import before_the_ignored_argument
         server._apply_toolset("full")
         length, solid, digest = _fingerprint(before_the_ignored_argument(
             TOOL, server.mcp.original_descriptions[TOOL]))
         assert CHANGED_0150[TOOL][1:] == (solid, digest)
-        assert WORDS[TOOL] == CHANGED_0151[TOOL]
+        assert WORDS[TOOL] == ONE_POLICY_0151[TOOL]
         if sys.version_info[:2] == (3, 13):
             assert CHANGED_0150[TOOL][0] == length
 

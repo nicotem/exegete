@@ -291,6 +291,23 @@ def execute_as_recipe(out, **kwargs):
     return call(**arguments)
 
 
+def a_mapper_that_deletes(monkeypatch):
+    """No overlap policy deletes a row since 0.15.1, when
+    qualcoder_edit_parity went, but the preview's counts of deleted rows,
+    the hidden-coder rule for them and the write's handling of a deleted
+    row stay (tests/test_v0151_one_overlap_policy.py): this mapper, which
+    deletes every row that lay exactly on a replaced name instead of
+    moving it onto the pseudonym, is how their tests reach them."""
+    real = P.SpanMapper.map_row
+
+    def map_row(self, pos0, pos1, policy):
+        mapped = real(self, pos0, pos1, policy)
+        if mapped is not None and mapped.change == P.SUBSTITUTED:
+            return P.RemappedSpan(None, None, P.DELETED, False, True)
+        return mapped
+    monkeypatch.setattr(P.SpanMapper, "map_row", map_row)
+
+
 def _house_rules(texts, labels=None):
     forbidden_spellings = ("color", "colors", "behavior", "organize",
                            "recognize", "authorization", "analyze",
@@ -588,14 +605,15 @@ class TestToken:
     @pytest.mark.parametrize("changed", [
         {"mapping": [{"original": "Thomas", "pseudonym": "Zed"}]},
         {"case_mode": "insensitive"},
-        {"overlap_policy": "qualcoder_edit_parity"},
+        # overlap_policy has one value since 0.15.1, so no other value of
+        # it is another operation; that it is still bound is checked in
+        # tests/test_v0151_one_overlap_policy.py.
         # File 4 is eligible, so the refusal is the token's and not the
         # file check's: a token for file 1 does not execute on file 4.
         {"file_id": 4},
         # v0.13, Brief 2: the note rewrite changes rows, so it is bound.
         {"rewrite_memos": True},
-    ], ids=["mapping", "case_mode", "overlap_policy", "file_id",
-            "rewrite_memos"])
+    ], ids=["mapping", "case_mode", "file_id", "rewrite_memos"])
     def test_a_bound_argument_that_differs_is_another_operation(
             self, project, changed):
         out = preview_of()
@@ -1147,20 +1165,21 @@ class TestHiddenCoders:
         assert (hidden["snapped"], hidden["deleted"],
                 hidden["clamped"]) == (0, 0, 0)
 
-    def test_under_edit_parity_a_hidden_row_exactly_on_the_name_is_deleted(
-            self, project):
-        """Unchanged behaviour, pinned as the control for 7.3(3)'s point
-        (b): only the edit-parity policy deletes, and a deletion is on
-        the override side whatever the lengths."""
+    def test_a_hidden_row_the_run_would_delete_needs_the_override(
+            self, project, monkeypatch):
+        """The control for 7.3(3)'s point (b): a deletion is on the
+        override side whatever the lengths. No policy deletes since
+        0.15.1 (qualcoder_edit_parity did); the rule stays, reached by a
+        mapper that deletes."""
+        a_mapper_that_deletes(monkeypatch)
         _hidden(project, ("coding", 10, 0, 6))
-        out = preview_of(overlap_policy="qualcoder_edit_parity")
+        out = preview_of()
         hidden = out["preview"]["hidden_coder_rows"]
         assert hidden["deleted"] == 1
         assert hidden["substituted"] == 0
         assert hidden["override_required"] is True
         assert out["execute_with"]["arguments"]["allow_hidden_coder"] is True
-        refused = call(mapping=MAPPING, overlap_policy="qualcoder_edit_parity",
-                       preview_token=out["preview_token"])
+        refused = call(mapping=MAPPING, preview_token=out["preview_token"])
         assert refused["reason"] == "hidden_coder_override_required"
         assert query(project, "SELECT ctid FROM code_text WHERE ctid=10"
                      ) == [{"ctid": 10}]
@@ -1535,21 +1554,16 @@ class TestWrite:
                          )[0]["fulltext"]
         assert new_text[row["pos0"]:row["pos1"]] == row["seltext"]
 
-    def test_the_parity_policy_deletes_and_says_how_many(self, project):
-        out = preview_of(overlap_policy="qualcoder_edit_parity")
+    def test_a_row_the_run_would_delete_is_counted_and_deleted(
+            self, project, monkeypatch):
+        """The write's handling of a deleted row stays, though no policy
+        deletes one since 0.15.1: counted in the preview and deleted by
+        the execute. The warning that named qualcoder_edit_parity went
+        with it."""
+        a_mapper_that_deletes(monkeypatch)
+        out = preview_of()
         assert out["preview"]["totals"]["rows_deleted"] >= 1
-        warning = [w for w in out["warnings"] if "would DELETE" in w]
-        assert len(warning) == 1
-        # Fix round 3, S5: the narrowed claim (D-10), not "exactly what
-        # QualCoder's own editor does": the editor diffs first, and its
-        # diff library keeps a coding this policy deletes whenever the
-        # pseudonym shares a prefix or suffix with the name.
-        assert ("which is what QualCoder's coding-view walk does when fed "
-                "this tool's exact edit list; the editor's own diff may "
-                "factor a shared prefix or suffix out of a replacement "
-                "(Tom to Tim) and keep a coding this policy deletes."
-                in warning[0])
-        assert "QualCoder's own editor does" not in warning[0]
+        assert not [w for w in out["warnings"] if "DELETE" in w]
         result = execute_from(out)
         assert result["files"][0]["codings_deleted"] >= 1
         assert query(project, "SELECT ctid FROM code_text WHERE ctid=1") == []
@@ -1589,12 +1603,6 @@ class TestUniqueConstraint:
         assert backups(project) == []
         assert query(project, "SELECT fulltext FROM source WHERE id=1"
                      )[0]["fulltext"] == TEXT
-
-    def test_the_parity_policy_resolves_it_by_deleting(self, project):
-        self._collide(project)
-        out = preview_of(overlap_policy="qualcoder_edit_parity")
-        assert not out["preview"]["totals"]["unique_constraint_collisions"]
-        assert execute_from(out)["success"] is True
 
     def test_a_legal_set_of_moves_is_not_blocked_by_a_transient_collision(
             self, project):
@@ -3580,13 +3588,14 @@ class TestTheNoteRewriteIsWritten:
                 "records of earlier runs: 1." in body)
 
     def test_a_note_on_a_row_the_file_rewrite_deletes_is_not_rewritten(
-            self, project):
-        """QA-B2-5: under qualcoder_edit_parity the coding that sits on
-        "Thomas" is deleted by the file rewrite, and its note goes with
-        it; it is not counted, reported or recorded as a note rewritten.
-        The same for the other two row kinds the rewrite deletes, an
-        annotation exactly on "Thomas" and a case link exactly on "Mary
-        Ann" (fix round 2, Q-1)."""
+            self, project, monkeypatch):
+        """QA-B2-5: a coding that sits on "Thomas" and is deleted by the
+        file rewrite takes its note with it; it is not counted, reported
+        or recorded as a note rewritten. The same for the other two row
+        kinds a rewrite can delete, an annotation exactly on "Thomas" and
+        a case link exactly on "Mary Ann" (fix round 2, Q-1). No policy
+        deletes since 0.15.1 (qualcoder_edit_parity did); the handling
+        stays, reached by a mapper that deletes."""
         add_annotation(project, 2, 0, 6, memo="Thomas noted here")
         add_case_link(project, 2, 34, 42)
         _plant_note(project, ["UPDATE code_text SET memo=? WHERE ctid=1",
@@ -3599,8 +3608,8 @@ class TestTheNoteRewriteIsWritten:
         for table in deleted:
             assert kept["preview"]["memo_rewrites"]["fields"][table] == {
                 "rows": 1, "replacements": 1}, table
-        out = preview_of(rewrite_memos=True,
-                         overlap_policy="qualcoder_edit_parity")
+        a_mapper_that_deletes(monkeypatch)
+        out = preview_of(rewrite_memos=True)
         assert out["preview"]["totals"]["rows_deleted"] >= 3
         for table in deleted:
             assert out["preview"]["memo_rewrites"]["fields"][table] == {
@@ -8504,13 +8513,14 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "key and you did not supply them, so on this path no diagnostic "
          "and no refusal quotes one, and include_context returns no "
          "context at all rather than the text around each match."),
-        ("parity_is_the_walk_not_the_editor",            # fix round 3, S5
-         "the walk QualCoder's own coding-view editor applies, fed this "
-         "tool's exact edit list, which DELETES a coding that sits on a "
-         "name and trims one that merely touches it. The editor itself "
-         "diffs the two texts first, and its diff library may factor a "
-         "shared prefix or suffix out of a replacement (Tom to Tim) and "
-         "keep a coding this policy deletes."),
+        # (fix round 3, S5's sentence on the qualcoder_edit_parity walk
+        # went with the policy in v0.15.1, as announced in 0.14; the one
+        # policy left deletes nothing)
+        ("the_one_policy_deletes_nothing",
+         "overlap_policy: \"snap_to_pseudonym\" (default): a coding that "
+         "marked the name marks the pseudonym, a coding that cut into a "
+         "name grows to contain the whole pseudonym, and nothing is ever "
+         "emptied or deleted."),
         ("the_ask_comes_in_the_preview",                 # fix round 3, S4
          "If the project has no AI coder name yet, the preview says so and "
          "carries the ask in execute_with.before_executing; set one with "
@@ -8789,10 +8799,10 @@ class TestTheDocumentsTellTheTruth:
         "replace the names you list, or a list you fill in on your own "
         "computer (`prepare_names_list`, `save_names_list`), as whole "
         "words,",
-        "`qualcoder_edit_parity` reproduces the walk QualCoder's "
-        "coding-view editor applies, fed this tool's exact edit list (the "
-        "editor's own diff may factor a shared prefix or suffix out of a "
-        "replacement and keep a coding this policy deletes)",
+        # v0.15.1: qualcoder_edit_parity removed, as announced in 0.14
+        "`overlap_policy` takes one value, `snap_to_pseudonym`, the "
+        "default: a coding that cut into a name grows to contain the whole "
+        "pseudonym, and nothing is deleted.",
         "PRIVACY.md's \"Coder visibility\" section says what is and is not "
         "re-read",
         # v0.13, Brief 1.
@@ -8965,10 +8975,8 @@ class TestTheDocumentsTellTheTruth:
         "or contains its pseudonym needs no override, whatever the two "
         "lengths, and neither does a pure position shift, because "
         "neither changes a coding decision; a coding that grew to "
-        "swallow a pseudonym, one that would be deleted (which only the "
-        "`qualcoder_edit_parity` policy does), or one that had to be "
-        "clamped because its stored end lay past the end of the text "
-        "requires the override.",
+        "swallow a pseudonym, or one that had to be clamped because its "
+        "stored end lay past the end of the text requires the override.",
         # v0.13, Brief 1: the file text, and the four things the sidecar
         # path still returns, as the description declares them.
         "The block names every file in which a name still shows, "

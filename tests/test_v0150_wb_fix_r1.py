@@ -79,7 +79,7 @@ def _served(mode):
 
 class TestTheRemovalsInV0151:
 
-    def test_there_are_deprecation_sentences(self):
+    def test_no_deprecation_sentence_is_left(self):
         # 12 since read_pseudonym_list, and its sentence, were removed in
         # v0.15.0 (the files design, piece 5); 11 since v0.15.1 accepts
         # and ignores create_backup, import_text_file's false included
@@ -92,8 +92,11 @@ class TestTheRemovalsInV0151:
         # cascade, owner and search_memo, as announced, with their
         # sentences (tests/test_v0151_removed_arguments.py); 1 since it
         # removed attributes on journal entries and the rename back
-        # recognised from backups (tests/test_v0151_journal_and_rename_back.py)
-        assert len(DEPRECATIONS) >= 1, DEPRECATIONS
+        # recognised from backups
+        # (tests/test_v0151_journal_and_rename_back.py); none since it
+        # removed the overlap policy qualcoder_edit_parity
+        # (tests/test_v0151_one_overlap_policy.py), the last of them
+        assert DEPRECATIONS == [], DEPRECATIONS
         assert "DEPRECATED_IMPORT_SKIP_BACKUP" not in DEPRECATIONS
         assert "DEPRECATED_REFI_EXPORT" not in DEPRECATIONS
         assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
@@ -102,14 +105,8 @@ class TestTheRemovalsInV0151:
                      "DEPRECATED_CASCADE", "DEPRECATED_OWNER",
                      "DEPRECATED_MEMO_SEARCH",
                      "DEPRECATED_JOURNAL_ATTRIBUTES",
-                     "DEPRECATED_RENAME_BACK"):
-            assert gone not in DEPRECATIONS, gone
-
-    @pytest.mark.parametrize("name", DEPRECATIONS)
-    def test_each_sentence_names_v0151(self, name):
-        sentence = getattr(server, name)
-        assert sentence.startswith("Deprecated, removed in v0.15.1: "), name
-        assert not BARE_V015.search(sentence), name
+                     "DEPRECATED_RENAME_BACK", "DEPRECATED_EDIT_PARITY"):
+            assert not hasattr(server, gone), gone
 
     def test_the_refi_export_is_kept_with_its_faults_named(self):
         """The owner's decision of 20 October 2026 (ruling 85, item 2): the

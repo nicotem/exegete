@@ -2003,11 +2003,12 @@ class TestFixRound2WhatGoesInV015:
 
     def test_options_that_go_warn_only_when_used(self, setup_server,
                                                  qualcoder_db_path):
-        self._described("pseudonymise_source", server.DEPRECATED_EDIT_PARITY)
         # (v0.15.1: cascade, owner and search_memo went, as announced;
         # test_arguments_that_went_are_refused above; so did attributes on
         # journal entries and the rename back recognised from backups,
-        # test_journal_attributes_and_the_rename_back_went below)
+        # test_journal_attributes_and_the_rename_back_went below, and the
+        # overlap policy qualcoder_edit_parity,
+        # test_the_overlap_policy_that_went_is_refused below)
         # (v0.15.1: the four help topics removed, as announced; each is
         # answered that it was, and no answer is marked deprecated)
         for topic in sorted(server.REMOVED_HELP_TOPICS):
@@ -2017,12 +2018,25 @@ class TestFixRound2WhatGoesInV015:
         for topic in (None, "grounding_rules", "methods_notes"):
             self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
                          server.HELP_TOPIC_REMOVED, False)
-        parity = server.DEPRECATED_EDIT_PARITY
-        self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
-                           file_id=1, overlap_policy="qualcoder_edit_parity"),
-                     parity, True)
-        self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
-                           file_id=1), parity, False)
+
+    def test_the_overlap_policy_that_went_is_refused(self, setup_server,
+                                                     qualcoder_db_path):
+        """v0.15.1: pseudonymise_source's qualcoder_edit_parity went, as
+        announced (tests/test_v0151_one_overlap_policy.py): its
+        description carries no deprecation, a call that names the policy
+        is refused with what replaces it, and a call without it is
+        answered as usual."""
+        description = server.mcp._tool_manager._tools[
+            "pseudonymise_source"].description
+        assert "Deprecated" not in description
+        assert "qualcoder_edit_parity" not in description
+        mapping = [{"original": "Tom", "pseudonym": "Pat"}]
+        refused = jcall("pseudonymise_source", mapping=mapping, file_id=1,
+                        overlap_policy="qualcoder_edit_parity")
+        assert refused == {"error": server.EDIT_PARITY_REMOVED}
+        previewed = jcall("pseudonymise_source", mapping=mapping, file_id=1)
+        assert "deprecated" not in previewed
+        assert server.EDIT_PARITY_REMOVED not in json.dumps(previewed)
 
     def test_in_core_the_memo_search_refusal_marks_search_memos(
             self, setup_server):

@@ -82,6 +82,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unless the name of the file's stored file has that ending.
   `restore_backup`, which undoes everything done after the backup, or
   QualCoder's own Rename, if you use it, can put an earlier name back.
+- **One overlap policy.** `pseudonymise_source`'s `overlap_policy` takes
+  only `snap_to_pseudonym`, the default; `qualcoder_edit_parity`, which
+  deleted codings sitting on a name, is refused. Where a preview reports
+  rows that would land on the same span, delete one row of each pair,
+  then preview again.
 - **The REFI-QDA export stays.** `export_refi_qda` is no longer
   deprecated and is not removed: the maintainer means to fix it in a
   later release (his decision of 20 October 2026). Until then its
@@ -338,6 +343,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backup), or QualCoder's own Rename, if you use it. An ending change
   QualCoder acts on is refused unless the name of the file's stored file
   has that ending. A rename's answer no longer carries `deprecated`.
+- **`pseudonymise_source`'s overlap policy `qualcoder_edit_parity`**,
+  which deleted a coding that sat on a name and cut back one that met
+  it, and was not exact parity with QualCoder's editor. A call that
+  names it is answered that it was removed, before the mapping, the
+  file, a token or the project's lock is looked at: no token is issued
+  and nothing is written.
+  `snap_to_pseudonym`, the default, is the one policy left: a coding
+  that cut into a name grows to hold the whole pseudonym, and nothing is
+  deleted. A preview no longer warns of rows it would delete, since it
+  deletes none; its counts of deleted rows stay in the answer, at zero.
+  Where rows would land on the same span, the refusal now says to delete
+  one row of each pair, then preview again.
 
 ### Changed: the REFI-QDA export is kept, its faults named
 
@@ -534,21 +551,21 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (79 tools; 82 in 0.15.0) | 203,352 | 206,624 | 213,748 | 217,084 |
+| `full` (79 tools; 82 in 0.15.0) | 202,652 | 206,624 | 213,016 | 217,084 |
 | `core` (26 tools; 25 in 0.15.0) | 71,685 | 68,258 | 75,349 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 203,352 characters (about 50.8k tokens
+- Serialised tool JSON: full = 202,652 characters (about 50.7k tokens
   at chars/4) over 79 tools, and core = 71,685 (about 17.9k) over 26,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 213,748 and
+  which also gives exactly 0.15.0's figures for its tree), 213,016 and
   75,349. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
-  25 on 3.13), eight changes moved them. The first, `create_backup`
+  25 on 3.13), nine changes moved them. The first, `create_backup`
   accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -607,8 +624,13 @@ schemas together, as below; the brief as `read_brief` returns it):
   215 on 3.11); `rename_file`'s without the rename back's sentence and
   with its paragraph on an ending put back, 325 fewer (329). In all, 683
   characters fewer in `full` (679 on 3.11); `core` serves none of the
-  three. Rounded, the figures are about 203,000 and 72,000 characters,
-  about 51k and 18k tokens. No other tool's entry changed. The full brief says that
+  three. The ninth, the overlap policy `qualcoder_edit_parity` removed,
+  as announced in 0.14: `pseudonymise_source`'s entry without its
+  deprecation sentence and without the policy's paragraph among its
+  arguments, 700 characters fewer in `full` (732 on 3.11); `core` does
+  not serve the tool. Rounded, the figures are about 203,000 and 72,000
+  characters, about 51k and 18k tokens. No other tool's entry changed.
+  The full brief says that
   Exegete takes a backup before every change, rather than "unless the
   researcher asks for none": 14 characters fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
@@ -616,7 +638,7 @@ schemas together, as below; the brief as `read_brief` returns it):
   as in 0.15.0 (35 on 3.11, where `update_annotation`'s now does), 4
   pass 4,096, on
   3.11 too (`import_text_file`'s, without `owner`, no longer does), and
-  one, `pseudonymise_source` (17,825 characters; 18,957 on 3.11), passes
+  one, `pseudonymise_source` (17,138 characters; 18,238 on 3.11), passes
   16,384.
 
 ## [0.15.0-alpha] - 2026-10-20

@@ -557,7 +557,8 @@ class TestTheThreeDescriptions:
         # and v0.15.1's ignored create_backup changes pseudonymise_source's
         # sentence on its backup: put back too
         from test_v0151_ignored_argument import before_the_ignored_argument
-        from test_v0142_description_cut import CHANGED_0151
+        from test_v0142_description_cut import (CHANGED_0151,
+                                                ONE_POLICY_0151)
         assert REMOVED not in descriptions and REMOVED not in raw
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
@@ -574,8 +575,11 @@ class TestTheThreeDescriptions:
                 assert len(text) <= length, name
             if indented:
                 assert len(text) <= length_311, name
-            assert name in CHANGED_0150 and WORDS[name] == \
-                CHANGED_0151.get(name, CHANGED_0150[name]), name
+            # (v0.15.1's removal of qualcoder_edit_parity changed
+            # pseudonymise_source again: its line, ONE_POLICY_0151)
+            assert name in CHANGED_0150 and WORDS[name] == {
+                **CHANGED_0151, **ONE_POLICY_0151}.get(
+                    name, CHANGED_0150[name]), name
 
 
 # ---------------------------------------------------------------------------

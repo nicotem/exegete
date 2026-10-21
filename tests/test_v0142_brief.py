@@ -629,7 +629,12 @@ class TestTheSizes:
     # deprecation sentences (683 characters fewer in `full`, from
     # 193,127; none in `core`, which serves none of the three;
     # tests/test_v0151_journal_and_rename_back.py).
-    NOW = {"full": 192_444, "core": 64_561}
+    # v0.15.1, the overlap policy qualcoder_edit_parity removed:
+    # pseudonymise_source loses its deprecation sentence and the policy's
+    # paragraph among its arguments (700 characters fewer in `full`, from
+    # 192,444; `core` does not serve the tool;
+    # tests/test_v0151_one_overlap_policy.py).
+    NOW = {"full": 191_744, "core": 64_561}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

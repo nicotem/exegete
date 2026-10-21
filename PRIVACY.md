@@ -998,16 +998,10 @@ project has the coder-visibility capability:
   coding that covered a name, or contained one, and now covers or
   contains its pseudonym needs no override, whatever the two lengths,
   and neither does a pure position shift, because neither changes a
-  coding decision; a coding that grew to swallow a pseudonym, one that
-  would be deleted (which only the `qualcoder_edit_parity` policy does),
-  or one that had to be clamped because its stored end lay past the end
-  of the text requires the override. Under the `qualcoder_edit_parity` policy a
-  coding that cut into a name is cut back at its head or tail to exclude
-  the pseudonym rather than grown to contain it, which shrinks it; that
-  too is classed `snapped` and needs the override (the
-  `qualcoder_edit_parity` policy is deprecated: v0.14 says so whenever
-  it is used, and v0.15.1 removes it). The refusal names
-  neither the coder nor a count. A row whose stored end lies past the
+  coding decision; a coding that grew to swallow a pseudonym, or one
+  that had to be clamped because its stored end lay past the end of the
+  text requires the override. The refusal names neither the coder nor a
+  count. A row whose stored end lies past the
   end of the text is clamped first, as QualCoder clamps its own, and is
   counted under its own class rather than under one the exemption
   carries, so a damaged row is never carried through it.

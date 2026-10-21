@@ -12502,11 +12502,6 @@ class QualcoderDatabase:
     # `case_text` has none, so a case link is never hidden and never
     # enters the hidden-coder accounting.
     PSEUDONYMISE_HIDEABLE = ("code_text", "annotation")
-    # `keep_start_anchor` per table, which is master's own split:
-    # codings and case links keep a span anchored at the file start,
-    # annotations do not (code_text.py:5940-5942).
-    PSEUDONYMISE_ANCHOR = {"code_text": True, "annotation": False,
-                           "case_text": True}
 
     def pseudonymise_plan(self, compiled, overlap_policy: str,
                           file_ids: Optional[Sequence[int]] = None
@@ -12547,13 +12542,12 @@ class QualcoderDatabase:
             mapper = engine.SpanMapper(replacements, len(text))
             rows = self._pseudonymise_rows(source["file_id"])
             for table, items in rows.items():
-                anchor = self.PSEUDONYMISE_ANCHOR[table]
                 hideable = table in self.PSEUDONYMISE_HIDEABLE
                 for row in items:
                     row["hidden"] = bool(
                         hideable and coder_is_hidden(visibility, row["owner"]))
                     row["map"] = mapper.map_row(row["pos0"], row["pos1"],
-                                                overlap_policy, anchor)
+                                                overlap_policy)
             conflicts, truncated, capped = engine.overlap_conflicts(
                 compiled, text, replacements)
             files.append({
@@ -12606,9 +12600,10 @@ class QualcoderDatabase:
         whitespace, and `replacement_for` only changes its case.
 
         `file_plan` is the same run's file plan: a coding, annotation or
-        case link it deletes (`qualcoder_edit_parity`) takes its note
-        with it, so that note is not in this plan, and nothing counts or
-        records it as rewritten (Brief 2 fix round 1, QA-B2-5).
+        case link it deletes (no policy deletes one since 0.15.1; the
+        handling stays) takes its note with it, so that note is not in
+        this plan, and nothing counts or records it as rewritten (Brief 2
+        fix round 1, QA-B2-5).
         """
         from . import pseudonymise as engine
 
@@ -12918,7 +12913,7 @@ class QualcoderDatabase:
         resize, which is a row that CONTAINED a whole name and changed
         length only because that name did. Not exempt: a snap (the row
         partially overlapped a name and its boundary had to move), a
-        deletion (the `qualcoder_edit_parity` policy alone), and a clamp
+        deletion (which no policy makes since 0.15.1), and a clamp
         (a damaged row whose stored end lay past the end of the text and
         was pulled back to it, whose extent changed for a reason the
         rewrite does not explain). The exempt classes are counted beside
@@ -14360,7 +14355,7 @@ class QualcoderDatabase:
         copy, and it names WHICH file moved where the signed state can
         only say that something did.
 
-        Never touched, at either pin and under either policy:
+        Never touched, at either pin:
         `important`, `owner`, `date` and `avid` on a coding, `owner` on an
         annotation, and `owner` and `date` on a case link. `memo` on every
         row, and `date` on an annotation and on a journal entry, are

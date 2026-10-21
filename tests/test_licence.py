@@ -346,11 +346,15 @@ def _defined_names(path):
 # date, which only the backup reader compared), and entry 69 without
 # tests/test_v013_rename_backups.py, which tested that reader and went
 # with it.
+# v0.15.1, the removals of arguments, part three: pseudonymise_source's
+# overlap policy qualcoder_edit_parity went, and with it the walk it
+# ran (SpanMapper._parity) and the oracle that checked the walk
+# (MasterEditWalk), so entries 6 and 53 are withdrawn.
 NOTICE_ENTRIES = 81             # 0.14.3: document import, 79-81
 # Entries withdrawn in place (v0.15.1): the number and the title stay,
 # with "(withdrawn)", so that the entries' references to each other stay
 # true; the entry holds one line and no Here line.
-NOTICE_WITHDRAWN = {47}
+NOTICE_WITHDRAWN = {6, 47, 53}
 NOTICE_WITHDRAWN_LINE = (
     "Withdrawn in 0.15.1: the code it described was removed.")
 NOTICE_HERE = (
@@ -361,7 +365,6 @@ NOTICE_HERE = (
     (3, "src/exegete/coder_comparison.py", "statistics"),
     (4, "src/exegete/coder_comparison.py", "qualcoder_report_values"),
     (5, "src/exegete/database.py", "snap_to_palette"),
-    (6, "src/exegete/pseudonymise.py", "SpanMapper._parity"),
     (7, "src/exegete/database.py",
      "QualcoderDatabase.code_is_descendant"),
     (8, "src/exegete/database.py", "QualcoderDatabase.get_branch_cids"),
@@ -484,7 +487,6 @@ NOTICE_HERE = (
     (51, "tests/test_v012_palette_idempotent.py", "upstream_color_matcher"),
     (52, "tests/test_v012_palette_idempotent.py",
      "TestPaletteParity.test_named_cases"),
-    (53, "tests/test_v012_pseudonymise_engine.py", "MasterEditWalk"),
     (54, "tests/test_v012_pseudonymise_engine.py", "master_boundary_spans",
      "legacy_boundary_spans",
      "TestNonChaining.test_why_that_mapping_is_refused_although_one_pass_survives_it",

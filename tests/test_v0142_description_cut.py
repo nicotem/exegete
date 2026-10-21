@@ -829,12 +829,21 @@ JOURNAL_RENAME_0151 = {
     "rename_file": (3148, 2593, "5d0c29ef977f9433"),
     "set_attribute": (1530, 1226, "cb66faba15a8c296"),
 }
+# And the overlap policy qualcoder_edit_parity, removed as announced in
+# 0.14 (tests/test_v0151_one_overlap_policy.py, whose
+# before_the_one_overlap_policy puts it back as it was served before):
+# pseudonymise_source without the policy's deprecation sentence and
+# without its paragraph among the arguments, overlap_policy's first
+# paragraph kept
+ONE_POLICY_0151 = {
+    "pseudonymise_source": (17138, 12626, "4e59fbbe50373983"),
+}
 WORDS_BEFORE_ARGUMENTS_0151 = {name: words for name, words in {
     **WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
     **CHANGED_0151, **CHANGED_0151_TEXTS, **REMOVALS_0151}.items()
     if name not in REMOVED_0151}
 WORDS = {**WORDS_BEFORE_ARGUMENTS_0151, **ARGUMENTS_0151,
-         **JOURNAL_RENAME_0151}
+         **JOURNAL_RENAME_0151, **ONE_POLICY_0151}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to

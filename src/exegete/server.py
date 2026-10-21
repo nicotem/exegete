@@ -341,12 +341,10 @@ REFI_EXPORT_KNOWN_FAULTS = (
 # unknown tool, and a removed topic is answered below. So did the
 # arguments delete_code's cascade, the owner of apply_codings and
 # import_text_file, and search_files' search_memo (REMOVED_ARGUMENTS),
-# attributes on journal entries (JOURNAL_ATTRIBUTES_REMOVED, below), and
-# the rename back recognised from the project's backups: rename_file no
-# longer reads them.
-DEPRECATED_EDIT_PARITY = (
-    "Deprecated, removed in v0.15.1: overlap_policy qualcoder_edit_parity, "
-    "which deletes codings on names and is not exact parity.")
+# attributes on journal entries (JOURNAL_ATTRIBUTES_REMOVED, below), the
+# rename back recognised from the project's backups (rename_file no
+# longer reads them), and pseudonymise_source's overlap policy
+# qualcoder_edit_parity (EDIT_PARITY_REMOVED, below).
 
 # The arguments removed in 0.15.1, as announced in 0.14: a call that
 # passes one is refused like any argument its tool does not declare
@@ -381,6 +379,19 @@ JOURNAL_ATTRIBUTES_REMOVED = (
     "Attributes on journal entries were removed in 0.15.1: Exegete set "
     "them but never read them back. Those already in the project stay as "
     "they are. Nothing was written.")
+
+# pseudonymise_source's overlap_policy qualcoder_edit_parity, removed in
+# 0.15.1, as announced in 0.14: a call that names it is answered with
+# this sentence before the mapping, the file, a token or the project's
+# lock is looked at, no token issued and nothing written.
+# snap_to_pseudonym, the default, is the one policy left; overlap_policy
+# stays an argument, bound into the token as before.
+EDIT_PARITY_REMOVED = (
+    "overlap_policy qualcoder_edit_parity was removed in 0.15.1: it "
+    "deleted codings that sat on a name and was not exact parity with "
+    "QualCoder's editor. snap_to_pseudonym, the default and now the only "
+    "policy, grows such a coding to hold the whole pseudonym and deletes "
+    "nothing; call again without overlap_policy.")
 
 # The help topics explain_ai_coding_tools no longer has (0.15.1, as
 # announced in 0.14): asked for one, it answers with this sentence and the
@@ -18492,16 +18503,6 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"remap, which QualCoder's schema forbids. The execute is "
             f"refused until this is resolved; see "
             f"unique_constraint_collisions.")
-    if totals.get("rows_deleted"):
-        warnings.append(
-            f"Warning: overlap_policy=qualcoder_edit_parity would DELETE "
-            f"{totals['rows_deleted']} row(s) whose span sits inside a "
-            f"replaced name, which is what QualCoder's coding-view walk "
-            f"does when fed this tool's exact edit list; the editor's own "
-            f"diff may factor a shared prefix or suffix out of a "
-            f"replacement (Tom to Tim) and keep a coding this policy "
-            f"deletes. The default policy, snap_to_pseudonym, deletes "
-            f"nothing.")
     pre_existing = [item for item in preview.get("files", [])
                     if item.get("pre_existing_pseudonym_occurrences")]
     if pre_existing:
@@ -19384,8 +19385,6 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(DEPRECATED_EDIT_PARITY, before="Args:",
-             when=lambda a: a.get("overlap_policy") == "qualcoder_edit_parity")
 def pseudonymise_source(
     mapping: Optional[List[Dict[str, Any]]] = None,
     *,
@@ -19559,15 +19558,6 @@ def pseudonymise_source(
                  marked the name marks the pseudonym, a coding that cut
                  into a name grows to contain the whole pseudonym, and
                  nothing is ever emptied or deleted.
-                 "qualcoder_edit_parity": the walk QualCoder's own
-                 coding-view editor applies, fed this tool's exact edit
-                 list, which DELETES a coding that sits on a name and
-                 trims one that merely touches it. The editor itself
-                 diffs the two texts first, and its diff library may
-                 factor a shared prefix or suffix out of a replacement
-                 (Tom to Tim) and keep a coding this policy deletes.
-                 Use it only when matching that walk matters more than
-                 keeping the codings.
         rewrite_memos: Also rewrite the public part of every note (the
                  twelve kinds of note: codings, annotations, case links,
                  files, cases, codes, categories, the project, attribute
@@ -19714,6 +19704,8 @@ def pseudonymise_source(
         return json.dumps({"error": (
             f"case_mode must be one of "
             f"{', '.join(pseudo.CASE_MODES)}.")}, indent=2)
+    if overlap_policy == "qualcoder_edit_parity":
+        return json.dumps({"error": EDIT_PARITY_REMOVED}, indent=2)
     if overlap_policy not in pseudo.OVERLAP_POLICIES:
         return json.dumps({"error": (
             f"overlap_policy must be one of "
@@ -19915,9 +19907,8 @@ def pseudonymise_source(
                     "Two or more rows would land on the same span after "
                     "remapping (unique_constraint_collisions in the preview "
                     "lists them), which QualCoder's schema forbids. Nothing "
-                    "was written: delete one row of each pair, or choose "
-                    "overlap_policy=qualcoder_edit_parity, which deletes "
-                    "spans that sit inside a replaced name."),
+                    "was written: delete one row of each pair, then "
+                    "preview again."),
                 "reason": "unique_constraint_collision",
                 "nothing_changed": True,
             }

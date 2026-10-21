@@ -112,17 +112,8 @@ Routines in the package
    would choose, ties included, which needs QualCoder's metric and its
    scan in its order.
 
-6. QualCoder's coding editor span walk (closely ported)
-   Here: src/exegete/pseudonymise.py, SpanMapper._parity.
-   From: code_text.py, lines 5893-5927 (apply_insert and apply_delete),
-   driven by the running offset of lines 5933-5950.
-   Author: Salomon-Mazatlan (a git identity in QualCoder's history, 33
-   of the 35 lines).
-   Why: under the optional overlap policy qualcoder_edit_parity, a coded
-   span moves, shrinks or is deleted exactly as QualCoder's own editor
-   would move, shrink or delete it when a name is deleted and its
-   pseudonym typed in its place; the order of the walk decides the
-   result.
+6. QualCoder's coding editor span walk (closely ported) (withdrawn)
+   Withdrawn in 0.15.1: the code it described was removed.
 
 7. QualCoder's sub-code descendant check (copied verbatim)
    Here: src/exegete/database.py,
@@ -563,12 +554,8 @@ QualCoder projects.
     52-65.
     Why: named parity cases, computed with QualCoder's function.
 
-53. The editor walk oracle (copied verbatim)
-    Here: tests/test_v012_pseudonymise_engine.py, MasterEditWalk.
-    From: code_text.py, lines 5893-5927.
-    Why: item 6 is checked against QualCoder's walk kept in QualCoder's
-    own shape (every row walked per edit, where item 6 walks every edit
-    per row), not against itself.
+53. The editor walk oracle (copied verbatim) (withdrawn)
+    Withdrawn in 0.15.1: the code it described was removed.
 
 54. The whole-word replacement pattern oracles (copied verbatim)
     Here: tests/test_v012_pseudonymise_engine.py, master_boundary_spans,

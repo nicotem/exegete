@@ -1,28 +1,12 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The v0.12 flagship engine: parity oracles, properties, edge cases (D1 6.1, 6.2, 6.3).
 
-Two oracles drive this file, both literal transcriptions of QualCoder
-master at pin 9bddf17, sitting beside the engine rather than inside it:
-
-- `master_boundary_spans`, the import-time replacement regex of
-  `manage_files.py:3344-3349`, which is where our whole-word rule comes
-  from;
-- `MasterEditWalk`, the `apply_insert` / `apply_delete` pair of
-  `code_text.py:5893-5927` driven by the running offset of `:5933-5950`,
-  which is what `overlap_policy="qualcoder_edit_parity"` promises.
-
-The second oracle is a real cross-check rather than a mirror: it walks
-ALL rows per edit, mutating a shared list the way upstream does, while
-the engine walks all edits per row and carries one row's state. An error
-in the order of the delete and the insert, in the running offset, or in
-the start anchor shows up as a disagreement.
-
-What the oracles do NOT claim, stated here because the claim would be
-easy to overstate: upstream feeds its walk whatever `diff_match_patch`
-produced for a keystroke, and that library may factor a common prefix or
-suffix out of a replacement. This engine never diffs; it deletes the
-whole name and inserts the whole pseudonym at the same offset. Parity is
-with the WALK, for that edit shape, and a test below says so.
+One oracle drives this file, a literal transcription of QualCoder master
+at pin 9bddf17, sitting beside the engine rather than inside it:
+`master_boundary_spans`, the import-time replacement regex of
+`manage_files.py:3344-3349`, which is where our whole-word rule comes
+from. The second, the coding editor's walk, went in 0.15.1 with the
+overlap policy that reproduced it (`qualcoder_edit_parity`).
 """
 
 import hashlib
@@ -306,236 +290,6 @@ class TestBoundaryDeltas:
 
 
 # =============================================================================
-# ORACLE 2: master's edit-mode walk (code_text.py:5893-5950)
-# =============================================================================
-
-class MasterEditWalk:
-    """`apply_insert` and `apply_delete`, transcribed from master.
-
-    `code_text.py:5893-5904` and `:5906-5927` at pin 9bddf17, kept in
-    upstream's own shape: a list of item dicts carrying `pos0`,
-    `newpos0` and `newpos1`, mutated in place, with a deletion queue.
-    The driver below supplies the running offset of `:5933-5950` for the
-    delete-then-insert pair each replacement amounts to.
-    """
-
-    def __init__(self):
-        self.code_deletions = []
-
-    @staticmethod
-    def apply_insert(items, at, length, keep_start_anchor):
-        for c in items:
-            if c['newpos0'] is None:
-                continue
-            if c['newpos0'] >= at:
-                c['newpos0'] += length
-                c['newpos1'] += length
-                if keep_start_anchor and c['pos0'] == 0:
-                    c['newpos0'] = 0
-            elif c['newpos0'] < at < c['newpos1']:
-                c['newpos1'] += length
-
-    def apply_delete(self, items, at, length, delete_sql):
-        for c in items:
-            if c['newpos0'] is None:
-                continue
-            if c['newpos0'] >= at + length:
-                c['newpos0'] -= length
-                c['newpos1'] -= length
-            elif c['newpos0'] >= at:
-                if c['newpos1'] <= at + length:
-                    self.code_deletions.append(delete_sql(c))
-                    c['newpos0'] = None
-                else:
-                    c['newpos0'] = at
-                    c['newpos1'] -= length
-            elif c['newpos1'] > at:
-                c['newpos1'] -= min(c['newpos1'], at + length) - at
-                if c['newpos1'] <= c['newpos0']:
-                    self.code_deletions.append(delete_sql(c))
-                    c['newpos0'] = None
-
-    def run(self, spans, replacements, keep_start_anchor):
-        """The walk over every row, one edit at a time (upstream's order).
-
-        Each replacement reaches the walk as upstream's editor would see
-        a whole-token retype: a delete of the name at the running offset
-        followed by an insert of the pseudonym at the same offset.
-
-        Upstream marks a deleted row by setting `newpos0` to None and
-        NEVER touches its `newpos1` again, because the row is about to be
-        removed by the queued SQL and the end is meaningless. The end is
-        normalised to None here so the comparison is against the ANSWER,
-        not against a field upstream stopped maintaining.
-        """
-        items = [{'id': index, 'pos0': a, 'pos1': b, 'newpos0': a,
-                  'newpos1': b} for index, (a, b) in enumerate(spans)]
-        shift = 0
-        for item in replacements:
-            at = item.start + shift
-            length = item.end - item.start
-            inserted = len(item.text)
-            self.apply_delete(items, at, length, lambda c: c['id'])
-            self.apply_insert(items, at, inserted, keep_start_anchor)
-            shift += inserted - length
-        return [(None, None) if c['newpos0'] is None
-                else (c['newpos0'], c['newpos1']) for c in items]
-
-
-class TestEditWalkParityOracle:
-    """D1 6.1: `qualcoder_edit_parity` is master's walk, row by row.
-
-    The oracle draws from `_TEXT_AND_SPANS`, whose spans are generated
-    relative to the text, so nothing is filtered and no health check
-    needs suppressing: re-verification R-4's `filter_too_much`
-    suppression (seed 22456547744127925701047518566622594684) covered a
-    filter that no longer exists. What it did NOT cover, and what the
-    final verification found, was that the old text strategy held a
-    whole-word name in 0.2 per cent of examples, so this oracle ran
-    3,000 examples with zero replacements and two planted parity bugs
-    stayed green under it. `TestTheGeneratorsExerciseWhatTheyClaim`
-    holds the measurement now.
-    """
-
-    @settings(max_examples=300, deadline=None,
-              suppress_health_check=[HealthCheck.too_slow])
-    @given(sample=_TEXT_AND_SPANS, anchor=st.booleans())
-    def test_the_engine_agrees_with_masters_walk(self, sample, anchor):
-        text, spans = sample
-        mapping = P.validate_mapping([
-            {"original": "Tom", "pseudonym": "Pseudo"},
-            {"original": "Ann", "pseudonym": "Quux"},
-        ])
-        compiled = P.Compiled(mapping)
-        replacements = P.find_replacements(compiled, text)
-        oracle = MasterEditWalk().run(spans, replacements, anchor)
-        mapper = P.SpanMapper(replacements, len(text))
-        ours = []
-        for pos0, pos1 in spans:
-            mapped = mapper.map_row(pos0, pos1, "qualcoder_edit_parity",
-                                    anchor)
-            ours.append((mapped.pos0, mapped.pos1))
-        assert ours == oracle
-
-    @pytest.mark.parametrize("span,expected", [
-        ((4, 7), (None, None)),      # exactly the name: deleted
-        ((4, 6), (None, None)),      # starting inside, ending inside
-        ((5, 9), (10, 12)),          # starting inside: cut to after
-        ((0, 6), (0, 4)),            # ending inside: cut to before
-        ((0, 11), (0, 14)),          # containing the name: grows
-        ((8, 11), (11, 14)),         # after the name: shifts
-        ((0, 3), (0, 3)),            # before the name: unmoved
-    ])
-    def test_the_five_shapes_D1_names(self, span, expected):
-        """"Say Tom now": the coding shapes D1 1.2 and 6.1 enumerate."""
-        text = "Say Tom now"
-        mapping = P.validate_mapping(
-            [{"original": "Tom", "pseudonym": "Pseudo"}])
-        compiled = P.Compiled(mapping)
-        replacements = P.find_replacements(compiled, text)
-        mapper = P.SpanMapper(replacements, len(text))
-        mapped = mapper.map_row(span[0], span[1], "qualcoder_edit_parity",
-                                True)
-        assert (mapped.pos0, mapped.pos1) == expected
-        assert MasterEditWalk().run([span], replacements, True) == [expected]
-
-    def test_the_start_anchor_holds_for_codings_and_case_links_only(self):
-        """`keep_start_anchor` is True for codings and case links and
-        False for annotations (`code_text.py:5940-5942`), and it only
-        matters when the span's ORIGINAL pos0 was 0."""
-        text = "Tom said so"
-        mapping = P.validate_mapping(
-            [{"original": "Tom", "pseudonym": "Pseudo"}])
-        compiled = P.Compiled(mapping)
-        replacements = P.find_replacements(compiled, text)
-        mapper = P.SpanMapper(replacements, len(text))
-        anchored = mapper.map_row(0, len(text), "qualcoder_edit_parity", True)
-        loose = mapper.map_row(0, len(text), "qualcoder_edit_parity", False)
-        assert anchored.pos0 == 0
-        assert loose.pos0 == 6        # the insert pushed the start right
-        assert MasterEditWalk().run([(0, len(text))], replacements, True) \
-            == [(anchored.pos0, anchored.pos1)]
-        assert MasterEditWalk().run([(0, len(text))], replacements, False) \
-            == [(loose.pos0, loose.pos1)]
-
-    def test_an_insertion_exactly_at_the_end_is_excluded(self):
-        """Master's `apply_insert` matches neither branch when the
-        insertion lands on `newpos1`, so text typed straight after a
-        span stays outside it (`code_text.py:5893-5904`)."""
-        text = "say Tom"
-        mapping = P.validate_mapping(
-            [{"original": "Tom", "pseudonym": "Pseudo"}])
-        compiled = P.Compiled(mapping)
-        replacements = P.find_replacements(compiled, text)
-        mapper = P.SpanMapper(replacements, len(text))
-        mapped = mapper.map_row(0, 4, "qualcoder_edit_parity", False)
-        assert (mapped.pos0, mapped.pos1) == (0, 4)
-
-    def test_the_382_end_of_file_deletion_is_not_reproduced(self):
-        """`3.8.2:code_text.py`'s `ed_update_codings` deletes every row
-        with `newpos1 >= len(self.text)` on each edit-mode exit, so a
-        coding that legitimately ends at the end of the file dies on
-        every edit. Master replaced that with a clamp (`:6232-6233`) and
-        neither policy here reproduces the deletion: the row survives
-        and still ends at the end of the rewritten text."""
-        text = "Tom said so"
-        compiled = P.Compiled(P.validate_mapping(
-            [{"original": "Tom", "pseudonym": "Pseudo"}]))
-        replacements = P.find_replacements(compiled, text)
-        mapper = P.SpanMapper(replacements, len(text))
-        for policy in P.OVERLAP_POLICIES:
-            mapped = mapper.map_row(4, len(text), policy, True)
-            assert mapped.pos0 is not None, policy
-            assert mapped.pos1 == mapper.new_len, policy
-
-    def test_parity_trims_a_trailing_name_which_is_not_that_deletion(self):
-        """The distinction the previous test would otherwise blur.
-
-        When the LAST token of a span is a replaced name, master's own
-        walk excludes the pseudonym: the delete takes the span's end back
-        to the edit point and the insert at that same point matches
-        neither branch. The row survives (it is not the 3.8.2 deletion)
-        but it no longer reaches the end of the text, and that is one of
-        the reasons this policy is the option rather than the default.
-        """
-        text = "he met Tom"
-        compiled = P.Compiled(P.validate_mapping(
-            [{"original": "Tom", "pseudonym": "Pseudo"}]))
-        replacements = P.find_replacements(compiled, text)
-        mapper = P.SpanMapper(replacements, len(text))
-        parity = mapper.map_row(0, len(text), "qualcoder_edit_parity", True)
-        snap = mapper.map_row(0, len(text), "snap_to_pseudonym", True)
-        assert (parity.pos0, parity.pos1) == (0, 7)
-        assert (snap.pos0, snap.pos1) == (0, mapper.new_len)
-        assert MasterEditWalk().run([(0, len(text))], replacements, True) \
-            == [(parity.pos0, parity.pos1)]
-
-    def test_parity_is_with_the_walk_not_with_the_diff_library(self):
-        """The honest limit of the claim, asserted rather than described.
-
-        Replacing "Thomas" with "Thom" is one delete plus one insert
-        here. `diff_match_patch` may instead report a common prefix and
-        a shorter delete, which would move the edit boundary and give a
-        different answer for a span inside the shared prefix. This test
-        shows the two answers differ, so nothing downstream can read the
-        parity claim more widely than it is meant.
-        """
-        text = "say Thomas now"
-        mapping = P.validate_mapping(
-            [{"original": "Thomas", "pseudonym": "Thom"}])
-        compiled = P.Compiled(mapping)
-        replacements = P.find_replacements(compiled, text)
-        whole_token = P.SpanMapper(replacements, len(text)).map_row(
-            4, 8, "qualcoder_edit_parity", False)
-        # The same rewrite expressed as the prefix-factored diff a diff
-        # library may produce: keep "Thom", delete "as".
-        factored = [P.Replacement(8, 10, 0, "as", "")]
-        prefix_factored = MasterEditWalk().run([(4, 8)], factored, False)
-        assert (whole_token.pos0, whole_token.pos1) == (None, None)
-        assert prefix_factored == [(4, 8)]
-
-
-# =============================================================================
 # ENGINE PROPERTIES (D1 6.2)
 # =============================================================================
 
@@ -556,7 +310,7 @@ class TestSnapProperties:
         replacements = P.find_replacements(compiled, text)
         mapper = P.SpanMapper(replacements, len(text))
         for pos0, pos1 in spans:
-            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym", True)
+            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym")
             assert mapped is not None
             assert mapped.pos0 is not None
             assert 0 <= mapped.pos0 < mapped.pos1 <= mapper.new_len
@@ -578,7 +332,7 @@ class TestSnapProperties:
         new_text = P.apply_replacements(text, replacements)
         mapper = P.SpanMapper(replacements, len(text))
         for pos0, pos1 in spans:
-            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym", True)
+            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym")
             if mapped.change == P.SNAPPED:
                 continue
             inner = [r for r in replacements
@@ -603,7 +357,7 @@ class TestSnapProperties:
             if any(r.start < pos1 and r.end > pos0 for r in replacements):
                 continue
             delta = sum(r.delta for r in replacements if r.end <= pos0)
-            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym", True)
+            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym")
             assert (mapped.pos0, mapped.pos1) == (pos0 + delta, pos1 + delta)
             assert mapped.change in (P.UNCHANGED, P.SHIFTED)
 
@@ -628,7 +382,7 @@ class TestSnapProperties:
         mapper = P.SpanMapper(replacements, len(text))
         names = {(r.start, r.end): r.text for r in replacements}
         for pos0, pos1 in spans + list(names):
-            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym", True)
+            mapped = mapper.map_row(pos0, pos1, "snap_to_pseudonym")
             if (pos0, pos1) in names:
                 assert mapped.change == P.SUBSTITUTED
                 assert new_text[mapped.pos0:mapped.pos1] == names[(pos0, pos1)]
@@ -643,7 +397,7 @@ class TestSnapProperties:
         replacements = P.find_replacements(compiled, text)
         new_text = P.apply_replacements(text, replacements)
         mapper = P.SpanMapper(replacements, len(text))
-        mapped = mapper.map_row(4, 7, "snap_to_pseudonym", True)
+        mapped = mapper.map_row(4, 7, "snap_to_pseudonym")
         assert new_text[mapped.pos0:mapped.pos1] == "Pseudo"
         # A resize before ruling 7.3(3), by length; a substitution since.
         assert mapped.change == P.SUBSTITUTED
@@ -658,23 +412,23 @@ class TestSnapProperties:
         replacements = P.find_replacements(compiled, text)
         new_text = P.apply_replacements(text, replacements)
         mapper = P.SpanMapper(replacements, len(text))
-        mapped = mapper.map_row(span[0], span[1], "snap_to_pseudonym", True)
+        mapped = mapper.map_row(span[0], span[1], "snap_to_pseudonym")
         assert "Pseudo" in new_text[mapped.pos0:mapped.pos1]
         assert mapped.change == P.SNAPPED
 
     def test_the_snap_policy_keeps_a_whole_file_span_whole_without_an_anchor(
             self):
-        """`keep_start_anchor` is a parity device: under the snap policy
-        position 0 maps to 0 by arithmetic, for every table."""
+        """Under the snap policy position 0 maps to 0 by arithmetic, for
+        every table: no start anchor is needed (the walk's, which went
+        with `qualcoder_edit_parity` in 0.15.1)."""
         text = "Tom said so"
         mapping = P.validate_mapping(
             [{"original": "Tom", "pseudonym": "Pseudo"}])
         compiled = P.Compiled(mapping)
         replacements = P.find_replacements(compiled, text)
         mapper = P.SpanMapper(replacements, len(text))
-        for anchor in (True, False):
-            mapped = mapper.map_row(0, len(text), "snap_to_pseudonym", anchor)
-            assert (mapped.pos0, mapped.pos1) == (0, mapper.new_len)
+        mapped = mapper.map_row(0, len(text), "snap_to_pseudonym")
+        assert (mapped.pos0, mapped.pos1) == (0, mapper.new_len)
 
 
 class TestChangeClassification:
@@ -707,7 +461,7 @@ class TestChangeClassification:
         one coding decision, unchanged. Before the ruling the shorter and
         the longer read as a resize and the equal one as a shift."""
         mapper, new_text = self._thomas("say Thomas now", pseudonym)
-        mapped = mapper.map_row(4, 10, "snap_to_pseudonym", False)
+        mapped = mapper.map_row(4, 10, "snap_to_pseudonym")
         assert mapped.change == P.SUBSTITUTED
         assert mapped.touched is True
         assert new_text[mapped.pos0:mapped.pos1] == pseudonym
@@ -716,7 +470,7 @@ class TestChangeClassification:
         """The second name moved by the first's delta and is still a
         substitution: both boundaries land on the pseudonym's."""
         mapper, new_text = self._thomas("Thomas met Thomas.", "Alex")
-        mapped = mapper.map_row(11, 17, "snap_to_pseudonym", False)
+        mapped = mapper.map_row(11, 17, "snap_to_pseudonym")
         assert mapped.change == P.SUBSTITUTED
         assert (mapped.pos0, mapped.pos1) == (9, 13)
         assert new_text[9:13] == "Alex"
@@ -733,7 +487,7 @@ class TestChangeClassification:
         text = "say Thomas said so"
         assert text[span[0]:span[1]] == reads
         mapper, _ = self._thomas(text, "Alex")
-        mapped = mapper.map_row(span[0], span[1], "snap_to_pseudonym", False)
+        mapped = mapper.map_row(span[0], span[1], "snap_to_pseudonym")
         assert mapped.change == P.RESIZED
 
     def test_a_clamped_span_that_lands_exactly_on_a_name_is_clamped(self):
@@ -744,11 +498,11 @@ class TestChangeClassification:
         what keeps it on the override side now that a resize is exempt;
         the same span stored as the name is the substitution."""
         mapper, new_text = self._thomas("say Thomas", "Alex")
-        mapped = mapper.map_row(4, 40, "snap_to_pseudonym", False)
+        mapped = mapper.map_row(4, 40, "snap_to_pseudonym")
         assert mapped.clamped is True
         assert mapped.change == P.CLAMPED
         assert new_text[mapped.pos0:mapped.pos1] == "Alex"
-        unclamped = mapper.map_row(4, 10, "snap_to_pseudonym", False)
+        unclamped = mapper.map_row(4, 10, "snap_to_pseudonym")
         assert unclamped.clamped is False
         assert unclamped.change == P.SUBSTITUTED
 
@@ -758,10 +512,10 @@ class TestChangeClassification:
         exempts; its end also lay past the text, which ruling 7.4 does
         not exempt. The clamp wins, so the row stays gated."""
         mapper, _ = self._thomas("say Thomas", "Alex")
-        mapped = mapper.map_row(0, 40, "snap_to_pseudonym", False)
+        mapped = mapper.map_row(0, 40, "snap_to_pseudonym")
         assert mapped.clamped is True
         assert mapped.change == P.CLAMPED
-        unclamped = mapper.map_row(0, 10, "snap_to_pseudonym", False)
+        unclamped = mapper.map_row(0, 10, "snap_to_pseudonym")
         assert unclamped.clamped is False
         assert unclamped.change == P.RESIZED
 
@@ -770,28 +524,10 @@ class TestChangeClassification:
         take its class away: (5, 40) on "say Thomas" clamps to (5, 10),
         which cuts into the name and snaps out to hold the pseudonym."""
         mapper, new_text = self._thomas("say Thomas", "Alex")
-        mapped = mapper.map_row(5, 40, "snap_to_pseudonym", False)
+        mapped = mapper.map_row(5, 40, "snap_to_pseudonym")
         assert mapped.clamped is True
         assert mapped.change == P.SNAPPED
         assert new_text[mapped.pos0:mapped.pos1] == "Alex"
-
-    def test_under_parity_a_clamped_span_on_a_name_is_still_deleted(self):
-        """The other class the clamp leaves alone, for the same reason:
-        a deletion is gated whatever else happened to the row."""
-        mapper, _ = self._thomas("say Thomas", "Alex")
-        mapped = mapper.map_row(4, 40, "qualcoder_edit_parity", False)
-        assert mapped.clamped is True
-        assert mapped.change == P.DELETED
-
-    def test_under_parity_a_span_exactly_on_a_name_is_deleted_not_substituted(
-            self):
-        """The edit-parity policy deletes the row before the class is
-        decided, and a deletion is on the override side whatever the
-        lengths (7.3(3), point (b))."""
-        for pseudonym in self._LENGTHS.values():
-            mapper, _ = self._thomas("say Thomas now", pseudonym)
-            mapped = mapper.map_row(4, 10, "qualcoder_edit_parity", False)
-            assert mapped.change == P.DELETED, pseudonym
 
     def _mapper(self, text, pseudonym):
         compiled = P.Compiled(P.validate_mapping(
@@ -805,37 +541,24 @@ class TestChangeClassification:
         """"Tom" to "Pat" is three characters for three: the coder still
         marks the same passage, so this is exempt under X1."""
         mapper = self._mapper("say Tom now ok", "Pat")
-        mapped = mapper.map_row(0, 11, policy, False)
+        mapped = mapper.map_row(0, 11, policy)
         assert mapped.change == P.UNCHANGED
         assert mapped.touched is True         # the seltext still changes
 
     @pytest.mark.parametrize("policy", P.OVERLAP_POLICIES)
     def test_a_span_strictly_containing_a_name_is_resized_not_snapped(
             self, policy):
-        """Master's tail-cut BRANCH fires here although nothing is cut:
-        the span shrinks by the name and grows by the pseudonym. Calling
-        it a snap would demand the hidden-coder override for a row whose
-        boundaries never met a name."""
+        """The span holds the whole name and grows with the pseudonym;
+        nothing is cut. Calling it a snap would demand the hidden-coder
+        override for a row whose boundaries never met a name."""
         mapper = self._mapper("say Tom now", "Pseudo")
-        mapped = mapper.map_row(0, 11, policy, False)
+        mapped = mapper.map_row(0, 11, policy)
         assert mapped.change == P.RESIZED
-
-    def test_a_whole_file_span_is_not_snapped_by_the_anchor_undoing_a_cut(
-            self):
-        """Under parity a span at offset 0 takes a head cut that the
-        start anchor immediately undoes in the same step. The start
-        never moves, so it is not a boundary the run had to move."""
-        mapper = self._mapper("Tom said so", "Pseudo")
-        anchored = mapper.map_row(0, 11, "qualcoder_edit_parity", True)
-        assert anchored.pos0 == 0
-        assert anchored.change == P.RESIZED
-        loose = mapper.map_row(0, 11, "qualcoder_edit_parity", False)
-        assert loose.change == P.SNAPPED
 
     @pytest.mark.parametrize("policy", P.OVERLAP_POLICIES)
     def test_a_span_after_every_edit_is_shifted(self, policy):
         mapper = self._mapper("say Tom now", "Pseudo")
-        mapped = mapper.map_row(8, 11, policy, False)
+        mapped = mapper.map_row(8, 11, policy)
         assert mapped.change == P.SHIFTED
         assert mapped.touched is False
 
@@ -843,21 +566,21 @@ class TestChangeClassification:
     def test_a_span_before_every_edit_is_unchanged_and_untouched(
             self, policy):
         mapper = self._mapper("say Tom now", "Pseudo")
-        mapped = mapper.map_row(0, 3, policy, False)
+        mapped = mapper.map_row(0, 3, policy)
         assert mapped.change == P.UNCHANGED
         assert mapped.touched is False
 
-    def test_a_cut_boundary_is_snapped_under_both_policies(self):
+    def test_a_cut_boundary_is_snapped(self):
         mapper = self._mapper("say Tom now", "Pseudo")
         for policy in P.OVERLAP_POLICIES:
-            assert mapper.map_row(5, 9, policy, False).change == P.SNAPPED
+            assert mapper.map_row(5, 9, policy).change == P.SNAPPED
 
     def test_touched_is_what_decides_a_seltext_refresh(self):
         """A row whose positions do not move can still need its stored
         quote rewritten, which is why `touched` exists separately."""
         mapper = self._mapper("say Tom now ok", "Pat")
-        inside = mapper.map_row(0, 11, "snap_to_pseudonym", False)
-        outside = mapper.map_row(0, 3, "snap_to_pseudonym", False)
+        inside = mapper.map_row(0, 11, "snap_to_pseudonym")
+        outside = mapper.map_row(0, 3, "snap_to_pseudonym")
         assert (inside.change, inside.touched) == (P.UNCHANGED, True)
         assert (outside.change, outside.touched) == (P.UNCHANGED, False)
 
@@ -1432,11 +1155,11 @@ class TestDamagedRows:
     def test_a_row_that_is_not_a_span_is_left_exactly_as_it_is(
             self, pos0, pos1):
         mapper, _ = self._mapper()
-        assert mapper.map_row(pos0, pos1, "snap_to_pseudonym", True) is None
+        assert mapper.map_row(pos0, pos1, "snap_to_pseudonym") is None
 
     def test_an_end_past_the_text_is_clamped_on_the_old_side(self):
         mapper, text = self._mapper()
-        mapped = mapper.map_row(0, len(text) + 40, "snap_to_pseudonym", True)
+        mapped = mapper.map_row(0, len(text) + 40, "snap_to_pseudonym")
         assert mapped.clamped is True
         assert mapped.pos1 == mapper.new_len
 
@@ -1444,7 +1167,7 @@ class TestDamagedRows:
             self):
         mapper, text = self._mapper()
         assert mapper.map_row(len(text) + 5, len(text) + 9,
-                              "snap_to_pseudonym", True) is None
+                              "snap_to_pseudonym") is None
 
     @pytest.mark.parametrize("pos0,pos1", [(-1, 11), (-4, -3), (0, -2)],
                              ids=repr)
@@ -1458,12 +1181,12 @@ class TestDamagedRows:
         a researcher can see it."""
         mapper, _ = self._mapper()
         for policy in P.OVERLAP_POLICIES:
-            assert mapper.map_row(pos0, pos1, policy, True) is None
+            assert mapper.map_row(pos0, pos1, policy) is None
 
     def test_the_clamp_is_reported_for_every_policy(self):
         mapper, text = self._mapper()
         for policy in P.OVERLAP_POLICIES:
-            assert mapper.map_row(0, len(text) + 3, policy, True).clamped
+            assert mapper.map_row(0, len(text) + 3, policy).clamped
 
 
 class TestTextEdgeCases:
@@ -1538,8 +1261,8 @@ class TestUniqueConstraintPreCheck:
             [{"original": "Thomas", "pseudonym": "Alex"}]))
         replacements = P.find_replacements(compiled, text)
         mapper = P.SpanMapper(replacements, len(text))
-        a = mapper.map_row(4, 10, "snap_to_pseudonym", True)
-        b = mapper.map_row(4, 8, "snap_to_pseudonym", True)
+        a = mapper.map_row(4, 10, "snap_to_pseudonym")
+        b = mapper.map_row(4, 8, "snap_to_pseudonym")
         assert (a.pos0, a.pos1) == (b.pos0, b.pos1)
         collisions = P.unique_constraint_collisions(
             [(1, 1, a.pos0, a.pos1, "C"), (1, 1, b.pos0, b.pos1, "C")],
@@ -1550,18 +1273,6 @@ class TestUniqueConstraintPreCheck:
         assert P.unique_constraint_collisions(
             [(1, 1, 0, 4, "C"), (2, 1, 0, 4, "C"), (1, 1, 0, 4, "D")],
             [1, 2, 3]) == []
-
-    def test_the_parity_policy_resolves_the_collision_by_deleting(self):
-        text = "say Thomas now"
-        compiled = P.Compiled(P.validate_mapping(
-            [{"original": "Thomas", "pseudonym": "Alex"}]))
-        replacements = P.find_replacements(compiled, text)
-        mapper = P.SpanMapper(replacements, len(text))
-        for span in ((4, 10), (4, 8)):
-            mapped = mapper.map_row(span[0], span[1],
-                                    "qualcoder_edit_parity", True)
-            assert mapped.change == P.DELETED
-
 
 # =============================================================================
 # ROUND TRIP AND DETERMINISM (D1 6.2)
@@ -1593,7 +1304,7 @@ class TestRoundTripOracle:
         assert not P.pre_existing_pseudonym_occurrences(compiled, text)
         new_text = P.apply_replacements(text, replacements)
         mapper = P.SpanMapper(replacements, len(text))
-        forward = [mapper.map_row(a, b, "snap_to_pseudonym", True)
+        forward = [mapper.map_row(a, b, "snap_to_pseudonym")
                    for a, b in spans]
 
         # The inverse edit list, exactly what a manifest records: each
@@ -1612,7 +1323,7 @@ class TestRoundTripOracle:
             if mapped.change == P.SNAPPED:
                 continue          # a cut boundary is information lost
             returned = back.map_row(mapped.pos0, mapped.pos1,
-                                    "snap_to_pseudonym", True)
+                                    "snap_to_pseudonym")
             assert (returned.pos0, returned.pos1) == (a, b)
 
 

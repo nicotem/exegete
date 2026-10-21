@@ -276,6 +276,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`restore_backup` is in the `core` set**, beside `list_backups`, so a
   local model working with the smaller set can restore a backup, in the
   same two steps. `core` now has 26 tools (see "Measured").
+- **A file refused as damaged leaves one line in Exegete's log**, naming
+  the kind of error behind the refusal (for example
+  `pymupdf.FileDataError`) and the release of the library Exegete reads
+  that kind of file with: PyMuPDF for a PDF, EbookLib for an EPUB,
+  striprtf for an RTF file and defusedxml for a Word file; an
+  OpenDocument file, which Python's own modules read, has none. Until
+  now the log said nothing, so a file that reads on one computer and is
+  refused on another could only be guessed at. The line never names the
+  file, its place or the project, and never gives the error's own
+  words, which can quote the file; the answer, and what reaches the AI
+  provider, are unchanged.
 
 ### Removed: three tools and four help topics, as announced in 0.14
 

@@ -1047,21 +1047,31 @@ RAW_ANSWERS = [
     {"ok": True, "result": {"text": "a", "signs": {}, "notes": [],
                             "charset": "é"}},
     {"ok": True, "result": None},
+    # v0.15.1: the cause behind "damaged", kept and dropped alike
+    {"ok": False, "refusal": "damaged",
+     "cause": {"kind": "pymupdf.FileDataError", "library": "pymupdf",
+               "version": "1.28.2"}},
+    {"ok": False, "refusal": "damaged",
+     "cause": {"kind": "Value Error", "library": "pymupdf",
+               "version": "1.28.2", "said": "x"}},
 ]
 
 
-def _outcome(check, value):
+def _outcome(check, value, kind):
     try:
-        return ("answer", check(value))
+        return ("answer",
+                check(value) if kind is None else check(value, kind))
     except import_reading.ReadFailed as failed:
-        return ("refused", failed.code, failed.numbers)
+        return ("refused", failed.code, failed.numbers,
+                getattr(failed, "cause", None))
 
 
+@pytest.mark.parametrize("kind", [None, "pdf"])
 @pytest.mark.parametrize("answer", RAW_ANSWERS)
-def test_the_shape_check_is_the_reading_process_s_own(answer):
+def test_the_shape_check_is_the_reading_process_s_own(answer, kind):
     raw = json.dumps(answer, ensure_ascii=True).encode("ascii")
-    assert _outcome(import_reading.checked_result, json.loads(raw)) == \
-        _outcome(import_reading._checked_answer, raw)
+    assert _outcome(import_reading.checked_result, json.loads(raw), kind) \
+        == _outcome(import_reading._checked_answer, raw, kind)
 
 
 def test_every_string_comes_back_exactly_a_lone_surrogate_included():

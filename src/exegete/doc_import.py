@@ -861,6 +861,22 @@ def _time_for(limit: float, budget: float, started: float, first: bool,
     return min(limit, left)
 
 
+def _log_cause(cause: Optional[Dict[str, Any]]) -> None:
+    """One line for a file refused as damaged: the kind of error behind
+    it and the release of the library Exegete reads that kind of file
+    with, where there is one; never the file, its place, size or digest,
+    or the project. The cause stays out of the item's numbers, so no
+    answer, and nothing sent to the AI provider, carries it."""
+    if not cause:
+        return
+    library = ""
+    if cause.get("library"):
+        library = " (%s %s)" % (cause["library"],
+                                cause.get("version") or "unknown")
+    logger.warning("A file was refused as damaged: its reading raised "
+                   "%s%s.", cause["kind"], library)
+
+
 def _read_one(item: Item, data: bytes, ctx: Context,
               timeout: Optional[float] = None,
               limit: Optional[float] = None,
@@ -876,6 +892,8 @@ def _read_one(item: Item, data: bytes, ctx: Context,
         result = reader(item.kind, data, max_characters=ctx.max_characters,
                         timeout=timeout)
     except import_reading.ReadFailed as failed:
+        if failed.code == "damaged":
+            _log_cause(getattr(failed, "cause", None))
         if failed.code in HELD_WHEN_READ:
             item.status, item.code = "held", failed.code
             return

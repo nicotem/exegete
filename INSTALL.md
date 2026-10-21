@@ -1966,7 +1966,11 @@ trigger), or a damaged one (with a note that is not UTF-8), no longer
 makes a tool log that note, private part included. They name no
 project, file, code, category, case, journal entry or attribute and no
 path: they carry ids, counts and the kinds of errors, and a project's
-schema version only when it has QualCoder's form. The MCP library's own
+schema version only when it has QualCoder's form. A file refused as
+damaged leaves one line naming the kind of error behind it and the
+release of the library Exegete reads that kind of file with, where
+there is one, never the file, which helps when you report a problem.
+The MCP library's own
 lines beside them name the kind of each request, and carry the
 caller's own text in two cases: for a prompt called with an argument
 it does not declare, that argument's value; and for a request the

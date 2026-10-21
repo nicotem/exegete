@@ -19,7 +19,13 @@ The contract, and why each part matters:
   standard output, which is a private pipe to the server (never the
   server's own channel to the host), checked before use; never Python's
   pickled objects. Its error output is dropped; a library that writes to
-  standard output inside the process writes nowhere.
+  standard output inside the process writes nowhere. A `damaged`
+  refusal may carry `cause`, {"kind", "library", "version"}: the class
+  of the exception behind it, by module and qualified name (`builtins.`
+  left out), the library Exegete reads that kind of file with
+  (READER_LIBRARIES, null for none) and the release of it this process
+  loaded, so that Exegete's log can say what kind of error lay behind
+  the verdict (v0.15.1).
 - Limits: a time limit, and a memory cap on every system (Linux: an
   address-space limit the process sets on itself before it reads
   anything; macOS, which honours no such limit: the server watches the
@@ -29,11 +35,13 @@ The contract, and why each part matters:
   too; Windows: a job object with a memory limit).
 
 No exception text, library message or process output is ever passed on:
-a refusal is one of Exegete's own codes.
+a refusal is one of Exegete's own codes, and a cause names a class and a
+release, never the exception's message, arguments, traceback or str().
 """
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -51,6 +59,18 @@ READ_TIMEOUT_SECONDS = 30.0
 MEMORY_CAP_BYTES = 1024 * 1024 * 1024
 MAX_ANSWER_BYTES = 16 * 1024 * 1024
 WATCH_INTERVAL_SECONDS = 0.05
+# The library Exegete reads each kind of file with (doc_readers), named
+# beside a "damaged" refusal's cause. OpenDocument is read with Python's
+# own zipfile and text handling, and defusedxml serves Word alone, so
+# every other kind has none.
+READER_LIBRARIES = {"pdf": "pymupdf", "epub": "ebooklib",
+                    "rtf": "striprtf", "word": "defusedxml"}
+# A cause's kind is a dotted name (a class's module and qualified name)
+# and its version a release's spelling; anything else drops the cause.
+_CAUSE_KIND = re.compile(
+    r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*){0,7}")
+_CAUSE_KIND_MAX = 100
+_CAUSE_VERSION = re.compile(r"[0-9A-Za-z.+!_-]{1,40}")
 
 _CHILD_CODE = ("import sys; sys.path.insert(0, sys.argv[1]); "
                "from exegete.import_reading import child_main; child_main()")
@@ -60,10 +80,14 @@ class ReadFailed(Exception):
     """A file the reading process did not read: Exegete's own reason code
     and any numbers the words need."""
 
-    def __init__(self, code: str, numbers: Optional[Dict[str, Any]] = None):
+    def __init__(self, code: str, numbers: Optional[Dict[str, Any]] = None,
+                 cause: Optional[Dict[str, Any]] = None):
         super().__init__(code)
         self.code = code
         self.numbers = numbers or {}
+        # What lay behind a "damaged" verdict, for Exegete's log alone:
+        # never in args or str(), so no answer carries it.
+        self.cause = cause
 
 
 # ---------------------------------------------------------------------------
@@ -113,20 +137,67 @@ def child_main() -> None:
     os._exit(0)
 
 
+def _hidden_class(refused: BaseException) -> Optional[type]:
+    """The class of the exception a refusal was raised over: the readers
+    raise it `from None` inside an `except`, which hides that exception
+    but keeps it as the context; None when it has none."""
+    context = refused.__context__
+    return None if context is None else type(context)
+
+
+def _cause(behind: Optional[type], kind: str) -> Optional[Dict[str, Any]]:
+    """What lay behind a "damaged" verdict, from the class of the exception
+    behind it alone (`behind`; None, nothing to name: no cause): its
+    module and qualified name, the library Exegete reads `kind` with and
+    the release of it this process loaded. Never the exception itself,
+    so never its message, arguments or traceback. On any failure here,
+    no cause, so a verdict never changes; a release not found leaves the
+    kind."""
+    if behind is None:
+        return None
+    try:
+        module, name = behind.__module__, behind.__qualname__
+        label = name if module == "builtins" else f"{module}.{name}"
+        library = READER_LIBRARIES.get(kind)
+    except Exception:
+        return None
+    version = None
+    if library is not None:
+        try:
+            from importlib import metadata
+            version = metadata.version(library)
+        except Exception:
+            version = None
+    return {"kind": label, "library": library, "version": version}
+
+
+def _damaged(behind: Optional[type], kind: str,
+             answer: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    answer = answer or {"ok": False, "refusal": "damaged"}
+    cause = _cause(behind, kind)
+    if cause is not None:
+        answer["cause"] = cause
+    return answer
+
+
 def _read(header: Dict[str, Any], raw: bytes) -> Dict[str, Any]:
     from . import doc_readers
+    kind = str(header["kind"])
     try:
-        result = doc_readers.read_document(str(header["kind"]), raw)
+        result = doc_readers.read_document(kind, raw)
     except doc_readers.ReadRefused as refused:
-        return {"ok": False, "refusal": refused.code,
-                "numbers": {k: v for k, v in refused.numbers.items()
-                            if isinstance(v, int)}}
+        answer = {"ok": False, "refusal": refused.code,
+                  "numbers": {k: v for k, v in refused.numbers.items()
+                              if isinstance(v, int)}}
+        if refused.code == "damaged":
+            return _damaged(_hidden_class(refused), kind, answer)
+        return answer
     except MemoryError:
         return {"ok": False, "refusal": "reader_memory"}
-    except RecursionError:
-        return {"ok": False, "refusal": "damaged"}
-    except Exception:
-        return {"ok": False, "refusal": "damaged"}
+    except RecursionError as error:
+        return _damaged(type(error), kind)
+    except Exception as error:
+        return _damaged(type(error), kind)
     limit = int(header.get("max_characters", 0))
     if limit and result["characters"] > limit:
         return {"ok": False, "refusal": "too_long",
@@ -302,7 +373,7 @@ def read_in_process(kind: str, data: bytes, max_characters: int = 0,
                 process.kill()
                 process.wait()
                 raise ReadFailed("reader_failed")
-        return _talk(process, header + data, timeout, memory_cap)
+        return _talk(process, header + data, timeout, memory_cap, kind)
     finally:
         if job is not None:
             job.close()
@@ -310,7 +381,7 @@ def read_in_process(kind: str, data: bytes, max_characters: int = 0,
 
 
 def _talk(process: "subprocess.Popen", payload: bytes, timeout: float,
-          memory_cap: int) -> Dict[str, Any]:
+          memory_cap: int, kind: Optional[str] = None) -> Dict[str, Any]:
     received = bytearray()
     overflow = threading.Event()
 
@@ -379,23 +450,52 @@ def _talk(process: "subprocess.Popen", payload: bytes, timeout: float,
         raise ReadFailed(reason)
     if overflow.is_set():
         raise ReadFailed("reader_failed")
-    return _checked_answer(bytes(received))
+    return _checked_answer(bytes(received), kind)
 
 
-def _checked_answer(raw: bytes) -> Dict[str, Any]:
+def _checked_answer(raw: bytes, kind: Optional[str] = None
+                    ) -> Dict[str, Any]:
     """The child's answer, its shape checked before anything uses it."""
     try:
         answer = json.loads(raw.decode("ascii"))
     except (UnicodeDecodeError, ValueError):
         raise ReadFailed("reader_failed") from None
-    return checked_result(answer)
+    return checked_result(answer, kind)
 
 
-def checked_result(answer: Any) -> Dict[str, Any]:
+def _checked_cause(cause: Any, code: str,
+                   kind: Optional[str]) -> Optional[Dict[str, Any]]:
+    """A refusal's cause, kept only beside `damaged` and only in its own
+    shape: exactly its three keys, a dotted name of at most 100
+    characters, the library READER_LIBRARIES gives the kind asked for
+    (none for no kind), and a release's spelling or null (null whenever
+    the library is). None otherwise: the cause is dropped whole and the
+    refusal stands as sent."""
+    if code != "damaged" or not isinstance(cause, dict) \
+            or set(cause) != {"kind", "library", "version"}:
+        return None
+    label, library, version = (cause["kind"], cause["library"],
+                               cause["version"])
+    if not isinstance(label, str) or len(label) > _CAUSE_KIND_MAX \
+            or _CAUSE_KIND.fullmatch(label) is None:
+        return None
+    expected = READER_LIBRARIES.get(kind) if isinstance(kind, str) else None
+    if library != expected:
+        return None
+    if version is not None and (
+            library is None or not isinstance(version, str)
+            or _CAUSE_VERSION.fullmatch(version) is None):
+        return None
+    return {"kind": label, "library": library, "version": version}
+
+
+def checked_result(answer: Any, kind: Optional[str] = None
+                   ) -> Dict[str, Any]:
     """A parsed answer, its shape checked: the text, signs, notes,
     character set and counts, or ReadFailed with the child's own code (or
-    `reader_failed`). The import checks a kept answer the same way
-    (kept_texts), wrapped as the child sends it."""
+    `reader_failed`) and, beside `damaged`, its cause as `_checked_cause`
+    keeps it for the file's `kind`. The import checks a kept answer the
+    same way (kept_texts), wrapped as the child sends it."""
     if not isinstance(answer, dict) or not isinstance(answer.get("ok"), bool):
         raise ReadFailed("reader_failed")
     if not answer["ok"]:
@@ -406,7 +506,8 @@ def checked_result(answer: Any) -> Dict[str, Any]:
         if not isinstance(numbers, dict):
             numbers = {}
         raise ReadFailed(code, {k: v for k, v in numbers.items()
-                                if isinstance(k, str) and isinstance(v, int)})
+                                if isinstance(k, str) and isinstance(v, int)},
+                         cause=_checked_cause(answer.get("cause"), code, kind))
     result = answer.get("result")
     if not isinstance(result, dict):
         raise ReadFailed("reader_failed")

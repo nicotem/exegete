@@ -634,7 +634,11 @@ class TestTheSizes:
     # paragraph among its arguments (700 characters fewer in `full`, from
     # 192,444; `core` does not serve the tool;
     # tests/test_v0151_one_overlap_policy.py).
-    NOW = {"full": 191_744, "core": 64_561}
+    # v0.15.1, search_memos in `core`: left out here as a tool added to
+    # the set after 0.14.2 (ADDED_TO_CORE_AFTER_0142); search_files'
+    # description there no longer marks it (66 characters fewer in
+    # `core`, from 64,561; tests/test_v0151_search_memos_core.py).
+    NOW = {"full": 191_744, "core": 64_495}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -748,8 +752,8 @@ ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading",
                     "set_project_coder_name", "prepare_names_list",
                     "save_names_list")
 # Tools that joined `core` after 0.14.2, left out of its figure likewise
-# (v0.15.1: restore_backup)
-ADDED_TO_CORE_AFTER_0142 = ("restore_backup",)
+# (v0.15.1: restore_backup and search_memos)
+ADDED_TO_CORE_AFTER_0142 = ("restore_backup", "search_memos")
 
 
 # ---------------------------------------------------------------------------

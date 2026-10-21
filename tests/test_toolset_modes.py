@@ -34,7 +34,7 @@ REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
 EXPECTED_FULL = FULL_TOOLS      # tests/tool_counts.py
-EXPECTED_CORE = 26              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), the earlier names of the two tools renamed in 0.15.0, and restore_backup (v0.15.1); check_for_updates, import_documents and create_project are not in core
+EXPECTED_CORE = 27              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), the earlier names of the two tools renamed in 0.15.0, and restore_backup and search_memos (v0.15.1); check_for_updates, import_documents and create_project are not in core
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -537,10 +537,17 @@ class TestThePublishedSchemaBudget:
     # more: 162 more in `full` (166 on 3.11), none in `core`, which does
     # not serve the tool. The rounded figures stay about 203,000 and
     # 72,000 characters, and the tokens 51k and 18k.
+    # v0.15.1, search_memos in `core`, since search_files no longer
+    # searches notes: `core` gains the tool, 2,347 characters (2,479 on
+    # 3.11), its description there marking add_journal_entry, and
+    # search_files' description there loses the two marks on
+    # search_memos, 66 fewer: 2,283 more in `core` (2,415 on 3.11), none
+    # in `full`. The rounded figures become about 203,000 and 74,000
+    # characters, and the tokens stay 51k and 18k.
     FULL_MEASURED = 202_814          # 79 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 71_685           # 26 tools, same environment
+    CORE_MEASURED = 73_968           # 27 tools, same environment
     FULL_MEASURED_310 = 213_182      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 75_349
+    CORE_MEASURED_310 = 77_764
 
     # Why two per cent, away from the reference environment.
     #
@@ -568,9 +575,9 @@ class TestThePublishedSchemaBudget:
     TOLERANCE = 0.02
 
     FULL_CHARS = "202,814"
-    CORE_CHARS = "71,685"
+    CORE_CHARS = "73,968"
     FULL_ROUNDED = "203,000"
-    CORE_ROUNDED = "72,000"
+    CORE_ROUNDED = "74,000"
     FULL_TOKENS = "51k"
     CORE_TOKENS = "18k"
 
@@ -894,7 +901,7 @@ class TestThePublishedSchemaBudget:
         assert (f"measure about {self.FULL_ROUNDED} characters, roughly "
                 f"{self.FULL_TOKENS} tokens, against about "
                 f"{self.CORE_ROUNDED} characters, roughly "
-                f"{self.CORE_TOKENS} tokens, for the 26 tools of `core` "
+                f"{self.CORE_TOKENS} tokens, for the {EXPECTED_CORE} tools of `core` "
                 f"({self.FULL_CHARS} and {self.CORE_CHARS} characters, "
                 f"measured for 0.15.1 on Python 3.13;") in install
 

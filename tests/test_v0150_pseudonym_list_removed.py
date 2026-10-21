@@ -326,15 +326,16 @@ class TestNoShippedTextNamesIt:
 
 class TestTheCount:
 
-    def test_full_has_79_tools_and_core_26(self):
+    def test_full_has_79_tools_and_core_27(self):
         """82 at this piece; 79 since v0.15.1 removed three tools, as
         announced in 0.14 (tests/test_v0151_removed_tools.py); core 26
-        since v0.15.1, restore_backup joining it."""
-        assert (FULL_TOOLS, CORE_TOOLS) == (79, 26)
+        since v0.15.1, restore_backup joining it, and 27, search_memos
+        joining it (tests/test_v0151_search_memos_core.py)."""
+        assert (FULL_TOOLS, CORE_TOOLS) == (79, 27)
         server._apply_toolset("full")
         assert len(_listed()) == 79
         server._apply_toolset("core")
-        assert len(_listed()) == 26
+        assert len(_listed()) == 27
 
 
 # ---------------------------------------------------------------------------

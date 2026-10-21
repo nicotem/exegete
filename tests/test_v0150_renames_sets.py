@@ -107,7 +107,7 @@ class TestTheSet:
         server._apply_toolset("core")
         registered = set(server.mcp._tool_manager._tools)
         assert registered == set(server.CORE_TOOLSET)
-        assert len(registered) == EXPECTED_CORE == 26   # the two earlier names (0.15.0), restore_backup (v0.15.1)
+        assert len(registered) == EXPECTED_CORE == 27   # the two earlier names (0.15.0), restore_backup and search_memos (v0.15.1)
         assert "create_project" not in registered
 
 

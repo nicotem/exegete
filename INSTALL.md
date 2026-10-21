@@ -750,7 +750,7 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   creating a project included, so that a study can be started from the
   conversation (TOOLS.md, "Starting a project from the conversation");
   two of them are the earlier names of two renamed tools (TOOLS.md,
-  "Earlier names"). `core` registers the 26-tool supervised coding set
+  "Earlier names"). `core` registers the 27-tool supervised coding set
   for local models (see the LM Studio recipe), which cannot create a
   project. `lifecycle`, the earlier name of `full` (the desktop
   extension's default before 0.15.0), is read as `full` until v1.0, and
@@ -1127,14 +1127,14 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 79 tools by
 default, and the serialised tool definitions alone measure about
-203,000 characters, roughly 51k tokens, against about 72,000
-characters, roughly 18k tokens, for the 26 tools of `core` (202,814
-and 71,685 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
+203,000 characters, roughly 51k tokens, against about 74,000
+characters, roughly 18k tokens, for the 27 tools of `core` (202,814
+and 73,968 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
 says how). The full set exceeds LM Studio's 8k default context several
 times over before you type a word, and tool counts this size are far
 past where small-model tool selection degrades. Set
 `EXEGETE_TOOLSET=core` (in the config of Step 5) to register only the
-26-tool supervised coding set.
+27-tool supervised coding set.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
 18k tokens of schema exceed the 8k default context. When loading the

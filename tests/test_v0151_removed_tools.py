@@ -184,13 +184,14 @@ class TestTheToolsAreGone:
         assert sorted(p.name for p in session_dir.iterdir()) == before
         assert server.session_manager.session_exists(sid)
 
-    def test_full_has_79_tools_and_core_26(self):
-        # core 26 since restore_backup joined it (v0.15.1, the restore)
-        assert (FULL_TOOLS, CORE_TOOLS) == (79, 26)
+    def test_full_has_79_tools_and_core_27(self):
+        # core 26 since restore_backup joined it (v0.15.1, the restore),
+        # 27 since search_memos did (v0.15.1, search_memos in core)
+        assert (FULL_TOOLS, CORE_TOOLS) == (79, 27)
         server._apply_toolset("full")
         assert len(_listed()) == 79
         server._apply_toolset("core")
-        assert len(_listed()) == 26
+        assert len(_listed()) == 27
 
 
 # ---------------------------------------------------------------------------

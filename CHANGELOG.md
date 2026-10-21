@@ -68,9 +68,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Your assistant app keeps its choices per tool, not per argument, so
   those still apply; a saved instruction, skill or script that passes
   one of these arguments needs it taken out.
-- **`core` has no note search.** `search_memos` is not in `core`, the
-  tool set for local models, so with `search_memo` gone no tool there
-  searches notes; `full`, the default, has `search_memos`.
+- **`search_memos` is in `core`.** `search_files` no longer searches
+  notes, so `search_memos` joins `core`, the tool set for local models,
+  and the small set keeps a way to search them.
 - **Attributes on journal entries.** `create_attribute_type` with
   `applies_to` `journal`, and `set_attribute` with `target_type`
   `journal`, are refused, nothing written. Journal attributes already in
@@ -343,7 +343,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   again.
 - **`restore_backup` is in the `core` set**, beside `list_backups`, so a
   local model working with the smaller set can restore a backup, in the
-  same two steps. `core` now has 26 tools (see "Measured").
+  same two steps. `core` now has 27 tools, with `search_memos` (see
+  "Measured").
 - **A file refused as damaged leaves one line in Exegete's log**, naming
   the kind of error behind the refusal (for example
   `pymupdf.FileDataError`) and the release of the library Exegete reads
@@ -404,8 +405,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A call that passes one of these arguments, with any value, is refused
   like any argument the tool does not declare, nothing done, with a
   sentence naming what replaces it, which the answer also gives under
-  `removed`. In `core`, where `search_memos` is not served, that
-  sentence says so.
+  `removed`.
 - **Attributes on journal entries**, which Exegete set but never read
   back. `create_attribute_type` with `applies_to` `journal` and
   `set_attribute` with `target_type` `journal` (in any letter case, with
@@ -631,20 +631,20 @@ schemas together, as below; the brief as `read_brief` returns it):
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
 | `full` (79 tools; 82 in 0.15.0) | 202,814 | 206,624 | 213,182 | 217,084 |
-| `core` (26 tools; 25 in 0.15.0) | 71,685 | 68,258 | 75,349 | 71,690 |
+| `core` (27 tools; 25 in 0.15.0) | 73,968 | 68,258 | 77,764 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
 - Serialised tool JSON: full = 202,814 characters (about 50.7k tokens
-  at chars/4) over 79 tools, and core = 71,685 (about 17.9k) over 26,
+  at chars/4) over 79 tools, and core = 73,968 (about 18.5k) over 27,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
   which also gives exactly 0.15.0's figures for its tree), 213,182 and
-  75,349. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
-  25 on 3.13), ten changes moved them. The first, `create_backup`
+  77,764. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
+  25 on 3.13), eleven changes moved them. The first, `create_backup`
   accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -713,8 +713,14 @@ schemas together, as below; the brief as `read_brief` returns it):
   to the `converted_documents` topic gone to keep it within 2,048
   characters, 4 characters more (8 on 3.11), and its schema gains
   `character_sets`, 158 more: 162 more in `full` (166 on 3.11); `core`
-  does not serve the tool. Rounded, the figures are about 203,000 and
-  72,000 characters, about 51k and 18k tokens. No other tool's entry
+  does not serve the tool. The eleventh, `search_memos` in `core`,
+  since `search_files` no longer searches notes: `core` gains the tool,
+  2,347 characters (2,479 on 3.11), its description there marking
+  `add_journal_entry` as not in the set, and `search_files`'
+  description there loses the two marks that said
+  `search_memos` was not in it, 66 fewer: 2,283 more in `core` (2,415
+  on 3.11), none in `full`. Rounded, the figures are about 203,000 and
+  74,000 characters, about 51k and 18k tokens. No other tool's entry
   changed.
   The full brief says that
   Exegete takes a backup before every change, rather than "unless the

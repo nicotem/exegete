@@ -10,8 +10,9 @@ search_memo go, as announced in 0.14 (DESIGN_0151_removals-arguments.md,
 2. A call over the host's path that passes one, as true, false or null
    (and owner as the project's own AI coder name, which 0.15.0 accepted
    without a word), is refused with its sentence under "removed", and
-   nothing happens: no row changes, no backup, no file, no search. In
-   `core` the search_memo sentence marks search_memos as not served.
+   nothing happens: no row changes, no backup, no file, no search. A
+   set without search_memos marks it in the search_memo sentence;
+   `core` serves it since v0.15.1 (search_memos in `core`).
    Any other unknown argument is refused as before, word for word.
 3. On a project with sub-codes, delete_code's preview carries no
    cascade, its execute deletes the whole branch with the token alone,
@@ -198,14 +199,23 @@ def test_each_removed_argument_is_refused_whatever_its_value(
     assert by_tool["search_files"][2] == 1
 
 
-def test_in_core_the_memo_search_sentence_marks_search_memos(setup_server):
+def test_the_memo_search_sentence_marks_search_memos_where_not_served(
+        setup_server):
+    """`core` serves search_memos since v0.15.1, so there the sentence
+    names it as it is; a set without it marks it (the registry is put
+    back by the conftest)."""
     server._apply_toolset("core")
-    assert "search_memos" not in server.mcp._tool_manager._tools
-    answer = json.loads(text_of(host_session(lambda client: client.call_tool(
-        "search_files", {"pattern": "x", "search_memo": False}))))
+    assert "search_memos" in server.mcp._tool_manager._tools
+
+    def refused():
+        return json.loads(text_of(host_session(
+            lambda client: client.call_tool(
+                "search_files", {"pattern": "x", "search_memo": False}))))
+    _refused_as_removed(refused(), "search_files", "search_memo")
+    server.mcp.remove_tool("search_memos")
     marked = _sentence("search_files", "search_memo").replace(
         "search_memos", "search_memos" + server.NOT_IN_THIS_TOOL_SET)
-    _refused_as_removed(answer, "search_files", "search_memo", marked)
+    _refused_as_removed(refused(), "search_files", "search_memo", marked)
     owner = json.loads(text_of(host_session(lambda client: client.call_tool(
         "apply_codings", {"coding_session_id": "x", "owner": None}))))
     # set_project_ai_coder_name is in core, so nothing is marked there

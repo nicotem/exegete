@@ -15,5 +15,6 @@ word where a test reads it.
 # prepare_names_list and save_names_list included
 FULL_TOOLS = 79
 # The supervised coding set for local models, the two earlier names
-# included; restore_backup joined it in v0.15.1 (25 to 26)
-CORE_TOOLS = 26
+# included; restore_backup joined it in v0.15.1 (25 to 26), and
+# search_memos (26 to 27), since search_files no longer searches notes
+CORE_TOOLS = 27

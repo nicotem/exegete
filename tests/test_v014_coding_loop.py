@@ -2038,11 +2038,17 @@ class TestFixRound2WhatGoesInV015:
         assert "deprecated" not in previewed
         assert server.EDIT_PARITY_REMOVED not in json.dumps(previewed)
 
-    def test_in_core_the_memo_search_refusal_marks_search_memos(
+    def test_the_memo_search_refusal_marks_search_memos_where_not_served(
             self, setup_server):
-        server._apply_toolset("core")      # the conftest restores it
-        out = jcall("search_files", pattern="x", search_memo=True)
+        # `core` serves search_memos since v0.15.1 (search_memos in
+        # `core`), so a set without it is made by removing it; the
+        # conftest restores the registry
+        server._apply_toolset("core")
         sentence = server.REMOVED_ARGUMENTS[("search_files", "search_memo")]
+        out = jcall("search_files", pattern="x", search_memo=True)
+        assert out["removed"]["search_memo"] == sentence
+        server.mcp.remove_tool("search_memos")
+        out = jcall("search_files", pattern="x", search_memo=True)
         assert out["removed"]["search_memo"] == sentence.replace(
             "search_memos", "search_memos" + server.NOT_IN_THIS_TOOL_SET)
 

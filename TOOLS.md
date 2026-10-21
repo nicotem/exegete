@@ -996,10 +996,11 @@ declares, and each tool's own description says what each one does.
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in Exegete's environment (in the extension,
 > the switch "Use the small tool set, for local models"), only the
-> 26-tool supervised coding set is registered: read_brief,
+> 27-tool supervised coding set is registered: read_brief,
 > list_available_projects, select_project, get_current_project,
 > get_project_summary,
-> search_files, read_file_with_codings, open_file_for_reading,
+> search_files, read_file_with_codings, search_memos,
+> open_file_for_reading,
 > search_coded_text,
 > get_coded_segments, get_coding_frequencies, start_coding_session,
 > record_suggestions, review_suggestions, edit_suggestion,
@@ -1012,7 +1013,7 @@ declares, and each tool's own description says what each one does.
 > serialised tool definitions: name, description and input schema, the
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
 > definitions run to about 203,000 characters for `full`, roughly 51k
-> tokens at four characters per token, and about 72,000 characters for
+> tokens at four characters per token, and about 74,000 characters for
 > `core`, roughly 18k tokens. On Python 3.10 to 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
@@ -1038,7 +1039,7 @@ declares, and each tool's own description says what each one does.
 - `search_coded_text(query, code_name, limit, coder, exclude_code_ids, cursor)` - Search coded segments, with the same novelty filter and paging
 - `get_coded_segments(code_id, limit, coder, strategy, max_chars, file_ids, cursor)` - Segments for a code, sampled by strategy (`by_document`, `diverse_by_document`, `recent_first`, `sequential`) under an optional character budget; `codings_not_shown` counts the code's region codings (areas on PDF pages or images) and audio/video codings in the same scope, which a text read does not show
 - `get_coding_frequencies(coder)` - Coding statistics: text codings per code, with `codings_not_counted` giving the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
-- `search_memos(query, limit)` - Search every memo and note outside QualCoder's saved graphs (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type
+- `search_memos(query, limit)` - Search every memo and note outside QualCoder's saved graphs (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type. In `core` since 0.15.1
 - `get_project_summary()` - Comprehensive project overview, naming any PDF with no usable text and counting the region and audio/video codings the text statistics leave out
 
 On projects with the coder-visibility capability (QualCoder 3.8.2 and

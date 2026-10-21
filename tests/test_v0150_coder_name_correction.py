@@ -1170,4 +1170,4 @@ class TestTheTool:
 
     def test_the_counts(self):
         assert len(server.STANDARD_TOOL_NAMES) == FULL_TOOLS
-        assert len(server.CORE_TOOLSET) == 26   # restore_backup (v0.15.1)
+        assert len(server.CORE_TOOLSET) == 27   # restore_backup and search_memos (v0.15.1)

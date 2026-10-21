@@ -23450,6 +23450,9 @@ CORE_TOOLSET = frozenset({
     "get_project_summary",
     # file search and read-with-coding
     "search_files", "read_file_with_codings",
+    # the search of notes of every kind, file memos included (since
+    # v0.15.1, when search_files stopped searching file memos)
+    "search_memos",
     # reading a whole file on the computer, its text kept off the
     # conversation (v0.14.3): most useful with local models,
     # where reading a file otherwise pulls all of it into a small context
@@ -23586,7 +23589,7 @@ def _refresh_served_texts() -> Dict[str, Any]:
     tool it names that this set does not register (v0.14, server-wide).
 
     The instructions and the tool descriptions are written for the full
-    set; in `core` they name tools `core` lacks (search_memos,
+    set; in `core` they name tools `core` lacks (import_text_file,
     explain_ai_coding_tools), and a model told to call a tool it cannot
     see is sent nowhere. The prompts and the methods
     notes are marked when they are read (`_mark_unregistered`), since

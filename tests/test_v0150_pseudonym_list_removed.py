@@ -464,7 +464,11 @@ class TestToolsReadmePrivacy:
         privacy = _read("PRIVACY.md")
         assert ("`get_current_project` reports whether the file is present "
                 "and how many entries it has, never a name. "
-                + PRIVACY_REMOVED + " A names file made before the list last "
+                + PRIVACY_REMOVED
+                # v0.15.1, privacy by audience (the owner, 21 October
+                # 2026): the rule says which of the three things it protects
+                + " This protects the key (\"How your data flows\")."
+                + " A names file made before the list last "
                 "changed can lack some of its entries, which "
                 "`prepare_names_list` says, and entries that cannot be "
                 "written as one line of the file stay in `pseudonyms.json`, "
@@ -481,7 +485,8 @@ class TestToolsReadmePrivacy:
             "file Exegete prepares, so that the names do not pass through "
             "the conversation; an assistant that opens files by itself "
             "could still read that file (\"Files Exegete keeps on your "
-            "computer\").")
+            "computer\"). Filling it in there protects the key (\"How your "
+            "data flows\").")
         # Fix round 1: the next paragraph names its subject
         assert _flat(paragraphs[2]).startswith(
             "For what reaches the AI assistant, the list and "

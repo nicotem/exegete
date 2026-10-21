@@ -43,11 +43,50 @@ must understand:
 > transcript through this tool sends the returned portions of that
 > transcript to that provider.
 
+**What the rules here protect.** Your AI provider has whatever you let
+the assistant read: once the assistant has read a text through
+Exegete, the provider has that text, as it has everything else in the
+conversation, and nothing afterwards, no preview, token or refusal,
+takes it back. So an answer that returns text the assistant has
+already read is not a leak. (Exegete does hold some things back from
+the assistant, such as the private part of a note after `#####`:
+"Keeping notes private from the AI", below.) Beyond that, the rules in
+this document protect three other things, each with its own readers:
+
+- **The key.** The names list pairs each real name with its pseudonym.
+  No tool returns the names on it: you can fill it in on your own
+  computer, in the names file, and what Exegete says of the list and
+  the file is counts and line or entry numbers. A mapping you type into
+  the conversation reaches the provider as you type it ("What
+  pseudonymisation is for", below).
+- **What stays on the computer, and who else reads it.** The project,
+  its backups and copies, Exegete's own folder (coding sessions, the
+  texts an import's preview read, the pseudonymisation run records),
+  the reading folder, and the host's own records of the conversation
+  (its log, its transcripts) stay on your disk, where anything that
+  reads the disk can read them: a sync or backup service, a copy you
+  give someone, another assistant that opens files by itself, a log or
+  a support bundle you send. Exegete's own log lines name no project
+  or file and quote no text ("Error answers and Exegete's log", below,
+  says what they hold, and what a host's log keeps besides).
+- **How much passes through the conversation.** Every turn can be kept
+  by the host and by the provider, under their own terms, so Exegete
+  passes text through the conversation only when it has to: a file you
+  only want to look at opens on your own screen ("Reading a whole
+  file", below), an import's preview gives names, sizes and counts
+  rather than the documents' text ("Bringing documents in", below, says
+  what else it gives), and a count answers where a count was asked.
+  This keeps fewer copies of the text in fewer places; it is not a
+  claim that the provider has not seen what you let the assistant read.
+
+Where a rule below serves one of these three, it says which.
+
 An assistant that opens files by itself can send more, outside
 Exegete: "Assistants that open files by themselves", below, says which
 assistants do, and what to use for participants' data.
 
-What stays local, always, unless a sync service copies the folder it is in:
+What stays local, always, unless a sync service copies the folder it is in
+(what stays on the computer, above):
 
 - your project itself (the `.qda` folder and its database)
 - automatic backups created before writes, and the safety backup a
@@ -215,8 +254,9 @@ What stays local, always, unless a sync service copies the folder it is in:
   `old_fingerprint` or `new_fingerprint` pair holds a plain SHA-256.
   Never an original name: the project path, the backup path and a
   file's name are withheld where a reader would see one, and "Practical
-  mitigations" below says how. Since v0.13 (format 2) the record also
-  says whether the run rewrote notes (`rewrite_memos`) and, when it
+  mitigations" below says how. This keeps the key out of these records
+  (what stays on the computer, above). Since v0.13 (format 2) the record
+  also says whether the run rewrote notes (`rewrite_memos`) and, when it
   did, lists each note it rewrote in a `memos` section (the table, the
   row's key, whether the note has a private part, the length of its
   public part before and after as a `public_length` pair, and where each
@@ -278,7 +318,8 @@ server log (the file Settings > Developer > Show Logs opens) records
 every request and every answer as well, so there the file also holds
 everything the tools returned and the arguments they were given, names,
 paths and quoted text included, as the conversation does. Read such a
-file as you would the conversation before sharing it.
+file as you would the conversation before sharing it. The log's rules
+protect what stays on the computer (above).
 
 Paging cursors (the `c1.` tokens the search and segment tools return)
 are not stored anywhere: they are handed to the model in a result and
@@ -316,7 +357,9 @@ its database (`data.qda`) included, without going through Exegete. What
 they read that way goes to their AI provider whole, the private part of
 every memo after `#####` included (the database holds each memo in
 full), and none of Exegete's protections applies to it; Exegete cannot
-see such a read or stop it. Exegete's own answers tell the assistant
+see such a read or stop it. Such an assistant is one of the other
+readers of what stays on the computer ("How your data flows").
+Exegete's own answers tell the assistant
 where a project is (`list_available_projects`, `select_project`,
 `get_current_project` and `create_project` answer with its path,
 `copy_project_to_workspace` with its copy's, and `list_backups` with
@@ -487,6 +530,8 @@ instead, on whichever plan or terms you use.
 
 ## Files Exegete keeps on your computer
 
+This section is about what stays on the computer ("How your data
+flows").
 Everything Exegete writes outside the conversation is one of four
 kinds, and it writes only into these places:
 
@@ -538,7 +583,8 @@ lines, though a write that is cut off can leave it behind.
 
 The files you fill in are never returned to the assistant: Exegete
 reports what is in the folder, never what the files hold, and its brief
-tells the assistant never to open them. Exegete names only the files it
+tells the assistant never to open them. This protects the key ("How
+your data flows"). Exegete names only the files it
 makes there (the note, and the files it gives you to fill in); anything
 you add yourself is counted, never named, since a name you give a file
 may hold a participant's name, and the count can include hidden files
@@ -564,7 +610,9 @@ it: its preview gives counts, which compare the list with the file in
 the same way, and the numbers of the lines to correct, never a name;
 on your word, after a backup, it replaces the list in `pseudonyms.json`
 with the file's names, keeping only the list's entries the file cannot
-hold as a line, and the file itself stays as it is. The export tools
+hold as a line, and the file itself stays as it is. Counts and line
+numbers, never names, protect the key ("How your data flows"). The
+export tools
 refuse to write in any project's `Exegete` folder, so an export cannot
 replace a file you filled in. The names file opens in the app your
 computer uses for text files: if that app has an AI assistant of its
@@ -622,7 +670,8 @@ included; an export made in QualCoder carries the unchanged originals.
 The list can be filled in on your own computer, in the names file
 Exegete prepares, so that the names do not pass through the
 conversation; an assistant that opens files by itself could still read
-that file ("Files Exegete keeps on your computer").
+that file ("Files Exegete keeps on your computer"). Filling it in there
+protects the key ("How your data flows").
 
 For what reaches the AI assistant, the list and `pseudonymise_source`
 help, but they should not be trusted blindly. Once the names are
@@ -751,7 +800,7 @@ New in v0.14.3. When you ask to read a file, the assistant calls
 `open_file_for_reading`, and the file opens on your own screen: a page
 in your browser with its whole text and its codings, or a read-only copy
 of the original in its own app, or that copy shown in Finder or File
-Explorer. What reaches the AI provider:
+Explorer. What each way of reading sends to the AI provider:
 
 | What you asked for | Sent to the AI provider | Not sent |
 |---|---|---|
@@ -759,6 +808,12 @@ Explorer. What reaches the AI provider:
 | The original, or the original in its folder | the file's id, its name and the place of the read-only copy | its contents |
 | The whole text in the chat (`read_file_with_codings` and the file and case resources, unchanged) | the text, a part at a time, with its codings | |
 | The whole text in the chat without codes (`read_file_with_codings` with `without_codes=true`) | the text, a part at a time, and the file's details, with counts of the codings and annotations left out | the codings, the codes, the annotations |
+
+A page keeps the text out of the conversation. It does not take back
+text the assistant has already read, in this conversation or an
+earlier one: the provider has that text already. Opening a page rather
+than reading in the chat limits how much passes through the
+conversation ("How your data flows").
 
 To talk about a passage you have read on the page, copy a few words of
 it into the conversation: those words go to the provider, like anything
@@ -777,7 +832,8 @@ on Linux, each page in a folder named after its project, then one
 named after the file's number. The
 folder is out of iCloud and OneDrive, not indexed by the computer's
 search and readable by your account only; it is tidied as said below,
-and you can delete it at any time.
+and you can delete it at any time. This and the cautions below are
+about what stays on the computer ("How your data flows").
 
 The page itself never reaches out: it holds no script, fetches nothing
 (its own content security policy forbids it) and links to nothing
@@ -883,7 +939,9 @@ reader knows where a "not coded" is not a decision); with
 `per_file=true`, it also names, under each code, every file either
 coder coded, and a file's name can hold a participant's name ("File
 names travel everywhere", in "Bringing documents in"). Nothing else about the coding: no coded text,
-no memo, no character positions, no file paths. On a project that hides coders, naming a hidden
+no memo, no character positions, no file paths. This limits how much
+passes through the conversation ("How your data flows"). On a project
+that hides coders, naming a hidden
 coder is refused unless you pass `allow_hidden_coder=true`, and the
 refusal says only that a named coder is hidden, never which of the two,
 and never how many coders are hidden; the lists of coders in its other
@@ -1067,7 +1125,9 @@ garble content, Exegete keeps it, and names the departure (TOOLS.md
 lists each one). The documents'
 text does not pass through the conversation on the way in, but for one
 line of a plain text file not saved as UTF-8, as each character set
-reads it (below). What does reach the AI provider, and what does not:
+reads it (below). This limits how much passes through the conversation
+("How your data flows"). What does reach the AI provider, and what
+does not:
 
 | Step | Sent to the AI provider | Not sent |
 |---|---|---|
@@ -1247,7 +1307,8 @@ backups skipped those too, and a copied lock file would make QualCoder
 report the copy as not properly closed). That mirrors QualCoder's own backups, keeps the
 non-regenerable prompt library and chat history safe in every backup,
 and, for QualCoder 4.0's search index, avoids multiplying plaintext
-copies of your sources across backup folders. QualCoder 3.8's store,
+copies of your sources across backup folders. This protects what stays
+on the computer ("How your data flows"). QualCoder 3.8's store,
 `faiss_store.bin`, matches none of those names, so Exegete's backups
 and workspace copies keep it, as QualCoder 3.8's own backups do: each
 backup of such a project holds one more plaintext copy of the text in
@@ -1330,7 +1391,9 @@ Two further rules touch files on your disk:
   the name of a skipped symlink is withheld where a reader of it would
   see a name from the mapping, the count kept; and the log line that
   reports a skipped symlink carries the count and the reason, never the
-  path, because MCP hosts keep the server's log on disk.
+  path, because MCP hosts keep the server's log on disk. The withheld
+  name protects the key, the log line what stays on the computer ("How
+  your data flows").
 - **Process listing.** To warn when a QualCoder 4.0 window appears to
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
@@ -1926,7 +1989,8 @@ also written in full, tool results included, under `~/.codex/sessions`,
 and later `~/.codex/archived_sessions`, whichever `history` setting you
 choose). So delete those session files after any work on study data,
 and keep `~/.codex` out of folders that a sync or backup service
-copies.
+copies. These files are part of what stays on the computer ("How your
+data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
@@ -2140,7 +2204,8 @@ will ask, and the summary above depends on them:
     names (`read_pseudonym_list` was removed in 0.15.0): you see and
     change the list in the names file on your own computer
     (`prepare_names_list`, then `save_names_list`), whose preview gives
-    counts and line numbers, never a name. A names file made before the
+    counts and line numbers, never a name. This protects the key ("How
+    your data flows"). A names file made before the
     list last changed can lack some of its entries, which
     `prepare_names_list` says, and entries that cannot be written as one
     line of the file stay in `pseudonyms.json`, where you can see them.
@@ -2294,7 +2359,8 @@ will ask, and the summary above depends on them:
     selected, and they are marked read-only, so a host in an auto mode
     runs them without asking. (Before v0.14 the list named only sessions with suggestions
     still to apply, never read proposals, and was empty for a project
-    selected by its folder, as `create_project` leaves it.)
+    selected by its folder, as `create_project` leaves it.) These files
+    are part of what stays on the computer ("How your data flows").
   - The run manifest in `~/.exegete/pseudonymisation/` (the
     pseudonyms, the replacement spans, the row ids and offsets) and the
     journal entry inside the project (the pseudonyms and counts) never
@@ -2343,7 +2409,8 @@ will ask, and the summary above depends on them:
   - **The preview's own reply.** On the `use_project_pseudonyms` path
     the mapping is the researcher's own reverse key and the model never
     supplied it, so no diagnostic and no refusal quotes a name from it
-    and `include_context` returns nothing at all. Four things are still
+    and `include_context` returns nothing at all. This protects the key
+    ("How your data flows"). Four things are still
     returned as they stand, because a preview whose files cannot be
     named cannot be relayed: the project path, each file's own name
     (including every file the residue's file-text block names), the
@@ -2359,7 +2426,8 @@ will ask, and the summary above depends on them:
   data", above).
 - **Consider which files you let the AI read.** Exegete's tools read
   only what is asked for: a session that never touches file 7 never
-  transmits file 7's text through them.
+  transmits file 7's text through them. This limits how much passes
+  through the conversation ("How your data flows").
 - **An assistant that opens files by itself can read a project
   whole** (Codex, Claude Code, Cowork in the folders you connect),
   outside Exegete; "Assistants that open files by themselves",

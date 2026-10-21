@@ -90,6 +90,10 @@ FILLED_IN = (
     "Exegete prepares, so that the names do not pass through the "
     "conversation; an assistant that opens files by itself could still read "
     "that file (\"Files Exegete keeps on your computer\").")
+# v0.15.1, privacy by audience (the owner, 21 October 2026): the rule
+# says which of the three things PRIVACY.md's opening names it protects
+FILLED_IN_PROTECTS = (
+    "Filling it in there protects the key (\"How your data flows\").")
 # Fix round 2: the list is a selection, a name in another form is
 # named, the condition is on the last item alone, and the long sentence
 # is three
@@ -145,6 +149,7 @@ SECTION = (
     "what you disclose to other people: a colleague or second coder you "
     "share the project with, a supervisor, or whoever receives an export. "
     + SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN + " "
+    + FILLED_IN_PROTECTS + " "
     # the files design, piece 5, fix round 1: the subject named, after
     # the paragraph on the names file
     "For what reaches the AI assistant, the list and `pseudonymise_source` "
@@ -368,6 +373,7 @@ class TestPrivacy:
         # (the files design, piece 5: then the paragraph on a list filled
         # in on the researcher's own computer)
         assert (SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN
+                + " " + FILLED_IN_PROTECTS
                 + " For what reaches the AI assistant") in section
 
     def test_the_list_is_a_selection_with_its_condition_last(self):

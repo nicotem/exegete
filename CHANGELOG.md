@@ -275,6 +275,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   conversation stay; the install and update commands carry the optional part for PDF and
   EPUB; and the account of the extension's folder setting after an
   update says what was seen, and where.
+- **PRIVACY.md says what its rules protect.** Its part on what reaches
+  the AI provider now opens with it: the provider has whatever you let
+  the assistant read, so an answer that returns text the assistant has
+  already read is not a leak, and the rules protect three other things,
+  each with its own readers: the key (the names list, which pairs real
+  names with pseudonyms, and whose names no tool returns), what
+  stays on the computer and who else reads it, and how much passes
+  through the conversation, since the host and the provider can keep
+  every turn. Each rule that serves one of the three now says which,
+  and the part on reading a whole file says that a page keeps the text
+  out of the conversation without taking back text the provider
+  already has. Nothing Exegete does has changed.
 - **Backups leave out the audio and video folders, and a restore keeps
   the project's.** Exegete's backups no longer copy the project's
   `audio` and `video` folders, which no Exegete tool changes, and

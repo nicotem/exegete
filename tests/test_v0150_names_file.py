@@ -1373,6 +1373,10 @@ class TestTheDocuments:
             "`pseudonyms.json` with the file's names, keeping only the "
             "list's entries the file cannot hold as a line, and the file "
             "itself stays as it is. "
+            # v0.15.1, privacy by audience (the owner, 21 October 2026):
+            # the rule says which of the three things it protects
+            "Counts and line numbers, never names, protect the key (\"How "
+            "your data flows\"). "
             "The export tools refuse to "
             "write in any project's `Exegete` folder, so an export cannot "
             "replace a file you "

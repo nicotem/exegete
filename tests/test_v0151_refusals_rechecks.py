@@ -362,23 +362,30 @@ def test_a_cycle_is_refused_before_the_lock_in_the_writes_words(
     assert str(refusal.value) == CATEGORY_CYCLE_REFUSAL
 
 
-async def delete_doubt_without_cascade(client, folder):
+async def delete_doubt_with_cascade(client, folder):
+    """0.15.0's execute of a branch, which carried cascade=true."""
     await call(client, "create_code", {
         "name": "Sub", "parent_code_id": code_id(folder, "Doubt")})
     preview = await call(client, "delete_code",
                          {"code_id": code_id(folder, "Doubt")})
     arguments = dict(preview["execute_with"]["arguments"])
-    assert arguments.pop("cascade") is True
-    return "delete_code", arguments
+    assert "cascade" not in arguments
+    return "delete_code", {**arguments, "cascade": True}
 
 
-def test_a_branch_deleted_without_cascade_is_refused_before_the_lock(
+def test_a_branch_deleted_with_cascade_is_refused_before_the_lock(
         tmp_path, monkeypatch):
+    """v0.15.1: cascade went (tests/test_v0151_removed_arguments.py), and
+    with it this part's refusal of a branch executed without it: the
+    token alone approves the branch. An execute that still passes it is
+    refused with the argument's sentence, before any lock; the database
+    method keeps its own refusal for a caller that passes none."""
     locks = []
     record, answer, folder = run(tmp_path, monkeypatch,
-                                 delete_doubt_without_cascade, locks=locks)
+                                 delete_doubt_with_cascade, locks=locks)
     refused_with_no_backup(record, answer)
-    assert answer["error"] == SUBCODES_NEED_CASCADE.format(count=1)
+    assert answer["removed"] == {"cascade": server.REMOVED_ARGUMENTS[
+        ("delete_code", "cascade")]}
     assert locks == []
     with QualcoderDatabase(folder, read_only=False) as db:
         with pytest.raises(ValueError) as refusal:

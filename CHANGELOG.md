@@ -18,9 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in every answer Exegete gives it, refusals included, under
   `create_backup_ignored` in an answer in JSON, or in a last paragraph
   of one in text. A call whose arguments do not fit the tool (a value
-  that cannot be read as true or false, a required argument missing) is
-  refused before it reaches Exegete, as before, and that refusal does
-  not carry it. A call without it, or with null, is told nothing.
+  that cannot be read as true or false, a required argument missing, an
+  argument the tool does not take, a removed one included) is refused
+  before the tool runs, as before, and that refusal does not carry it.
+  A call without it, or with null, is told nothing.
   `import_text_file`'s `create_backup=false`, which 0.14.3 deprecated,
   is accepted in the same way and no longer adds `deprecated` to the
   answer. A script or a saved instruction that passes
@@ -53,6 +54,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the topics `analyze_for_coding`, `apply_codings`, `edit_suggestion` and
   `coding_style_guidance`, which repeated the tools' own descriptions;
   asked for one, it says so and lists the topics it has.
+- **Arguments removed, as announced in 0.14.** `delete_code` no longer
+  takes `cascade`: the preview's token approves the whole branch, and
+  its `execute_with` no longer carries it. `apply_codings` and
+  `import_text_file` no longer take `owner`: rows are stored under the
+  project's AI coder name, which `set_project_ai_coder_name` changes.
+  `search_files` no longer takes `search_memo`, and its answer no longer
+  has `searched_memo` or `memo` in `matched_in`: `search_memos` searches
+  file memos and every other kind of note. A call that passes a removed
+  argument is refused, nothing done, with what replaces it, even with
+  `false` or `null`, which 0.15.0 accepted without a word; a host that
+  checks arguments before sending them may refuse it in its own words.
+  Your assistant app keeps its choices per tool, not per argument, so
+  those still apply; a saved instruction, skill or script that passes
+  one of these arguments needs it taken out.
+- **`core` has no note search.** `search_memos` is not in `core`, the
+  tool set for local models, so with `search_memo` gone no tool there
+  searches notes; `full`, the default, has `search_memos`.
 - **The REFI-QDA export stays.** `export_refi_qda` is no longer
   deprecated and is not removed: the maintainer means to fix it in a
   later release (his decision of 20 October 2026). Until then its
@@ -268,6 +286,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `start_coding_session`, it answers, as for any tool without a topic,
   that the tool's description documents it.
 
+### Removed: arguments and behaviours, as announced in 0.14
+
+- **`delete_code`'s `cascade`.** Deleting a code with sub-codes deletes
+  its whole branch, as before, with the one approval of its preview: the
+  preview's token covers every code of the branch and their codings, so
+  a sub-code added or moved after the preview makes the token stale, and
+  the preview's `execute_with` no longer carries `cascade=true`. A
+  preview made by 0.15.0 for a code with sub-codes carries it and is
+  refused; a new preview works.
+- **The `owner` argument of `apply_codings` and `import_text_file`**,
+  which could only repeat the project's AI coder name: every row Exegete
+  writes is stored under that name, which `set_project_ai_coder_name`
+  changes. The other checks before such a write are as before (no name
+  set yet, a settings file that cannot be read, the name in Exegete's
+  settings differing from the project's).
+- **`search_files`' `search_memo`**: `search_memos` searches file memos
+  and every other kind of note. `search_files`' answer no longer has
+  `searched_memo`, or `memo` in `matched_in`, and a cursor from 0.15.0
+  is refused as invalid, as after any change to the arguments it is
+  bound to.
+- A call that passes one of these arguments, with any value, is refused
+  like any argument the tool does not declare, nothing done, with a
+  sentence naming what replaces it, which the answer also gives under
+  `removed`. In `core`, where `search_memos` is not served, that
+  sentence says so.
+
 ### Changed: the REFI-QDA export is kept, its faults named
 
 - **`export_refi_qda` is no longer deprecated, and stays.** 0.14
@@ -463,21 +507,21 @@ schemas together, as below; the brief as `read_brief` returns it):
 
 | | 0.15.1, Python 3.13.5 | 0.15.0, Python 3.13.5 | 0.15.1, Python 3.11.13 | 0.15.0, Python 3.11.13 |
 |---|---|---|---|---|
-| `full` (79 tools; 82 in 0.15.0) | 205,516 | 206,624 | 215,952 | 217,084 |
-| `core` (26 tools; 25 in 0.15.0) | 72,456 | 68,258 | 76,144 | 71,690 |
+| `full` (79 tools; 82 in 0.15.0) | 204,035 | 206,624 | 214,427 | 217,084 |
+| `core` (26 tools; 25 in 0.15.0) | 71,685 | 68,258 | 75,349 | 71,690 |
 | The opening text | 2,034 | 2,034 | 2,034 | 2,034 |
 | The full brief | 13,211 | 13,225 | 13,211 | 13,225 |
 | The brief in `core` | 1,915 | 1,915 | 1,915 | 1,915 |
 
-- Serialised tool JSON: full = 205,516 characters (about 51.4k tokens
-  at chars/4) over 79 tools, and core = 72,456 (about 18.1k) over 26,
+- Serialised tool JSON: full = 204,035 characters (about 51.0k tokens
+  at chars/4) over 79 tools, and core = 71,685 (about 17.9k) over 26,
   measured on Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a
   separate environment installed from the repository's lock file, not
   the repository's own `venv/`: for 0.15.0's tree it gives exactly
   0.15.0's figures; on Python 3.11.13 (likewise a separate environment,
-  which also gives exactly 0.15.0's figures for its tree), 215,952 and
-  76,144. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
-  25 on 3.13), six changes moved them. The first, `create_backup`
+  which also gives exactly 0.15.0's figures for its tree), 214,427 and
+  75,349. Against 0.15.0's figures (206,624 over 82 tools and 68,258 over
+  25 on 3.13), seven changes moved them. The first, `create_backup`
   accepted and ignored.
   In 18 of the 22 tools that take it, the argument's line in the
   description says that it is no longer used and its schema's default
@@ -520,16 +564,25 @@ schemas together, as below; the brief as `read_brief` returns it):
   tool, 3,806 characters (4,034 on 3.11),
   while `list_backups`' and `delete_coding`'s descriptions lose the four
   marks that said it was not in the set, 132 fewer: 3,676 more in
-  `core` (3,904 on 3.11). Rounded, the figures are about 206,000 and
-  72,000 characters, about 51k and 18k tokens. No other tool's entry
-  changed. The full brief says that Exegete takes a backup before every
-  change, rather than "unless the researcher asks for none": 14
-  characters fewer.
+  `core` (3,904 on 3.11). The seventh, the arguments removed, as
+  announced in 0.14: `delete_code`'s entry without `cascade`, 352
+  characters fewer (360 on 3.11); `apply_codings`' and
+  `import_text_file`'s without `owner`, 391 fewer each (403);
+  `search_files`' without `search_memo`, 347 fewer (359). In all, 1,481
+  characters fewer in `full` (1,525 on 3.11), and 771 in `core`, which
+  serves `apply_codings` and `search_files` (795 on 3.11):
+  `search_files`' entry there is 380 fewer (392), since its sentence on
+  `search_memo` marked `search_memos` as not in that set. Rounded, the
+  figures are about 204,000 and 72,000 characters, about 51k and 18k
+  tokens. No other tool's entry changed. The full brief says that
+  Exegete takes a backup before every change, rather than "unless the
+  researcher asks for none": 14 characters fewer.
 - Claude Code keeps 4,096 characters of a tool's description, and
   16,384 through its tool search: in `full`, 32 descriptions pass 2,048
-  (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096 (5 on
-  3.11) and one, `pseudonymise_source` (17,825 characters; 18,957 on
-  3.11), passes 16,384.
+  (35 on 3.11; `create_attribute_type`'s now does), 4 pass 4,096, on
+  3.11 too (`import_text_file`'s, without `owner`, no longer does), and
+  one, `pseudonymise_source` (17,825 characters; 18,957 on 3.11), passes
+  16,384.
 
 ## [0.15.0-alpha] - 2026-10-20
 

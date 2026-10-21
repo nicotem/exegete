@@ -619,7 +619,12 @@ class TestTheSizes:
     # delete_coding no longer mark it (132 characters fewer). Its fix
     # round 1: the paragraph says that over a stale lock file none is
     # held (73 characters more in `full`).
-    NOW = {"full": 194_608, "core": 65_332}
+    # v0.15.1, the removed arguments: delete_code, apply_codings,
+    # import_text_file and search_files lose cascade, owner and
+    # search_memo with their sentences (1,481 characters fewer in `full`
+    # from 194,608; 771 in `core` from 65,332;
+    # tests/test_v0151_removed_arguments.py).
+    NOW = {"full": 193_127, "core": 64_561}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,

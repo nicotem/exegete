@@ -855,9 +855,9 @@ and reported back by the project reads. A project that already has a
 name keeps it: a setting that differs is checked for conflicts, and the
 next write asks you once which to use; the setting never attributes a
 row in such a project on its own. A name that belongs to a person (the
-project's own coder name, or the one in Exegete's settings) is refused, and the `owner` argument of
-`apply_codings` and `import_text_file` can no longer be used to write
-rows under someone else's name.
+project's own coder name, or the one in Exegete's settings) is refused,
+and no tool takes a name to write rows under: the `owner` argument of
+`apply_codings` and `import_text_file` was removed in 0.15.1.
 
 ## Approving AI suggestions: what Exegete can and cannot see
 

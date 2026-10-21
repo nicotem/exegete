@@ -981,14 +981,18 @@ class TestSearchDoesNotLeakPrivateZone:
 
     def test_search_files_memo_private_only_match_suppressed(
             self, private_everywhere):
+        # v0.15.1: search_files no longer reads memos (search_memo
+        # removed, as announced); a private suffix is not found there
         out = json.loads(server.search_files(
-            SECRET, search_filename=False, search_memo=True))
-        assert out["total_matches"] == 0
+            SECRET, search_filename=True, search_content=True))
+        assert out["total_matches"] == 0 and out["results"] == []
 
     def test_search_files_memo_preview_is_public(self, private_everywhere):
-        out = json.loads(server.search_files(
-            "file", search_filename=False, search_memo=True))
-        assert out["total_matches"] == 1
+        # search_memos, which searches file memos since v0.15.1, shows
+        # the file memo's public part only
+        out = json.loads(server.search_memos("file"))
+        files = [r for r in out["results"] if r["type"] == "file"]
+        assert len(files) == 1
         _assert_clean(json.dumps(out))
 
 

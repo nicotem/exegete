@@ -31,6 +31,22 @@ from exegete.server import (
 )
 
 
+def _host(tool, **arguments):
+    """One call over the host's path (FastMCP's call_tool), parsed: the
+    path on which a removed argument is refused (v0.15.1)."""
+    import asyncio
+    out = asyncio.run(server.mcp.call_tool(tool, arguments))
+    blocks = out[0] if isinstance(out, tuple) else out
+    return json.loads("".join(getattr(b, "text", "") for b in blocks))
+
+
+def _removed_owner(out, tool):
+    """The refusal of owner, removed in 0.15.1, which names no value."""
+    assert out["removed"] == {
+        "owner": server.REMOVED_ARGUMENTS[(tool, "owner")]}, out
+    assert out["unknown_arguments"] == ["owner"]
+
+
 def _row(project_path, sql, args=()):
     con = sqlite3.connect(str(Path(project_path) / "data.qda"))
     con.row_factory = sqlite3.Row
@@ -254,8 +270,10 @@ class TestConfiguredAttribution:
         """D7 6.3 inverted: the owner argument no longer beats anything.
 
         The refusal comes before the backup and before the write, and the
-        approved suggestions stay approved, so the caller can set the
-        name and retry without re-approving anything.
+        approved suggestions stay approved, so the caller can retry
+        without the argument and without re-approving anything. v0.15.1:
+        the argument was removed, as announced, so the refusal is the
+        removed argument's, before the tool runs.
         """
         session = session_with_suggestions
         server.update_suggestion_status(
@@ -263,12 +281,9 @@ class TestConfiguredAttribution:
             approve=[session.suggestions[0].guid])
         before = _row(qualcoder_db_path,
                       "SELECT COUNT(*) AS n FROM code_text")["n"]
-        out = json.loads(server.apply_codings(
-            session.session_id, create_backup=False,
-            owner="Handpicked Coder"))
-        assert out["action_required"] == \
-            "omit_owner_or_set_project_ai_coder_name"
-        assert out["ai_coder_name"] == DEFAULT_AI_CODER_NAME
+        out = _host("apply_codings", coding_session_id=session.session_id,
+                    owner="Handpicked Coder")
+        _removed_owner(out, "apply_codings")
         assert "Handpicked Coder" not in json.dumps(out)
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) AS n FROM code_text")["n"] == before
@@ -284,10 +299,9 @@ class TestConfiguredAttribution:
 
     def test_explicit_owner_in_import_is_refused(self, setup_server,
                                                  qualcoder_db_path):
-        out = json.loads(server.import_text_file(
-            "explicit_owner.txt", "Body.", owner="Legacy Import",
-            create_backup=False))
-        assert "error" in out
+        out = _host("import_text_file", filename="explicit_owner.txt",
+                    content="Body.", owner="Legacy Import")
+        _removed_owner(out, "import_text_file")
         assert "Legacy Import" not in json.dumps(out)
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) AS n FROM source "
@@ -357,10 +371,12 @@ class TestConfiguredAttribution:
 
 
 class TestToolSuppliedOwnerValidated:
-    """S-H3: the owner ARGUMENT of apply_codings and import_text_file goes
-    through the same validator as the configured name, so a hostile owner
-    (control characters, newlines, 5000 characters, the memo marker) is
-    never stored under any coder column."""
+    """S-H3: a hostile owner (control characters, newlines, 5000
+    characters, the memo marker) is never stored under any coder column.
+    The owner ARGUMENT of apply_codings and import_text_file went through
+    the same validator as the configured name; v0.15.1 removed it, as
+    announced, so every value is refused before the tool runs, and none
+    is echoed back."""
 
     HOSTILE = ("Test\nCoder\x01", "Evil‮Owner", "x" * 5000,
                "AI ##### Agent", "   ", "Own er")
@@ -376,10 +392,11 @@ class TestToolSuppliedOwnerValidated:
         session = self._approved(session_with_suggestions)
         before = _row(qualcoder_db_path,
                       "SELECT COUNT(*) AS n FROM code_text")["n"]
-        out = json.loads(server.apply_codings(
-            session.session_id, create_backup=False, owner=bad))
-        assert "error" in out, out
-        assert "owner" in out["error"]
+        out = _host("apply_codings", coding_session_id=session.session_id,
+                    owner=bad)
+        _removed_owner(out, "apply_codings")
+        if bad.strip():                    # the value is not echoed
+            assert bad not in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) AS n FROM code_text")["n"] == before
         assert _row(qualcoder_db_path,
@@ -389,10 +406,11 @@ class TestToolSuppliedOwnerValidated:
     @pytest.mark.parametrize("bad", HOSTILE, ids=repr)
     def test_import_text_file_rejects_hostile_owner(
             self, setup_server, qualcoder_db_path, bad):
-        out = json.loads(server.import_text_file(
-            "hostile_owner.txt", "Body.", owner=bad, create_backup=False))
-        assert "error" in out, out
-        assert "owner" in out["error"]
+        out = _host("import_text_file", filename="hostile_owner.txt",
+                    content="Body.", owner=bad)
+        _removed_owner(out, "import_text_file")
+        if bad.strip():                    # the value is not echoed
+            assert bad not in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) AS n FROM source "
                     "WHERE name = 'hostile_owner.txt'")["n"] == 0
@@ -410,22 +428,29 @@ class TestToolSuppliedOwnerValidated:
     def test_a_well_formed_owner_is_now_refused_by_the_rule_not_the_rules(
             self, setup_server, qualcoder_db_path):
         """"Researcher B" is a perfectly valid coder name, and that is the
-        point: it passes validation and is then refused because a human
-        coder's name is never used for rows this server writes."""
-        out = json.loads(server.import_text_file(
-            "fine_owner.txt", "Body.", owner="Researcher B",
-            create_backup=False))
-        assert "error" in out
-        assert "owner argument no longer chooses" in out["error"]
+        point: a human coder's name is never used for rows this server
+        writes. v0.15.1: no tool takes a name to write under any more."""
+        out = _host("import_text_file", filename="fine_owner.txt",
+                    content="Body.", owner="Researcher B")
+        _removed_owner(out, "import_text_file")
+        assert "set_project_ai_coder_name" in out["error"]
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) AS n FROM source "
                     "WHERE name='fine_owner.txt'")["n"] == 0
 
-    def test_the_project_name_itself_is_accepted_as_owner(
+    def test_the_project_name_itself_is_refused_as_owner_too(
             self, setup_server, qualcoder_db_path):
-        out = json.loads(server.import_text_file(
-            "same_name.txt", "Body.", owner=DEFAULT_AI_CODER_NAME,
-            create_backup=False))
+        """0.15.0 accepted the project's own AI coder name as a no-op;
+        v0.15.1 refuses every value alike, and the import without the
+        argument stores the row under that name."""
+        out = _host("import_text_file", filename="same_name.txt",
+                    content="Body.", owner=DEFAULT_AI_CODER_NAME)
+        _removed_owner(out, "import_text_file")
+        assert _row(qualcoder_db_path,
+                    "SELECT COUNT(*) AS n FROM source "
+                    "WHERE name='same_name.txt'")["n"] == 0
+        out = _host("import_text_file", filename="same_name.txt",
+                    content="Body.")
         assert out["success"] is True
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM source WHERE name='same_name.txt'"

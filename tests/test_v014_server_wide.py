@@ -446,6 +446,8 @@ NOT_TOOLS = {
                     "update_check.json, and the extension's setting",
     "create_backup_ignored": "the key of an answer to a call that gave "
                              "create_backup, which Exegete ignores",
+    "search_memo": "search_files' argument removed in 0.15.1, which the "
+                   "refusal of a call passing it names (REMOVED_ARGUMENTS)",
 }
 
 

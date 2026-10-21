@@ -508,10 +508,18 @@ class TestThePublishedSchemaBudget:
     # sets (77 on 3.11): 472 more in `full` (500), 3,806 for the tool
     # (4,034) and 3,676 more in `core` (3,904). The rounded figures
     # become about 206,000 and 72,000 characters, the tokens 51k and 18k.
-    FULL_MEASURED = 205_516          # 79 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 72_456           # 26 tools, same environment
-    FULL_MEASURED_310 = 215_952      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 76_144
+    # v0.15.1, the removed arguments: delete_code without cascade (352
+    # characters fewer; 360 on 3.11), apply_codings and import_text_file
+    # without owner (391 fewer each; 403), search_files without
+    # search_memo (347 fewer; 359): 1,481 fewer in `full` (1,525 on 3.11)
+    # and 771 in `core` (795), whose search_files entry is 380 fewer (392)
+    # since its sentence there marked search_memos as not served. The
+    # rounded figures become about 204,000 and 72,000 characters, and the
+    # tokens stay 51k and 18k.
+    FULL_MEASURED = 204_035          # 79 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 71_685           # 26 tools, same environment
+    FULL_MEASURED_310 = 214_427      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 75_349
 
     # Why two per cent, away from the reference environment.
     #
@@ -538,9 +546,9 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "205,516"
-    CORE_CHARS = "72,456"
-    FULL_ROUNDED = "206,000"
+    FULL_CHARS = "204,035"
+    CORE_CHARS = "71,685"
+    FULL_ROUNDED = "204,000"
     CORE_ROUNDED = "72,000"
     FULL_TOKENS = "51k"
     CORE_TOKENS = "18k"
@@ -594,9 +602,9 @@ class TestThePublishedSchemaBudget:
         line in 22 descriptions and its schema's default, and the texts
         that offered to skip a backup; the REFI-QDA export's sentence
         names its known faults; the descriptions of three backup tools
-        name the audio and video folders; three tools removed), so the
-        current entry is the Unreleased one alone, and 0.15.0's figure is
-        history (`_v0150_entry`).
+        name the audio and video folders; three tools removed; four
+        arguments removed), so the current entry is the Unreleased one
+        alone, and 0.15.0's figure is history (`_v0150_entry`).
         """
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [Unreleased]"):

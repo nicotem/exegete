@@ -287,13 +287,18 @@ async def imports(client, root):
 
 
 def test_the_import_keeps_its_deprecation_apart(tmp_path):
-    """owner's deprecation stays under "deprecated"; create_backup=false,
-    deprecated in 0.14.3, carries one no longer."""
+    """create_backup=false, deprecated in 0.14.3, carries no deprecation
+    any longer. v0.15.1: owner, deprecated beside it, went
+    (tests/test_v0151_removed_arguments.py): a call with both is refused
+    before the tool runs, as any argument the tool does not take is, and
+    that refusal, the tool's arguments not read, carries neither key."""
     server._apply_toolset("full")
     both, alone = host_session(lambda client: imports(client, tmp_path))
-    assert both["success"] and alone["success"]
-    assert both["deprecated"] == server.DEPRECATED_OWNER
-    assert both[KEY] == alone[KEY] == server.IGNORED_CREATE_BACKUP
+    assert alone["success"]
+    assert both["removed"] == {"owner": server.REMOVED_ARGUMENTS[
+        ("import_text_file", "owner")]}
+    assert "deprecated" not in both and KEY not in both
+    assert alone[KEY] == server.IGNORED_CREATE_BACKUP
     assert "deprecated" not in alone
 
 
@@ -491,7 +496,11 @@ def _swap_lines(text, now, then, name):
 def before_the_ignored_argument(name, description):
     """`name`'s description as 0.15.0 served it, on any interpreter: the
     create_backup line and the texts that offered to skip a backup put
-    back as they were."""
+    back as they were (after the arguments v0.15.1 removed, owner among
+    them, are put back: tests/test_v0151_removed_arguments.py)."""
+    from test_v0151_removed_arguments import (DEPRECATED_OWNER_0150,
+                                              before_the_removed_arguments)
+    description = before_the_removed_arguments(name, description)
     found = list(NEW_ARGS_LINE.finditer(description))
     if found:
         assert len(found) == 1, name
@@ -505,7 +514,7 @@ def before_the_ignored_argument(name, description):
     for now, then in OLD_TEXTS.get(name, []):
         description = _swap_lines(description, now, then, name)
     if name == "import_text_file":
-        owner = "\n\n" + server.DEPRECATED_OWNER
+        owner = "\n\n" + DEPRECATED_OWNER_0150
         assert description.count(owner) == 1
         description = description.replace(
             owner, f"\n\n{OLD_IMPORT_SKIP_BACKUP}{owner}")

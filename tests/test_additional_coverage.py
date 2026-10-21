@@ -337,12 +337,9 @@ class TestSearchFilesMultiMode:
         assert data["total_matches"] >= 1
 
     def test_search_memo_only(self, setup_server):
-        result = server.search_files(
-            "Test memo",
-            search_filename=False,
-            search_content=False,
-            search_memo=True
-        )
+        # v0.15.1: search_files' search_memo removed, as announced;
+        # search_memos searches file memos
+        result = server.search_memos("Test memo")
         data = json.loads(result)
         assert isinstance(data, dict)
 
@@ -350,8 +347,7 @@ class TestSearchFilesMultiMode:
         result = server.search_files(
             "test",
             search_filename=True,
-            search_content=True,
-            search_memo=True
+            search_content=True
         )
         data = json.loads(result)
         assert isinstance(data, dict)

@@ -372,16 +372,21 @@ class TestSubcodeWriteDifferentials:
         preview = pv["preview"]
         assert preview["subcode_count"] == 3           # 3, 4, 5
         assert set(preview["subcodes"]) == {"SubB", "SubSub", "SubC"}
-        assert "cascade" in preview["note"]
+        # v0.15.1: cascade removed from the tool; the preview's token
+        # alone approves the branch, and its note no longer names it
+        assert "cascade" not in preview["note"]
+        assert "cascade" not in pv["execute_with"]["arguments"]
         # branch-wide coding blast radius, not just the root's
         assert preview["text_codings_to_delete"] == 4  # ctids 1,10,11,12
 
-        # refuse without cascade
-        out = json.loads(H.execute_destructive(server.delete_code, 1))
-        assert "error" in out and "cascade" in out["error"]
+        # the database method still refuses a branch without cascade
+        with QualcoderDatabase(p, read_only=False) as wdb:
+            with pytest.raises(ValueError, match="cascade"):
+                wdb.delete_code(1, auto_commit=False)
+            wdb.conn.rollback()
         assert _one(p, "SELECT COUNT(*) FROM code_name")[0] == 5   # untouched
 
-        out = json.loads(H.execute_destructive(server.delete_code, 1, cascade=True))
+        out = json.loads(H.execute_destructive(server.delete_code, 1))
         assert out.get("success") is True, out
 
         # master recipe on the twin: branch cids {1,3,4,5}, per-cid deletes

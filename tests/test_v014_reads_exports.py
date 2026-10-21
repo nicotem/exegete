@@ -258,7 +258,7 @@ class TestCodebookPreviewsSayWhatChanges:
         preview = host("delete_code", code_id=1)
         graphs = preview["preview"]["saved_graph_rows_removed"]
         assert graphs["code_nodes"] == 2 and graphs["lines"] == 1
-        done = host("delete_code", code_id=1, cascade=True,
+        done = host("delete_code", code_id=1,
                     preview_token=preview["preview_token"])
         assert done["success"] is True, done
         assert _graph_rows(folder) == ([], [])
@@ -895,7 +895,8 @@ class TestSubCodeMovesAndTheCascadeSayWhatHappens:
             self, ladder):
         ladder("v17", lambda f: add_subcode(f, 10, "Kid", supercid=1))
         preview = host("delete_code", code_id=1)
-        assert preview["execute_with"]["arguments"]["cascade"] is True
+        # v0.15.1: cascade removed; the token alone approves the branch
+        assert "cascade" not in preview["execute_with"]["arguments"]
         assert "approving this preview approves the branch" in \
             preview["preview"]["note"]
 

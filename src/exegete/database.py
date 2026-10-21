@@ -552,10 +552,10 @@ class UnsupportedSchemaError(RuntimeError):
     """Raised when the project database schema is too old for this server."""
 
 
-# Two refusals said in two places, so that each has one source of words
-# (v0.15.1): move_category's own, and the tool's check before any lock;
-# delete_code's own, and the tool's refusal from its preview before any
-# lock.
+# Two refusals with one source of words each (v0.15.1): move_category's
+# own, said again by the tool's check before any lock; and delete_code's
+# own, for a caller of this module that passes no cascade (the tool
+# always deletes the whole branch since cascade left it in 0.15.1).
 CATEGORY_CYCLE_REFUSAL = (
     "That move would make the category its own ancestor (a cycle), which "
     "would cut it and its codes off from the code tree; refusing.")
@@ -7375,7 +7375,6 @@ class QualcoderDatabase:
         pattern: str,
         search_filename: bool = True,
         search_content: bool = False,
-        search_memo: bool = False,
         case_sensitive: bool = False,
         limit: int = DEFAULT_LIMIT,
         context_chars: int = 100,
@@ -7383,7 +7382,8 @@ class QualcoderDatabase:
         exclude_mask: Optional[Dict[int, Any]] = None,
         after: Optional[Sequence[Any]] = None,
     ) -> Dict[str, Any]:
-        """Search for files across multiple locations (filename, content, memo).
+        """Search for files by name and content (file memos: search_memos,
+        since 0.15.1).
 
         This is a comprehensive search method that can search in different parts
         of the file data and aggregates results showing where matches were found.
@@ -7392,7 +7392,6 @@ class QualcoderDatabase:
             pattern: Text to search for
             search_filename: Search in file names (default: True)
             search_content: Search in file content/fulltext (default: False)
-            search_memo: Search in file memos (default: False)
             case_sensitive: Case-sensitive matching (default: False)
             limit: Maximum number of files to return (default: DEFAULT_LIMIT)
             context_chars: Characters of context around content matches (default: 100)
@@ -7438,7 +7437,6 @@ class QualcoderDatabase:
                     name,
                     fulltext,
                     mediapath,
-                    memo,
                     owner,
                     date
                 FROM source{file_where}
@@ -7475,8 +7473,7 @@ class QualcoderDatabase:
                 files_searched += 1
                 matched_in = {
                     "filename": False,
-                    "content": False,
-                    "memo": False
+                    "content": False
                 }
                 matches = []
                 match_count = 0
@@ -7580,21 +7577,6 @@ class QualcoderDatabase:
                         # counted: "every match already coded" is an answer
                         files_all_excluded += 1
 
-                # Search memo. Memo privacy ('#####'): match against the
-                # public part only and preview the public part only, so a
-                # private suffix can neither be found nor shown.
-                if search_memo:
-                    memo_text = extract_ai_memo(row["memo"] or "")
-                    search_memo_text = memo_text if case_sensitive else memo_text.lower()
-
-                    if search_pattern in search_memo_text:
-                        matched_in["memo"] = True
-                        matches.append({
-                            "location": "memo",
-                            "preview": memo_text[:200] + ("..." if len(memo_text) > 200 else "")
-                        })
-                        match_count += 1
-
                 # If any matches, add to results
                 if any(matched_in.values()):
                     file_type = _detect_file_type(row["mediapath"])
@@ -7662,7 +7644,6 @@ class QualcoderDatabase:
                     "pattern": pattern,
                     "searched_filename": search_filename,
                     "searched_content": search_content,
-                    "searched_memo": search_memo,
                     "case_sensitive": case_sensitive
                 },
                 "performance_info": performance_info,
@@ -10959,10 +10940,10 @@ class QualcoderDatabase:
             preview["note"] = (
                 f"{len(branch) - 1} sub-code(s) hang under this code. "
                 f"Deleting deletes the whole branch and all its codings "
-                f"with one approval: execute_with carries cascade=true, so "
-                f"approving this "
-                f"preview approves the branch. Move the sub-codes first if "
-                f"they are needed.")
+                f"with one approval: this preview's token covers every "
+                f"code of the branch, so approving this preview approves "
+                f"the branch. Move the sub-codes first if they are "
+                f"needed.")
         return preview
 
     def delete_code(self, code_id: int, cascade: bool = False,

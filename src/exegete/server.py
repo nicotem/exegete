@@ -81,7 +81,6 @@ from .database import (
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
     CATEGORY_CYCLE_REFUSAL,
-    SUBCODES_NEED_CASCADE,
     _is_locked_error,
     default_workspace,
     earlier_workspace_holds_projects,
@@ -341,20 +340,13 @@ REFI_EXPORT_KNOWN_FAULTS = (
 # v0.15.0 (ruling 78): the names file replaces it. The three tools and
 # the four help topics announced here went in 0.15.1, as announced (the
 # CHANGELOG names them): a call of one of the tools is refused as an
-# unknown tool, and a removed topic is answered below.
-DEPRECATED_CASCADE = (
-    "Deprecated, removed in v0.15.1: cascade; the preview token already "
-    "approves the whole branch.")
-DEPRECATED_OWNER = (
-    "Deprecated, removed in v0.15.1: owner, which can only repeat the "
-    "project's AI coder name.")
+# unknown tool, and a removed topic is answered below. So did the
+# arguments delete_code's cascade, the owner of apply_codings and
+# import_text_file, and search_files' search_memo (REMOVED_ARGUMENTS).
 DEPRECATED_JOURNAL_ATTRIBUTES = (
     "Deprecated, removed in v0.15.1: attributes on journal entries, which "
     "Exegete can set but never reads back (QualCoder's Journals window, "
     "for researchers who use it, sets and shows them).")
-DEPRECATED_MEMO_SEARCH = (
-    "Deprecated, removed in v0.15.1: search_memo; search_memos searches "
-    "file memos and every other kind of note.")
 DEPRECATED_EDIT_PARITY = (
     "Deprecated, removed in v0.15.1: overlap_policy qualcoder_edit_parity, "
     "which deletes codings on names and is not exact parity.")
@@ -362,6 +354,30 @@ DEPRECATED_RENAME_BACK = (
     "Deprecated, removed in v0.15.1: a rename back recognised from the "
     "project's backups (QualCoder's own Rename, if the researcher uses it, "
     "still makes one).")
+
+# The arguments removed in 0.15.1, as announced in 0.14: a call that
+# passes one is refused like any argument its tool does not declare
+# (unknown_arguments_refusal), nothing done, with this sentence naming
+# what replaces it in place of a "Did you mean" line, and under
+# "removed". Every value is refused alike, false and null included:
+# 0.15.0 accepted cascade=false without a word, and accepted silently now
+# it would delete a branch it once refused to delete.
+_OWNER_REMOVED = (
+    "owner was removed in 0.15.1: every row Exegete writes is stored under "
+    "the project's AI coder name, which set_project_ai_coder_name "
+    "changes; call {tool} without it.")
+REMOVED_ARGUMENTS: Dict[Tuple[str, str], str] = {
+    ("delete_code", "cascade"): (
+        "cascade was removed in 0.15.1: the preview's token approves the "
+        "whole branch, sub-codes included, so call delete_code without "
+        "it."),
+    ("apply_codings", "owner"): _OWNER_REMOVED.format(tool="apply_codings"),
+    ("import_text_file", "owner"): _OWNER_REMOVED.format(
+        tool="import_text_file"),
+    ("search_files", "search_memo"): (
+        "search_memo was removed in 0.15.1: search_memos searches file "
+        "memos and every other kind of note."),
+}
 
 # The help topics explain_ai_coding_tools no longer has (0.15.1, as
 # announced in 0.14): asked for one, it answers with this sentence and the
@@ -949,6 +965,10 @@ def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
     `apply_project_pseudonym=true` imported the real names (the claims
     audit, item 5). The declared arguments are the tool's input schema,
     the list the host itself was given.
+
+    An argument removed in 0.15.1 (REMOVED_ARGUMENTS) is refused the same
+    way, whatever its value, with its sentence, marked for the tool set
+    in use, in place of a "Did you mean" line, and under "removed".
     """
     if not isinstance(arguments, dict) or not arguments:
         return None
@@ -962,15 +982,24 @@ def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
             f"argument a tool does not know is refused rather than ignored, "
             f"so that a misspelt one cannot fall back to its default "
             f"unnoticed.")
+    removed: Dict[str, str] = {}
     for key, name in zip(unknown, shown):
+        sentence = REMOVED_ARGUMENTS.get((tool_name, key))
+        if sentence is not None:
+            removed[name] = _mark_unregistered(sentence)
+            text += f" {removed[name]}"
+            continue
         close = difflib.get_close_matches(str(key), declared, n=1,
                                           cutoff=0.75)
         if close:
             text += f" Did you mean '{close[0]}' for '{name}'?"
     text += (f" Its arguments are: {', '.join(declared)}." if declared
              else " It takes no arguments.")
-    return json.dumps({"error": text, "unknown_arguments": shown,
-                       "arguments": declared}, indent=2)
+    payload: Dict[str, Any] = {"error": text, "unknown_arguments": shown,
+                               "arguments": declared}
+    if removed:
+        payload["removed"] = removed
+    return json.dumps(payload, indent=2)
 
 
 # v0.14.1: the resources' addresses moved from qualcoder:// to
@@ -2793,10 +2822,10 @@ def _the_setter_refuses(name: str) -> bool:
         name == settings_coder_name()
 
 
-def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
+def _ask_refusal() -> Dict[str, Any]:
     """The ASK: no name is set, so nothing was written (D7 3.3).
 
-    A pure function of the sidecar, the environment and the arguments:
+    A pure function of the sidecar and the environment:
     repeating the refused call returns byte-identical JSON, and nothing
     is written, backed up, upgraded or consumed on the way here. A
     setting the setter would refuse is not offered (v0.15.0).
@@ -2837,9 +2866,6 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
                  f"together.")
     text += (" The name can be changed at any time with the same tool; "
              "earlier rows keep the name they were written under.")
-    if owner_supplied:
-        text += (" The owner argument you passed was not applied; the name "
-                 "is the user's to choose.")
     return {
         "error": text,
         "action_required": _ASK_ACTION,
@@ -2878,32 +2904,7 @@ def _mismatch_refusal(current: str, declared: str) -> Dict[str, Any]:
     }
 
 
-def _owner_argument_refusal(current: str) -> Dict[str, Any]:
-    """The OWNER refusal: the argument no longer chooses the name (B1.10).
-
-    The supplied value is not echoed back (D6 3.9): only shapes we
-    ourselves wrote are reflected into the conversation, and the model
-    already knows what it passed.
-    """
-    return {
-        "error": (
-            f"The owner argument no longer chooses the coder name: this "
-            f"project's AI coder name is \"{current}\" and every row "
-            f"Exegete writes is stored under it, so that AI work stays "
-            f"distinguishable from the researcher's and from other "
-            f"coders'. Omit owner, or, if the user wants a different "
-            f"attribution, ask them and change the project's AI coder "
-            f"name with set_project_ai_coder_name, then call this tool "
-            f"again without owner. A human coder's name is never used for "
-            f"rows Exegete writes. Nothing was written and no backup "
-            f"was made."),
-        "action_required": "omit_owner_or_set_project_ai_coder_name",
-        "ai_coder_name": current,
-    }
-
-
 def _resolve_write_owner(
-        tool_owner: Optional[str] = None
 ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """The owner a database write may use, or the refusal that stops it.
 
@@ -2925,8 +2926,7 @@ def _resolve_write_owner(
 
     Order of checks (D7 3.2): an unreadable or newer-format sidecar, then
     unset, then the AI coder name in Exegete's settings conflicting with
-    the project's name, then a tool-supplied owner that is not the
-    project's name.
+    the project's name.
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -2937,13 +2937,11 @@ def _resolve_write_owner(
     if state.status == SIDECAR_NEWER_FORMAT:
         return None, {"error": newer_format_message(state.path)}
     if not state.is_set:
-        return None, _ask_refusal(owner_supplied=tool_owner is not None)
+        return None, _ask_refusal()
     current = state.name
     declared = host_declaration()
     if ai_coder_name_mismatch(declared, state.entry):
         return None, _mismatch_refusal(current, declared)
-    if tool_owner is not None and tool_owner != current:
-        return None, _owner_argument_refusal(current)
     settle_earlier_file(_current_project_folder(), state)
     return current, None
 
@@ -7398,20 +7396,17 @@ def get_coded_segments(code_id: int, limit: int = 100,
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
-@_deprecated(lambda: _mark_unregistered(DEPRECATED_MEMO_SEARCH), before=None,
-             when=lambda a: a.get("search_memo") is True)
 def search_files(
     pattern: str,
     search_filename: bool = True,
     search_content: bool = False,
-    search_memo: bool = False,
     case_sensitive: bool = False,
     limit: int = 50,
     exclude_code_ids: Optional[List[int]] = None,
     cursor: Optional[str] = None,
     max_matches_per_file: int = 5
 ) -> str:
-    """Search for files by name, content, or memo.
+    """Search for files by name or content.
 
     This tool helps you find specific files in the project without searching
     the entire filesystem. Perfect for locating interview transcripts by
@@ -7420,7 +7415,6 @@ def search_files(
     PERFORMANCE GUIDE:
     - Filename search: fast (milliseconds): searches file names only
     - Content search: slower (can take seconds for 100+ files): searches full text
-    - Memo search: file memos, the public part only (before '#####')
 
     IMPORTANT - CLARIFICATION WORKFLOW:
     When a user's request is ambiguous (e.g., "search for files containing paul"):
@@ -7453,13 +7447,10 @@ def search_files(
     cursor WITH THE SAME other arguments to continue; a cursor is bound
     to them. Nothing is stored between calls.
 
-    Deprecated, removed in v0.15.1: search_memo; search_memos searches file memos and every other kind of note.
-
     Args:
         pattern: Text to search for (case-insensitive by default)
         search_filename: Search in file names (default: True, fast)
         search_content: Search in file content/fulltext (default: False, slower)
-        search_memo: Search in file memos (default: False, fast)
         case_sensitive: Use case-sensitive matching (default: False)
         limit: Maximum number of files to return per page (default: 50)
         exclude_code_ids: Codes whose coded spans are already accounted
@@ -7484,9 +7475,9 @@ def search_files(
             - file_id: ID for use with other tools
             - file_name: Name of the file
             - file_type: Type (text, audio, video, image, pdf)
-            - matched_in: {filename: bool, content: bool, memo: bool}
+            - matched_in: {filename: bool, content: bool}
             - match_count: The number of matches LISTED for this file
-              (its name, its memo, and the content matches shown), not
+              (its name and the content matches shown), not
               the number in the file: content matches are capped by
               max_matches_per_file
             - content_matches_found, content_matches_excluded,
@@ -7537,7 +7528,6 @@ def search_files(
         "pattern": pattern,
         "search_filename": search_filename,
         "search_content": search_content,
-        "search_memo": search_memo,
         "case_sensitive": case_sensitive,
         "limit": limit,
         "exclude_code_ids": exclude_ids,
@@ -7564,7 +7554,6 @@ def search_files(
             pattern=pattern,
             search_filename=search_filename,
             search_content=search_content,
-            search_memo=search_memo,
             case_sensitive=case_sensitive,
             limit=limit,
             max_matches_per_file=max_matches_per_file,
@@ -7613,8 +7602,7 @@ def search_files(
             "search_parameters": {
                 "pattern": pattern,
                 "searched_filename": search_filename,
-                "searched_content": search_content,
-                "searched_memo": search_memo
+                "searched_content": search_content
             }
         }, indent=2)
 
@@ -11192,13 +11180,10 @@ def _codings_failed_validation(failures, total_approved: int
 @mcp.tool(annotations=TOOL_ADDS)
 @_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_OWNER, before="Args:",
-             when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Safety guarantees:")
 def apply_codings(
     coding_session_id: str,
-    create_backup: Optional[bool] = None,
-    owner: Optional[str] = None
+    create_backup: Optional[bool] = None
 ) -> str:
     """Apply approved coding suggestions to the project database.
 
@@ -11235,9 +11220,6 @@ def apply_codings(
         coding_session_id: The session ID with approved suggestions
         create_backup: No longer used: Exegete takes a backup before every
                        change (accepted until the release on method)
-        owner: Deprecated (above). Only the project's AI coder name is
-               accepted, as a no-op; any other value is refused before
-               backup or write (set_project_ai_coder_name changes it)
 
     Returns:
         Detailed confirmation of what was written to the database
@@ -11276,16 +11258,7 @@ def apply_codings(
             "statistics": session.get_statistics()
         }, indent=2)
 
-    # A tool-supplied owner is VALIDATED first and RESTRICTED second
-    # (Appendix A, R1): a hostile string still gets the validation text it
-    # got in v0.11 (S-H3 step 1), and a well-formed one that is not the
-    # project's AI coder name is refused before any backup or write.
-    if owner is not None:
-        try:
-            owner = validate_coder_name(owner, "owner")
-        except ValueError as e:
-            return json.dumps({"error": str(e)})
-    owner, owner_error = _resolve_write_owner(owner)
+    owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
@@ -11559,14 +11532,11 @@ def apply_codings(
 @mcp.tool(annotations=TOOL_ADDS)
 @_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_OWNER, before="Args:",
-             when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def import_text_file(
     filename: str,
     content: str,
     memo: str = "",
-    owner: Optional[str] = None,
     create_backup: Optional[bool] = None,
     case_name: Optional[str] = None,
     apply_project_pseudonyms: bool = False
@@ -11609,9 +11579,6 @@ def import_text_file(
                   take for this text's stored copy
         content: The full text content of the file
         memo: Optional memo/description for the file
-        owner: Deprecated (above). Only the project's AI coder name is
-               accepted, as a no-op; any other value is refused before
-               backup or write (set_project_ai_coder_name changes it)
         create_backup: No longer used: Exegete takes a backup before every
                        change (accepted until the release on method)
         case_name: Optional existing case to link the new file to.
@@ -11717,16 +11684,10 @@ def import_text_file(
                 "error": ("After applying this project's pseudonyms the "
                           "content is empty; nothing was imported.")},
                 indent=2)
-    # Validated first, restricted second (Appendix A, R1); the rows this
-    # import writes carry the project's AI coder name.
-    # validate_text_file_import repeats the character check as defence in
+    # The rows this import writes carry the project's AI coder name;
+    # validate_text_file_import checks its characters again as defence in
     # depth.
-    if owner is not None:
-        try:
-            owner = validate_coder_name(owner, "owner")
-        except ValueError as e:
-            return json.dumps({"error": str(e)})
-    owner, owner_error = _resolve_write_owner(owner)
+    owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
@@ -11922,7 +11883,7 @@ def _import_owner_stop() -> Optional[str]:
     if state.status == SIDECAR_NEWER_FORMAT:
         return newer_format_message(state.path)
     if not state.is_set:
-        return _ask_refusal(owner_supplied=False)["error"]
+        return _ask_refusal()["error"]
     declared = host_declaration()
     if ai_coder_name_mismatch(declared, state.entry):
         return _mismatch_refusal(state.name, declared)["error"]
@@ -17193,8 +17154,6 @@ def _issue_preview(tool: str, args: Dict[str, Any], preview: Dict[str, Any],
                       if override_required is None else override_required)
     if needs_override:
         arguments["allow_hidden_coder"] = True
-    if preview.get("subcode_count", 0):
-        arguments["cascade"] = True
     arguments["preview_token"] = token
     payload: Dict[str, Any] = {
         "requires_confirmation": True,
@@ -17466,10 +17425,7 @@ def merge_codes(from_code_id: int, into_code_id: int,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(DEPRECATED_CASCADE, before="Args:",
-             when=lambda a: a.get("cascade") is True)
 def delete_code(code_id: int, preview_token: Optional[str] = None,
-                cascade: bool = False,
                 allow_hidden_coder: bool = False) -> str:
     """Delete a code AND all its codings. DESTRUCTIVE: preview then confirm.
 
@@ -17497,10 +17453,10 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     sub-code, and all their codings) in one transaction, exactly as
     QualCoder's own delete, which asks once in a dialog naming the
     sub-codes. The preview is that dialog here: it names the sub-codes,
-    and its execute_with carries cascade=true when there are any, so the
-    researcher's approval of the preview is the approval of the branch.
-    An execute without cascade=true on such a code is refused. Review
-    the preview before confirming.
+    and the token it returns covers every code of the branch and their
+    codings, so the researcher's approval of the preview is the approval
+    of the branch, and a sub-code added or moved after it makes the token
+    stale. Review the preview before confirming.
     Move the sub-codes first if they are needed. On those projects the
     deleted codes' nodes and lines on QualCoder's saved graphs are
     removed too, as QualCoder 4.0's own delete removes them; the preview
@@ -17510,9 +17466,6 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
         code_id: The code's cid
         preview_token: The token from this operation's preview; omit it to
                  get the preview
-        cascade: Must be true to delete a code that has sub-codes (the
-                 whole branch dies; default false refuses instead); the
-                 preview's execute_with sets it. Deprecated (above)
         allow_hidden_coder: Required when the preview reports codings that
                  belong to a coder currently hidden in QualCoder
     """
@@ -17523,23 +17476,16 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
             row_owner=ro.code_owner(code_id))
         return preview
 
-    def _branch_needs_cascade(preview):
-        """A code with sub-codes, executed without cascade=true: refused
-        before any lock, from the preview the token signs, in the write's
-        own words (v0.15.1); the write refused it after its backup."""
-        count = preview.get("subcode_count", 0)
-        if count and not cascade:
-            return {"error": SUBCODES_NEED_CASCADE.format(count=count)}
-        return None
-
-    execute_args: Dict[str, Any] = {"code_id": code_id}
-    if cascade:
-        execute_args["cascade"] = True
+    # The whole branch, always (0.15.1, cascade removed): the token's
+    # fingerprint (fingerprint_rows_delete_code) covers every code of the
+    # branch and their codings, so the branch deleted is the one the
+    # researcher approved, and a sub-code added or moved since makes the
+    # token stale.
     result = _guarded_destructive(
         preview_fn=_preview,
         op_fn=lambda wdb: {"success": True, "message": "Deleted code",
                            "preview_verified": True,
-                           **wdb.delete_code(code_id, cascade=cascade,
+                           **wdb.delete_code(code_id, cascade=True,
                                              auto_commit=False)},
         fingerprint_fn=lambda db_: db_.fingerprint_rows_delete_code(code_id),
         tool="delete_code",
@@ -17548,12 +17494,11 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
         allow_hidden_coder=allow_hidden_coder,
         backup_fail_detail="the code was not deleted",
         confirm_hint="This will destroy the code and all its coded segments "
-                     "(and, with cascade=true, its whole sub-code branch). "
+                     "(and its whole sub-code branch, when it has one). "
                      "Review total_codings_to_delete and the collateral "
                      "breakdown, then call delete_code again with "
                      "preview_token. A backup is made first.",
-        execute_arguments=execute_args,
-        execute_guard_fn=_branch_needs_cascade,
+        execute_arguments={"code_id": code_id},
     )
     return json.dumps(result, indent=2)
 

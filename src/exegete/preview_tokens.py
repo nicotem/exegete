@@ -373,9 +373,9 @@ def load_secret() -> str:
 # `args` maps the tool's call arguments to the canonical `A` that decides
 # the EFFECT of the operation. Arguments that do not change what the
 # operation does to the data are deliberately absent: `preview_token` and
-# `confirm` never appear, and `cascade` is not bound because the preview
-# always reports the whole branch, so the impact shown does not depend on
-# it (D3 3.2); `cascade` still gates the execute on its own.
+# `confirm` never appear. `cascade`, removed in 0.15.1, was never bound:
+# the preview always reports the whole branch, and the execute always
+# deletes it.
 
 def _args_merge_codes(kwargs):
     return {"from_code_id": int(kwargs["from_code_id"]),
@@ -422,7 +422,7 @@ def _args_pseudonymise_source(kwargs):
     OUT of the binding, so the identical mapping binds the same whether
     it was typed out or read from the project's own `pseudonyms.json`.
 
-    The preview-only arguments are absent, as `cascade` is: `include_context`,
+    The preview-only arguments are absent: `include_context`,
     `context_chars`, `scan_residue`, `residue_detail` and
     `max_spans_per_entry` change what the preview SHOWS, and
     `record_in_journal` changes only whether the run records itself, so

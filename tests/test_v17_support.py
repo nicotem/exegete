@@ -382,15 +382,21 @@ class TestT4DeleteBranch:
         assert preview["subcode_count"] == 2
         assert sorted(preview["subcodes"]) == ["Sub one", "Sub sub"]
         assert preview["text_codings_to_delete"] == 2  # branch-wide count
-        assert "cascade=true" in preview["note"]
+        # v0.15.1: cascade removed; the token alone approves the branch
+        assert "cascade" not in preview["note"]
+        assert "cascade" not in out["execute_with"]["arguments"]
 
-    def test_delete_without_cascade_refused(self, v17_env):
+    def test_delete_takes_no_cascade(self, v17_env):
+        """v0.15.1: cascade removed; a call that passes it is refused
+        (over the host's path: tests/test_v0151_removed_arguments.py),
+        and the branch survives."""
         folder = v17_env("v16")
         add_subcode(folder, 10, "Sub one", supercid=1)
         server.switch_project(str(folder))
-        out = json.loads(H.execute_destructive(server.delete_code, 1))
-        assert "cascade=true" in out["error"]
-        assert _rows(folder, "SELECT cid FROM code_name WHERE cid IN (1, 10)")
+        out = json.loads(server.delete_code(1, cascade=False))
+        assert "error" in out and "preview_token" not in out
+        assert len(_rows(folder, "SELECT cid FROM code_name "
+                                 "WHERE cid IN (1, 10)")) == 2
 
     def test_cascade_deletes_whole_branch_no_dangling(self, v17_env):
         folder = v17_env("v16")
@@ -402,7 +408,7 @@ class TestT4DeleteBranch:
         conn.commit()
         conn.close()
         server.switch_project(str(folder))
-        out = json.loads(H.execute_destructive(server.delete_code, 1, cascade=True))
+        out = json.loads(H.execute_destructive(server.delete_code, 1))
         assert out.get("success") is True, out
         assert out["branch_deleted"] is True
         assert _rows(folder, "SELECT cid FROM code_name WHERE cid IN (1, 10, 11)") == []

@@ -73,21 +73,21 @@ class TestSearchFilesBranches:
         assert "stressed" in match["preview"]
 
     def test_memo_branch(self, search_project):
-        out = json.loads(server.search_files(
-            "magnetita", search_filename=False, search_memo=True))
-        names = {r["file_name"] for r in out["results"]}
-        assert names == {"photo.jpg"}
-        assert out["results"][0]["matched_in"]["memo"] is True
+        """v0.15.1: search_files' memo branch removed with search_memo, as
+        announced; search_memos finds the file memo."""
+        out = json.loads(server.search_memos("magnetita"))
+        files = [r for r in out["results"] if r["type"] == "file"]
+        assert [r["id"] for r in files] == [11]       # photo.jpg
 
     def test_combined_branches_aggregate_match_count(self, search_project):
         out = json.loads(server.search_files(
-            "magnetita", search_filename=True, search_content=True,
-            search_memo=True))
+            "magnetita", search_filename=True, search_content=True))
         by_name = {r["file_name"]: r for r in out["results"]}
+        # photo.jpg holds the word in its memo alone, no longer searched
         assert set(by_name) == {"MAGNETITA_notes.txt", "report_final.pdf",
-                                "photo.jpg", None}
-        assert by_name["photo.jpg"]["matched_in"] == {
-            "filename": False, "content": False, "memo": True}
+                                None}
+        assert set(by_name["MAGNETITA_notes.txt"]["matched_in"]) == {
+            "filename", "content"}
 
     def test_case_sensitive(self, search_project):
         out = json.loads(server.search_files("magnetita", case_sensitive=True))

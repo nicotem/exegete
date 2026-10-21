@@ -802,10 +802,24 @@ REMOVALS_0151 = {
 # record of what they served
 REMOVED_0151 = {"export_code_report", "cleanup_old_sessions",
                 "merge_proposals"}
-WORDS = {name: words for name, words in {
+# And the arguments removed, as announced in 0.14
+# (tests/test_v0151_removed_arguments.py, whose
+# before_the_removed_arguments puts these four back as they were served
+# before): delete_code without cascade, its paragraph on sub-codes saying
+# the token covers the branch; apply_codings and import_text_file without
+# owner; search_files without search_memo; each without its deprecation
+# sentence
+ARGUMENTS_0151 = {
+    "apply_codings": (2285, 1856, "a7cb208688a17003"),
+    "delete_code": (2244, 1847, "5ddc0e80152c294f"),
+    "import_text_file": (3688, 2725, "0721b7099400ef2a"),
+    "search_files": (4537, 3575, "dd59501a07c07301"),
+}
+WORDS_BEFORE_ARGUMENTS_0151 = {name: words for name, words in {
     **WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
     **CHANGED_0151, **CHANGED_0151_TEXTS, **REMOVALS_0151}.items()
     if name not in REMOVED_0151}
+WORDS = {**WORDS_BEFORE_ARGUMENTS_0151, **ARGUMENTS_0151}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to

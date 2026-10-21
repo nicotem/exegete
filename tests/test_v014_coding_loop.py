@@ -1962,47 +1962,56 @@ class TestFixRound2WhatGoesInV015:
         text = answer if isinstance(answer, str) else json.dumps(answer)
         assert (sentence in text) is expected, (sentence, text[-300:])
 
-    def test_options_that_go_warn_only_when_used(self, setup_server,
-                                                 qualcoder_db_path):
-        for tool, sentence in (
-                ("delete_code", server.DEPRECATED_CASCADE),
-                ("apply_codings", server.DEPRECATED_OWNER),
-                ("import_text_file", server.DEPRECATED_OWNER),
-                ("create_attribute_type",
-                 server.DEPRECATED_JOURNAL_ATTRIBUTES),
-                ("set_attribute", server.DEPRECATED_JOURNAL_ATTRIBUTES),
-                ("search_files", server.DEPRECATED_MEMO_SEARCH),
-                ("pseudonymise_source", server.DEPRECATED_EDIT_PARITY),
-                ("rename_file", server.DEPRECATED_RENAME_BACK)):
-            self._described(tool, sentence)
-        cascade = server.DEPRECATED_CASCADE
-        self._warned(jcall("delete_code", code_id=1, cascade=True),
-                     cascade, True)
-        self._warned(jcall("delete_code", code_id=1), cascade, False)
-        owner = server.DEPRECATED_OWNER
+    def test_arguments_that_went_are_refused(self, setup_server):
+        """v0.15.1: cascade, owner and search_memo went, as announced
+        (tests/test_v0151_removed_arguments.py): no description carries
+        their deprecation, a call that passes one is refused with what
+        replaces it, and a call without it is answered as usual."""
+        for tool, argument in (("delete_code", "cascade"),
+                               ("apply_codings", "owner"),
+                               ("import_text_file", "owner"),
+                               ("search_files", "search_memo")):
+            description = server.mcp._tool_manager._tools[tool].description
+            assert "Deprecated" not in description, tool
+            assert argument not in server.mcp._tool_manager._tools[
+                tool].parameters["properties"], tool
+        refused = jcall("delete_code", code_id=1, cascade=True)
+        assert refused["removed"] == {"cascade": server.REMOVED_ARGUMENTS[
+            ("delete_code", "cascade")]}
+        assert "removed" not in jcall("delete_code", code_id=1)
         sid = new_session()
         g = record(sid, item())["recorded"][0]["guid"]
         call("update_suggestion_status", coding_session_id=sid, approve=[g])
-        self._warned(call("apply_codings", coding_session_id=sid,
-                          create_backup=False, owner="Somebody Else"),
-                     owner, True)                  # refused, as JSON
-        # (v0.15.1: without create_backup, whose own sentence would
-        # follow as the last paragraph; tests/test_v0151_ignored_argument.py)
-        applied = call("apply_codings", coding_session_id=sid,
-                       owner="AI Coding Assistant")
+        refused = jcall("apply_codings", coding_session_id=sid,
+                        owner="AI Coding Assistant")
+        assert refused["removed"] == {"owner": server.REMOVED_ARGUMENTS[
+            ("apply_codings", "owner")]}
+        applied = call("apply_codings", coding_session_id=sid)
         assert "CODINGS APPLIED" in applied        # a text answer
-        assert applied.endswith("\n\n" + owner)
-        sid = new_session()
-        g = record(sid, item(COPE, "Coping"))["recorded"][0]["guid"]
-        call("update_suggestion_status", coding_session_id=sid, approve=[g])
-        self._warned(call("apply_codings", coding_session_id=sid,
-                          create_backup=False), owner, False)
-        self._warned(call("import_text_file", filename="a.txt",
-                          content="text", owner="Somebody Else",
-                          create_backup=False), owner, True)
-        self._warned(call("import_text_file", filename="b.txt",
-                          content="text", create_backup=False),
-                     owner, False)
+        assert "removed in 0.15.1" not in applied
+        refused = jcall("import_text_file", filename="a.txt",
+                        content="text", owner="Somebody Else")
+        assert refused["removed"] == {"owner": server.REMOVED_ARGUMENTS[
+            ("import_text_file", "owner")]}
+        imported = jcall("import_text_file", filename="b.txt",
+                         content="text")
+        assert imported["success"] is True and "deprecated" not in imported
+        refused = jcall("search_files", pattern="x", search_memo=True)
+        assert refused["removed"] == {"search_memo": server.REMOVED_ARGUMENTS[
+            ("search_files", "search_memo")]}
+        assert "deprecated" not in jcall("search_files", pattern="x")
+
+    def test_options_that_go_warn_only_when_used(self, setup_server,
+                                                 qualcoder_db_path):
+        for tool, sentence in (
+                ("create_attribute_type",
+                 server.DEPRECATED_JOURNAL_ATTRIBUTES),
+                ("set_attribute", server.DEPRECATED_JOURNAL_ATTRIBUTES),
+                ("pseudonymise_source", server.DEPRECATED_EDIT_PARITY),
+                ("rename_file", server.DEPRECATED_RENAME_BACK)):
+            self._described(tool, sentence)
+        # (v0.15.1: cascade, owner and search_memo went, as announced;
+        # test_arguments_that_went_are_refused above)
         # (v0.15.1: the four help topics removed, as announced; each is
         # answered that it was, and no answer is marked deprecated)
         for topic in sorted(server.REMOVED_HELP_TOPICS):
@@ -2025,10 +2034,6 @@ class TestFixRound2WhatGoesInV015:
         self._warned(jcall("set_attribute", target_type="case",
                            target_id=1, attribute_name="Age", value="3",
                            create_backup=False), journal, False)
-        memo = server.DEPRECATED_MEMO_SEARCH
-        self._warned(jcall("search_files", pattern="x", search_memo=True),
-                     memo, True)
-        self._warned(jcall("search_files", pattern="x"), memo, False)
         parity = server.DEPRECATED_EDIT_PARITY
         self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
                            file_id=1, overlap_policy="qualcoder_edit_parity"),
@@ -2036,11 +2041,12 @@ class TestFixRound2WhatGoesInV015:
         self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
                            file_id=1), parity, False)
 
-    def test_in_core_the_memo_search_warning_marks_search_memos(
+    def test_in_core_the_memo_search_refusal_marks_search_memos(
             self, setup_server):
         server._apply_toolset("core")      # the conftest restores it
         out = jcall("search_files", pattern="x", search_memo=True)
-        assert out["deprecated"] == server.DEPRECATED_MEMO_SEARCH.replace(
+        sentence = server.REMOVED_ARGUMENTS[("search_files", "search_memo")]
+        assert out["removed"]["search_memo"] == sentence.replace(
             "search_memos", "search_memos" + server.NOT_IN_THIS_TOOL_SET)
 
     def test_a_rename_back_licensed_by_a_backup(self, setup_server,

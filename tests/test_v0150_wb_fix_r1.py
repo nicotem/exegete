@@ -88,13 +88,17 @@ class TestTheRemovalsInV0151:
         # sentences (tests/test_v0151_removed_tools.py); 6 since the
         # REFI-QDA export, kept, names its known faults under a name of
         # its own, REFI_EXPORT_KNOWN_FAULTS, no longer a deprecation
-        # (tests/test_v0151_refi_known_faults.py)
-        assert len(DEPRECATIONS) >= 6, DEPRECATIONS
+        # (tests/test_v0151_refi_known_faults.py); 3 since v0.15.1 removed
+        # cascade, owner and search_memo, as announced, with their
+        # sentences (tests/test_v0151_removed_arguments.py)
+        assert len(DEPRECATIONS) >= 3, DEPRECATIONS
         assert "DEPRECATED_IMPORT_SKIP_BACKUP" not in DEPRECATIONS
         assert "DEPRECATED_REFI_EXPORT" not in DEPRECATIONS
         assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
         for gone in ("DEPRECATED_CODE_REPORT", "DEPRECATED_CLEANUP",
-                     "DEPRECATED_MERGE_PROPOSALS", "DEPRECATED_HELP_TOPICS"):
+                     "DEPRECATED_MERGE_PROPOSALS", "DEPRECATED_HELP_TOPICS",
+                     "DEPRECATED_CASCADE", "DEPRECATED_OWNER",
+                     "DEPRECATED_MEMO_SEARCH"):
             assert gone not in DEPRECATIONS, gone
 
     @pytest.mark.parametrize("name", DEPRECATIONS)

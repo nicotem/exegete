@@ -317,6 +317,12 @@ OTHER_NAMES = frozenset({"open", "encoding", "len"})
 # document may name it, as gone, outside a call form
 RETIRED: Dict[str, Tuple[str, str]] = {
     "confirm": ("argument", "0.13"),
+    # delete_code's, apply_codings' and import_text_file's, and
+    # search_files', as announced in 0.14
+    # (tests/test_v0151_removed_arguments.py)
+    "cascade": ("argument", "0.15.1"),
+    "owner": ("argument", "0.15.1"),
+    "search_memo": ("argument", "0.15.1"),
 }
 
 
@@ -1642,8 +1648,11 @@ NAME_SENTENCES = (
     ("the tool `merge_code`", "wrong"),
     ("`merge_codes(cascade=true)`", "wrong"),
     ("`merge_codes(from_code_id=1)`", "right"),
-    ("`delete_code(code_id, cascade, owner)`", "wrong"),
-    ("`delete_code(code_id, cascade)`", "right"),
+    ("`delete_code(code_id, allow_hidden_coder, owner)`", "wrong"),
+    ("`delete_code(code_id, allow_hidden_coder)`", "right"),
+    # an argument removed in 0.15.1, in its tool's call form
+    ("`delete_code(code_id, cascade)`", "wrong"),
+    ("The `cascade` argument was removed in 0.15.1.", "right"),
     # quoted values, `...` and items of several words aside
     ('`delete_code(code_id, "x", ..., owner as removed in 1.0)`', "right"),
     ("`analyze_for_coding(file_ids)`", "right"),

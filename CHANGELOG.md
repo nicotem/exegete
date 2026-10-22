@@ -534,8 +534,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backup, as is an "unchanged" or "already exists" answer found there.
   A category or parent code given by name is looked up again by its id.
   Refused before any backup now: a category moved under its own
-  sub-category, a code given a parent code that does not exist, and
-  `delete_code` without `cascade=true` on a code with sub-codes.
+  sub-category, and a code given a parent code that does not exist.
   `apply_codings` writes only the codings not already in the project
   when it takes the lock, so a coding another program wrote meanwhile is
   reported as already there rather than failing after the backup. In a

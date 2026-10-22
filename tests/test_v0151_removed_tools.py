@@ -390,7 +390,7 @@ class TestNoShippedTextNamesThem:
 
     def test_the_changelog_records_them(self):
         log = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = _flat(log[log.index("## [Unreleased]"):
+        unreleased = _flat(log[log.index("## [0.15.1-alpha]"):
                                log.index("## [0.15.0-alpha]")])
         removed = unreleased[unreleased.index(
             "### Removed: three tools and four help topics"):]

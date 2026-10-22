@@ -49,7 +49,7 @@ def _served(mode):
 
 def _unreleased():
     text = _read("CHANGELOG.md")
-    return text[text.index("## [Unreleased]"):text.index("## [0.15.0")]
+    return text[text.index("## [0.15.1-alpha]"):text.index("## [0.15.0")]
 
 
 def _method_release():

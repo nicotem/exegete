@@ -457,8 +457,8 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
 def test_the_changelog_names_the_windows_report_among_known_limits():
     """For the release notes' known limits (ruling 96)."""
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = text[text.index("## [Unreleased]"):
-                      text.index("\n## [", text.index("## [Unreleased]") + 1)]
+    unreleased = text[text.index("## [0.15.1-alpha]"):
+                      text.index("\n## [", text.index("## [0.15.1-alpha]") + 1)]
     start = unreleased.index("\n### Known limits\n")
     limits = " ".join(unreleased[start:unreleased.index(
         "\n### ", start + 1)].split())

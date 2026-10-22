@@ -285,7 +285,7 @@ def test_the_check_finds_what_0150_said(tmp_path):
 
 def test_the_changelog_says_so():
     log = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = " ".join(log[log.index("## [Unreleased]"):
+    unreleased = " ".join(log[log.index("## [0.15.1-alpha]"):
                               log.index("## [0.15.0-alpha]")].split())
     upgrading = unreleased[unreleased.index("### Upgrading from 0.15.0"):]
     upgrading = upgrading[:upgrading.index("### ", 5)]

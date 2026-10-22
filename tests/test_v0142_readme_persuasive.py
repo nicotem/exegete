@@ -724,7 +724,7 @@ def _measured():
     # again (create_backup accepted and ignored), so they are in the
     # Unreleased part above 0.15.0's
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [Unreleased]",
+    entry = _flat(_between(changelog, "## [0.15.1-alpha]",
                            "## [0.15.0-alpha]"))
     measured = entry[entry.index("### Measured"):]
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",

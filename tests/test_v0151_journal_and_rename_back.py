@@ -375,7 +375,7 @@ def test_the_readme_and_the_changelog_say_so():
     assert "setting an attribute on a journal entry" in \
         row[0][:row[0].index("|", row[0].index("|") + 1)]
     log = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = _flat(log[log.index("## [Unreleased]"):
+    unreleased = _flat(log[log.index("## [0.15.1-alpha]"):
                            log.index("## [0.15.0-alpha]")])
     upgrading = unreleased[unreleased.index("### Upgrading from 0.15.0"):]
     upgrading = upgrading[:upgrading.index("### ", 5)]

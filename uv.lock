@@ -584,7 +584,7 @@ wheels = [
 
 [[package]]
 name = "exegete"
-version = "0.15.0a0"
+version = "0.15.1a0"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },

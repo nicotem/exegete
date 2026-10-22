@@ -174,7 +174,7 @@ class TestNoTextAnnouncesTheRemoval:
 
     def test_the_changelog_records_that_it_stays(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-        unreleased = _flat(text[text.index("## [Unreleased]"):
+        unreleased = _flat(text[text.index("## [0.15.1-alpha]"):
                                 text.index("## [0.15.0-alpha]")])
         upgrading = unreleased[unreleased.index("### Upgrading from 0.15.0"):]
         upgrading = upgrading[:upgrading.index("### ", 5)]

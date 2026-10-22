@@ -328,7 +328,7 @@ def test_a_pipe_lock_refuses_the_databases_changes_and_says_so(fresh,
                          1)[1].split(";", 1)[0]
     assert "project's database" in clause
     unreleased = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").split(
-        "## [Unreleased]", 1)[1].split("\n## [", 1)[0]
+        "## [0.15.1-alpha]", 1)[1].split("\n## [", 1)[0]
     before, after = unreleased.split("no longer makes a tool wait", 1)
     entry = after.split("\n- ", 1)[0]
     assert "project's database" in entry

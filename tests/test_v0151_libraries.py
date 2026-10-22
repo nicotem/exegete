@@ -439,7 +439,7 @@ def test_what_the_lock_check_catches_is_said_as_it_is():
     assert "description" not in ours[0]["metadata"]
 
     changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    unreleased = changelog[changelog.index("## [Unreleased]"):]
+    unreleased = changelog[changelog.index("## [0.15.1-alpha]"):]
     unreleased = unreleased[:unreleased.index("\n## [", 1)]
     contributing = (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")
     for where, text in (("CHANGELOG.md", unreleased),

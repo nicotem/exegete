@@ -632,10 +632,12 @@ class TestThePublishedSchemaBudget:
         names its known faults; the descriptions of three backup tools
         name the audio and video folders; three tools removed; four
         arguments removed), so the current entry is the Unreleased one
-        alone, and 0.15.0's figure is history (`_v0150_entry`).
+        alone, and 0.15.0's figure is history (`_v0150_entry`). From
+        the release on, the current entry is 0.15.1's, under an
+        Unreleased heading that says nothing yet.
         """
         text = cls._read("CHANGELOG.md")
-        return text[text.index("## [Unreleased]"):
+        return text[text.index("## [0.15.1-alpha]"):
                     text.index("## [0.15.0-alpha]")]
 
     @classmethod

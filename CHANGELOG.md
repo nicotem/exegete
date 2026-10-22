@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.15.1-alpha] - 2026-10-26
+
 ### Upgrading from 0.15.0
 
 - **`create_backup` no longer does anything.** Exegete takes one backup

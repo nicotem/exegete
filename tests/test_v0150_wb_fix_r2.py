@@ -172,7 +172,7 @@ class TestClaudeCodesLimitsOnEveryPython:
         # v0.15.1 measures again: the current figure is in the
         # [Unreleased] part's Measured, 0.15.0's is history
         log = _read("CHANGELOG.md")
-        current = log[log.index("## [Unreleased]"):
+        current = log[log.index("## [0.15.1-alpha]"):
                       log.index("## [0.15.0-alpha]")]
         measured = _flat(current[current.index("### Measured"):])
         if sys.version_info[:2] >= (3, 13):

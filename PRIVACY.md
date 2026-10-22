@@ -16,7 +16,12 @@ holds under both its names.
 **Exegete itself runs entirely on your machine.** It is a local
 process started by your MCP client (Claude Desktop, Claude Code, or any
 other). It adds **no telemetry, no analytics, and no separate cloud
-path** of its own. It opens your project's database read-only
+path** of its own. One library it installs to read PDFs on Windows x64
+and Linux reports on its own use to Microsoft unless it is switched
+off: Exegete switches it off entirely on Linux, but on Windows one
+report still goes to Windows' diagnostic data each time a PDF is read
+("A library's usage reports", below, says what it holds, and what you
+can do). It opens your project's database read-only
 by default. The one thing it fetches from the internet itself, while
 switched on, is a small public file that says whether a newer version
 of Exegete exists, and it sends nothing from your projects to get it
@@ -80,6 +85,57 @@ this document protect three other things, each with its own readers:
   claim that the provider has not seen what you let the assistant read.
 
 Where a rule below serves one of these three, it says which.
+
+**A library's usage reports (what stays on the computer, and who else
+reads it).** Where PDFs are read with PyMuPDF 2 (Windows x64 and Linux,
+with Python 3.11 to 3.14, the desktop extension's Python among them;
+INSTALL.md), PyMuPDF loads onnxruntime, Microsoft's library for running
+trained models. onnxruntime reports on its own use to Microsoft unless
+it is switched off. Its reports hold facts about the computer and the
+library, never anything from your documents or projects, but an ethics
+committee or a data protection officer may want to know of them:
+
+- **On Linux**, onnxruntime would keep a device id and a store of
+  events in your home folder, and send them to Microsoft over the
+  internet. Exegete switches this off in the process that reads a
+  document, before onnxruntime loads (with onnxruntime's own setting,
+  `ORT_DISABLE_TELEMETRY`), so nothing is kept and nothing is sent. On
+  a Mac, Exegete's installs keep PyMuPDF 1, which does not load
+  onnxruntime; should it load there, the setting switches it off in the
+  same way.
+- **On Windows**, onnxruntime does not read that setting: it reports
+  through Windows' own diagnostic data, and its switch can be reached
+  only once it has loaded, by which time it has made one report. So
+  **each time a PDF is read** (an import's preview reads each PDF once,
+  in a process of its own, and the import reads it again only when the
+  preview's text cannot be used), one report goes to Windows'
+  diagnostic data: onnxruntime's release, the processor's model, the
+  number of processors, the memory, whether a debugger is attached, how
+  onnxruntime was built, and the names of any Windows services that
+  process runs. Windows sends it to Microsoft, or keeps it back, as the
+  computer's diagnostic data setting says (in Windows' Settings, under
+  "Diagnostics & feedback"). Exegete then switches off every later
+  report in that process.
+
+What the switch cannot promise:
+
+- The account of Windows above comes from onnxruntime's source code,
+  for the release Exegete's installs use (1.31.0). It has not been
+  watched on a Windows computer, and which of Windows' settings keeps
+  the report back has not been checked. On Linux and on a Mac, readings
+  given a home folder of their own were checked to keep nothing there.
+- A program that starts or changes its listening to onnxruntime's
+  events through Windows' event tracing while a PDF is read, Windows'
+  own diagnostic service among them, can switch its reports on again
+  for that reading.
+- Another release of onnxruntime, installed other than through
+  Exegete's lock, may treat the setting and the switch differently.
+
+What you can do: if these reports matter for your study, you could
+read no PDFs through Exegete on Windows (a PDF converted to text with
+another tool, file to file, comes in as text, and no other kind of
+document loads onnxruntime), and check, or ask your IT to check, what
+the computer's diagnostic data setting lets Windows send.
 
 An assistant that opens files by itself can send more, outside
 Exegete: "Assistants that open files by themselves", below, says which
@@ -1269,19 +1325,20 @@ Seven cautions:
 Each document is read in a separate, short-lived process with a time
 limit and a memory cap, handed the file's bytes rather than its path;
 it runs without a sandbox (one, where the system offers it, is on the
-list of later work, with no release set). Import and reading
-use no network. Where PDFs are read with PyMuPDF 2 (Windows x64 and
-Linux, with Python 3.11 to 3.14; INSTALL.md), PyMuPDF loads onnxruntime,
-Microsoft's library for running trained models, whose usage reports to
-Microsoft are on by default; Exegete switches them off in the reading
-process. On Linux they are off before onnxruntime starts, so it keeps
-nothing on the computer and sends nothing. On Windows, onnxruntime
-reports through Windows' own diagnostic data, and its switch can be
-reached only once it has loaded: by then it has made one report, with
-onnxruntime's release and the computer's processor model, number of
-processors and memory, and nothing from your documents, which Windows
-passes to Microsoft or not as the computer's diagnostic data setting
-says; every later report is switched off. A document converted with
+list of later work, with no release set). Import and reading make no
+request over the network of their own. Where PDFs are read with
+PyMuPDF 2 (Windows x64 and Linux, with Python 3.11 to 3.14; INSTALL.md),
+PyMuPDF loads onnxruntime, Microsoft's library for running trained
+models, whose usage reports to Microsoft are on by default; Exegete
+switches them off in the reading process. On Linux they are off before
+onnxruntime starts, so it keeps nothing on the computer and sends
+nothing. On Windows, its switch can be reached only once it has loaded:
+by then it has made one report to Windows' diagnostic data, about the
+computer and onnxruntime and with nothing from your documents, which
+Windows passes to Microsoft or not as the computer's diagnostic data
+setting says; every later report is switched off ("A library's usage
+reports", under "How your data flows", says what the report holds, the
+switch's limits, and what you can do). A document converted with
 another tool, such as a pandoc server, should be converted file to
 file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).

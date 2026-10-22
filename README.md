@@ -538,7 +538,9 @@ with its reason; and you work on a project in one program at a time.
 Exegete is a Model Context Protocol (MCP) server, which is why more
 than one assistant can use it. It runs locally over standard input and
 output, in Python 3.10 or newer, with no online service and no
-telemetry; its one request of its own is the check for new versions
+telemetry of its own (on Windows x64, a library it installs for PDFs
+reports its use: PRIVACY.md, "How your data flows"); its one request
+of its own is the check for new versions
 ("Updating", above). What the assistant reads through it goes to the maker of
 the AI behind it
 ([Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes)).

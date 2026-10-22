@@ -34,9 +34,10 @@ The contract, and why each part matters:
   behind the verdict (v0.15.1).
 - Usage reports off: PyMuPDF 2.0 loads onnxruntime, whose reports to
   Microsoft are on by default. The small environment carries the setting
-  that stops them on Linux and macOS, and before a PDF is read the
-  process calls onnxruntime's own switch, the one Windows' reports heed,
-  which stops all but the one onnxruntime writes as it loads (v0.15.1).
+  that stops them on Linux and macOS, and before a PDF is read with
+  PyMuPDF 2 or later the process calls onnxruntime's own switch, the one
+  Windows' reports heed, which stops all but the one onnxruntime writes
+  as it loads (v0.15.1).
 - Limits: a time limit, and a memory cap on every system (Linux: an
   address-space limit the process sets on itself before it reads
   anything; macOS, which honours no such limit: the server watches the
@@ -204,6 +205,24 @@ def _damaged(behind: Optional[type], kind: str,
     return answer
 
 
+def _pymupdf_loads_onnxruntime() -> bool:
+    """Whether the installed PyMuPDF loads onnxruntime (v0.15.1): 2.0
+    and later do, as they are imported; 1.x never does, so where
+    onnxruntime is installed beside it for some other reason, loading it
+    here would only bring its Windows report and its start-up cost. Not
+    installed: no. A release that cannot be read: yes, so that the
+    switch is never left out where it may count."""
+    from importlib import metadata
+    try:
+        release = metadata.version(READER_LIBRARIES["pdf"])
+    except metadata.PackageNotFoundError:
+        return False
+    except Exception:
+        return True
+    major = str(release).split(".", 1)[0]
+    return not major.isdigit() or int(major) >= 2
+
+
 def _onnxruntime_reports_off() -> None:
     """Before PyMuPDF loads (v0.15.1). PyMuPDF 2.0 loads onnxruntime as
     it is imported and starts its models, and onnxruntime's usage reports
@@ -213,8 +232,11 @@ def _onnxruntime_reports_off() -> None:
     setting: onnxruntime's own switch, called here once it has loaded and
     before PyMuPDF starts its models, stops every report after the one it
     writes as it loads, which nothing in Python can reach (PRIVACY.md
-    says so). Where onnxruntime is not installed (PyMuPDF 1.x), nothing
-    is loaded; if it cannot load, PyMuPDF reads without it, as before."""
+    says so). Under PyMuPDF 1.x, or where onnxruntime is not installed,
+    nothing is loaded; if it cannot load, PyMuPDF reads without it, as
+    before."""
+    if not _pymupdf_loads_onnxruntime():
+        return
     try:
         import onnxruntime
     except ImportError:

@@ -204,9 +204,10 @@ rather than fewer.
   meets a new major release only with a release of Exegete tried with
   it. Not bounded today: cryptography (never loaded by Exegete, held per
   computer by `[tool.uv]`), onnxruntime and numpy (which PyMuPDF 2
-  brings on Windows x64 and Linux; large, but loaded only by PyMuPDF
-  inside the reading process, never by Exegete's own code or at its
-  start; a new major release of either could stop PDFs being read
+  brings on Windows x64 and Linux; large, but loaded only inside the
+  reading process, never at Exegete's start, where Exegete's own code
+  imports onnxruntime only to switch its usage reports off; a new major
+  release of either could stop PDFs being read
   there, which the `newest-libraries` job would show), pywin32
   (Windows only), uvicorn, python-multipart and sse-starlette (a limit
   at their next minor release would hold back routine fixes),

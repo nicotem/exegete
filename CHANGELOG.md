@@ -216,8 +216,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Macs, needs macOS 14. Both releases read the test documents' PDFs to
   the text QualCoder 4.0's own functions store, and CI checks Exegete's
   text against QualCoder's with each. A PDF's reading is now given 2 GB
-  of memory, since PyMuPDF 2 needs more than the 1 GB every other kind
-  of file keeps, and a PDF refused for memory names 2048 MB. On Linux
+  of memory, since with PyMuPDF 2 it can need more than 1 GB on Linux;
+  every other kind of file keeps 1 GB, and a PDF refused for memory
+  names 2048 MB. On Linux
   the reading process starts with three fixed settings that keep the
   memory its threads reserve small (`MALLOC_ARENA_MAX`,
   `OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`). onnxruntime's usage
@@ -226,7 +227,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Linux entirely; on Windows, where that switch can be reached only
   once onnxruntime has loaded, all but the one report it makes as it
   loads, which holds facts about the computer and nothing from your
-  documents (PRIVACY.md, "Bringing documents in"). The cost on those
+  documents (PRIVACY.md, "How your data flows", says what it holds and
+  what you can do; "Known limits", below). The cost on those
   computers: about 75 to 90 MB more to download and 150 to 190 MB more
   on disk in the extension, and 0.4 to 1 second more to start each
   PDF's reading. INSTALL.md names the computers where pip cannot install
@@ -621,6 +623,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   again**, as INSTALL.md does: in the README's "Two coder names", for
   the two coder names and the QualCoder setting, and in the quick
   start's first project, for the coder name.
+
+### Known limits
+
+- **On Windows x64, a library Exegete installs for PDFs reports its
+  use to Windows' diagnostic data, once each time a PDF is read.**
+  PyMuPDF 2 loads onnxruntime, Microsoft's library for running trained
+  models, whose usage reports are on by default. Exegete switches them
+  off in the process that reads a document: on Linux before onnxruntime
+  loads, so nothing is kept or sent; on Windows only once it has
+  loaded, by which time it has made one report (its release, the
+  processor, the memory and a few facts about the process, nothing from
+  your documents), which Windows sends to Microsoft or keeps back as the
+  computer's diagnostic data setting says. That account of Windows comes
+  from onnxruntime's source code and has not been watched on a Windows
+  computer. If it matters for your study, you could read no PDFs
+  through Exegete on Windows (PRIVACY.md, "How your data flows", says
+  more). On a Mac, and for every other kind of document, onnxruntime is
+  not loaded.
 
 ### For contributors
 

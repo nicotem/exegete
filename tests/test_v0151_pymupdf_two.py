@@ -276,22 +276,39 @@ def test_onnxruntimes_reports_are_switched_off_on_every_system(
 
 
 class _Watch(importlib.abc.MetaPathFinder):
-    """Notes PyMuPDF's import, and keeps the real one out."""
+    """Notes PyMuPDF's import, and keeps the real one out; with
+    `onnxruntime_too`, notes and keeps out onnxruntime's as well."""
 
-    def __init__(self, seen):
+    def __init__(self, seen, onnxruntime_too=False):
         self.seen = seen
+        self.kept_out = ("pymupdf", "onnxruntime") if onnxruntime_too \
+            else ("pymupdf",)
 
     def find_spec(self, name, path=None, target=None):
-        if name == "pymupdf":
-            self.seen.append("pymupdf")
+        if name in self.kept_out:
+            self.seen.append(name)
             raise ImportError("kept out by the test")
         return None
 
 
-def _a_reading_watched(monkeypatch, kind, data):
+def _pymupdf_installed_as(monkeypatch, release):
+    """The PyMuPDF release the reading process finds installed, whatever
+    this computer has (None: not installed)."""
+    real = metadata.version
+
+    def version(name):
+        if name.lower() != "pymupdf":
+            return real(name)
+        if release is None:
+            raise metadata.PackageNotFoundError(name)
+        return release
+    monkeypatch.setattr(metadata, "version", version)
+
+
+def _a_reading_watched(monkeypatch, kind, data, release="2.0.0"):
     """`_read` in this process, with an onnxruntime of the test's own
-    whose switch notes its call, and PyMuPDF's import noted: what
-    happened, in order."""
+    whose switch notes its call, PyMuPDF `release` installed, and
+    PyMuPDF's import noted: what happened, in order."""
     seen = []
     fake = types.ModuleType("onnxruntime")
     fake.__spec__ = importlib.machinery.ModuleSpec("onnxruntime", None)
@@ -300,6 +317,7 @@ def _a_reading_watched(monkeypatch, kind, data):
     for name in [name for name in sys.modules
                  if name == "pymupdf" or name.startswith("pymupdf.")]:
         monkeypatch.delitem(sys.modules, name)
+    _pymupdf_installed_as(monkeypatch, release)
     monkeypatch.setattr(sys, "meta_path", [_Watch(seen)] + sys.meta_path)
     answer = import_reading._read({"kind": kind, "size": len(data)}, data)
     return seen, answer
@@ -319,15 +337,143 @@ def test_no_other_kind_of_file_loads_onnxruntime(monkeypatch):
     assert seen == []
 
 
-def test_privacy_says_what_onnxruntime_reports_on_windows():
-    """The one report onnxruntime makes on Windows as it loads, before
-    its switch can be reached, is said where reading is."""
-    text = (REPO / "PRIVACY.md").read_text(encoding="utf-8")
-    start = text.index("## Bringing documents in")
-    section = " ".join(text[start:text.index("\n## ", start + 1)].split())
-    assert "Exegete switches them off in the reading process" in section
-    assert "by then it has made one report" in section
-    assert "nothing from your documents" in section
+# (the combined review's second round, 21 October 2026) PyMuPDF 1.x never
+# loads onnxruntime: loading it there, where it is installed beside 1.x
+# for some other reason, would only bring its Windows report.
+@pytest.mark.parametrize("release, loaded", [
+    ("2.0.0", True), ("2.1.3", True), ("10.0", True),
+    ("an unreadable release", True),
+    ("1.28.2", False), ("1.26.5", False), (None, False)])
+def test_onnxruntime_is_loaded_only_where_pymupdf_2_or_later_is(
+        monkeypatch, release, loaded):
+    seen = []
+    monkeypatch.delitem(sys.modules, "onnxruntime", raising=False)
+    for name in [name for name in sys.modules
+                 if name == "pymupdf" or name.startswith("pymupdf.")]:
+        monkeypatch.delitem(sys.modules, name)
+    _pymupdf_installed_as(monkeypatch, release)
+    monkeypatch.setattr(sys, "meta_path",
+                        [_Watch(seen, onnxruntime_too=True)] + sys.meta_path)
+    data = b"%PDF-1.4"
+    answer = import_reading._read({"kind": "pdf", "size": len(data)}, data)
+    assert seen == (["onnxruntime", "pymupdf"] if loaded else ["pymupdf"])
+    assert answer["ok"] is False      # PyMuPDF kept out: refused
+
+
+@pytest.mark.skipif(not OPTIONAL, reason="PyMuPDF needed")
+def test_the_installed_pymupdf_is_read_by_its_own_release():
+    """The release read where the reading process looks it up is the one
+    that loads: 2.0 in CI's Ubuntu and Windows 3.13, 1.28.2 elsewhere."""
+    import pymupdf
+    major = int(pymupdf.__version__.split(".", 1)[0])
+    assert import_reading._pymupdf_loads_onnxruntime() is (major >= 2)
+
+
+def _flat_section(name, heading):
+    text = (REPO / name).read_text(encoding="utf-8")
+    start = text.index(heading)
+    end = text.find("\n## ", start + 1)
+    return " ".join(text[start:end if end > 0 else None].split())
+
+
+def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
+    """The owner's ruling 96 (22 October 2026): Exegete has no telemetry
+    of its own; PRIVACY names onnxruntime's reports where it says what
+    stays on the computer and who else reads it: on Linux switched off
+    before it loads, nothing kept; on Windows one report to Windows'
+    diagnostic data each time a PDF is read, under the computer's
+    setting; the switch's limits; what a researcher can do."""
+    flows = _flat_section("PRIVACY.md", "## How your data flows")
+    assert ("no telemetry, no analytics, and no separate cloud path** of "
+            "its own. One library it installs to read PDFs on Windows x64 "
+            "and Linux reports on its own use to Microsoft unless it is "
+            "switched off") in flows
+    assert ("on Windows one report still goes to Windows' diagnostic data "
+            "each time a PDF is read") in flows
+    start =flows.index("**A library's usage reports (what stays on the "
+                        "computer, and who else reads it).**")
+    part = flows[start:flows.index("An assistant that opens files by "
+                                   "itself", start)]
+    for fact in (
+            "Exegete switches this off in the process that reads a "
+            "document, before onnxruntime loads",
+            "`ORT_DISABLE_TELEMETRY`), so nothing is kept and nothing is "
+            "sent",
+            "by which time it has made one report",
+            "**each time a PDF is read**",
+            "never anything from your documents or projects",
+            "as the computer's diagnostic data setting says",
+            "Exegete then switches off every later report in that process",
+            "has not been watched on a Windows computer",
+            "can switch its reports on again for that reading",
+            "you could read no PDFs through Exegete on Windows",
+            "what the computer's diagnostic data setting lets Windows "
+            "send"):
+        assert fact in part, fact
+    # and where reading is, no longer "no network" alone
+    reading = _flat_section("PRIVACY.md", "## Bringing documents in")
+    assert "use no network" not in reading
+    assert ("Import and reading make no request over the network of "
+            "their own") in reading
+    assert "by then it has made one report to Windows' diagnostic data" \
+        in reading
+    assert "\"A library's usage reports\", under \"How your data flows\"" \
+        in reading
+
+
+def test_the_changelog_names_the_windows_report_among_known_limits():
+    """For the release notes' known limits (ruling 96)."""
+    text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    unreleased = text[text.index("## [Unreleased]"):
+                      text.index("\n## [", text.index("## [Unreleased]") + 1)]
+    start = unreleased.index("\n### Known limits\n")
+    limits = " ".join(unreleased[start:unreleased.index(
+        "\n### ", start + 1)].split())
+    assert ("**On Windows x64, a library Exegete installs for PDFs reports "
+            "its use to Windows' diagnostic data, once each time a PDF is "
+            "read.**") in limits
+    assert "you could read no PDFs through Exegete on Windows" in limits
+    # (the second round) 2 GB because PyMuPDF 2 can need more than 1 GB on
+    # Linux: CI measured 376 MiB with the reading process's settings
+    flat = " ".join(unreleased.split())
+    assert "PyMuPDF 2 needs more than the 1 GB" not in flat
+    assert ("given 2 GB of memory, since with PyMuPDF 2 it can need more "
+            "than 1 GB on Linux") in flat
+
+
+def test_contributing_says_exegetes_code_imports_onnxruntime():
+    """Since fix round 1 Exegete's own code imports onnxruntime, in the
+    reading process alone, to switch its reports off."""
+    text = " ".join((REPO / "CONTRIBUTING.md").read_text(
+        encoding="utf-8").split())
+    assert "never by Exegete's own code" not in text
+    assert ("loaded only inside the reading process, never at Exegete's "
+            "start, where Exegete's own code imports onnxruntime only to "
+            "switch its usage reports off") in text
+
+
+def test_the_parity_script_switches_onnxruntimes_reports_off(tmp_path):
+    """Run by a contributor with PyMuPDF 2 outside CI, the script would
+    otherwise give onnxruntime a device id, an event store and its
+    uploader; a host's own value is not followed."""
+    probe = ("import importlib.util, os, sys; "
+             "spec = importlib.util.spec_from_file_location("
+             "'qualcoder_parity', sys.argv[1]); "
+             "module = importlib.util.module_from_spec(spec); "
+             "spec.loader.exec_module(module); "
+             "print(os.environ.get('ORT_DISABLE_TELEMETRY'))")
+    for host in (None, "0"):
+        env = {key: value for key, value in os.environ.items()
+               if key != "ORT_DISABLE_TELEMETRY"}
+        if host is not None:
+            env["ORT_DISABLE_TELEMETRY"] = host
+        done = subprocess.run(
+            [sys.executable, "-c", probe,
+             str(REPO / "scripts" / "qualcoder_parity.py")],
+            env=env, cwd=tmp_path, capture_output=True, text=True,
+            timeout=120)
+        assert done.returncode == 0, done.stderr
+        assert done.stdout.strip() == "1"
 
 
 def _onnxruntime_installed():

@@ -287,7 +287,12 @@ def _tools(mode="full"):
 # import gives the assistant says that one line of a file not saved as
 # UTF-8 is shown, as each character set reads it. That takes 79
 # characters, and the limit is raised by that and no more: 40,728.
-README_LIMIT = 40_728
+# v0.15.1, PyMuPDF 2 with its runtime (the owner's ruling 96 of 22
+# October 2026): "For advanced users" says that Exegete has no telemetry
+# of its own, and that on Windows x64 a library it installs for PDFs
+# reports its use, with a pointer to PRIVACY.md. That takes 111
+# characters, and the limit is raised by that and no more: 40,839.
+README_LIMIT = 40_839
 
 
 def test_the_readme_stays_short():
@@ -796,9 +801,15 @@ def test_the_advanced_section_rests_on_the_code():
     # v0.14.2, the README's first round of checks: read alone, "no online
     # service and no telemetry" let an IT reader think the data stays on
     # the computer
+    # v0.15.1, PyMuPDF 2 with its runtime (ruling 96): no telemetry of
+    # Exegete's own, but on Windows x64 onnxruntime, which PyMuPDF 2
+    # loads, reports once for each PDF read
     for words in ("in Python 3.10 or newer, with no online service and no "
-                  "telemetry; its one request of its own is the check for "
-                  "new versions (\"Updating\", above). What the assistant "
+                  "telemetry of its own (on Windows x64, a library it "
+                  "installs for PDFs reports its use: PRIVACY.md, \"How "
+                  "your data flows\"); its one request of its own is the "
+                  "check for new versions (\"Updating\", above). What the "
+                  "assistant "
                   "reads through it goes to "
                   "the maker of the AI behind it ([Where your data goes]"
                   "(https://github.com/nicotem/exegete#where-your-data-goes))",

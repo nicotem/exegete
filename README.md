@@ -185,7 +185,9 @@ match what you said; if not, say so.
 request for a file that says whether a newer version exists, with
 nothing from your projects: at most once a week, and when you ask,
 while checking is on, as it is in the Claude Desktop extension unless
-you switch it off ("Updating", below). What the assistant reads through it (passages,
+you switch it off ("Updating", below). On Windows x64, a library it
+installs for PDFs also reports its use, with nothing from your projects
+(PRIVACY.md, "How your data flows"). What the assistant reads through it (passages,
 codes, memos, names) goes to the maker of the AI behind your assistant:
 Anthropic for Claude's apps, OpenAI for ChatGPT's desktop app and
 Codex, no one with a local model. Text you paste or attach goes in

@@ -1237,7 +1237,10 @@ been checked since).
 Disconnect from the network and work. Model inference, chats, and all
 Exegete's operations are local (Exegete's check for new versions is off
 on this route, as Step 5's entry sets it; its log says so at every
-start); LM Studio states it needs the
+start; on Windows x64, a library Exegete installs for PDFs reports its
+use to Windows' diagnostic data, which working offline does not stop:
+[PRIVACY.md](PRIVACY.md), "How your data flows"); LM Studio states it
+needs the
 internet only for model search/downloads, runtime downloads, and update
 checks (<https://lmstudio.ai/docs/app/offline>). A note that you
 verified this yourself is good evidence for a data-management plan.
@@ -1250,7 +1253,9 @@ document or one code at a time, and verify codings as you go. Long
 transcripts should be worked in sections. Multi-step batch operations
 (recode across a project, cross-case reports) are not realistic
 targets for local models today. Nothing leaves your machine through
-Exegete while its check for new versions is off; the
+Exegete while its check for new versions is off (on Windows x64, a
+library it installs for PDFs reports its use to Windows, with nothing
+from your projects: [PRIVACY.md](PRIVACY.md), "How your data flows"); the
 trade-off is that you supervise more, and until an evaluation exists,
 treat every result as needing review.
 

@@ -292,7 +292,11 @@ def _tools(mode="full"):
 # of its own, and that on Windows x64 a library it installs for PDFs
 # reports its use, with a pointer to PRIVACY.md. That takes 111
 # characters, and the limit is raised by that and no more: 40,839.
-README_LIMIT = 40_839
+# The words round after the privacy reader's check (ruling 97): "In
+# short" says that on Windows x64 that library reports its use, with
+# nothing from the projects, pointing to PRIVACY.md. That takes 138
+# characters, and the limit is raised by that and no more: 40,977.
+README_LIMIT = 40_977
 
 
 def test_the_readme_stays_short():

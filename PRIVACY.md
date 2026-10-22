@@ -18,10 +18,11 @@ process started by your MCP client (Claude Desktop, Claude Code, or any
 other). It adds **no telemetry, no analytics, and no separate cloud
 path** of its own. One library it installs to read PDFs on Windows x64
 and Linux reports on its own use to Microsoft unless it is switched
-off: Exegete switches it off entirely on Linux, but on Windows one
-report still goes to Windows' diagnostic data each time a PDF is read
-("A library's usage reports", below, says what it holds, and what you
-can do). It opens your project's database read-only
+off: Exegete switches it off entirely on Linux, but on Windows a few
+reports still go to Windows' diagnostic data each time a PDF is read,
+with nothing from your documents ("A library's usage reports", below,
+says what they hold, and what you can do). It opens your project's
+database read-only
 by default. The one thing it fetches from the internet itself, while
 switched on, is a small public file that says whether a newer version
 of Exegete exists, and it sends nothing from your projects to get it
@@ -86,9 +87,10 @@ this document protect three other things, each with its own readers:
 
 Where a rule below serves one of these three, it says which.
 
-**A library's usage reports (what stays on the computer, and who else
-reads it).** Where PDFs are read with PyMuPDF 2 (Windows x64 and Linux,
-with Python 3.11 to 3.14, the desktop extension's Python among them;
+**A library's usage reports (what Microsoft can learn about the library
+being used on this computer, with no participant data).** Where PDFs
+are read with PyMuPDF 2 (Windows x64 and Linux, with Python 3.11 to
+3.14, the desktop extension's Python among them;
 INSTALL.md), PyMuPDF loads onnxruntime, Microsoft's library for running
 trained models. onnxruntime reports on its own use to Microsoft unless
 it is switched off. Its reports hold facts about the computer and the
@@ -105,24 +107,28 @@ committee or a data protection officer may want to know of them:
   same way.
 - **On Windows**, onnxruntime does not read that setting: it reports
   through Windows' own diagnostic data, and its switch can be reached
-  only once it has loaded, by which time it has made one report. So
+  only once it has loaded, by which time it has made a few reports. So
   **each time a PDF is read** (an import's preview reads each PDF once,
   in a process of its own, and the import reads it again only when the
-  preview's text cannot be used), one report goes to Windows'
+  preview's text cannot be used), a few reports go to Windows'
   diagnostic data: onnxruntime's release, the processor's model, the
   number of processors, the memory, whether a debugger is attached, how
   onnxruntime was built, and the names of any Windows services that
-  process runs. Windows sends it to Microsoft, or keeps it back, as the
-  computer's diagnostic data setting says (in Windows' Settings, under
+  process runs; the names and driver versions of the computer's
+  graphics adapters and of any NPU (a processor for AI models); and
+  that onnxruntime registered its processor part, with any error.
+  Windows adds its own identifiers to what it sends, and sends the
+  reports to Microsoft, or keeps them back, as the computer's
+  diagnostic data setting says (in Windows' Settings, under
   "Diagnostics & feedback"). Exegete then switches off every later
   report in that process.
 
 What the switch cannot promise:
 
-- The account of Windows above comes from onnxruntime's source code,
-  for the release Exegete's installs use (1.31.0). It has not been
+- The account of Windows above comes from onnxruntime's source code
+  and the Windows package Exegete installs (1.31.0). It has not been
   watched on a Windows computer, and which of Windows' settings keeps
-  the report back has not been checked. On Linux and on a Mac, readings
+  the reports back has not been checked. On Linux and on a Mac, readings
   given a home folder of their own were checked to keep nothing there.
 - A program that starts or changes its listening to onnxruntime's
   events through Windows' event tracing while a PDF is read, Windows'
@@ -399,7 +405,10 @@ page) and `has_more` are computed here on every page.
 What leaves your machine through Exegete: **only what tools return
 into the conversation**, and, while checking for new versions is on,
 one request for a public file that carries nothing from your projects
-("Checking for new versions"). For qualitative research, what tools
+("Checking for new versions"); on Windows x64, a library Exegete
+installs for PDFs also reports its use to Windows, with nothing from
+your projects ("A library's usage reports", above). For qualitative
+research, what tools
 return can be the most sensitive content you hold. An assistant that
 opens files by itself can send more, outside Exegete: the next section says which
 do.
@@ -1333,12 +1342,15 @@ models, whose usage reports to Microsoft are on by default; Exegete
 switches them off in the reading process. On Linux they are off before
 onnxruntime starts, so it keeps nothing on the computer and sends
 nothing. On Windows, its switch can be reached only once it has loaded:
-by then it has made one report to Windows' diagnostic data, about the
-computer and onnxruntime and with nothing from your documents, which
-Windows passes to Microsoft or not as the computer's diagnostic data
-setting says; every later report is switched off ("A library's usage
-reports", under "How your data flows", says what the report holds, the
-switch's limits, and what you can do). A document converted with
+by then it has made a few reports to Windows' diagnostic data, about
+the computer (the names and driver versions of its graphics adapters
+and of any NPU among them) and onnxruntime (that it registered its
+processor part, with any error), with nothing from your documents;
+Windows adds its own identifiers to what it sends, and passes the
+reports to Microsoft or not as the computer's diagnostic data setting
+says; every later report is switched off ("A library's usage reports",
+under "How your data flows", says what the reports hold, the switch's
+limits, and what you can do). A document converted with
 another tool, such as a pandoc server, should be converted file to
 file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).
@@ -1699,11 +1711,14 @@ account, set up as that section says.
 The rung where the third-party-processor question disappears: model
 inference and every operation of Exegete happen on your machine,
 provided its check for new versions stays off, as it is on this route
-unless you switch it on ("Checking for new versions", below). LM
-Studio's documentation states (quoted 2026-08-17,
-<https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
-entirely offline" and that "Nothing you enter into LM Studio when
-chatting with LLMs leaves your device". That is the vendor's statement,
+unless you switch it on ("Checking for new versions", below), though
+on Windows x64 a library it installs for PDFs reports its use to
+Windows, with nothing from your projects ("A library's usage reports",
+under "How your data flows"). LM Studio's documentation states
+(quoted 2026-08-17, <https://lmstudio.ai/docs/app/offline>) that LM
+Studio "can operate entirely offline" and that "Nothing you enter into
+LM Studio when chatting with LLMs leaves your device". That is the
+vendor's statement,
 not our certification: verify offline operation yourself (disconnect
 and work), check that the host's entry sets `EXEGETE_UPDATE_CHECK` to
 `off` (Exegete's log says at each start whether checking is on), and

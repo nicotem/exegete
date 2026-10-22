@@ -230,11 +230,12 @@ def _onnxruntime_reports_off() -> None:
     (env_settings.READER_SETTINGS) stops them all on Linux and macOS. On
     Windows they go through the system's event tracing, which reads no
     setting: onnxruntime's own switch, called here once it has loaded and
-    before PyMuPDF starts its models, stops every report after the one it
-    writes as it loads, which nothing in Python can reach (PRIVACY.md
-    says so). Under PyMuPDF 1.x, or where onnxruntime is not installed,
-    nothing is loaded; if it cannot load, PyMuPDF reads without it, as
-    before."""
+    before PyMuPDF starts its models, stops every report after the few it
+    writes as it loads (the process; the graphics adapters' and any NPU's
+    drivers; the registration of its processor part, with any error),
+    which nothing in Python can reach (PRIVACY.md says so). Under
+    PyMuPDF 1.x, or where onnxruntime is not installed, nothing is
+    loaded; if it cannot load, PyMuPDF reads without it, as before."""
     if not _pymupdf_loads_onnxruntime():
         return
     try:

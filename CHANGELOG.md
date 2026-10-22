@@ -225,10 +225,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   reports to Microsoft, on by default, are switched off in the reading
   process (`ORT_DISABLE_TELEMETRY`, and onnxruntime's own switch): on
   Linux entirely; on Windows, where that switch can be reached only
-  once onnxruntime has loaded, all but the one report it makes as it
-  loads, which holds facts about the computer and nothing from your
-  documents (PRIVACY.md, "How your data flows", says what it holds and
-  what you can do; "Known limits", below). The cost on those
+  once onnxruntime has loaded, all but the few reports it makes as it
+  loads, which hold facts about the computer, its graphics adapters and
+  onnxruntime, and nothing from your documents (PRIVACY.md, "How your
+  data flows", says what they hold and what you can do; "Known limits",
+  below). The cost on those
   computers: about 75 to 90 MB more to download and 150 to 190 MB more
   on disk in the extension, and 0.4 to 1 second more to start each
   PDF's reading. INSTALL.md names the computers where pip cannot install
@@ -626,21 +627,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Known limits
 
-- **On Windows x64, a library Exegete installs for PDFs reports its
-  use to Windows' diagnostic data, once each time a PDF is read.**
-  PyMuPDF 2 loads onnxruntime, Microsoft's library for running trained
-  models, whose usage reports are on by default. Exegete switches them
-  off in the process that reads a document: on Linux before onnxruntime
-  loads, so nothing is kept or sent; on Windows only once it has
-  loaded, by which time it has made one report (its release, the
-  processor, the memory and a few facts about the process, nothing from
-  your documents), which Windows sends to Microsoft or keeps back as the
-  computer's diagnostic data setting says. That account of Windows comes
-  from onnxruntime's source code and has not been watched on a Windows
-  computer. If it matters for your study, you could read no PDFs
-  through Exegete on Windows (PRIVACY.md, "How your data flows", says
-  more). On a Mac, and for every other kind of document, onnxruntime is
-  not loaded.
+- **On Windows x64, a library Exegete installs for PDFs makes a few
+  reports of its use to Windows' diagnostic data each time a PDF is
+  read.** PyMuPDF 2 loads onnxruntime, Microsoft's library for running
+  trained models, whose usage reports are on by default. Exegete
+  switches them off in the process that reads a document: on Linux
+  before onnxruntime loads, so nothing is kept or sent; on Windows only
+  once it has loaded, by which time it has made a few reports (its
+  release, the processor, the memory and some facts about the process;
+  the names and driver versions of the computer's graphics adapters and
+  of any NPU; that it registered its processor part, with any error;
+  nothing from your documents), which Windows sends to Microsoft with
+  its own identifiers added, or keeps back, as the computer's
+  diagnostic data setting says. That account of Windows comes from
+  onnxruntime's source code and the Windows package Exegete installs
+  (1.31.0), and has not been watched on a Windows computer. If it
+  matters for your study, you could read no PDFs through Exegete on
+  Windows (PRIVACY.md, "How your data flows", says more). On a Mac, and
+  for every other kind of document, onnxruntime is not loaded.
 
 ### For contributors
 

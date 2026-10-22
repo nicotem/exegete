@@ -380,18 +380,29 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     """The owner's ruling 96 (22 October 2026): Exegete has no telemetry
     of its own; PRIVACY names onnxruntime's reports where it says what
     stays on the computer and who else reads it: on Linux switched off
-    before it loads, nothing kept; on Windows one report to Windows'
+    before it loads, nothing kept; on Windows a few reports to Windows'
     diagnostic data each time a PDF is read, under the computer's
-    setting; the switch's limits; what a researcher can do."""
+    setting; the switch's limits; what a researcher can do. The words
+    round after the privacy reader's check (ruling 97): onnxruntime
+    1.31.0 writes ProcessInfo, then RegisterEpLibraryStart, a DriverInfo
+    event for the graphics adapters and one for any NPU, and
+    RegisterEpLibraryEnd before its switch can be reached (environment.cc
+    397 to 403, windows/device_discovery.cc 119 to 330, windows/telemetry.cc
+    757 to 773 and 927 to 968); the part is the second question, what
+    Microsoft can learn about the library's use, with no participant
+    data; and the four passages that say nothing else leaves point to
+    it."""
     flows = _flat_section("PRIVACY.md", "## How your data flows")
     assert ("no telemetry, no analytics, and no separate cloud path** of "
             "its own. One library it installs to read PDFs on Windows x64 "
             "and Linux reports on its own use to Microsoft unless it is "
             "switched off") in flows
-    assert ("on Windows one report still goes to Windows' diagnostic data "
-            "each time a PDF is read") in flows
-    start =flows.index("**A library's usage reports (what stays on the "
-                        "computer, and who else reads it).**")
+    assert ("on Windows a few reports still go to Windows' diagnostic data "
+            "each time a PDF is read, with nothing from your documents") \
+        in flows
+    start = flows.index("**A library's usage reports (what Microsoft can "
+                        "learn about the library being used on this "
+                        "computer, with no participant data).**")
     part = flows[start:flows.index("An assistant that opens files by "
                                    "itself", start)]
     for fact in (
@@ -399,8 +410,14 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
             "document, before onnxruntime loads",
             "`ORT_DISABLE_TELEMETRY`), so nothing is kept and nothing is "
             "sent",
-            "by which time it has made one report",
+            "by which time it has made a few reports",
             "**each time a PDF is read**",
+            "the names and driver versions of the computer's graphics "
+            "adapters and of any NPU",
+            "that onnxruntime registered its processor part, with any error",
+            "Windows adds its own identifiers to what it sends",
+            "comes from onnxruntime's source code and the Windows package "
+            "Exegete installs (1.31.0)",
             "never anything from your documents or projects",
             "as the computer's diagnostic data setting says",
             "Exegete then switches off every later report in that process",
@@ -415,8 +432,24 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     assert "use no network" not in reading
     assert ("Import and reading make no request over the network of "
             "their own") in reading
-    assert "by then it has made one report to Windows' diagnostic data" \
-        in reading
+    assert ("by then it has made a few reports to Windows' diagnostic "
+            "data") in reading
+    assert "graphics adapters and of any NPU among them" in reading
+    assert "Windows adds its own identifiers to what it sends" in reading
+    # the passages that say what else leaves the computer point to the part
+    pointer = "a library Exegete installs for PDFs also reports its use"
+    assert pointer in " ".join(flows.split())
+    governance = _flat_section("PRIVACY.md", "## Your governance options")
+    assert ("though on Windows x64 a library it installs for PDFs reports "
+            "its use to Windows") in governance
+    install = " ".join((REPO / "INSTALL.md").read_text(
+        encoding="utf-8").split())
+    assert install.count("library it installs for PDFs reports its use") \
+        + install.count("library Exegete installs for PDFs reports its use") \
+        == 2
+    readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
+    assert ("On Windows x64, a library it installs for PDFs also reports its "
+            "use, with nothing from your projects") in readme
     assert "\"A library's usage reports\", under \"How your data flows\"" \
         in reading
 
@@ -429,10 +462,15 @@ def test_the_changelog_names_the_windows_report_among_known_limits():
     start = unreleased.index("\n### Known limits\n")
     limits = " ".join(unreleased[start:unreleased.index(
         "\n### ", start + 1)].split())
-    assert ("**On Windows x64, a library Exegete installs for PDFs reports "
-            "its use to Windows' diagnostic data, once each time a PDF is "
-            "read.**") in limits
+    assert ("**On Windows x64, a library Exegete installs for PDFs makes a "
+            "few reports of its use to Windows' diagnostic data each time a "
+            "PDF is read.**") in limits
+    assert ("the names and driver versions of the computer's graphics "
+            "adapters and of any NPU") in limits
+    assert ("onnxruntime's source code and the Windows package Exegete "
+            "installs (1.31.0)") in limits
     assert "you could read no PDFs through Exegete on Windows" in limits
+    assert 'PRIVACY.md, "How your data flows", says more' in limits
     # (the second round) 2 GB because PyMuPDF 2 can need more than 1 GB on
     # Linux: CI measured 376 MiB with the reading process's settings
     flat = " ".join(unreleased.split())

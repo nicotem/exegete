@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.15.1-alpha.1] - 2026-10-23
+
+A patch release made the same day as 0.15.1-alpha, for two things a
+researcher meets first: the desktop extension's settings page, and the
+README's opening.
+
+### Upgrading from 0.15.1-alpha
+
+Coming from 0.15.0, read "Upgrading from 0.15.0", under 0.15.1-alpha
+below, as well.
+
+- **What was typed in the two text boxes the settings page no longer
+  has is no longer used.** In the desktop extension, the switches
+  "Limit Exegete to its small tool set" and "I use QualCoder on this
+  computer" decide. If "Tool set" said `core`, switch on "Limit Exegete
+  to its small tool set".
+- **Nothing else changes.** Your projects, their backups, the tools and
+  the other settings are as they were in 0.15.1-alpha.
+
 ### Changed
 
 - The desktop extension's settings no longer include the text boxes
@@ -19,6 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   does and its default, and the page says once, in its first setting,
   that settings take effect after Claude Desktop is quit and opened
   again.
+- The README's opening says what Exegete is and how you work with it,
+  without presuming a kind of data, and that your project is kept in
+  QualCoder's format, so it can also be opened in QualCoder; the
+  sentence that placed QualCoder beside NVivo, ATLAS.ti and MAXQDA is
+  gone, and QUICKSTART.md and the extension's long description keep a
+  shorter gloss of the name, "QualCoder is free software for
+  qualitative analysis".
 
 ## [0.15.1-alpha] - 2026-10-23
 

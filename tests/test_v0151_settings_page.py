@@ -130,7 +130,8 @@ def test_the_terminal_route_still_gives_both(monkeypatch):
 
 def test_the_changelog_says_it():
     text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
-    start = text.index("## [Unreleased]")
+    # 0.15.1-alpha.1's entry, released the same day as 0.15.1-alpha
+    start = text.index("## [0.15.1-alpha.1]")
     unreleased = " ".join(text[start:text.index("\n## [", start)].split())
     changed = unreleased[unreleased.index("### Changed"):]
     for title in GONE.values():

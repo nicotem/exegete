@@ -13,7 +13,7 @@ same character rule as everything else this server echoes.
 """
 
 # pyproject.toml's version, as written there
-VERSION = "0.15.1-alpha"
+VERSION = "0.15.1-alpha.1"
 # The release date, as the CHANGELOG heading gives it (set again on the
 # day if the release moves: the CHANGELOG heading, CITATION.cff and the
 # update site's two files hold the same date)

@@ -98,9 +98,10 @@ class TestTheIntroduction:
         # one paragraph that leads with them. The README's third round
         # (with the owner's decisions of 1 October 2026): the newcomer
         # check's shorter form, every decided fact kept; compatibility is
-        # the tagline's and the lede's ("your project stays one that
-        # QualCoder opens"), and one program at a time is said where the
-        # reader acts on it ("A first session")
+        # the tagline's and the lede's (since the owner's word of 23
+        # October 2026, "Your project is kept in QualCoder's format, so it
+        # can also be opened in QualCoder"), and one program at a time is
+        # said where the reader acts on it ("A first session")
         # v0.14.2, how Exegete describes itself (the owner's ruling of 7
         # October 2026): what you do in it first, then that it is built to
         # stay interoperable with QualCoder; "not an add-on or a remote
@@ -116,7 +117,8 @@ class TestTheIntroduction:
                 "do not need QualCoder to start, or running while you work, "
                 "though a few things are not in Exegete yet (listed "
                 "below).") in opening
-        assert "your project stays one that QualCoder opens." in opening
+        assert ("Your project is kept in QualCoder's format, so it can "
+                "also be opened in [QualCoder](") in opening
         assert "**One program at a time.**" in _flat("README.md")
         # Not "at any time": one program at a time, as "A first session"
         # says further down. (v0.14.2: the technical paragraph now sits
@@ -146,8 +148,8 @@ class TestTheIntroduction:
             assert request in can_do, request
         assert ("Whether a code fits the words, and what a coding means, "
                 "stays your judgement.") in can_do
-        assert ("Your AI assistant reads, searches and suggests; you "
-                "decide.") in opening
+        assert ("You ask in your own words; the assistant reads, searches "
+                "and suggests; you decide.") in opening
         # Independence, and not a remote control. v0.14.2: "What it is
         # not" is split: the rest sits beside the compatibility
         # commitment, and the opening keeps "independently of QualCoder's

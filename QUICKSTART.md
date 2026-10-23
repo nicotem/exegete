@@ -7,10 +7,9 @@ Claude Desktop instead:
 This guide will get you up and running with Exegete (formerly
 qualcoder-mcp), a qualitative analysis application you use in
 conversation with an AI assistant, compatible with QualCoder, in 10
-minutes. QualCoder is free software for qualitative analysis, of the
-same kind as NVivo, ATLAS.ti and MAXQDA. This guide sets Exegete up by
-hand, in Claude Desktop's settings file; README's one-click extension
-is the easier start.
+minutes. QualCoder is free software for qualitative analysis. This
+guide sets Exegete up by hand, in Claude Desktop's settings file;
+README's one-click extension is the easier start.
 
 ## Prerequisites Checklist
 

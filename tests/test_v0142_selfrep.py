@@ -685,8 +685,11 @@ class TestQualCoderIsOptional:
         quick = _flat((REPO / "QUICKSTART.md").read_text(encoding="utf-8"))
         assert "- [ ] A project to work on (a `.qda` folder, in QualCoder's " \
                "format)" in quick
-        assert ("QualCoder is free software for qualitative analysis, of "
-                "the same kind as NVivo, ATLAS.ti and MAXQDA.") in quick
+        # the name glossed where it is first used, without the comparison
+        # with NVivo, ATLAS.ti and MAXQDA (the owner's word of 23 October
+        # 2026: QualCoder is not the frame)
+        assert ("compatible with QualCoder, in 10 minutes. QualCoder is "
+                "free software for qualitative analysis. This guide") in quick
 
     def test_the_rule_for_coding_agents(self):
         claude = _flat((REPO / "CLAUDE.md").read_text(encoding="utf-8"))

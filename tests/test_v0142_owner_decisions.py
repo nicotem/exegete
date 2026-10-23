@@ -21,8 +21,9 @@ Pinned here:
 - Cowork's reach in PRIVACY.md, with all three conditions;
 - Exegete as free, open-source software, with the licence the package
   declares;
-- one neutral sentence placing QualCoder beside NVivo, ATLAS.ti and
-  MAXQDA;
+- one neutral sentence placing QualCoder, with its link (since the
+  owner's word of 23 October 2026, on its format, without the
+  comparison with NVivo, ATLAS.ti and MAXQDA);
 - what using it costs, dated, with the makers' pages linked, the
   weekly limits and the ways past a limit, no more than OpenAI's page
   says of its Free and Go plans, and no claim that a free plan is
@@ -475,9 +476,13 @@ def test_the_readme_says_free_open_source_and_names_the_licence():
     assert f"(`{licence}`), QualCoder's own licence" in _flat("README.md")
 
 
-QUALCODER = ("[QualCoder](https://github.com/ccbogel/QualCoder) is free "
-             "software for qualitative analysis, of the same kind as NVivo, "
-             "ATLAS.ti and MAXQDA.")
+# The owner's word of 23 October 2026: the README's opening no longer
+# makes QualCoder the frame. The sentence that placed QualCoder beside
+# NVivo, ATLAS.ti and MAXQDA gave way to one on the project's format,
+# which keeps the link; QUICKSTART.md and the extension's description
+# keep a shorter gloss of the name, without the comparison.
+QUALCODER = ("Your project is kept in QualCoder's format, so it can also "
+             "be opened in [QualCoder](https://github.com/ccbogel/QualCoder).")
 
 
 def test_one_neutral_sentence_places_qualcoder():
@@ -488,8 +493,10 @@ def test_one_neutral_sentence_places_qualcoder():
     # neutral: no comparison of worth
     for word in ("better", "unlike", "cheaper", "instead of", "alternative"):
         assert word not in QUALCODER.lower(), word
-    # said once
-    assert _flat("README.md").count("of the same kind as NVivo") == 1
+    # the comparison is gone, from the README and the texts that repeated it
+    for name in ("README.md", "QUICKSTART.md",
+                 "packaging/desktop-extension/manifest.in.json"):
+        assert "of the same kind as NVivo" not in _flat(name), name
 
 
 # ---------------------------------------------------------------------------

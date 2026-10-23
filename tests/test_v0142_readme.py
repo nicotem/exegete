@@ -74,10 +74,13 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
     opening = _between(_readme(), "# Exegete", "## What you can do")
     for words in (
             # the benefit, in the reader's terms, before any feature name
-            "Analyse your interviews by asking, in your own words. Your AI "
-            "assistant reads, searches and suggests; you decide. Every "
-            "suggested coding quotes the text word for word and waits for "
-            "your approval",
+            # (the owner's word of 23 October 2026: what Exegete is, with
+            # no kind of data presumed and QualCoder not the frame)
+            "Exegete is a qualitative analysis application you use in "
+            "conversation with an AI assistant. You ask in your own words; "
+            "the assistant reads, searches and suggests; you decide. Every "
+            "suggested coding quotes the text word for word and is written "
+            "only when you approve it.",
             # the example, labelled for what it is
             "*An illustration, shortened, with made-up practice text; your "
             "assistant's words will differ.*",
@@ -101,7 +104,8 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
             "not email; never put participant data in an issue."):
         assert words in opening, words
     # no tool, protocol or feature name before the benefit sentence
-    lede = opening[:opening.index("Analyse your interviews")]
+    lede = opening[:opening.index("Exegete is a qualitative analysis "
+                                  "application you use")]
     for word in ("MCP", "tool", "server", "`"):
         assert word not in lede.replace("shields.io", ""), word
     # the example comes before the next steps, and they are three, one for

@@ -482,7 +482,7 @@ them, with where each comes from.
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
 directions. QualCoder 3.8.2 and 4.0 as checked on 10 October 2026,
-beside Exegete 0.15.0:
+beside Exegete 0.15.1:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
@@ -646,10 +646,6 @@ github.com/nicotem/exegete
 
 Plans, not promises: the order may change with what testers report.
 
-- v0.15.1, the safety net, first part: a backup before every change,
-  taken by Exegete itself; old tools marked as going are retired
-  (TOOLS.md names each), except the REFI-QDA export, which stays and is
-  to be fixed; two settings become switches
 - v0.15.2, the safety net, second part: undo a session's changes; when
   replacing names, choose which mentions to keep; coding sessions kept
   with their project

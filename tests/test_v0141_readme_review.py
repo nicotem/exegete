@@ -222,7 +222,7 @@ def test_the_three_commitments():
     # v0.15.0, the release review: QualCoder's column as checked, beside
     # the Exegete the column now describes
     dated = section.index("QualCoder 3.8.2 and 4.0 as checked on 10 "
-                          "October 2026, beside Exegete 0.15.0:")
+                          "October 2026, beside Exegete 0.15.1:")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table

@@ -693,7 +693,11 @@ AI provider in full ("Assistants that open files by themselves",
 above). Filling a file in while no such assistant is working protects
 that moment only: afterwards the file stays in the project's folder,
 as `pseudonyms.json` and the originals do, and in every backup and copy
-of the project, where such an assistant can read it at any time.
+of the project, where such an assistant can read it at any time. A
+backup cut short (Exegete's process ended during the copy) stays
+beside the project under a hidden name, with whatever it had copied,
+the names file and `pseudonyms.json` among them, until the next backup
+of the project removes it once it is an hour old.
 
 Some ways narrow that reach, though none closes it. You could keep the
 project in a folder no assistant with its own file access is given. How
@@ -1472,7 +1476,7 @@ Two further rules touch files on your disk:
   the name of a skipped symlink is withheld where a reader of it would
   see a name from the mapping, the count kept; and the log line that
   reports a skipped symlink carries the count and the reason, never the
-  path, because MCP hosts keep the server's log on disk. The withheld
+  path, because MCP hosts keep Exegete's log on disk. The withheld
   name protects the key, the log line what stays on the computer ("How
   your data flows").
 - **Process listing.** To warn when a QualCoder 4.0 window appears to

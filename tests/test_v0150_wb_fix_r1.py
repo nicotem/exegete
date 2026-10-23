@@ -141,11 +141,9 @@ class TestTheRemovalsInV0151:
         nxt = readme[readme.index("## What comes next"):]
         nxt = nxt[:nxt.index("## ", 5)]
         items = {item.split(",")[0]: item for item in nxt.split(" - ")[1:]}
-        assert list(items)[:3] == ["v0.15.1", "v0.15.2", "v0.15.3"]
-        assert "a backup before every change, taken by Exegete itself" \
-            in items["v0.15.1"]
-        assert "the REFI-QDA export, which stays" in items["v0.15.1"]
-        assert "undo" not in items["v0.15.1"]
+        # v0.15.1's release preparation: its own item goes once it is
+        # released; what it brought is in the CHANGELOG's entry
+        assert list(items)[:3] == ["v0.15.2", "v0.15.3", "v0.16"]
         assert "undo a session's changes" in items["v0.15.2"]
         assert "choose which mentions to keep" in items["v0.15.2"]
         assert "method" in items["v0.15.3"]

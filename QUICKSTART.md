@@ -217,7 +217,7 @@ and EPUB), and open the client again; new tools only
 appear after the restart. Confirm the installed version with `venv/bin/python -m
 exegete.server --version`, which prints the version and exits
 (`venv/bin/pip show exegete` still works and spells
-`0.15.0-alpha` as `0.15.0a0`). Updates never touch your projects or
+`0.15.1-alpha` as `0.15.1a0`). Updates never touch your projects or
 backups (the server is code-only).
 
 ## Troubleshooting

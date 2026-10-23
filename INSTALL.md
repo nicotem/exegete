@@ -1484,7 +1484,10 @@ whole file unreadable. Add the lines it lacks to the entry that is
 there instead. An entry written from the steps before 0.15.0 may end
 with two more lines, `[mcp_servers.exegete.tools.read_pseudonym_list]`
 and `approval_mode = "prompt"` under it: that tool was removed in
-0.15.0, so you can delete both lines.
+0.15.0, so you can delete both lines. A table of the same kind that you
+added for one of the three tools removed in 0.15.1 (the CHANGELOG's
+"Upgrading from 0.15.0" names them) can be deleted in the same way,
+with the lines under it.
 
 **Other ways to add it.** The desktop app has a settings screen for
 this (Settings, MCP servers, Add server: the name `exegete`, STDIO, and
@@ -2133,7 +2136,7 @@ for PDF and EPUB: to be sure of keeping it, write
 it fetched first, until the command names a version or uv's cache is
 cleared. To update, quit the client, change `exegete` (or the earlier
 name, qualcoder-mcp) in that entry to `exegete@` and the newest version
-as PyPI spells it (for example `exegete@0.15.0a0`), and open the client
+as PyPI spells it (for example `exegete@0.15.1a0`), and open the client
 again: it fetches that version when it next starts, which needs the
 internet that once. With the check for new versions on, "How do I
 update Exegete?" gives this step with the version filled in. An entry
@@ -2182,7 +2185,7 @@ terminal:
 ```
 
 It prints `exegete` followed by the version and exits; version
-`0.15.0-alpha` shows as `0.15.0a0`, its normalised form. The server
+`0.15.1-alpha` shows as `0.15.1a0`, its normalised form. Exegete
 also reports its version to the host in the MCP handshake
 (`serverInfo.version`); whether the assistant can see and repeat it
 depends on the host, so asking Claude "what version is running?" is a

@@ -489,7 +489,7 @@ def test_the_label_check_would_notice():
     for kept in ("QualCoder 3.8.2 and the 4.0 beta", "QualCoder 4.0's format",
                  "Checked on 1 October 2026, Exegete 0.14.2 against "
                  "QualCoder 3.8.2", "QualCoder 3.8.2 and 4.0 as checked on "
-                 "10 October 2026, beside Exegete 0.15.0:",
+                 "10 October 2026, beside Exegete 0.15.1:",
                  "a name that starts with `exegete-` and ends "
                  "in `.mcpb`"):
         assert not _release_labels(kept), kept

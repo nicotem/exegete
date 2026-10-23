@@ -11,10 +11,51 @@ Nothing yet.
 
 ## [0.15.1-alpha] - 2026-10-26
 
+v0.15.1, the second of the v0.15 releases and the first part of the
+safety net. What a researcher notices first: Exegete itself takes one
+backup before every change to the project's database, at the last
+moment and whatever a call asks, and a change it refuses leaves no
+backup; backups leave out the audio and video folders, and a restore
+keeps the project's; a restore's preview says what it would bring back,
+and `restore_backup` is in the smaller tool set too; a plain text file
+not saved as UTF-8 can be read in the character set you choose, from
+one line shown as each set reads it; an import counts, by file, the
+places where a name from the names list may still show in a form the
+list does not replace; and two settings are switches in the desktop
+extension. The removals announced in 0.14 are made (three tools, four
+help topics and some arguments), except the REFI-QDA export, which
+stays, its known faults named. Less visible: the approval token's tag
+is now under its signature; Exegete's lock file is kept fresh for the
+whole of every write; a named pipe or a folder where a project keeps
+its lock file or SQLite's side files is refused rather than making a
+tool wait; and on Windows x64 and Linux, PDFs are read with PyMuPDF 2,
+which on Windows x64 makes a few reports of its use to Windows'
+diagnostic data ("Known limits", below).
+
+The maintainer decided the questions behind these on 20, 21 and 22
+October 2026. Undo, which was planned for this release, moves whole to
+v0.15.2, with choosing which mentions a pseudonymisation run changes,
+coding sessions kept with their project and the smaller fixes that
+touch data; method comes in v0.15.3. "Upgrading from 0.15.0" comes
+first: what changes for you, and what you may want to do; it was
+written from a comparison of what the two releases offer, made by a
+script (`scripts/compare_release_surface.py`). The account then follows
+what a researcher meets: the switches in the extension's settings, the
+tools and arguments removed, the REFI-QDA export, bringing documents
+in, PDFs, the backups, the restore, the approval token, the lock file
+and the project's files, the libraries the extension installs and the
+documents; then the known limits, a part for contributors, citing, and
+the measurements.
+
 ### Upgrading from 0.15.0
 
+Your projects are untouched, and the settings you chose stay as they
+were. After updating, quit your AI app and open it again, so that it
+loads the new tool list.
+
 - **`create_backup` no longer does anything.** Exegete takes one backup
-  before every change, whatever the argument says, so a call with
+  before every change to the project's database, whatever the argument
+  says, so a call with
   `create_backup=false` takes one as well. The 22 tools that take it
   still accept every value they accepted before, so that saved
   instructions keep working, until v0.15.3, the method release, removes
@@ -30,14 +71,38 @@ Nothing yet.
   is accepted in the same way and no longer adds `deprecated` to the
   answer. A script or a saved instruction that passes
   `create_backup=false` to save time or disk space now takes a backup at
-  each change: `prune_backups` removes old ones.
+  each change: `prune_backups` removes old ones. Two writes outside the
+  database take none, as before: `set_project_ai_coder_name` (the
+  project's `exegete.json`) and `prepare_names_list` (the names file).
+- **Backups leave out the audio and video folders, and a restore keeps
+  the project's.** A backup made by 0.15.1 holds no recordings;
+  `list_backups` marks each backup that does (`holds_audio_or_video`),
+  as one made by 0.15.0 or by QualCoder may. A recording the project no
+  longer has may be kept only in such an older backup, and pruning it
+  removes it: the preview of `prune_backups` counts such files
+  (`audio_video_files_only_here`), so you can copy them out first.
+  Restoring a backup made by 0.15.1 with Exegete 0.15.0 (two versions
+  on one computer, or after going back) leaves the project without its
+  audio and video folders; they are then only in the safety backup
+  0.15.0 takes first.
+- **A refused change leaves no backup**, so a refusal no longer adds a
+  backup to the list. A write whose backup SQLite cannot copy whole (a
+  damaged database) is now refused, with the reason, rather than
+  copying the database file as it is. A backup cut short because
+  Exegete's process ended during the copy is no longer listed, kept by
+  a prune or restored, and the next backup removes it once it is an
+  hour old.
 - **Two switches in the extension's settings**, "Use the small tool
   set, for local models" and "I use QualCoder on this computer", both
   off after the update. "Tool set" and "Do you also use QualCoder on
   this computer?" are still read, so nothing needs changing; but if
   "Tool set" says `core`, the smaller set stays with the new switch
-  off: to have every tool, set it to `full` as well. After changing a
-  setting, quit Claude Desktop and open it again.
+  off: to have every tool, set it to `full` as well. A switch can say
+  yes, never no: no is given only in the text setting. After changing a
+  setting, quit Claude Desktop and open it again. On the other routes
+  they are `EXEGETE_SMALL_TOOLSET` and `EXEGETE_I_USE_QUALCODER`; a
+  value Exegete does not recognise is read as off, and the log says so
+  once, naming the setting, never its value.
 - **Three tools removed, as announced in 0.14.** Instead of
   `export_code_report`, `get_coded_segments(code_id=...)` reads the same
   passages, page by page and without the limit of 1,000. Instead of
@@ -58,6 +123,9 @@ Nothing yet.
   the topics `analyze_for_coding`, `apply_codings`, `edit_suggestion` and
   `coding_style_guidance`, which repeated the tools' own descriptions;
   asked for one, it says so and lists the topics it has.
+  `start_coding_session`, which in 0.15.0 shared `analyze_for_coding`'s
+  topic, is now answered as any tool without one: its own description
+  documents it.
 - **Arguments removed, as announced in 0.14.** `delete_code` no longer
   takes `cascade`: the preview's token approves the whole branch, and
   its `execute_with` no longer carries it. `apply_codings` and
@@ -71,10 +139,16 @@ Nothing yet.
   checks arguments before sending them may refuse it in its own words.
   Your assistant app keeps its choices per tool, not per argument, so
   those still apply; a saved instruction, skill or script that passes
-  one of these arguments needs it taken out.
+  one of these arguments needs it taken out. A cursor from 0.15.0's
+  `search_files` is refused as invalid: search again. A rename's and a
+  text import's answers no longer carry `deprecated`, and deleting a
+  coding or a note that carries a private note no longer adds
+  `backup_note`.
 - **`search_memos` is in `core`.** `search_files` no longer searches
   notes, so `search_memos` joins `core`, the tool set for local models,
-  and the small set keeps a way to search them.
+  and the small set keeps a way to search them. `restore_backup` joins
+  it too, beside `list_backups`, so `core` now has 27 tools. A host that
+  asks before a tool's first use may ask for these two.
 - **Attributes on journal entries.** `create_attribute_type` with
   `applies_to` `journal`, and `set_attribute` with `target_type`
   `journal`, are refused, nothing written. Journal attributes already in
@@ -90,13 +164,212 @@ Nothing yet.
   only `snap_to_pseudonym`, the default; `qualcoder_edit_parity`, which
   deleted codings sitting on a name, is refused. Where a preview reports
   rows that would land on the same span, delete one row of each pair,
-  then preview again.
+  then preview again. A preview no longer warns of rows it would
+  delete, since it deletes none; its counts of deleted rows stay in the
+  answer, at zero.
 - **The REFI-QDA export stays.** `export_refi_qda` is no longer
   deprecated and is not removed: the maintainer means to fix it in a
   later release (his decision of 20 October 2026). Until then its
   description and its answers name its known faults, in the answer's
   `known_faults` field, where 0.15.0 had `deprecated`; a script or saved
   instruction that read `deprecated` should read `known_faults`.
+
+- **Approval tokens across the update.** Tokens now start `qcp2.`, and
+  their tag is under their signature. A preview made by 0.15.0 just
+  before the update gives a token (`qcp1.`) that 0.15.1 still accepts
+  for its hour, so the call copied from it can be run after the update,
+  with three exceptions, refused as changed or as carrying a removed
+  argument: a restore previewed with 0.15.0, a `delete_code` preview
+  for a code with sub-codes (its call carries the removed argument), and a
+  `save_names_list` preview (its signed state now holds a new count).
+  Preview again, and the new token works. A token made by 0.15.1 is not
+  accepted by 0.15.0, which matters only with two versions on one
+  computer, or after going back.
+- **The restore.** Its preview now says when the backup was taken, what
+  the project and the backup hold (counts, never a name) and what
+  happens to the names list; a names list saved, changed or removed
+  after the preview makes the token stale. The project's lock file is
+  held, and kept fresh, for the whole restore, so QualCoder 3.8.2 or
+  another conversation using Exegete finds the project in use until it
+  ends, unless a lock file already there was stale (below, "Known
+  limits").
+- **Exegete's lock file** is renewed every five seconds while a write
+  runs, so a long write no longer reads as a lock file left over. A
+  change is refused and rolled back if, just before it is saved,
+  another program's fresh lock file is found there; the answer names
+  the backup taken before it.
+- **Files where a project's lock file or SQLite's side files belong
+  must be ordinary files.** A named pipe, a socket, a device or a
+  folder at the lock file's name refuses every change to the project's
+  database, reads going on, until it is moved out of the project folder;
+  beside `data.qda` (and a link there too), the project, backup or copy
+  is refused, and a backup holding one is marked unclean. Such entries
+  arise only from a folder copied with a tool that keeps them.
+- **PDFs with PyMuPDF 2 on Windows x64 and Linux.** With Python 3.11 to
+  3.14 on Windows x64, and on Linux on x86-64 and Arm, the desktop
+  extension included, the optional part for PDF and EPUB brings PyMuPDF
+  2.0 and nine libraries it needs, about 75 to 90 MB more to download
+  and 150 to 190 MB more on disk. Every Mac keeps PyMuPDF 1.x for now
+  (1.28.2 in the extension), as do Windows on Arm, Linux on other
+  processors, Python 3.10, and Python 3.15 and later. On Windows x64,
+  onnxruntime, which PyMuPDF 2 loads, makes a few reports of its use to
+  Windows' diagnostic data each time a PDF is read, holding facts about
+  the computer and nothing from your documents (below, "Known limits";
+  PRIVACY.md, "How your data flows"). A PDF's reading is given 2 GB of
+  memory, and a PDF refused for memory names 2048 MB; every other kind
+  of file keeps 1 GB. Some PDFs may read differently from 1.x; the
+  documents already brought in are unchanged. On Windows x64, a recent
+  change to the project's chat history is no longer a sign that
+  QualCoder may have the project open when no QualCoder program is
+  found.
+- **Choosing a reading for a file not saved as UTF-8.** Such a plain
+  text file is still held back, and now the preview shows one line of
+  it as each character set that can read it reads it; `import_documents`
+  takes the new argument `character_sets` to name the one you pick.
+  These lines reach the AI provider, perhaps for a file never imported;
+  no line holding a name from the names list, or a form of one the
+  count below counts, is shown.
+- **The names the list misses, counted.** The import's preview and its
+  answer count, for each file, the places where a name from the list may
+  still show in a form the list does not replace (`listed_names_left`),
+  never naming one, and `save_names_list`'s preview names by line the
+  lines whose first name has no line of its own. Nothing the import
+  replaces changes.
+- **Installing.** The extension installs the lock's releases, listed in
+  each release's notes; certifi moves to 2026.10.19 for an advisory.
+  pydantic and anyio are now named among Exegete's requirements, and
+  lxml asks for a release below 7. An install or update from PyPI keeps
+  PDF and EPUB only with the optional part, `"exegete[pdf-epub]"`.
+- **The early plans and analyses moved** to `docs/history/` in the
+  repository, so a link to their old place breaks; NOTICE gives the two
+  new paths it cites.
+- **What moved to v0.15.2:** undoing what a session did, choosing which
+  mentions a pseudonymisation run changes, coding sessions kept with
+  their project (until then sessions gather in `~/.exegete/sessions`,
+  removed one at a time with `delete_coding_session`), and the smaller
+  fixes that touch data. Method is v0.15.3.
+- **The sizes.** Every request now sends 202,814 characters of tool
+  descriptions in `full` on Python 3.13 (3,810 fewer than 0.15.0) and
+  73,968 in `core` (5,710 more, with its two new tools); on Python 3.11,
+  213,182 and 77,764 ("Measured", below).
+
+### Two settings as switches in the extension
+
+- **"Use the small tool set, for local models"**, a switch on the
+  desktop extension's settings page, off by default. On, Exegete
+  registers `core`, the smaller set for local models, which cannot
+  create a project; off, "Tool set" decides, as before. If either asks
+  for the smaller set, it is used.
+- **"I use QualCoder on this computer"**, a switch beside it, off by
+  default. On, Exegete takes it that you use QualCoder here, and its
+  answers carry the notes that matter only if you also open your
+  projects in QualCoder; off, "Do you also use QualCoder on this
+  computer?" decides, as before. If either says yes, the answer is yes;
+  no can be given only in the text setting. Whatever either says,
+  Exegete still refuses to write while QualCoder 3.8.2 has a project
+  open, and still warns when it sees signs that QualCoder 4.0 may have
+  one open.
+- **The text settings stay**, with their keys, titles and defaults, so a
+  value saved in 0.15.0 keeps working, and the Terminal routes are
+  unchanged. The extension passes the switches as
+  `EXEGETE_SMALL_TOOLSET` and `EXEGETE_I_USE_QUALCODER`, which can also
+  be set by hand: `on`, `true` or `1`, in any letter case, is on;
+  `off`, `false`, `0`, unset or blank is off. Any other value is read as
+  off, and the log says so once at start, naming the setting and never
+  its value; it never stops Exegete.
+
+### Removed: three tools and four help topics, as announced in 0.14
+
+- **`export_code_report`**, which returned a report of one code with up
+  to 1,000 of its passages: `get_coded_segments(code_id=...)` reads the
+  same passages, page by page, with no such limit.
+- **`cleanup_old_sessions`**, which deleted the coding sessions of every
+  project on the computer older than a number of days, with no preview,
+  approved suggestions not yet applied included. `list_coding_sessions`
+  with a larger `days_old` lists the old sessions, and
+  `delete_coding_session` removes one at a time. Sessions now gather in
+  `~/.exegete/sessions` until they are removed that way.
+- **`merge_proposals`**, which combined two code proposals. To merge
+  two, reject one with `update_proposal_status`, then give the other its
+  own passages and the rejected one's together in `update_proposal`'s
+  `example_segments`, which replaces the list. A proposal merged before
+  stays merged: a coding session that holds one still loads and shows it
+  as merged, and it still cannot be changed, approved or created.
+- **Four help topics of `explain_ai_coding_tools`**:
+  `analyze_for_coding`, `apply_codings`, `edit_suggestion` and
+  `coding_style_guidance`, which repeated what the tools' own
+  descriptions say. Asked for one of them, it answers that the topic was
+  removed, with the topics it has, and no error; asked for
+  `start_coding_session`, it answers, as for any tool without a topic,
+  that the tool's description documents it.
+
+### Removed: arguments and behaviours, as announced in 0.14
+
+- **`delete_code`'s `cascade`.** Deleting a code with sub-codes deletes
+  its whole branch, as before, with the one approval of its preview: the
+  preview's token covers every code of the branch and their codings, so
+  a sub-code added or moved after the preview makes the token stale, and
+  the preview's `execute_with` no longer carries `cascade=true`. The
+  call copied from a preview made by 0.15.0 for a code with sub-codes
+  carries it and is refused; a new preview works.
+- **The `owner` argument of `apply_codings` and `import_text_file`**,
+  which could only repeat the project's AI coder name: every row Exegete
+  writes is stored under that name, which `set_project_ai_coder_name`
+  changes. The other checks before such a write are as before (no name
+  set yet, a settings file that cannot be read, the name in Exegete's
+  settings differing from the project's).
+- **`search_files`' `search_memo`**: `search_memos` searches file memos
+  and every other kind of note. `search_files`' answer no longer has
+  `searched_memo`, or `memo` in `matched_in`, and a cursor from 0.15.0
+  is refused as invalid, as after any change to the arguments it is
+  bound to.
+- A call that passes one of these arguments, with any value, is refused
+  like any argument the tool does not declare, nothing done, with a
+  sentence naming what replaces it, which the answer also gives under
+  `removed`.
+- **Attributes on journal entries**, which Exegete set but never read
+  back. `create_attribute_type` with `applies_to` `journal` and
+  `set_attribute` with `target_type` `journal` (in any letter case, with
+  spaces at the ends) answer that they were removed, as their first
+  check: nothing is written and no backup is taken. Journal attributes
+  already in a project stay as they are, and `list_attribute_types`
+  lists them as before.
+- **A rename back recognised from the project's backups.** `rename_file`
+  no longer reads the project's backups, Exegete's or QualCoder's, to see
+  whether a name or an ending was the file's before. A text with no
+  stored file no longer takes back a name its copy has in the project's
+  documents folder: that is refused like any name already there, and the
+  refusal names `restore_backup` (which undoes everything done after the
+  backup), or QualCoder's own Rename, if you use it. An ending change
+  QualCoder acts on is refused unless the name of the file's stored file
+  has that ending. A rename's answer no longer carries `deprecated`.
+- **`pseudonymise_source`'s overlap policy `qualcoder_edit_parity`**,
+  which deleted a coding that sat on a name and cut back one that met
+  it, and was not exact parity with QualCoder's editor. A call that
+  names it is answered that it was removed, before the mapping, the
+  file, a token or the project's lock is looked at: no token is issued
+  and nothing is written.
+  `snap_to_pseudonym`, the default, is the one policy left: a coding
+  that cut into a name grows to hold the whole pseudonym, and nothing is
+  deleted. A preview no longer warns of rows it would delete, since it
+  deletes none; its counts of deleted rows stay in the answer, at zero.
+  Where rows would land on the same span, the refusal now says to delete
+  one row of each pair, then preview again.
+
+### The REFI-QDA export is kept, its faults named
+
+- **`export_refi_qda` is no longer deprecated, and stays.** 0.14
+  announced its removal; the maintainer means to fix it in a later
+  release instead. Until then its description and every answer it
+  gives, its own refusals included, name its known faults: it files
+  every coding under the AI coder name, the researcher's own and a
+  hidden coder's included, so another program shows them as the AI's;
+  it leaves out cases, annotations, journals and media; and a session's
+  export includes every suggestion, rejected ones too, with nothing to
+  say which. The answer carries that sentence in the field
+  `known_faults`, where 0.15.0 had `deprecated`. A refusal Exegete
+  makes in the same way for every tool (no project selected, an
+  unexpected error) carries neither, as in 0.15.0.
 
 ### Added: choosing how a file not saved as UTF-8 is read
 
@@ -171,51 +444,15 @@ Nothing yet.
   from a preview made before the update is refused as changed; a new
   preview mends it.
 
-### Changed
+### PDFs with PyMuPDF 2, and files refused as damaged
 
-- **The approval token's tag is now under its signature.** The token a
-  two-step tool's preview gives (`preview_token`) carries a short tag
-  naming the operation it was made for; the signature did not cover
-  that tag, so a token whose tag had been altered still worked for its
-  own operation. It now covers it: a token with an altered tag is
-  refused as made for another operation, with nothing changed. Tokens
-  now start `qcp2.`. A token made by 0.15.0 or earlier (`qcp1.`) is
-  still accepted for its hour, so a preview made just before an update
-  can still be run after it, unless the project or the operation has
-  changed since (some operations are refused differently in this
-  release); then preview again. A pseudonymisation run records the tag
-  of the token that approved it, in either form, in its journal entry
-  and its run manifest. A token made by this release is not accepted
-  by 0.15.0, which answers that it is not a token Exegete issued: this
-  matters only when two versions of Exegete run on one computer, or
-  after going back to 0.15.0.
-- **Two libraries named, and a limit on lxml.** pydantic
-  (`>=2.11.0,<3`) and anyio (`>=4.5,<5`) are now among Exegete's
-  requirements, since Exegete imports both; the MCP library already
-  brought them, with the same floors. lxml, in the optional part
-  `pdf-epub`, now asks for a release below 7. An install from PyPI takes
-  the same releases as before; a new major release of one of these waits
-  for a release of Exegete that has been tried with it.
-- **Each release's notes list what the desktop extension installs**,
-  from this release: each library and its release, and the computers
-  that take it where they differ (cryptography; pywin32 on Windows;
-  PyMuPDF, and the libraries PyMuPDF 2 brings on Windows x64 and Linux),
-  so you can compare an install of your own with it. CI gives the table
-  for every commit, from the lock's dry run on six computers
-  (`scripts/extension_libraries.py`).
-- **The desktop extension installs certifi 2026.10.19**, the release
-  that fixes advisory GHSA-6q48-6c7w-9gw2 of 20 October 2026, in place
-  of 0.15.0's 2026.7.22 (certifi's list of trusted certificate
-  authorities held an emSign root under which eight intermediate
-  authorities' private keys were compromised); certifi comes with the
-  MCP library, through httpx, and no other library in the lock moves.
 - **PDFs are read with PyMuPDF 2 on Windows x64 and Linux.** With
-  Python 3.11 to 3.14 there (the desktop extension's Python, 3.13,
+  Python 3.11 to 3.14 there (on Linux, on x86-64 and Arm) (the desktop extension's Python, 3.13,
   among them), the optional part `pdf-epub` now brings PyMuPDF 2.0 and
   the nine libraries it needs: onnxruntime, numpy, networkx, protobuf,
   flatbuffers, psutil, PyYAML, tabulate and packaging (NOTICE gives
-  their licences). Macs, Windows on Arm, Python 3.10, and Python 3.15
-  and later keep PyMuPDF 1.x (1.28.2 in the extension): PyMuPDF 2 or
+  their licences). Macs, Windows on Arm, Linux on other processors, Python 3.10,
+  and Python 3.15 and later keep PyMuPDF 1.x (1.28.2 in the extension): PyMuPDF 2 or
   onnxruntime has no ready-made package there, or, on Apple silicon
   Macs, needs macOS 14. Both releases read the test documents' PDFs to
   the text QualCoder 4.0's own functions store, and CI checks Exegete's
@@ -253,7 +490,23 @@ Nothing yet.
   the sign. On Linux each program's path is now read whole, so a
   QualCoder in a folder whose path holds a space is found rather than
   counted as a possible miss.
-- **Exegete takes one backup before every change, at the last moment.**
+- **A file refused as damaged leaves one line in Exegete's log**, naming
+  the kind of error behind the refusal (for example
+  `pymupdf.FileDataError`) and the release of the library Exegete reads
+  that kind of file with: PyMuPDF for a PDF, EbookLib for an EPUB,
+  striprtf for an RTF file and defusedxml for a Word file; an
+  OpenDocument file, which Python's own modules read, has none. Until
+  now the log said nothing, so a file that reads on one computer and is
+  refused on another could only be guessed at. The line never names the
+  file, its place or the project, and never gives the error's own
+  words, which can quote the file; the answer, and what reaches the AI
+  provider, are unchanged.
+
+
+### Backups made by Exegete
+
+- **Exegete takes one backup before every change to the project's
+  database, at the last moment.**
   After a tool's checks, Exegete copies the project into the backup,
   all but its database, while other programs can still save; then it
   takes SQLite's write lock, copies the database and makes the change,
@@ -300,6 +553,26 @@ Nothing yet.
   refused because either changed leaves no safety backup; it compares
   them once more after it, and a change made while the safety backup
   is made is refused, as before, with the safety backup named.
+- **More refused changes leave no backup.** The checks of the codebook's
+  and the cases' changes (`create_code`, `rename_code`, `recolor_code`,
+  `move_code_to_category`, `create_category`, `rename_category`,
+  `move_category`, `create_case`, `rename_case`, `rename_file`), of
+  `apply_codings`, `create_proposed_codes` and `import_text_file` run
+  again under SQLite's write lock, before the backup's database is
+  copied: a name taken, or a category, code, case or text changed by
+  another program since the first checks, is refused there with no
+  backup, as is an "unchanged" or "already exists" answer found there.
+  A category or parent code given by name is looked up again by its id.
+  Refused before any backup now: a category moved under its own
+  sub-category, and a code given a parent code that does not exist.
+  `apply_codings` writes only the codings not already in the project
+  when it takes the lock, so a coding another program wrote meanwhile is
+  reported as already there rather than failing after the backup. In a
+  coding session file made or changed by hand, a suggestion's reasoning,
+  or a proposal's name or definition, that is not text is refused before
+  any backup, where it was written as its printed form or failed after
+  the backup.
+
 - **No text offers to skip a backup any more.** Each tool that takes
   `create_backup` says in its description that the argument is no
   longer used, and its input schema gives no default but null. The
@@ -311,31 +584,6 @@ Nothing yet.
   before every change. PRIVACY.md no longer counts a forced backup
   among what tells the assistant that a row carries a private note:
   the refusal alone does.
-- **The documents read again against the code, and put right where they
-  were no longer true**: the REFI-QDA export is kept, and its
-  description and answers name its known faults instead of its removal
-  (below); the plans give undo to v0.15.2
-  and method to v0.15.3; the setting OpenAI documents for Codex is said
-  to be untested, with no test promised; PRIVACY.md names QualCoder
-  3.8's AI search store, which backups keep (as `list_backups`' note now
-  says), what `compare_coders` names and what stays on the computer, the
-  reading folder included; the steps for uninstalling say that Claude
-  Desktop's log of the extension and the assistants' own records of the
-  conversation stay; the install and update commands carry the optional part for PDF and
-  EPUB; and the account of the extension's folder setting after an
-  update says what was seen, and where.
-- **PRIVACY.md says what its rules protect.** Its part on what reaches
-  the AI provider now opens with it: the provider has whatever you let
-  the assistant read, so an answer that returns text the assistant has
-  already read is not a leak, and the rules protect three other things,
-  each with its own readers: the key (the names list, which pairs real
-  names with pseudonyms, and whose names no tool returns), what
-  stays on the computer and who else reads it, and how much passes
-  through the conversation, since the host and the provider can keep
-  every turn. Each rule that serves one of the three now says which,
-  and the part on reading a whole file says that a page keeps the text
-  out of the conversation without taking back text the provider
-  already has. Nothing Exegete does has changed.
 - **Backups leave out the audio and video folders, and a restore keeps
   the project's.** Exegete's backups no longer copy the project's
   `audio` and `video` folders, which no Exegete tool changes, and
@@ -373,6 +621,18 @@ Nothing yet.
   folders, rather than that nothing was lost. Restoring one of
   QualCoder's backups always says that the project's audio and video
   folders are kept as they are.
+- **A backup cut short is no longer listed, kept by a prune or
+  restored.** A backup is made under a hidden name beside the project
+  and takes its name only once it is whole, so one left incomplete
+  because Exegete's process ended during the copy (an assistant app
+  quitting at that moment, for instance) is neither listed by
+  `list_backups`, counted by `prune_backups`, nor accepted by
+  `restore_backup`. The next backup of the project removes such a
+  leftover once it is an hour old. 0.15.0's notes named this among its
+  known limits.
+
+### The restore
+
 - **A restore's preview says what it would bring back, and the project
   stays in use for the whole restore.** `restore_backup`'s preview now
   gives when the backup was taken (`backup_taken`, with
@@ -411,143 +671,27 @@ Nothing yet.
   local model working with the smaller set can restore a backup, in the
   same two steps. `core` now has 27 tools, with `search_memos` (see
   "Measured").
-- **A file refused as damaged leaves one line in Exegete's log**, naming
-  the kind of error behind the refusal (for example
-  `pymupdf.FileDataError`) and the release of the library Exegete reads
-  that kind of file with: PyMuPDF for a PDF, EbookLib for an EPUB,
-  striprtf for an RTF file and defusedxml for a Word file; an
-  OpenDocument file, which Python's own modules read, has none. Until
-  now the log said nothing, so a file that reads on one computer and is
-  refused on another could only be guessed at. The line never names the
-  file, its place or the project, and never gives the error's own
-  words, which can quote the file; the answer, and what reaches the AI
-  provider, are unchanged.
 
-### Removed: three tools and four help topics, as announced in 0.14
+### The approval token
 
-- **`export_code_report`**, which returned a report of one code with up
-  to 1,000 of its passages: `get_coded_segments(code_id=...)` reads the
-  same passages, page by page, with no such limit.
-- **`cleanup_old_sessions`**, which deleted the coding sessions of every
-  project on the computer older than a number of days, with no preview,
-  approved suggestions not yet applied included. `list_coding_sessions`
-  with a larger `days_old` lists the old sessions, and
-  `delete_coding_session` removes one at a time. Sessions now gather in
-  `~/.exegete/sessions` until they are removed that way.
-- **`merge_proposals`**, which combined two code proposals. To merge
-  two, reject one with `update_proposal_status`, then give the other its
-  own passages and the rejected one's together in `update_proposal`'s
-  `example_segments`, which replaces the list. A proposal merged before
-  stays merged: a coding session that holds one still loads and shows it
-  as merged, and it still cannot be changed, approved or created.
-- **Four help topics of `explain_ai_coding_tools`**:
-  `analyze_for_coding`, `apply_codings`, `edit_suggestion` and
-  `coding_style_guidance`, which repeated what the tools' own
-  descriptions say. Asked for one of them, it answers that the topic was
-  removed, with the topics it has, and no error; asked for
-  `start_coding_session`, it answers, as for any tool without a topic,
-  that the tool's description documents it.
+- **The approval token's tag is now under its signature.** The token a
+  two-step tool's preview gives (`preview_token`) carries a short tag
+  naming the operation it was made for; the signature did not cover
+  that tag, so a token whose tag had been altered still worked for its
+  own operation. It now covers it: a token with an altered tag is
+  refused as made for another operation, with nothing changed. Tokens
+  now start `qcp2.`. A token made by 0.15.0 or earlier (`qcp1.`) is
+  still accepted for its hour, so a preview made just before an update
+  can still be run after it, unless the project or the operation has
+  changed since (some operations are refused differently in this
+  release); then preview again. A pseudonymisation run records the tag
+  of the token that approved it, in either form, in its journal entry
+  and its run manifest. A token made by this release is not accepted
+  by 0.15.0, which answers that it is not a token Exegete issued: this
+  matters only when two versions of Exegete run on one computer, or
+  after going back to 0.15.0.
 
-### Removed: arguments and behaviours, as announced in 0.14
-
-- **`delete_code`'s `cascade`.** Deleting a code with sub-codes deletes
-  its whole branch, as before, with the one approval of its preview: the
-  preview's token covers every code of the branch and their codings, so
-  a sub-code added or moved after the preview makes the token stale, and
-  the preview's `execute_with` no longer carries `cascade=true`. A
-  preview made by 0.15.0 for a code with sub-codes carries it and is
-  refused; a new preview works.
-- **The `owner` argument of `apply_codings` and `import_text_file`**,
-  which could only repeat the project's AI coder name: every row Exegete
-  writes is stored under that name, which `set_project_ai_coder_name`
-  changes. The other checks before such a write are as before (no name
-  set yet, a settings file that cannot be read, the name in Exegete's
-  settings differing from the project's).
-- **`search_files`' `search_memo`**: `search_memos` searches file memos
-  and every other kind of note. `search_files`' answer no longer has
-  `searched_memo`, or `memo` in `matched_in`, and a cursor from 0.15.0
-  is refused as invalid, as after any change to the arguments it is
-  bound to.
-- A call that passes one of these arguments, with any value, is refused
-  like any argument the tool does not declare, nothing done, with a
-  sentence naming what replaces it, which the answer also gives under
-  `removed`.
-- **Attributes on journal entries**, which Exegete set but never read
-  back. `create_attribute_type` with `applies_to` `journal` and
-  `set_attribute` with `target_type` `journal` (in any letter case, with
-  spaces at the ends) answer that they were removed, as their first
-  check: nothing is written and no backup is taken. Journal attributes
-  already in a project stay as they are, and `list_attribute_types`
-  lists them as before.
-- **A rename back recognised from the project's backups.** `rename_file`
-  no longer reads the project's backups, Exegete's or QualCoder's, to see
-  whether a name or an ending was the file's before. A text with no
-  stored file no longer takes back a name its copy has in the project's
-  documents folder: that is refused like any name already there, and the
-  refusal names `restore_backup` (which undoes everything done after the
-  backup), or QualCoder's own Rename, if you use it. An ending change
-  QualCoder acts on is refused unless the name of the file's stored file
-  has that ending. A rename's answer no longer carries `deprecated`.
-- **`pseudonymise_source`'s overlap policy `qualcoder_edit_parity`**,
-  which deleted a coding that sat on a name and cut back one that met
-  it, and was not exact parity with QualCoder's editor. A call that
-  names it is answered that it was removed, before the mapping, the
-  file, a token or the project's lock is looked at: no token is issued
-  and nothing is written.
-  `snap_to_pseudonym`, the default, is the one policy left: a coding
-  that cut into a name grows to hold the whole pseudonym, and nothing is
-  deleted. A preview no longer warns of rows it would delete, since it
-  deletes none; its counts of deleted rows stay in the answer, at zero.
-  Where rows would land on the same span, the refusal now says to delete
-  one row of each pair, then preview again.
-
-### Changed: the REFI-QDA export is kept, its faults named
-
-- **`export_refi_qda` is no longer deprecated, and stays.** 0.14
-  announced its removal; the maintainer means to fix it in a later
-  release instead. Until then its description and every answer it
-  gives, its own refusals included, name its known faults: it files
-  every coding under the AI coder name, the researcher's own and a
-  hidden coder's included, so another program shows them as the AI's;
-  it leaves out cases, annotations, journals and media; and a session's
-  export includes every suggestion, rejected ones too, with nothing to
-  say which. The answer carries that sentence in the field
-  `known_faults`, where 0.15.0 had `deprecated`. A refusal Exegete
-  makes in the same way for every tool (no project selected, an
-  unexpected error) carries neither, as in 0.15.0.
-
-### Fixed
-
-- **A backup cut short is no longer listed, kept by a prune or
-  restored.** A backup is made under a hidden name beside the project
-  and takes its name only once it is whole, so one left incomplete
-  because Exegete's process ended during the copy (an assistant app
-  quitting at that moment, for instance) is neither listed by
-  `list_backups`, counted by `prune_backups`, nor accepted by
-  `restore_backup`. The next backup of the project removes such a
-  leftover once it is an hour old. 0.15.0's notes named this among its
-  known limits.
-- **More refused changes leave no backup.** The checks of the codebook's
-  and the cases' changes (`create_code`, `rename_code`, `recolor_code`,
-  `move_code_to_category`, `create_category`, `rename_category`,
-  `move_category`, `create_case`, `rename_case`, `rename_file`), of
-  `apply_codings`, `create_proposed_codes` and `import_text_file` run
-  again under SQLite's write lock, before the backup's database is
-  copied: a name taken, or a category, code, case or text changed by
-  another program since the first checks, is refused there with no
-  backup, as is an "unchanged" or "already exists" answer found there.
-  A category or parent code given by name is looked up again by its id.
-  Refused before any backup now: a category moved under its own
-  sub-category, and a code given a parent code that does not exist.
-  `apply_codings` writes only the codings not already in the project
-  when it takes the lock, so a coding another program wrote meanwhile is
-  reported as already there rather than failing after the backup. In a
-  coding session file made or changed by hand, a suggestion's reasoning,
-  or a proposal's name or definition, that is not text is refused before
-  any backup, where it was written as its printed form or failed after
-  the backup.
-
-### Exegete's lock file kept fresh for the whole of every write
+### Exegete's lock file, and the files beside the database
 
 - **Exegete renews its lock file every five seconds while a write
   runs**, as QualCoder 3.8.2 does while it has a project open. Before,
@@ -573,8 +717,6 @@ Nothing yet.
   longer that a long write shows as one; PRIVACY.md says the file is
   renewed while the write runs.
 
-### Fixed
-
 - **A named pipe where a project keeps its lock file, or where SQLite
   keeps its side files beside `data.qda`, no longer makes a tool wait
   for ever.** Exegete now looks at such an entry before opening
@@ -585,33 +727,57 @@ Nothing yet.
   refused too, the project, backup or copy is refused, and a backup
   holding one is marked unclean.
 
-### Two settings as switches in the extension
 
-- **"Use the small tool set, for local models"**, a switch on the
-  desktop extension's settings page, off by default. On, Exegete
-  registers `core`, the smaller set for local models, which cannot
-  create a project; off, "Tool set" decides, as before. If either asks
-  for the smaller set, it is used.
-- **"I use QualCoder on this computer"**, a switch beside it, off by
-  default. On, Exegete takes it that you use QualCoder here, and its
-  answers carry the notes that matter only if you also open your
-  projects in QualCoder; off, "Do you also use QualCoder on this
-  computer?" decides, as before. If either says yes, the answer is yes;
-  no can be given only in the text setting. Whatever either says,
-  Exegete still refuses to write while QualCoder 3.8.2 has a project
-  open, and still warns when it sees signs that QualCoder 4.0 may have
-  one open.
-- **The text settings stay**, with their keys, titles and defaults, so a
-  value saved in 0.15.0 keeps working, and the Terminal routes are
-  unchanged. The extension passes the switches as
-  `EXEGETE_SMALL_TOOLSET` and `EXEGETE_I_USE_QUALCODER`, which can also
-  be set by hand: `on`, `true` or `1`, in any letter case, is on;
-  `off`, `false`, `0`, unset or blank is off. Any other value is read as
-  off, and the log says so once at start, naming the setting and never
-  its value; it never stops Exegete.
+### The libraries the extension installs
 
-### Changed: a few texts put right
+- **Two libraries named, and a limit on lxml.** pydantic
+  (`>=2.11.0,<3`) and anyio (`>=4.5,<5`) are now among Exegete's
+  requirements, since Exegete imports both; the MCP library already
+  brought them, with the same floors. lxml, in the optional part
+  `pdf-epub`, now asks for a release below 7. An install from PyPI takes
+  the same releases as before; a new major release of one of these waits
+  for a release of Exegete that has been tried with it.
+- **Each release's notes list what the desktop extension installs**,
+  from this release: each library and its release, and the computers
+  that take it where they differ (cryptography; pywin32 on Windows;
+  PyMuPDF, and the libraries PyMuPDF 2 brings on Windows x64 and Linux),
+  so you can compare an install of your own with it. CI gives the table
+  for every commit, from the lock's dry run on six computers
+  (`scripts/extension_libraries.py`).
+- **The desktop extension installs certifi 2026.10.19**, the release
+  that fixes advisory GHSA-6q48-6c7w-9gw2 of 20 October 2026, in place
+  of 0.15.0's 2026.7.22 (certifi's list of trusted certificate
+  authorities held an emSign root under which eight intermediate
+  authorities' private keys were compromised); certifi comes with the
+  MCP library, through httpx, and no other library moves with it.
 
+### The documents
+
+- **The documents read again against the code, and put right where they
+  were no longer true**: the REFI-QDA export is kept, and its
+  description and answers name its known faults instead of its removal
+  (below); the plans give undo to v0.15.2
+  and method to v0.15.3; the setting OpenAI documents for Codex is said
+  to be untested, with no test promised; PRIVACY.md names QualCoder
+  3.8's AI search store, which backups keep (as `list_backups`' note now
+  says), what `compare_coders` names and what stays on the computer, the
+  reading folder included; the steps for uninstalling say that Claude
+  Desktop's log of the extension and the assistants' own records of the
+  conversation stay; the install and update commands carry the optional part for PDF and
+  EPUB; and the account of the extension's folder setting after an
+  update says what was seen, and where.
+- **PRIVACY.md says what its rules protect.** Its part on what reaches
+  the AI provider now opens with it: the provider has whatever you let
+  the assistant read, so an answer that returns text the assistant has
+  already read is not a leak, and the rules protect three other things,
+  each with its own readers: the key (the names list, which pairs real
+  names with pseudonyms, and whose names no tool returns), what
+  stays on the computer and who else reads it, and how much passes
+  through the conversation, since the host and the provider can keep
+  every turn. Each rule that serves one of the three now says which,
+  and the part on reading a whole file says that a page keeps the text
+  out of the conversation without taking back text the provider
+  already has. Nothing Exegete does has changed.
 - **The `ai_data` folder Exegete makes is named where a new project's
   folders are described.** `create_project`'s description now says that
   Exegete makes an empty `ai_data` folder beside the four folders
@@ -628,8 +794,54 @@ Nothing yet.
   the two coder names and the QualCoder setting, and in the quick
   start's first project, for the coder name.
 
+- **LM Studio has a recipe of its own.** The README links INSTALL.md's
+  steps for LM Studio, which now install the optional part for PDF and
+  EPUB, give an example path that does not name QualCoder, say how a
+  first project is made with `core`, which cannot create one, and give
+  the tool sets' sizes in one sentence.
+
 ### Known limits
 
+- **Undo is not in this release.** Undoing what a session did comes in
+  v0.15.2; until then `restore_backup` takes a project back to a backup,
+  undoing everything done after it.
+- **A lock file left by an Exegete process that ended during a write
+  stays until it is removed by hand.** QualCoder 3.8 then finds the
+  project in use, and later writes by Exegete, which read the file as
+  left over once it is 30 seconds old, go ahead without a lock file of
+  their own, so QualCoder 3.8 is not told of them. If QualCoder 3.8 says
+  a project is in use when nothing is using it, you could move
+  `project_in_use.lock` out of the project folder, once you are sure no
+  program has the project open.
+- **A link at the lock file's name that leads nowhere** lets writes go
+  ahead without the lock file. Such a link arises only from a folder
+  copied with a tool that keeps links.
+- **A backup stopped by a named pipe** in the project folder says to
+  check disk space and permissions, which is not the cause: the pipe is.
+  Moving it out of the project folder lets the backup through.
+- **A backup cut short stays beside the project under a hidden name**
+  until the next backup removes it, once it is an hour old: whatever it
+  had copied stays there meanwhile, the names list and the names file
+  included (PRIVACY.md says so).
+- **During each change, another program's save waits** while Exegete
+  copies the database into the backup: about 2.5 ms for each MB of
+  database on the maintainer's Mac, so about two seconds for a database
+  of 800 MB.
+- **If you also use QualCoder, never write while a QualCoder window has
+  the project open.** QualCoder 4.0 writes no lock file: Exegete warns
+  when it sees two signs that QualCoder may have the project open, but
+  a write made then still goes through, so only you can make sure.
+- **A backup opened directly as a project in QualCoder** gets empty
+  audio and video folders made in it (QualCoder 3.8.2 says so, 4.0
+  does it silently), since backups no longer hold them. To go back to a
+  backup, `restore_backup` keeps the project's own recordings; to look
+  at a backup in QualCoder, opening a copy of it leaves the backup as
+  it was.
+- **QualCoder 3.8.2's Code PDF says "Texts do not match"** for some
+  PDFs Exegete brought in, and then allows no coding there; it says the
+  same of QualCoder 4.0's own import of the same files, whose stored
+  text matches Exegete's to the character. QualCoder 4.0's Code PDF
+  accepts them.
 - **On Windows x64, a library Exegete installs for PDFs makes a few
   reports of its use to Windows' diagnostic data each time a PDF is
   read.** PyMuPDF 2 loads onnxruntime, Microsoft's library for running
@@ -648,6 +860,18 @@ Nothing yet.
   matters for your study, you could read no PDFs through Exegete on
   Windows (PRIVACY.md, "How your data flows", says more). On a Mac, and
   for every other kind of document, onnxruntime is not loaded.
+- **Every Mac keeps PyMuPDF 1.x for now.** PyMuPDF 2 or onnxruntime,
+  which it needs, has no ready-made package for some Macs and needs
+  macOS 14 on Apple silicon, and the lock file cannot tell one release
+  of macOS from another, so it gives every Mac 1.28.2. Both releases read the test documents' PDFs to the
+  same text.
+- **A project made in Exegete before 0.15.0**, and not yet opened in
+  QualCoder 4.0, can stop once at its first open there with an error
+  about its `ai_data` folder; opening it again works. The error most
+  likely needs that project to be opened after another in the same
+  QualCoder session, and even then it is rare: an agent's check opened
+  such projects 19 times in QualCoder 4.0 without meeting it. Projects
+  made from 0.15.0 on hold the folder already.
 
 ### For contributors
 
@@ -860,6 +1084,11 @@ Exegete's texts about QualCoder, the names list, imports, the files
 Exegete keeps, creating a project, what is deprecated and the libraries
 the extension installs; then a part for contributors, and the
 measurements.
+
+Plans since this release: the removals came in 0.15.1, with the first
+part of the safety net; undo, choosing what a pseudonymisation run
+changes and coding sessions kept with their project moved to v0.15.2,
+and method to v0.15.3. The entry is as it was published.
 
 ### Upgrading from 0.14.3
 

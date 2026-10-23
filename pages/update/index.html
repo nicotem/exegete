@@ -41,11 +41,10 @@ footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
 
 <p>The newest version is <strong>0.15.1-alpha</strong>, from 26 October 2026.</p>
 
-<p><strong>What's new:</strong> Exegete can now take your coder name and the
-AI's from its settings, reads each document once, so an import usually takes
-seconds, and lets you fill in the names list on your own computer, so the names
-do not pass through the conversation. Its answers no longer assume that you use
-QualCoder.
+<p><strong>What's new:</strong> Exegete now takes one backup before every
+change to a project's database, without its audio and video, and a restore's
+preview says what it would bring back. A file not saved as UTF-8 can be read in
+the character set you choose, and two settings are now switches.
 <a href="https://github.com/nicotem/exegete/releases/tag/v0.15.1-alpha">The full
 notes for 0.15.1-alpha</a>, whose "Upgrading" part says what changes for
 you.</p>
@@ -93,6 +92,13 @@ again.</li>
 </ol>
 
 <p>Use Exegete on more than one computer? Update it on each one.</p>
+
+<p><strong>New in 0.15.1.</strong> Three tools announced as going are removed
+(the full notes name each and say what replaces it), and a choice Claude
+Desktop saved for one of them no longer applies. The settings gain two
+switches, "Use the small tool set, for local models" and "I use QualCoder on
+this computer", both off after the update; the settings you chose stay as they
+were. After changing a setting, quit Claude Desktop and open it again.</p>
 
 <p><strong>Two tools have new names in 0.15.0.</strong>
 <code>analyze_for_coding</code> is now <code>start_coding_session</code>, and
@@ -160,6 +166,15 @@ means, see
 <a href="https://github.com/nicotem/exegete/blob/main/INSTALL.md#pdf-and-epub-the-optional-part">INSTALL.md,
 "PDF and EPUB: the optional part"</a>. Without it, Exegete brings in the other
 documents and says when it cannot read a PDF or an EPUB.</p>
+
+<p>New in 0.15.1 on these routes: the three tools above are removed, and a
+call that passes an argument removed with them (<code>cascade</code>,
+<code>owner</code>, <code>search_memo</code>) is refused, naming what replaces
+it; two settings, <code>EXEGETE_SMALL_TOOLSET</code> and
+<code>EXEGETE_I_USE_QUALCODER</code>, are switches (<code>on</code>,
+<code>true</code> or <code>1</code>). With Python 3.11 to 3.14 on Windows x64,
+and on Linux on x86-64 and Arm, the optional part for PDF and EPUB now brings
+PyMuPDF 2; the full notes say what that means on Windows.</p>
 
 <p>New in 0.15.0 on these routes: the tool set <code>full</code>, the default,
 now includes creating a project; new projects go, as before, to

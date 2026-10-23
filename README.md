@@ -567,8 +567,8 @@ every tool.
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:
 measured on Python 3.13, at four characters a token; about five per
-cent more on 3.10 to 3.12. `lifecycle`, the earlier name of `full` in
-the extension, is still accepted and means `full`.
+cent more on 3.10 to 3.12. `lifecycle`, the earlier name of `full`, is
+still accepted in `EXEGETE_TOOLSET` and means `full`.
 
 **Beyond the basics**:
 

@@ -5,8 +5,10 @@ both coder names saved, the first project still asked for his name;
 after quitting and reopening Claude Desktop, the next was made with both
 names from the settings).
 
-1. Every setting's description on the extension's page ends with the
-   sentence, short, as the last thing the researcher reads there.
+1. After 0.15.1 (the owner's word of 23 October 2026) the extension's page
+   says it once, in its own words, as the last sentence of the first
+   setting's description (tests/test_v0151_settings_page.py); before, every
+   setting's description ended with it.
 2. INSTALL.md's step 4 says it once, clearly, with the reason.
 3. The CHANGELOG's "Upgrading from 0.14.3" says it once.
 4. TOOLS.md says it beside the two coder-name settings.
@@ -20,6 +22,8 @@ TEMPLATE = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))
 
 SENTENCE = "After changing a setting, quit Claude Desktop and open it again."
+PAGE_SENTENCE = ("Settings take effect after Claude Desktop is quit and "
+                 "opened again.")
 
 
 def _read(name):
@@ -30,14 +34,12 @@ def _flat(text):
     return " ".join(text.split())
 
 
-def test_every_setting_s_description_ends_with_the_sentence():
-    settings = TEMPLATE["user_config"]
-    # v0.15.1: the extension's two switches joined the six
-    assert len(settings) == 8
-    for key, option in settings.items():
-        description = option["description"]
-        assert description.endswith(" " + SENTENCE), key
-        assert description.count(SENTENCE) == 1, key
+def test_the_page_says_it_once_in_the_first_setting():
+    settings = list(TEMPLATE["user_config"].values())
+    page = json.dumps(TEMPLATE, ensure_ascii=False)
+    assert SENTENCE not in page
+    assert page.count(PAGE_SENTENCE) == 1
+    assert settings[0]["description"].endswith(" " + PAGE_SENTENCE)
 
 
 def test_install_says_it_once_in_step_4_with_the_reason():

@@ -19,16 +19,13 @@
         "exegete"
       ],
       "env": {
-        "EXEGETE_TOOLSET": "${user_config.toolset}",
         "EXEGETE_WORKSPACE": "${user_config.projects_folder}",
         "EXEGETE_WORKSPACE_REQUIRED": "1",
-        "QUALCODER_MCP_TOOLSET": "${user_config.toolset}",
         "QUALCODER_MCP_WORKSPACE": "${user_config.projects_folder}",
         "QUALCODER_MCP_WORKSPACE_REQUIRED": "1",
         "EXEGETE_AI_CODER_NAME": "${user_config.ai_coder_name}",
         "QUALCODER_MCP_AI_CODER_NAME": "${user_config.ai_coder_name}",
         "EXEGETE_CODER_NAME": "${user_config.coder_name}",
-        "EXEGETE_USES_QUALCODER": "${user_config.uses_qualcoder}",
         "EXEGETE_SMALL_TOOLSET": "${user_config.small_toolset}",
         "EXEGETE_I_USE_QUALCODER": "${user_config.i_use_qualcoder}",
         "EXEGETE_UPDATE_CHECK": "${user_config.update_check}",
@@ -50,56 +47,42 @@
     "small_toolset": {
       "type": "boolean",
       "title": "Limit Exegete to its small tool set",
-      "description": "Useful with a local model that has little room for the tools' descriptions: on, Exegete offers its small tool set, 27 tools instead of all 79, which cannot create a project. Off: every tool, creating a new project included (recommended). Typing core in \"Tool set\" does the same: if either asks for the small tool set, it is used. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "On: Exegete offers its small tool set, for a local model with little room for the tools' descriptions; that set cannot create a project. Off, the default: Exegete offers every tool. Settings take effect after Claude Desktop is quit and opened again.",
       "default": false,
-      "required": false
-    },
-    "toolset": {
-      "type": "string",
-      "title": "Tool set",
-      "description": "Type one of two words. full: every tool, creating a new project included (recommended). core: a smaller set for local models. If this shows lifecycle, the earlier name of full, it works as full. Any other word stops the extension from starting. If the switch \"Limit Exegete to its small tool set\" is on, the smaller set is used whether this says full or core. After changing a setting, quit Claude Desktop and open it again.",
-      "default": "full",
       "required": false
     },
     "projects_folder": {
       "type": "directory",
       "title": "Folder for projects",
-      "description": "Where new projects are created and working copies of projects are kept. The default, Exegete projects in your home folder (~), is outside Documents, which iCloud or OneDrive may sync; it is made when the first project needs it. If you choose another folder, choose one that no sync service keeps. QualCoder projects, the earlier default, works too, and Exegete finds the projects there whichever folder you choose; after an update from an earlier version, look at this setting, which the update may have changed from QualCoder projects to Exegete projects. Leaving it empty stops the extension from starting. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "Where Exegete creates new projects and keeps working copies of projects. The default, Exegete projects in your home folder, is made when the first project needs it. Choose a folder that no sync service keeps. Leaving it empty stops the extension from starting.",
       "default": "~/Exegete projects",
       "required": false
     },
     "coder_name": {
       "type": "string",
       "title": "Your coder name",
-      "description": "The name your own codings carry in a project, kept apart from the AI's. Filled in, Exegete gives it to each project it creates, without asking; left empty, Claude asks for it each time. Projects that already exist keep their coder name, or their lack of one. It must differ from the AI coder name. If you also use QualCoder, use the name its settings show as \"Current coder\", exactly as written there. At most 80 characters; a line break or tab, an invisible formatting character (the joiners some scripts need are allowed) or ##### stops the extension from starting. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "The name your own codings carry in a project, kept apart from the AI's; Exegete gives it to each project it creates. Empty, the default: Claude asks for it at each new project. It must differ from the AI coder name.",
       "default": "",
       "required": false
     },
     "ai_coder_name": {
       "type": "string",
       "title": "AI coder name",
-      "description": "The name Claude's work in your projects is stored under, so that it stays apart from yours; a model's name lets codings by different models be compared later. Filled in, Exegete gives it to each project it creates, without asking, and offers it first when another project needs one; left empty, Claude asks the first time a project needs it. A project that already has an AI coder name keeps it, and Claude asks you once whether to switch. It must differ from your coder name. At most 80 characters; a line break or tab, an invisible formatting character (the joiners some scripts need are allowed) or ##### stops the extension from starting. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "The name Claude's work in a project is stored under, kept apart from yours and given to each project Exegete creates; a model's name lets different models' work be compared. Empty, the default: Claude asks the first time a project needs it.",
       "default": "",
       "required": false
     },
     "i_use_qualcoder": {
       "type": "boolean",
       "title": "I use QualCoder on this computer",
-      "description": "On: Exegete takes it that you use QualCoder here and adds some notes that matter only if you also open your projects in QualCoder (such as whether an open QualCoder window shows Exegete's changes). Off: \"Do you also use QualCoder on this computer?\" decides. If either says yes, the answer is yes. Whatever this says, Exegete still refuses to write while QualCoder 3.8.2 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "On: Exegete adds some notes that matter only if you also open your projects in QualCoder. Off, the default: only when it finds signs of QualCoder on the project or this computer. Either way, it still checks whether QualCoder has a project open.",
       "default": false,
-      "required": false
-    },
-    "uses_qualcoder": {
-      "type": "string",
-      "title": "Do you also use QualCoder on this computer?",
-      "description": "Type yes, no or not sure. With yes, Exegete adds some notes that matter only if you also open your projects in QualCoder (such as whether an open QualCoder window shows Exegete's changes, or the backups QualCoder 3.8 may keep elsewhere); with no, it leaves those out, unless a project shows signs that QualCoder may have opened it or QualCoder is running when a project is selected; with not sure, it decides from what it finds on each project and on this computer. Notes worded \"if the project is opened in QualCoder\", such as the one on emoji and Windows line breaks, are given with any answer, and so is the line saying that a new project is in QualCoder's format. Whatever you answer, Exegete still refuses to write while QualCoder 3.8.2 has a project open, and still warns when it sees signs that QualCoder 4.0 may have one open: an answer can be out of date (a colleague's project, QualCoder installed later), and a write into a project open in QualCoder can lose work. Any other word is read as not sure. If the switch \"I use QualCoder on this computer\" is on, the answer is yes whatever this says; no can be given only here. After changing a setting, quit Claude Desktop and open it again.",
-      "default": "not sure",
       "required": false
     },
     "update_check": {
       "type": "boolean",
       "title": "Tell me when a new version is out",
-      "description": "Exegete fetches a small file from its website, which GitHub hosts, to see whether a newer version exists: once a week at most on its own, and when Claude checks for you. Claude then tells you once. Nothing from your projects is sent; GitHub records your computer's internet address and the time, as any website does. Switch this off and Exegete itself makes no connection. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "On, the default: once a week at most, and when you ask, Exegete fetches a file naming the newest version from its website, which GitHub hosts. Nothing from your projects is sent; GitHub records your computer's internet address. Off: Exegete itself makes no connection.",
       "default": true,
       "required": false
     }

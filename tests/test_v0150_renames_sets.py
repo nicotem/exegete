@@ -42,15 +42,9 @@ REFUSAL_AFTER_THE_VALUE = (
 
 NOTE = ("{setting} is set to lifecycle, the earlier name of the full tool "
         "set, which since 0.15.0 includes creating a project; lifecycle is "
-        "read as full until v1.0. Use full in the host's configuration (the "
-        "extension's \"Tool set\" setting) instead.")
+        "read as full until v1.0. Use full in the host's configuration "
+        "instead.")
 
-SETTING_DESCRIPTION = (
-    "Type one of two words. full: every tool, creating a new project "
-    "included (recommended). core: a smaller set for local models. If "
-    "this shows lifecycle, the earlier name of full, it works as full. Any "
-    "other word stops the extension from starting.")
-RESTART = " After changing a setting, quit Claude Desktop and open it again."
 
 SETTINGS_CLAUSE = ("The settings choose the tool set (every tool, or a "
                    "smaller set for local models)")
@@ -346,17 +340,15 @@ class TestOverStandardInput:
 class TestTheExtension:
 
     def test_the_setting(self):
-        option = MANIFEST["user_config"]["toolset"]
-        assert option["type"] == "string"
-        assert option["default"] == "full"
-        # v0.15.1: the words, as before; then the switch "Limit Exegete
-        # to its small tool set", named by its title, gives the
-        # smaller set over either word (tests/test_v0151_switches.py,
-        # what the words say); the restart sentence last
-        assert option["description"].startswith(SETTING_DESCRIPTION)
-        assert option["description"].endswith(RESTART)
-        switch = MANIFEST["user_config"]["small_toolset"]["title"]
-        assert f"If the switch \"{switch}\" is on" in option["description"]
+        # after 0.15.1 (ruling 83, the owner's word of 23 October 2026):
+        # the switch alone, the text setting gone from the page and its
+        # variables no longer passed, so the extension has `full` unless
+        # the switch is on (tests/test_v0151_switches.py)
+        assert "toolset" not in MANIFEST["user_config"]
+        option = MANIFEST["user_config"]["small_toolset"]
+        assert option["type"] == "boolean" and option["default"] is False
+        env = MANIFEST["server"]["mcp_config"]["env"]
+        assert not {"EXEGETE_TOOLSET", "QUALCODER_MCP_TOOLSET"} & set(env)
 
     def test_the_long_description(self):
         text = MANIFEST["long_description"]
@@ -385,13 +377,12 @@ class TestTheExtension:
                 "models; `lifecycle` was `full`'s name in the extension "
                 "before 0.15.0.") in block
         # v0.15.1: with the extension, `core` when the switch "Limit
-        # Exegete to its small tool set" is on or "Tool set" says
-        # `core`, `full` otherwise; `lifecycle` still works as `full`
+        # Exegete to its small tool set" is on, `full` otherwise (after
+        # 0.15.1 the switch alone, the text setting gone)
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
         assert (f"it is `core` when the extension's switch \\\"{switch}\\\" "
-                f"is on or its Tool set setting says `core`, and `full` "
-                f"otherwise") in block
-        assert ("may show `lifecycle`, which works as `full`).\"") in block
+                f"is on, and `full` otherwise.\"") in block
+        assert "Tool set setting" not in block
         options = re.findall(r"^        - (.+)$", block, re.M)
         # Fix round 1: the option no longer reads as a version the
         # researcher is not on, since 0.15.0 may still show `lifecycle`
@@ -400,10 +391,8 @@ class TestTheExtension:
                            "Not sure"]
         support = _flat("SUPPORT.md")
         assert (f"the toolset is `core` when its switch \"{switch}\" is "
-                f"on or its Tool set setting says `core`, and `full` "
-                f"otherwise") in support
-        assert ("an extension installed before 0.15.0 may show "
-                "`lifecycle`, which works as `full`).") in support
+                f"on, and `full` otherwise.") in support
+        assert "Tool set setting" not in support
 
 
 # ---------------------------------------------------------------------------
@@ -547,8 +536,9 @@ class TestTheDocuments:
         # The design's "before 0.15.0" gives way to the README's own rule
         # (tests/test_v0142_readme.py: no release number outside the
         # sections where versions are the point)
-        assert ("`lifecycle`, the earlier name of `full` in the extension, "
-                "is still accepted and means `full`.") in readme
+        # after 0.15.1 the extension no longer passes a tool set
+        assert ("`lifecycle`, the earlier name of `full`, is still accepted "
+                "in `EXEGETE_TOOLSET` and means `full`.") in readme
         install = _flat("INSTALL.md")
         assert f"`full` (default) registers {EXPECTED_FULL} tools" in install
         assert (f"Exegete offers {EXPECTED_FULL} tools by default, and the "

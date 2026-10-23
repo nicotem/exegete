@@ -289,8 +289,10 @@ def test_create_projects_answers(route, monkeypatch, tmp_path,
 
 
 def test_the_tool_sets_texts(monkeypatch, _settings_empty):
-    setting = MANIFEST["user_config"]["toolset"]
-    assert setting["title"] == "Tool set"
+    # after 0.15.1 the tool set's text setting left the page; its switch
+    # carries no mark either
+    setting = MANIFEST["user_config"]["small_toolset"]
+    assert setting["title"] == "Limit Exegete to its small tool set"
     _no_mark(setting["description"])
     _no_mark(server.LIFECYCLE_NOTE)
     monkeypatch.setenv(TOOLSET, "banana")

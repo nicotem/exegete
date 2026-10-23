@@ -46,30 +46,6 @@ from exegete.qualcoder_history import (AI_DATA_SIGN,  # noqa: E402
 
 SETTING = "EXEGETE_USES_QUALCODER"
 TITLE = "Do you also use QualCoder on this computer?"
-# The design's words, whole, as fix round 1 narrowed them: "some notes",
-# and only the examples the level will decide (pieces 11's open window and
-# QualCoder 3.8's other backups; piece 12 gives its later-import note
-# whatever the level); "may have opened it", since a leftover lock can be
-# Exegete's own
-DESCRIPTION = (
-    "Type yes, no or not sure. With yes, Exegete adds some notes that "
-    "matter only if you also open your projects in QualCoder (such as "
-    "whether an open QualCoder window shows Exegete's changes, or the "
-    "backups QualCoder 3.8 may keep elsewhere); with no, it leaves those "
-    "out, unless a project shows signs that QualCoder may have opened it "
-    "or QualCoder is running when a project is selected; "
-    "with not sure, it decides from what it finds on each project and on "
-    "this computer. Notes worded \"if the project is opened in "
-    "QualCoder\", such as the one on emoji and Windows line breaks, are "
-    "given with any answer, and so is the line saying that a new project "
-    "is in QualCoder's format. Whatever you answer, Exegete still refuses "
-    "to write "
-    "while QualCoder 3.8.2 has a project open, and still warns when it sees "
-    "signs that QualCoder 4.0 may have one open: an answer can be out of "
-    "date (a colleague's project, QualCoder installed later), and a write "
-    "into a project open in QualCoder can lose work. Any other word is "
-    "read as not sure.")
-RESTART = " After changing a setting, quit Claude Desktop and open it again."
 LONG_DESCRIPTION_END = (
     "The settings choose the tool set (every tool, or a smaller set for "
     "local models), the folder where new projects and working copies are "
@@ -351,25 +327,21 @@ class TestTheField:
 # =============================================================================
 
 class TestTheExtensionsSetting:
+    """After 0.15.1 (ruling 83, the owner's word of 23 October 2026): the
+    switch "I use QualCoder on this computer" replaces the text setting
+    on the extension's page, and the answer no is given on the Terminal
+    route only, through the variable, which Exegete still reads."""
 
-    def test_the_entry_its_title_description_and_default(self):
-        option = dict(TEMPLATE["user_config"]["uses_qualcoder"])
-        description = option.pop("description")
-        assert option == {"type": "string", "title": TITLE,
-                          "default": "not sure", "required": False}
-        # v0.15.1: the words of 0.15.0, then the switch "I use QualCoder
-        # on this computer", by its title: on, it gives yes whatever this
-        # says, and no can be given only here; the restart sentence last
-        assert description.startswith(DESCRIPTION)
-        switch = TEMPLATE["user_config"]["i_use_qualcoder"]["title"]
-        assert (f"If the switch \"{switch}\" is on, the answer is yes "
-                f"whatever this says; no can be given only here.") in \
-            description
-        assert description.endswith(RESTART)
+    def test_the_text_setting_left_the_page(self):
+        assert "uses_qualcoder" not in TEMPLATE["user_config"]
+        assert TITLE not in [option["title"] for option in
+                             TEMPLATE["user_config"].values()]
 
     def test_its_variable(self):
         env = TEMPLATE["server"]["mcp_config"]["env"]
-        assert env[SETTING] == "${user_config.uses_qualcoder}"
+        assert SETTING not in env
+        assert not any("user_config.uses_qualcoder}" in value
+                       for value in env.values())
 
     def test_the_long_description(self):
         assert TEMPLATE["long_description"].endswith(LONG_DESCRIPTION_END)
@@ -377,11 +349,15 @@ class TestTheExtensionsSetting:
     def test_the_default_reaches_the_server_as_not_sure(self, tmp_path):
         import smoke_desktop_extension as smoke
         config = smoke.launch_config(dict(TEMPLATE), tmp_path / "ext", {})
-        assert config["env"][SETTING] == "not sure"
-        assert read_setting(config["env"][SETTING]) == ("not sure", True)
-        changed = smoke.launch_config(dict(TEMPLATE), tmp_path / "ext",
-                                      {"uses_qualcoder": "no"})
-        assert read_setting(changed["env"][SETTING]) == ("no", True)
+        assert SETTING not in config["env"]
+        assert read_setting(config["env"].get(SETTING)) == ("not sure", True)
+        # a value saved under the old key before the update reaches
+        # nothing: the manifest no longer names it, so the answer stays
+        # the default (the switch off)
+        kept = smoke.launch_config(dict(TEMPLATE), tmp_path / "ext",
+                                   {"uses_qualcoder": "no"})
+        assert kept["env"] == config["env"]
+        assert read_setting(kept["env"].get(SETTING)) == ("not sure", True)
 
     def test_the_server_reads_it_through_env_settings(
             self, setup_server, qualcoder_db_path, monkeypatch):
@@ -485,20 +461,18 @@ class TestTheDocuments:
             assert "how its editor counts positions" not in text
 
     def test_install_the_extensions_settings(self):
+        # after 0.15.1: no bullet for the text setting in step 4; the
+        # answer no is a Terminal setting only, and step 4 says so
         install = _doc("INSTALL.md")
-        assert ("- **Do you also use QualCoder on this computer?**: not sure "
-                "unless you change it. Type yes, no or not sure. With yes, "
-                "Exegete adds some notes that matter only if you also open "
-                "your projects in QualCoder") in install
-        assert ("with no, it leaves those out, unless a project shows signs "
-                "that QualCoder may have opened it or QualCoder is running "
-                "when a project is selected; with not sure, it decides from "
-                "what it finds on each project and on this computer.") \
+        assert "- **Do you also use QualCoder on this" not in install
+        assert ("Two choices are made only on the Terminal route: the tool "
+                "set by name (`EXEGETE_TOOLSET`) and the answer no to "
+                "whether you use QualCoder (`EXEGETE_USES_QUALCODER`)") \
             in install
         # between the AI coder name and the check for new versions, as in
         # the extension
         assert install.index("- **AI coder name**: empty") < \
-            install.index("- **Do you also use QualCoder on this") < \
+            install.index("- **I use QualCoder on this computer**") < \
             install.index("- **Tell me when a new version is out**")
 
     def test_install_the_variable(self):
@@ -513,8 +487,9 @@ class TestTheDocuments:
                 "Whatever it says, Exegete still refuses to write while "
                 "QualCoder 3.8.2 has a project open, and still warns when it "
                 "sees signs that QualCoder 4.0 may have one open",
-                "The desktop extension sets it from its setting \"Do you "
-                "also use QualCoder on this computer?\"."):
+                "The desktop extension does not set it: its switch sets "
+                "`EXEGETE_I_USE_QUALCODER`, below, and with the switch off "
+                "the answer is `not sure`."):
             assert words in entry, words
 
     def test_the_changelog(self):
@@ -534,8 +509,9 @@ class TestTheDocuments:
 # =============================================================================
 
 def _install_bullet():
+    # after 0.15.1 the switch's bullet, the text setting's being gone
     install = _doc("INSTALL.md")
-    start = install.index("- **Do you also use QualCoder on this computer?**")
+    start = install.index("- **I use QualCoder on this computer**")
     return install[start:install.index("- **Tell me when a new version",
                                        start)]
 
@@ -559,9 +535,20 @@ class TestFixRoundOneTheTextsClaimWhatTheLevelDecides:
     (piece 12 gives its note on a later import after every rename)."""
 
     def _texts(self):
-        return (_flat(TEMPLATE["user_config"]["uses_qualcoder"]
-                      ["description"]),
-                _install_bullet(), _install_entry(), _changelog_section())
+        # after 0.15.1 the text setting's description and bullet are gone
+        # with it; the switch's are read below
+        return (_install_entry(), _changelog_section())
+
+    def _switch_texts(self):
+        return (_flat(TEMPLATE["user_config"]["i_use_qualcoder"]
+                      ["description"]), _install_bullet())
+
+    def test_the_switch_promises_some_notes_too(self):
+        for text in self._switch_texts():
+            assert "the notes that matter only if" not in text
+            assert "later import" not in text
+            assert "some notes that matter only if you also open your " \
+                   "projects in QualCoder" in text
 
     def test_no_example_the_level_does_not_decide(self):
         for text in self._texts():
@@ -586,7 +573,8 @@ class TestFixRoundOneTheTextsClaimWhatTheLevelDecides:
 class TestFixRoundOneTheDocuments:
 
     def test_install_bullet_says_what_the_answer_never_changes(self):
-        assert ("Whatever you answer, Exegete still refuses to write while "
+        # after 0.15.1, the switch's bullet
+        assert ("Either way, Exegete still refuses to write while "
                 "QualCoder 3.8.2 has a project open, and still warns when it "
                 "sees signs that QualCoder 4.0 may have one open.") \
             in _install_bullet()
@@ -604,7 +592,8 @@ class TestFixRoundOneTheDocuments:
                  "`qualcoder_history` when the project or this computer "
                  "shows a trace of QualCoder, or when the answer to \"Do "
                  "you also use QualCoder on this computer?\" in Exegete's "
-                 "settings is yes or no"),
+                 "settings (`EXEGETE_USES_QUALCODER`, on the Terminal "
+                 "route) is yes or no"),
                 ("get_current_project()",
                  "when there are any or when the answer to \"Do you also "
                  "use QualCoder on this computer?\" is yes or no")):

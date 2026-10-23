@@ -110,12 +110,12 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     one_click = install[install.index("## Claude Desktop: the one-click "
                                       "extension"):
                         install.index("## Choosing your AI host")]
-    assert ("`full` (the default) gives every tool, creating a new "
-            "project included (recommended); `core` a smaller set for local "
-            "models.") in " ".join(one_click.split())
-    assert ("Installed before 0.15.0, it may show `lifecycle`, the earlier "
-            "name of `full`; it works as `full`.") in " ".join(
-                one_click.split())
+    # after 0.15.1 the switch alone chooses the set in the extension
+    assert ("Off, Exegete offers every tool (the set called `full`), "
+            "creating a new project included; on, the smaller set `core`, "
+            "for local models, which cannot create a project.") in \
+        " ".join(one_click.split())
+    assert "`lifecycle`" not in one_click
     install = _doc("INSTALL.md")
     assert "**Qualcoder installed** with at least one project created" \
         not in install
@@ -134,12 +134,14 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             "do yet: bringing in images, audio and video") in flat_needs
     assert ("Since 0.14.3, Exegete brings in documents itself with "
             "`import_documents`") in flat_needs
-    # The facts it rests on: the extension's tool set defaults to full,
+    # The facts it rests on: the extension's tool set defaults to full
+    # (after 0.15.1 its switch, off by default, and no tool set passed),
     # which has create_project since 0.15.0 on every route (not core), and
     # a file is imported from text passed in the call
     manifest = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
-    assert manifest["user_config"]["toolset"]["default"] == "full"
+    assert manifest["user_config"]["small_toolset"]["default"] is False
+    assert "EXEGETE_TOOLSET" not in manifest["server"]["mcp_config"]["env"]
     assert "create_project" not in server.CORE_TOOLSET
     assert "create_project" in server.mcp._tool_manager._tools
     params = inspect.signature(server.import_text_file).parameters

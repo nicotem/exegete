@@ -118,32 +118,18 @@ def _nothing_made(tmp_path):
 # The extension's settings
 # ---------------------------------------------------------------------------
 
-CODER_DESCRIPTION = (
-    "The name your own codings carry in a project, kept apart from the "
-    "AI's. Filled in, Exegete gives it to each project it creates, without "
-    "asking; left empty, Claude asks for it each time. Projects that "
-    "already exist keep their coder name, or their lack of one. It must "
-    "differ from the AI coder name. If you also use QualCoder, use the "
-    "name its settings show as \"Current coder\", exactly as written "
-    "there. At most 80 "
-    "characters; a line break or tab, an invisible formatting character "
-    "(the joiners some scripts need are allowed) or ##### stops the "
-    "extension from starting."
-    " After changing a setting, quit Claude Desktop and open it again.")
+# What each description says, as facts: what the name is for, and that
+# empty means the assistant asks (after 0.15.1 the page's descriptions were
+# cut to plain statements: tests/test_v0151_settings_page.py)
+CODER_DESCRIPTION = ("kept apart from the AI's",
+                     "Exegete gives it to each project it creates",
+                     "Empty, the default: Claude asks for it",
+                     "It must differ from the AI coder name")
 # The coder names, piece 3: the AI coder name in the settings is given
 # to each project Exegete creates (tests/test_v0150_ai_coder_name_setting.py)
-AI_DESCRIPTION = (
-    "The name Claude's work in your projects is stored under, so that it "
-    "stays apart from yours; a model's name lets codings by different "
-    "models be compared later. Filled in, Exegete gives it to each project "
-    "it creates, without asking, and offers it first when another project "
-    "needs one; left empty, Claude asks the first time a project needs it. "
-    "A project that already has an AI coder name keeps it, and Claude asks "
-    "you once whether to switch. It must differ from your coder name. At "
-    "most 80 characters; a line break or tab, an invisible formatting "
-    "character (the joiners some scripts need are allowed) or ##### stops "
-    "the extension from starting."
-    " After changing a setting, quit Claude Desktop and open it again.")
+AI_DESCRIPTION = ("kept apart from yours",
+                  "given to each project Exegete creates",
+                  "Empty, the default: Claude asks the first time")
 
 
 class TestTheExtensionsSettings:
@@ -154,18 +140,20 @@ class TestTheExtensionsSettings:
     ])
     def test_each_setting_and_its_words(self, key, title, description):
         option = TEMPLATE["user_config"][key]
-        assert option == {"type": "string", "title": title,
-                          "description": description, "default": "",
-                          "required": False}
+        assert {k: v for k, v in option.items() if k != "description"} == {
+            "type": "string", "title": title, "default": "",
+            "required": False}
+        for words in description:
+            assert words in option["description"], words
 
     def test_they_come_after_the_folder(self):
         # v0.15.0: "Do you also use QualCoder on this computer?" follows
         # them, in the long description's order; v0.15.1: each of the
-        # two switches just before the text setting it stands beside
+        # two switches just before the text setting it stands beside;
+        # after 0.15.1 the switches alone, the text settings gone
         assert list(TEMPLATE["user_config"]) == [
-            "small_toolset", "toolset", "projects_folder", "coder_name",
-            "ai_coder_name", "i_use_qualcoder", "uses_qualcoder",
-            "update_check"]
+            "small_toolset", "projects_folder", "coder_name",
+            "ai_coder_name", "i_use_qualcoder", "update_check"]
 
     def test_the_variables_they_set(self):
         env = TEMPLATE["server"]["mcp_config"]["env"]
@@ -814,10 +802,10 @@ class TestTheDocuments:
 
     def test_install_the_variables(self):
         install = _doc("INSTALL.md")
-        assert ("The desktop extension sets both spellings of these four "
-                "settings itself (the tool set, the two for the workspace "
-                "and the AI coder name), always to the same value.") \
-            in install
+        # after 0.15.1 the tool set is no longer one of them
+        assert ("The desktop extension sets both spellings of three of "
+                "these settings itself (the two for the workspace and the "
+                "AI coder name), always to the same value.") in install
         # v0.15.0: and "Do you also use QualCoder on this computer?";
         # v0.15.1: and the extension's two switches. The count and the
         # names are the code's (names.NEW_ONLY_SETTINGS)

@@ -173,26 +173,29 @@ class TestTheToolsAreTheServers:
 
 class TestTheSettings:
 
-    def test_eight_settings_and_nothing_secret(self):
+    def test_six_settings_and_nothing_secret(self):
         config = TEMPLATE["user_config"]
         # v0.15.0: the two coder names joined the first three, and "Do
         # you also use QualCoder on this computer?"; v0.15.1: the two
-        # switches
-        assert set(config) == {"small_toolset", "toolset",
-                               "projects_folder", "coder_name",
-                               "ai_coder_name", "i_use_qualcoder",
-                               "uses_qualcoder", "update_check"}
+        # switches; after 0.15.1 (ruling 83, the owner's word of 23
+        # October 2026) the switches replace the two text settings
+        assert set(config) == {"small_toolset", "projects_folder",
+                               "coder_name", "ai_coder_name",
+                               "i_use_qualcoder", "update_check"}
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
-    def test_the_tool_set_defaults_to_full_and_names_the_others(self):
-        option = TEMPLATE["user_config"]["toolset"]
-        assert option["type"] == "string"
-        # v0.15.0: `full`, every tool; `lifecycle` named as its earlier name
-        assert option["default"] == "full"
-        for mode in server._VALID_TOOLSET_MODES:
-            assert f"{mode}:" in option["description"]
-        assert "lifecycle, the earlier name of full" in option["description"]
+    def test_the_tool_set_is_the_switch_alone(self, monkeypatch):
+        # after 0.15.1: no text setting for the tool set, and none of its
+        # variables passed, so the extension has the server's default,
+        # `full`, unless the switch is on
+        assert "toolset" not in TEMPLATE["user_config"]
+        env = TEMPLATE["server"]["mcp_config"]["env"]
+        assert not any("user_config.toolset}" in value
+                       for value in env.values())
+        for name in env:
+            monkeypatch.delenv(name, raising=False)
+        assert server._resolve_toolset_mode() == "full"
 
     def test_an_empty_folder_stops_the_extension(self, monkeypatch):
         """Fix round 1: the app lays a saved empty value over the default,
@@ -237,12 +240,12 @@ class TestTheSettings:
     def test_each_setting_reaches_a_variable_the_server_reads(self):
         """v0.14.1: each of the three under both spellings, always the
         same value, until v1.0 (tests/test_v0141_compat.py says why);
-        v0.15.0: the AI coder name the same way, the fourth."""
+        v0.15.0: the AI coder name the same way, the fourth; after
+        0.15.1 the tool set no longer, its switch in its place."""
         from exegete import names
         env = TEMPLATE["server"]["mcp_config"]["env"]
         expected = {}
-        for key, value in (("toolset", "${user_config.toolset}"),
-                           ("workspace", "${user_config.projects_folder}"),
+        for key, value in (("workspace", "${user_config.projects_folder}"),
                            ("workspace_required", "1"),
                            ("ai_coder_name", "${user_config.ai_coder_name}")):
             for name in names.SETTINGS[key]:
@@ -255,10 +258,9 @@ class TestTheSettings:
         expected[names.NEW_ONLY_SETTINGS["installed_as"]] = "extension"
         expected[names.NEW_ONLY_SETTINGS["coder_name"]] = \
             "${user_config.coder_name}"
-        # and "Do you also use QualCoder on this computer?" (v0.15.0)
-        expected[names.NEW_ONLY_SETTINGS["uses_qualcoder"]] = \
-            "${user_config.uses_qualcoder}"
-        # and the two switches (v0.15.1)
+        # and the two switches (v0.15.1), which replace the tool set's
+        # text setting and "Do you also use QualCoder on this computer?"
+        # after 0.15.1: neither is passed
         for key in ("small_toolset", "i_use_qualcoder"):
             expected[names.NEW_ONLY_SETTINGS[key]] = \
                 "${user_config." + key + "}"
@@ -859,7 +861,11 @@ class TestTheDocuments:
         section = " ".join(_section(
             text, "## Claude Desktop: the one-click extension").split())
         option = TEMPLATE["user_config"]
-        assert f"`{option['toolset']['default']}` (the default)" in section
+        # after 0.15.1 the switch's bullet names both sets
+        switch = section[section.index(
+            f"- **{option['small_toolset']['title']}**"):]
+        switch = switch[:switch.index(" - **")]
+        assert "`full`" in switch and "`core`" in switch
         for mode in server._VALID_TOOLSET_MODES:
             assert f"`{mode}`" in section
         assert f"`{option['projects_folder']['default']}`" in section

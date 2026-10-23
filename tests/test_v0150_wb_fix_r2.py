@@ -354,7 +354,9 @@ class TestTheSmallerPoints:
         install = _flat(_read("INSTALL.md"))
         manifest = _manifest_setting("coder_name")
         assert install.count(CURRENT_CODER) == 2
-        assert CURRENT_CODER in manifest
+        # after 0.15.1 the page's description says only what the name is
+        # for, INSTALL the rest
+        assert "Current coder" not in manifest
         for text in (install, manifest):
             assert "give the name in its settings" not in text
 
@@ -380,8 +382,10 @@ class TestTheSmallerPoints:
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
         install = _flat(_read("INSTALL.md"))
         # v0.15.1: the switch's sentence now comes between "whose
-        # default is `full`." and "Any other value"
-        for words in ("setting, whose default is `full`.",
+        # default is `full`." and "Any other value"; after 0.15.1 the
+        # extension sets the switch's variable instead
+        for words in ("The desktop extension does not set it: its switch "
+                      "sets `EXEGETE_SMALL_TOOLSET`",
                       "Any other value stops Exegete at start-up",
                       "used, and the log says so once at start; it never "
                       "stops Exegete. The desktop extension's settings do "
@@ -397,10 +401,13 @@ class TestTheSmallerPoints:
             "INSTALL.md")
 
     def test_the_setting_names_the_creation_line(self):
-        manifest = _manifest_setting("uses_qualcoder")
-        assert CREATION_LINE in manifest
+        # after 0.15.1 the text setting left the page, and with it step
+        # 4's bullet; the variable's entry keeps the line
+        assert "uses_qualcoder" not in \
+            json.loads(_read("packaging/desktop-extension/manifest.in.json"))[
+                "user_config"]
         install = _flat(_read("INSTALL.md"))
-        assert install.count(CREATION_LINE) == 2
+        assert install.count(CREATION_LINE) == 1
         assert CREATION_LINE in _flat(_unreleased())
         # and what it names is what create_project gives
         assert (server.OPENING_IN_QUALCODER_IF_USED

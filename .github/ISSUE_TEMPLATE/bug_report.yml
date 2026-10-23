@@ -70,7 +70,7 @@ body:
     id: toolset
     attributes:
       label: Toolset (EXEGETE_TOOLSET, or QUALCODER_MCP_TOOLSET before 0.14.1)
-      description: "`full` is the default, every tool, creating a project included; `core` is the reduced set for local models; `lifecycle` was `full`'s name in the extension before 0.15.0. With the Claude Desktop extension, it is `core` when the extension's switch \"Limit Exegete to its small tool set\" is on or its Tool set setting says `core`, and `full` otherwise (an extension installed before 0.15.0 may show `lifecycle`, which works as `full`)."
+      description: "`full` is the default, every tool, creating a project included; `core` is the reduced set for local models; `lifecycle` was `full`'s name in the extension before 0.15.0. With the Claude Desktop extension, it is `core` when the extension's switch \"Limit Exegete to its small tool set\" is on, and `full` otherwise."
       options:
         - full (default, or variable not set)
         - core

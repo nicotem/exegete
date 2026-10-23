@@ -33,17 +33,9 @@ EPUB documents ("PDF and EPUB: the optional part", below).
 4. **Look at its settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
    - **Limit Exegete to its small tool set**: off unless you
-     switch it on. Off, Exegete offers every tool, creating a new
-     project included (recommended); on, a smaller set for local
-     models, which cannot create a project. Typing `core` in "Tool set"
-     does the same: if either asks for the smaller set, it is used.
-   - **Tool set**: `full` (the default) gives every tool, creating a
-     new project included (recommended); `core` a smaller set for local
-     models. Type one of the two words: any other word stops the
-     extension from starting. Installed before 0.15.0, it may show
-     `lifecycle`, the earlier name of `full`; it works as `full`. If
-     the switch "Limit Exegete to its small tool set" is on, the
-     smaller set is used whether this says `full` or `core`.
+     switch it on. Off, Exegete offers every tool (the set called
+     `full`), creating a new project included; on, the smaller set
+     `core`, for local models, which cannot create a project.
    - **Folder for projects**: where new projects are created and
      working copies of projects are kept. The default,
      `~/Exegete projects` (a folder called "Exegete projects" in
@@ -82,28 +74,12 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      and Claude asks you once whether to switch. It must differ from
      your coder name, and the same limits apply.
    - **I use QualCoder on this computer**: off unless you switch it
-     on. On, Exegete takes it that you use QualCoder here and adds the
-     notes that matter only if you also open your projects in
-     QualCoder; off, "Do you also use QualCoder on this computer?"
-     decides. If either says yes, the answer is yes.
-     Whatever they say, Exegete still refuses to write while QualCoder
-     3.8.2 has a project open, and still warns when it sees signs that
-     QualCoder 4.0 may have one open.
-   - **Do you also use QualCoder on this computer?**: not sure unless
-     you change it. Type yes, no or not sure. With yes, Exegete adds
-     some notes that matter only if you also open your projects in
-     QualCoder (whether an open QualCoder window shows Exegete's
-     changes, for example); with no, it leaves those out, unless a
-     project shows signs that QualCoder may have opened it or QualCoder
-     is running when a project is selected; with not sure, it decides
-     from what it finds on each project and on this computer. Notes
-     worded "if the project is opened in QualCoder", such as the one on
-     emoji and Windows line breaks, are given with any answer, and so is
-     the line saying that a new project is in QualCoder's format. Whatever
-     you answer, Exegete still refuses to write while QualCoder 3.8.2
-     has a project open, and still warns when it sees signs that QualCoder
-     4.0 may have one open. With the switch on, the answer is yes
-     whatever this says; no can be given only here.
+     on. On, Exegete adds some notes that matter only if you also open
+     your projects in QualCoder; off, it adds them when it finds signs
+     of QualCoder on the project or on this computer. Either way,
+     Exegete still refuses to write while QualCoder 3.8.2 has a project
+     open, and still warns when it sees signs that QualCoder 4.0 may
+     have one open.
    - **Tell me when a new version is out**: on unless you switch it
      off. Once a week at most, and when you ask, Exegete fetches a
      small file from its website on GitHub to see whether a newer
@@ -119,6 +95,11 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    change reaches Exegete only at its next start. Until then Exegete
    works with the settings it started with: a coder name filled in just
    now is not yet given to a new project, for example.
+
+   Two choices are made only on the Terminal route: the tool set by
+   name (`EXEGETE_TOOLSET`) and the answer no to whether you use
+   QualCoder (`EXEGETE_USES_QUALCODER`), both under "Environment
+   variables the server reads", below.
 5. **Check it works**: in a new conversation, the "+" button, then
    Connectors, lists Exegete with its tools switched on. Ask
    "Using the Exegete tools, is a project open?" and allow the
@@ -169,7 +150,11 @@ Exegete asks Claude to tell you when a newer version is out, unless
 you switch that off (the setting "Tell me when a new version is out",
 above); with a GitHub account,
 Watch, then Custom, then Releases, on the repository's page also sends
-you a notice of each.
+you a notice of each. Up to 0.15.1 the extension also had two text
+boxes, "Tool set" and "Do you also use QualCoder on this computer?",
+which the two switches replace: what was typed in them is no longer
+used, so if "Tool set" said `core`, switch on "Limit Exegete to its
+small tool set".
 **Removing**: Settings, Extensions, Exegete, Uninstall. Neither
 touches your projects; what else stays is under "Uninstalling" below.
 **The log** is `mcp-server-Exegete.log` in `~/Library/Logs/Claude`
@@ -771,9 +756,9 @@ case, and a leading `~` in the workspace is read as your home folder;
 spaces in the workspace, the project path and
 `EXEGETE_ALLOW_UNKNOWN_SCHEMA` do count), Exegete does not start, and says which two disagree; if either spelling of
 `EXEGETE_WORKSPACE_REQUIRED` says `1`, a folder is required. The
-desktop extension sets both spellings of these four settings itself
-(the tool set, the two for the workspace and the AI coder name), always
-to the same value. Seven settings are new and have one spelling only:
+desktop extension sets both spellings of three of these settings
+itself (the two for the workspace and the AI coder name), always to
+the same value. Seven settings are new and have one spelling only:
 the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
 `EXEGETE_INSTALLED_AS`), `EXEGETE_CALL_SECONDS`, `EXEGETE_CODER_NAME`,
 `EXEGETE_USES_QUALCODER` and the extension's two switches,
@@ -796,10 +781,9 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   for local models (see the LM Studio recipe), which cannot create a
   project. `lifecycle`, the earlier name of `full` (the desktop
   extension's default before 0.15.0), is read as `full` until v1.0, and
-  Exegete names it in its log at each start. The desktop extension sets
-  this variable from its "Tool set" setting, whose default is `full`.
-  It also sets `EXEGETE_SMALL_TOOLSET` from its switch; either one
-  asking for `core` gives `core`.
+  Exegete names it in its log at each start. The desktop extension does
+  not set it: its switch sets `EXEGETE_SMALL_TOOLSET`, below. With both
+  set, either one asking for `core` gives `core`.
   Any other value stops Exegete at start-up with an error naming the
   valid values. Resources and prompts are not affected.
 - `EXEGETE_SMALL_TOOLSET` (0.15.1): the extension's switch "Limit
@@ -909,9 +893,9 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
 
 - `EXEGETE_USES_QUALCODER` (0.15.0): your answer to "Do you also use
   QualCoder on this computer?": `yes`, `no` or `not sure`, in any
-  letter case. Unset or blank, it is `not sure`, the default, as in the
-  desktop extension. With `yes`, Exegete adds some notes that matter
-  only if you also open your projects in QualCoder; with `no`, it
+  letter case. Unset or blank, it is `not sure`, the default. With
+  `yes`, Exegete adds some notes that matter only if you also open
+  your projects in QualCoder; with `no`, it
   leaves those out, unless a project shows signs that QualCoder may
   have opened it or QualCoder is running when a project is selected;
   with `not sure`, it decides from what it finds on each project and on
@@ -924,9 +908,9 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   3.8.2 has a project open, and still warns when it sees signs that QualCoder
   4.0 may have one open: an answer can be out of date (a colleague's
   project, QualCoder installed later), and a write into a project open
-  in QualCoder can lose work. The desktop extension sets it from its
-  setting "Do you also use QualCoder on this computer?". It also sets
-  `EXEGETE_I_USE_QUALCODER` from its switch; either one saying yes
+  in QualCoder can lose work. The desktop extension does not set it:
+  its switch sets `EXEGETE_I_USE_QUALCODER`, below, and with the switch
+  off the answer is `not sure`. With both set, either one saying yes
   gives yes.
 
 - `EXEGETE_I_USE_QUALCODER` (0.15.1): the extension's switch "I use

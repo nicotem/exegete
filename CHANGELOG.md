@@ -7,7 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- The desktop extension's settings no longer include the text boxes
+  "Tool set" and "Do you also use QualCoder on this computer?", which
+  the switches "Limit Exegete to its small tool set" and "I use
+  QualCoder on this computer" replace, and a value typed in them before
+  is no longer used; Exegete still reads `EXEGETE_TOOLSET` and
+  `EXEGETE_USES_QUALCODER` on the Terminal route, the only place the
+  answer no can be given. Each setting's description is cut to what it
+  does and its default, and the page says once, in its first setting,
+  that settings take effect after Claude Desktop is quit and opened
+  again.
 
 ## [0.15.1-alpha] - 2026-10-23
 

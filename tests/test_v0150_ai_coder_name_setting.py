@@ -135,18 +135,11 @@ STORED_STEP = (
 # The words that call the setting what it is
 # ---------------------------------------------------------------------------
 
-AI_DESCRIPTION = (
-    "The name Claude's work in your projects is stored under, so that it "
-    "stays apart from yours; a model's name lets codings by different "
-    "models be compared later. Filled in, Exegete gives it to each project "
-    "it creates, without asking, and offers it first when another project "
-    "needs one; left empty, Claude asks the first time a project needs it. "
-    "A project that already has an AI coder name keeps it, and Claude asks "
-    "you once whether to switch. It must differ from your coder name. At "
-    "most 80 characters; a line break or tab, an invisible formatting "
-    "character (the joiners some scripts need are allowed) or ##### stops "
-    "the extension from starting."
-    " After changing a setting, quit Claude Desktop and open it again.")
+# What the extension's description says, as facts (after 0.15.1 the page's
+# descriptions were cut to plain statements: tests/test_v0151_settings_page.py)
+AI_DESCRIPTION_SAYS = ("kept apart from yours",
+                       "given to each project Exegete creates",
+                       "Claude asks the first time a project needs it")
 
 ASK_WITH_SETTING = (
     "No AI coder name is set for this project yet, so nothing was written. "
@@ -188,7 +181,8 @@ class TestTheWords:
 
     def test_the_extensions_description(self):
         option = TEMPLATE["user_config"]["ai_coder_name"]
-        assert option["description"] == AI_DESCRIPTION
+        for words in AI_DESCRIPTION_SAYS:
+            assert words in option["description"], words
 
     def test_the_ask_names_the_setting(self, setup_server_unset,
                                        monkeypatch):

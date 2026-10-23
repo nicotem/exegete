@@ -234,8 +234,8 @@ class TestInARealProcess:
 
 
 class TestTheExtensionSetsBothSpellings:
-    """The manifest's `env` sets both spellings of its three settings to
-    the same value. Until v1.0, while the earlier spellings are read: a
+    """The manifest's `env` sets both spellings of its settings that have
+    two to the same value. Until v1.0, while the earlier spellings are read: a
     setting the manifest names overrides one of the same name inherited
     from the environment, so an old value exported in a shell profile,
     or passed on by the app, can never disagree and stop the extension."""
@@ -251,21 +251,24 @@ class TestTheExtensionSetsBothSpellings:
         # researcher's own coder name, with one; and one more with one
         # spelling, "Do you also use QualCoder on this computer?" (four
         # with one spelling only); v0.15.1: two more with one spelling,
-        # the extension's two switches (six with one spelling only)
-        assert len(env) == 14
+        # the extension's two switches (six with one spelling only); after
+        # 0.15.1 (the owner, 23 October 2026, ruling 83): the tool set
+        # under both spellings and the QualCoder answer leave the page,
+        # the two switches taking their place, so neither is passed
+        assert len(env) == 11
         # A departure, v0.15.0: EXEGETE_CALL_SECONDS, a setting with one
         # spelling, is kept out of the manifest, since the extension's
         # time per import call is measured for it, not offered in its
         # settings (its mark, EXEGETE_INSTALLED_AS, gives it that time)
         offered = set(names.NEW_ONLY_SETTINGS.values()) - {
-            names.NEW_ONLY_SETTINGS["call_seconds"]}
+            names.NEW_ONLY_SETTINGS["call_seconds"],
+            names.NEW_ONLY_SETTINGS["uses_qualcoder"]}
         assert set(env) - {n for pair in SETTINGS.values() for n in pair} \
             == offered
-        for key in ("toolset", "workspace", "workspace_required",
-                    "ai_coder_name"):
+        for key in ("workspace", "workspace_required", "ai_coder_name"):
             new, old = SETTINGS[key]
             assert env[new] == env[old]
-        assert env[SETTINGS["toolset"][0]] == "${user_config.toolset}"
+        assert not set(SETTINGS["toolset"]) & set(env)
         assert env[SETTINGS["ai_coder_name"][0]] == \
             "${user_config.ai_coder_name}"
 
@@ -278,8 +281,19 @@ class TestTheExtensionSetsBothSpellings:
         config = smoke.launch_config(manifest, tmp_path / "ext", {})
         stray = {"QUALCODER_MCP_TOOLSET": "core",
                  "QUALCODER_MCP_WORKSPACE": str(tmp_path / "elsewhere")}
-        # the app lays the manifest's env over what it passes on
-        proc = _run_server(home, {**stray, **config["env"]})
+        # the app passes on only its short list of variables, so a stray
+        # value never reaches Exegete through it (since the manifest stopped
+        # setting the tool set, after 0.15.1, nothing would overrule one)
+        passed = smoke.server_environment(config, environ={
+            "HOME": str(home), "PATH": "/usr/bin", **stray})
+        assert not set(stray) & (set(passed) - set(config["env"]))
+        assert passed["QUALCODER_MCP_WORKSPACE"] == \
+            config["env"]["QUALCODER_MCP_WORKSPACE"]
+        # and lays the manifest's env over it: a stray workspace, had it
+        # come through, could not disagree
+        proc = _run_server(home, {"QUALCODER_MCP_WORKSPACE":
+                                  stray["QUALCODER_MCP_WORKSPACE"],
+                                  **config["env"]})
         assert proc.returncode == 0, proc.stderr
         # v0.15.0: the extension's default is `full`, every tool
         assert f"Toolset mode: full ({FULL_TOOLS} tools registered)" in \

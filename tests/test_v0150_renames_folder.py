@@ -41,20 +41,12 @@ DESCRIPTION_LINES = (
     "extension's folder, and its earlier default)",
 )
 
-SETTING_DESCRIPTION = (
-    "Where new projects are created and working copies of projects are "
-    "kept. The default, Exegete projects in your home folder (~), is "
-    "outside Documents, which iCloud or OneDrive may sync; it is made when "
-    "the first project needs it. If you choose another folder, choose one "
-    # (the staleness audit of 20 October 2026: one account of an update
-    # and this setting, as the documents give it; never "it keeps working")
-    "that no sync service keeps. QualCoder projects, the earlier default, "
-    "works too, and Exegete finds the projects there whichever folder you "
-    "choose; after an update from an earlier version, look at this "
-    "setting, which the update may have changed from QualCoder projects "
-    "to Exegete projects. Leaving it empty stops the extension from "
-    "starting."
-    " After changing a setting, quit Claude Desktop and open it again.")
+# What the extension's description says, as facts (after 0.15.1 the page's
+# descriptions were cut to plain statements, the earlier default left to
+# the CHANGELOG: tests/test_v0151_settings_page.py)
+SETTING_DESCRIPTION = ("Exegete projects in your home folder",
+                       "no sync service",
+                       "Leaving it empty stops the extension from starting")
 
 MANIFEST = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))
@@ -319,7 +311,9 @@ class TestTheTexts:
     def test_the_extensions_setting(self):
         folder = MANIFEST["user_config"]["projects_folder"]
         assert folder["default"] == "~/" + names.EXTENSION_WORKSPACE_FOLDER
-        assert folder["description"] == SETTING_DESCRIPTION
+        for words in SETTING_DESCRIPTION:
+            assert words in folder["description"], words
+        assert "QualCoder projects" not in folder["description"]
         assert folder["type"] == "directory"
         assert folder["title"] == "Folder for projects"
 

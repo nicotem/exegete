@@ -759,11 +759,16 @@ def test_the_tool_set_table():
     # the defaults: the extension's manifest, the server's own, and none
     manifest = json.loads(_read("packaging/desktop-extension/"
                                 "manifest.in.json"))
-    assert manifest["user_config"]["toolset"]["default"] == "full"
+    # after 0.15.1 the extension passes no tool set, so it has the
+    # server's default, its switch off by default
+    assert "toolset" not in manifest["user_config"]
+    assert not {"EXEGETE_TOOLSET", "QUALCODER_MCP_TOOLSET"} & \
+        set(manifest["server"]["mcp_config"]["env"])
+    assert manifest["user_config"]["small_toolset"]["default"] is False
     assert "(default full)" in server._resolve_toolset_mode.__doc__
     assert rows["full"][4] == "every route"
-    assert ("`lifecycle`, the earlier name of `full` in the extension, is "
-            "still accepted and means `full`.") in _flat(section)
+    assert ("`lifecycle`, the earlier name of `full`, is still accepted in "
+            "`EXEGETE_TOOLSET` and means `full`.") in _flat(section)
     # v0.15.1: the variable, or the extension's switch by its title
     assert rows["core"][4].startswith("none: set `EXEGETE_TOOLSET=core`")
     assert manifest["user_config"]["small_toolset"]["title"] in \

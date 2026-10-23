@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """v0.15.1, two settings as switches (ruling 83): the extension's page
 gains "Limit Exegete to its small tool set" and "I use QualCoder on
-this computer", beside the text settings, which are still read.
+this computer", beside the text settings, which are still read. After
+0.15.1 (the owner's word of 23 October 2026) the switches replace the
+text settings on the page; Exegete still reads their variables, which
+only the Terminal route sets.
 
 - Each switch is read by env_settings.read_switch: on, true or 1 is on;
   off, false, 0, unset, blank or an unfilled `${...}` is off; anything
@@ -44,7 +47,7 @@ SENTINEL = "Zq9-Sentinel-Switch"
 
 TEMPLATE = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))
-RESTART = "After changing a setting, quit Claude Desktop and open it again."
+RESTART = "Settings take effect after Claude Desktop is quit and opened again."
 
 
 # =============================================================================
@@ -230,46 +233,41 @@ class TestNeverLifted:
 
 CONFIG = TEMPLATE["user_config"]
 SWITCHES = {"small_toolset": ("Limit Exegete to its small tool set",
-                              SMALL, "toolset"),
+                              SMALL, "toolset", "Tool set"),
             "i_use_qualcoder": ("I use QualCoder on this computer", I_USE,
-                                "uses_qualcoder")}
+                                "uses_qualcoder",
+                                "Do you also use QualCoder on this computer?")}
 
 
 class TestThePage:
 
     @pytest.mark.parametrize("key", list(SWITCHES))
     def test_each_switch(self, key):
-        title, variable, beside = SWITCHES[key]
+        title, variable, replaced, replaced_title = SWITCHES[key]
         option = CONFIG[key]
         assert {k: v for k, v in option.items() if k != "description"} == {
             "type": "boolean", "title": title, "default": False,
             "required": False}
-        order = list(CONFIG)
-        assert order.index(key) + 1 == order.index(beside)
         env = TEMPLATE["server"]["mcp_config"]["env"]
         assert env[variable] == "${user_config." + key + "}"
-        # each names the other, and says the restart once, last
-        for one, other in ((key, beside), (beside, key)):
-            description = CONFIG[one]["description"]
-            assert f"\"{CONFIG[other]['title']}\"" in description, one
-            assert description.endswith(" " + RESTART), one
-            assert description.count(RESTART) == 1, one
-            # the app's order on screen is not checked
-            assert "above" not in description and "below" not in description
+        # after 0.15.1 the switch stands alone: the text setting it
+        # replaces is gone, and the description names no other setting
+        assert replaced not in CONFIG
+        description = option["description"]
+        assert replaced_title not in description
+        assert '"' not in description
+        # the app's order on screen is not checked
+        assert "above" not in description and "below" not in description
 
-    def test_the_text_settings_as_before(self):
-        assert {k: v for k, v in CONFIG["toolset"].items()
-                if k != "description"} == {
-            "type": "string", "title": "Tool set", "default": "full",
-            "required": False}
-        assert {k: v for k, v in CONFIG["uses_qualcoder"].items()
-                if k != "description"} == {
-            "type": "string",
-            "title": "Do you also use QualCoder on this computer?",
-            "default": "not sure", "required": False}
+    def test_the_text_settings_left_the_page(self):
+        # after 0.15.1: neither text setting, and neither variable passed;
+        # Exegete still reads both (sections 1 to 4), from the Terminal
+        # route
+        assert not {"toolset", "uses_qualcoder"} & set(CONFIG)
         env = TEMPLATE["server"]["mcp_config"]["env"]
-        assert env[TOOLSET] == "${user_config.toolset}"
-        assert env[USES] == "${user_config.uses_qualcoder}"
+        assert TOOLSET not in env and USES not in env
+        assert names.SETTINGS["toolset"][0] == TOOLSET
+        assert names.NEW_ONLY_SETTINGS["uses_qualcoder"] == USES
 
 
 # =============================================================================
@@ -281,12 +279,14 @@ class TestThroughTheAppsModel:
     @pytest.mark.parametrize("settings, toolset, answer", [
         ({}, "full", "not sure"),
         ({"small_toolset": True}, "core", "not sure"),
-        # an earlier value kept, the switch at its default
-        ({"toolset": "core"}, "core", "not sure"),
+        # an earlier value kept by the app, the switch at its default:
+        # after 0.15.1 the manifest names neither text setting, so a value
+        # saved under its key reaches nothing, and the defaults rule
+        ({"toolset": "core"}, "full", "not sure"),
         # as --set passes it
         ({"toolset": "full", "small_toolset": "true"}, "core", "not sure"),
         ({"i_use_qualcoder": True, "uses_qualcoder": "no"}, "full", "yes"),
-        ({"uses_qualcoder": "no"}, "full", "no"),
+        ({"uses_qualcoder": "no"}, "full", "not sure"),
     ])
     def test_what_exegete_reads(self, settings, toolset, answer, tmp_path,
                                 monkeypatch):
@@ -394,8 +394,9 @@ class TestTheStandInAndCi:
                 if "python scripts/smoke_desktop_extension.py" in line]
         assert len(runs) == 2
         over, fresh = runs
+        # after 0.15.1 "Tool set" saying core reaches nothing: every tool
         for part in ('--over "$RUNNER_TEMP/v0150.mcpb" $flag',
-                     "--set toolset=core", "--expect-tools core",
+                     "--set toolset=core", "--expect-tools manifest",
                      'HOME="$home"', 'USERPROFILE="$home"'):
             assert part in over, part
         assert "for way in kept emptied; do" in step
@@ -426,40 +427,30 @@ def _sentence_with(text: str, part: str) -> str:
 class TestTheWordsSayWhatTheSwitchesDo:
 
     def test_the_tool_set_switch_wins_over_the_two_words_only(self):
-        # An unknown word in "Tool set" still stops the start with the
-        # switch on, so each sentence giving the switch the last word
-        # names the two words it wins over, and never "whatever"
-        texts = {
-            "the page": _sentence_with(
-                " ".join(CONFIG["toolset"]["description"].split()),
-                "the smaller set is used"),
-            "INSTALL, step 4": _sentence_with(
-                _between(INSTALL, "- **Tool set**:",
-                         "- **Folder for projects**"),
-                "the smaller set is used"),
-            "INSTALL, the variable": _sentence_with(
-                _between(INSTALL, f"- `{SMALL}` (0.15.1)",
-                         "- `EXEGETE_WORKSPACE`"),
-                "gives `core`"),
-        }
-        for where, sentence in texts.items():
-            for word in names.TOOLSETS:
-                assert word in sentence, (where, word)
-            assert "whatever" not in sentence, where
-        assert "still stops Exegete" in texts["INSTALL, the variable"]
+        # An unknown word in EXEGETE_TOOLSET still stops the start with the
+        # switch on, so the sentence giving the switch the last word names
+        # the two words it wins over, and never "whatever" (after 0.15.1
+        # the text setting and its bullet are gone; the variable remains)
+        sentence = _sentence_with(
+            _between(INSTALL, f"- `{SMALL}` (0.15.1)",
+                     "- `EXEGETE_WORKSPACE`"),
+            "gives `core`")
+        for word in names.TOOLSETS:
+            assert word in sentence, word
+        assert "whatever" not in sentence
+        assert "still stops Exegete" in sentence
 
-    def test_off_the_text_setting_decides(self):
-        # With the switch off, the answer is the text setting's; what
-        # Exegete finds weighs as that answer lets it, which the text
-        # setting's own description says
-        title = CONFIG["uses_qualcoder"]["title"]
+    def test_off_what_exegete_finds_decides(self):
+        # After 0.15.1, with the switch off the extension's answer is the
+        # default, not sure, so what Exegete finds decides; neither text
+        # names the text setting that left the page
+        title = "Do you also use QualCoder on this computer?"
         page = " ".join(CONFIG["i_use_qualcoder"]["description"].split())
         bullet = _between(INSTALL, "- **I use QualCoder on this computer**:",
-                          f"- **{title}**:")
+                          "- **Tell me when a new version is out**")
         for where, clause in (
-                ("the page", page[page.index("Off: "):]),
+                ("the page", page[page.index("Off, the default: "):]),
                 ("INSTALL, step 4", bullet[bullet.index("; off, ") + 2:])):
             clause = clause.split(". ")[0]
-            assert f"\"{title}\"" in clause, where
-            assert clause.endswith("decides"), where
-            assert "what it finds" not in clause, where
+            assert title not in clause, where
+            assert "signs of QualCoder on the project or" in clause, where

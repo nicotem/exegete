@@ -23482,7 +23482,7 @@ LIFECYCLE_NOTE = (
     "{setting} is set to lifecycle, the earlier name of the full tool set, "
     "which since 0.15.0 includes creating a project; lifecycle is read as "
     f"full until {names.OLD_SPELLINGS_UNTIL}. Use full in the host's "
-    "configuration (the extension's \"Tool set\" setting) instead.")
+    "configuration instead.")
 
 
 def _workspace_start_problem() -> Optional[str]:

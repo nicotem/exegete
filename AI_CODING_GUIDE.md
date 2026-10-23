@@ -5,8 +5,9 @@ qualcoder-mcp), in the conversational workflow.
 
 > Codings are written directly to the project database after your
 > explicit approval; no import step is needed. (A REFI-QDA *export*
-> tool, `export_refi_qda`, is deprecated and goes in v0.15.1: it files
-> every coding under the AI coder name. Exegete has no other REFI-QDA
+> tool, `export_refi_qda`, has known faults, which a later release is
+> meant to fix: it files every coding under the AI coder name, yours
+> included. Exegete has no other REFI-QDA
 > export yet; QualCoder's own export, if you use QualCoder, keeps each
 > coder: Project, Export, REFI-QDA Project export.) For the
 > step-by-step walkthrough with example conversations, see
@@ -118,15 +119,15 @@ session. None of this replaces your approval of each suggestion.
 | `review_suggestions(coding_session_id, suggestion_guids, show_context)` | Inspect suggestions in detail |
 | `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` | Adjust a pending suggestion's span, code or reading before approval (session-only); a new code without a new reading clears the reading |
 | `update_suggestion_status(coding_session_id, approve, reject, reopen)` | Approve, reject, or reopen (back to pending, to edit and decide again) by GUID |
-| `apply_codings(coding_session_id, create_backup, owner: deprecated, removed in v0.15.1)` | **Write** approved suggestions (project-bound, validated, all-or-nothing). An approved suggestion whose identical coding already exists is left alone and reported by id; that check reads the base table, so on a project that hides the AI coder it discloses that one such row exists (PRIVACY.md) |
+| `apply_codings(coding_session_id, create_backup)` | **Write** approved suggestions (project-bound, validated, all-or-nothing). An approved suggestion whose identical coding already exists is left alone and reported by id; that check reads the base table, so on a project that hides the AI coder it discloses that one such row exists (PRIVACY.md) |
 | `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coded segment (on projects with the coder-visibility capability, QualCoder 3.8.2 and 4.0, schema v14 and later, a hidden coder's row, or a row whose memo carries a `#####` private note, is refused without the override) |
 | `list_backups()` / `restore_backup(backup_path, preview_token)` | List snapshots / guarded project restore (previews first, then the token the preview returns) |
-| `import_text_file(filename, content, memo, owner: deprecated, removed in v0.15.1, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add a new transcript, optionally linked to a case; `apply_project_pseudonyms=true` applies the project's own `pseudonyms.json` on the way in, as QualCoder does |
-| `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, show_text, memo)` | **Write**: bring documents in from your computer by their paths or a folder's, their text never passing through the conversation; a preview first, then the import with its token, on your word |
+| `import_text_file(filename, content, memo, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add a new transcript, optionally linked to a case; `apply_project_pseudonyms=true` applies the project's own `pseudonyms.json` on the way in, as QualCoder does |
+| `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, character_sets, show_text, memo)` | **Write**: bring documents in from your computer by their paths or a folder's, their text never passing through the conversation, but for one line of a file not saved as UTF-8, as each character set reads it; a preview first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
 | `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
-| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (deprecated, removed in v0.15.1; QualCoder's own export, if you use QualCoder, keeps each coder) |
-| `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` / `cleanup_old_sessions` (deprecated) | Session management |
+| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx (known faults, which a later release is meant to fix: every coding under the AI coder name; QualCoder's own export, if you use QualCoder, keeps each coder) |
+| `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` | Session management |
 | `copy_project_to_workspace(source_path, new_name)` | Copy a project into the safe workspace |
 
 ## Best Practices
@@ -222,8 +223,7 @@ session. None of this replaces your approval of each suggestion.
   capability
   reads follow the per-coder visibility
   setting (see "Working alongside QualCoder 4.0" in TOOLS.md)
-- Every write creates a timestamped backup first unless called with
-  `create_backup=false` (`list_backups` shows them, including QualCoder's own `_BKUP_` snapshots)
+- Exegete takes a timestamped backup before every change (`list_backups` shows them, including QualCoder's own `_BKUP_` snapshots)
 - Sessions only apply to the project they were created in
 - Applied suggestions are marked and cannot be double-applied
 
@@ -239,8 +239,10 @@ INSTALL.md.)
 **Can the AI create new codes?** Yes, with your approval: `propose_codes`
 records code proposals discovered in the data, you review and refine
 them (`review_proposals`, `update_proposal`, `update_proposal_status`;
-`merge_proposals` is deprecated: reject one proposal and add its
-passages to the other), and `create_proposed_codes` writes the
+to merge two, reject one (`update_proposal_status`), then give the
+other its own passages and the rejected one's together in
+`update_proposal`'s `example_segments`, which replaces the list), and
+`create_proposed_codes` writes the
 approved ones to the codebook, as codes only; Claude then suggests their
 passages one by one, the proposals' example passages first, for you to
 decide like any suggestion. The codebook tools (`create_code`,
@@ -286,6 +288,4 @@ workspace workflow: copy first, work on the copy, and compare, in the
 conversation or in QualCoder, before adopting changes.
 
 **Where are sessions stored?** `~/.exegete/sessions/` as JSON, one
-file per session. `delete_coding_session` removes one;
-`cleanup_old_sessions` (deprecated, removed in v0.15.1) deletes every
-project's old sessions with no preview.
+file per session. `delete_coding_session` removes one.

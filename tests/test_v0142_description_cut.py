@@ -635,7 +635,10 @@ CHANGED_0150 = {
     # tests/test_v0150_ai_coder_name_setting.py pins both)
     "create_project": (2486, 1975, "3de9483aca76e003"),
     "set_project_ai_coder_name": (2151, 1754, "6b48741b8d00d08b"),
-    "export_refi_qda": (2186, 1803, "26fdfe7d1edb6d62"),
+    # v0.15.1, the stale texts: the export is kept, to be fixed (ruling
+    # 85, item 2), and its sentence names its known faults instead of its
+    # removal (2,186 to 2,312 characters on 3.13)
+    "export_refi_qda": (2312, 1904, "a80800d56c24ae10"),
     # not presuming QualCoder, piece 5: the write tools' closing
     # paragraph in 26 descriptions, apply_codings' lock sentence and
     # first safety guarantee, and restore_backup's item 4, each now
@@ -715,7 +718,135 @@ CHANGED_0150 = {
     # that it "cannot see" one (rename_case 2,065, rename_file 3,410)
     "restore_backup": (2877, 2367, "06cea91506d0e578"),
 }
-WORDS = {**WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150}
+# The descriptions v0.15.1 changes, as it serves them, on top of 0.15.0's
+# words. The ignored argument (tests/test_v0151_ignored_argument.py):
+# Exegete takes a backup before every change, so the 22 tools that take
+# create_backup say in its Args line that it is no longer used (59
+# characters more each on 3.13), and every text that offered to skip a
+# backup says that Exegete takes one before every change: apply_codings'
+# opening paragraph, delete_coding's and delete_annotation's (whose
+# private note no longer forces a backup), import_text_file's
+# deprecation of create_backup=false (gone), list_backups' first
+# sentence and pseudonymise_source's sentence on its backup, which adds
+# that a run that changes nothing takes none
+# v0.15.1, audio and video left out of backups
+# (tests/test_v0151_media_out.py): list_backups and prune_backups say
+# that a backup holds the project but its audio and video folders, and
+# prune_backups that a backup copies pseudonyms.json "too" rather than
+# "the whole tree"; restore_backup that a restore keeps the two folders
+# as it keeps the Exegete folder. Their lines above stand for the
+# release they belong to. Its fix round 2: list_backups and
+# prune_backups say this of the backups made from 0.15.1 on, that one
+# made earlier may hold the folders, and name the answers' fields that
+# say so (holds_audio_or_video, audio_video_files_only_here);
+# prune_backups no longer calls a backup "full-project", and
+# copy_project_to_workspace says that it keeps the two folders where it
+# said "the same exclusions backups use".
+# v0.15.1, the restore (tests/test_v0151_restore.py): restore_backup's
+# paragraph on what its preview gives (the backup's time, the counts,
+# the names list) and on the lock file held for the whole restore; its
+# fix round 1, that over a stale lock file none is held.
+CHANGED_0151 = {
+    "add_annotation": (1635, 1327, "4bbbbadf442ce4d9"),
+    "add_journal_entry": (1075, 864, "12671d098694fc7f"),
+    "apply_codings": (2576, 2080, "5bd24c4f519eb9d7"),
+    "copy_project_to_workspace": (1821, 1499, "69ccd8862dabdb2f"),
+    "create_attribute_type": (2101, 1669, "514860e96ff9c269"),
+    "create_case": (1647, 1362, "058d9acfbdafa8bf"),
+    "create_category": (1839, 1456, "1932d23aa946913a"),
+    "create_code": (2883, 2334, "164e07affb43e225"),
+    "create_proposed_codes": (1867, 1527, "4e0e3c73ad69168e"),
+    "delete_annotation": (1747, 1409, "febaf8e7ef5e66f2"),
+    "delete_coding": (2772, 2226, "20b73b09f4af1cfc"),
+    "import_text_file": (3979, 2949, "32c2ba85d34a6301"),
+    "link_file_to_case": (1781, 1353, "5b8da085c5673f75"),
+    # after the owner's sitting (tests/test_v0151_sitting_fixes.py):
+    # one made earlier "may hold files in them", the mark being read
+    # from the files; the length kept
+    "list_backups": (2348, 1973, "95e747703091a2c1"),
+    "move_category": (1398, 1072, "cbf3cb5c7691d6b2"),
+    "move_code_to_category": (1735, 1370, "aaea0c1644efe794"),
+    "prune_backups": (3380, 2754, "ad1f10aba1338ff2"),
+    "pseudonymise_source": (17825, 13103, "e26b83009d0c054a"),
+    "recolor_code": (1293, 1061, "1379964b6a5e9ead"),
+    "rename_case": (2124, 1733, "39675c0d95087246"),
+    "rename_category": (998, 808, "47f306f452b8c7d5"),
+    "rename_code": (968, 778, "d44768fcb8687026"),
+    "rename_file": (3469, 2859, "2a48298f73e57c30"),
+    "restore_backup": (3377, 2782, "4f25a3b30c2dac2e"),
+    "set_attribute": (1747, 1411, "6926f03ebdf6151c"),
+    "set_memo": (2610, 2080, "38ff500521558e9d"),
+    "update_annotation": (1990, 1631, "ce66fc0d896a7302"),
+}
+# And the small corrections (tests/test_v0151_small_corrections.py), in a
+# table of their own, since the ignored argument's guard reads the one
+# above as its own: the empty ai_data folder Exegete makes, named in
+# create_project's description (2,486 to 2,613 characters on 3.13), no
+# longer "exactly" as QualCoder 4.0's own New Project makes the project,
+# and in copy_project_to_workspace's, for a copy that has none (1,821 to
+# 1,909, after the audio and video piece's sentence on the two folders,
+# whose line above this one replaces)
+CHANGED_0151_TEXTS = {
+    "copy_project_to_workspace": (1909, 1569, "68e802ffd0fde4ef"),
+    "create_project": (2613, 2079, "41b00db6efcb9ba1"),
+}
+# And v0.15.1's removals, as announced in 0.14
+# (tests/test_v0151_removed_tools.py, whose before_the_removals puts these
+# two back as 0.15.0 served them): the help topics' deprecation sentence
+# leaves explain_ai_coding_tools' description, and propose_codes'
+# WORKFLOW says how to merge two proposals without merge_proposals (reject
+# one, then give the other both sets of passages in update_proposal's
+# example_segments)
+REMOVALS_0151 = {
+    "explain_ai_coding_tools": (471, 371, "2a67738a0b20f970"),
+    "propose_codes": (2865, 2290, "57967898aef29c34"),
+}
+# The three tools those removals took out; their lines above stay as the
+# record of what they served
+REMOVED_0151 = {"export_code_report", "cleanup_old_sessions",
+                "merge_proposals"}
+# And the arguments removed, as announced in 0.14
+# (tests/test_v0151_removed_arguments.py, whose
+# before_the_removed_arguments puts these four back as they were served
+# before): delete_code without cascade, its paragraph on sub-codes saying
+# the token covers the branch; apply_codings and import_text_file without
+# owner; search_files without search_memo; each without its deprecation
+# sentence
+ARGUMENTS_0151 = {
+    "apply_codings": (2285, 1856, "a7cb208688a17003"),
+    "delete_code": (2244, 1847, "5ddc0e80152c294f"),
+    "import_text_file": (3688, 2725, "0721b7099400ef2a"),
+    "search_files": (4537, 3575, "dd59501a07c07301"),
+}
+# And attributes on journal entries and the rename back recognised from
+# backups, removed as announced in 0.14
+# (tests/test_v0151_journal_and_rename_back.py, whose
+# before_the_journal_and_rename_back puts these three back as they were
+# served before): create_attribute_type and set_attribute without the
+# journal attributes' deprecation sentence, their domains case or file;
+# rename_file without the rename back's sentence, its paragraph saying
+# that an ending the name of its stored file has may be put back and that
+# a name the project's backups show is not looked for
+JOURNAL_RENAME_0151 = {
+    "create_attribute_type": (1963, 1540, "b242c3dd182736b5"),
+    "rename_file": (3148, 2593, "5d0c29ef977f9433"),
+    "set_attribute": (1530, 1226, "cb66faba15a8c296"),
+}
+# And the overlap policy qualcoder_edit_parity, removed as announced in
+# 0.14 (tests/test_v0151_one_overlap_policy.py, whose
+# before_the_one_overlap_policy puts it back as it was served before):
+# pseudonymise_source without the policy's deprecation sentence and
+# without its paragraph among the arguments, overlap_policy's first
+# paragraph kept
+ONE_POLICY_0151 = {
+    "pseudonymise_source": (17138, 12626, "4e59fbbe50373983"),
+}
+WORDS_BEFORE_ARGUMENTS_0151 = {name: words for name, words in {
+    **WORDS_0141, **REWORDED_0142, **CHANGED_0143, **CHANGED_0150,
+    **CHANGED_0151, **CHANGED_0151_TEXTS, **REMOVALS_0151}.items()
+    if name not in REMOVED_0151}
+WORDS = {**WORDS_BEFORE_ARGUMENTS_0151, **ARGUMENTS_0151,
+         **JOURNAL_RENAME_0151, **ONE_POLICY_0151}
 
 
 # Tools new in this release, whose descriptions have no v0.14.1 words to
@@ -781,7 +912,8 @@ class TestTheDescriptionsKeepTheirWords:
             "compare_coders": ("TWO KAPPAS", "UNIT OF ANALYSIS"),
             "create_code": ("Text containing '#####'", "Colours are stored"),
             "delete_code": ("Two-step by design.", "SUB-CODES"),
-            "delete_coding": ("Two guards", "A backup is created first"),
+            # v0.15.1: "Exegete takes a backup first", in the same place
+            "delete_coding": ("Two guards", "Exegete takes a backup first"),
             "edit_suggestion": ("READING AND CODE", "Edits are not"),
             # v0.15.0: the refusal's paragraph is one sentence now (not
             # presuming QualCoder, piece 5), in the same place

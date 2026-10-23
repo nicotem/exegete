@@ -386,8 +386,14 @@ def test_install_says_the_figures():
             "other call, from any chat.") in install
     assert ("The desktop extension's settings do not offer it."
             in install)
-    assert (f"gives an import call the extension's time (`{SETTING}`, "
-            f"above)") in install
+    # (the staleness audit of 20 October 2026: the extension's figure is
+    # today the same as every other route's, so the mark changes nothing
+    # in an import's time; the sentence says so while the two agree)
+    assert doc_import.EXTENSION_CALL_SECONDS == \
+        doc_import.TERMINAL_CALL_SECONDS
+    assert (f"would give an import call the extension's time, today the "
+            f"same {doc_import.EXTENSION_CALL_SECONDS} seconds as on every "
+            f"route (`{SETTING}`, above)") in install
 
 
 def test_the_changelog_says_the_figures():

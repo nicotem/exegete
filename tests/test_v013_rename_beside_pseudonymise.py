@@ -189,18 +189,16 @@ def test_every_rename_text_keeps_the_house_rules():
         ("a.txt", "a", None, ["a"]), ("a.pdf", "a", "/docs/a.pdf", []),
         ("a", "a.transcribed", None, []), ("a.mp3", "a", "/audio/a.mp3", []),
         ("a.txt", "a.docx", None, []))]
-    # v0.15.0, piece 12: the notes as built, with and without every sign,
-    # and (its fix round 1) with and without a backup just taken
+    # v0.15.0, piece 12: the notes as built, with and without every sign
+    # (each names the backup just taken: one is taken before every
+    # change since v0.15.1)
     import itertools
     for flags in itertools.product((False, True), repeat=4):
         signs = server._RenameSigns(*flags)
         for left_in in ({}, {"saved_graph_labels": 1, "saved_filters": 2,
                              "saved_table_displays": 1}):
-            for taken in (False, True):
-                texts += [server._rename_case_note(left_in, signs,
-                                                   backup_taken=taken),
-                          server._rename_file_note(left_in, signs,
-                                                   backup_taken=taken)]
+            texts += [server._rename_case_note(left_in, signs),
+                      server._rename_file_note(left_in, signs)]
     assert all(isinstance(t, str) and t for t in texts)
     _house_rules(texts)
 
@@ -240,22 +238,28 @@ def test_privacy_says_rename_file_reads_the_backups():
     # Fix round 3, B-5, F2A-2, F2A-6, F2A-7, P-5.
     # v0.14 (existing projects, part 6): restore checks for a journal or
     # WAL file beside the backup's database before it opens it
-    assert "Besides `restore_backup`, which checks that no journal or WAL " \
-           "file sits beside the database of the backup you choose, opens " \
-           "it to check it, reads its first bytes for the preview and " \
-           "copies it back, one tool reads the backups' contents: " \
-           "`rename_file`, to recognise a rename back" in flat
-    assert "once per question, stopping at the first that shows the name. " \
-           "It reads only the name and the date of the row with this " \
-           "file's id there; for a copy in the project's documents folder " \
-           "it also asks whether that row's text equals the file's current " \
-           "text, a comparison SQLite makes, so no text is read out of a " \
-           "backup. Taking that row for the same file is a heuristic: the " \
-           "date is set at creation and by some later QualCoder actions, " \
-           "and a rename never changes it. Nothing it reads is returned or " \
-           "logged" in flat
-    assert "To recognise a rename back, `rename_file` reads this file's " \
-           "earlier name from the project's backups" in flat
+    paragraph = flat[flat.index("Besides `restore_backup`, which checks"):]
+    paragraph = paragraph[:paragraph.index("Two further rules")]
+    assert "which checks that no journal or WAL file sits beside the " \
+           "database of the backup you choose, opens it to check it, reads " \
+           "its first bytes for the preview and copies it back" in paragraph
+    # (the staleness audit of 20 October 2026: prune_backups and
+    # restore_backup read each backup's pseudonyms.json too, as a
+    # fingerprint of its bytes, never its names; database.py,
+    # pseudonyms_json_fingerprint)
+    assert "a fingerprint of the bytes of the project's `pseudonyms.json`" \
+        in paragraph
+    assert "`prune_backups`, which reads the `pseudonyms.json` of each " \
+           "backup beside the project only to compare such fingerprints" \
+        in paragraph
+    assert "no name in it is read out or returned" in paragraph
+    # v0.15.1: rename_file no longer reads the backups, as announced
+    # (tests/test_v0151_journal_and_rename_back.py)
+    assert "says why), no tool reads the backups' contents; in 0.15.0 and " \
+           "earlier, `rename_file` read the names in them to recognise a " \
+           "rename back." in paragraph
+    assert "one tool reads the backups' contents" not in flat
+    assert "To recognise a rename back, `rename_file` reads" not in flat
 
 
 def test_the_fix_round_3_wording():

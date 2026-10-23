@@ -334,18 +334,18 @@ class TestF8OrphanConsistency:
 
 
 # =============================================================================
-# F9 — cleanup_old_sessions must refuse to wipe everything
+# F9 — nothing wipes every session (cleanup_old_sessions refused days_old
+# of 0 or less; v0.15.1 removed the tool, as announced in 0.14)
 # =============================================================================
 
 class TestF9SessionCleanupGuard:
 
-    @pytest.mark.parametrize("days", [0, -5])
-    def test_f9_nonpositive_days_refused(self, setup_server, days):
+    def test_f9_no_tool_removes_every_session(self, setup_server):
         out = server.start_coding_session([1], instruction="test")
         sid = out.split("Session ID: `")[1].split("`")[0]
 
-        result = json.loads(server.cleanup_old_sessions(days))
-        assert "error" in result
+        assert "cleanup_old_sessions" not in server.mcp._tool_manager._tools
+        assert not hasattr(server.session_manager, "cleanup_old_sessions")
         assert server.session_manager.session_exists(sid)  # nothing deleted
 
 

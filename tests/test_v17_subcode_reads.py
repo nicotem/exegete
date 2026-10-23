@@ -99,8 +99,9 @@ def _upstream_categories_of_code(folder, cid):
 class TestT11Listings:
 
     def test_code_details_show_parent_and_path(self, subcode_env):
-        # get_code_details feeds the exegete://codes/{id} resource and
-        # export_code_report; asserted at the shared DB layer
+        # get_code_details feeds the exegete://codes/{id} resource (and
+        # fed export_code_report until v0.15.1 removed it); asserted at the
+        # shared DB layer
         out = server.db.get_code_details(11)
         assert out["parent_code_id"] == 10
         assert out["parent_code_name"] == "Sub stress"

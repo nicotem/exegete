@@ -10,6 +10,7 @@ import os
 import sqlite3
 import stat
 import sys
+import threading
 from pathlib import Path
 from typing import (Optional, List, Dict, Any, Callable, NamedTuple,
                     Sequence, Tuple, Union)
@@ -25,9 +26,15 @@ import uuid
 import shutil
 from datetime import datetime
 from contextlib import closing, contextmanager
-import glob
 
 from . import doc_readers, env_settings, names
+from .file_kinds import (
+    ProjectFileKindError,
+    is_kind,
+    kind_word,
+    nonblocking_opener,
+    odd_kind,
+)
 from .memo_privacy import (
     PERSONAL_NOTE_MARK,
     extract_ai_memo,
@@ -544,6 +551,36 @@ class UnsupportedSchemaError(RuntimeError):
     """Raised when the project database schema is too old for this server."""
 
 
+# Two refusals with one source of words each (v0.15.1): move_category's
+# own, said again by the tool's check before any lock; and delete_code's
+# own, for a caller of this module that passes no cascade (the tool
+# always deletes the whole branch since cascade left it in 0.15.1).
+CATEGORY_CYCLE_REFUSAL = (
+    "That move would make the category its own ancestor (a cycle), which "
+    "would cut it and its codes off from the code tree; refusing.")
+SUBCODES_NEED_CASCADE = (
+    "{count} sub-code(s) will also be deleted. Move the sub-codes first if "
+    "they are needed, or call again with cascade=true to delete the whole "
+    "branch and all its codings.")
+
+
+# The safety sentence of every text that sends the researcher to copy a
+# backup back by hand, which is the way while the database will not
+# open and no tool can restore (v0.15.1, fix round 1): a backup put in
+# the project's place would leave it without its recordings, which
+# Exegete's backups leave out (MEDIA_FOLDERS), and a backup that holds
+# the folders (an earlier version's, or QualCoder's) would replace the
+# project's. Said of the backups made from 0.15.1 on, since one made by
+# an earlier version holds the folders as they were then (fix round 2).
+BACKUP_BY_HAND_KEEPS_MEDIA = (
+    "To copy one back, copy everything in it except any audio or video "
+    "folder into the project folder, leaving the project's own audio and "
+    "video folders where they are: Exegete's backups made from 0.15.1 on "
+    "leave those folders out, and one made earlier holds them as they "
+    "were then, so a backup put in the project's place would leave the "
+    "project without its recordings, or without those added since.")
+
+
 # The plain refusal of a database whose project table has no row (v0.14,
 # the create-project study's finding 7): not a usable QualCoder project.
 NO_PROJECT_ROW_MESSAGE = (
@@ -551,7 +588,7 @@ NO_PROJECT_ROW_MESSAGE = (
     "empty), so it is not a usable project, and neither Exegete nor "
     "QualCoder will open it. If it was left by a project creation that did not "
     "finish, it may be deleted by hand; otherwise restore it from a "
-    "backup.")
+    "backup. " + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 
 # The way through for a project from a QualCoder older than 3.8, which
@@ -618,6 +655,17 @@ def _sqlite_ro_uri(path: Union[str, Path]) -> str:
     return f"{Path(path).resolve().as_uri()}?mode=ro"
 
 
+def _sqlite_ro_immutable_uri(path: Union[str, Path]) -> str:
+    """`_sqlite_ro_uri` with `immutable=1`: SQLite reads the main file as
+    it stands, takes no lock and makes no side file beside it (no
+    journal, no -wal, no -shm). Only for a database no program writes,
+    a backup, and only once its side files have been checked
+    (`unclean_backup_side_files`, `backup_database_is_link`): immutable
+    would read the main file without a journal or WAL file that holds
+    what was committed (v0.15.1, the form the earlier names' read used)."""
+    return _sqlite_ro_uri(path) + "&immutable=1"
+
+
 def _is_locked_error(e: sqlite3.Error) -> bool:
     """Check whether a sqlite3 error indicates a locked/busy database."""
     msg = str(e).lower()
@@ -640,15 +688,30 @@ def _is_locked_error(e: sqlite3.Error) -> bool:
 QUALCODER_LOCK_FILENAME = "project_in_use.lock"
 QUALCODER_LOCK_TIMEOUT = 30.0  # seconds; QualCoder __main__.py:131 — do not change
 LOCK_READ_MAX_BYTES = 4096  # a real lock is two short lines; cap the read
+# Exegete refreshes its own lock file this often while it holds it, as
+# QualCoder 3.8.2's heartbeat does (__main__.py:133), so that a write of
+# any length is never read as a lock file left behind (v0.15.1)
+LOCK_REFRESH_SECONDS = 5.0
+# No wait, join or mutex of that refresh lasts longer than this
+LOCK_WAIT_LIMIT_SECONDS = 10.0
+# The lock state of a lock file that is not a regular file (v0.15.1): a
+# named pipe, a socket, a device or a folder at its name, never opened
+# for reading. Every write to the database is refused while it is
+# there; reads go on, and so do Exegete's writes to its own files in
+# the project folder (exegete.json, the names list to fill in).
+# A departure from QualCoder 3.8.2, which opens the file without looking
+# at it (__main__.py 2640), and waits for ever at a named pipe.
+LOCK_NOT_A_FILE = "not_a_file"
 
 
 def qualcoder_open_message(holder: Optional[str]) -> str:
     """The refusal of every write while the lock file is active.
 
     Exegete writes the same file during each of its own writes
-    (`hold_project_lock`), so an active lock file means QualCoder 3.8.2
-    has the project open or another conversation using Exegete is writing
-    to it; the message names both (v0.15.0).
+    (`hold_project_lock`) and keeps it fresh for the whole write
+    (v0.15.1), so an active lock file means QualCoder 3.8.2 has the
+    project open or another conversation using Exegete is writing to it;
+    the message names both (v0.15.0).
     """
     return (
         f"This project is in use by another program: its lock file is "
@@ -657,6 +720,67 @@ def qualcoder_open_message(holder: Optional[str]) -> str:
         f"Ask the researcher to close it in QualCoder, or wait a moment; "
         f"once get_current_project shows qualcoder_open false, retry."
     )
+
+
+def lock_not_a_file_message(kind: str) -> str:
+    """The refusal of every write while the lock file is not a regular
+    file (v0.15.1): its name and kind, nothing changed, reads go on, and
+    the way through."""
+    return (
+        f"This project's lock file, {QUALCODER_LOCK_FILENAME}, "
+        f"{is_kind(kind)}, so Exegete made no change to the project. "
+        f"Reads go on as usual; moving that entry out of the project "
+        f"folder lets changes go ahead."
+    )
+
+
+def lock_not_a_file_warning(kind: str) -> str:
+    """The same state in an answer that refuses nothing (select_project,
+    get_current_project, start_coding_session)."""
+    return (
+        f"This project's lock file, {QUALCODER_LOCK_FILENAME}, "
+        f"{is_kind(kind)}. Reads work; every change to the project's "
+        f"database will be refused until that entry is moved out of the "
+        f"project folder."
+    )
+
+
+class _LockNotAFile(Exception):
+    """The opened lock file is not a regular file: a named pipe, say,
+    put at its name after the first look."""
+
+    def __init__(self, kind: str):
+        super().__init__(kind)
+        self.kind = kind
+
+
+@contextmanager
+def _open_lock_file(path: Path, mode: str):
+    """Exegete's own lock file opened without waiting, and given to the
+    caller only once the opened file is known to be regular (v0.15.1),
+    for the refresh, the check before a commit and the end of a write.
+
+    Anything else put at its name during the write raises `_LockNotAFile`
+    naming its kind: a named pipe by the opened file's own `fstat` (or,
+    opened "r+", which a pipe cannot be, by a look after the failed
+    open), a folder or a socket, which fail at the open, by that look.
+    A missing file raises FileNotFoundError, any other failure its own
+    OSError, as a plain `open` does."""
+    try:
+        f = open(path, mode, encoding="utf-8", errors="replace",
+                 opener=nonblocking_opener)
+    except FileNotFoundError:
+        raise
+    except OSError:
+        kind = odd_kind(path, follow=True)
+        if kind is not None:
+            raise _LockNotAFile(kind) from None
+        raise
+    with f:
+        kind_mode = os.fstat(f.fileno()).st_mode
+        if not stat.S_ISREG(kind_mode):
+            raise _LockNotAFile(kind_word(kind_mode))
+        yield f
 
 
 def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
@@ -668,28 +792,47 @@ def qualcoder_lock_state(project_dir: Union[str, Path]) -> tuple:
     Returns:
         (state, holder) where state is 'absent', 'active' (heartbeat within
         30 s, QualCoder is running with this project open) or 'stale'
-        (QualCoder crashed or the file is unreadable).
+        (QualCoder crashed or the file is unreadable), or, for the fourth
+        state, (LOCK_NOT_A_FILE, kind): the name holds a named pipe, a
+        socket, a device or a folder, which is never read (v0.15.1).
     """
     lock = Path(project_dir) / QUALCODER_LOCK_FILENAME
     if not lock.exists():
         return "absent", None
+    # Looked at before it is opened (v0.15.1): opening a named pipe for
+    # reading waits until a program writes to it. A link is read
+    # through, as before, so its kind is the kind of what it leads to.
+    kind = odd_kind(lock, follow=True)
+    if kind is not None:
+        return LOCK_NOT_A_FILE, kind
 
     def _read():
         # Read only a bounded prefix: a real lock is two short lines
         # (username + epoch). A crafted/corrupt multi-gigabyte lock in a
         # shared project must not be slurped into memory (SEC S-3).
-        with open(lock, "r", encoding="utf-8", errors="replace") as f:
+        # Opened without waiting, and read only once the opened file is
+        # known to be regular: an entry put at the name after the look
+        # above is answered at once, never read (v0.15.1).
+        with open(lock, "r", encoding="utf-8", errors="replace",
+                  opener=nonblocking_opener) as f:
+            mode = os.fstat(f.fileno()).st_mode
+            if not stat.S_ISREG(mode):
+                raise _LockNotAFile(kind_word(mode))
             head = f.read(LOCK_READ_MAX_BYTES)
         lines = head.splitlines()
         return lines[0], time.time() - float(lines[1])
 
     try:
         holder, age = _read()
+    except _LockNotAFile as e:
+        return LOCK_NOT_A_FILE, e.kind
     except Exception:
         # QualCoder itself retries once after 0.5 s (__main__.py:2647-2651)
         time.sleep(0.5)
         try:
             holder, age = _read()
+        except _LockNotAFile as e:
+            return LOCK_NOT_A_FILE, e.kind
         except Exception:
             # Unreadable lock = treated as a dead process, like QualCoder's
             # own break-the-lock fallback (__main__.py:2652-2656)
@@ -1291,61 +1434,321 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
     return signals
 
 
+class ProjectLock:
+    """Exegete's hold on a project's lock file, kept fresh (v0.15.1).
+
+    While Exegete holds the file it rewrites the time in it every
+    `LOCK_REFRESH_SECONDS`, as QualCoder 3.8.2's heartbeat does, so a
+    write of any length reads as active to QualCoder 3.8.2 and to a
+    second copy of Exegete; at the end the file is removed only if it
+    still holds Exegete's own lines.
+
+    `text` is the two lines last confirmed written (the user, then the
+    time to six decimals, so every write has one length and nothing is
+    ever cut); `trying` the lines of a write whose outcome an error left
+    unknown, also counted as Exegete's. Its truth value is `held`:
+    whether Exegete made the file for this write. Every touch of the file
+    happens under one mutex; no wait, join or mutex lasts past
+    `LOCK_WAIT_LIMIT_SECONDS`.
+
+    Departures from QualCoder's heartbeat (3.8.2 `__main__.py` 151 to
+    159, and its removal, 2552 to 2560), named: QualCoder opens the file
+    with "w" and writes `str(time.time())`, and removes whatever file is
+    there; Exegete opens it with "r+", never creating or emptying it,
+    writes the time to six decimals (which QualCoder's `float()` reads,
+    2643), and never writes over, or removes, another program's lines.
+    """
+
+    def __init__(self, path: Union[str, Path]):
+        self.path = Path(path)
+        self.text: Optional[str] = None
+        self.trying: Optional[str] = None
+        self._user: Optional[str] = None
+        self._mutex = threading.Lock()
+        self._stopped = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+        self._logged: set = set()
+
+    @property
+    def held(self) -> bool:
+        return self.text is not None
+
+    def __bool__(self) -> bool:
+        return self.held
+
+    def _lines(self) -> str:
+        return f"{self._user}\n{time.time():.6f}"
+
+    def _log_once(self, key, message: str, *args) -> None:
+        # Each kind once per hold; the kind only, never the error's
+        # message, which names the project's path (v0.14)
+        if key in self._logged:
+            return
+        self._logged.add(key)
+        logger.warning(message, *args)
+
+    def create(self) -> None:
+        """Make the file with mode "x" and Exegete's two lines.
+
+        The lines are computed before the open, so a user name that
+        cannot be found leaves nothing behind; a write that fails after
+        the file was made removes the file Exegete has just made.
+
+        Raises:
+            FileExistsError: another program made the file first
+            OSError: the file could not be made or written
+        """
+        self._user = getpass.getuser()
+        lines = self._lines()
+        made = False
+        try:
+            with open(self.path, "x", encoding="utf-8") as f:
+                made = True
+                # Same two-line format QualCoder writes
+                # (__main__.py:2546-2547)
+                f.write(lines)
+        except BaseException:
+            if made:
+                try:
+                    self.path.unlink()
+                except OSError:
+                    pass
+            raise
+        self.text = lines
+
+    def start(self) -> None:
+        """Start the refresh, a daemon thread."""
+        thread = threading.Thread(target=self._run,
+                                  name="exegete-lock-refresh", daemon=True)
+        thread.start()
+        self._thread = thread
+
+    def _run(self) -> None:
+        while not self._stopped.wait(LOCK_REFRESH_SECONDS):
+            try:
+                if not self.refresh_once():
+                    return
+            except Exception as e:  # never let the refresh raise
+                self._log_once(("refresh", error_label(e)),
+                               "The project lock file's refresh failed, "
+                               "retried: %s", error_label(e))
+
+    def refresh_once(self) -> bool:
+        """Rewrite the time in the file if it still holds Exegete's lines.
+
+        Returns False when the refresh should end: stopped, the file
+        gone, or another program's lines in it.
+        """
+        if self._stopped.is_set():
+            return False
+        if not self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS):
+            return True
+        try:
+            if self._stopped.is_set():
+                return False
+            try:
+                # "r+" never creates the file nor empties it; anything
+                # but a regular file at the name is not Exegete's file,
+                # never waited on (v0.15.1)
+                with _open_lock_file(self.path, "r+") as f:
+                    seen = f.read(LOCK_READ_MAX_BYTES)
+                    if seen == self.trying:
+                        self.text, self.trying = seen, None
+                    elif seen != self.text:
+                        self._log_once(
+                            "another", "The project lock file holds another "
+                            "program's lines; Exegete stops refreshing it")
+                        return False
+                    lines = self._lines()
+                    self.trying = lines
+                    f.seek(0)
+                    f.write(lines)
+                self.text, self.trying = lines, None
+                return True
+            except _LockNotAFile as e:
+                # The kind is one of `kind_word`'s fixed words, never a path
+                kind = e.kind
+                self._log_once(
+                    ("not_a_file", kind), "The project lock file %s; "
+                    "Exegete stops refreshing it", is_kind(kind))
+                return False
+            except FileNotFoundError as e:
+                self._log_once(
+                    "gone", "The project lock file was removed during a "
+                    "write; Exegete stops refreshing it: %s", error_label(e))
+                return False
+            except OSError as e:
+                # Disk full, permission, a file held on Windows, or one
+                # pending deletion there: the last lines kept, retried
+                self._log_once(
+                    ("retry", error_label(e)), "Could not refresh the "
+                    "project lock file, retried: %s", error_label(e))
+                return True
+        finally:
+            self._mutex.release()
+
+    def _whose(self) -> str:
+        """"ours", "another", "gone" or "unreadable": what the file holds.
+
+        Exegete's lines are taken before and after the read, so a refresh
+        running beside it is never mistaken for another program's lines.
+        The file is closed before this returns.
+
+        Raises:
+            _LockNotAFile: anything but a regular file is at the name, a
+                named pipe say, never waited on (v0.15.1)
+        """
+        before = (self.text, self.trying)
+        try:
+            with _open_lock_file(self.path, "r") as f:
+                seen = f.read(LOCK_READ_MAX_BYTES)
+        except FileNotFoundError:
+            return "gone"
+        except OSError:
+            return "unreadable"
+        return "ours" if seen in before + (self.text, self.trying) \
+            else "another"
+
+    def still_ours(self) -> bool:
+        """Whether the file still holds Exegete's lines, for the check
+        before a commit; a file gone is not Exegete's.
+
+        Unreadable, or the mutex not taken: read once more after 0.5
+        seconds (`qualcoder_lock_state`'s wait), not waiting on the
+        mutex again; still so, the file counts as Exegete's while the
+        time last confirmed written is within `QUALCODER_LOCK_TIMEOUT` of
+        now, since only a stale lock is taken over. Anything but a
+        regular file at the name is not Exegete's (v0.15.1): the check
+        before the commit then refuses in its words. Never raises
+        OSError.
+        """
+        if not self.held:
+            return False
+        whose = "unreadable"
+        try:
+            if self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS):
+                try:
+                    whose = self._whose()
+                finally:
+                    self._mutex.release()
+            if whose == "unreadable":
+                time.sleep(0.5)
+                whose = self._whose()
+        except _LockNotAFile:
+            return False
+        if whose == "unreadable":
+            confirmed = float(self.text.splitlines()[1])
+            return time.time() - confirmed <= QUALCODER_LOCK_TIMEOUT
+        return whose == "ours"
+
+    def stop(self) -> None:
+        """Stop the refresh: the flag, then the join. Safe to repeat."""
+        self._stopped.set()
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(LOCK_WAIT_LIMIT_SECONDS)
+
+    def end(self) -> None:
+        """Stop the refresh, then remove the file only if it still reads
+        as Exegete's; otherwise leave it, with one log line by kind."""
+        self.stop()
+        # Without the mutex if it is not taken: a stuck refresh never
+        # creates the file, so the read before the removal still holds
+        got = self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS)
+        try:
+            try:
+                whose = self._whose()
+                if whose == "unreadable":
+                    time.sleep(0.5)
+                    whose = self._whose()
+            except _LockNotAFile as e:
+                # A named pipe, say, put at the name during the write:
+                # never waited on, never removed (v0.15.1). The kind is
+                # one of `kind_word`'s fixed words, never a path
+                kind = e.kind
+                logger.warning("The project lock file %s; it was left in "
+                               "place at the end of a write", is_kind(kind))
+                return
+            if whose == "unreadable":
+                logger.warning("The project lock file could not be read at "
+                               "the end of a write; it was left in place")
+            elif whose == "another":
+                logger.warning("The project lock file holds another "
+                               "program's lines at the end of a write; it "
+                               "was left in place")
+            elif whose == "gone":
+                logger.warning("The project lock file was already gone at "
+                               "the end of a write")
+            else:
+                # The read above has closed its file, so that on Windows
+                # the removal is not refused by Exegete's own handle
+                try:
+                    self.path.unlink()
+                except OSError as e:
+                    # The kind only (v0.14): the error's text is the lock
+                    # file's path, the project folder's name in it.
+                    logger.warning("Could not remove project lock file: %s",
+                                   error_label(e))
+        finally:
+            if got:
+                self._mutex.release()
+
+
 @contextmanager
 def hold_project_lock(project_dir: Union[str, Path]):
     """Hold QualCoder's project lock for the duration of an MCP write.
 
     Mirrors QualCoder's own protocol: refuse when the lock is active; when
     it is absent, create it (username + epoch, mode 'x') so a QualCoder
-    launched mid-write politely refuses to open the project; delete it on
-    exit. A stale foreign lock is left alone (QualCoder's next open shows
-    its "not properly closed" prompt) and we proceed WITHOUT holding;
-    callers must re-check the lock state immediately before committing.
+    launched mid-write politely refuses to open the project, and keep it
+    fresh every `LOCK_REFRESH_SECONDS` for the whole write (v0.15.1); at
+    the end remove it only if it still holds Exegete's lines. A stale
+    foreign lock is left alone (QualCoder's next open shows its "not
+    properly closed" prompt) and we proceed WITHOUT holding or
+    refreshing; callers must re-check the lock state immediately before
+    committing.
 
     Yields:
-        True when the lock is held by us, False when proceeding over a
-        stale foreign lock.
+        A `ProjectLock`, true when the lock is held by us, false when
+        proceeding over a stale foreign lock.
 
     Raises:
-        DatabaseLockedError: If QualCoder has the project open
+        DatabaseLockedError: If QualCoder has the project open, or the
+            lock file's name holds something other than a regular file
+            (v0.15.1), refused before anything is made
     """
     project_dir = Path(project_dir)
-    lock = project_dir / QUALCODER_LOCK_FILENAME
+    lock = ProjectLock(project_dir / QUALCODER_LOCK_FILENAME)
 
     state, holder = qualcoder_lock_state(project_dir)
     if state == "active":
         raise DatabaseLockedError(qualcoder_open_message(holder))
+    if state == LOCK_NOT_A_FILE:
+        raise DatabaseLockedError(lock_not_a_file_message(holder))
 
-    held = False
     if state == "absent":
         try:
-            with open(lock, "x", encoding="utf-8") as f:
-                # Same two-line format QualCoder writes (__main__.py:2546-2547)
-                f.write(f"{getpass.getuser()}\n{time.time()}")
-            held = True
+            lock.create()
         except FileExistsError:
             # Race: someone created the lock between check and create
             state2, holder2 = qualcoder_lock_state(project_dir)
             if state2 == "active":
                 raise DatabaseLockedError(qualcoder_open_message(holder2)) from None
+            if state2 == LOCK_NOT_A_FILE:
+                raise DatabaseLockedError(
+                    lock_not_a_file_message(holder2)) from None
             # stale — leave the file alone and proceed unheld
         except OSError as e:
             logger.warning("Could not create project lock file: %s",
                            error_label(e))
 
     try:
-        yield held
+        if lock.held:
+            lock.start()
+        yield lock
     finally:
-        if held:
-            try:
-                lock.unlink()
-            except OSError as e:
-                # The kind only (v0.14): the error's text is the lock
-                # file's path, the project folder's name in it, and this
-                # line fires on every restore.
-                logger.warning("Could not remove project lock file: %s",
-                               error_label(e))
-
+        if lock.held:
+            lock.end()
 
 def position_safe(fulltext: str) -> bool:
     """Check whether Qt (GUI) and code-point positions coincide for a text.
@@ -1722,6 +2125,9 @@ def validate_qda_path(db_path: str) -> Path:
     Raises:
         ValueError: If path is invalid
         FileNotFoundError: If database file doesn't exist
+        ProjectFileKindError: If a side file of SQLite's beside the
+            database is not a regular file (v0.15.1), before SQLite
+            opens anything
     """
     try:
         # Resolve to absolute path, following symlinks
@@ -1770,6 +2176,12 @@ def validate_qda_path(db_path: str) -> Path:
             )
     else:
         raise ValueError(f"Path is neither a file nor a directory: {path}")
+
+    # SQLite's side files, looked at before SQLite opens them (v0.15.1):
+    # a named pipe there would make every open wait for ever
+    odd = odd_database_side_file(path)
+    if odd is not None:
+        raise ProjectFileKindError(odd)
 
     # Basic SQLite validation (read-only check)
     conn = None
@@ -2259,12 +2671,11 @@ def file_ending_problem(old: str, new: str, mediapath: Optional[str],
     transcript. Every other name changes freely: a name with no
     recognised ending ('Thomas.Jones') has no rule.
 
-    `earlier` are names this file had before (its stored file's own name,
-    and its names in the project's backups): restoring an ending one of
-    them had is not refused (the lead's ruling on QA-4), where the rule
-    is about gaining an ending ('.pdf' either way, '.transcribed', a
-    declared file type) or swapping a transcript's '.txt' and
-    '.transcribed'. Losing both of a transcript's endings, or a media
+    `earlier` are names this file had before (its stored file's own
+    name): restoring an ending one of them had is not refused (the lead's
+    ruling on QA-4), where the rule is about gaining an ending ('.pdf'
+    either way, '.transcribed', a declared file type) or swapping a
+    transcript's '.txt' and '.transcribed'. Losing both of a transcript's endings, or a media
     file's stored extension, is refused whatever came before, because
     that is the change that breaks QualCoder's link or export.
     """
@@ -2555,10 +2966,60 @@ BACKUP_IGNORE_PATTERNS = ("*.lock",) + QUALCODER_BACKUP_IGNORE_PATTERNS
 # (qualcoder_history.ai_data_found).
 AI_DATA_FOLDER = "ai_data"
 
+# The project's audio and video folders, which QualCoder makes for a new
+# project (4.0 __main__.py:2194-2201, at the tag 4.0) and again when it
+# opens one (__main__.py:2879-2884), and into which its import copies
+# recordings (manage_files.py:3048-3053 and 3064-3067). A departure, named
+# (v0.15.1, the owner's decision of 27 September 2026): Exegete's backups
+# leave both folders out, whatever is at their names, and a restore keeps
+# the project's own, never taking the backup's (server._kept_by_restore).
+# QualCoder's save_backup keeps media unless its `backup_av_files`
+# setting (on by default, app.py:1376) is off, and then leaves out six
+# file endings wherever they are (app.py:1745-1752). Exegete never writes
+# in either folder, so a backup taken before a change has no copy of
+# them to lose; a workspace copy keeps them.
+MEDIA_FOLDERS = ("audio", "video")
+
+
+def top_entry_named(top: Union[str, Path], name: str,
+                    names: Tuple[str, ...]) -> bool:
+    """Whether `name`, a top-level entry of a project folder or of a
+    backup (`top`), is at one of `names` as the disk takes names: letter
+    case folded on macOS and Windows (as `private_files` compares the
+    Exegete folder's name), exactly elsewhere, or, where the system
+    compares names exactly and the disk does not (Linux on a disk that
+    ignores letter case), another spelling the disk takes for that name:
+    the same entry, by device and inode, read with `lstat`, never
+    following a link. The one test a backup's leave-out and a restore's
+    keep both make, so the two never disagree (v0.15.1). Never raises."""
+    from . import private_files
+    for wanted in names:
+        if private_files._same_name(name, wanted, None):
+            return True
+        if name.casefold() != wanted.casefold():
+            continue
+        try:
+            info = os.lstat(Path(top) / name)
+            own = os.lstat(Path(top) / wanted)
+        except (OSError, ValueError):
+            continue
+        if info.st_ino and (info.st_dev, info.st_ino) == (own.st_dev,
+                                                         own.st_ino):
+            return True
+    return False
+
+
+def is_media_folder_entry(top: Union[str, Path], name: str) -> bool:
+    """Whether a top-level entry of a project folder or of a backup is at
+    the audio or the video folder's name (MEDIA_FOLDERS), whatever it is:
+    a folder, a file, a link or a junction. Never raises."""
+    return top_entry_named(top, name, MEDIA_FOLDERS)
+
 
 def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
                  database_copied: bool = False,
-                 exclude_real: Optional[set] = None):
+                 exclude_real: Optional[set] = None,
+                 leave_out_top: Tuple[str, ...] = ()):
     """The ignore callback shared by backup_project and copy_project_to_workspace.
 
     Applies BACKUP_IGNORE_PATTERNS and additionally skips any entry that
@@ -2584,6 +3045,11 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
     database into the copy by `_copy_database`. `exclude_real` (fix round
     1) names, by real path, the file a linked `data.qda` points to and
     its side files, which the copy has already taken consistently.
+
+    `leave_out_top` (v0.15.1; a backup passes MEDIA_FOLDERS) names
+    entries at the project's top that are left out whatever they are, a
+    link or a junction included, matched by `top_entry_named`: never
+    copied, never followed, never reported as skipped.
     """
     root_real = os.path.normcase(os.path.realpath(project_root))
     patterns = shutil.ignore_patterns(*BACKUP_IGNORE_PATTERNS)
@@ -2605,9 +3071,15 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
 
     def _ignore(dirpath, names):
         ignored = set(patterns(dirpath, names))
-        if database_copied and \
-                os.path.normcase(os.path.abspath(dirpath)) == root_norm:
+        at_top = os.path.normcase(os.path.abspath(dirpath)) == root_norm
+        if database_copied and at_top:
             ignored.update(n for n in names if n in DATABASE_FILES)
+        if leave_out_top and at_top:
+            # Before the links are looked at, so a link at one of these
+            # names is left out, not reported as skipped
+            ignored.update(n for n in names
+                           if top_entry_named(project_root, n,
+                                              leave_out_top))
         if exclude_real:
             ignored.update(
                 n for n in names
@@ -2712,13 +3184,68 @@ BACKUP_WITHOUT_DATABASE_MESSAGE = (
 def _side_file_is_live(path: str) -> bool:
     """A side file that SQLite would act on: a link, or a file with
     something in it (an empty journal or WAL file is ignored by SQLite,
-    fix round 1)."""
+    fix round 1). Read by `lstat` (v0.15.1): a link, or anything that is
+    not a regular file (a named pipe, a folder), counts as live, so a
+    backup holding one is never taken for clean."""
     try:
-        if os.path.islink(path):
-            return True
-        return os.path.isfile(path) and os.path.getsize(path) > 0
+        info = os.lstat(path)
     except (OSError, ValueError):
         return False
+    if not stat.S_ISREG(info.st_mode):
+        return True
+    return info.st_size > 0
+
+
+# What SQLite keeps under each side file's suffix, for the refusal below
+_SIDE_FILE_ROLES = {"-journal": "journal", "-wal": "write-ahead log",
+                    "-shm": "shared-memory file"}
+
+
+def odd_database_side_file(data_qda: Union[str, Path]) -> Optional[str]:
+    """The refusal for a side file of SQLite's that is not a regular
+    file, or None when there is none (v0.15.1).
+
+    SQLite opens `data.qda-journal`, `-wal` and `-shm` beside a database
+    without asking, and a named pipe there makes it wait for ever. Each
+    is looked at by `lstat` beside `data_qda` and, when `data_qda` is a
+    link, beside the file it leads to (where SQLite names them, as
+    `unclean_backup_side_files` reads them); a link there counts too.
+    Nothing is opened. The words name no path and fit a project, a
+    backup and a copy's source alike; a link gets no advice to move it,
+    since it may lead to a journal SQLite needs to finish an earlier
+    write, and a regular journal is never refused.
+    """
+    base = os.fspath(data_qda)
+    places = [(base, False)]
+    try:
+        if os.path.islink(base):
+            places.append((os.path.realpath(base), True))
+    except (OSError, ValueError):
+        pass
+    for database, beside_target in places:
+        for suffix in _SIDE_SUFFIXES:
+            kind = odd_kind(database + suffix)
+            if kind is None:
+                continue
+            role = _SIDE_FILE_ROLES[suffix]
+            if beside_target:
+                what = (f"The entry whose name ends in {suffix} beside "
+                        f"the file data.qda links to")
+            else:
+                what = f"The entry data.qda{suffix} beside data.qda"
+            text = (f"{what} {is_kind(kind)}, so Exegete opened and "
+                    f"changed nothing: SQLite keeps the database's {role} "
+                    f"under that name.")
+            if kind == "a link":
+                text += (" A link there may lead to a journal SQLite needs "
+                         "to finish an earlier write, so moving it is not "
+                         "suggested; it is worth finding where it leads "
+                         "first.")
+            else:
+                text += (" Moving that entry out of its folder lets "
+                         "Exegete open the database.")
+            return text
+    return None
 
 
 def backup_database_is_link(folder: Union[str, Path]) -> bool:
@@ -2825,14 +3352,19 @@ def backup_sort_key(entry: Path, prefix: str, to_the_hour: bool = False,
 def unclean_backup_side_files(folder: Union[str, Path]) -> List[str]:
     """The side files that make a backup folder unclean, by name: a
     journal or a WAL file beside its `data.qda` that is not empty (a
-    link counts too), and, when `data.qda` is a link, one beside the
-    file it points to (fix round 1: SQLite names a linked database's
-    journal after the target)."""
+    link counts too, and from v0.15.1 anything that is not a regular
+    file, as does a shared-memory file that is not one), and, when
+    `data.qda` is a link, one beside the file it points to (fix round
+    1: SQLite names a linked database's journal after the target)."""
     out = []
     base = os.fspath(folder)
     for name in UNCLEAN_BACKUP_SIDE_FILES:
         if _side_file_is_live(os.path.join(base, name)):
             out.append(name)
+    # The shared-memory file too when it is not a regular file (v0.15.1):
+    # SQLite opens it, and a named pipe there would make it wait
+    if odd_kind(os.path.join(base, "data.qda-shm")) is not None:
+        out.append("data.qda-shm")
     if backup_database_is_link(folder):
         try:
             real = os.path.realpath(os.path.join(base, "data.qda"))
@@ -2841,6 +3373,8 @@ def unclean_backup_side_files(folder: Union[str, Path]) -> List[str]:
         for suffix in ("-journal", "-wal"):
             if _side_file_is_live(real + suffix):
                 out.append(os.path.basename(real) + suffix)
+        if odd_kind(real + "-shm") is not None:
+            out.append(os.path.basename(real) + "-shm")
     return out
 
 
@@ -2849,7 +3383,8 @@ class _BackupBusy(Exception):
 
 
 def _copy_database(source: Path, dest: Path,
-                   report: Optional[Dict[str, Any]] = None) -> None:
+                   report: Optional[Dict[str, Any]] = None,
+                   copy_as_file: bool = True) -> None:
     """Write `source` (a project's data.qda) into `dest` consistently.
 
     SQLite's online backup, all pages in one step, from a read-only
@@ -2858,7 +3393,9 @@ def _copy_database(source: Path, dest: Path,
     another program holds the write lock the step returns busy; Python
     retries, and past BACKUP_BUSY_SECONDS this gives up with
     DatabaseLockedError. A database SQLite cannot read is copied as a
-    file with its side files (see above), and `report` says so.
+    file with its side files (see above), and `report` says so; without
+    `copy_as_file` (v0.15.1, a write's backup under the write's lock)
+    it raises OSError instead.
     """
     deadline = time.monotonic() + BACKUP_BUSY_SECONDS
 
@@ -2888,6 +3425,8 @@ def _copy_database(source: Path, dest: Path,
         failure = sqlite_error_label(e)
     except sqlite3.DatabaseError as e:
         failure = sqlite_error_label(e)
+    if not copy_as_file:
+        raise OSError(f"SQLite could not copy the database: {failure}")
     # Not readable as a database: the bytes as they are, side files too
     for name in ("-journal", "-wal", "-shm", ""):
         try:
@@ -2904,38 +3443,54 @@ def _copy_database(source: Path, dest: Path,
 
 
 def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
-                       report: Optional[Dict[str, Any]] = None) -> None:
+                       report: Optional[Dict[str, Any]] = None,
+                       database_later: bool = False,
+                       leave_out_top: Tuple[str, ...] = ()
+                       ) -> Optional[Path]:
     """Copy a project folder into `dest`, an empty folder the caller has
     just claimed (and removes on any failure): the database
     consistently, the rest as before. A data.qda that is a link inside
     the project is copied from the file it points to, which is then left
     out with its side files; one pointing outside the project, or to
     nothing, raises BackupWithoutDatabaseError before anything is
-    written (fix round 1)."""
+    written (fix round 1).
+
+    With `database_later` (v0.15.1, a backup's two steps) the database
+    is not copied here: the link checks are made as before, the
+    database and its side files are left out of the copy, and the file
+    to copy it from is returned, for `StartedBackup.finish` to copy by
+    `_copy_database` (None when the project has no data.qda).
+
+    `leave_out_top` names the entries at the project's top left out of
+    the copy, whatever they are (`_copy_ignore`): a backup passes
+    MEDIA_FOLDERS, a workspace copy nothing."""
     database = source / "data.qda"
     exclude_real: set = set()
-    database_copied = False
+    database_source: Optional[Path] = None
     if database.is_symlink():
         root_real = os.path.normcase(os.path.realpath(source))
         real = os.path.realpath(database)
         inside = os.path.normcase(real).startswith(root_real + os.sep)
         if not inside or not os.path.isfile(real):
             raise BackupWithoutDatabaseError(BACKUP_WITHOUT_DATABASE_MESSAGE)
-        _copy_database(Path(real), dest / "data.qda", report)
+        database_source = Path(real)
         exclude_real = {os.path.normcase(real + suffix)
                         for suffix in ("",) + _SIDE_SUFFIXES}
-        database_copied = True
-        if report is not None:
-            report["database_from_link"] = True
     elif database.is_file():
-        _copy_database(database, dest / "data.qda", report)
-        database_copied = True
+        database_source = database
+    if database_source is not None and not database_later:
+        _copy_database(database_source, dest / "data.qda", report)
+    if database_source is not None and report is not None and \
+            database_source is not database:
+        report["database_from_link"] = True
     shutil.copytree(
         source, dest, dirs_exist_ok=True,
         ignore=_copy_ignore(source, skipped,
-                            database_copied=database_copied,
-                            exclude_real=exclude_real))
+                            database_copied=database_source is not None,
+                            exclude_real=exclude_real,
+                            leave_out_top=leave_out_top))
     _withhold_exegete_folder_links(source, skipped, report)
+    return database_source if database_later else None
 
 
 def _withhold_exegete_folder_links(source: Path, skipped: List[str],
@@ -2966,27 +3521,219 @@ def _withhold_exegete_folder_links(source: Path, skipped: List[str],
             report.pop("skipped_symlinks_in_exegete_folder", None)
 
 
-def backup_project(project_path: Union[str, Path],
-                   report: Optional[Dict[str, Any]] = None) -> Path:
-    """Create a timestamped backup of a Qualcoder project.
+# ----------------------------------------------------------------------------
+# A backup made whole before it takes its name (v0.15.1, from the
+# methods review of 20 October 2026)
+#
+# A backup used to be claimed under its final name and filled in place,
+# and removed only when an exception was raised: a process ended during
+# the copy (a host quitting, a power cut) left a folder that list_backups
+# listed as the newest, prune_backups could keep over the last whole one,
+# and restore_backup accepted. It is now filled under a hidden name,
+# `.<project>_backup_<time>_partial_<8 hex>.qda`, which nothing lists (a
+# leading dot, so neither the `<project>_backup_` nor the `_BKUP_` prefix
+# matches; `_backup_` and `.qda` in it, so the project list passes it by
+# as a backup), and given its name by one rename within the folder once
+# its database is in: a backup under its name is whole. A rename never
+# replaces a folder already under the chosen name: one there takes the
+# next counter (on Linux and macOS a folder made empty in the instant
+# between the check and the rename is the one case a rename replaces).
+# A hidden folder left by a process that ended is removed by the next
+# backup of that project once its time is BACKUP_LEFTOVER_SECONDS old:
+# never sooner, since another copy of Exegete may still be filling it.
+#
+# Its two steps (v0.15.1, the backup's moment): `start_backup` claims
+# the hidden folder and copies everything but the database, outside
+# SQLite's lock; `StartedBackup.finish` copies the database by SQLite's
+# own copy and names the folder, under the write's lock, so the backup
+# holds the state the write's checks saw; `abandon` removes it.
+# `backup_project` does both at once.
+# ----------------------------------------------------------------------------
+BACKUP_LEFTOVER_SECONDS = 3600
+_PARTIAL_BACKUP_REST = re.compile(
+    r"_backup_(\d{8}_\d{6})_partial_[0-9a-f]{8}\.qda")
+# On Windows a folder another program holds a handle in (a virus scanner
+# reading a file just written) cannot be renamed for a moment: the waits
+# before each new try, about a second in all.
+_RENAME_WAITS = (0.05, 0.1, 0.2, 0.25, 0.4)
+_BACKUP_NAME_TRIES = 1000
 
-    The whole project tree is copied, ai_data/ included, minus
-    BACKUP_IGNORE_PATTERNS (QualCoder's own backup ignore set plus
-    *.lock; see the constant above). Symlinks pointing outside the
-    project folder, dangling symlinks, and in-project symlink loops are
-    skipped rather than followed (S-P1, see _copy_ignore).
 
-    Args:
-        project_path: Path to the .qda project folder
-        report: Optional dict; on success receives "skipped_symlinks",
-                the project-relative paths of skipped symlinks
+def is_partial_backup_name(name: str, stem: str) -> bool:
+    """Whether a folder name is one a backup of the project called
+    `stem` has while it is being made."""
+    prefix = f".{stem}"
+    return (name.startswith(prefix) and _PARTIAL_BACKUP_REST
+            .fullmatch(name[len(prefix):]) is not None)
 
-    Returns:
-        Path to the backup folder
+
+def sweep_partial_backups(project_path: Union[str, Path],
+                          now: Optional[datetime] = None) -> int:
+    """Remove the hidden folders of this project's backups left
+    unfinished by a process that ended, once the time in their name is
+    more than BACKUP_LEFTOVER_SECONDS old; return how many went. A link
+    is never followed or removed, and a failure is passed over: a
+    leftover is never listed, so it waits for the next sweep."""
+    folder = Path(project_path)
+    if folder.name == "data.qda":
+        folder = folder.parent
+    now = now or datetime.now()
+    removed = 0
+    try:
+        entries = list(os.scandir(folder.parent))
+    except OSError:
+        return 0
+    for entry in entries:
+        if not is_partial_backup_name(entry.name, folder.stem):
+            continue
+        stamp = _PARTIAL_BACKUP_REST.fullmatch(
+            entry.name[len(folder.stem) + 1:]).group(1)
+        try:
+            when = datetime.strptime(stamp, "%Y%m%d_%H%M%S")
+            if (now - when).total_seconds() <= BACKUP_LEFTOVER_SECONDS:
+                continue
+            if entry.is_symlink() or not entry.is_dir(follow_symlinks=False):
+                continue
+        except (OSError, ValueError):
+            continue
+        shutil.rmtree(entry.path, ignore_errors=True)
+        if not os.path.lexists(entry.path):
+            removed += 1
+    if removed:
+        logger.info("Removed %d backup folder(s) left unfinished", removed)
+    return removed
+
+
+def _keep_folder_time(source: Path, dest: Path) -> None:
+    """Give the backup's folder the project's times again, as the copy
+    of the tree left them before the database was written into it (a
+    copy inherits the project folder's modification time)."""
+    try:
+        st = os.stat(source)
+        os.utime(dest, ns=(st.st_atime_ns, st.st_mtime_ns))
+    except OSError:
+        pass
+
+
+def _rename_folder(partial: Path, final: Path) -> None:
+    """One rename; on Windows, a refusal while another program holds a
+    handle in the folder is tried again for about a second."""
+    for wait in _RENAME_WAITS + (None,):
+        try:
+            os.rename(partial, final)
+            return
+        except FileExistsError:
+            raise
+        except PermissionError:
+            if wait is None or os.name != "nt" or os.path.lexists(final):
+                raise
+            time.sleep(wait)
+
+
+def _name_backup(partial: Path, project_path: Path) -> Path:
+    """Give a whole backup its name: `<project>_backup_<time>.qda`, the
+    time of this moment, `_2`, `_3` and so on when that name is taken.
+    A folder already under a name is never replaced (QA F2 / SEC D-3,
+    S-H5): the rename to it fails and the next counter is tried."""
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    for counter in range(1, _BACKUP_NAME_TRIES + 1):
+        name = (f"{project_path.stem}_backup_{timestamp}.qda" if counter == 1
+                else f"{project_path.stem}_backup_{timestamp}_{counter}.qda")
+        final = project_path.parent / name
+        if os.path.lexists(final):
+            continue
+        try:
+            _rename_folder(partial, final)
+        except OSError:
+            if os.path.lexists(final) and os.path.isdir(partial):
+                continue    # taken in the meantime: the next counter
+            raise
+        return final
+    raise FileExistsError(errno.EEXIST, "No free name for the backup")
+
+
+class StartedBackup:
+    """A backup begun by `start_backup`: everything but the database
+    copied into a folder under a hidden name. `finish` copies the
+    database and gives the folder its name; `abandon` removes it. The
+    first of the two to run settles it; the other then does nothing."""
+
+    def __init__(self, project_path: Path, partial: Path,
+                 database_source: Optional[Path], skipped: List[str],
+                 report: Optional[Dict[str, Any]]):
+        self.project_path = project_path
+        self.partial = partial
+        self.path: Optional[Path] = None
+        self._database_source = database_source
+        self._skipped = skipped
+        self._report = report
+        self._settled = False
+
+    def finish(self, copy_as_file: bool = True) -> Path:
+        """Copy the database into the backup and give it its name.
+
+        Without `copy_as_file` (a write's backup, taken under the
+        write's own lock), a database SQLite cannot copy is not copied
+        as a file: the file copy opens and closes the database file
+        outside SQLite, which on Linux and macOS drops every lock the
+        process holds on it. The backup then fails and is removed.
+
+        Raises:
+            DatabaseLockedError: Another program kept the database locked
+            OSError: The backup failed; it is removed
+        """
+        if self._settled:
+            raise RuntimeError("This backup is already finished or "
+                               "abandoned.")
+        try:
+            if self._database_source is not None:
+                _copy_database(self._database_source,
+                               self.partial / "data.qda", self._report,
+                               copy_as_file=copy_as_file)
+            _keep_folder_time(self.project_path, self.partial)
+            final = _name_backup(self.partial, self.project_path)
+        except DatabaseLockedError:
+            # Another program kept the database locked (v0.14): no
+            # backup, so nothing may be written; said as the lock it is
+            logger.error("Failed to create backup: the database stayed "
+                         "locked")
+            self.abandon()
+            raise
+        except Exception as e:
+            logger.error(f"Failed to create backup: {error_label(e)}")
+            self.abandon()
+            raise OSError(f"Backup failed: {error_label(e)}") from None
+        self._settled = True
+        self.path = final
+        suffix = final.name[len(self.project_path.stem):]
+        logger.info("Backup created successfully: (project folder name "
+                    "withheld)%s", suffix)
+        if self._report is not None:
+            self._report["skipped_symlinks"] = self._skipped
+        return final
+
+    def abandon(self) -> None:
+        """Remove the backup's folder, unless it is finished. A removal
+        that fails leaves it under its hidden name, never listed, for a
+        later backup's sweep."""
+        if self._settled:
+            return
+        self._settled = True
+        shutil.rmtree(self.partial, ignore_errors=True)
+
+
+def start_backup(project_path: Union[str, Path],
+                 report: Optional[Dict[str, Any]] = None) -> StartedBackup:
+    """The first of a backup's two steps (v0.15.1): claim a folder under
+    a hidden name beside the project and copy into it everything
+    `backup_project` copies but the database. Leftovers of earlier
+    backups are swept first.
 
     Raises:
         FileNotFoundError: If project doesn't exist
-        OSError: If backup fails
+        BackupWithoutDatabaseError: data.qda links outside the project
+        OSError: If the copy fails; nothing is left under the backup's
+            name, and the folder is removed
     """
     project_path = Path(project_path)
 
@@ -3000,16 +3747,11 @@ def backup_project(project_path: Union[str, Path],
     if not project_path.is_dir():
         raise ValueError(f"Project path must be a directory: {project_path}")
 
-    # Create backup with timestamp; uniquify on collision so two writes in
-    # the same second cannot abort each other (QA F2 / SEC D-3)
+    sweep_partial_backups(project_path)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_name = f"{project_path.stem}_backup_{timestamp}.qda"
-    backup_path = project_path.parent / backup_name
-    counter = 2
-    while backup_path.exists():
-        backup_name = f"{project_path.stem}_backup_{timestamp}_{counter}.qda"
-        backup_path = project_path.parent / backup_name
-        counter += 1
+    partial = project_path.parent / (
+        f".{project_path.stem}_backup_{timestamp}_partial_"
+        f"{uuid.uuid4().hex[:8]}.qda")
 
     # The seventh route (re-verification R-5). A backup folder's name is
     # `<project folder stem>_backup_<timestamp>.qda`, so logging it in
@@ -3024,19 +3766,19 @@ def backup_project(project_path: Union[str, Path],
     # part that carries the name rather than the line: what identifies
     # WHICH backup among a project's backups is the timestamped suffix,
     # and that is what is kept. The folder lives beside the project, so
-    # nothing that could be found before is unfindable now.
+    # nothing that could be found before is unfindable now. The hidden
+    # name is never logged.
     #
-    # The two `Failed to create backup` lines below log the error's kind
-    # only (v0.14): its text can carry the whole path, and the kind with
-    # the system's name for it (`PermissionError EACCES`) says what
-    # failed.
-    suffix = backup_name[len(project_path.stem):]
-    logger.info("Creating backup: (project folder name withheld)%s", suffix)
+    # The `Failed to create backup` lines log the error's kind only
+    # (v0.14): its text can carry the whole path, and the kind with the
+    # system's name for it (`PermissionError EACCES`) says what failed.
+    logger.info("Creating backup: (project folder name withheld)_backup_%s",
+                timestamp)
 
     skipped: List[str] = []
     try:
         # The claim: an atomic mkdir, before anything is written
-        backup_path.mkdir()
+        partial.mkdir()
     except FileExistsError as e:
         # The folder appeared under someone else's hand and is never
         # ours to remove (S-H5)
@@ -3046,31 +3788,52 @@ def backup_project(project_path: Union[str, Path],
         logger.error(f"Failed to create backup: {error_label(e)}")
         raise OSError(f"Backup failed: {error_label(e)}") from None
     try:
-        _copy_project_tree(project_path, backup_path, skipped, report)
-        logger.info("Backup created successfully: (project folder name "
-                    "withheld)%s", suffix)
-        if report is not None:
-            report["skipped_symlinks"] = skipped
-        return backup_path
-    except DatabaseLockedError:
-        # Another program kept the database locked (v0.14): no backup,
-        # so nothing may be written; said as the lock it is
-        logger.error("Failed to create backup: the database stayed locked")
-        shutil.rmtree(backup_path, ignore_errors=True)
-        raise
+        database_source = _copy_project_tree(project_path, partial, skipped,
+                                             report, database_later=True,
+                                             leave_out_top=MEDIA_FOLDERS)
     except BackupWithoutDatabaseError:
         # The copy would hold no database (fix round 1): no backup, so
         # nothing may be written
         logger.error("Failed to create backup: data.qda links outside "
                      "the project")
-        shutil.rmtree(backup_path, ignore_errors=True)
+        shutil.rmtree(partial, ignore_errors=True)
         raise
     except Exception as e:
         logger.error(f"Failed to create backup: {error_label(e)}")
-        # Never leave a partial tree behind: list_backups would present
-        # it as a restorable backup (S-H5)
-        shutil.rmtree(backup_path, ignore_errors=True)
+        # Never leave a partial tree behind (S-H5); one a removal misses
+        # stays under its hidden name, never listed
+        shutil.rmtree(partial, ignore_errors=True)
         raise OSError(f"Backup failed: {error_label(e)}") from None
+    return StartedBackup(project_path, partial, database_source, skipped,
+                         report)
+
+
+def backup_project(project_path: Union[str, Path],
+                   report: Optional[Dict[str, Any]] = None) -> Path:
+    """Create a timestamped backup of a Qualcoder project: both of a
+    backup's steps at once (`start_backup`, then `finish`).
+
+    The whole project tree is copied, ai_data/ included, minus
+    BACKUP_IGNORE_PATTERNS (QualCoder's own backup ignore set plus
+    *.lock; see the constant above) and the audio and video folders
+    (MEDIA_FOLDERS, v0.15.1); the database by SQLite's own copy.
+    Symlinks pointing outside the project folder, dangling symlinks, and
+    in-project symlink loops are skipped rather than followed (S-P1, see
+    _copy_ignore).
+
+    Args:
+        project_path: Path to the .qda project folder
+        report: Optional dict; on success receives "skipped_symlinks",
+                the project-relative paths of skipped symlinks
+
+    Returns:
+        Path to the backup folder
+
+    Raises:
+        FileNotFoundError: If project doesn't exist
+        OSError: If backup fails
+    """
+    return start_backup(project_path, report).finish()
 
 
 def copy_project_to_workspace(
@@ -3289,6 +4052,53 @@ def pseudonyms_json_fingerprint(folder: Union[str, Path]) -> Optional[str]:
         return "unreadable"
 
 
+# What a restore's preview counts in the project now and in the backup
+# (v0.15.1): each kind of row by the format's own tables, every coder's
+# rows together. Codings are the text, image and audio-video codings
+# together.
+PROJECT_COUNT_TABLES = (
+    ("files", ("source",)),
+    ("codes", ("code_name",)),
+    ("categories", ("code_cat",)),
+    ("codings", ("code_text", "code_image", "code_av")),
+    ("cases", ("cases",)),
+    ("annotations", ("annotation",)),
+    ("journal_entries", ("journal",)),
+)
+
+
+def project_counts(folder: Union[str, Path], immutable: bool = False
+                   ) -> Optional[Dict[str, Optional[int]]]:
+    """How many rows of each kind (`PROJECT_COUNT_TABLES`) the project, or
+    the backup, in `folder` holds: every coder's rows, no coder named.
+    A kind whose table the schema lacks is None (codings: when it lacks
+    all three tables).
+
+    Never waits: the database is opened read-only with no wait on
+    another program's lock, so a database being written, or one that
+    cannot be opened, gives None, as a whole. A backup (`immutable`) is
+    opened immutable too, so no side file is ever made beside its
+    database; the caller has refused an unclean backup, or one whose
+    database is a link, first. Never raises."""
+    data = Path(folder) / "data.qda"
+    try:
+        uri = (_sqlite_ro_immutable_uri(data) if immutable
+               else _sqlite_ro_uri(data))
+        with closing(sqlite3.connect(uri, uri=True, timeout=0)) as con:
+            tables = {row[0].lower() for row in con.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'")}
+            counts: Dict[str, Optional[int]] = {}
+            for kind, names in PROJECT_COUNT_TABLES:
+                present = [name for name in names if name in tables]
+                counts[kind] = (sum(
+                    con.execute(f'SELECT COUNT(*) FROM "{name}"')
+                    .fetchone()[0] for name in present)
+                    if present else None)
+            return counts
+    except Exception:                                   # noqa: BLE001
+        return None
+
+
 def read_project_pseudonyms(project_folder: Union[str, Path]
                             ) -> Tuple[List[Dict[str, str]], str]:
     """QualCoder's own `pseudonyms.json`, read the way it is written.
@@ -3422,8 +4232,8 @@ def private_note_refusal(kind: str, row_id: int,
     # stays marker-free, so a marker in any result always means a leak
     return (f"{kind} {row_id} carries a private note (a memo section the "
             f"assistant cannot see); nothing was deleted. Pass "
-            f"{override}=true to delete it anyway; a backup is taken first "
-            f"regardless of create_backup.")
+            f"{override}=true to delete it anyway; a backup is taken "
+            f"first.")
 
 
 def _append_provenance_block(target_memo: Any, block: str) -> str:
@@ -3852,9 +4662,10 @@ class QualcoderDatabase:
                             f"which that schema has, so it may have been "
                             f"damaged or altered; Exegete cannot read it as "
                             f"it is or repair it itself. A copy from before "
-                            f"the change (a backup folder beside it, "
-                            f"selected in its place, for example) may have "
-                            f"them; otherwise ")
+                            f"the change may have them: a backup folder "
+                            f"beside it, for example, copied back by hand "
+                            f"while no program has the project open. "
+                            + BACKUP_BY_HAND_KEEPS_MEDIA + " Otherwise, ")
                     else:
                         # "Appears": the missing columns are the sign, and
                         # a damaged copy can lack them too (documents
@@ -3977,8 +4788,8 @@ class QualcoderDatabase:
         round 3): these maps give a code its path and its category in an
         answer, and every code and category is read to build them, so a
         damaged name elsewhere used to fail the read of an undamaged
-        code (export_code_report). Read-only: no write takes a name from
-        here.
+        code (the code report, removed in 0.15.1). Read-only: no write
+        takes a name from here.
         """
         caps = getattr(self, "capabilities", None)
         has_supercid = caps is not None and caps.has_supercid
@@ -4124,9 +4935,10 @@ class QualcoderDatabase:
                 "project is damaged. A backup made before the damage "
                 "still has the views: restoring it (list_backups, "
                 "restore_backup) takes the project back to that "
-                "backup's state, all but its Exegete folder, which a "
-                "restore keeps; QualCoder 4.0, if you use it, recreates "
-                "the views when it opens the project."))
+                "backup's state, all but its Exegete, audio and video "
+                "folders, which a restore keeps; QualCoder 4.0, if you "
+                "use it, recreates the views when it opens the "
+                "project."))
         return view
 
     def _visibility_in_force(self) -> Optional[bool]:
@@ -6561,7 +7373,6 @@ class QualcoderDatabase:
         pattern: str,
         search_filename: bool = True,
         search_content: bool = False,
-        search_memo: bool = False,
         case_sensitive: bool = False,
         limit: int = DEFAULT_LIMIT,
         context_chars: int = 100,
@@ -6569,7 +7380,8 @@ class QualcoderDatabase:
         exclude_mask: Optional[Dict[int, Any]] = None,
         after: Optional[Sequence[Any]] = None,
     ) -> Dict[str, Any]:
-        """Search for files across multiple locations (filename, content, memo).
+        """Search for files by name and content (file memos: search_memos,
+        since 0.15.1).
 
         This is a comprehensive search method that can search in different parts
         of the file data and aggregates results showing where matches were found.
@@ -6578,7 +7390,6 @@ class QualcoderDatabase:
             pattern: Text to search for
             search_filename: Search in file names (default: True)
             search_content: Search in file content/fulltext (default: False)
-            search_memo: Search in file memos (default: False)
             case_sensitive: Case-sensitive matching (default: False)
             limit: Maximum number of files to return (default: DEFAULT_LIMIT)
             context_chars: Characters of context around content matches (default: 100)
@@ -6624,7 +7435,6 @@ class QualcoderDatabase:
                     name,
                     fulltext,
                     mediapath,
-                    memo,
                     owner,
                     date
                 FROM source{file_where}
@@ -6661,8 +7471,7 @@ class QualcoderDatabase:
                 files_searched += 1
                 matched_in = {
                     "filename": False,
-                    "content": False,
-                    "memo": False
+                    "content": False
                 }
                 matches = []
                 match_count = 0
@@ -6766,21 +7575,6 @@ class QualcoderDatabase:
                         # counted: "every match already coded" is an answer
                         files_all_excluded += 1
 
-                # Search memo. Memo privacy ('#####'): match against the
-                # public part only and preview the public part only, so a
-                # private suffix can neither be found nor shown.
-                if search_memo:
-                    memo_text = extract_ai_memo(row["memo"] or "")
-                    search_memo_text = memo_text if case_sensitive else memo_text.lower()
-
-                    if search_pattern in search_memo_text:
-                        matched_in["memo"] = True
-                        matches.append({
-                            "location": "memo",
-                            "preview": memo_text[:200] + ("..." if len(memo_text) > 200 else "")
-                        })
-                        match_count += 1
-
                 # If any matches, add to results
                 if any(matched_in.values()):
                     file_type = _detect_file_type(row["mediapath"])
@@ -6848,7 +7642,6 @@ class QualcoderDatabase:
                     "pattern": pattern,
                     "searched_filename": search_filename,
                     "searched_content": search_content,
-                    "searched_memo": search_memo,
                     "case_sensitive": case_sensitive
                 },
                 "performance_info": performance_info,
@@ -7967,47 +8760,20 @@ class QualcoderDatabase:
         ).fetchone()
         return int(row["ctid"]) if row else None
 
-    def add_code(
-        self,
-        name: str,
-        owner: str,
-        memo: Optional[str] = None,
-        category_id: Optional[int] = None,
-        color: Optional[str] = None,
-        parent_code_id: Optional[int] = None,
-        auto_commit: bool = True
-    ) -> int:
-        """Add a new code to the project.
-
-        Args:
-            name: Code name (must be unique)
-            owner: Name of the person creating the code
-            memo: Optional description/definition of the code
-            category_id: Optional category ID to place code in
-            color: Hex colour code #RRGGBB (default: random pick from
-                   QualCoder's own palette, like GUI-created codes)
-            auto_commit: Commit immediately (default True). Pass False to
-                         defer the commit to the caller (batch/lock recheck).
-
-        Returns:
-            The cid (code ID) of the newly created code
+    def check_add_code(self, category_id: Optional[int] = None,
+                       parent_code_id: Optional[int] = None
+                       ) -> Tuple[Optional[int], Optional[int]]:
+        """add_code's checks of where the code goes, which only read: the
+        category exists; a parent code, never with a category, on a
+        project with sub-codes, exists. add_code calls it first, and
+        create_code calls it before any lock and again under SQLite's
+        write lock, before its backup's database is copied (v0.15.1), so
+        a category or a parent code removed meanwhile is refused with no
+        backup. Returns the two ids, validated.
 
         Raises:
-            ValueError: If validation fails
-            RuntimeError: If database is read-only or operation fails
+            ValueError: the refusal, in add_code's words
         """
-        self._require_write_access()
-        # Collapse whitespace runs and strip, refusing whitespace-only names
-        # (QA5-3; QualCoder 4.0's own normalisation, normalize_name),
-        # consistent with add_category/rename_code/rename_category
-        name = normalize_name(name)
-        if not name:
-            raise ValueError("name must be a non-empty string")
-        validate_string(name, "name")
-
-        if not owner or not isinstance(owner, str):
-            raise ValueError("owner must be a non-empty string")
-
         # Validate category if provided
         if category_id is not None:
             category_id = validate_id(category_id, "category_id")
@@ -8049,6 +8815,51 @@ class QualcoderDatabase:
             if not parent_check:
                 raise ValueError(
                     f"Parent code ID {parent_code_id} does not exist")
+        return category_id, parent_code_id
+
+    def add_code(
+        self,
+        name: str,
+        owner: str,
+        memo: Optional[str] = None,
+        category_id: Optional[int] = None,
+        color: Optional[str] = None,
+        parent_code_id: Optional[int] = None,
+        auto_commit: bool = True
+    ) -> int:
+        """Add a new code to the project.
+
+        Args:
+            name: Code name (must be unique)
+            owner: Name of the person creating the code
+            memo: Optional description/definition of the code
+            category_id: Optional category ID to place code in
+            color: Hex colour code #RRGGBB (default: random pick from
+                   QualCoder's own palette, like GUI-created codes)
+            auto_commit: Commit immediately (default True). Pass False to
+                         defer the commit to the caller (batch/lock recheck).
+
+        Returns:
+            The cid (code ID) of the newly created code
+
+        Raises:
+            ValueError: If validation fails
+            RuntimeError: If database is read-only or operation fails
+        """
+        self._require_write_access()
+        # Collapse whitespace runs and strip, refusing whitespace-only names
+        # (QA5-3; QualCoder 4.0's own normalisation, normalize_name),
+        # consistent with add_category/rename_code/rename_category
+        name = normalize_name(name)
+        if not name:
+            raise ValueError("name must be a non-empty string")
+        validate_string(name, "name")
+
+        if not owner or not isinstance(owner, str):
+            raise ValueError("owner must be a non-empty string")
+
+        category_id, parent_code_id = self.check_add_code(
+            category_id, parent_code_id)
 
         # Default to a random QualCoder palette colour (what the GUI does);
         # a supplied colour is validated strictly, then snapped onto the
@@ -8201,6 +9012,38 @@ class QualcoderDatabase:
             "important": bool(row["important"]),
         }
 
+    def check_delete_coding(self, coding_id: int,
+                            allow_hidden_coder: bool = False,
+                            confirm_private_note_deletion: bool = False
+                            ) -> Dict[str, Any]:
+        """`delete_coding`'s checks, which only read (v0.15.1): the
+        coding exists, and a hidden coder's row or a private note is
+        not deleted without its override. `delete_coding` calls it
+        first; the tool calls it again on the write connection under
+        SQLite's write lock, before the backup's database is copied, so
+        that a refusal leaves no backup.
+
+        Returns:
+            What the write uses: the coding ("existing"), whether its
+            coder is visible and whether its memo carries a private note
+
+        Raises:
+            ValueError: the refusal, in `delete_coding`'s words
+        """
+        existing = self.get_coding(coding_id)
+        if existing is None:
+            raise ValueError(f"Coding ID {coding_id} does not exist")
+        visible = self.coding_is_visible(coding_id)
+        private = memo_has_private_zone(existing.get("memo"))
+        refusals = []
+        if not visible and not allow_hidden_coder:
+            refusals.append(hidden_coder_refusal("Coding", coding_id))
+        if private and not confirm_private_note_deletion:
+            refusals.append(private_note_refusal("Coding", coding_id))
+        if refusals:
+            raise ValueError(" ".join(refusals))
+        return {"existing": existing, "visible": visible, "private": private}
+
     def delete_coding(self, coding_id: int, auto_commit: bool = True,
                       allow_hidden_coder: bool = False,
                       confirm_private_note_deletion: bool = False
@@ -8237,18 +9080,10 @@ class QualcoderDatabase:
             RuntimeError: If database is read-only or the delete fails
         """
         self._require_write_access()
-        existing = self.get_coding(coding_id)
-        if existing is None:
-            raise ValueError(f"Coding ID {coding_id} does not exist")
-        visible = self.coding_is_visible(coding_id)
-        private = memo_has_private_zone(existing.get("memo"))
-        refusals = []
-        if not visible and not allow_hidden_coder:
-            refusals.append(hidden_coder_refusal("Coding", coding_id))
-        if private and not confirm_private_note_deletion:
-            refusals.append(private_note_refusal("Coding", coding_id))
-        if refusals:
-            raise ValueError(" ".join(refusals))
+        checked = self.check_delete_coding(
+            coding_id, allow_hidden_coder, confirm_private_note_deletion)
+        existing, visible, private = (checked["existing"], checked["visible"],
+                                      checked["private"])
 
         try:
             self.conn.execute(
@@ -8526,6 +9361,95 @@ class QualcoderDatabase:
                 f"Failed to import text file: "
                 f"{sqlite_error_label(e)}") from None
 
+    def check_link_file_to_case(self, case_id: int, file_id: int,
+                                owner: str) -> Dict[str, Any]:
+        """`link_file_to_case`'s checks, which only read (v0.15.1): the
+        owner, the case, the file, a PDF with no usable text, and a link
+        that exists. `link_file_to_case` calls it first; the tool calls
+        it again on the write connection under SQLite's write lock,
+        before the backup's database is copied, so that a refusal leaves
+        no backup.
+
+        Returns:
+            What the write uses: the ids, the case's and the file's
+            names, and the whole-file span
+
+        Raises:
+            ValueError: the refusal, in `link_file_to_case`'s words
+            RuntimeError: a read that failed
+        """
+        case_id = validate_id(case_id, "case_id")
+        file_id = validate_id(file_id, "file_id")
+        if not owner or not isinstance(owner, str) or not owner.strip():
+            raise ValueError("owner must be a non-empty string")
+
+        try:
+            case_row = self.conn.execute(
+                "SELECT caseid, name FROM cases WHERE caseid = ?", (case_id,)
+            ).fetchone()
+            file_row = self.conn.execute(
+                "SELECT id, name, fulltext FROM source WHERE id = ?", (file_id,)
+            ).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "link_file_to_case", "Failed to link file to case")
+
+        if not case_row:
+            raise ValueError(f"Case ID {case_id} does not exist")
+        if not file_row:
+            raise ValueError(f"File ID {file_id} does not exist")
+        problem = self.unusable_pdf_problem(file_id)
+        if problem is not None:
+            raise ValueError(unusable_pdf_link_refusal(file_row["name"],
+                                                       problem))
+
+        # Whole-file span. Write convention standardized on
+        # pos1 = len(fulltext): master's unified choice
+        # (case_file_manager.py:208-210) and already 3.8.2's own file
+        # manager convention (3.8.2:manage_files.py:755-764). The old
+        # 3.8.2 case-manager convention (len-1) coexists in real data;
+        # the duplicate pre-check below treats both as the same link.
+        fulltext = file_row["fulltext"]
+        pos0 = 0
+        pos1 = len(fulltext) if fulltext else 0
+
+        try:
+            # Overlap-aware duplicate check (cases-attributes.md §2.6):
+            # upstream has TWO conflicting whole-file conventions — the case
+            # file manager writes pos1 = len(fulltext)-1, while Manage Files
+            # "Assign case" and survey import write pos1 = len(fulltext) —
+            # and each GUI path's own probe only matches its own convention,
+            # silently double-linking across paths. case_text has NO unique
+            # constraint, so this app-side probe is the only protection:
+            # treat ANY existing row that already covers the whole file
+            # (either convention, or a superset span) as a duplicate.
+            # (0, len-1) and (0, len) are the SAME whole-file link (W12):
+            # the threshold is the smaller convention so either spelling,
+            # from any QualCoder version or this server, is caught.
+            dedupe_floor = max(0, pos1 - 1)
+            existing = self.conn.execute(
+                "SELECT id, pos0, pos1 FROM case_text WHERE caseid = ? "
+                "AND fid = ? AND pos0 <= 0 AND pos1 >= ?",
+                (case_id, file_id, dedupe_floor)
+            ).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "link_file_to_case",
+                               "Failed to link file to case")
+        if existing:
+            convention = ""
+            if (existing["pos0"], existing["pos1"]) != (pos0, pos1):
+                convention = (
+                    f" (existing span {existing['pos0']}-"
+                    f"{existing['pos1']}, QualCoder's other whole-file "
+                    f"convention)"
+                )
+            raise ValueError(
+                f"File '{file_row['name']}' is already linked to case "
+                f"'{case_row['name']}'{convention}"
+            )
+        return {"case_id": case_id, "case_name": case_row["name"],
+                "file_id": file_id, "file_name": file_row["name"],
+                "pos0": pos0, "pos1": pos1}
+
     def link_file_to_case(
         self,
         case_id: int,
@@ -8561,74 +9485,13 @@ class QualcoderDatabase:
             RuntimeError: If database is read-only or the insert fails
         """
         self._require_write_access()
-        case_id = validate_id(case_id, "case_id")
-        file_id = validate_id(file_id, "file_id")
-        if not owner or not isinstance(owner, str) or not owner.strip():
-            raise ValueError("owner must be a non-empty string")
-
-        try:
-            case_row = self.conn.execute(
-                "SELECT caseid, name FROM cases WHERE caseid = ?", (case_id,)
-            ).fetchone()
-            file_row = self.conn.execute(
-                "SELECT id, name, fulltext FROM source WHERE id = ?", (file_id,)
-            ).fetchone()
-        except sqlite3.Error as e:
-            _raise_query_error(e, "link_file_to_case", "Failed to link file to case")
-
-        if not case_row:
-            raise ValueError(f"Case ID {case_id} does not exist")
-        if not file_row:
-            raise ValueError(f"File ID {file_id} does not exist")
-        problem = self.unusable_pdf_problem(file_id)
-        if problem is not None:
-            raise ValueError(unusable_pdf_link_refusal(file_row["name"],
-                                                       problem))
-
-        # Whole-file span. Write convention standardized on
-        # pos1 = len(fulltext): master's unified choice
-        # (case_file_manager.py:208-210) and already 3.8.2's own file
-        # manager convention (3.8.2:manage_files.py:755-764). The old
-        # 3.8.2 case-manager convention (len-1) coexists in real data;
-        # the duplicate pre-check below treats both as the same link.
-        fulltext = file_row["fulltext"]
-        pos0 = 0
-        pos1 = len(fulltext) if fulltext else 0
+        checked = self.check_link_file_to_case(case_id, file_id, owner)
+        case_id, file_id = checked["case_id"], checked["file_id"]
+        pos0, pos1 = checked["pos0"], checked["pos1"]
 
         date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         try:
-            # Overlap-aware duplicate check (cases-attributes.md §2.6):
-            # upstream has TWO conflicting whole-file conventions — the case
-            # file manager writes pos1 = len(fulltext)-1, while Manage Files
-            # "Assign case" and survey import write pos1 = len(fulltext) —
-            # and each GUI path's own probe only matches its own convention,
-            # silently double-linking across paths. case_text has NO unique
-            # constraint, so this app-side probe is the only protection:
-            # treat ANY existing row that already covers the whole file
-            # (either convention, or a superset span) as a duplicate.
-            # (0, len-1) and (0, len) are the SAME whole-file link (W12):
-            # the threshold is the smaller convention so either spelling,
-            # from any QualCoder version or this server, is caught.
-            dedupe_floor = max(0, pos1 - 1)
-            existing = self.conn.execute(
-                "SELECT id, pos0, pos1 FROM case_text WHERE caseid = ? "
-                "AND fid = ? AND pos0 <= 0 AND pos1 >= ?",
-                (case_id, file_id, dedupe_floor)
-            ).fetchone()
-            if existing:
-                convention = ""
-                if (existing["pos0"], existing["pos1"]) != (pos0, pos1):
-                    convention = (
-                        f" (existing span {existing['pos0']}-"
-                        f"{existing['pos1']}, QualCoder's other whole-file "
-                        f"convention)"
-                    )
-                raise ValueError(
-                    f"File '{file_row['name']}' is already linked to case "
-                    f"'{case_row['name']}'{convention}"
-                )
-
             self.conn.execute(
                 "INSERT INTO case_text (caseid, fid, pos0, pos1, owner, date, memo) "
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -8637,8 +9500,6 @@ class QualcoderDatabase:
             if auto_commit:
                 self.conn.commit()
             logger.info(f"Linked file {file_id} to case {case_id} ({pos0}-{pos1})")
-        except ValueError:
-            raise
         except sqlite3.Error as e:
             try:
                 self.conn.rollback()
@@ -8648,9 +9509,9 @@ class QualcoderDatabase:
 
         return {
             "case_id": case_id,
-            "case_name": case_row["name"],
+            "case_name": checked["case_name"],
             "file_id": file_id,
-            "file_name": file_row["name"],
+            "file_name": checked["file_name"],
             "position_start": pos0,
             "position_end": pos1,
         }
@@ -8669,6 +9530,82 @@ class QualcoderDatabase:
         "coding": ("code_text", "ctid", None),
         "case": ("cases", "caseid", "name"),
     }
+
+    def check_set_memo(self, target_type: str, target_id: Optional[int],
+                       memo: str, allow_hidden_coder: bool = False
+                       ) -> Dict[str, Any]:
+        """`set_memo`'s checks, which only read (v0.15.1): the kind, the
+        memo as text and its length, the target (for the project, its
+        record), and a hidden coder's coding. `set_memo` calls it
+        first; the tool calls it again on the write connection under
+        SQLite's write lock, before the backup's database is copied, so
+        that a refusal leaves no backup.
+
+        Returns:
+            What the write uses: the target's id, its label and the
+            memo stored on it now
+
+        Raises:
+            ValueError: the refusal, in `set_memo`'s words
+            RuntimeError: a read that failed
+        """
+        if target_type not in self._MEMO_TARGETS and target_type != "project":
+            raise ValueError(
+                f"target_type must be one of: "
+                f"{', '.join(sorted([*self._MEMO_TARGETS, 'project']))}"
+            )
+        if not isinstance(memo, str):
+            raise ValueError("memo must be a string")
+        # Reject over-length rather than silently truncate (memos have no
+        # length limit in QualCoder; validate_string would truncate — a
+        # silent corruption of the user's note, memos-journals.md §6.7/#8)
+        _reject_if_too_long(memo, "memo")
+        if target_type == "project":
+            try:
+                row = self.conn.execute("SELECT memo FROM project").fetchone()
+            except sqlite3.Error as e:
+                _raise_query_error(e, "set_memo", "Failed to set memo")
+            if row is None:
+                # restore_backup is marked where a tool set lacks it
+                raise ValueError(_mark_unregistered(
+                    "This project has no project record, so it has no "
+                    "project memo, and it is not a usable project in "
+                    "Exegete or in QualCoder. Nothing was written; a backup "
+                    "made before the record was lost has it (list_backups, "
+                    "restore_backup)."))
+            return {"target_id": None, "label": "project",
+                    "memo": row["memo"]}
+        target_id = validate_id(target_id, "target_id")
+
+        table, id_col, name_col = self._MEMO_TARGETS[target_type]
+
+        # Verify the row exists, capture a label for the confirmation, and
+        # read the existing memo for the privacy-preserving merge
+        select_cols = (f"{name_col}, memo" if name_col else f"{id_col}, memo")
+        try:
+            row = self.conn.execute(
+                f"SELECT {select_cols} FROM {table} WHERE {id_col} = ?",
+                (target_id,)
+            ).fetchone()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "set_memo", "Failed to set memo")
+        if not row:
+            raise ValueError(
+                f"{target_type.capitalize()} ID {target_id} does not exist"
+            )
+        if target_type == "coding":
+            # The visibility query runs with or without the override, as
+            # in delete_coding / update_annotation / delete_annotation: a
+            # view that cannot answer raises (R1 fail-closed rule), so the
+            # override never writes through an unreadable state. Codes,
+            # categories, files and cases have no per-coder visibility
+            # and never consult the view.
+            visible = self.coding_is_visible(target_id)
+            if not visible and not allow_hidden_coder:
+                raise ValueError(hidden_coder_refusal("Coding", target_id))
+        return {"target_id": target_id,
+                "label": row[0] if name_col else f"{target_type} {target_id}",
+                "memo": row["memo"]}
 
     def set_memo(
         self,
@@ -8700,55 +9637,19 @@ class QualcoderDatabase:
             RuntimeError: If database is read-only or the update fails
         """
         self._require_write_access()
-        if target_type not in self._MEMO_TARGETS and target_type != "project":
-            raise ValueError(
-                f"target_type must be one of: "
-                f"{', '.join(sorted([*self._MEMO_TARGETS, 'project']))}"
-            )
-        if not isinstance(memo, str):
-            raise ValueError("memo must be a string")
-        # Reject over-length rather than silently truncate (memos have no
-        # length limit in QualCoder; validate_string would truncate — a
-        # silent corruption of the user's note, memos-journals.md §6.7/#8)
-        _reject_if_too_long(memo, "memo")
+        found = self.check_set_memo(target_type, target_id, memo,
+                                    allow_hidden_coder)
         if target_type == "project":
-            return self._set_project_memo(memo, auto_commit)
-        target_id = validate_id(target_id, "target_id")
-
-        table, id_col, name_col = self._MEMO_TARGETS[target_type]
-
-        # Verify the row exists, capture a label for the confirmation, and
-        # read the existing memo for the privacy-preserving merge
-        select_cols = (f"{name_col}, memo" if name_col else f"{id_col}, memo")
-        try:
-            row = self.conn.execute(
-                f"SELECT {select_cols} FROM {table} WHERE {id_col} = ?",
-                (target_id,)
-            ).fetchone()
-        except sqlite3.Error as e:
-            _raise_query_error(e, "set_memo", "Failed to set memo")
-        if not row:
-            raise ValueError(
-                f"{target_type.capitalize()} ID {target_id} does not exist"
-            )
-        label = row[0] if name_col else f"{target_type} {target_id}"
-        if target_type == "coding":
-            # The visibility query runs with or without the override, as
-            # in delete_coding / update_annotation / delete_annotation: a
-            # view that cannot answer raises (R1 fail-closed rule), so the
-            # override never writes through an unreadable state. Codes,
-            # categories, files and cases have no per-coder visibility
-            # and never consult the view.
-            visible = self.coding_is_visible(target_id)
-            if not visible and not allow_hidden_coder:
-                raise ValueError(hidden_coder_refusal("Coding", target_id))
+            return self._set_project_memo(memo, found["memo"], auto_commit)
+        target_id, label = found["target_id"], found["label"]
+        table, id_col = self._MEMO_TARGETS[target_type][:2]
 
         # Memo privacy (QC 4.0 '#####' convention): replace only the
         # AI-visible public text; an existing private suffix survives
         # verbatim, and a marker in the NEW text is dropped (an AI write
         # can never create, read, replace, or delete the private zone).
         # Mirrors upstream ai_memo.merge_public_memo semantics exactly.
-        stored_memo = merge_public_memo(row["memo"], memo)
+        stored_memo = merge_public_memo(found["memo"], memo)
         public_memo = extract_ai_memo(stored_memo)
 
         # Content-only: QualCoder's memo edits for code_name/code_cat/source/
@@ -8782,7 +9683,7 @@ class QualcoderDatabase:
             "cleared": public_memo == "",
         }
 
-    def _set_project_memo(self, memo: str, auto_commit: bool
+    def _set_project_memo(self, memo: str, existing: Any, auto_commit: bool
                           ) -> Dict[str, Any]:
         """The project memo (v0.14): the project row's `memo`, written
         with QualCoder's own statement, `update project set memo=?`
@@ -8790,19 +9691,10 @@ class QualcoderDatabase:
         every other memo, only the public part is replaced: the private
         part after '#####' survives verbatim and is never returned.
         QualCoder 4.0's own assistant reads the public part as the
-        project's context (ai_chat.py:2731)."""
-        try:
-            row = self.conn.execute("SELECT memo FROM project").fetchone()
-        except sqlite3.Error as e:
-            _raise_query_error(e, "set_memo", "Failed to set memo")
-        if row is None:
-            # restore_backup is marked where a tool set lacks it
-            raise ValueError(_mark_unregistered(
-                "This project has no project record, so it has no project "
-                "memo, and it is not a usable project in Exegete or in "
-                "QualCoder. Nothing was written; a backup made before the "
-                "record was lost has it (list_backups, restore_backup)."))
-        stored_memo = merge_public_memo(row["memo"], memo)
+        project's context (ai_chat.py:2731). `existing` is the memo
+        `check_set_memo` read from the project record, which it refuses
+        when there is none."""
+        stored_memo = merge_public_memo(existing, memo)
         public_memo = extract_ai_memo(stored_memo)
         try:
             self.conn.execute("UPDATE project SET memo = ?", (stored_memo,))
@@ -8823,30 +9715,22 @@ class QualcoderDatabase:
             "cleared": public_memo == "",
         }
 
-    def add_journal_entry(
-        self,
-        name: str,
-        entry: str,
-        owner: str,
-        auto_commit: bool = True
-    ) -> Dict[str, Any]:
-        """Add a research journal entry.
-
-        Args:
-            name: Journal entry name/title (must be unique; journal has
-                  unique(name))
-            entry: The journal text (jentry)
-            owner: Coder name for attribution
-            auto_commit: Commit immediately (default True)
+    def check_add_journal_entry(self, name: str, entry: str, owner: str
+                                ) -> Dict[str, str]:
+        """`add_journal_entry`'s checks, which only read (v0.15.1): the
+        name, the entry as text and its length, the owner, a name in
+        use. `add_journal_entry` calls it first; the tool calls it again
+        on the write connection under SQLite's write lock, before the
+        backup's database is copied, so that a refusal leaves no backup.
 
         Returns:
-            Dict with the new entry's id, name and date
+            The name and the entry as the write stores them: the name
+            without its outer spaces, the entry's public part
 
         Raises:
-            ValueError: If validation fails or the name already exists
-            RuntimeError: If database is read-only or the insert fails
+            ValueError: the refusal, in `add_journal_entry`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         if not name or not isinstance(name, str) or not name.strip():
             raise ValueError("name must be a non-empty string")
         name = name.strip()
@@ -8884,6 +9768,34 @@ class QualcoderDatabase:
                                "Failed to add journal entry")
         if existing:
             raise ValueError(f"A journal entry named '{name}' already exists")
+        return {"name": name, "entry": entry}
+
+    def add_journal_entry(
+        self,
+        name: str,
+        entry: str,
+        owner: str,
+        auto_commit: bool = True
+    ) -> Dict[str, Any]:
+        """Add a research journal entry.
+
+        Args:
+            name: Journal entry name/title (must be unique; journal has
+                  unique(name))
+            entry: The journal text (jentry)
+            owner: Coder name for attribution
+            auto_commit: Commit immediately (default True)
+
+        Returns:
+            Dict with the new entry's id, name and date
+
+        Raises:
+            ValueError: If validation fails or the name already exists
+            RuntimeError: If database is read-only or the insert fails
+        """
+        self._require_write_access()
+        checked = self.check_add_journal_entry(name, entry, owner)
+        name, entry = checked["name"], checked["entry"]
 
         date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
@@ -8933,6 +9845,14 @@ class QualcoderDatabase:
         if not row:
             raise ValueError(f"Category ID {category_id} does not exist")
         return row
+
+    def check_category_exists(self, category_id: int) -> None:
+        """Refuse a category id that names no category, in the words the
+        write methods use (v0.15.1): a tool that resolved a category's
+        name before any lock looks its id up again under SQLite's write
+        lock, before its backup's database is copied, so a category
+        removed meanwhile is refused with no backup."""
+        self._get_category_row(category_id)
 
     def rename_code(self, code_id: int, new_name: str,
                     auto_commit: bool = True) -> Dict[str, Any]:
@@ -9356,8 +10276,15 @@ class QualcoderDatabase:
         sqlite3.Error handling. Used by the token guard to close the
         window between the read-only fingerprint and the mutation (H2);
         the flagship reuses it.
+
+        Since v0.15.1 every write takes it before its backup's database
+        is copied (`server._perform_write`), so a call inside the
+        transaction that started does nothing: SQLite refuses a BEGIN
+        within a transaction.
         """
         self._require_write_access()
+        if self.conn.in_transaction:
+            return
         self.conn.execute("BEGIN IMMEDIATE")
 
     def get_branch_cids(self, root_cid: int) -> List[int]:
@@ -9704,11 +10631,7 @@ class QualcoderDatabase:
             if new_supercatid is not None:
                 self._get_category_row(new_supercatid)  # parent must exist
             if self.would_create_category_cycle(category_id, new_supercatid):
-                raise ValueError(
-                    "That move would make the category its own ancestor "
-                    "(a cycle), which would cut it and its codes off from "
-                    "the code tree; refusing."
-                )
+                raise ValueError(CATEGORY_CYCLE_REFUSAL)
             self.conn.execute(
                 "UPDATE code_cat SET supercatid = ? WHERE catid = ?",
                 (new_supercatid, category_id)
@@ -10015,10 +10938,10 @@ class QualcoderDatabase:
             preview["note"] = (
                 f"{len(branch) - 1} sub-code(s) hang under this code. "
                 f"Deleting deletes the whole branch and all its codings "
-                f"with one approval: execute_with carries cascade=true, so "
-                f"approving this "
-                f"preview approves the branch. Move the sub-codes first if "
-                f"they are needed.")
+                f"with one approval: this preview's token covers every "
+                f"code of the branch, so approving this preview approves "
+                f"the branch. Move the sub-codes first if they are "
+                f"needed.")
         return preview
 
     def delete_code(self, code_id: int, cascade: bool = False,
@@ -10039,11 +10962,8 @@ class QualcoderDatabase:
         preview = self.preview_delete_code(code_id)
         branch = self.get_branch_cids(code_id)
         if len(branch) > 1 and not cascade:
-            raise ValueError(
-                f"{len(branch) - 1} sub-code(s) will also be deleted. Move "
-                f"the sub-codes first if they are needed, or call again "
-                f"with cascade=true to delete the whole branch and all its "
-                f"codings.")
+            raise ValueError(SUBCODES_NEED_CASCADE.format(
+                count=len(branch) - 1))
         try:
             for cid in branch:
                 self.conn.execute("DELETE FROM code_text WHERE cid = ?", (cid,))
@@ -10170,18 +11090,24 @@ class QualcoderDatabase:
             "date": row["date"],
         }
 
-    def add_annotation(self, file_id: int, start_pos: int, end_pos: int,
-                       memo: str, owner: str,
-                       auto_commit: bool = True) -> Dict[str, Any]:
-        """Create an annotation on a text span.
+    def check_add_annotation(self, file_id: int, start_pos: int,
+                             end_pos: int, memo: str, owner: str
+                             ) -> Dict[str, Any]:
+        """`add_annotation`'s checks, which only read (v0.15.1): the
+        note, the owner, the positions, the file and its text, a span
+        past the end, and an annotation already there or overlapping.
+        `add_annotation` calls it first; the tool calls it again on the
+        write connection under SQLite's write lock, before the backup's
+        database is copied, so that a refusal leaves no backup.
 
-        QualCoder contract (memos-journals.md §4.1): insert ONLY when the
-        memo is non-empty; an annotation never exists with memo='' (the
-        memo is the annotation). Positions are character offsets into the
-        file's fulltext; unique(fid,pos0,pos1,owner) is pre-checked
-        app-side for a clean error.
+        Returns:
+            What the write uses: the file's id and name, its text, and
+            the note's public part
+
+        Raises:
+            ValueError: the refusal, in `add_annotation`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         file_id = validate_id(file_id, "file_id")
         if not isinstance(memo, str) or not memo.strip():
             raise ValueError(
@@ -10224,7 +11150,6 @@ class QualcoderDatabase:
                 f"end_pos ({end_pos}) exceeds file length ({len(fulltext)})"
             )
 
-        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             # unique(fid,pos0,pos1,owner) pre-check for a clean error
             existing = self.conn.execute(
@@ -10259,6 +11184,30 @@ class QualcoderDatabase:
                     f"coder; edit the existing one with update_annotation, "
                     f"or delete it first"
                 )
+        except sqlite3.Error as e:
+            _raise_query_error(e, "add_annotation", "Failed to add annotation")
+        return {"file_id": file_id, "file_name": file_content["name"],
+                "fulltext": fulltext, "memo": memo}
+
+    def add_annotation(self, file_id: int, start_pos: int, end_pos: int,
+                       memo: str, owner: str,
+                       auto_commit: bool = True) -> Dict[str, Any]:
+        """Create an annotation on a text span.
+
+        QualCoder contract (memos-journals.md §4.1): insert ONLY when the
+        memo is non-empty; an annotation never exists with memo='' (the
+        memo is the annotation). Positions are character offsets into the
+        file's fulltext; unique(fid,pos0,pos1,owner) is pre-checked
+        app-side for a clean error.
+        """
+        self._require_write_access()
+        checked = self.check_add_annotation(file_id, start_pos, end_pos,
+                                            memo, owner)
+        file_id, memo = checked["file_id"], checked["memo"]
+        fulltext = checked["fulltext"]
+
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
             cursor = self.conn.execute(
                 "INSERT INTO annotation (fid, pos0, pos1, memo, owner, date) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
@@ -10292,13 +11241,42 @@ class QualcoderDatabase:
         return {
             "annotation_id": anid,
             "file_id": file_id,
-            "file_name": file_content["name"],
+            "file_name": checked["file_name"],
             "position_start": start_pos,
             "position_end": end_pos,
             "memo": memo,
             "owner": owner,
             "date": date_str,
         }
+
+    def check_update_annotation(self, annotation_id: int, memo: str,
+                                allow_hidden_coder: bool = False
+                                ) -> Dict[str, Any]:
+        """`update_annotation`'s checks, which only read (v0.15.1): the
+        note as text and its length, the annotation, and a hidden
+        coder's row. `update_annotation` calls it first; the tool calls
+        it again on the write connection under SQLite's write lock,
+        before the backup's database is copied, so that a refusal leaves
+        no backup.
+
+        Returns:
+            What the write uses: the annotation ("existing") and whether
+            its coder is visible
+
+        Raises:
+            ValueError: the refusal, in `update_annotation`'s words
+            RuntimeError: a read that failed
+        """
+        if not isinstance(memo, str):
+            raise ValueError("memo must be a string")
+        _reject_if_too_long(memo, "memo")
+        existing = self.get_annotation(annotation_id)
+        if existing is None:
+            raise ValueError(f"Annotation ID {annotation_id} does not exist")
+        visible = self.annotation_is_visible(annotation_id)
+        if not visible and not allow_hidden_coder:
+            raise ValueError(hidden_coder_refusal("Annotation", annotation_id))
+        return {"existing": existing, "visible": visible}
 
     def update_annotation(self, annotation_id: int, memo: str,
                           auto_commit: bool = True,
@@ -10318,15 +11296,9 @@ class QualcoderDatabase:
         applies here.
         """
         self._require_write_access()
-        if not isinstance(memo, str):
-            raise ValueError("memo must be a string")
-        _reject_if_too_long(memo, "memo")
-        existing = self.get_annotation(annotation_id)
-        if existing is None:
-            raise ValueError(f"Annotation ID {annotation_id} does not exist")
-        visible = self.annotation_is_visible(annotation_id)
-        if not visible and not allow_hidden_coder:
-            raise ValueError(hidden_coder_refusal("Annotation", annotation_id))
+        checked = self.check_update_annotation(annotation_id, memo,
+                                               allow_hidden_coder)
+        existing, visible = checked["existing"], checked["visible"]
 
         # Memo privacy ('#####'): replace only the public text; a private
         # suffix the researcher put on this annotation survives verbatim
@@ -10385,6 +11357,40 @@ class QualcoderDatabase:
             result["cleared"] = True
         return result
 
+    def check_delete_annotation(self, annotation_id: int,
+                                allow_hidden_coder: bool = False,
+                                confirm_private_note_deletion: bool = False
+                                ) -> Dict[str, Any]:
+        """`delete_annotation`'s checks, which only read (v0.15.1): the
+        annotation exists, and a hidden coder's row or a private note is
+        not deleted without its override. `delete_annotation` calls it
+        first; the tool calls it again on the write connection under
+        SQLite's write lock, before the backup's database is copied, so
+        that a refusal leaves no backup.
+
+        Returns:
+            What the write uses: the annotation ("existing"), whether
+            its coder is visible and whether its note carries a private
+            section
+
+        Raises:
+            ValueError: the refusal, in `delete_annotation`'s words
+            RuntimeError: a read that failed
+        """
+        existing = self.get_annotation(annotation_id)
+        if existing is None:
+            raise ValueError(f"Annotation ID {annotation_id} does not exist")
+        visible = self.annotation_is_visible(annotation_id)
+        private = memo_has_private_zone(existing.get("memo"))
+        refusals = []
+        if not visible and not allow_hidden_coder:
+            refusals.append(hidden_coder_refusal("Annotation", annotation_id))
+        if private and not confirm_private_note_deletion:
+            refusals.append(private_note_refusal("Annotation", annotation_id))
+        if refusals:
+            raise ValueError(" ".join(refusals))
+        return {"existing": existing, "visible": visible, "private": private}
+
     def delete_annotation(self, annotation_id: int,
                           auto_commit: bool = True,
                           allow_hidden_coder: bool = False,
@@ -10399,18 +11405,10 @@ class QualcoderDatabase:
         in one message when both apply.
         """
         self._require_write_access()
-        existing = self.get_annotation(annotation_id)
-        if existing is None:
-            raise ValueError(f"Annotation ID {annotation_id} does not exist")
-        visible = self.annotation_is_visible(annotation_id)
-        private = memo_has_private_zone(existing.get("memo"))
-        refusals = []
-        if not visible and not allow_hidden_coder:
-            refusals.append(hidden_coder_refusal("Annotation", annotation_id))
-        if private and not confirm_private_note_deletion:
-            refusals.append(private_note_refusal("Annotation", annotation_id))
-        if refusals:
-            raise ValueError(" ".join(refusals))
+        checked = self.check_delete_annotation(
+            annotation_id, allow_hidden_coder, confirm_private_note_deletion)
+        existing, visible, private = (checked["existing"], checked["visible"],
+                                      checked["private"])
         try:
             self.conn.execute(
                 "DELETE FROM annotation WHERE anid = ?", (annotation_id,)
@@ -10792,14 +11790,13 @@ class QualcoderDatabase:
                 self.conn.execute("SELECT caseid, name FROM cases")]
 
     def file_name_rows(self) -> List[Dict[str, Any]]:
-        """Every file's id, name, stored path, transcript link and date,
-        one light query (the rename pre-check)."""
+        """Every file's id, name, stored path and transcript link, one
+        light query (the rename pre-check)."""
         return [{"id": r["id"], "name": r["name"],
-                 "mediapath": r["mediapath"], "av_text_id": r["av_text_id"],
-                 "date": r["date"]}
+                 "mediapath": r["mediapath"], "av_text_id": r["av_text_id"]}
                 for r in self.conn.execute(
-                    "SELECT id, name, mediapath, av_text_id, date FROM "
-                    "source ORDER BY id")]
+                    "SELECT id, name, mediapath, av_text_id FROM source "
+                    "ORDER BY id")]
 
     def documents_listing(self) -> List[str]:
         """The names in the project's documents/ folder ([] when it is
@@ -10844,120 +11841,6 @@ class QualcoderDatabase:
     def documents_name_taken(self, name: str) -> Optional[str]:
         """documents_clash with no own copy (a new entry has none)."""
         return self.documents_clash(name)
-
-    # How many of the project's backups, newest first, are read to
-    # recognise a rename back (fix round 1, QA-4).
-    EARLIER_NAMES_BACKUP_LIMIT = 200
-
-    # What current_text answers when the text cannot be read at all.
-    TEXT_UNREADABLE = object()
-
-    def current_text(self, file_id: int) -> Any:
-        """This entry's stored text as it is now, as the database's own
-        bytes (for earlier_name's same-text question), or None.
-
-        Read `CAST(fulltext AS BLOB)` (fix round 4, F3A-2), so a text
-        stored as text that is not UTF-8 is compared as it stands
-        instead of failing the decode; a read that still fails answers
-        TEXT_UNREADABLE, which is no evidence, so the ordinary refusal
-        answers and nothing of the text reaches a log line.
-        """
-        try:
-            row = self.conn.execute(
-                "SELECT CAST(fulltext AS BLOB) FROM source WHERE id = ?",
-                (file_id,)).fetchone()
-        except sqlite3.Error:
-            return self.TEXT_UNREADABLE
-        return row[0] if row else None
-
-    def earlier_name(self, file_id: int, current_date: Any,
-                     accept: Callable[[str], bool],
-                     same_text: bool = False,
-                     text: Any = None) -> Optional[str]:
-        """The first name `accept` accepts that this same entry has in one
-        of the project's backups, newest backup first, or None: this
-        server's `<project>_backup_*` and QualCoder's `<project>_BKUP_*`
-        copies beside the project, at most EARLIER_NAMES_BACKUP_LIMIT of
-        them.
-
-        The evidence rename_file uses to recognise a rename back (the
-        lead's ruling on QA-4): a backup keeps every earlier name. A
-        HEURISTIC for "the same entry": a backup's row counts only when
-        its id AND its date match the current row (fix round 2, R1-1):
-        QualCoder's `source.id` has no AUTOINCREMENT, so a deleted last
-        entry's id is given to the next one, and the date is set at
-        creation and by some later QualCoder actions (saving a
-        transcript, replacing a text, its 4.0 assistant's memo update),
-        never by a rename. With `same_text`, for the documents/ half
-        only, the row's text must equal `text` too (fix round 3, F2A-2:
-        QualCoder's Merge projects copies dates, so a different text can
-        match on id and date); the comparison runs inside SQLite
-        (`fulltext IS ?`), so no text is read out of a backup. No date,
-        no evidence (the safe direction: a rename back is then refused).
-        Each backup is opened read-only and immutable (R1-2), so no lock
-        is taken and no side file is made, a WAL backup included; a
-        backup with a `data.qda-journal` or `data.qda-wal` beside its
-        database is skipped (F2A-5); the scan stops at the first backup
-        that shows an accepted name (R1-4). A backup that cannot be read
-        is skipped. Nothing is
-        written; only the name and date of the row with this id are read.
-        """
-        if current_date is None or current_date == "":
-            return None
-        # An empty, missing or unreadable text says nothing about which
-        # entry this is (fix round 4, F3A-1, F3A-2): no evidence.
-        if same_text and (text is None or text == b"" or text == ""
-                          or text is self.TEXT_UNREADABLE):
-            return None
-        folder = Path(self.db_path).parent
-        backups = []
-        for prefix, to_the_hour in ((f"{folder.stem}_backup_", False),
-                                    (f"{folder.stem}_BKUP_", True)):
-            try:
-                for entry in folder.parent.glob(glob.escape(prefix) + "*.qda"):
-                    try:
-                        if entry.is_dir() and entry != folder:
-                            # Newest first by the time in the name (v0.14),
-                            # not the folder's date, which a copy inherits
-                            when, counter, _dated_from = backup_sort_key(
-                                entry, prefix, to_the_hour)
-                            backups.append(((when, counter), entry))
-                    except OSError:
-                        continue
-            except OSError:
-                continue
-        backups.sort(key=lambda item: item[0], reverse=True)
-        for _when, entry in backups[:self.EARLIER_NAMES_BACKUP_LIMIT]:
-            data = entry / "data.qda"
-            try:
-                if not data.is_file():
-                    continue
-                # A copy taken while a writer was mid-transaction, or a
-                # WAL database with frames not yet in the main file:
-                # immutable would read the main file as it stands and
-                # count a state that was never committed, so such a
-                # backup is skipped, as mode=ro alone would have refused
-                # it (fix round 3, F2A-5).
-                if unclean_backup_side_files(entry) or \
-                        backup_database_is_link(entry):
-                    continue
-                uri = _sqlite_ro_uri(data) + "&immutable=1"
-                with closing(sqlite3.connect(uri, uri=True)) as con:
-                    if same_text:
-                        row = con.execute(
-                            "SELECT name, date FROM source WHERE id = ? "
-                            "AND CAST(fulltext AS BLOB) IS ?",
-                            (file_id, text)).fetchone()
-                    else:
-                        row = con.execute(
-                            "SELECT name, date FROM source WHERE id = ?",
-                            (file_id,)).fetchone()
-            except (sqlite3.Error, OSError, ValueError):
-                continue
-            if row and row[1] == current_date and \
-                    isinstance(row[0], str) and accept(row[0]):
-                return row[0]
-        return None
 
     @staticmethod
     def own_stored_names(mediapath: Optional[str],
@@ -11139,27 +12022,26 @@ class QualcoderDatabase:
         "journal": ("journal", "jid"),
     }
 
-    def add_attribute_type(self, name: str, owner: str, applies_to: str,
-                           value_type: str = "character",
-                           memo: Optional[str] = None,
-                           auto_commit: bool = True) -> Dict[str, Any]:
-        """Define a new attribute (cases-attributes.md §3.1/§3.2).
+    def check_add_attribute_type(self, name: str, owner: str,
+                                 applies_to: str,
+                                 value_type: str = "character",
+                                 memo: Optional[str] = None
+                                 ) -> Dict[str, str]:
+        """`add_attribute_type`'s checks, which only read (v0.15.1): the
+        name, the owner, the domain, the kind of value, the reserved
+        names, the memo's length, and a name in use. `add_attribute_type`
+        calls it first; the tool calls it again on the write connection
+        under SQLite's write lock, before the backup's database is
+        copied, so that a refusal leaves no backup.
 
-        Writes the attribute_type row exactly as every QualCoder entry
-        point does, then performs the placeholder back-fill: one empty
-        ('' value) attribute row per existing entity of the domain. The
-        back-fill is load-bearing; QualCoder's GUI table, exports and
-        sorting assume every entity has a row for every attribute of its
-        domain, and the case-side auto-heal is a no-op in 3.8.2, so
-        skipping it here would leave cases silently dropped from
-        attribute joins.
+        Returns:
+            The name and the memo as the write stores them: the name
+            without its outer spaces, the memo's public part
 
-        Attribute names are GLOBAL (attribute_type.name is the primary
-        key across all three domains). Both Ref_Author and Ref_Authors
-        spellings are reserved (upstream reserves only the singular but
-        its RIS importer creates the plural).
+        Raises:
+            ValueError: the refusal, in `add_attribute_type`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         if not name or not isinstance(name, str) or not name.strip():
             raise ValueError("name must be a non-empty string")
         name = name.strip()
@@ -11185,20 +12067,50 @@ class QualcoderDatabase:
         # add_coding)
         memo = extract_ai_memo(memo or "")
 
-        entity_table, entity_id_col = self._ATTRIBUTE_DOMAINS[applies_to]
-        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         try:
             existing = self.conn.execute(
                 "SELECT name, caseOrFile FROM attribute_type WHERE name = ?",
                 (name,)
             ).fetchone()
-            if existing:
-                raise ValueError(
-                    f"An attribute named '{name}' already exists (as a "
-                    f"{existing['caseOrFile']} attribute); attribute names "
-                    f"are global across cases, files and journals"
-                )
+        except sqlite3.Error as e:
+            _raise_query_error(e, "add_attribute_type",
+                               "Failed to add attribute type")
+        if existing:
+            raise ValueError(
+                f"An attribute named '{name}' already exists (as a "
+                f"{existing['caseOrFile']} attribute); attribute names "
+                f"are global across cases, files and journals"
+            )
+        return {"name": name, "memo": memo}
 
+    def add_attribute_type(self, name: str, owner: str, applies_to: str,
+                           value_type: str = "character",
+                           memo: Optional[str] = None,
+                           auto_commit: bool = True) -> Dict[str, Any]:
+        """Define a new attribute (cases-attributes.md §3.1/§3.2).
+
+        Writes the attribute_type row exactly as every QualCoder entry
+        point does, then performs the placeholder back-fill: one empty
+        ('' value) attribute row per existing entity of the domain. The
+        back-fill is load-bearing; QualCoder's GUI table, exports and
+        sorting assume every entity has a row for every attribute of its
+        domain, and the case-side auto-heal is a no-op in 3.8.2, so
+        skipping it here would leave cases silently dropped from
+        attribute joins.
+
+        Attribute names are GLOBAL (attribute_type.name is the primary
+        key across all three domains). Both Ref_Author and Ref_Authors
+        spellings are reserved (upstream reserves only the singular but
+        its RIS importer creates the plural).
+        """
+        self._require_write_access()
+        checked = self.check_add_attribute_type(name, owner, applies_to,
+                                                value_type, memo)
+        name, memo = checked["name"], checked["memo"]
+
+        entity_table, entity_id_col = self._ATTRIBUTE_DOMAINS[applies_to]
+        date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        try:
             self.conn.execute(
                 "INSERT INTO attribute_type (name, date, owner, memo, "
                 "caseOrFile, valuetype) VALUES (?, ?, ?, ?, ?, ?)",
@@ -11221,8 +12133,6 @@ class QualcoderDatabase:
                 self.conn.commit()
             logger.info("Added an attribute type (%s/%s), %s placeholder(s)",
                         applies_to, value_type, len(entity_ids))
-        except ValueError:
-            raise
         except sqlite3.IntegrityError:
             try:
                 self.conn.rollback()
@@ -11250,34 +12160,27 @@ class QualcoderDatabase:
             "placeholders_created": len(entity_ids),
         }
 
-    def set_attribute_value(self, target_type: str, target_id: int,
-                            attr_name: str, value: str, owner: str,
-                            auto_commit: bool = True) -> Dict[str, Any]:
-        """Set an attribute value for a case, file or journal.
+    def check_set_attribute_value(self, target_type: str, target_id: int,
+                                  attr_name: str, value: str, owner: str
+                                  ) -> Dict[str, Any]:
+        """`set_attribute_value`'s checks, which only read (v0.15.1): the
+        kind of target, the attribute's name, the value as text and its
+        length, the owner, the target and the attribute exist and fit,
+        and a numeric attribute's value is a number. `set_attribute_value`
+        calls it first; the tool calls it again on the write connection
+        under SQLite's write lock, before the backup's database is
+        copied, so that a refusal leaves no backup. A rule only the
+        database applies still fails at the write.
 
-        QualCoder contract (cases-attributes.md §4.1/§4.2): input is
-        stripped; the domain-filtered valuetype gates numeric values;
-        the write is insert-if-missing then update, keyed
-        (id, name, attr_type); never assume the placeholder row exists
-        (QualCoder's case-side placeholder heal is a no-op in 3.8.2).
-        Every path writes the value with this server's owner and the
-        date (v0.14, claims audit item 18), as QualCoder's case path does
-        (cases.py:741-750 at 9bddf17; 3.8.2 cases.py:670-679). A named
-        departure: QualCoder's file and
-        journal edits write the value alone (manage_files.py:1259,
-        :2257, journals.py:827 at 9bddf17), so a placeholder QualCoder
-        made kept "Researcher" and its old date under the AI's value,
-        and get_file_attributes named the researcher as its owner, while
-        README promises every row this server writes carries the AI
-        coder name. QualCoder reads a value's owner only to list coders
-        in its charts window (view_charts.py:84).
+        Returns:
+            What the write uses: the target's id, the attribute's name
+            and the value without their outer spaces, the target's row
+            ("entity") and the attribute's ("attribute")
 
-        Deliberate deviation (documented): a non-castable value for a
-        numeric attribute is REJECTED with an error; QualCoder silently
-        replaces it with '' (interactive data loss). '' itself is the
-        canonical "unset" and is always accepted.
+        Raises:
+            ValueError: the refusal, in `set_attribute_value`'s words
+            RuntimeError: a read that failed
         """
-        self._require_write_access()
         if target_type not in self._ATTRIBUTE_DOMAINS:
             raise ValueError(
                 "target_type must be 'case', 'file' or 'journal'"
@@ -11308,29 +12211,69 @@ class QualcoderDatabase:
                 "SELECT valuetype, caseOrFile FROM attribute_type "
                 "WHERE name = ?", (attr_name,)
             ).fetchone()
-            if not att:
-                raise ValueError(
-                    f"Attribute '{attr_name}' does not exist; create it "
-                    f"first with create_attribute_type"
-                )
-            if att["caseOrFile"] != target_type:
-                raise ValueError(
-                    f"'{attr_name}' is a {att['caseOrFile']} attribute; it "
-                    f"cannot be set on a {target_type}"
-                )
-            if att["valuetype"] == "numeric" and value != "" \
-                    and finite_number(value) is None:
-                raise ValueError(
-                    f"'{attr_name}' is a numeric attribute and '{value}' "
-                    f"is not a number Exegete can compare: give "
-                    f"digits, optionally with a sign, a decimal point or "
-                    f"an exponent (\"30\", \"4.5\", \"1e3\"); not "
-                    f"\"nan\" or \"inf\", not underscores, not digits "
-                    f"outside 0 to 9. QualCoder blanks or reverts a value "
-                    f"that is not a number, with a warning; Exegete "
-                    f"refuses it, so nothing changes. Pass '' to unset."
-                )
+        except sqlite3.Error as e:
+            _raise_query_error(e, "set_attribute_value",
+                               "Failed to set attribute value")
+        if not att:
+            raise ValueError(
+                f"Attribute '{attr_name}' does not exist; create it "
+                f"first with create_attribute_type"
+            )
+        if att["caseOrFile"] != target_type:
+            raise ValueError(
+                f"'{attr_name}' is a {att['caseOrFile']} attribute; it "
+                f"cannot be set on a {target_type}"
+            )
+        if att["valuetype"] == "numeric" and value != "" \
+                and finite_number(value) is None:
+            raise ValueError(
+                f"'{attr_name}' is a numeric attribute and '{value}' "
+                f"is not a number Exegete can compare: give "
+                f"digits, optionally with a sign, a decimal point or "
+                f"an exponent (\"30\", \"4.5\", \"1e3\"); not "
+                f"\"nan\" or \"inf\", not underscores, not digits "
+                f"outside 0 to 9. QualCoder blanks or reverts a value "
+                f"that is not a number, with a warning; Exegete "
+                f"refuses it, so nothing changes. Pass '' to unset."
+            )
+        return {"target_id": target_id, "attr_name": attr_name,
+                "value": value, "entity": entity, "attribute": att}
 
+    def set_attribute_value(self, target_type: str, target_id: int,
+                            attr_name: str, value: str, owner: str,
+                            auto_commit: bool = True) -> Dict[str, Any]:
+        """Set an attribute value for a case, file or journal.
+
+        QualCoder contract (cases-attributes.md §4.1/§4.2): input is
+        stripped; the domain-filtered valuetype gates numeric values;
+        the write is insert-if-missing then update, keyed
+        (id, name, attr_type); never assume the placeholder row exists
+        (QualCoder's case-side placeholder heal is a no-op in 3.8.2).
+        Every path writes the value with this server's owner and the
+        date (v0.14, claims audit item 18), as QualCoder's case path does
+        (cases.py:741-750 at 9bddf17; 3.8.2 cases.py:670-679). A named
+        departure: QualCoder's file and
+        journal edits write the value alone (manage_files.py:1259,
+        :2257, journals.py:827 at 9bddf17), so a placeholder QualCoder
+        made kept "Researcher" and its old date under the AI's value,
+        and get_file_attributes named the researcher as its owner, while
+        README promises every row this server writes carries the AI
+        coder name. QualCoder reads a value's owner only to list coders
+        in its charts window (view_charts.py:84).
+
+        Deliberate deviation (documented): a non-castable value for a
+        numeric attribute is REJECTED with an error; QualCoder silently
+        replaces it with '' (interactive data loss). '' itself is the
+        canonical "unset" and is always accepted.
+        """
+        self._require_write_access()
+        checked = self.check_set_attribute_value(target_type, target_id,
+                                                 attr_name, value, owner)
+        target_id, attr_name = checked["target_id"], checked["attr_name"]
+        value = checked["value"]
+        entity, att = checked["entity"], checked["attribute"]
+
+        try:
             date_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             existing = self.conn.execute(
                 "SELECT attrid, value FROM attribute "
@@ -11363,8 +12306,6 @@ class QualcoderDatabase:
                 self.conn.commit()
             logger.info("Set an attribute on %s %s", target_type,
                         target_id)
-        except ValueError:
-            raise
         except sqlite3.Error as e:
             try:
                 self.conn.rollback()
@@ -11386,8 +12327,35 @@ class QualcoderDatabase:
             "row_created": existing is None,
         }
 
+    def start_backup_before_write(self) -> StartedBackup:
+        """The first step of a write's backup (v0.15.1): the project
+        copied but its database, outside SQLite's lock
+        (`start_backup`). `backup_before_write` finishes it once the
+        write holds SQLite's lock; the caller abandons it when the write
+        stops before that.
+
+        Raises:
+            BackupWithoutDatabaseError, OSError: as `start_backup`
+        """
+        self.last_backup_report = {}
+        self._started_backup = start_backup(
+            self.db_path, report=self.last_backup_report)
+        return self._started_backup
+
+    def abandon_backup_before_write(self) -> None:
+        """Remove the backup `start_backup_before_write` began, when the
+        write stops before `backup_before_write` finishes it: a refused
+        write leaves no backup. Nothing when none is pending."""
+        started = getattr(self, "_started_backup", None)
+        self._started_backup = None
+        if started is not None:
+            started.abandon()
+
     def backup_before_write(self) -> Path:
-        """Create a backup of the current project before making changes.
+        """Create a backup of the current project before making changes:
+        the backup `start_backup_before_write` began, finished (its
+        database copied by SQLite under the write's lock, then its
+        name), or a whole backup at once when none was begun.
 
         The copy report (skipped outward or dangling symlinks, S-P1) is
         kept on self.last_backup_report for the caller to surface, and
@@ -11402,9 +12370,14 @@ class QualcoderDatabase:
         Raises:
             OSError: If backup fails
         """
-        self.last_backup_report = {}
-        self.last_backup_path = backup_project(
-            self.db_path, report=self.last_backup_report)
+        started = getattr(self, "_started_backup", None)
+        self._started_backup = None
+        if started is None:
+            self.last_backup_report = {}
+            self.last_backup_path = backup_project(
+                self.db_path, report=self.last_backup_report)
+            return self.last_backup_path
+        self.last_backup_path = started.finish(copy_as_file=False)
         return self.last_backup_path
 
     # ======================================================================
@@ -11529,11 +12502,6 @@ class QualcoderDatabase:
     # `case_text` has none, so a case link is never hidden and never
     # enters the hidden-coder accounting.
     PSEUDONYMISE_HIDEABLE = ("code_text", "annotation")
-    # `keep_start_anchor` per table, which is master's own split:
-    # codings and case links keep a span anchored at the file start,
-    # annotations do not (code_text.py:5940-5942).
-    PSEUDONYMISE_ANCHOR = {"code_text": True, "annotation": False,
-                           "case_text": True}
 
     def pseudonymise_plan(self, compiled, overlap_policy: str,
                           file_ids: Optional[Sequence[int]] = None
@@ -11574,13 +12542,12 @@ class QualcoderDatabase:
             mapper = engine.SpanMapper(replacements, len(text))
             rows = self._pseudonymise_rows(source["file_id"])
             for table, items in rows.items():
-                anchor = self.PSEUDONYMISE_ANCHOR[table]
                 hideable = table in self.PSEUDONYMISE_HIDEABLE
                 for row in items:
                     row["hidden"] = bool(
                         hideable and coder_is_hidden(visibility, row["owner"]))
                     row["map"] = mapper.map_row(row["pos0"], row["pos1"],
-                                                overlap_policy, anchor)
+                                                overlap_policy)
             conflicts, truncated, capped = engine.overlap_conflicts(
                 compiled, text, replacements)
             files.append({
@@ -11633,9 +12600,10 @@ class QualcoderDatabase:
         whitespace, and `replacement_for` only changes its case.
 
         `file_plan` is the same run's file plan: a coding, annotation or
-        case link it deletes (`qualcoder_edit_parity`) takes its note
-        with it, so that note is not in this plan, and nothing counts or
-        records it as rewritten (Brief 2 fix round 1, QA-B2-5).
+        case link it deletes (no policy deletes one since 0.15.1; the
+        handling stays) takes its note with it, so that note is not in
+        this plan, and nothing counts or records it as rewritten (Brief 2
+        fix round 1, QA-B2-5).
         """
         from . import pseudonymise as engine
 
@@ -11945,7 +12913,7 @@ class QualcoderDatabase:
         resize, which is a row that CONTAINED a whole name and changed
         length only because that name did. Not exempt: a snap (the row
         partially overlapped a name and its boundary had to move), a
-        deletion (the `qualcoder_edit_parity` policy alone), and a clamp
+        deletion (which no policy makes since 0.15.1), and a clamp
         (a damaged row whose stored end lay past the end of the text and
         was pulled back to it, whose extent changed for a reason the
         rewrite does not explain). The exempt classes are counted beside
@@ -13387,7 +14355,7 @@ class QualcoderDatabase:
         copy, and it names WHICH file moved where the signed state can
         only say that something did.
 
-        Never touched, at either pin and under either policy:
+        Never touched, at either pin:
         `important`, `owner`, `date` and `avid` on a coding, `owner` on an
         annotation, and `owner` and `date` on a case link. `memo` on every
         row, and `date` on an annotation and on a journal entry, are

@@ -355,7 +355,7 @@ DIGEST = "ab" * 32
 
 
 # How the log names the folder: never by its path, which holds the
-# account's name (PRIVACY.md, "Error answers and the server's log").
+# account's name (PRIVACY.md, "Error answers and Exegete's log").
 SHOWN = "~/.exegete/import-texts.noindex"
 
 
@@ -1047,21 +1047,31 @@ RAW_ANSWERS = [
     {"ok": True, "result": {"text": "a", "signs": {}, "notes": [],
                             "charset": "é"}},
     {"ok": True, "result": None},
+    # v0.15.1: the cause behind "damaged", kept and dropped alike
+    {"ok": False, "refusal": "damaged",
+     "cause": {"kind": "pymupdf.FileDataError", "library": "pymupdf",
+               "version": "1.28.2"}},
+    {"ok": False, "refusal": "damaged",
+     "cause": {"kind": "Value Error", "library": "pymupdf",
+               "version": "1.28.2", "said": "x"}},
 ]
 
 
-def _outcome(check, value):
+def _outcome(check, value, kind):
     try:
-        return ("answer", check(value))
+        return ("answer",
+                check(value) if kind is None else check(value, kind))
     except import_reading.ReadFailed as failed:
-        return ("refused", failed.code, failed.numbers)
+        return ("refused", failed.code, failed.numbers,
+                getattr(failed, "cause", None))
 
 
+@pytest.mark.parametrize("kind", [None, "pdf"])
 @pytest.mark.parametrize("answer", RAW_ANSWERS)
-def test_the_shape_check_is_the_reading_process_s_own(answer):
+def test_the_shape_check_is_the_reading_process_s_own(answer, kind):
     raw = json.dumps(answer, ensure_ascii=True).encode("ascii")
-    assert _outcome(import_reading.checked_result, json.loads(raw)) == \
-        _outcome(import_reading._checked_answer, raw)
+    assert _outcome(import_reading.checked_result, json.loads(raw), kind) \
+        == _outcome(import_reading._checked_answer, raw, kind)
 
 
 def test_every_string_comes_back_exactly_a_lone_surrogate_included():
@@ -1112,16 +1122,20 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
                  "readable by your account only",
                  "not indexed by the computer's search",
                  "left out of Time Machine when Exegete could mark it so",
-                 "up to an hour after the preview and removes it after the "
-                 "import",
+                 # (the staleness audit of 20 October 2026: the token's
+                 # hour and its five minutes of skew, kept_texts.py, held
+                 # to the constant below)
+                 "up to an hour and five minutes after the preview",
+                 "and removes it after the import",
                  "goes at Exegete's next start, or the next time it "
-                 "prepares an import, once that hour has passed, so it can "
+                 "prepares an import, once that time has passed, so it can "
                  "stay longer in an app that keeps Exegete running",
                  "Deleting the folder changes nothing in any project",
                  "nothing in it is sent anywhere",
                  "Another backup of your home folder can copy it, as it "
                  "copies the documents themselves"):
         assert said in item, said
+    assert kept_texts.ENTRY_LIFETIME == 60 * 60 + 5 * 60
     section = privacy[privacy.index("## Bringing documents in"):]
     section = section[:section.index("## Backups, project copies")]
     assert ("The import uses the text its preview read, kept in Exegete's "

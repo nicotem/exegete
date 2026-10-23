@@ -29,8 +29,7 @@ What is looked at, and nothing else:
    ai_vectorstore.py:582).
 2. QualCoder's own backups beside the project: the names in the
    project's parent folder that match `<stem>_BKUP_*.qda`, the stem
-   escaped for glob as `earlier_name` reads them, stopping at the first
-   that is a folder.
+   escaped for glob, stopping at the first that is a folder.
 3. A leftover lock file: `database.qualcoder_lock_state` says "stale"
    (it reads the first LOCK_READ_MAX_BYTES of the project's lock file,
    two short lines, with one retry after half a second, as every
@@ -48,11 +47,14 @@ either: a check that fails is left out and the kind of its error logged
 at debug level. Nothing is written. Each check is a public function, so
 later texts reuse it rather than repeat it.
 
-The researcher's answer to "Do you also use QualCoder on this computer?"
-(EXEGETE_USES_QUALCODER, ruling 73, item 8: yes, no or not sure, the
-default) weighs in `History.level` after the signs. A sign on the
-project, or a QualCoder running at the selection, decides whatever the
-answer; "no" outweighs only QualCoder's settings folder, which says that
+The researcher's answer (ruling 73, item 8: yes, no or not sure, the
+default) weighs in `History.level` after the signs: yes when the
+extension's switch "I use QualCoder on this computer"
+(EXEGETE_I_USE_QUALCODER, v0.15.1, ruling 83) is on, otherwise their
+answer to "Do you also use QualCoder on this computer?"
+(EXEGETE_USES_QUALCODER). A sign on the project, or a QualCoder running
+at the selection, decides whatever the answer; "no" outweighs only
+QualCoder's settings folder, which says that
 QualCoder is installed, not that it is used; "yes" gives the level
 "computer" when nothing is found. It never reaches the live check: the
 refusal while the project's lock file is active and the warnings on
@@ -81,6 +83,12 @@ ANSWERS = (YES, NO, NOT_SURE)
 SETTING_NOT_RECOGNISED = (
     f"{names.NEW_ONLY_SETTINGS['uses_qualcoder']} is not yes, no or not "
     f"sure; it is read as not sure.")
+# Logged in its place when the switch "I use QualCoder on this computer"
+# is on (v0.15.1): the answer is then yes, not "not sure".
+SETTING_NOT_RECOGNISED_SWITCH_ON = (
+    f"{names.NEW_ONLY_SETTINGS['uses_qualcoder']} is not yes, no or not "
+    f"sure; {names.NEW_ONLY_SETTINGS['i_use_qualcoder']} is on, so the "
+    f"answer is yes.")
 
 AI_DATA_SIGN = (
     "an ai_data folder with something in it, which QualCoder 3.8.2 and "
@@ -100,11 +108,13 @@ STALE_LOCK_SIGN = (
 REPORT_NOTE = (
     "What Exegete found when the project was selected; it decides which "
     "notes about QualCoder its answers carry. The field's setting is the "
-    "researcher's answer in Exegete's settings to \"Do you also use "
-    "QualCoder on this computer?\" (not sure unless they changed it); it "
-    "weighs only when the project shows no sign of QualCoder and "
-    "QualCoder is not running. Whether QualCoder has the project open now "
-    "is a separate, live check: select_project's warning, and "
+    "researcher's answer in Exegete's settings: yes when the switch \"I "
+    "use QualCoder on this computer\" is on, otherwise their answer to "
+    "\"Do you also use QualCoder on this computer?\" (not sure unless they "
+    "changed it); it weighs only when the project shows no sign of "
+    "QualCoder and QualCoder is not running. Whether QualCoder has the "
+    "project open now is a separate, live check: select_project's "
+    "warning, and "
     "get_current_project's qualcoder_open and qualcoder_gui_signals. A "
     "false qualcoder_on_this_computer means only that no sign of QualCoder "
     "was found on this computer.")
@@ -121,9 +131,10 @@ class History(NamedTuple):
     could read command lines and found none, and no line that may be one
     (`ProcessScan.found_none`); None when it was not asked for, could not
     run, saw program names only, or found a line that may be a QualCoder
-    it could not read. `setting`: the researcher's answer to "Do you
-    also use QualCoder on this computer?", "yes", "no" or "not sure"
-    (read_setting).
+    it could not read. `setting`: the researcher's answer, "yes", "no"
+    or "not sure": yes when the switch "I use QualCoder on this
+    computer" is on, otherwise their answer to "Do you also use
+    QualCoder on this computer?" (read_setting).
     """
     signs: Tuple[str, ...]
     installed: bool

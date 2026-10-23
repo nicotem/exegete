@@ -23,8 +23,8 @@ jobs:
     # Least privilege for the job's GITHUB_TOKEN: the job reads the
     # checkout and uploads an artefact, and needs nothing else. Without a
     # permissions block the token takes the repository default, which is
-    # read/write unless the owner has changed it, in a job that runs
-    # `pip install -e ".[dev]"` on every branch push.
+    # read/write unless the owner has changed it, in a job that installs
+    # and runs third-party code on every branch push.
     permissions:
       contents: read
     strategy:
@@ -65,12 +65,32 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      # With the optional part (0.14.3), so the PDF and EPUB import
-      # tests run on every platform rather than skip.
-      - name: Install package and dev dependencies
+      # From the lock (v0.15.1): the suite runs with the releases the
+      # desktop extension installs, so a new release on PyPI can no
+      # longer turn a job red overnight, as PyMuPDF 2.0 did on 19 October
+      # 2026 (run 39270048143, Ubuntu on Python 3.13) while the lock held
+      # 1.28.2. The newest releases have a job of their own,
+      # newest-libraries, which may fail and only reports. uv, at the
+      # version the extension job uses, has an environment of its own and
+      # is called through that environment's Python, so it never joins
+      # the suite's path (a test of the real uv tool skips where there is
+      # none). `--locked` fails when pyproject.toml and uv.lock disagree,
+      # so a limit changed without `uv lock` is caught on the push. pip
+      # then installs the exported releases, each checked against its
+      # hash, into the job's own Python, and the package itself without
+      # its dependencies. With the optional part (0.14.3), so the PDF and
+      # EPUB import tests run on every platform rather than skip.
+      - name: Install package and dev dependencies from the lock
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,pdf-epub]"
+          python -m venv "$RUNNER_TEMP/uv-env"
+          uvpy="$RUNNER_TEMP/uv-env/bin/python"
+          [ -e "$uvpy" ] || uvpy="$RUNNER_TEMP/uv-env/Scripts/python.exe"
+          "$uvpy" -m pip install "uv==0.9.7"
+          "$uvpy" -m uv export --locked --extra dev --extra pdf-epub --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
+          python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
+          python -m pip install --no-deps -e .
 
       - name: Run test suite
         shell: bash
@@ -222,16 +242,33 @@ jobs:
       # computer (fix round 1: cryptography had no wheel for Intel Macs or
       # Windows on Arm). Asked of the shipped lock itself, for every
       # computer pyproject's [tool.uv] names, on the package's Python:
-      # nothing but the project may be built.
+      # nothing but the project may be built. v0.15.1: each computer's
+      # report is also kept, for the table below; uv writes it, the
+      # `+ name==version` lines included, to standard error, and bash runs
+      # this with pipefail, so a failing uv still fails the step.
       - name: Check the lock has a wheel for every computer
         if: runner.os == 'Linux'
         shell: bash
         run: |
+          mkdir -p "$RUNNER_TEMP/dry-run"
           cd dist/mcpb/exegete-*/
           for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             echo "== $target"
-            uv sync --frozen --dry-run --no-install-project --no-build --extra pdf-epub --python "$(cat .python-version)" --python-platform "$target"
+            uv sync --frozen --dry-run --no-install-project --no-build --extra pdf-epub --python "$(cat .python-version)" --python-platform "$target" 2>&1 | tee "$RUNNER_TEMP/dry-run/$target.txt"
           done
+
+      # v0.15.1: what the extension installs, one table in the run's
+      # summary, from the six reports above (scripts/extension_libraries.py
+      # fails on a report with no install line). Each release's notes copy
+      # the release commit's table under "What the extension installs".
+      # --check-pymupdf: it also fails when a computer's report does not
+      # install the PyMuPDF pyproject.toml gives it (2.x with onnxruntime
+      # on Windows x64 and Linux, 1.x elsewhere), since uv evaluates
+      # markers for a computer it is asked about, not the one it runs on.
+      - name: List what the extension installs
+        if: runner.os == 'Linux'
+        shell: bash
+        run: python scripts/extension_libraries.py --check-pymupdf "$RUNNER_TEMP"/dry-run/*.txt >> "$GITHUB_STEP_SUMMARY"
 
       # Installed and started the way Claude Desktop 2.9939.2 does it
       # (scripts/smoke_desktop_extension.py says how), with that uv, in a
@@ -261,6 +298,26 @@ jobs:
             flag=""; [ "$way" = emptied ] && flag="--emptied"
             HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/update-app-$way" --over "$RUNNER_TEMP/old.mcpb" $flag --expect-tools manifest
           done
+
+      # v0.15.1, the two switches: the update from the published 0.15.0
+      # package, both ways as above, with "Tool set" saying core kept
+      # from before and the new switch "Limit Exegete to its small tool
+      # set" at its default, off; then a fresh install with that
+      # switch on, as the app passes it. Each must list exactly the
+      # smaller set (exegete.server.CORE_TOOLSET, from this commit).
+      - name: Update over the published 0.15.0 package, an earlier value kept
+        shell: bash
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/v0150.mcpb" https://github.com/nicotem/exegete/releases/download/v0.15.0-alpha/exegete-0.15.0-alpha.mcpb
+          for way in kept emptied; do
+            home="$RUNNER_TEMP/update-0150-home-$way"
+            mkdir -p "$home"
+            flag=""; [ "$way" = emptied ] && flag="--emptied"
+            HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/update-0150-app-$way" --over "$RUNNER_TEMP/v0150.mcpb" $flag --set toolset=core --expect-tools core
+          done
+          home="$RUNNER_TEMP/switch-home"
+          mkdir -p "$home"
+          HOME="$home" USERPROFILE="$home" python scripts/smoke_desktop_extension.py dist/mcpb/*.mcpb --into "$RUNNER_TEMP/switch-app" --set small_toolset=true --expect-tools core
 
   desktop-extension-same:
     name: desktop extension, the same bytes on every platform
@@ -326,19 +383,34 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Install the package with the optional part
+      # From the lock, as the suite installs (the `test` job says why).
+      - name: Install the package with the optional part, from the lock
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev,pdf-epub]"
+          python -m venv "$RUNNER_TEMP/uv-env"
+          uvpy="$RUNNER_TEMP/uv-env/bin/python"
+          [ -e "$uvpy" ] || uvpy="$RUNNER_TEMP/uv-env/Scripts/python.exe"
+          "$uvpy" -m pip install "uv==0.9.7"
+          "$uvpy" -m uv export --locked --extra dev --extra pdf-epub --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
+          python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
+          python -m pip install --no-deps -e .
 
-      # The gate reads PDFs and EPUBs with the releases the record names
-      # (the extension's pins), so their text is compared, not skipped,
-      # whatever PyPI's newest release; the watch keeps the newest.
-      - name: The record's PyMuPDF and EbookLib releases (gate)
+      # Both entries install from the lock (v0.15.1). The gate then
+      # reinstalls the EbookLib release the record names, which the lock
+      # already holds (tests/test_v0150_lock.py), so its text is compared,
+      # not skipped, should the two ever part. PyMuPDF stays as the lock
+      # gives it here, 2.0 (v0.15.1), a release the record lists as
+      # giving QualCoder's functions the same text (`same_text_with`), so
+      # the gate compares QualCoder's own functions with Exegete's under
+      # 2.0 and the suite compares each release with the record. The
+      # watch now watches QualCoder's newest code alone; the newest
+      # library releases have a job of their own, newest-libraries.
+      - name: The record's EbookLib release (gate)
         if: matrix.which == 'gate'
         shell: bash
         run: |
-          pins=$(python -c "import json; v = json.load(open('tests/fixtures/import_expected.json'))['versions']; print('pymupdf==' + v['pymupdf'], 'ebooklib==' + v['ebooklib'])")
+          pins=$(python -c "import json; v = json.load(open('tests/fixtures/import_expected.json'))['versions']; print('ebooklib==' + v['ebooklib'])")
           pip install $pins
 
       - name: Exegete's text against QualCoder's
@@ -395,13 +467,23 @@ jobs:
         with:
           python-version: "3.13"
 
-      # setuptools for the tests' builds without isolation (the version
-      # the extension's build is pinned to); uv at the version the app
-      # downloads.
+      # From the lock, as the suite installs (the `test` job says why),
+      # with the development part alone; then setuptools for the tests'
+      # builds without isolation (the version the extension's build is
+      # pinned to), and uv at the version the app downloads, which these
+      # tests run as the real tool.
       - name: Install the package, the build backend and uv
+        shell: bash
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]" "setuptools==84.0.0" "uv==0.9.7"
+          python -m venv "$RUNNER_TEMP/uv-env"
+          uvpy="$RUNNER_TEMP/uv-env/bin/python"
+          [ -e "$uvpy" ] || uvpy="$RUNNER_TEMP/uv-env/Scripts/python.exe"
+          "$uvpy" -m pip install "uv==0.9.7"
+          "$uvpy" -m uv export --locked --extra dev --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
+          python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
+          python -m pip install --no-deps -e .
+          python -m pip install "setuptools==84.0.0" "uv==0.9.7"
 
       - name: Build the old name's package
         run: python -m build packaging/pypi-old-name --outdir dist/old-name
@@ -410,11 +492,14 @@ jobs:
       # that it works through the link (or junction) the move leaves;
       # and pipx, with the pip it asks for (26.1 or later), for the
       # transition check's installers test, which installs pipx from here
-      # rather than use the runner's own.
+      # rather than use the runner's own. Exegete's own requirements are
+      # read from pyproject.toml (v0.15.1), so its limits reach the
+      # wheelhouse.
       - name: Fetch the wheelhouse for the offline tests
         shell: bash
         run: |
-          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: "mcp>=1.17.0,<2" "defusedxml>=0.7.1" "striprtf==0.0.33" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
+          python -c "import tomllib; print('\n'.join(tomllib.load(open('pyproject.toml', 'rb'))['project']['dependencies']))" > "$RUNNER_TEMP/runtime.txt"
+          pip download --dest "$RUNNER_TEMP/wheelhouse" --only-binary=:all: -r "$RUNNER_TEMP/runtime.txt" "setuptools==84.0.0" "pipx==1.17.8" "pip>=26.1"
           pip download --dest "$RUNNER_TEMP/wheelhouse" --no-deps --only-binary=:all: "qualcoder-mcp==0.14.0a0"
 
       # RENAME_TESTS_MUST_RUN turns a skip into a failure, so this job
@@ -425,3 +510,180 @@ jobs:
           RENAME_TESTS_MUST_RUN: "1"
         shell: bash
         run: python -m pytest -ra ${{ matrix.tests }}
+
+  # v0.15.1: the links in the documents (scripts/check_links.py). Every
+  # relative link and its anchor, and every link to the repository's own
+  # documents on main (as the README and the update page give them, so
+  # that they work on PyPI and in every installed copy), against the
+  # tracked files of this commit. Standard library only, so it runs
+  # before anything is installed. The links to other sites are checked
+  # once a week instead (external-links.yml). Then the facts the
+  # documents repeat (tests/test_v0151_facts.py): the folders, the time
+  # per import call and the tool counts, held to the code's constants,
+  # which needs the package; the answer comes in about two minutes.
+  documents:
+    name: documents
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: The links inside the repository
+        run: python scripts/check_links.py
+
+      # From the lock, as the libraries' install does: uv, at the version
+      # the extension job uses, in an environment of its own, so it never
+      # joins the path; `--locked` fails when pyproject.toml and uv.lock
+      # disagree; pip installs the exported releases, each checked
+      # against its hash, then the package itself without dependencies.
+      - name: Install the package from the lock
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m venv "$RUNNER_TEMP/uv-env"
+          uvpy="$RUNNER_TEMP/uv-env/bin/python"
+          "$uvpy" -m pip install "uv==0.9.7"
+          "$uvpy" -m uv export --locked --extra dev --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
+          python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
+          python -m pip install --no-deps -e .
+
+      - name: The facts the documents repeat
+        run: python -m pytest -q tests/test_v0151_facts.py
+
+  # v0.15.1: the newest library releases. Every other job that runs tests
+  # installs from the lock; this one takes the newest release of each
+  # library pyproject.toml allows, what an install from PyPI takes today
+  # (pip, pipx, `uv tool`), and runs the suite with them. It may fail and
+  # only reports: a red result is read by the maintainer and never blocks
+  # a merge (continue-on-error, and no job needs it). Its summary gives
+  # the release of each bounded library it installed, and Starlette's,
+  # which the MCP library loads at every start without a limit, and the
+  # newest release of each on PyPI, so a new major release beyond a limit
+  # (PyMuPDF 2.0, the MCP library's 2.0) is seen without being installed.
+  newest-libraries:
+    name: the newest library releases (reports only)
+    runs-on: ubuntu-latest
+    # Measured on its first run (20 October 2026, run 39416267478): this
+    # job took 28 minutes, its install included, and the suite on Ubuntu
+    # 21 and 26 minutes in the `test` jobs. 45 is about one and a half
+    # times this job's run, the margin the `test` job's own limit keeps
+    # over its slowest green job; a hang is named first, by the per-test
+    # limit. A run that reaches the limit ends red, which here only
+    # reports, as any red in this job does.
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    continue-on-error: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # uv in an environment of its own, as in the `test` job; `--python`
+      # names the job's own interpreter, since `--system` alone takes the
+      # first Python uv finds.
+      - name: Install the newest releases pyproject.toml allows
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m venv "$RUNNER_TEMP/uv-env"
+          uvpy="$RUNNER_TEMP/uv-env/bin/python"
+          "$uvpy" -m pip install "uv==0.9.7"
+          "$uvpy" -m uv pip install --system --python "$(python -c 'import sys; print(sys.executable)')" -e ".[dev,pdf-epub]"
+
+      # Before the suite, so it is read even when the suite fails or runs
+      # out of time. Its table is written under the runner's temporary
+      # folder, never into the checkout the suite then runs in.
+      - name: The releases installed, and the newest on PyPI
+        shell: bash
+        run: |
+          python - "$RUNNER_TEMP/releases.md" <<'EOF'
+          import json, re, subprocess, sys, tomllib
+          from packaging.specifiers import SpecifierSet
+
+          def key(name):
+              return re.sub(r"[-_.]+", "-", name).lower()
+
+          with open("pyproject.toml", "rb") as handle:
+              project = tomllib.load(handle)["project"]
+          limits = {}
+          for line in (project["dependencies"]
+                       + project["optional-dependencies"]["pdf-epub"]):
+              name = re.match(r"[A-Za-z0-9_.-]+", line).group(0)
+              if "<" in line:
+                  limits[key(name)] = line[len(name):].split(";")[0].strip()
+          listed = subprocess.run(
+              [sys.executable, "-m", "pip", "list", "--format=json"],
+              capture_output=True, text=True, check=True).stdout
+          installed = {key(p["name"]): p["version"] for p in json.loads(listed)}
+          rows = ["| library | limit | installed here | newest on PyPI |",
+                  "|---|---|---|---|"]
+          for name in [*limits, "starlette"]:
+              found = subprocess.run(
+                  [sys.executable, "-m", "pip", "index", "versions", name],
+                  capture_output=True, text=True).stdout
+              newest = re.match(r"\S+ \(([^)]+)\)", found)
+              newest = newest.group(1) if newest else "not found"
+              limit = limits.get(name, "none")
+              here = installed.get(name, "not installed")
+              rows.append(f"| {name} | {limit} | {here} | {newest} |")
+              print(f"::notice title=newest library releases::{name}: "
+                    f"installed {here}, newest on PyPI {newest}, limit {limit}")
+              if name in limits and newest != "not found" and \
+                      not SpecifierSet(limits[name]).contains(newest):
+                  print(f"::warning title=a release beyond a limit::{name} "
+                        f"{newest} is on PyPI, beyond {limit}")
+          with open(sys.argv[1], "w", encoding="utf-8") as handle:
+              handle.write("\n".join(rows) + "\n")
+          EOF
+          {
+            echo "### The newest library releases: ubuntu-latest / py3.13"
+            echo ""
+            cat "$RUNNER_TEMP/releases.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The suite as the `test` job runs it; its summary line and its
+      # failures go to the summary and to annotations, as there. Its
+      # output, too, is kept under the runner's temporary folder.
+      - name: The suite on the newest releases
+        shell: bash
+        run: |
+          set +e
+          out="$RUNNER_TEMP/pytest_output.txt"
+          python -m pytest -ra --tb=short -q 2>&1 | tee "$out"
+          code=${PIPESTATUS[0]}
+          summary=$(grep -E "^[0-9]+ (passed|failed|error)|^(=+ )?[0-9]+ (failed|passed|errors?)[ ,]" "$out" | tail -1)
+          {
+            echo "### pytest on the newest releases: ubuntu-latest / py3.13"
+            echo ""
+            echo '```'
+            echo "${summary:-no summary line: the run ended before pytest wrote one}"
+            grep -E "^(FAILED|ERROR) " "$out" | head -60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          grep -E "^(FAILED|ERROR) " "$out" | head -10 \
+            | sed -e 's/%/%25/g' -e 's/^/::error title=pytest, newest releases::/'
+          if [ -n "$summary" ]; then
+            echo "::notice title=pytest summary, newest releases::$(echo "$summary" | sed 's/%/%25/g')"
+          else
+            tail -10 "$out" | sed -e 's/%/%25/g' -e 's/^/::error title=pytest output tail::/'
+          fi
+          exit $code

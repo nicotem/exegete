@@ -247,7 +247,56 @@ def _tools(mode="full"):
 # names file among what an assistant that opens files can reach. That
 # takes 32 characters, and the limit is raised by that and no more:
 # 38,474.
-README_LIMIT = 38_474
+# v0.15.1, the record on Zenodo: a third badge, the DOI that always
+# leads to the newest release. That takes 108 characters (the line
+# and its line break), and the limit is raised by that and no more:
+# 38,582.
+# v0.15.1, the LM Studio route (the owner's word of 20 October 2026):
+# "Other assistants" names LM Studio's recipe of its own, in seven steps
+# with the `core` tool set, and links straight to it in INSTALL.md. That
+# takes 270 characters, and the limit is raised by that and no more:
+# 38,852.
+# v0.15.1, the stale texts (the staleness audit of 20 October 2026):
+# the REFI-QDA export kept with its known faults, in the table and the
+# interoperability paragraph; "What comes next" in three releases, undo
+# in v0.15.2 and method in v0.15.3; the Codex setting as OpenAI documents
+# it, untested; the backup Exegete takes itself; the install command with
+# the optional part for PDF and EPUB; a first project on `core`; the
+# exception for a project built to leak a private note; signs of an open
+# QualCoder 4.0 window; the names list among the previewed changes; the
+# exceptions past the cut; QualCoder's homepage and the protocol's
+# foundation. That takes 1,593 characters, and the limit is raised by
+# that and no more: 40,445. Its fix round: the backup before each change
+# to the project's database, and PRIVACY's heading on Exegete's log, 23
+# characters more: 40,468.
+# v0.15.1, the two switches: "Getting started" leaves the switch "Limit
+# Exegete to its small tool set" off, and the tool sets' table
+# names it beside `EXEGETE_TOOLSET=core`. That takes 80 characters, and
+# the limit is raised by that and no more: 40,548.
+# v0.15.1, the small corrections: "Two coder names" says that a change
+# in the extension's settings needs Claude Desktop quit and opened again
+# (the plan's split and the Codex setting were already in, with the stale
+# texts). That takes 60 characters, and the limit is raised by that and
+# no more: 40,608.
+# v0.15.1, attributes on journal entries removed, as announced in 0.14:
+# the interoperability table's exceptions for cases, attributes, memos,
+# annotations and journals name setting an attribute on a journal entry.
+# That takes 41 characters, and the limit is raised by that and no more:
+# 40,649.
+# v0.15.1, the encoding choice: the sentence on what the preview of an
+# import gives the assistant says that one line of a file not saved as
+# UTF-8 is shown, as each character set reads it. That takes 79
+# characters, and the limit is raised by that and no more: 40,728.
+# v0.15.1, PyMuPDF 2 with its runtime (the owner's ruling 96 of 22
+# October 2026): "For advanced users" says that Exegete has no telemetry
+# of its own, and that on Windows x64 a library it installs for PDFs
+# reports its use, with a pointer to PRIVACY.md. That takes 111
+# characters, and the limit is raised by that and no more: 40,839.
+# The words round after the privacy reader's check (ruling 97): "In
+# short" says that on Windows x64 that library reports its use, with
+# nothing from the projects, pointing to PRIVACY.md. That takes 138
+# characters, and the limit is raised by that and no more: 40,977.
+README_LIMIT = 40_977
 
 
 def test_the_readme_stays_short():
@@ -360,8 +409,11 @@ def test_the_path_of_a_coding():
     # each step a behaviour of the server
     status = inspect.signature(server.update_suggestion_status).parameters
     assert {"approve", "reject", "reopen"} <= set(status)
+    # v0.15.1: a backup before every change, whatever create_backup says;
+    # the argument is accepted and ignored, its default null
+    # (tests/test_v0151_ignored_argument.py)
     apply = inspect.signature(server.apply_codings)
-    assert apply.parameters["create_backup"].default is True
+    assert apply.parameters["create_backup"].default is None
     doc = " ".join(server.apply_codings.__doc__.split())
     assert "re-validated BEFORE the backup" in doc
     assert "single all-or-nothing transaction" in doc
@@ -537,8 +589,10 @@ def test_the_assistants_table():
                         "and beyond", "**yes**"),
         "ChatGPT's desktop app and Codex": (
             "Codex: yes, well beyond its folder, without asking, even in "
-            "\"Ask for approval\" and read-only mode (a setting that stops "
-            "it has not yet been tested with Exegete)",
+            "\"Ask for approval\" and read-only mode (OpenAI documents a "
+            "setting, marked Beta, that can keep Codex's own commands from "
+            "reading outside the folder it works in; it has not been tested "
+            "with Exegete)",
             "**yes, without asking**"),
         "LM Studio": ("Its chat: no", "**not by itself.**"),
     }
@@ -546,11 +600,13 @@ def test_the_assistants_table():
         assert cells[name][REACH] == readme_words, name
         assert privacy_words in hosts, name
     # (the review of the redraft: Claude Code's folder and Codex's
-    # untested setting in PRIVACY.md's words, not shortened)
+    # untested setting in PRIVACY.md's words, not shortened; ruling 85,
+    # item 4: the setting named as OpenAI documents it, its test dropped)
     assert "Claude Code reads the folder it starts in without asking" \
         in hosts
-    assert "a setting that stops it has not yet been tested with Exegete" \
-        in hosts
+    assert ("OpenAI documents a setting, marked Beta, that can keep "
+            "Codex's own commands from reading outside the folder it works "
+            "in; it has not been tested with Exegete") in hosts
     # what each maker receives, and what this project suggests (v0.14.2,
     # the README's first round of checks: the commercial-terms route of
     # 0.14.0's table, and Cowork as PRIVACY.md's checklist puts it)
@@ -664,10 +720,12 @@ def test_the_assistants_table():
 
 def _measured():
     # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
-    # carries them (test_toolset_modes.py pins them)
+    # carries them (test_toolset_modes.py pins them); v0.15.1 moves them
+    # again (create_backup accepted and ignored), so they are in the
+    # Unreleased part above 0.15.0's
     changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [0.15.0-alpha]",
-                           "## [0.14.3-alpha]"))
+    entry = _flat(_between(changelog, "## [0.15.1-alpha]",
+                           "## [0.15.0-alpha]"))
     measured = entry[entry.index("### Measured"):]
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",
                       measured)
@@ -706,7 +764,10 @@ def test_the_tool_set_table():
     assert rows["full"][4] == "every route"
     assert ("`lifecycle`, the earlier name of `full` in the extension, is "
             "still accepted and means `full`.") in _flat(section)
-    assert rows["core"][4] == "none: set `EXEGETE_TOOLSET=core`"
+    # v0.15.1: the variable, or the extension's switch by its title
+    assert rows["core"][4].startswith("none: set `EXEGETE_TOOLSET=core`")
+    assert manifest["user_config"]["small_toolset"]["title"] in \
+        rows["core"][4]
     assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
     # the sentence under it, with the interpreters and the per cent
     # (v0.14.2, the README's second round of checks: shorter, the same
@@ -731,7 +792,10 @@ ARGUMENTS = {"get_coded_segments": ("cursor", "strategy", "max_chars",
              "find_cooccurring_codes": ("window_size",),
              "query_by_attribute": ("operator",)}
 GUARDED = ("merge_codes", "merge_category", "delete_code", "delete_category",
-           "pseudonymise_source", "restore_backup", "prune_backups")
+           "pseudonymise_source", "restore_backup", "prune_backups",
+           # (the staleness audit of 20 October 2026: the names list's
+           # save previews first too)
+           "set_project_coder_name", "save_names_list")
 
 
 def test_the_advanced_section_rests_on_the_code():
@@ -741,24 +805,35 @@ def test_the_advanced_section_rests_on_the_code():
     # v0.14.2, the README's first round of checks: read alone, "no online
     # service and no telemetry" let an IT reader think the data stays on
     # the computer
+    # v0.15.1, PyMuPDF 2 with its runtime (ruling 96): no telemetry of
+    # Exegete's own, but on Windows x64 onnxruntime, which PyMuPDF 2
+    # loads, reports once for each PDF read
     for words in ("in Python 3.10 or newer, with no online service and no "
-                  "telemetry; its one request of its own is the check for "
-                  "new versions (\"Updating\", above). What the assistant "
+                  "telemetry of its own (on Windows x64, a library it "
+                  "installs for PDFs reports its use: PRIVACY.md, \"How "
+                  "your data flows\"); its one request of its own is the "
+                  "check for new versions (\"Updating\", above). What the "
+                  "assistant "
                   "reads through it goes to "
                   "the maker of the AI behind it ([Where your data goes]"
                   "(https://github.com/nicotem/exegete#where-your-data-goes))",
                   # v0.14.2, the README's first round of checks: what a
                   # backup is (backup_project, below)
-                  "Each backup copies the whole project folder, with any "
-                  "media stored in it, next to the project; `prune_backups` "
-                  "clears old ones.",
+                  # v0.15.1: but its audio and video folders
+                  "Each backup copies the project folder, except its audio "
+                  "and video folders (a restore keeps the project's), next "
+                  "to the project; `prune_backups` clears old ones.",
+                  # (v0.15.1, the backup's moment: Exegete takes the
+                  # backup itself, whatever the call asks)
                   "It reads a project's SQLite database read-only; each "
                   "tool that writes opens its own connection, after a "
-                  "backup (by default), and refuses while the project's "
-                  "lock file is active (QualCoder 3.8.2 has the project "
-                  "open, or another conversation using Exegete is writing "
-                  "to it).",
-                  "`pipx install exegete`"):
+                  "backup Exegete takes itself, and refuses while the "
+                  "project's lock file is active (QualCoder 3.8.2 has the "
+                  "project open, or another conversation using Exegete is "
+                  "writing to it).",
+                  # (the staleness audit of 20 October 2026: the command
+                  # carries the optional part, pyproject's extra)
+                  "`pipx install \"exegete[pdf-epub]\"`"):
         assert words in opening, words
     with open(REPO / "pyproject.toml", "rb") as handle:
         project = tomllib.load(handle)["project"]
@@ -803,8 +878,12 @@ def test_the_advanced_section_rests_on_the_code():
             "as it does by default, and the first 4,096 when it loads the "
             "tool at the start (2,048 before its version 2.1.296). So the "
             "rules that matter come first in each description, within "
-            "2,048 characters; the rest reach the model through "
-            "`read_brief` or the answers.") in beyond
+            "2,048 characters, a few named exceptions apart; the rest "
+            "reach the model through `read_brief` or the answers.") in beyond
+    # (the staleness audit of 20 October 2026: the exceptions are named,
+    # tests/test_v0142_description_cut.py, LEFT_PAST_THE_CUT)
+    import test_v0142_description_cut as cut
+    assert cut.LEFT_PAST_THE_CUT
     assert "Claude Code shows only the first 2,048" not in beyond
     assert "Claude Code shows the first 4,096" not in beyond
     assert ("`pseudonymise_source` (these five also say whose work is "
@@ -845,13 +924,17 @@ def test_what_comes_next_is_plans():
     # v0.14.3: bringing documents in and reading a whole
     # file yourself are in Exegete, so they are no longer the next plan
     # (the whole-branch review of v0.15.0, round 1: v0.15 in three
-    # releases, the safety net in v0.15.1 and method in v0.15.2)
+    # releases, the safety net in v0.15.1 and method in v0.15.2; the
+    # owner's decisions of 20 October 2026, ruling 85, item 1: the safety
+    # net in two releases, v0.15.1 and v0.15.2, with undo in the second,
+    # and method in v0.15.3; v0.15.1's release preparation takes its own
+    # item out, as 0.14.3's did)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15.1", "v0.15.2", "v0.16", "v0.17", "Later"]
+        "v0.15.2", "v0.15.3", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
-    for words in ("undo everything a session did",
+    for words in ("undo a session's changes",
                   "when replacing names, choose which mentions to keep",
                   "more of the analysis shown in the conversation, as tables",
                   # v0.14.2, the README's second round of checks: the rest
@@ -859,8 +942,6 @@ def test_what_comes_next_is_plans():
                   # for": graphs the assistant can show, PDFs labelled
                   # honestly, counts where names remain, a fallback when a
                   # quote does not match)
-                  "old tools marked as going are retired (TOOLS.md names "
-                  "each)",
                   "as tables and graphs (codes that occur together, the code "
                   "tree, counts by attribute)",
                   "PDFs that say where their text came from",

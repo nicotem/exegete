@@ -48,7 +48,11 @@ is the easier start.
 The quickest install is from PyPI (`pip install exegete` in a
 virtual environment, or `pipx install exegete`; see "Recommended:
 Install from PyPI" in INSTALL.md, whose config examples use the
-resulting `exegete` command). The steps below use the source install:
+resulting `exegete` command). PDF and EPUB files need Exegete's
+optional part: `"exegete[pdf-epub]"` in place of `exegete`, or
+`".[pdf-epub]"` in place of `.` in the source install below (INSTALL.md,
+"PDF and EPUB: the optional part"). The steps below use the source
+install:
 
 ```bash
 # Navigate to where you want to install (e.g., Documents)
@@ -187,8 +191,9 @@ Exegete asks the assistant to check your coder name with you first
 (the name your own codings will carry) and to say where the project
 will be made, unless your coder name is already set
 (`EXEGETE_CODER_NAME` in the `env` section above, or "Your coder name"
-in the extension's settings): then the project is made with that name
-at once, and the answer says where. Then:
+in the extension's settings, which reaches Exegete once Claude Desktop
+has been quit and opened again): then the project is made with that
+name at once, and the answer says where. Then:
 
 ```
 Can you give me a summary of my project?
@@ -207,11 +212,12 @@ Show me the most frequently used codes
 When a new version is released: first **fully quit your Claude
 client**, so that no copy of the server is running while its files
 change; then `cd` into the cloned folder, run `git pull`, then
-`venv/bin/pip install -e .`, and open the client again; new tools only
+`venv/bin/pip install -e .` (`".[pdf-epub]"` in place of `.` for PDF
+and EPUB), and open the client again; new tools only
 appear after the restart. Confirm the installed version with `venv/bin/python -m
 exegete.server --version`, which prints the version and exits
 (`venv/bin/pip show exegete` still works and spells
-`0.15.0-alpha` as `0.15.0a0`). Updates never touch your projects or
+`0.15.1-alpha` as `0.15.1a0`). Updates never touch your projects or
 backups (the server is code-only).
 
 ## Troubleshooting
@@ -255,6 +261,7 @@ You should see it start without errors. Press Ctrl+C to stop.
 
 **"Module not found"**
 - Make sure you ran `pip install -e .` in the virtual environment
+  (`pip install -e ".[pdf-epub]"` for PDF and EPUB as well)
 - Check that the Python path in config points to the venv Python
 
 ## Next Steps

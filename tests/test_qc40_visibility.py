@@ -694,9 +694,10 @@ class TestWriteEchoesRedactHiddenTargets:
         assert out["deleted_coding"]["hidden_coder_row"] is True
         assert out["deleted_coding"]["private_note_removed"] is True
         assert "memo" not in out["deleted_coding"]
-        # S-P2 (a): a backup exists even though create_backup=False
+        # S-P2 (a): a backup exists even though create_backup=False, as
+        # before every change since v0.15.1, so no note says so
         assert "backup_path" in out
-        assert "backup_note" in out
+        assert "backup_note" not in out
         assert len(_backups(visibility_db)) == 1
         assert _row(visibility_db,
                     "SELECT COUNT(*) FROM code_text WHERE ctid = 3")[0] == 0
@@ -847,14 +848,14 @@ class TestVisibilityGuardFailsClosed:
         assert "refused" not in out
         return out
 
-    def _rows_intact(self, project):
+    def _rows_intact(self, project, backups=0):
         assert _row(project,
                     "SELECT memo FROM code_text WHERE ctid = 3")[0] == \
             "hidden memo"
         assert _row(project,
                     "SELECT memo FROM annotation WHERE anid = 1")[0] == \
             "hidden annotation"
-        assert _backups(project) == []
+        assert len(_backups(project)) == backups
 
     @pytest.mark.parametrize("variant", sorted(_BROKEN_VIEWS))
     def test_helpers_raise_instead_of_answering_visible(self, visibility_db,
@@ -973,17 +974,23 @@ class TestVisibilityGuardFailsClosed:
         # the write runs. The db layer queries the view again, with the
         # override, and refuses (the set_memo cell that was open)
         real_perform_write = server._perform_write
+        broken = []
 
         def break_then_write(op, **kwargs):
             _break_views(visibility_db, "missing_table")
+            broken.append(True)
             return real_perform_write(op, **kwargs)
 
         monkeypatch.setattr(server, "_perform_write", break_then_write)
         raw = server.set_memo("coding", 3, "probe", create_backup=False,
                               allow_hidden_coder=True)
+        assert broken, "the view never broke; the test proves nothing"
         out = self._assert_failed_closed(raw)
         assert "nothing was changed" in out["error"]
-        self._rows_intact(visibility_db)
+        # The view breaks after the read-only checks; set_memo's checks
+        # run again under SQLite's lock, before the backup's database is
+        # copied, so the refusal leaves no backup (v0.15.1)
+        self._rows_intact(visibility_db, backups=0)
 
     def test_locked_database_surfaces_as_locked_not_hidden(
             self, visibility_db, monkeypatch):

@@ -34,7 +34,7 @@ REPO = Path(__file__).resolve().parent.parent
 VENV_PY = Path(sys.executable)
 
 EXPECTED_FULL = FULL_TOOLS      # tests/tool_counts.py
-EXPECTED_CORE = 25              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), and the earlier names of the two tools renamed in 0.15.0; check_for_updates, import_documents and create_project are not in core
+EXPECTED_CORE = 27              # 21, plus read_brief (v0.14.2) and open_file_for_reading (v0.14.3), the earlier names of the two tools renamed in 0.15.0, and restore_backup and search_memos (v0.15.1); check_for_updates, import_documents and create_project are not in core
 
 SCHEMA = """
 CREATE TABLE project (databaseversion TEXT, date TEXT, memo TEXT, about TEXT, bookmarkfile INTEGER, bookmarkpos INTEGER, codername TEXT, recently_used_codes TEXT);
@@ -463,10 +463,91 @@ class TestThePublishedSchemaBudget:
     # and separator, 1,310 characters fewer in `full` (1,362 on 3.11);
     # `core` did not serve it, and get_current_project's description is
     # unchanged (its answer's note changed).
-    FULL_MEASURED = 206_624          # 82 tools, Python 3.13.5, mcp 1.30.0
-    CORE_MEASURED = 68_258           # 25 tools, same environment
-    FULL_MEASURED_310 = 217_084      # the same tree on Python 3.11.13
-    CORE_MEASURED_310 = 71_690
+    # v0.15.1, the ignored argument: create_backup accepted and ignored,
+    # its line in 22 descriptions and its schema's default, and the texts
+    # that offered to skip a backup, 1,577 characters more in `full` and
+    # 225 in `core` (1,645 and 233 on 3.11). The first change of v0.15.1
+    # to move the figure, so the current entry is the Unreleased one and
+    # 0.15.0's figure is history (`_v0150_entry`).
+    # v0.15.1, the stale texts: export_refi_qda's sentence names its
+    # known faults instead of its removal (the owner's decision of 20
+    # October 2026: the export is kept, to be fixed), 126 characters more
+    # in `full` on both interpreters; `core` does not serve the tool.
+    # v0.15.1, audio and video left out of backups: list_backups',
+    # prune_backups' and restore_backup's sentences on the two folders,
+    # which backups leave out and a restore keeps, 100 characters more in
+    # `full` and 36 in `core` (108 and 40 on 3.11). Its fix round 2:
+    # list_backups and prune_backups say so of the backups made from
+    # 0.15.1 on, that one made earlier may hold the two folders, and name
+    # the answers' fields that say which, and copy_project_to_workspace
+    # that it keeps them, 500 characters more in `full` and 172 in `core`
+    # (532 and 184 on 3.11).
+    # v0.15.1, the small corrections: create_project's and
+    # copy_project_to_workspace's descriptions name the empty ai_data
+    # folder Exegete makes, 129 and 89 characters more, 218 in `full` and
+    # 89 in `core`, which serves the copy alone (137 and 93, so 230 and
+    # 93, on 3.11). The rounded figures stay about 209,000 and 69,000
+    # characters, and the tokens 52k and 17k.
+    # v0.15.1, the removals: export_code_report, cleanup_old_sessions and
+    # merge_proposals removed, as announced in 0.14, their entries and
+    # separators 4,107 characters fewer in `full` (4,295 on 3.11);
+    # explain_ai_coding_tools without the help topics' deprecation
+    # sentence, 166 fewer (162), and propose_codes saying how to merge two
+    # proposals now, 172 more (184): 4,101 fewer in all (4,273 on 3.11).
+    # `core` serves none of the three. The rounded figures become about
+    # 205,000 and 69,000 characters, and the tokens 51k and 17k.
+    # v0.15.1, the restore: restore_backup's description says what its
+    # preview gives and that the lock file is held for the whole
+    # restore, 399 characters more in `full` (423 on 3.11); and `core`
+    # gains the tool (3,733 characters; 3,957 on 3.11) while
+    # list_backups' and delete_coding's descriptions lose the four marks
+    # that said it was not in the set: 3,603 more in `core` (3,827). The
+    # rounded figures become about 205,000 and 72,000 characters, the
+    # tokens 51k and 18k. Its fix round 1: the description says that over
+    # a lock file already stale none is held, 73 characters more in both
+    # sets (77 on 3.11): 472 more in `full` (500), 3,806 for the tool
+    # (4,034) and 3,676 more in `core` (3,904). The rounded figures
+    # become about 206,000 and 72,000 characters, the tokens 51k and 18k.
+    # v0.15.1, the removed arguments: delete_code without cascade (352
+    # characters fewer; 360 on 3.11), apply_codings and import_text_file
+    # without owner (391 fewer each; 403), search_files without
+    # search_memo (347 fewer; 359): 1,481 fewer in `full` (1,525 on 3.11)
+    # and 771 in `core` (795), whose search_files entry is 380 fewer (392)
+    # since its sentence there marked search_memos as not served. The
+    # rounded figures become about 204,000 and 72,000 characters, and the
+    # tokens stay 51k and 18k.
+    # v0.15.1, attributes on journal entries and the rename back removed:
+    # create_attribute_type and set_attribute without the journal
+    # attributes' deprecation sentence (139 and 219 characters fewer; 135
+    # and 215 on 3.11), rename_file without the rename back's (325 fewer;
+    # 329): 683 fewer in `full` (679 on 3.11), none in `core`, which
+    # serves none of the three. The rounded figures become about 203,000
+    # and 72,000 characters, and the tokens stay 51k and 18k.
+    # v0.15.1, the overlap policy qualcoder_edit_parity removed:
+    # pseudonymise_source without its deprecation sentence and the
+    # policy's paragraph among its arguments, 700 characters fewer in
+    # `full` (732 on 3.11), none in `core`, which does not serve the tool.
+    # The rounded figures stay about 203,000 and 72,000 characters, and
+    # the tokens 51k and 18k.
+    # v0.15.1, the encoding choice: import_documents' description says
+    # that one line of a file not in UTF-8 is shown and has an Args line
+    # for character_sets, its pointer to import_text_file and to the
+    # converted_documents topic gone to keep it within 2,048 characters,
+    # 4 characters more (8 on 3.11); its schema gains character_sets, 158
+    # more: 162 more in `full` (166 on 3.11), none in `core`, which does
+    # not serve the tool. The rounded figures stay about 203,000 and
+    # 72,000 characters, and the tokens 51k and 18k.
+    # v0.15.1, search_memos in `core`, since search_files no longer
+    # searches notes: `core` gains the tool, 2,347 characters (2,479 on
+    # 3.11), its description there marking add_journal_entry, and
+    # search_files' description there loses the two marks on
+    # search_memos, 66 fewer: 2,283 more in `core` (2,415 on 3.11), none
+    # in `full`. The rounded figures become about 203,000 and 74,000
+    # characters, and the tokens stay 51k and 18k.
+    FULL_MEASURED = 202_814          # 79 tools, Python 3.13.5, mcp 1.30.0
+    CORE_MEASURED = 73_968           # 27 tools, same environment
+    FULL_MEASURED_310 = 213_182      # the same tree on Python 3.11.13
+    CORE_MEASURED_310 = 77_764
 
     # Why two per cent, away from the reference environment.
     #
@@ -493,12 +574,12 @@ class TestThePublishedSchemaBudget:
     # drives both facts so this paragraph cannot rot away from them.
     TOLERANCE = 0.02
 
-    FULL_CHARS = "206,624"
-    CORE_CHARS = "68,258"
-    FULL_ROUNDED = "207,000"
-    CORE_ROUNDED = "68,000"
-    FULL_TOKENS = "52k"
-    CORE_TOKENS = "17k"
+    FULL_CHARS = "202,814"
+    CORE_CHARS = "73,968"
+    FULL_ROUNDED = "203,000"
+    CORE_ROUNDED = "74,000"
+    FULL_TOKENS = "51k"
+    CORE_TOKENS = "18k"
 
     @staticmethod
     def _read(name):
@@ -545,7 +626,26 @@ class TestThePublishedSchemaBudget:
         is the Unreleased one alone, and 0.14.3's figure is history
         (`_v0143_entry`). From the release on, the current entry is
         0.15.0's, under an Unreleased heading that says nothing yet.
+        v0.15.1 moves it again (create_backup accepted and ignored, its
+        line in 22 descriptions and its schema's default, and the texts
+        that offered to skip a backup; the REFI-QDA export's sentence
+        names its known faults; the descriptions of three backup tools
+        name the audio and video folders; three tools removed; four
+        arguments removed), so the current entry is the Unreleased one
+        alone, and 0.15.0's figure is history (`_v0150_entry`). From
+        the release on, the current entry is 0.15.1's, under an
+        Unreleased heading that says nothing yet.
         """
+        text = cls._read("CHANGELOG.md")
+        return text[text.index("## [0.15.1-alpha]"):
+                    text.index("## [0.15.0-alpha]")]
+
+    @classmethod
+    def _v0150_entry(cls):
+        """The 0.15.0 entry, whose figure is history and stays put
+        (v0.15.1's ignored create_backup, REFI-QDA sentence and backup
+        descriptions move the figure, so the current
+        entry is the Unreleased one, above the 0.15.0 heading)."""
         text = cls._read("CHANGELOG.md")
         return text[text.index("## [0.15.0-alpha]"):text.index("## [0.14.3")]
 
@@ -685,20 +785,38 @@ class TestThePublishedSchemaBudget:
         entry = self._current_entry()
         assert f"full = {self.FULL_CHARS} characters" in entry
         assert f"core = {self.CORE_CHARS}" in entry
+        # and the table's rows, on both interpreters (v0.15.1, the
+        # restore's fix round 1: a row could lag behind the prose)
+        for name, now, now_311 in (
+                ("full", self.FULL_MEASURED, self.FULL_MEASURED_310),
+                ("core", self.CORE_MEASURED, self.CORE_MEASURED_310)):
+            row = re.search(rf"\| `{name}` \([^)]*\) \| ([0-9,]+) \| "
+                            r"[0-9,]+ \| ([0-9,]+) \|", entry)
+            assert row is not None, name
+            assert row.groups() == (f"{now:,}", f"{now_311:,}"), name
         assert f"Python 3.13.5 with mcp {self.REFERENCE_MCP}" in entry
         # The environment, by path: this repository holds two, at
         # different interpreters, and a version alone does not say which
-        # was used. v0.15.0's figures are taken in separate environments
-        # installed from the lock, and the entry says so, with the check
-        # that they give 0.14.3's figures exactly for 0.14.3's tree.
+        # was used. v0.15.1's figures, as v0.15.0's, are taken in
+        # separate environments installed from the lock, and the entry
+        # says so, with the check that they give 0.15.0's figures exactly
+        # for 0.15.0's tree.
         flat = " ".join(entry.split())
         assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a "
                 "separate environment installed from the repository's lock "
                 "file, not the repository's own `venv/`") in flat
-        assert "for 0.14.3's tree it gives exactly 0.14.3's figures" in flat
+        assert "for 0.15.0's tree it gives exactly 0.15.0's figures" in flat
         assert ("Python 3.11.13 (likewise a separate environment, which "
-                "also gives exactly 0.14.3's figures for its tree)") in flat
+                "also gives exactly 0.15.0's figures for its tree)") in flat
         assert "mcp 1.30.0 in the repository's own `venv/`" not in flat
+        # 0.15.0's own figures, as history, taken the same way
+        v0150 = " ".join(self._v0150_entry().split())
+        assert ("Python 3.13.5 with mcp 1.30.0 and pydantic 2.13.5 in a "
+                "separate environment installed from the repository's lock "
+                "file, not the repository's own `venv/`") in v0150
+        assert "for 0.14.3's tree it gives exactly 0.14.3's figures" in v0150
+        assert ("Python 3.11.13 (likewise a separate environment, which "
+                "also gives exactly 0.14.3's figures for its tree)") in v0150
         # 0.14.3's own figures, as history: taken the same way, and
         # checked against the repository's environments (the review of
         # 12 October 2026 found it naming `venv/` instead).
@@ -719,6 +837,10 @@ class TestThePublishedSchemaBudget:
         so is the rule that the entry being written states exactly one
         figure: its own."""
         assert self._current_entry().count("Serialised tool") == 1
+        v0150 = self._v0150_entry()
+        assert v0150.count("Serialised tool") == 1
+        assert "full = 206,624 characters" in v0150
+        assert self.FULL_CHARS not in v0150
         v0143 = self._v0143_entry()
         assert v0143.count("Serialised tool") == 1
         assert "full = 201,739 characters" in v0143
@@ -774,6 +896,16 @@ class TestThePublishedSchemaBudget:
         assert f"roughly {self.FULL_TOKENS} tokens" in install
         assert f"about {self.CORE_ROUNDED} characters, roughly " \
                f"{self.CORE_TOKENS} tokens" in install
+        # v0.15.1, the LM Studio route: Step 3 of the recipe gives both
+        # sets in one sentence, rounded and to the character, so a
+        # re-measure that moves these constants names that sentence too
+        # (v0.15.1, the ignored argument: measured for 0.15.1)
+        assert (f"measure about {self.FULL_ROUNDED} characters, roughly "
+                f"{self.FULL_TOKENS} tokens, against about "
+                f"{self.CORE_ROUNDED} characters, roughly "
+                f"{self.CORE_TOKENS} tokens, for the {EXPECTED_CORE} tools of `core` "
+                f"({self.FULL_CHARS} and {self.CORE_CHARS} characters, "
+                f"measured for 0.15.1 on Python 3.13;") in install
 
     # `pseudonymise_source`'s own share of the full figure, which
     # INSTALL.md states rounded to the nearest 500 (v0.13: the one-file
@@ -784,21 +916,17 @@ class TestThePublishedSchemaBudget:
     # from about 19,500 to about 20,000, and its fix round to 19,960;
     # the write tools' sentence (not presuming QualCoder, piece 5) then
     # took it to 19,841, still about 20,000.
-    FLAGSHIP_ROUNDED = "20,000"
-
-    def test_install_quotes_the_flagships_own_share(self):
+    # v0.15.1, the LM Studio route (the owner's word of 20 October 2026):
+    # the recipe's Step 3 gives the two sets' sizes in one sentence, and
+    # the aside that broke the figure down, this share with it, is gone;
+    # a reader installing LM Studio does not need it, and TOOLS.md keeps
+    # the measurement.
+    def test_install_no_longer_breaks_the_figure_down(self):
         install = self._read("INSTALL.md")
-        assert (f"accounts for about {self.FLAGSHIP_ROUNDED} characters of "
-                f"that on its own") in install
-        if not self._reference_environment():
-            return
-        tools = asyncio.run(server.mcp.list_tools())
-        flagship = next(t for t in tools if t.name == "pseudonymise_source")
-        share = len(json.dumps({"name": flagship.name,
-                                "description": flagship.description or "",
-                                "inputSchema": flagship.inputSchema}))
-        assert round(share / 500) * 500 == int(
-            self.FLAGSHIP_ROUNDED.replace(",", "")), share
+        for gone in ("accounts for about 20,000 characters of that on its "
+                     "own", "the 0.12 flagship", "the palette and "
+                     "idempotency notes"):
+            assert gone not in install, gone
 
     def test_install_advises_a_context_the_core_schema_fits_in(self):
         """Step 4's advice is arithmetic, not a number to swap: the old

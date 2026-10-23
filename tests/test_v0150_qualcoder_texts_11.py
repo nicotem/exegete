@@ -100,15 +100,32 @@ EXEGETE_BACKUPS = (
 RETENTION = " (retention never touches QualCoder's own backups)"
 # Fix round 1: what a backup holds, always; what it adds on ai_data/, on
 # its sign, in the same note
-BACKUPS_HOLD = ("Backups hold the whole project folder, except lock files "
-                "and SQLite's working files.")
+# v0.15.1: and the audio and video folders, which backups made from
+# 0.15.1 on leave out and one made earlier may hold (its fix round 2,
+# tests/test_v0151_media_out.py); after the owner's sitting, the mark
+# read from the files in them (tests/test_v0151_sitting_fixes.py)
+BACKUPS_HOLD = (
+    "Exegete's backups hold the whole project folder except lock files "
+    "and SQLite's working files; those made from 0.15.1 on leave out its "
+    "audio and video folders too, while one made by an earlier version "
+    "may hold them, with recordings the project no longer has. Each "
+    "backup's holds_audio_or_video says whether it holds any file in "
+    "those folders, read from the backup itself, and audio_video_files "
+    "how many; empty folders are not marked.")
 AI_DATA = (
     "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
     "also holds its AI prompt library and chat history, which backups "
     "keep (and pruning removes). Backups leave out QualCoder 4.0's AI "
     "search index, ai_data/search.sqlite, which QualCoder rebuilds when it "
     "next opens the project with AI enabled, so a restored project without "
-    "one is normal.")
+    "one is normal."
+    # v0.15.1, the stale texts (the privacy reader): QualCoder 3.8's
+    # store, which no ignore pattern matches (held to
+    # database.BACKUP_IGNORE_PATTERNS in tests/test_v0151_stale_texts.py)
+    " They keep QualCoder 3.8's AI search store, "
+    "ai_data/vectorstore/faiss_store.bin, which holds the text of the "
+    "project's sources, so each backup of a project that has one holds "
+    "another copy of that text.")
 ONLINE_BACKUP = (
     "Since v0.14 Exegete copies the project database with SQLite's own "
     "online backup, so a backup taken while another program is writing to "

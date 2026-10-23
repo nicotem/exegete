@@ -49,8 +49,8 @@ SETTING_DESCRIPTION = (
     "Type one of two words. full: every tool, creating a new project "
     "included (recommended). core: a smaller set for local models. If "
     "this shows lifecycle, the earlier name of full, it works as full. Any "
-    "other word stops the extension from starting."
-    " After changing a setting, quit Claude Desktop and open it again.")
+    "other word stops the extension from starting.")
+RESTART = " After changing a setting, quit Claude Desktop and open it again."
 
 SETTINGS_CLAUSE = ("The settings choose the tool set (every tool, or a "
                    "smaller set for local models)")
@@ -107,7 +107,7 @@ class TestTheSet:
         server._apply_toolset("core")
         registered = set(server.mcp._tool_manager._tools)
         assert registered == set(server.CORE_TOOLSET)
-        assert len(registered) == EXPECTED_CORE == 25   # the two earlier names (0.15.0)
+        assert len(registered) == EXPECTED_CORE == 27   # the two earlier names (0.15.0), restore_backup and search_memos (v0.15.1)
         assert "create_project" not in registered
 
 
@@ -349,7 +349,14 @@ class TestTheExtension:
         option = MANIFEST["user_config"]["toolset"]
         assert option["type"] == "string"
         assert option["default"] == "full"
-        assert option["description"] == SETTING_DESCRIPTION
+        # v0.15.1: the words, as before; then the switch "Limit Exegete
+        # to its small tool set", named by its title, gives the
+        # smaller set over either word (tests/test_v0151_switches.py,
+        # what the words say); the restart sentence last
+        assert option["description"].startswith(SETTING_DESCRIPTION)
+        assert option["description"].endswith(RESTART)
+        switch = MANIFEST["user_config"]["small_toolset"]["title"]
+        assert f"If the switch \"{switch}\" is on" in option["description"]
 
     def test_the_long_description(self):
         text = MANIFEST["long_description"]
@@ -376,10 +383,15 @@ class TestTheExtension:
         assert ("description: \"`full` is the default, every tool, creating "
                 "a project included; `core` is the reduced set for local "
                 "models; `lifecycle` was `full`'s name in the extension "
-                "before 0.15.0. With the Claude Desktop extension, it is the "
-                "extension's Tool set setting (`full` unless you changed "
-                "it; an extension installed before 0.15.0 may show "
-                "`lifecycle`, which works as `full`).\"") in block
+                "before 0.15.0.") in block
+        # v0.15.1: with the extension, `core` when the switch "Limit
+        # Exegete to its small tool set" is on or "Tool set" says
+        # `core`, `full` otherwise; `lifecycle` still works as `full`
+        switch = MANIFEST["user_config"]["small_toolset"]["title"]
+        assert (f"it is `core` when the extension's switch \\\"{switch}\\\" "
+                f"is on or its Tool set setting says `core`, and `full` "
+                f"otherwise") in block
+        assert ("may show `lifecycle`, which works as `full`).\"") in block
         options = re.findall(r"^        - (.+)$", block, re.M)
         # Fix round 1: the option no longer reads as a version the
         # researcher is not on, since 0.15.0 may still show `lifecycle`
@@ -387,8 +399,10 @@ class TestTheExtension:
                            "lifecycle (the earlier name of full)",
                            "Not sure"]
         support = _flat("SUPPORT.md")
-        assert ("the toolset is its Tool set setting (`full` unless you "
-                "changed it; an extension installed before 0.15.0 may show "
+        assert (f"the toolset is `core` when its switch \"{switch}\" is "
+                f"on or its Tool set setting says `core`, and `full` "
+                f"otherwise") in support
+        assert ("an extension installed before 0.15.0 may show "
                 "`lifecycle`, which works as `full`).") in support
 
 
@@ -504,8 +518,26 @@ class TestTheDocuments:
         # 206,613, about 207,000; and save_names_list (piece 4): 83
         # tools, 207,912, and its fix round 1, 207,934, about 208,000;
         # and read_pseudonym_list removed (piece 5): 82 tools, 206,624,
-        # about 207,000
-        assert (rounded, tokens) == ("207,000", "52k")
+        # about 207,000; and v0.15.1's create_backup accepted and
+        # ignored, with the texts that offered to skip a backup: 208,201,
+        # and the REFI-QDA export's sentence on its known faults (the stale
+        # texts): 208,327, and the audio and video folders left out of
+        # backups: 208,427, about 208,000, and its fix round 2: 208,927,
+        # about 209,000; and the ai_data folder named in create_project's
+        # and copy_project_to_workspace's descriptions (the small
+        # corrections): 209,145, about 209,000; and v0.15.1's removals,
+        # three tools and four help topics, as announced in 0.14: 79
+        # tools, 205,044, about 205,000; and restore_backup's paragraph
+        # on its preview and its lock file (the restore): 205,443, still
+        # about 205,000, and its fix round 1 (over a stale lock file none
+        # is held): 205,516, about 206,000; and the arguments removed, as
+        # announced (cascade, owner and search_memo): 204,035, about
+        # 204,000; and attributes on journal entries and the rename back
+        # removed, as announced: 203,352, about 203,000; and the overlap
+        # policy qualcoder_edit_parity removed: 202,652, still about
+        # 203,000; and the encoding choice (character_sets): 202,814,
+        # still about 203,000
+        assert (rounded, tokens) == ("203,000", "51k")
         readme = _flat("README.md")
         assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
                 f"and two renamed tools' earlier names "
@@ -616,9 +648,11 @@ class TestTheDocuments:
 
     def test_the_readme_sentences(self):
         readme = _flat("README.md")
-        assert ("Leave its \"Tool set\" setting as it comes (`full`): "
-                "`core`, the smaller set for local models, cannot create a "
-                "project") in readme
+        # v0.15.1: the switch, by its title, left off as it comes; the
+        # smaller set, `core`, cannot create a project
+        switch = MANIFEST["user_config"]["small_toolset"]["title"]
+        assert (f"Leave its switch \"{switch}\" off, as it comes: the "
+                f"smaller set, `core`, cannot create a project") in readme
         assert ("whose default tool set, `full`, can create a project "
                 "too.") in readme
         assert "| Create a project | Yes | Yes |" in readme
@@ -649,9 +683,12 @@ class TestTheDocuments:
         changelog = _flat("CHANGELOG.md")
         unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                                changelog.index("## [0.14.3")]
-        texts = {name.name: _flat(name.name)
-                 for name in sorted(REPO.glob("*.md"))
-                 if name.name != "CHANGELOG.md"}
+        # and in the older documents kept in docs/history/ (v0.15.1)
+        names = [path.relative_to(REPO).as_posix()
+                 for path in sorted(REPO.glob("*.md"))
+                 + sorted(REPO.glob("docs/history/*.md"))]
+        texts = {name: _flat(name) for name in names
+                 if name != "CHANGELOG.md"}
         texts["CHANGELOG.md, [0.15.0-alpha]"] = unreleased
         quoted = {where: self._quoted_titles(text)
                   for where, text in texts.items()}

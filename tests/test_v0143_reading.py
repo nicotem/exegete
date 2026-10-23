@@ -533,13 +533,19 @@ class TestWhatTheAssistantIsTold:
                                "the conversation. At most 1,000,000 "
                                "characters.")
 
-    def test_skipping_the_backup_on_import_is_deprecated(self, project):
+    def test_skipping_the_backup_on_import_is_ignored(self, project):
+        """Deprecated in 0.14.3; from v0.15.1 every tool that takes
+        create_backup ignores it and says so under a key of its own
+        (tests/test_v0151_ignored_argument.py)."""
         answer = host("import_text_file", filename="x.txt",
                       content="Some text.", create_backup=False)
-        assert "create_backup=false" in json.dumps(answer)
+        assert answer["create_backup_ignored"] == \
+            server.IGNORED_CREATE_BACKUP
+        assert "deprecated" not in answer
         plain = host("import_text_file", filename="y.txt",
                      content="Some text.")
-        assert "create_backup=false" not in json.dumps(plain)
+        assert "create_backup_ignored" not in plain
+        assert "deprecated" not in plain
 
 
 class TestPandocMakesComments:

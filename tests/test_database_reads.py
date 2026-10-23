@@ -770,10 +770,12 @@ class TestSearchOperations:
                 assert any(m["location"] == "content" for m in r["matches"])
 
     def test_search_files_by_memo(self, db):
-        """Test searching files by memo."""
-        result = db.search_files("coping", search_filename=False, search_content=False, search_memo=True)
+        """v0.15.1: search_files no longer searches memos (search_memo
+        removed, as announced); search_memos finds a file memo."""
+        result = db.search_files("coping", search_filename=False, search_content=False)
 
-        assert result["total_matches"] >= 1
+        assert result["total_matches"] == 0
+        assert any(r["type"] == "file" for r in db.search_memos("coping"))
 
     def test_search_files_case_insensitive(self, db):
         """Test case-insensitive search (default)."""

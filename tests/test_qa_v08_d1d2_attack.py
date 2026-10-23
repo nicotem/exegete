@@ -305,8 +305,16 @@ class TestAttributeType:
 
     def test_journal_domain_with_backfill(self, setup_server,
                                           qualcoder_db_path):
+        # v0.15.1: the tool refuses the journal domain, as announced
+        # (tests/test_v0151_journal_and_rename_back.py); the database
+        # method keeps it, with its backfill, which this pins
         out = json.loads(server.create_attribute_type("Mood", "journal"))
-        assert out.get("success") is True, out
+        assert out == {"error": server.JOURNAL_ATTRIBUTES_REMOVED}, out
+        assert not _rows(qualcoder_db_path,
+                         "SELECT * FROM attribute_type WHERE name='Mood'")
+        with server.QualcoderDatabase(qualcoder_db_path,
+                                      read_only=False) as wdb:
+            wdb.add_attribute_type("Mood", "TestCoder", "journal")
         # one placeholder per existing journal (fixture has jid=1), value=''
         ph = _rows(qualcoder_db_path,
                    "SELECT * FROM attribute WHERE name='Mood'")

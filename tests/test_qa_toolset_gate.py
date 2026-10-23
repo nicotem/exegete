@@ -109,7 +109,7 @@ class TestSubprocessBehavior:
         through the real transport, not just the unit resolver."""
         names, _, _ = _session_lists(tmp_path, " CoRe ")
         assert names == sorted(server.CORE_TOOLSET)
-        assert len(names) == 25           # with open_file_for_reading (v0.14.3) and the two earlier names (0.15.0)
+        assert len(names) == 27           # with open_file_for_reading (v0.14.3), the two earlier names (0.15.0), restore_backup and search_memos (v0.15.1)
 
     def test_resources_and_prompts_byte_identical_across_modes(self, tmp_path):
         """The mode must not touch resources or prompts AT ALL — byte-equal
@@ -145,7 +145,7 @@ class TestRegistryIsolation:
         for _ in range(2):
             removed = server._apply_toolset("core")
             try:
-                assert len(server.mcp._tool_manager._tools) == 25
+                assert len(server.mcp._tool_manager._tools) == 27
                 assert set(server.mcp._tool_manager._tools) \
                     == set(server.CORE_TOOLSET)
             finally:

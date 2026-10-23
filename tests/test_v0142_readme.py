@@ -157,7 +157,11 @@ def test_how_it_works_explains_before_it_instructs():
             "assistant reads it: Exegete's preview of an import gives the "
             "assistant the documents' names, sizes, lengths and "
             "warnings, never their "
-            "text ([PRIVACY.md, \"Bringing documents in\"]"
+            # v0.15.1, the encoding choice: but one line of a file not
+            # saved as UTF-8 (tests/test_v0151_encoding_readings.py)
+            "text, but for one line of a file not saved as UTF-8, as each "
+            "character set reads it ([PRIVACY.md, \"Bringing documents "
+            "in\"]"
             "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
             "#bringing-documents-in-0143)).") in data
 
@@ -217,17 +221,19 @@ NETWORK_ONLY = ("socket", "ssl", "urllib.request")
 
 def test_it_has_no_ai_of_its_own():
     """"It has no AI of its own" (README, "How it works"): its
-    dependencies are the MCP library and, from 0.14.3, the two small
+    dependencies are the MCP library; from v0.15.1, pydantic and anyio,
+    named because Exegete imports them and the MCP library already loads
+    them (tests/test_v0151_libraries.py); and, from 0.14.3, the two small
     libraries the document import reads with (a safe XML parser,
-    QualCoder's RTF reader), neither a model's client nor a network
-    library; nothing in its source imports a model's client or asks the
-    host's model through MCP's sampling call; and a network library only
-    in the check for new versions, which the README names. The day that
-    changes, this fails."""
+    QualCoder's RTF reader); none of them a model's client. Nothing in
+    its source imports a model's client or asks the host's model through
+    MCP's sampling call, and a network library only in the check for new
+    versions (updates.py), which the README names and the import check
+    below holds. The day that changes, this fails."""
     with open(REPO / "pyproject.toml", "rb") as handle:
         dependencies = tomllib.load(handle)["project"]["dependencies"]
     assert [re.match(r"[A-Za-z0-9_.-]+", d).group(0) for d in dependencies] \
-        == ["mcp", "defusedxml", "striprtf"]
+        == ["mcp", "pydantic", "anyio", "defusedxml", "striprtf"]
     found = {}
     for path in sorted((REPO / "src").rglob("*.py")):
         uses = _model_or_network_uses(path.read_text(encoding="utf-8"))
@@ -439,15 +445,15 @@ RELEASE_LABELS = (re.compile(r"\bNEW\b"),
                   re.compile(r"(?i)\bfrom v?0\.\d+\)"),
                   re.compile(r"exegete-v?\d+\.\d+"))
 # Where a version is the point: the roadmap, the licence's record of
-# which terms apply to which release, the dated check of the table, and
-# the export being withdrawn
+# which terms apply to which release, and the dated check of the table
+# (the REFI-QDA export's removal date went in v0.15.1: it is kept, its
+# known faults named, ruling 85, item 2)
 VERSIONS_IN_PLACE = ("## What comes next", "## Disclaimer", "## Licence",
                      "## Acknowledgements")
 # (v0.15.0, the release review: the table's stamp gives QualCoder's
 # side its date and names the Exegete its column describes)
 DATED = re.compile(r"Exegete v?0\.\d+\.\d+ against QualCoder|"
-                   r"beside Exegete v?0\.\d+\.\d+:|"
-                   r"\(removed in 0\.\d+(?:\.\d+)?\)")
+                   r"beside Exegete v?0\.\d+\.\d+:")
 
 
 def _release_labels(text):
@@ -477,13 +483,14 @@ def test_the_label_check_would_notice():
                 "download the file whose name ends in `.mcpb` (for example "
                 "`exegete-0.14.1-alpha.mcpb`)",
                 "Checked on 29 September 2026, this program's 0.14.0 (then "
-                "called qualcoder-mcp) against QualCoder 3.8.2"):
+                "called qualcoder-mcp) against QualCoder 3.8.2",
+                "Export only, being withdrawn (removed in 0.15.1)"):
         assert _release_labels(old), old
     for kept in ("QualCoder 3.8.2 and the 4.0 beta", "QualCoder 4.0's format",
                  "Checked on 1 October 2026, Exegete 0.14.2 against "
                  "QualCoder 3.8.2", "QualCoder 3.8.2 and 4.0 as checked on "
-                 "10 October 2026, beside Exegete 0.15.0:",
-                 "Export only, being withdrawn (removed in 0.15)", "a name that starts with `exegete-` and ends "
+                 "10 October 2026, beside Exegete 0.15.1:",
+                 "a name that starts with `exegete-` and ends "
                  "in `.mcpb`"):
         assert not _release_labels(kept), kept
 

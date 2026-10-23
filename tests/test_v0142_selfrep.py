@@ -418,12 +418,14 @@ class TestNothingSaysExegeteOpensAQualCoderProject:
                      "packaging/pypi-old-name/README.md",
                      "issue template bug_report.yml"):
             assert name in docs, name
-        # the historical ones carry their banner, and are records
+        # the historical ones carry their banner, and are records (in
+        # docs/history/ since v0.15.1)
         for name in ("QUALCODER_IMPORT_CAPABILITIES.md",
                      "RESEARCH_SUMMARY.md", "SECURITY_FIXES.md",
                      "FEATURE_ANALYSIS.md", "SECURITY_REVIEW.md"):
             assert name not in docs, name
-            assert _historical((REPO / name).read_text(encoding="utf-8"))
+            assert _historical((REPO / "docs" / "history" / name)
+                               .read_text(encoding="utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -713,14 +715,15 @@ class TestQualCoderIsOptional:
 # docstring's indentation alike), and its characters that are not white
 # space. Taken from the descriptions as registered, in the lifecycle set.
 # (read_pseudonym_list's row went with the tool, removed in v0.15.0: the
-# files design, piece 5.)
+# files design, piece 5; export_code_report's, cleanup_old_sessions' and
+# merge_proposals' went with theirs, removed in v0.15.1 as announced in
+# 0.14.)
 BEFORE = {
     "add_annotation": (1697, 1781, 1406),
     "add_journal_entry": (1137, 1193, 943),
     "read_file_with_codings": (1977, 2081, 1620),
     "start_coding_session": (6101, 6345, 4958),
     "apply_codings": (2627, 2791, 2152),
-    "cleanup_old_sessions": (842, 898, 684),
     "compare_coders": (3019, 3231, 2472),
     "copy_project_to_workspace": (1821, 1945, 1500),
     "create_attribute_type": (2129, 2233, 1719),
@@ -737,7 +740,6 @@ BEFORE = {
     "edit_suggestion": (3392, 3632, 2724),
     "explain_ai_coding_tools": (672, 720, 545),
     "export_case_code_matrix_csv": (1372, 1464, 1117),
-    "export_code_report": (1561, 1657, 1263),
     "export_codebook": (1952, 2096, 1555),
     "export_coded_segments_report": (2972, 3184, 2322),
     "export_frequencies_csv": (1288, 1380, 1050),
@@ -761,7 +763,6 @@ BEFORE = {
     "list_coding_sessions": (645, 705, 503),
     "merge_category": (2544, 2688, 2077),
     "merge_codes": (2869, 3033, 2395),
-    "merge_proposals": (663, 699, 559),
     "move_category": (1460, 1540, 1150),
     "move_code_to_category": (1797, 1901, 1448),
     "propose_codes": (2692, 2836, 2142),
@@ -862,6 +863,13 @@ class TestNoDescriptionGrew:
         "export_refi_qda", "import_text_file", "merge_proposals",
         "pseudonymise_source", "rename_file", "search_files",
         "set_attribute"}
+    # and v0.15.1, the small corrections
+    # (tests/test_v0151_small_corrections.py; its words pinned in
+    # tests/test_v0142_description_cut.py,
+    # CHANGED_0151_TEXTS): copy_project_to_workspace says that a copy of a
+    # project without an ai_data folder gets an empty one, a sentence
+    # longer, as the design says (create_project is counted above)
+    CHANGED_IN_0151 = {"copy_project_to_workspace"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
@@ -873,7 +881,8 @@ class TestNoDescriptionGrew:
         grew = []
         for name, (on_313, on_311, solid) in sorted(BEFORE.items()):
             if name in (self.CHANGED_IN_0143 | self.CHANGED_IN_0150
-                        | self.RENAMED_IN_0150 | self.REMOVALS_MOVED_0150):
+                        | self.RENAMED_IN_0150 | self.REMOVALS_MOVED_0150
+                        | self.CHANGED_IN_0151):
                 continue
             text = registered[name]
             if name in self.LENGTHENED_IN_0150:

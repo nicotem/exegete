@@ -90,6 +90,10 @@ FILLED_IN = (
     "Exegete prepares, so that the names do not pass through the "
     "conversation; an assistant that opens files by itself could still read "
     "that file (\"Files Exegete keeps on your computer\").")
+# v0.15.1, privacy by audience (the owner, 21 October 2026): the rule
+# says which of the three things PRIVACY.md's opening names it protects
+FILLED_IN_PROTECTS = (
+    "Filling it in there protects the key (\"How your data flows\").")
 # Fix round 2: the list is a selection, a name in another form is
 # named, the condition is on the last item alone, and the long sentence
 # is three
@@ -145,6 +149,7 @@ SECTION = (
     "what you disclose to other people: a colleague or second coder you "
     "share the project with, a supervisor, or whoever receives an export. "
     + SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN + " "
+    + FILLED_IN_PROTECTS + " "
     # the files design, piece 5, fix round 1: the subject named, after
     # the paragraph on the names file
     "For what reaches the AI assistant, the list and `pseudonymise_source` "
@@ -231,7 +236,9 @@ PARAGRAPH = (
     "To keep real names from the assistant altogether, suggest "
     "replacing them before the documents reach this computer (PRIVACY.md, "
     "\"What pseudonymisation is for\").")
-# (removed in v0.15.1 since the whole-branch review, round 1)
+# (removed in v0.15.1 since the whole-branch review, round 1; and gone
+# since v0.15.1 removed the option, as announced:
+# tests/test_v0151_one_overlap_policy.py)
 DEPRECATION = "Deprecated, removed in v0.15.1: overlap_policy"
 # The CHANGELOG entry's heading
 ENTRY = "### The names list, filled in on your computer, and what pseudonymisation is for"
@@ -366,6 +373,7 @@ class TestPrivacy:
         # (the files design, piece 5: then the paragraph on a list filled
         # in on the researcher's own computer)
         assert (SHARING_THE_FOLDER + " " + EXPORTS + " " + FILLED_IN
+                + " " + FILLED_IN_PROTECTS
                 + " For what reaches the AI assistant") in section
 
     def test_the_list_is_a_selection_with_its_condition_last(self):
@@ -487,12 +495,11 @@ class TestTheDescription:
             assert PARAGRAPH in flat, mode
             # past the first 2,048 characters, which do not move
             assert description.index("What it is for:") > CUT, mode
-            # the last paragraph before "Args:", but for the deprecation
-            # sentence the deprecated option adds there
+            # the last paragraph before "Args:" (the deprecation sentence
+            # the deprecated option added there went with it in v0.15.1)
             after = flat[flat.index(PARAGRAPH) + len(PARAGRAPH):]
-            assert after.startswith(" " + DEPRECATION), mode
-            after = after[after.index(DEPRECATION):]
-            assert after.index("Args:") == after.index(". ") + 2, mode
+            assert after.startswith(" Args:"), mode
+            assert DEPRECATION not in flat, mode
             served_paragraph = description[
                 description.index("What it is for:"):
                 description.index("for\").") + len("for\").")]
@@ -524,23 +531,33 @@ class TestTheDescription:
         # and the whole-branch review's round 1 moved the removals to
         # v0.15.1: put back too
         from test_v0150_wb_fix_r1 import before_the_review
+        # and v0.15.1's ignored create_backup changed its sentence on
+        # the backup: put back too
+        from test_v0151_ignored_argument import before_the_ignored_argument
         server._apply_toolset("full")
         before = before_the_review(without_the_paragraph(
             put_back_the_lock_paragraph(
-                TOOL, server.mcp.original_descriptions[TOOL])))
+                TOOL, before_the_ignored_argument(
+                    TOOL, server.mcp.original_descriptions[TOOL]))))
         length, solid, digest = _fingerprint(before)
         assert (solid, digest) == (12705, "b497f4c553410195")
         if sys.version_info[:2] == (3, 13):
             assert length == 17339
 
     def test_its_line_in_changed_0150_is_what_is_served(self):
-        from test_v0142_description_cut import (CHANGED_0150, WORDS,
+        from test_v0142_description_cut import (CHANGED_0150,
+                                                ONE_POLICY_0151, WORDS,
                                                 _fingerprint)
+        # v0.15.1's ignored create_backup changed its sentence on the
+        # backup (its own line, CHANGED_0151), and its removal of the
+        # overlap policy qualcoder_edit_parity its arguments (its line,
+        # ONE_POLICY_0151): put back
+        from test_v0151_ignored_argument import before_the_ignored_argument
         server._apply_toolset("full")
-        length, solid, digest = _fingerprint(
-            server.mcp.original_descriptions[TOOL])
+        length, solid, digest = _fingerprint(before_the_ignored_argument(
+            TOOL, server.mcp.original_descriptions[TOOL]))
         assert CHANGED_0150[TOOL][1:] == (solid, digest)
-        assert WORDS[TOOL] == CHANGED_0150[TOOL]
+        assert WORDS[TOOL] == ONE_POLICY_0151[TOOL]
         if sys.version_info[:2] == (3, 13):
             assert CHANGED_0150[TOOL][0] == length
 

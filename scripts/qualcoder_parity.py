@@ -30,6 +30,7 @@ import builtins
 import gc
 import json
 import logging
+import os
 import platform
 import re
 import shutil
@@ -41,6 +42,13 @@ import types
 import zipfile
 from importlib import metadata
 from pathlib import Path
+
+# v0.15.1: PyMuPDF 2, where it is installed, loads onnxruntime as it is
+# imported, and onnxruntime's usage reports to Microsoft are on by
+# default: switched off before anything here loads it, as
+# tests/conftest.py does for the tests (Linux and macOS heed the setting;
+# Windows' reports read none).
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "tests"))

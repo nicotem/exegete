@@ -73,8 +73,9 @@ project is closed and reopened there.
 
 ### Backups
 
-Every write makes a timestamped backup first, unless it is called with
-`create_backup=false` where the tool offers that:
+Exegete takes a timestamped backup before every change
+(`create_backup`, which some tools still accept, no longer does
+anything):
 
 ```
 your_project_backup_20251029_143045.qda
@@ -292,7 +293,7 @@ Apply the approved codings to the project
 ```
 
 **What Claude does:**
-1. Creates a backup first (by default)
+1. Creates a backup first, as before every change
 2. Loops through all approved suggestions
 3. Writes each as a coding to the database
 4. Writes each coding's reading (explicit or interpretive) first in its
@@ -682,15 +683,12 @@ Load session abc123 and show me what we did
 ```
 Delete session abc123
 ```
-(`delete_coding_session`; `cleanup_old_sessions`, which deletes every
-project's old sessions with no preview, is deprecated and goes in
-v0.15.1)
+(`delete_coding_session`)
 
 ### Backup Management
 
-Backups are created before each write by default (a call can pass
-`create_backup=false` to skip it); there is no tool that takes one on
-request. To keep a separate copy of a project, copy
+Exegete takes a backup before every change; there is no tool that
+takes one on request. To keep a separate copy of a project, copy
 it to the workspace:
 
 **Copy a project to the workspace:**

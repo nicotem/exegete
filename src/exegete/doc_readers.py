@@ -14,8 +14,10 @@ each a switch: given none, a reader's text is QualCoder's; the other
 departures are named where they are made, and all are in TOOLS.md. A document is read by
 `read_document`, called only inside the reading process
 (import_reading), never in the server. The server uses this module's
-names and small helpers only, and reads no document itself. Plain text and web pages are read as UTF-8 alone:
-nothing is guessed (the owner's decision of 6 October 2026).
+names and small helpers only, and reads no document itself. Web pages are read as UTF-8 alone, and plain
+text as UTF-8 or in the character set the researcher chose from the
+preview's readings (v0.15.1): nothing is guessed (the owner's decision
+of 6 October 2026).
 
 Nothing here touches the disk or the network. A refusal is a
 `ReadRefused` carrying one of Exegete's own codes and numbers, never a
@@ -23,6 +25,7 @@ library's message, which a hostile document could fill.
 """
 
 import bisect
+import hashlib
 import io
 import posixpath
 import re
@@ -218,15 +221,19 @@ class Archive:
 
 
 # ---------------------------------------------------------------------------
-# Plain text: UTF-8 only (the owner's decision of 6 October 2026)
+# Plain text: UTF-8, or the set the researcher chose (the owner's decision
+# of 6 October 2026 that nothing is guessed; the choice from v0.15.1)
 # ---------------------------------------------------------------------------
 #
 # QualCoder decodes a plain text file as UTF-8 with a byte-order mark,
 # then as UTF-8, then by charset-normalizer's guess, then as cp1252 or
 # Latin-1 (text_decoding.py 8-34). Exegete takes the first two steps
-# alone and holds back every other file, with steps to save it as UTF-8
-# (a named departure): a guess can read accented letters as others, and
-# a name from the list written with other letters is not replaced.
+# and holds back every other file, with steps to save it as UTF-8 and,
+# from v0.15.1, one line of it as each character set below reads it; a
+# file read in the set the researcher then chooses is read in that set
+# alone (a named departure): a guess can read accented letters as
+# others, and a name from the list written with other letters is not
+# replaced.
 #
 # A file saved as UTF-16 or UTF-32 without the byte-order mark that names
 # it can be valid UTF-8 too, byte for byte: each letter of Latin, Greek or
@@ -254,6 +261,190 @@ def decode_utf8(raw: bytes) -> Tuple[str, str]:
             raise ReadRefused("nul_characters")
         return text, name
     raise ReadRefused("not_utf8")
+
+
+# ---------------------------------------------------------------------------
+# A file not saved as UTF-8: the readings the researcher chooses from
+# (v0.15.1, the owner's request of 12 October 2026)
+# ---------------------------------------------------------------------------
+#
+# Where QualCoder guesses (text_decoding.py 8-34, charset-normalizer's
+# best guess, then Windows Western, then Latin-1), Exegete guesses
+# nothing: the preview shows one line of the file as each character set
+# below that can read it reads it, the researcher picks the one that
+# reads right, and the import reads the file in that set alone (a named
+# departure). The list and its order are Exegete's own; the names are
+# macOS's (CoreFoundation's CFStringGetNameOfEncoding), which TextEdit
+# shows. Python's own codec tables, never the computer's code page.
+READINGS = (
+    ("cp1252", "Western (Windows Latin 1)"),
+    ("mac_roman", "Western (Mac OS Roman)"),
+    ("latin_1", "Western (ISO Latin 1)"),
+    ("iso8859_15", "Western (ISO Latin 9)"),
+    ("cp437", "Latin-US (DOS)"),
+    ("cp850", "Western (DOS Latin 1)"),
+    ("cp1250", "Central European (Windows Latin 2)"),
+    ("iso8859_2", "Central European (ISO Latin 2)"),
+    ("mac_latin2", "Central European (Mac OS)"),
+    ("cp1251", "Cyrillic (Windows)"),
+    ("koi8_r", "Cyrillic (KOI8-R)"),
+    ("iso8859_5", "Cyrillic (ISO 8859-5)"),
+    ("mac_cyrillic", "Cyrillic (Mac OS)"),
+    ("cp866", "Russian (DOS)"),
+    ("cp1253", "Greek (Windows)"),
+    ("iso8859_7", "Greek (ISO 8859-7)"),
+    ("mac_greek", "Greek (Mac OS)"),
+    ("cp932", "Japanese (Windows, DOS)"),
+    ("euc_jp", "Japanese (EUC)"),
+    ("gb18030", "Chinese (GB 18030)"),
+    ("cp950", "Traditional Chinese (Windows, DOS)"),
+    ("cp949", "Korean (Windows, DOS)"),
+    ("utf_16", "Unicode (UTF-16)"),
+    ("utf_32", "Unicode (UTF-32)"),
+)
+READING_NAMES = dict(READINGS)
+UNICODE_READINGS = ("utf_16", "utf_32")
+# Lines looked at, lines kept, and characters each side of a line's first
+# character outside ASCII.
+READING_LINES = 200
+READING_KEPT = 10
+READING_SIDE = 60
+READING_WINDOW = 2 * READING_SIDE + 1
+# A NUL, or a control code from U+0080 to U+009F, which no text holds and
+# which the ISO sets give for the bytes Windows uses for quotation marks:
+# a set whose text holds one is not offered.
+_READING_NOT_TEXT = re.compile(r"[\x00\x80-\x9f]")
+_UTF32_MARKS = (b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff")
+_UTF16_MARKS = (b"\xff\xfe", b"\xfe\xff")
+_READING_HIGH_BYTE = re.compile(rb"[\x80-\xff]")
+_READING_BREAK_BYTE = re.compile(rb"[\r\n]")
+_READING_NOT_ASCII = re.compile(r"[^\x00-\x7f]")
+_READING_BREAK = re.compile(r"[\r\n]")
+_READING_LINE = re.compile(r"[^\r\n]+")
+
+
+def unicode_mark(raw: bytes) -> Optional[str]:
+    """The Unicode reading a byte-order mark at the start names, or None:
+    UTF-32's first, since its little-endian mark starts with UTF-16's."""
+    if raw.startswith(_UTF32_MARKS):
+        return "utf_32"
+    if raw.startswith(_UTF16_MARKS):
+        return "utf_16"
+    return None
+
+
+def reading(raw: bytes, key: str) -> str:
+    """The file's text in the set `key` by the readings' rules, strictly:
+    ReadRefused(`not_in_chosen_set`) when the set is not one of READINGS,
+    the decoding fails, the text holds a control code from U+0080 to
+    U+009F, `utf_16` or `utf_32` lacks the mark that names it, or another
+    set is asked of a file that mark names; `nul_characters` for a NUL.
+    Nothing is replaced and nothing guessed."""
+    if key not in READING_NAMES or unicode_mark(raw) != (
+            key if key in UNICODE_READINGS else None):
+        raise ReadRefused("not_in_chosen_set")
+    try:
+        text = raw.decode(key)
+    except UnicodeDecodeError:
+        raise ReadRefused("not_in_chosen_set") from None
+    found = _READING_NOT_TEXT.search(text)
+    if found is not None:
+        raise ReadRefused("nul_characters" if found.group() == "\x00"
+                          else "not_in_chosen_set")
+    return text
+
+
+def _spans(text, high, breaks, lf, cr) -> List[Tuple[int, int]]:
+    """Where the first READING_LINES lines holding a `high` character (or
+    byte) start and end, a line ending at any CR or LF."""
+    spans: List[Tuple[int, int]] = []
+    position = 0
+    while len(spans) < READING_LINES:
+        found = high.search(text, position)
+        if found is None:
+            break
+        at = found.start()
+        start = max(text.rfind(lf, 0, at), text.rfind(cr, 0, at)) + 1
+        ended = breaks.search(text, at)
+        end = ended.start() if ended else len(text)
+        spans.append((start, end))
+        position = end
+    return spans
+
+
+def _window(line: str) -> str:
+    """READING_SIDE characters each side of a line's first character
+    outside ASCII (its start, in a line with none)."""
+    found = _READING_NOT_ASCII.search(line)
+    at = found.start() if found else 0
+    return line[max(0, at - READING_SIDE):at + READING_SIDE + 1]
+
+
+def readings_of(raw: bytes, max_characters: int = 0) -> Dict[str, Any]:
+    """Each reading of a file that is not UTF-8, for the preview:
+    {"choices": [{"key", "names", "windows"}], "not_offered": [keys]}, or
+    {"too_long": True} when every offered reading is longer than
+    `max_characters` (0: no limit).
+
+    The sets are decoded strictly one at a time, each keeping only its
+    text's digest and its lines' windows before the next. A set is not
+    offered when `reading` refuses it; `utf_16` and `utf_32` only after
+    the mark that names them, and then alone. Sets whose texts are equal
+    are one choice, under the first key, their names in READINGS' order.
+    The lines: the first READING_LINES holding a byte above 0x7F (no set
+    here writes a line-break byte inside a character, so a line is the
+    same line in every set; for a marked file, those holding a character
+    outside ASCII in its text, else its first lines with any text). Each
+    choice's window of a line is READING_SIDE characters each side of its
+    first character outside ASCII. The READING_KEPT lines whose windows
+    differ most among the choices are kept, the earliest first on ties.
+    Nothing ranks or marks a choice."""
+    mark = unicode_mark(raw)
+    spans = None if mark else _spans(
+        raw, _READING_HIGH_BYTE, _READING_BREAK_BYTE, b"\n", b"\r")
+    choices: List[Dict[str, Any]] = []
+    lengths: List[int] = []
+    by_digest: Dict[str, Dict[str, Any]] = {}
+    not_offered: List[str] = []
+    for key, name in READINGS:
+        try:
+            text = reading(raw, key)
+        except ReadRefused:
+            not_offered.append(key)
+            continue
+        digest = hashlib.sha256(
+            text.encode("utf-8", "surrogatepass")).hexdigest()
+        if digest in by_digest:
+            by_digest[digest]["names"].append(name)
+            continue
+        if mark:
+            lines = [text[start:end] for start, end in _spans(
+                text, _READING_NOT_ASCII, _READING_BREAK, "\n", "\r")]
+            if not lines:
+                # All of it ASCII: its first lines with any text.
+                lines = []
+                for found in _READING_LINE.finditer(text):
+                    if found.group().strip():
+                        lines.append(found.group())
+                        if len(lines) == READING_LINES:
+                            break
+        else:
+            lines = [raw[start:end].decode(key) for start, end in spans]
+        choice = {"key": key, "names": [name],
+                  "windows": [_window(line) for line in lines]}
+        lengths.append(len(text))
+        del text, lines
+        by_digest[digest] = choice
+        choices.append(choice)
+    if max_characters and choices and all(length > max_characters
+                                          for length in lengths):
+        return {"too_long": True}
+    count = min((len(c["windows"]) for c in choices), default=0)
+    score = [len({c["windows"][i] for c in choices}) for i in range(count)]
+    kept = sorted(range(count), key=lambda i: (-score[i], i))[:READING_KEPT]
+    for choice in choices:
+        choice["windows"] = [choice["windows"][i] for i in kept]
+    return {"choices": choices, "not_offered": not_offered}
 
 
 def _universal_newlines(text: str) -> str:
@@ -1668,8 +1859,8 @@ def pandoc_layout_signs(text: str) -> List[str]:
 # One document, as QualCoder's load_file_text reads it (3213-3349)
 # ---------------------------------------------------------------------------
 
-def read_document(kind: str, raw: bytes, departures=None
-                  ) -> Dict[str, Any]:
+def read_document(kind: str, raw: bytes, departures=None,
+                  character_set: Optional[str] = None) -> Dict[str, Any]:
     """The text Exegete stores for a file of `kind` with these bytes
     (pseudonyms aside, which the server applies), and what the preview
     says about it: QualCoder 4.0's import's text, with the named
@@ -1677,10 +1868,17 @@ def read_document(kind: str, raw: bytes, departures=None
     text is QualCoder's).
 
     Returns a dict: text, charset (for plain text and web pages, the
-    UTF-8 they were read as), signs (warning code to count), and for a
-    PDF its notes and highlight count. Raises ReadRefused for a file
-    this reader will not read, `not_utf8` or `not_utf8_web` for one that
-    is not UTF-8.
+    UTF-8 they were read as, or for plain text the key of the reading
+    chosen), signs (warning code to count), and for a PDF its notes and
+    highlight count. Raises ReadRefused for a file this reader will not
+    read, `not_utf8` or `not_utf8_web` for one that is not UTF-8.
+
+    `character_set` (v0.15.1): the reading the researcher chose, a key of
+    READINGS, for a plain text file that is not UTF-8, which is then read
+    in that set alone by the readings' rules (`reading`), or refused
+    (`not_in_chosen_set`, or `nul_characters` for a NUL). A file valid as
+    UTF-8 is read as UTF-8 whatever is given; a web page and every other
+    format are read as without it.
     """
     signs: Dict[str, int] = {}
     charset: Optional[str] = None
@@ -1703,7 +1901,12 @@ def read_document(kind: str, raw: bytes, departures=None
         raise ReadRefused("not_supported")
 
     if text == "" and kind in PLAIN_FORMATS:
-        text, charset = decode_utf8(raw)
+        try:
+            text, charset = decode_utf8(raw)
+        except ReadRefused as refused:
+            if refused.code != "not_utf8" or character_set is None:
+                raise
+            text, charset = reading(raw, character_set), character_set
         # QualCoder's plain text step removes one byte-order mark here;
         # its transcript route, which subtitles follow, does not
         # (import_transcription_from_file 2484-2505).

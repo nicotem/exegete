@@ -85,12 +85,13 @@ CASE_NOTES = (
     "private parts)")
 CASE_FILES = ("in the names of files named after the case (their ids are "
               "in old_name_left_in.file_ids, and rename_file renames them)")
-# Fix round 1: "including the one just taken" only when the rename took
-# a backup; the tests below rename with create_backup=False unless they
-# say otherwise
+# "Including the one just taken" always since v0.15.1: Exegete takes a
+# backup before every change, whatever create_backup says (fix round 1
+# said it only when the rename took one); the tests below rename with
+# create_backup=False unless they say otherwise
 TAKEN = ", including the one just taken"
-CASE_BACKUPS = ("in every backup (list_backups lists them; prune_backups "
-                "removes Exegete's")
+CASE_BACKUPS = ("in every backup" + TAKEN + " (list_backups lists them; "
+                "prune_backups removes Exegete's")
 QUALCODER_BACKUPS = (", and QualCoder's own _BKUP_ copies only the "
                      "researcher can remove")
 SAVED_QUERIES = ("in any of QualCoder's saved SQL queries that name it "
@@ -123,8 +124,8 @@ FILE_FIRST = (
     "Only the file's name in the project changed (as with QualCoder's "
     "\"Rename database entry\"): nothing on disk was renamed, and the "
     "stored path, date, notes, codings and case links are kept.")
-FILE_BACKUPS = (" Every backup keeps the old name, and so do Exegete's "
-                "coding-session files")
+FILE_BACKUPS = (" Every backup" + TAKEN + ", keeps the old name, and so "
+                "do Exegete's coding-session files")
 FILE_QUERIES = (" and any of QualCoder's saved SQL queries that name it "
                 "(not read here)")
 FILE_RECORDS = (
@@ -432,26 +433,25 @@ class TestTheSentenceOnQualCodersImports:
 
 
 class TestTheBackupJustTaken:
-    """Fix round 1: both notes say "including the one just taken" only
-    when the rename took a backup (create_backup, True by default)."""
+    """Both notes say "including the one just taken": since v0.15.1
+    Exegete takes a backup before every change, whatever create_backup
+    says (fix round 1 said it only when the rename took one)."""
 
     def test_rename_case_with_a_backup(self, project):
         out = json.loads(server.rename_case(1, "P01"))
         assert out["backup_path"]
-        assert out["note"] == CASE_NONE.replace(
-            "in every backup (", "in every backup" + TAKEN + " (")
+        assert out["note"] == CASE_NONE
 
     def test_rename_file_with_a_backup(self, project):
         out = json.loads(server.rename_file(1, "P01.txt"))
         assert out["backup_path"]
-        assert out["note"] == FILE_NONE.replace(
-            " Every backup keeps", " Every backup" + TAKEN + ", keeps")
+        assert out["note"] == FILE_NONE
 
-    def test_without_a_backup(self, project):
+    def test_with_create_backup_false(self, project):
         case, file = _case(), _file()
-        assert "backup_path" not in case and "backup_path" not in file
-        assert "just taken" not in case["note"]
-        assert "just taken" not in file["note"]
+        assert case["backup_path"] and file["backup_path"]
+        assert TAKEN in case["note"]
+        assert TAKEN in file["note"]
 
 
 # ---------------------------------------------------------------------------
@@ -755,12 +755,7 @@ class TestTheHouseRules:
     def test_the_new_texts(self):
         from test_v012_pseudonymise_tool import _house_rules
         _house_rules([CASE_ALL, CASE_NONE, FILE_NONE + FILE_QUERIES
-                      + FILE_LATER, CASE_NONE.replace(
-                          "in every backup (",
-                          "in every backup" + TAKEN + " ("),
-                      FILE_NONE.replace(" Every backup keeps",
-                                        " Every backup" + TAKEN + ", keeps"),
-                      SEARCH_INDEX, DOCS_COPY, MEDIA_COPY,
+                      + FILE_LATER, SEARCH_INDEX, DOCS_COPY, MEDIA_COPY,
                       FOUND_BY_NAME, CODEBOOK_RULE, FREQUENCIES_RULE,
                       DIVERGENCE, SAFE_CELLS, SEGMENTS_RULE, MATRIX_RULE,
                       FOOTER, HIDDEN_APPLIED, HIDDEN_BYPASSED,

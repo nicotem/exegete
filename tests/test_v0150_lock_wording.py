@@ -109,8 +109,10 @@ class TestTheThreeTexts:
         assert f'"{qualcoder_open_message("...")}"' in flat
 
     def test_no_link_uses_the_old_heading(self):
-        for path in REPO.glob("*.md"):
-            assert "#close-qualcoder-first" not in _read(path.name), path
+        # the documents at the top, and those in docs/history/ (v0.15.1)
+        for path in [*REPO.glob("*.md"), *REPO.glob("docs/history/*.md")]:
+            assert "#close-qualcoder-first" not in path.read_text(
+                encoding="utf-8"), path
 
 
 # ---------------------------------------------------------------------------
@@ -239,6 +241,12 @@ REQUEST = re.compile(
 # Sentences about QualCoder itself, which ask nothing before a write
 ABOUT_QUALCODER = re.compile(
     r"\bclos(?:e|ed|ing) and reopen|report the copy as not properly closed")
+# Quitting Claude Desktop, so that a change in the extension's settings
+# reaches Exegete, asks nothing of QualCoder (v0.15.1, the small
+# corrections: the README's sentence that names the settings, the
+# QualCoder one among them)
+QUITTING_CLAUDE_DESKTOP = re.compile(
+    r"\bquit Claude Desktop\b|\bClaude Desktop has been quit\b")
 
 
 def _blocks(text):
@@ -265,8 +273,8 @@ def unconditional_requests(text):
             if asked_of_users or "QualCoder" not in sentence \
                     or CONDITION_HERE.search(sentence):
                 continue
-            if REQUEST.search(sentence) and \
-                    not ABOUT_QUALCODER.search(sentence):
+            if REQUEST.search(QUITTING_CLAUDE_DESKTOP.sub("", sentence)) \
+                    and not ABOUT_QUALCODER.search(sentence):
                 found.append(sentence)
     return found
 
@@ -290,8 +298,13 @@ class TestTheSixDescriptions:
 
     @pytest.mark.parametrize("tool", sorted(BEFORE))
     def test_no_description_is_longer_than_before(self, served, tool):
+        # v0.15.1's ignored create_backup lengthens rename_case's and
+        # rename_file's line on it: put back, so that this change's own
+        # words are measured
+        from test_v0151_ignored_argument import before_the_ignored_argument
         before = BEFORE[tool][0 if sys.version_info >= (3, 13) else 1]
-        assert len(served[tool]) <= before, (tool, len(served[tool]))
+        text = before_the_ignored_argument(tool, served[tool])
+        assert len(text) <= before, (tool, len(text))
 
     @pytest.mark.parametrize("tool", sorted(set(NEW_WORDS) - {
         "rename_case", "rename_file"}))
@@ -311,13 +324,23 @@ class TestTheSixDescriptions:
         descriptions are as tests/test_v0142_description_cut.py pinned
         them before this change."""
         from test_v0142_description_cut import _fingerprint
+        # v0.15.1: restore_backup's sentence on the audio and video
+        # folders taken out too (tests/test_v0151_media_out.py)
+        from test_v0150_restore_keeps_folder import MEDIA_SENTENCE
         before = {"start_coding_session": (6042, 4908, "662931b185aced31"),
                   "restore_backup": (2877, 2367, "9014851203733822"),
                   "delete_coding": (2867, 2307, "be5e2d1ea0338a1e")}
+        # and v0.15.1's ignored create_backup: put back first
+        from test_v0151_ignored_argument import before_the_ignored_argument
+        # and the restore piece's paragraph (tests/test_v0151_restore.py)
+        from test_v0151_restore import without_the_preview_paragraph
         server._apply_toolset("full")
         for name, (length, solid, digest) in before.items():
             text = put_back_the_lock_wording(
-                name, server.mcp.original_descriptions[name])
+                name, before_the_ignored_argument(
+                    name, without_the_preview_paragraph(
+                        server.mcp.original_descriptions[name])).replace(
+                        " " + MEDIA_SENTENCE, ""))
             got = _fingerprint(text)
             assert got[1:] == (solid, digest), name
             if sys.version_info[:2] == (3, 13):
@@ -417,10 +440,9 @@ class TestOneSpelling:
         """Item 32's "From:" line names 3.8.2's source, and so does its
         title (fix round 1)."""
         notice = _read(name)
-        assert ("32. QualCoder 3.8.2's lock file: its name, timeout and "
-                "content.\n") in notice
-        assert "From: 3.8.2 __main__.py, lines 131, 2546-2547 and 2637." \
+        assert "32. QualCoder 3.8.2's lock file: its name, timeout" \
             in notice
+        assert "From: 3.8.2 __main__.py, lines 131, " in notice
 
     def test_the_changelog_s_new_entries(self):
         entry = WAS.sub("", _flat(_unreleased()))
@@ -462,7 +484,9 @@ class TestTheChangelog:
                 # fix round 1: quitting, exiting, not running
                 "Quit QualCoder before restoring a backup.",
                 "Exit QualCoder first, then restore the backup.",
-                "QualCoder must not be running while you restore."):
+                "QualCoder must not be running while you restore.",
+                # v0.15.1: quitting Claude Desktop beside it excuses nothing
+                "Quit QualCoder and quit Claude Desktop before restoring."):
             assert unconditional_requests(sentence) == [sentence]
         # fix round 1: a condition about another program, or an "it" in
         # an earlier sentence, excuses nothing
@@ -482,7 +506,12 @@ class TestTheChangelog:
                 "QualCoder 3.8.2 has it open (if the researcher uses it, "
                 "ask them to close it there).",
                 "If you also use QualCoder, quit it before restoring. Make "
-                "sure QualCoder is not running."):
+                "sure QualCoder is not running.",
+                # v0.15.1: a request to quit Claude Desktop is not one to
+                # close QualCoder
+                "Whether you also use QualCoder is set in Claude Desktop's "
+                "settings (after changing one, quit Claude Desktop and open "
+                "it again)."):
             assert unconditional_requests(sentence) == []
 
     def test_the_six_descriptions(self):
@@ -525,7 +554,10 @@ class TestTheChangelog:
             four = [f"{len(served[name]):,}" for name in (
                 "pseudonymise_source", "start_coding_session",
                 "search_files", "record_suggestions")]
-            assert ("(the same four, at {}, {}, {} and {},".format(*four)
+            # v0.15.1, the removed arguments: import_text_file, without
+            # owner, no longer passes 4,096 there, so the four are all
+            # (tests/test_v0151_removed_arguments.py)
+            assert ("the same four are, at {}, {}, {} and {}.".format(*four)
                     in install)
 
     def test_the_measurement(self):

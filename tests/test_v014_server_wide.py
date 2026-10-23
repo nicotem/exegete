@@ -72,7 +72,7 @@ EXPECTED_HINTS = {
     "search_coded_text": R,
     "get_coded_segments": R, "search_files": R,
     "get_coding_frequencies": R, "search_memos": R,
-    "export_code_report": R, "get_project_summary": R,
+    "get_project_summary": R,
     "read_file_with_codings": R, "list_attribute_types": R,
     "get_file_attributes": R, "get_case_attributes": R,
     "query_by_attribute": R, "compare_coders": R,
@@ -118,9 +118,11 @@ EXPECTED_HINTS = {
     "export_coded_segments_report": C, "export_frequencies_csv": C,
     "export_case_code_matrix_csv": C, "record_suggestions": C,
     "edit_suggestion": C, "update_suggestion_status": C,
-    "delete_coding_session": C, "cleanup_old_sessions": C,
+    # (v0.15.1 removed export_code_report, cleanup_old_sessions and
+    # merge_proposals, as announced in 0.14)
+    "delete_coding_session": C,
     "propose_codes": C, "update_proposal": C,
-    "update_proposal_status": C, "merge_proposals": C, "set_memo": C,
+    "update_proposal_status": C, "set_memo": C,
     "merge_codes": C, "merge_category": C, "delete_code": C,
     "delete_category": C, "delete_coding": C, "delete_annotation": C,
     # the same name again adds an entry to the name's history
@@ -442,6 +444,10 @@ NOT_TOOLS = {
     "set_at": "a key of the AI coder name's record",
     "update_check": "the check for new versions' state file, "
                     "update_check.json, and the extension's setting",
+    "create_backup_ignored": "the key of an answer to a call that gave "
+                             "create_backup, which Exegete ignores",
+    "search_memo": "search_files' argument removed in 0.15.1, which the "
+                   "refusal of a call passing it names (REMOVED_ARGUMENTS)",
 }
 
 
@@ -561,8 +567,12 @@ class TestEveryNamedToolIsThere:
 
     def test_core_marks_what_it_lacks_and_full_does_not(self):
         core, _ = served_texts("core")
-        marked = "restore_backup" + server.NOT_IN_THIS_TOOL_SET
+        # v0.15.1: restore_backup is in core, so list_backups' description
+        # names it unmarked, and marks import_text_file, which core lacks
+        marked = "import_text_file" + server.NOT_IN_THIS_TOOL_SET
         assert marked in core["description of list_backups"]
+        assert ("restore_backup" + server.NOT_IN_THIS_TOOL_SET
+                not in core["description of list_backups"])
         # v0.14.2: the opening text is the brief's short version, which
         # names only read_brief, in every set; the brief's full version,
         # served as a resource in core too, is where the marks are
@@ -837,7 +847,6 @@ async def call_every_tool(client, root, lock_check=False):
                                "search_content": True})
     await run("get_coding_frequencies", {})
     await run("search_memos", {"query": "interview"})
-    await run("export_code_report", {"code_name": "Doubt"})
     await run("get_project_summary", {})
     await run("read_file_with_codings", {"file_id": 1})
     # its earlier name, listed until the release on method (0.15.0)
@@ -856,7 +865,7 @@ async def call_every_tool(client, root, lock_check=False):
     await run("get_case_code_matrix", {})
     await run("get_codes_by_case", {"case_id": 1})
     await run("get_cases_by_code", {"code_id": 2})
-    await run("explain_ai_coding_tools", {"tool_name": "apply_codings"})
+    await run("explain_ai_coding_tools", {"tool_name": "grounding_rules"})
     # v0.15.0: the names file, made, shown and opened (the recorders)
     await run("prepare_names_list", {})
     # v0.15.0: the names file filled in, then saved as the project's
@@ -895,9 +904,15 @@ async def call_every_tool(client, root, lock_check=False):
     await run("update_proposal", {"coding_session_id": session_2,
                                   "proposal_guid": keep,
                                   "memo": "Leaning on others for help"})
-    await run("merge_proposals", {"coding_session_id": session_2,
-                                  "from_proposal_guid": fold,
-                                  "into_proposal_guid": keep})
+    # two merged as v0.15.1 does it (merge_proposals removed): one
+    # rejected, the other given both sets of passages, here the same one
+    await run("update_proposal_status", {"coding_session_id": session_2,
+                                         "reject": [fold]})
+    await run("update_proposal", {"coding_session_id": session_2,
+                                  "proposal_guid": keep,
+                                  "example_segments": [
+                                      {"file_id": 1,
+                                       "segment_text": QUOTE}]})
     await run("update_proposal_status", {"coding_session_id": session_2,
                                          "approve": [keep]})
     await run("create_proposed_codes", {"coding_session_id": session_2})
@@ -945,7 +960,6 @@ async def call_every_tool(client, root, lock_check=False):
                                             "new_name": "Study copy"})
     await run("select_project", {"project_path": folder})
     await run("delete_coding_session", {"coding_session_id": session_2})
-    await run("cleanup_old_sessions", {"days_old": 30})
     return run
 
 
@@ -2036,8 +2050,8 @@ NOT_PROJECT_WRITES = {
     "start_coding_session": "session file", "record_suggestions": "session",
     "edit_suggestion": "session", "update_suggestion_status": "session",
     "propose_codes": "session", "update_proposal": "session",
-    "update_proposal_status": "session", "merge_proposals": "session",
-    "delete_coding_session": "session", "cleanup_old_sessions": "sessions",
+    "update_proposal_status": "session",
+    "delete_coding_session": "session",
     "export_refi_qda": "writes a file outside the project",
     "export_codebook": "file", "export_coded_segments_report": "file",
     "export_frequencies_csv": "file", "export_case_code_matrix_csv": "file",
@@ -2287,7 +2301,14 @@ def _core_reachable_texts():
     # SERVER_INSTRUCTIONS is marked by _refresh_served_texts whenever a
     # set is applied (v0.15.0: LIFECYCLE_TOOLS, a list of names never
     # sent, went with the `lifecycle` set)
-    settled = {"SERVER_INSTRUCTIONS"}
+    settled = {"SERVER_INSTRUCTIONS",
+               # v0.15.1, restore_backup in core, whose token refusals
+               # reach these: each text in TOKEN_ERROR_TEXTS_BY_TOOL is
+               # served only for the tool its key names
+               # (`_token_error(reason, tool)`), save_names_list and
+               # pseudonymise_source, which core does not register, and
+               # KEYED_BIND is a set of names that is never served
+               "TOKEN_ERROR_TEXTS_BY_TOOL", "KEYED_BIND"}
 
     def refs(node):
         out = set()

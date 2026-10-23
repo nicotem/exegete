@@ -75,8 +75,11 @@ def test_the_documents_name_the_release_as_verified():
             "its code at commit `9bddf17` (see \"Supported QualCoder "
             "versions\").") in tools
     install = _flat("INSTALL.md")
+    # (the staleness audit of 20 October 2026: a missing or unreadable
+    # value is refused too, database.py, write_support)
     assert ("newer than the schemas this release is verified against (v14 "
-            "through v17, up to QualCoder 4.0) are refused to protect the "
+            "through v17, up to QualCoder 4.0), or whose schema value is "
+            "missing or not in QualCoder's form, are refused to protect the "
             "data") in install
     privacy = _flat("PRIVACY.md")
     assert ("What they say of QualCoder is verified against QualCoder 4.0, "
@@ -184,7 +187,7 @@ def test_the_readme_table_is_checked_against_the_release():
     # checked again for 0.14.3, whose import row the table carries
     # v0.15.0, the release review: the Exegete column is 0.15.0's
     assert ("QualCoder 3.8.2 and 4.0 as checked on 10 October 2026, beside "
-            "Exegete 0.15.0:") in readme
+            "Exegete 0.15.1:") in readme
     assert ("3.8.2: an AI search finds passages, which you code; 4.0: its "
             "assistant codes as it works, within the AI permission you set "
             "(read only stops it), with undo") in readme

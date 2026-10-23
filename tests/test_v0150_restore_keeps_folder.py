@@ -23,7 +23,6 @@ TOOLS, PRIVACY, the CHANGELOG, the module's own words, the answers that
 speak of a restore).
 """
 
-import contextlib
 import errno
 import io
 import json
@@ -649,8 +648,9 @@ class TestAFailureInTheSwap:
         _, answer = _restore(backup)
         assert answer["error"] == (
             "Restore failed. The pre-restore state is preserved in the "
-            "safety backup; copy it back over the project folder to "
-            "recover. The project folder still holds its Exegete folder as "
+            "safety backup; copy its contents back into the project folder "
+            "to recover, leaving its audio and video folders as they are. "
+            "The project folder still holds its Exegete folder as "
             "it was; the safety backup's copy of it can lack some files, "
             "since backups leave out files named like lock files and "
             "database working files. When the researcher copies the safety "
@@ -696,21 +696,34 @@ GOING = "removed meanwhile"
 
 
 def _while_the_swap_runs(monkeypatch) -> list:
-    """A flag held while the restore holds the project's lock (the clear
-    and the copy), so that a stand-in for another program acts then only,
-    never during the preview, the safety backup or the recovery."""
-    armed = []
-    real = server.hold_project_lock
+    """A flag held while the restore clears the project and copies the
+    backup in, so that a stand-in for another program acts then only,
+    never during the preview, the safety backup or the recovery. (v0.15.1:
+    the restore's hold of the lock file, which this flag followed, now
+    begins before the safety backup and lasts through the recovery, so
+    the flag follows the swap's own clear and copy.)"""
+    armed, started = [], []
+    clear = server._clear_all_but_exegete_folder
+    copy = server._copy_around_exegete_folder
 
-    @contextlib.contextmanager
-    def holding(*args, **kwargs):
-        with real(*args, **kwargs) as held:
-            armed.append(True)
-            try:
-                yield held
-            finally:
-                armed.clear()
-    monkeypatch.setattr(server, "hold_project_lock", holding)
+    def clearing(*args, **kwargs):
+        if started:
+            return clear(*args, **kwargs)
+        started.append(True)
+        armed.append(True)
+        try:
+            return clear(*args, **kwargs)
+        except BaseException:
+            armed.clear()
+            raise
+
+    def copying(*args, **kwargs):
+        try:
+            return copy(*args, **kwargs)
+        finally:
+            armed.clear()
+    monkeypatch.setattr(server, "_clear_all_but_exegete_folder", clearing)
+    monkeypatch.setattr(server, "_copy_around_exegete_folder", copying)
     return armed
 
 
@@ -1153,7 +1166,7 @@ class TestAQualCoderBackup:
         assert preview["exegete_folder_note"] == KEPT_BACKUP_TOO
         assert answer["exegete_folder_note"] == KEPT_BACKUP_TOO
         # and one of QualCoder's own backups of it is still told apart
-        assert "QualCoder-made backup" in preview_qc["note"]
+        assert preview_qc["note"].startswith(server.MEDIA_KEPT_NOTE)
         assert preview_qc["exegete_folder_note"] == \
             KEPT_BACKUP_TOO + QUALCODER_PRUNES
 
@@ -1217,13 +1230,24 @@ SENTENCE = ("The project's Exegete folder (files the researcher fills in) "
             "when either has one.")
 
 
+# v0.15.1, audio and video left out of backups: the paragraph's second
+# sentence, taken out with it below
+MEDIA_SENTENCE = "So are its audio and video folders."
+
+
 def without_the_folder_paragraph(description):
     """restore_backup's description with this piece's paragraph taken out,
     as served on any interpreter (on 3.10 to 3.12 it keeps its
     indentation), so that a test of an earlier piece still compares with
-    what that piece measured."""
+    what that piece measured; the sentence v0.15.1 added at its end
+    (MEDIA_SENTENCE) goes with it, and so does the paragraph the restore
+    piece of v0.15.1 added after it (tests/test_v0151_restore.py)."""
+    from test_v0151_restore import without_the_preview_paragraph
+    description = without_the_preview_paragraph(description)
     words = [re.escape(word) for word in SENTENCE.split()]
-    pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words))
+    media = [re.escape(word) for word in MEDIA_SENTENCE.split()]
+    pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words)
+                         + r"(?:\s+" + r"\s+".join(media) + r")?")
     found = pattern.search(description)
     return (description if found is None
             else description[:found.start()] + description[found.end():])
@@ -1263,13 +1287,17 @@ class TestTheTexts:
         entry = entry[:entry.index(" - `", 4)]
         assert ("The project's `Exegete` folder (files the researcher fills "
                 "in) is kept as it is, never taken from the backup; the "
-                "preview says when either has one") in entry
+                "preview says when either has one. So are its `audio` and "
+                "`video` folders") in entry
         assert ("`list_backups` + `restore_backup` roll the project back "
-                "to a snapshot, all but its `Exegete` folder, which a "
-                "restore keeps.") in tools
+                "to a snapshot, all but its `Exegete`, `audio` and `video` "
+                "folders, which a restore keeps.") in tools
+        # v0.15.1, the restore: its preview counts rows by kind, every
+        # coder's together, never by owner
         assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete` folder, which a restore keeps): its preview does "
-                "not count codings by owner") in tools
+                "`Exegete`, `audio` and `video` folders, which a restore "
+                "keeps): its preview counts each kind of row, every coder's "
+                "together, never by owner") in tools
         assert "whole project back" not in tools
 
     def test_privacy(self):
@@ -1309,13 +1337,13 @@ class TestTheTexts:
         # exegete.json: rolled back with the rest of the project, not of
         # the folder
         assert ("a restore rolls it back with the rest of the project (all "
-                "but its `Exegete` folder, which a restore keeps).") in \
-            _flat(privacy)
+                "but its `Exegete`, `audio` and `video` folders, which a "
+                "restore keeps).") in _flat(privacy)
         # the passage on pseudonyms.json no longer says the whole folder
         assert "rolls the whole folder back" not in _flat(privacy)
         assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete` folder, which a restore keeps), this file with "
-                "it") in _flat(privacy)
+                "`Exegete`, `audio` and `video` folders, which a restore "
+                "keeps), this file with it") in _flat(privacy)
 
     def test_the_changelog(self):
         changelog = _flat(_read("CHANGELOG.md"))
@@ -1337,17 +1365,18 @@ class TestTheTexts:
                 ) in upgrading
 
     def test_the_answers_that_speak_of_a_restore(self):
-        """explain_ai_coding_tools' step 6 and apply_codings' workflow say
-        what a restore keeps (the answer for a missing coder-visibility
-        view: tests/test_v0150_qualcoder_texts_1.py)."""
+        """explain_ai_coding_tools' step 6 says what a restore keeps (the
+        answer for a missing coder-visibility view:
+        tests/test_v0150_qualcoder_texts_1.py); the help topic
+        apply_codings, whose workflow said it too, was removed in v0.15.1,
+        as announced in 0.14, and says so."""
         overview = _flat(server.explain_ai_coding_tools())
         assert "whole project back" not in overview
         assert ("list_backups + restore_backup roll the project back (all "
-                "but its Exegete folder, which a restore keeps).") in overview
-        workflow = _flat(server.explain_ai_coding_tools("apply_codings"))
-        assert "whole project back" not in workflow
-        assert ("restore_backup rolls the project back (all but its "
-                "Exegete folder, which a restore keeps)") in workflow
+                "but its Exegete, audio and video folders, which a restore "
+                "keeps).") in overview
+        topic = json.loads(server.explain_ai_coding_tools("apply_codings"))
+        assert topic["note"] == server.HELP_TOPIC_REMOVED
 
     def test_the_modules_own_words(self):
         words = _flat(private_files.__doc__)

@@ -610,14 +610,17 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
         assert out["success"] is True
         assert "backup_skipped_symlinks" not in out
 
-    def test_import_text_file_without_backup_carries_no_key(
+    def test_import_text_file_with_create_backup_false_reports_skipped(
             self, setup_server, qualcoder_db_path, tmp_path):
+        """v0.15.1: Exegete takes a backup before every change, so
+        create_backup=false takes one too, and it reports the links it
+        left out as any backup does."""
         self._plant(qualcoder_db_path, tmp_path)
         out = json.loads(server.import_text_file(
             "r3c.txt", "text", create_backup=False))
         assert out["success"] is True
-        assert "backup_path" not in out
-        assert "backup_skipped_symlinks" not in out
+        assert Path(out["backup_path"]).is_dir()
+        assert out["backup_skipped_symlinks"] == 1
 
     def test_apply_codings_reports_skipped(self, setup_server,
                                            qualcoder_db_path, tmp_path):
@@ -717,7 +720,7 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
         out = json.loads(H.execute_destructive(server.restore_backup, str(restore_point)))
         assert "success" not in out
         assert "safety backup" in out["error"]
-        assert "copy it back" in out["error"]
+        assert "copy its contents back" in out["error"]
         assert "recreate" in out["error"]
         self._assert_safety_report(out)
         assert Path(out["safety_backup"]).is_dir()

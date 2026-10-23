@@ -331,8 +331,9 @@ class TestTheExecutePath:
         Another writer commits after the verification and before the
         delete. BEGIN IMMEDIATE takes the RESERVED lock first, so this
         can only happen strictly before it; the re-read then sees the new
-        row, and the operation refuses with the backup already taken and
-        says so.
+        row, and the operation refuses. Since v0.15.1 the re-read is the
+        write's check, before the backup's database is copied, so the
+        refusal leaves no backup and says nothing of one.
         """
         out = _preview(server.delete_code, 1)
         original = QualcoderDatabase.begin_immediate
@@ -351,7 +352,7 @@ class TestTheExecutePath:
         assert fired, "the race never happened; the test proves nothing"
         assert refused["error"].startswith("The project changed since this "
                                            "preview was made")
-        assert "A backup had already been taken" in refused["error"]
+        assert "A backup had already been taken" not in refused["error"]
         # B2.5: every token refusal is machine-readable, this one
         # included. It used to reach the model as prose alone, because
         # _perform_write maps a bare ValueError to {"error": ...} (QA
@@ -361,13 +362,10 @@ class TestTheExecutePath:
         assert H.query(qualcoder_db_path,
                        "SELECT COUNT(*) AS n FROM code_name WHERE cid=1"
                        )[0]["n"] == 1
-        assert len(_backups(qualcoder_db_path)) == 1
-        # v0.13 A5 (fix round 1, F5): the refusal names that backup. The
-        # arm shipped without this, and reverting it turned nothing red
-        # at full-suite scope (QA Q-2).
-        assert Path(refused["backup_path"]).is_dir()
-        assert Path(refused["backup_path"]).name \
-            == _backups(qualcoder_db_path)[0]
+        # v0.15.1: no backup, so none is named (v0.13 A5 named the one
+        # taken before the re-read)
+        assert _backups(qualcoder_db_path) == []
+        assert "backup_path" not in refused
         assert server.db.read_only is True
 
     def test_a_row_added_between_preview_and_execute_stops_it(

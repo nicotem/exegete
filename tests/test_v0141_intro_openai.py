@@ -36,6 +36,15 @@ import exegete.server as server                   # noqa: E402
 from exegete import database, names               # noqa: E402
 
 
+
+# The Codex setting, as the documents say it since the owner dropped its
+# test on 20 October 2026 (ruling 85, item 4): what OpenAI documents, and
+# that it is untested, with no test promised
+CODEX_SETTING = ("OpenAI documents a setting, marked Beta, that can keep "
+                 "Codex's own commands from reading outside the folder it "
+                 "works in; it has not been tested with Exegete")
+
+
 def _read(name):
     return (REPO / name).read_text(encoding="utf-8")
 
@@ -219,10 +228,16 @@ class TestTheIntroduction:
                 "pseudonymise_source"],
             "**Export** the codebook, a coding report, frequencies and the "
             "case-by-code matrix as CSV, text or Markdown": [
-                "export_codebook", "export_code_report",
+                # the coding report is export_coded_segments_report's
+                # file (v0.15.1 removed export_code_report, as announced)
+                "export_codebook", "export_coded_segments_report",
                 "export_frequencies_csv", "export_case_code_matrix_csv"],
-            "**Go back**: a backup before each change, by default, and a way "
-            "to restore one": ["list_backups", "restore_backup"],
+            # v0.15.1: before every change, whatever create_backup says;
+            # the backup's moment: Exegete takes it itself, before each
+            # change to the project's database
+            "**Go back**: a backup before every change to the project's "
+            "database, taken by Exegete itself, and a way to restore one": [
+                "list_backups", "restore_backup"],
         }
         for words, needed in claims.items():
             assert words in covers, words
@@ -323,11 +338,12 @@ class TestTheReadmesRoute:
         # (the owner, 1 October 2026: the suggestion with its reason; the
         # same training advice for both makers, before participants' data)
         # (the judge, the same day: an alternative, not a purpose)
+        # (ruling 85, item 4, 20 October 2026: the setting's test is
+        # dropped, so it is named as untested, with no test promised)
         for words in ("Codex reads files by itself, so for participants' "
                       "data this project suggests an assistant with no file "
-                      "access of its own, such as Claude Desktop's chat, "
-                      "until a setting that stops Codex's reads has been "
-                      "tested with Exegete.",
+                      "access of its own, such as Claude Desktop's chat. "
+                      + CODEX_SETTING,
                       "1. **Switch training off** before participants' "
                       "data: while it is on, OpenAI may use your "
                       "conversations to train its models.",
@@ -335,7 +351,7 @@ class TestTheReadmesRoute:
                       "makes. 3. **Give Codex a folder of its own**",
                       "INSTALL.md#chatgpts-desktop-app-and-codex-experimental",
                       "Experimental: written from OpenAI's documentation, "
-                      "read on 30 September 2026, and not yet tried by this "
+                      "read on 30 September 2026, and not tried by this "
                       "project."):
             assert words in section, words
         # It sits in "Start here", after the one-click route
@@ -886,8 +902,8 @@ class TestCodexWorksInAFolderOfItsOwn:
                 "and the read-only mode",
                 "That is why step 3 keeps study files out of Codex's "
                 "folder, and why, for participants' data, this project "
-                "suggests an assistant with no file access of its own for "
-                "now (the box at the top of this section).",
+                "suggests an assistant with no file access of its own (the "
+                "box at the top of this section).",
                 "if Codex started in its read-only mode, you may keep it "
                 "there (Exegete's tools work the same). Full access would "
                 "run every tool call without asking you, so this project "
@@ -915,9 +931,9 @@ class TestCodexWorksInAFolderOfItsOwn:
                 # the suggestion last
                 "| **ChatGPT's desktop app and Codex** (Experimental) | "
                 "Codex: yes, well beyond its folder, without asking, even "
-                "in \"Ask for approval\" and read-only mode (a setting "
-                "that stops it has not yet been tested with Exegete) | "
-                "OpenAI | Claude Desktop's chat instead |",
+                "in \"Ask for approval\" and read-only mode ("
+                + CODEX_SETTING + ") | OpenAI | Claude Desktop's chat "
+                "instead |",
                 # v0.14.2, the README's first round of checks: only codings
                 # wait for approval ("How it works" says what does not);
                 # the second round: one meaning for each "it"; the
@@ -1031,13 +1047,22 @@ class TestTheStepsANewcomerCanGetWrong:
         section = _install_openai()
         before = section[:section.index("```toml")]
         flat = " ".join(before.split())
-        for words in ("On a Mac or Linux, change only `YOUR_USERNAME` in the "
-                      "`command` line to your own (the full path from step "
-                      "1), typing no quote marks",
-                      "On Windows, replace the whole value after "
-                      "`command =`, its double quotes included, with your "
-                      "path between single quotes"):
-            assert words in flat, words
+        # (the staleness audit of 20 October 2026, and its fix round: held
+        # to the fact) The entry is written with a Mac's `/Users`, step 1
+        # gives Linux's path under `/home`, so the sentence says to change
+        # both there
+        entry = section[section.index("```toml"):]
+        entry = entry[:entry.index("```", 7)]
+        assert 'command = "/Users/YOUR_USERNAME/' in entry
+        assert "`/home/YOUR_USERNAME/exegete-venv/bin/exegete` on Linux" \
+            in flat
+        paste = flat[flat.index("On a Mac or Linux, change `YOUR_USERNAME`"):]
+        paste = paste[:paste.index("On Windows")]
+        assert "on Linux also `/Users` to `/home`" in paste
+        assert "typing no quote marks" in paste
+        assert ("On Windows, replace the whole value after `command =`, its "
+                "double quotes included, with your path between single "
+                "quotes") in flat
         # Why: a Windows path between double quotes does not read as TOML,
         # and the same path between single quotes does
         path = r"C:\Users\YOUR_USERNAME\exegete-venv\Scripts\exegete.exe"
@@ -1245,7 +1270,11 @@ def _limits_codexs_reading(text):
 
 
 def _shipped_documents():
-    return sorted(p.name for p in REPO.glob("*.md"))
+    """The Markdown documents at the top of the repository, and the
+    older ones kept in docs/history/ (v0.15.1), by their paths in it."""
+    return [p.relative_to(REPO).as_posix()
+            for p in sorted(REPO.glob("*.md"))
+            + sorted(REPO.glob("docs/history/*.md"))]
 
 
 def _privacy_hosts():
@@ -1400,9 +1429,9 @@ class TestAssistantsOwnFileAccess:
             assert words in listed, words
         assert "Do not" not in listed
         assert ("| Codex: yes, well beyond its folder, without asking, "
-                "even in \"Ask for approval\" and read-only mode (a "
-                "setting that stops it has not yet been tested with "
-                "Exegete) | OpenAI | Claude Desktop's chat instead |") in data
+                "even in \"Ask for approval\" and read-only mode ("
+                + CODEX_SETTING + ") | OpenAI | Claude Desktop's chat "
+                "instead |") in data
         assert data.index("| **Claude Desktop's chat**") < \
             data.index("| **ChatGPT's desktop app and Codex**")
         # v0.14.2: with PRIVACY.md's third condition, as everywhere the
@@ -1469,9 +1498,19 @@ class TestAssistantsOwnFileAccess:
                                                      qualcoder_db_path):
         # "Exegete's own answers tell the assistant where a project is"
         section = _privacy_hosts()
+        # (the staleness audit of 20 October 2026, and its fix round: the
+        # copy and the backups are named by their place too, each tool
+        # that answers with one named; tests/test_v0151_stale_texts.py
+        # holds the backups' fields)
         assert ("(`list_available_projects`, `select_project`, "
                 "`get_current_project` and `create_project` answer with its "
-                "path)") in section
+                "path") in section
+        for words in ("`copy_project_to_workspace` with its copy's",
+                      "`list_backups` with each backup's, a whole copy of "
+                      "the project", "every change's answer with the backup "
+                      "taken before it", "`restore_backup` with the backup "
+                      "restored"):
+            assert words in section, words
         folder = Path(qualcoder_db_path).parent
         current = json.loads(server.get_current_project())
         assert str(folder) in current["current_project"]
@@ -1801,9 +1840,8 @@ class TestTheSmallerPoints:
         # (the judge, 1 October 2026: an alternative, not a purpose)
         box = ("Codex reads files on your computer by itself, so for "
                "participants' data this project suggests an assistant with "
-               "no file access of its own, such as Claude Desktop's chat, "
-               "until a setting that stops Codex's reads has been tested "
-               "with Exegete; step 3 says more.")
+               "no file access of its own, such as Claude Desktop's chat. "
+               + CODEX_SETTING + ". Step 3 says more.")
         assert box in install
         assert install.index(box) < \
             install.index("**Which OpenAI apps can use Exegete.**")

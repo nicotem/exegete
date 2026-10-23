@@ -13,8 +13,11 @@ transaction).
 
 The text is QualCoder 4.0's (doc_readers); what is not QualCoder's is a
 named departure, listed in TOOLS.md. Plain text and web pages are read
-as UTF-8 alone, and a file that is not UTF-8 is held back with steps to
-save it so: nothing is guessed (the owner's decision of 6 October 2026),
+as UTF-8, and a file that is not UTF-8 is held back with steps to save
+it so: nothing is guessed (the owner's decision of 6 October 2026). From
+v0.15.1 the preview shows one line of a plain text file held so as each
+character set that can read it reads it, and the researcher may choose
+one (`character_sets`), in which the import then reads that file alone;
 so the names list is applied to, and checked in, the text as it is
 stored.
 """
@@ -37,6 +40,7 @@ from . import doc_readers, env_settings, garbled_text, import_paths, names
 from . import import_reading
 from . import import_words as words
 from . import kept_texts
+from . import pseudonymise as pseudo
 
 logger = logging.getLogger(__name__)
 
@@ -163,6 +167,14 @@ class Item:
     # places in it, for the page the researcher can check them on.
     check_text: Optional[str] = None
     check_places: List[Any] = field(default_factory=list)
+    # A plain text file not saved as UTF-8: its readings, as the reading
+    # process gave them (import_reading.checked_readings), for the
+    # preview alone; never in `numbers`, so neither the token's state nor
+    # the outcomes kept for the import carry them (v0.15.1).
+    readings: Optional[Dict[str, Any]] = None
+    # The reading the researcher chose for this file (a key of
+    # doc_readers.READINGS), from `character_sets` by its label (v0.15.1).
+    character_set: Optional[str] = None
 
     pre_code: str = ""             # a refusal decided before reading
 
@@ -214,6 +226,14 @@ class Context:
     # On Windows with long paths switched off: a place in the folder of
     # originals past 259 characters cannot be written. None until asked.
     short_paths: Optional[bool] = None
+    # What the readings of a file not saved as UTF-8 are checked against
+    # before a line of them is shown (v0.15.1): the compiled names list,
+    # or what a list that cannot be used is checked with; with the list
+    # switched off, the list all the same. None: no list.
+    readings_check: Any = None
+    # The researcher's choices, {a file as the preview names it: a key of
+    # doc_readers.READINGS} (v0.15.1).
+    character_sets: Dict[str, str] = field(default_factory=dict)
 
 
 def stored_name(disk_name: str) -> str:
@@ -271,6 +291,9 @@ class OriginalsOnly:
     def __init__(self, forms: Sequence[str]):
         from .pseudonymise import NameDetector
         self.detector = NameDetector(forms)
+        # As a compiled list gives them, for the readings' check of a
+        # first name alone (readings_withheld, v0.15.1)
+        self.forms = tuple((form, index) for index, form in enumerate(forms))
 
     def carries_a_name(self, value: Any) -> bool:
         return self.detector.contains(value)
@@ -370,7 +393,7 @@ def keep_texts(result: "Survey", ctx: "Context",
         if now() - started >= ctx.call_seconds + KEEP_SECONDS:
             break
         if kept_texts.keep(item.digest, item.size, item.kind,
-                           ctx.max_characters, item.read):
+                           ctx.max_characters, item.read, **_chosen(item)):
             kept += 1
     if kept < len(ready):
         logger.warning(
@@ -387,7 +410,8 @@ def forget_texts(result: "Survey", ctx: "Context") -> None:
         if item.status == "ready" or (
                 item.status == "later"
                 and item.code == NOT_IMPORTED_THIS_TIME):
-            kept_texts.forget(item.digest, item.kind, ctx.max_characters)
+            kept_texts.forget(item.digest, item.kind, ctx.max_characters,
+                              **_chosen(item))
 
 
 def _supported_suffixes() -> List[str]:
@@ -713,8 +737,9 @@ def listed_names(compiled: Any, text: str, kind: Optional[str]) -> list:
 def evaluate(item: Item, result: Dict[str, Any], ctx: Context) -> None:
     """What the import does with one file's text: holds it back, or
     applies the names list and gathers its warnings and memo. The text is
-    the one that will be stored (UTF-8 alone, for plain text and web
-    pages), so the names found in it are the names there are."""
+    the one that will be stored (for plain text, read as UTF-8 or in the
+    set the researcher chose; for web pages, as UTF-8 alone), so the
+    names found in it are the names there are."""
     from . import pseudonymise as pseudo
     item.read = result
     text = result["text"]
@@ -826,24 +851,217 @@ def _warnings(item: Item, result: Dict[str, Any], signs: Dict[str, int],
         add("listed_name_in_file_name")
     if item.check_text is not None:
         add("garbled_letters", where=item.numbers.get("where", "in places"))
+    chosen = chosen_name(result)
+    if chosen is not None:
+        add("chosen_reading", name=chosen)
     return out
 
 
+def chosen_name(result: Optional[Dict[str, Any]]) -> Optional[str]:
+    """The name of the reading a file was read in, when it was read in a
+    set the researcher chose (its result's character set a key of
+    doc_readers.READINGS, never the argument); else None."""
+    charset = (result or {}).get("charset")
+    if not isinstance(charset, str):
+        return None
+    return doc_readers.READING_NAMES.get(charset)
+
+
 def _memo(item: Item, result: Dict[str, Any], ctx: Context) -> str:
-    """The file's memo: the memo argument, then the PDF's notes after a
-    blank line, as QualCoder orders them."""
+    """The file's memo: the memo argument, then, for a file read in the
+    character set chosen for it, a line saying so (v0.15.1), then the
+    PDF's notes after a blank line, as QualCoder orders them."""
     memo = ctx.memo or ""
+    chosen = chosen_name(result)
+    if chosen is not None:
+        line = words.READ_AS_CHOSEN_MEMO.format(name=chosen)
+        memo = memo + "\n\n" + line if memo else line
     if result["notes"]:
         notes = doc_readers.pdf_notes_memo(result["notes"])
         memo = memo + "\n\n" + notes if memo else notes
     return memo
 
 
+# ---------------------------------------------------------------------------
+# The names the list misses (v0.15.1), counted by file and never named
+# ---------------------------------------------------------------------------
+
+# The count's allowance, each call, in the units of pseudonymise_source's
+# names-left count and at its figures (ruling 7's measurement): its work
+# and its matches. A file whose estimate passes the whole allowance is
+# too large to be checked; once a file passes what is left, it and every
+# later file are not checked.
+NAMES_LEFT_WORK = pseudo.MAX_RESIDUE_SCAN_WORK
+NAMES_LEFT_MATCHES = pseudo.MAX_RESIDUE_SCAN_MATCHES
+# The warnings the count gives, any of which brings the preview's note
+# and the import's line
+NAMES_LEFT_CODES = ("listed_names_left", "listed_names_left_at_least",
+                    "listed_names_left_not_checked",
+                    "listed_names_left_too_large",
+                    "listed_names_left_too_large_any_list")
+# names_left_in_text's kinds, under the names the answer gives them; a
+# PDF's whole words (whole_word_in_a_file_not_rewritten) are left out,
+# since listed_names_kept counts them already
+_NAMES_LEFT_KINDS = (("other_capitals", "case_only"),
+                     ("other_characters", "normalisation_variants"),
+                     ("joined_or_split_differently", "joined_differently"),
+                     ("inside_a_longer_word", "inside_a_longer_word"),
+                     ("put_back_by_a_pseudonym", "put_back_by_a_pseudonym"))
+
+
+def _names_left_text(item: Item) -> str:
+    """The text the count reads: the stored text, with the notes' markers
+    taken out for Word, OpenDocument and RTF (a reader sees
+    "Maria[Comment 1] Brown" as the name whole, as pseudonymise_source
+    counts it); for a PDF, its text and then each note's content on a
+    line of its own."""
+    if item.kind in doc_readers.MARKING_FORMATS:
+        return pseudo.without_markers(item.text, doc_readers.NOTE_MARKER)
+    if item.kind == doc_readers.PDF:
+        notes = (item.read or {}).get("notes") or []
+        return "\n".join([item.text] + [note["content"] for note in notes])
+    return item.text
+
+
+def _names_left(item: Item, numbers: Dict[str, Any], code: str,
+                **say: Any) -> None:
+    item.numbers["listed_names_left"] = numbers
+    item.warnings.append((words.WARNINGS[code][0],
+                          words.say(words.WARNINGS, code, **say)))
+    item.warning_codes.append(code)
+
+
+def _not_checked(item: Item) -> None:
+    _names_left(item, {"not_checked": True}, "listed_names_left_not_checked")
+
+
+def _counted_in_part(item: Item, at_least: int) -> None:
+    """A count stopped part way: at least `at_least` places, or, when the
+    places it had found by then are none (the count's matches were all a
+    name in a PDF written as the list writes it, which
+    listed_names_kept counts), not checked."""
+    if at_least > 0:
+        _names_left(item, {"at_least": at_least},
+                    "listed_names_left_at_least",
+                    places=words.places_phrase(at_least))
+    else:
+        _not_checked(item)
+
+
+def count_names_left(items: Sequence[Item], ctx: Context) -> None:
+    """Where a name from the names list may still show in each ready
+    file's stored text, in a form the list does not replace: the wide
+    reading pseudonymise_source counts (other capitals, a name joined or
+    split differently, inside a longer word, ...), and first names alone.
+    Numbers alone leave it, as `item.numbers["listed_names_left"]` and a
+    warning in Exegete's words: never a name, nor a word of the text.
+
+    Nothing without a usable list (none, empty, off, or one Exegete
+    cannot use). The allowance is the call's, under pseudonymise_source's
+    four rules: a file whose estimate passes the whole allowance is too
+    large and closes nothing; once a file passes what is left, it and
+    every later file are not checked; everything spent is charged; a
+    count stopped part way gives a lower bound. Any exception is caught:
+    that file and every later one are not checked, and the log names the
+    exception's class alone. Called by the preview after its survey and
+    by the import after its commit, so it writes nothing and changes no
+    decision."""
+    compiled = ctx.compiled
+    if compiled is None:
+        return
+    ready = [item for item in items if item.status == "ready"]
+    if not ready:
+        return
+    failed = False
+    try:
+        first_names = pseudo.FirstNamesAlone(compiled)
+    except Exception as e:                          # noqa: BLE001
+        logger.warning("The count of names left in the files was not "
+                       "made (%s).", type(e).__name__)
+        failed = True
+    work_done = 0
+    matches_left = NAMES_LEFT_MATCHES
+    past = False
+    for item in ready:
+        if failed:
+            _not_checked(item)
+            continue
+        try:
+            text = _names_left_text(item)
+            length = pseudo.reading_length(text,
+                                           stop_past_work=NAMES_LEFT_WORK)
+            work = (pseudo.residue_work(compiled, text, length)
+                    + first_names.work(text, length))
+            if work > NAMES_LEFT_WORK:
+                # Too large for this list, decided against the whole
+                # allowance, so it closes nothing for the files after it;
+                # too large even for a list of one name, fewer names
+                # would not help it
+                if pseudo.residue_work_at_one_form(
+                        text, length) > NAMES_LEFT_WORK:
+                    _names_left(item, {"too_large_to_check": True},
+                                "listed_names_left_too_large_any_list")
+                else:
+                    _names_left(item, {"too_large_to_check": True},
+                                "listed_names_left_too_large")
+                continue
+            if (past or matches_left <= 0
+                    or work_done + work > NAMES_LEFT_WORK):
+                past = True
+                _not_checked(item)
+                continue
+            stop: Dict[str, Any] = {}
+            found = pseudo.names_left_in_text(
+                compiled, text, list_longer_words=False,
+                rewritten_by_this_run=item.kind != doc_readers.PDF,
+                max_matches=matches_left,
+                max_extra_work=NAMES_LEFT_WORK - work_done - work,
+                stopped=stop)
+            spent = found if found is not None else stop
+            work_done += work + spent["extra_work"]
+            matches_left -= spent["matches"]
+            if found is None:
+                # A lower bound on the wide reading, whose whole words in
+                # a PDF are the list's own, which are not places here
+                _counted_in_part(item, stop["at_least"] - (
+                    item.numbers.get("listed_count") or 0
+                    if item.kind == doc_readers.PDF else 0))
+                continue
+            kinds = {name: 0 for name, _key in _NAMES_LEFT_KINDS}
+            for entry in found["entries"]:
+                for name, key in _NAMES_LEFT_KINDS:
+                    kinds[name] += entry[key]
+            alone = first_names.count(text, max_matches=matches_left)
+            matches_left -= alone["matches"]
+            kinds["first_name_alone"] = alone["count"]
+            kinds["other"] = found["unattributed"]
+            places = sum(kinds.values())
+            if alone["stopped"]:
+                _counted_in_part(item, places)
+                continue
+            shown = {name: count for name, count in kinds.items() if count}
+            if not places:
+                item.numbers["listed_names_left"] = {"places": 0}
+                continue
+            _names_left(item, {"places": places, **shown},
+                        "listed_names_left",
+                        places=words.places_phrase(places),
+                        kinds=words.kinds_phrase(shown))
+        except Exception as e:                      # noqa: BLE001
+            logger.warning("The count of names left in the files stopped "
+                           "(%s); this file and the later ones were not "
+                           "checked.", type(e).__name__)
+            failed = True
+            item.numbers.pop("listed_names_left", None)
+            _not_checked(item)
+
+
 # What the reader refuses that the import holds back, with the steps to
-# a file it reads: one not saved as UTF-8.
+# a file it reads: one not saved as UTF-8; and one that cannot be read in
+# the character set chosen for it (v0.15.1).
 GARBLED = frozenset({"garbled_fixed", "garbled_rtf"})
 HELD_WHEN_READ = frozenset({"not_utf8", "not_utf8_web", "nul_characters",
-                            "nul_characters_web"})
+                            "nul_characters_web", "not_in_chosen_set"})
 NOT_READ_THIS_TIME = "not_read_this_time"
 NOT_IMPORTED_THIS_TIME = "not_imported_this_time"
 
@@ -861,6 +1079,22 @@ def _time_for(limit: float, budget: float, started: float, first: bool,
     return min(limit, left)
 
 
+def _log_cause(cause: Optional[Dict[str, Any]]) -> None:
+    """One line for a file refused as damaged: the kind of error behind
+    it and the release of the library Exegete reads that kind of file
+    with, where there is one; never the file, its place, size or digest,
+    or the project. The cause stays out of the item's numbers, so no
+    answer, and nothing sent to the AI provider, carries it."""
+    if not cause:
+        return
+    library = ""
+    if cause.get("library"):
+        library = " (%s %s)" % (cause["library"],
+                                cause.get("version") or "unknown")
+    logger.warning("A file was refused as damaged: its reading raised "
+                   "%s%s.", cause["kind"], library)
+
+
 def _read_one(item: Item, data: bytes, ctx: Context,
               timeout: Optional[float] = None,
               limit: Optional[float] = None,
@@ -874,10 +1108,16 @@ def _read_one(item: Item, data: bytes, ctx: Context,
     reader = ctx.reader or import_reading.read_in_process
     try:
         result = reader(item.kind, data, max_characters=ctx.max_characters,
-                        timeout=timeout)
+                        timeout=timeout, **_chosen(item))
     except import_reading.ReadFailed as failed:
+        if failed.code == "damaged":
+            _log_cause(getattr(failed, "cause", None))
         if failed.code in HELD_WHEN_READ:
             item.status, item.code = "held", failed.code
+            if failed.code == "not_utf8":
+                # Kept on the item for the preview alone, never in
+                # `numbers`.
+                item.readings = getattr(failed, "readings", None)
             return
         if failed.code == "reader_timeout" and timeout < limit:
             item.status, item.code = "later", later_code
@@ -889,10 +1129,20 @@ def _read_one(item: Item, data: bytes, ctx: Context,
         if failed.code == "reader_timeout":
             numbers["seconds"] = int(limit)
         if failed.code == "reader_memory":
-            numbers["limit_mb"] = import_reading.MEMORY_CAP_BYTES // MB
+            # the cap that applied: a PDF's is larger (v0.15.1)
+            numbers["limit_mb"] = \
+                import_reading.memory_cap_for(item.kind) // MB
         _refuse(item, failed.code, before_reading=False, **numbers)
         return
     evaluate(item, result, ctx)
+
+
+def _chosen(item: Item) -> Dict[str, str]:
+    """The set chosen for a file as an argument, given only when there is
+    one, so that a reader or a kept text's call is made as before without
+    it (v0.15.1)."""
+    return ({"character_set": item.character_set}
+            if item.character_set else {})
 
 
 def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
@@ -915,6 +1165,10 @@ def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
         if data is None:
             continue
         new_so_far += 1
+        # The reading chosen for it, by the label the preview gives it,
+        # set before the check below so the import's own pass carries it
+        # (v0.15.1).
+        item.character_set = chosen_set(item, ctx)
         if not read_texts:
             continue
         timeout = _time_for(import_reading.READ_TIMEOUT_SECONDS,
@@ -928,12 +1182,42 @@ def survey(paths: Sequence[str], ctx: Context, read_texts: bool = True,
 
 
 # ---------------------------------------------------------------------------
-# What the preview says, in this order, never with any of the text
+# What the preview says, in this order, never with any of the text, but
+# for one line of a plain text file not saved as UTF-8 as each character
+# set reads it (shown_readings, v0.15.1)
 # ---------------------------------------------------------------------------
 
 def item_label(item: Item) -> str:
     return item.position if item.hide_name else shown_name(item.name
                                                            or item.disk_name)
+
+
+def chosen_set(item: Item, ctx: Context) -> Optional[str]:
+    """The reading the researcher chose for this file, by the label the
+    preview gives it (its name, or its position when the name is hidden),
+    both in Unicode's composed form; or None (v0.15.1)."""
+    if not ctx.character_sets:
+        return None
+    label = unicodedata.normalize("NFC", item_label(item))
+    for given, key in ctx.character_sets.items():
+        if unicodedata.normalize("NFC", given) == label:
+            return key
+    return None
+
+
+def character_sets_not_used(result: "Survey", ctx: Context) -> int:
+    """How many of the choices given were not used: each names no file
+    here, or a file not read in that set (one read as UTF-8, a web page,
+    another format, or one held, refused or left before it was read in
+    it). Never the names."""
+    used = set()
+    for item in result.items:
+        if item.character_set and (
+                (item.read or {}).get("charset") == item.character_set
+                or item.code == "not_in_chosen_set"):
+            used.add(unicodedata.normalize("NFC", item_label(item)))
+    return sum(1 for given in ctx.character_sets
+               if unicodedata.normalize("NFC", given) not in used)
 
 
 def refusal_words(item: Item) -> str:
@@ -970,14 +1254,141 @@ def refusal_words(item: Item) -> str:
     return words.say(words.FILE_REFUSALS, code, **numbers)
 
 
-def held_back_entries(items: Sequence[Item]) -> Tuple[
-        List[Dict[str, str]], Optional[Dict[str, str]]]:
+# The files held back as not saved in UTF-8 whose readings a preview
+# shows (v0.15.1): the rest are asked for alone.
+READINGS_FILES = 5
+# Characters each side of a line's first character outside ASCII that a
+# reading shows, of the READING_SIDE its window holds: the margin is what
+# the names check reads beyond what is shown.
+SHOWN_SIDE = 30
+
+
+def _shown_line(window: str) -> str:
+    """A reading's window cut to at most SHOWN_SIDE characters each side
+    of its first character outside ASCII, at the last space within reach,
+    or at SHOWN_SIDE where there is none (the East Asian scripts)."""
+    found = re.search(r"[^\x00-\x7f]", window)
+    at = found.start() if found else 0
+    left, right = window[:at], window[at + 1:]
+    if len(left) > SHOWN_SIDE:
+        reach = left[-SHOWN_SIDE:]
+        space = reach.find(" ")
+        if left[-SHOWN_SIDE - 1] != " " and space >= 0:
+            reach = reach[space + 1:]
+        left = reach
+    if len(right) > SHOWN_SIDE:
+        reach = right[:SHOWN_SIDE]
+        space = reach.rfind(" ")
+        if right[SHOWN_SIDE] != " " and space >= 0:
+            reach = reach[:space]
+        right = reach
+    return left + window[at:at + 1] + right
+
+
+def readings_withheld(check: Any) -> Callable[[str], bool]:
+    """Whether a reading's window of a line is kept from the preview
+    (v0.15.1, ruling 93), as widely as the names-left count counts: it
+    holds a name from the list by Exegete's one rule for a name inside a
+    name (`name_holds_listed_name`: any case, across separators, inside
+    longer words), or the first word of a listed name alone, by the
+    count's own matcher (`pseudonymise.FirstNamesAlone`, built here once
+    from the list's forms). Nothing is withheld without a list; every
+    line under EveryName, and every line when the matcher cannot be
+    built or fails on a window: never a line unchecked, and the answer's
+    sentence says no line is shown. Nothing is logged."""
+    if check is None:
+        return lambda window: False
+    if isinstance(check, EveryName):
+        return lambda window: True
+    try:
+        first_names = pseudo.FirstNamesAlone(check)
+    except Exception:                               # noqa: BLE001
+        return lambda window: True
+
+    def withheld(window: str) -> bool:
+        if name_holds_listed_name(check, window):
+            return True
+        try:
+            return first_names.count(window)["count"] > 0
+        except Exception:                           # noqa: BLE001
+            return True
+    return withheld
+
+
+def shown_readings(item: Item, ctx: Optional[Context],
+                   withheld: Optional[Callable[[str], bool]] = None
+                   ) -> Dict[str, Any]:
+    """What the preview shows of a held file's readings (v0.15.1): the
+    first of its lines in which no choice's whole window is withheld
+    (`readings_withheld` over `readings_check`, or `withheld` when given),
+    each choice's window then cut (`_shown_line`), with the sets that
+    cannot read the file; or, when every line is withheld, why no line is
+    shown, with the sets that can read it, each without a line (ruling
+    93: a choice can still be made by the file's name and theirs).
+    Nothing ranks or marks a choice."""
+    readings = item.readings or {}
+    if readings.get("too_long"):
+        return {"readings_too_long": words.READINGS_TOO_LONG}
+    choices = readings.get("choices") or []
+    if not choices:
+        return {"no_reading_offered": words.NO_READING_OFFERED}
+    if withheld is None:
+        withheld = readings_withheld(
+            ctx.readings_check if ctx is not None else None)
+    cannot = [doc_readers.READING_NAMES[key]
+              for key in readings.get("not_offered", [])
+              if key in doc_readers.READING_NAMES]
+    line = None
+    for index in range(len(choices[0]["windows"])):
+        if not any(withheld(c["windows"][index]) for c in choices):
+            line = index
+            break
+    if line is None:
+        return {"no_line_shown": words.NO_LINE_SHOWN,
+                "readings": [{"character_set": choice["key"],
+                              "read_as": list(choice["names"])}
+                             for choice in choices],
+                "cannot_be_read_as": cannot}
+    lines = [_shown_line(c["windows"][line]) for c in choices]
+    shown = []
+    for choice, text in zip(choices, lines):
+        said: Dict[str, Any] = {"character_set": choice["key"],
+                                "read_as": list(choice["names"]),
+                                "line": text}
+        if lines.count(text) > 1:
+            # The texts differ, so this choice reads otherwise elsewhere.
+            said["differs_elsewhere"] = True
+        shown.append(said)
+    return {"readings": shown, "cannot_be_read_as": cannot}
+
+
+def held_back_entries(items: Sequence[Item], ctx: Optional[Context] = None
+                      ) -> Tuple[List[Dict[str, Any]],
+                                 Optional[Dict[str, str]]]:
     """The files held back, each with its reason, and the steps to save a
     copy as UTF-8 for those not saved so, once for every such file, by
     the kind of file they serve (the review of 12 October 2026: a preview
-    of fifty such files repeated the same steps fifty times)."""
-    entries = [{"file": item_label(i), "reason": refusal_words(i)}
-               for i in items]
+    of fifty such files repeated the same steps fifty times). Of the
+    files carrying readings (v0.15.1), the first READINGS_FILES have them
+    shown (shown_readings); the rest say how to see theirs. The import's
+    answer reads no text, so its entries carry none."""
+    entries: List[Dict[str, Any]] = []
+    shown = 0
+    withheld: Optional[Callable[[str], bool]] = None
+    for item in items:
+        entry: Dict[str, Any] = {"file": item_label(item),
+                                 "reason": refusal_words(item)}
+        if item.readings is not None:
+            if shown < READINGS_FILES:
+                if withheld is None:
+                    # Built once a call: the first names' pattern
+                    withheld = readings_withheld(
+                        ctx.readings_check if ctx is not None else None)
+                entry.update(shown_readings(item, ctx, withheld))
+                shown += 1
+            else:
+                entry["readings_not_shown"] = words.READINGS_NOT_SHOWN
+        entries.append(entry)
     steps: Dict[str, str] = {}
     for item in items:
         kind = words.STEPS_FOR.get(item.code)
@@ -1031,13 +1442,21 @@ def file_entry(item: Item) -> Dict[str, Any]:
         "size_kb": round(item.size / 1024, 1),
         "words": len(item.text.split()),
     }
+    chosen = chosen_name(result)
     if result.get("charset") in ("utf-8", "utf-8-sig"):
         # Plain text and web pages: the one character set read.
         entry["character_set"] = "UTF-8"
+    elif chosen is not None:
+        # Plain text read in the set the researcher chose (v0.15.1).
+        entry["character_set"] = f"{chosen}, as chosen"
     if item.kind != doc_readers.PDF and item.replacements:
         entry["names_replaced"] = item.replacements
     if item.numbers.get("listed_count"):
         entry["listed_names_kept"] = item.numbers["listed_count"]
+    left = item.numbers.get("listed_names_left")
+    if left and left.get("places") != 0:
+        # v0.15.1: the places where a listed name may still show, by kind
+        entry["listed_names_left"] = dict(left)
     changes = [text for group, text in item.warnings if group == "changes"]
     information = [text for group, text in item.warnings
                    if group == "information"]
@@ -1113,11 +1532,19 @@ def preview_answer(result: Survey, ctx: Context,
                                      len(skipped), len(unread), len(later),
                                      bool(stops))
     answer["names_list"] = names_list_line(ctx)
+    if any(code in NAMES_LEFT_CODES for item in ready
+           for code in item.warning_codes):
+        answer["listed_names_left_note"] = words.LISTED_NAMES_LEFT_NOTE
     if held:
-        answer["held_back"], steps = held_back_entries(held)
+        answer["held_back"], steps = held_back_entries(held, ctx)
         if steps:
             answer["saving_a_copy_as_utf8"] = steps
+        if any("readings" in entry for entry in answer["held_back"]):
+            answer["reading_held_files"] = words.READINGS_NOTE
     answer["files"] = [file_entry(i) for i in ready]
+    if ctx.character_sets:
+        answer["character_sets_not_used"] = character_sets_not_used(result,
+                                                                    ctx)
     if refused or result.path_refusals:
         answer["refused"] = (
             [{"path": r["given"],
@@ -1385,6 +1812,37 @@ class Written:
         self.temps, self.finals = [], []
 
 
+def read_again(result: Survey, ctx: Context,
+               now: Optional[Callable[[], float]] = None) -> None:
+    """Each ready file read again before the import's backup (v0.15.1),
+    in `write_batch`'s order and under its rule for time, the rest left
+    for the next call as there, and its digest compared with the
+    survey's; no bytes are kept. Raises BatchFailed("changed") for a
+    file that changed, went or grew past its limit since the preview,
+    as `write_batch` does, so that refusal leaves no backup;
+    `write_batch` compares again for the seconds after."""
+    now = now or clock
+    started = ctx.call_started if ctx.call_started is not None else now()
+    first = True
+    stopped = False
+    for item in result.items:
+        if item.status != "ready":
+            continue
+        timeout = None if stopped else _time_for(
+            IMPORT_FILE_SECONDS, ctx.call_seconds, started, first, now)
+        if timeout is None:
+            stopped = True
+            item.status, item.code = "later", NOT_IMPORTED_THIS_TIME
+            continue
+        first = False
+        try:
+            data, _size = read_bytes(item.path, SIZE_LIMITS[item.kind])
+        except _ReadRefusal:
+            raise BatchFailed("changed") from None
+        if data is None or digest_of(data) != item.digest:
+            raise BatchFailed("changed")
+
+
 def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
                 ctx: Context, owner: str, written: Written,
                 now: Optional[Callable[[], float]] = None) -> List[Item]:
@@ -1447,7 +1905,7 @@ def write_batch(insert_row: Callable[..., Dict[str, Any]], result: Survey,
         # names list and every decision after it are today's, on the
         # preview's own input.
         kept = kept_texts.load(item.digest, item.size, item.kind,
-                               ctx.max_characters)
+                               ctx.max_characters, **_chosen(item))
         if kept is not None:
             evaluate(item, kept, ctx)
         else:

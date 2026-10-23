@@ -11,11 +11,9 @@ What it does, in one paragraph. A mapping of names to pseudonyms is
 validated, compiled into ONE whole-word, escaped, longest-first
 alternation, and run over a text in a single non-chaining pass. Each
 match becomes an edit. Every `code_text`, `annotation` and `case_text`
-span of that text is then remapped under one of two policies:
-`snap_to_pseudonym`, which treats the pseudonym as the same token as the
-name it replaces and never empties or deletes a span, and
-`qualcoder_edit_parity`, which reproduces the semantics QualCoder's own
-coding-view editor applies when a whole token is deleted and retyped.
+span of that text is then remapped under `snap_to_pseudonym`, which
+treats the pseudonym as the same token as the name it replaces and never
+empties or deletes a span.
 
 Upstream reference at pin 9bddf17 (QualCoder master), read-only:
 
@@ -23,14 +21,9 @@ Upstream reference at pin 9bddf17 (QualCoder master), read-only:
   `re.sub(rf"(?<!\\w){re.escape(original)}(?!\\w)", pseudonym, text_)`,
   applied entry by entry over the whole text at import;
 - the minimum lengths: `pseudonyms.py:72-74` (original, 2) and
-  `pseudonyms.py:76-78` (pseudonym, 3);
-- the span walk `qualcoder_edit_parity` reproduces: `apply_insert` at
-  `code_text.py:5893-5904`, `apply_delete` at `:5906-5927`, the running
-  offset at `:5933-5950`, the end clamp at `:6208-6209` (case links) and
-  `:6232-6233` (codings), and the absence of a clamp for annotations at
-  `:6213-6222`.
+  `pseudonyms.py:76-78` (pseudonym, 3).
 
-Two deliberate deviations from upstream, both documented in the tool
+One deliberate deviation from upstream, documented in the tool
 description and pinned by tests:
 
 1. ONE pass, not a chain. Upstream applies each entry as its own
@@ -39,14 +32,6 @@ description and pinned by tests:
    into "Pat"). This engine refuses a mapping whose pseudonym is also a
    name in the mapping and matches everything in one leftmost-longest
    pass, so no replacement is ever replaced again.
-2. `qualcoder_edit_parity` reproduces the SEMANTICS of master's walk for
-   a whole-token replacement (delete the name, insert the pseudonym at
-   the same offset), not the output of diff-match-patch. Upstream feeds
-   its walk whatever `diff_main` produced, and `diff_main` may factor a
-   common prefix or suffix out of a replacement, which would move the
-   edit boundaries. That factoring is a property of the diff library and
-   is not reproduced here; the claim this module makes is the narrower,
-   true one.
 """
 
 import re
@@ -299,14 +284,16 @@ NO_SEPARATOR_RANGES = (
 _NO_SEPARATOR_STARTS = tuple(low for low, _, _ in NO_SEPARATOR_RANGES)
 
 CASE_MODES = ("exact", "insensitive", "insensitive_preserve")
-OVERLAP_POLICIES = ("snap_to_pseudonym", "qualcoder_edit_parity")
+OVERLAP_POLICIES = ("snap_to_pseudonym",)
 
-# How a row's span changed. One vocabulary for both policies, because the
-# preview shape and the hidden-coder rule key on it. `substituted` is the
-# owner's ruling of 2026-09-15 (QC40_PLATFORM 7.3(3), refining X1): a
-# span that sat exactly on a replaced name and now sits exactly on its
-# pseudonym is a pure substitution, whatever the two lengths, and is
-# exempt from the hidden-coder override like a pure shift. `clamped` is
+# How a row's span changed. One vocabulary, because the preview shape and
+# the hidden-coder rule key on it; `deleted` stays in it, though no policy
+# deletes a row since 0.15.1, so the preview's shape is unchanged.
+# `substituted` is the owner's ruling of 2026-09-15 (QC40_PLATFORM
+# 7.3(3), refining X1): a span that sat exactly on a replaced name and
+# now sits exactly on its pseudonym is a pure substitution, whatever the
+# two lengths, and is exempt from the hidden-coder override like a pure
+# shift. `clamped` is
 # the owner's ruling of 2026-09-16 (QC40_PLATFORM 7.4, decision 7): a
 # span that CONTAINED a whole replaced name and changed length only
 # because that name did is `resized` and is exempt too, so the one row
@@ -2554,6 +2541,194 @@ def names_left_in_text(compiled: "Compiled", text: str,
             "extra_work": extra_work}
 
 
+
+# v0.15.1, the names the list misses: a first name alone. The names list
+# replaces a name only as written, so the first word of a name of several
+# words, written alone ("Jane" of "Jane Doe"), stays in the stored text;
+# the wide reading above does not see it, since it reads whole names. The
+# import's preview and its answer count it beside the wide reading's
+# kinds, by file and never by name (doc_import.count_names_left).
+
+def _letter_or_digit(char: str, marks: bool = False) -> bool:
+    category = unicodedata.category(char)[0]
+    return category in "LN" or (marks and category == "M")
+
+
+def first_word(name: Any) -> Optional[str]:
+    """The first word of a real name or variant of at least two words:
+    its text before the first white space, with the characters other
+    than letters and digits taken off its ends (a combining mark after a
+    letter stays with it). None for a name of one word, or when the word
+    has fewer than `MIN_ORIGINAL_CHARS` characters or does not begin
+    with a capital ("de la Cruz", "van Gogh", "J Doe", scripts without
+    capitals). Its words after the first must hold a letter or a digit,
+    so "Jane ..." is a name of one word."""
+    if not isinstance(name, str):
+        return None
+    pieces = name.split(None, 1)
+    if len(pieces) < 2 or not _detector_parts(pieces[1]):
+        return None
+    word = pieces[0]
+    start, end = 0, len(word)
+    while start < end and not _letter_or_digit(word[start]):
+        start += 1
+    while end > start and not _letter_or_digit(word[end - 1], marks=True):
+        end -= 1
+    word = word[start:end]
+    if len(word) < MIN_ORIGINAL_CHARS or not word[0].isupper():
+        return None
+    return word
+
+
+def _first_word_alternative(firsts: Sequence[str],
+                            parts: Sequence[str]) -> str:
+    """One group of first words as one alternative: its first letters as
+    written, then the rest of the word's parts, joined by
+    `_SEPARATOR_RUN`, in any case; every piece escaped. It captures
+    nothing: a capturing group for each alternative makes the engine's
+    cost at each position grow with the square of their number (fix
+    round 1), which the budgets' units, linear in it, do not price."""
+    return ("(?:" + "|".join(re.escape(letter) for letter in sorted(firsts))
+            + ")(?i:" + _SEPARATOR_RUN.join(
+                [re.escape(parts[0][1:])]
+                + [re.escape(part) for part in parts[1:]]) + ")")
+
+
+def _first_word_key(folded: str) -> str:
+    """The key that finds a match's group: casefolded letters and digits,
+    no separator, with the dotted and the dotless i read as i, since the
+    pattern's case-insensitive matching equates i, I, the dotted capital
+    and the dotless small i, which casefolding keeps apart."""
+    return folded.replace("i\u0307", "i").replace("\u0131", "i")
+
+
+class FirstNamesAlone:
+    """Where the first word of a listed name shows alone, counted in the
+    reader's reading of a text, as the wide reading reads its names.
+
+    Built once a call from a compiled list. A first word that is itself
+    a listed form, ignoring case and separators, is left out: the wide
+    reading counts it. The rest are grouped by their casefolded reading,
+    one alternative each, longest first: not after a word character, the
+    first letter as written (a capital), the rest of the word's parts
+    (`_detector_parts`) joined by `_SEPARATOR_RUN` in any case, and not
+    before a word character. A match followed by `_SEPARATOR_RUN` and the
+    rest of any name of its group, in any case, is the wide reading's
+    ("JANE DOE", Jane and Doe on two lines, "Jane Does", "Mary-Jane
+    O'Neil" with a curly apostrophe where "Mary-Jane O'Neil" is listed)
+    and is not counted here; the longer first words come first, so
+    "Mary-Jane" refused is never counted as "Mary". The alternatives
+    capture nothing (fix round 1): a match's group is found from its
+    casefolded letters and digits (`group_of`). `Compiled`,
+    `NameDetector` and the rewrite are untouched."""
+
+    __slots__ = ("pattern", "rests", "units", "_pieces", "_by_key",
+                 "_compiled")
+
+    def __init__(self, compiled: "Compiled"):
+        listed = {tuple(_fold(part) for part in _detector_parts(form))
+                  for form, _ in compiled.forms}
+        groups: Dict[Tuple[str, ...], Dict[str, Any]] = {}
+        for form, _index in compiled.forms:
+            word = first_word(form)
+            if word is None:
+                continue
+            parts = _detector_parts(word)
+            key = tuple(_fold(part) for part in parts)
+            if not parts or key in listed:
+                continue
+            group = groups.setdefault(key, {"firsts": set(), "parts": parts,
+                                            "rests": set(), "word": word})
+            group["firsts"].add(parts[0][0])
+            group["rests"].add(form.split(None, 1)[1])
+        ordered = sorted(groups.values(), key=lambda group: (
+            -reading_length(group["word"]), group["word"]))
+        # The rest of each name of a group as the reader reads it
+        # (`_detector_alternative`), longest first
+        self.rests: List["re.Pattern[str]"] = [
+            re.compile(_SEPARATOR_RUN + "(?i:" + "|".join(sorted(
+                {_detector_alternative(rest) for rest in group["rests"]},
+                key=lambda alternative: (-len(alternative), alternative)))
+                + ")")
+            for group in ordered]
+        # Each group's first letters and parts, in the pattern's order;
+        # every pattern is built from them by `_first_word_alternative`,
+        # which escapes every piece
+        self._pieces = [(group["firsts"], group["parts"])
+                        for group in ordered]
+        self._compiled: Dict[int, "re.Pattern[str]"] = {}
+        self._by_key: Dict[str, List[int]] = {}
+        for index, (_firsts, parts) in enumerate(self._pieces):
+            self._by_key.setdefault(_first_word_key("".join(
+                _fold(part) for part in parts)), []).append(index)
+        self.pattern: Optional["re.Pattern[str]"] = (
+            re.compile("(?<!\\w)(?:" + "|".join(
+                _first_word_alternative(firsts, parts)
+                for firsts, parts in self._pieces) + ")(?!\\w)")
+            if ordered else None)
+        # Priced as `Compiled.form_units` prices the forms: a unit for
+        # each started block of FORM_UNIT_CHARS characters of each first
+        # word's reading
+        self.units = sum(-(-reading_length(group["word"]) // FORM_UNIT_CHARS)
+                         for group in ordered)
+
+    def _matches_whole(self, index: int, matched: str) -> bool:
+        pattern = self._compiled.get(index)
+        if pattern is None:
+            pattern = self._compiled[index] = re.compile(
+                _first_word_alternative(*self._pieces[index]))
+        return pattern.fullmatch(matched) is not None
+
+    def group_of(self, matched: str) -> int:
+        """The group whose alternative the pattern matched as `matched`.
+
+        The alternation chose the first alternative that matches
+        `matched` whole (an earlier one would have matched there
+        itself). Looked for first among the groups with its key, in
+        order, which hold that one unless the pattern's case-insensitive
+        matching equates a letter the key does not; failing them, among
+        all the groups, in order, which is the alternation's choice."""
+        key = _first_word_key(_SEPARATOR_SPLIT.sub("", matched).casefold())
+        for index in self._by_key.get(key, ()):
+            if self._matches_whole(index, matched):
+                return index
+        for index in range(len(self._pieces)):
+            if self._matches_whole(index, matched):
+                return index
+        raise LookupError("no first word matches")
+
+    def work(self, text: str, length: Optional[int] = None) -> int:
+        """What counting `text` costs, in the budgets' units: nothing
+        when no first word is counted, else the reading's length times
+        the first words' units and, since the count reads the text again
+        (`_reader_sees`), the per-character term of its class."""
+        if self.pattern is None:
+            return 0
+        term = (RESIDUE_WORK_PER_CHARACTER if text.isascii()
+                else RESIDUE_WORK_PER_CHARACTER_NON_ASCII)
+        if length is None:
+            length = reading_length(text)
+        return length * (self.units + term)
+
+    def count(self, text: str, max_matches: Optional[int] = None
+              ) -> Dict[str, Any]:
+        """How many times a first word shows alone in `text`:
+        `{"count", "matches", "stopped"}`, each match charged one to
+        `max_matches`; past it the count stops, with the count so far."""
+        found = spent = 0
+        if self.pattern is None:
+            return {"count": 0, "matches": 0, "stopped": False}
+        seen = _reader_sees(text)
+        for match in self.pattern.finditer(seen):
+            spent += 1
+            if max_matches is not None and spent > max_matches:
+                return {"count": found, "matches": spent, "stopped": True}
+            if self.rests[self.group_of(match.group())].match(
+                    seen, match.end()):
+                continue
+            found += 1
+        return {"count": found, "matches": spent, "stopped": False}
+
 # The owner's ruling of 2026-09-23 on Brief 1's finding F-1: a pseudonym
 # that contains a name from the mapping is withheld, by the rule that
 # withholds a file name carrying one, from the run record and the journal
@@ -2640,10 +2815,8 @@ class RemappedSpan:
 class SpanMapper:
     """Maps old offsets to new ones for one text and one edit list.
 
-    `snap_to_pseudonym` is arithmetic on a prefix sum and needs no walk;
-    `qualcoder_edit_parity` walks the edits per row, which is the same
-    semantics as upstream's walk over all rows per edit but the opposite
-    iteration order, so the two are a real cross-check of each other.
+    `snap_to_pseudonym`, the one policy, is arithmetic on a prefix sum
+    and needs no walk.
     """
 
     def __init__(self, replacements: Sequence[Replacement], old_len: int):
@@ -2651,7 +2824,6 @@ class SpanMapper:
         self.starts = [item.start for item in replacements]
         self.ends = [item.end for item in replacements]
         self.new_lengths = [len(item.text) for item in replacements]
-        self.replacements = list(replacements)
         cumulative = [0]
         for item in replacements:
             cumulative.append(cumulative[-1] + item.delta)
@@ -2710,76 +2882,6 @@ class SpanMapper:
         new1 = self.map_end(pos1)
         return self._classify(pos0, pos1, new0, new1, cut)
 
-    # -- qualcoder_edit_parity --------------------------------------------
-
-    def _parity(self, pos0: int, pos1: int,
-                keep_start_anchor: bool) -> RemappedSpan:
-        """Master's `apply_delete` then `apply_insert`, per edit.
-
-        Transcribed from `code_text.py:5906-5927` and `:5893-5904` at pin
-        9bddf17 and driven by the running offset of `:5933-5950`: each
-        replacement is the deletion of the name followed by the insertion
-        of the pseudonym at the same evolving offset. The consequences
-        are upstream's own and are the reason this is the OPTION and not
-        the default: a span that sits exactly on a name is deleted, and a
-        span that merely touches one is trimmed to exclude the pseudonym
-        entirely.
-        """
-        original_pos0 = pos0
-        new0: Optional[int] = pos0
-        new1 = pos1
-        shift = 0
-        head_cut = False
-        tail_cut = False
-        for index, item in enumerate(self.replacements):
-            at = item.start + shift
-            length = item.end - item.start
-            inserted = self.new_lengths[index]
-            if new0 is not None:
-                # apply_delete (code_text.py:5906-5927)
-                if new0 >= at + length:
-                    new0 -= length
-                    new1 -= length
-                elif new0 >= at:
-                    if new1 <= at + length:
-                        new0 = None           # span fully inside the name
-                    else:
-                        # The span's head held the name, whether it began
-                        # inside it or exactly on it; either way the
-                        # pseudonym ends up outside the span.
-                        new0 = at
-                        new1 -= length
-                        head_cut = True
-                elif new1 > at:
-                    # This branch also fires for a span that STRICTLY
-                    # CONTAINS the name, where nothing is cut at all: the
-                    # span shrinks by the name and grows by the pseudonym
-                    # through the insert below. Only an end at or inside
-                    # the name's end really loses the pseudonym, so only
-                    # that is recorded as a cut.
-                    if new1 <= at + length:
-                        tail_cut = True
-                    new1 -= min(new1, at + length) - at
-                    if new1 <= new0:
-                        new0 = None
-            if new0 is not None:
-                # apply_insert (code_text.py:5893-5904)
-                if new0 >= at:
-                    new0 += inserted
-                    new1 += inserted
-                    if keep_start_anchor and original_pos0 == 0:
-                        new0 = 0
-                elif new0 < at < new1:
-                    new1 += inserted
-            shift += inserted - length
-        if new0 is None:
-            return RemappedSpan(None, None, DELETED, False, True)
-        # A span anchored at the file start never moves its start, so a
-        # head cut on it was undone in the same step and is not a cut.
-        anchored = keep_start_anchor and original_pos0 == 0
-        cut = tail_cut or (head_cut and not anchored)
-        return self._classify(pos0, pos1, new0, new1, cut)
-
     # -- shared ------------------------------------------------------------
 
     def _substitutes(self, pos0: int, pos1: int, new0: int, new1: int
@@ -2788,11 +2890,10 @@ class SpanMapper:
         IS that name's pseudonym, both boundaries on the edit's own.
 
         Under `snap_to_pseudonym` the second half follows from the first
-        by the arithmetic of `map_start` and `map_end`; under
-        `qualcoder_edit_parity` such a span is deleted before it reaches
-        `_classify`. Both halves are checked all the same, because the
-        class is defined by both (owner ruling 7.3(3)) and a third
-        policy would inherit the definition rather than the coincidence.
+        by the arithmetic of `map_start` and `map_end`. Both halves are
+        checked all the same, because the class is defined by both
+        (owner ruling 7.3(3)) and another policy would inherit the
+        definition rather than the coincidence.
         """
         index = bisect_left(self.starts, pos0)
         if index >= len(self.starts) or self.starts[index] != pos0 \
@@ -2803,13 +2904,12 @@ class SpanMapper:
 
     def _classify(self, pos0: int, pos1: int, new0: int, new1: int,
                   cut: bool) -> RemappedSpan:
-        """One vocabulary for both policies.
+        """One vocabulary for every row.
 
         `snapped` means the run had to MOVE a boundary because it met a
-        replaced name: under `snap_to_pseudonym` a boundary that lay
-        strictly inside a name snapped outward to contain the whole
-        pseudonym; under `qualcoder_edit_parity` a head or tail cut
-        excluded the pseudonym from the span. `substituted` is a span
+        replaced name: a boundary that lay strictly inside a name
+        snapped outward to contain the whole pseudonym. `substituted` is
+        a span
         that sat exactly on one replaced name and now sits exactly on
         that name's pseudonym, whatever the two lengths: the coder
         marked the name and still marks it under its new spelling, so
@@ -2844,8 +2944,8 @@ class SpanMapper:
             change = UNCHANGED
         return RemappedSpan(new0, new1, change, False, touched)
 
-    def map_row(self, pos0: Any, pos1: Any, policy: str,
-                keep_start_anchor: bool) -> Optional[RemappedSpan]:
+    def map_row(self, pos0: Any, pos1: Any,
+                policy: str) -> Optional[RemappedSpan]:
         """Map one stored row, or None when the row is not mappable.
 
         Returning None is the "leave it exactly as it is" answer for a
@@ -2861,7 +2961,7 @@ class SpanMapper:
         step earlier (`code_text.py:6232-6233`, "clamp, never delete a
         valid code"). Clamping before rather than after is what makes
         the guarantee that no row is written with an end past the new
-        text hold under both policies rather than only under one.
+        text hold.
 
         A clamped row has a class of its own, `clamped`, which nothing
         else produces. The classes describe what happens to the STORED
@@ -2893,9 +2993,7 @@ class SpanMapper:
             clamped = True
         if pos0 >= pos1:
             return None
-        if policy == "qualcoder_edit_parity":
-            mapped = self._parity(pos0, pos1, keep_start_anchor)
-        elif policy == "snap_to_pseudonym":
+        if policy == "snap_to_pseudonym":
             mapped = self._snap(pos0, pos1)
         else:
             raise ValueError(

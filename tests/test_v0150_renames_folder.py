@@ -46,10 +46,14 @@ SETTING_DESCRIPTION = (
     "kept. The default, Exegete projects in your home folder (~), is "
     "outside Documents, which iCloud or OneDrive may sync; it is made when "
     "the first project needs it. If you choose another folder, choose one "
-    "that no sync service keeps. If this shows QualCoder projects, the "
-    "earlier default, it keeps working, and Exegete finds the projects "
-    "there whichever folder you choose. Leaving it empty stops the "
-    "extension from starting."
+    # (the staleness audit of 20 October 2026: one account of an update
+    # and this setting, as the documents give it; never "it keeps working")
+    "that no sync service keeps. QualCoder projects, the earlier default, "
+    "works too, and Exegete finds the projects there whichever folder you "
+    "choose; after an update from an earlier version, look at this "
+    "setting, which the update may have changed from QualCoder projects "
+    "to Exegete projects. Leaving it empty stops the extension from "
+    "starting."
     " After changing a setting, quit Claude Desktop and open it again.")
 
 MANIFEST = json.loads((REPO / "packaging" / "desktop-extension" /
@@ -328,7 +332,8 @@ DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
              "QUICKSTART.md", "SUPPORT.md", "CONTRIBUTING.md", "CLAUDE.md",
              "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md")
 # The folder's own spelling, letter case kept: "Qualcoder projects",
-# meaning projects in the format (IMPORT_INSTRUCTIONS.md), is not it
+# meaning projects in the format (docs/history/IMPORT_INSTRUCTIONS.md),
+# is not it
 EARLIER_FOLDER = re.compile(r"QualCoder projects")
 
 
@@ -390,14 +395,21 @@ class TestTheDocuments:
         assert ("The default, `~/Exegete projects` (a folder called "
                 "\"Exegete projects\" in your home folder)") in item
         # the maintainer's sitting of 19 October 2026: the update moved a
-        # setting left at the earlier default
-        assert ("Installed before 0.15.0, a setting left at the earlier "
-                "default, `~/QualCoder projects`, is moved to "
-                "`~/Exegete projects` by the update. No project is moved, and "
-                "both folders are searched, so the projects "
-                "in the earlier one are still found. To keep new projects "
-                "beside the earlier ones, set it back to "
-                "`~/QualCoder projects`.") in item
+        # setting left at the earlier default; said as seen, once, with a
+        # folder chosen by hand not yet checked (the staleness audit of 20
+        # October 2026; tests/test_v0150_last_blockers.py holds the account
+        # in every place that tells it; its fix round: here, the folders by
+        # their names in the code, both among the usual places)
+        from test_v0150_last_blockers import _says_the_account
+        _says_the_account(item)
+        earlier = f"`~/{names.OLD_EXTENSION_WORKSPACE_FOLDER}`"
+        for folder in (names.EXTENSION_WORKSPACE_FOLDER,
+                       names.OLD_EXTENSION_WORKSPACE_FOLDER):
+            assert "~/" + folder in server._USUAL_SEARCH_PLACES, folder
+        for words in (f"a setting left at the earlier default, {earlier}",
+                      "No project is moved", "both folders are searched",
+                      f"set it back to {earlier}"):
+            assert words in item, words
         assert "may still show" not in item
         assert "it keeps working" not in item
 

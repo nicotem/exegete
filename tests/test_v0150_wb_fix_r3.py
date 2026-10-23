@@ -144,10 +144,13 @@ class TestTheRefusalNamesBothCauses:
 
     def test_tools_summary(self):
         tools = _flat(_read("TOOLS.md"))
-        assert ("verified against QualCoder's format, and refused while the "
-                "project's lock file is active (QualCoder 3.8.2 has the "
+        # (the staleness audit of 20 October 2026: every change to the
+        # database, with the backup Exegete takes itself)
+        assert ("verified against QualCoder's format, and is refused while "
+                "the project's lock file is active (QualCoder 3.8.2 has the "
                 "project open, or another conversation using Exegete is "
-                "writing to it). QualCoder 4.0 writes no lock file, so for "
+                "writing to it).") in tools
+        assert ("QualCoder 4.0 writes no lock file, so for "
                 "it Exegete can only report signs of an open window; if you "
                 "also use QualCoder, make sure no window has the project "
                 "open before a write (see \"Supported QualCoder versions\" "

@@ -28,6 +28,10 @@ What to change, if you want to, on each route:
   then change the command in your assistant's settings to it, and
   only then `pipx uninstall qualcoder-mcp` or `uv tool uninstall
   qualcoder-mcp` (the other way round leaves no server).
+- **PDF and EPUB.** The commands above that install `exegete` leave out
+  its optional part for PDF and EPUB: write `"exegete[pdf-epub]"` in
+  place of `exegete` (with uvx, `uvx --from "exegete[pdf-epub]"
+  exegete`).
 - **Settings.** Exegete's settings now start `EXEGETE_` (for
   example `EXEGETE_TOOLSET`); the old `QUALCODER_MCP_...` spellings and
   `QUALCODER_PROJECT_PATH` still work until version 1.0.

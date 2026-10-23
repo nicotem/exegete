@@ -152,7 +152,7 @@ class TestThePreviewThenTheChange:
         digest, siblings = _digest(folder), _siblings(folder)
         answer = _preview(NEW)
         assert _digest(folder) == digest and _siblings(folder) == siblings
-        assert answer["preview_token"].startswith("qcp1.")
+        assert answer["preview_token"].startswith("qcp2.")
         assert answer["preview"]["current_coder_name"] == OLD
         assert answer["preview"]["new_coder_name"] == NEW
         assert answer["preview"]["project_coder_name"] == {"from": OLD,
@@ -502,7 +502,9 @@ class TestAChangeAfterThePreview:
     def test_the_change_is_rechecked_inside_the_transaction(
             self, tmp_path, monkeypatch):
         """A row recorded between the token's check and the write: the
-        re-check under the write lock refuses, after the backup."""
+        re-check under the write lock refuses; since v0.15.1 it is the
+        write's check, before the backup's database, so no backup is
+        left."""
         folder = _make(tmp_path)
         token = _preview(NEW)["preview_token"]
         real = database.QualcoderDatabase.begin_immediate
@@ -516,7 +518,8 @@ class TestAChangeAfterThePreview:
         answer = _call(NEW, token)
         assert answer["reason"] == "project_changed", answer
         assert _stored(folder)[0] == OLD
-        assert Path(answer["backup_path"]).is_dir()
+        assert "backup_path" not in answer
+        assert list(folder.parent.glob(f"{folder.stem}_backup_*")) == []
 
     def test_a_token_for_another_name_is_refused(self, tmp_path):
         folder = _make(tmp_path)
@@ -1132,8 +1135,9 @@ class TestTheTool:
                 "or its coder list cannot be read.") in tools
         assert "Exegete cannot change it" not in tools
         # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5)
-        assert "registers 82 tools" in tools
+        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
+        # removed three tools, as announced in 0.14
+        assert "registers 79 tools" in tools
 
     def test_the_changelog_says_what_was_added(self):
         log = _flat((REPO / "CHANGELOG.md").read_text(
@@ -1166,4 +1170,4 @@ class TestTheTool:
 
     def test_the_counts(self):
         assert len(server.STANDARD_TOOL_NAMES) == FULL_TOOLS
-        assert len(server.CORE_TOOLSET) == 25
+        assert len(server.CORE_TOOLSET) == 27   # restore_backup and search_memos (v0.15.1)

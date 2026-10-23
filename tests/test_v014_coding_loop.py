@@ -71,6 +71,28 @@ def session_file(sid):
     return Path(server.session_manager.storage_dir) / f"session_{sid}.json"
 
 
+def merged_as_in_0150(sid, source, target):
+    """A merge as 0.15.0's merge_proposals, removed in 0.15.1, left the
+    session file: the target gains the source's passages it lacks, and
+    returns to pending if it was approved; the source is `merged`, a
+    final status, with `merged_into` the target. Sessions saved so still
+    load and read as before."""
+    path = session_file(sid)
+    data = json.loads(path.read_text())
+    by_guid = {p["guid"]: p for p in data["proposed_codes"]}
+    into, away = by_guid[target], by_guid[source]
+    spans = {(x["file_id"], x["start_pos"], x["end_pos"])
+             for x in into["example_segments"]}
+    moved = [x for x in away["example_segments"]
+             if (x["file_id"], x["start_pos"], x["end_pos"]) not in spans]
+    into["example_segments"] += moved
+    if into["status"] == "approved" and moved:
+        into["status"] = "pending"
+    away["status"] = "merged"
+    away["merged_into"] = target
+    path.write_text(json.dumps(data))
+
+
 def record(sid, *items, **kw):
     return jcall("record_suggestions", coding_session_id=sid,
                  suggestions=list(items), **kw)
@@ -292,8 +314,10 @@ class TestNoScoreInAnyText:
         assert server.GROUNDING_RECORD in text
 
     def test_the_help_and_the_guidance_carry_no_score(self):
-        for topic in (None, "analyze_for_coding", "apply_codings",
-                      "grounding_rules", "coding_style_guidance"):
+        # (v0.15.1: the topics analyze_for_coding, apply_codings and
+        # coding_style_guidance removed, as announced in 0.14)
+        for topic in (None, "grounding_rules", "methodology_vocabulary",
+                      "methods_notes"):
             text = server.explain_ai_coding_tools(topic).lower()
             assert "confidence" not in text, topic
         assert "confidence" not in server.METHODS_GUIDANCE.lower()
@@ -616,12 +640,12 @@ class TestTheLoopsTextsSayWhatHappens:
         assert "It reads no file and returns no suggestion" in text
         assert "performs AI analysis" not in text
         assert "not_found" in text
+        # (v0.15.1: the help topic under its earlier name, which said the
+        # same, removed as announced in 0.14; its answer says so)
+        assert "filters to stress-related codes only" not in text.lower()
         help_ = json.loads(server.explain_ai_coding_tools(
             "analyze_for_coding"))
-        assert "reads no file" in help_["purpose"]
-        blob = json.dumps(help_).lower()
-        assert "automatically" not in blob
-        assert "filters to stress-related codes only" not in blob
+        assert help_["note"] == server.HELP_TOPIC_REMOVED
 
     def test_read_file_with_codings_names_its_four_counts(
             self, setup_server):
@@ -631,11 +655,16 @@ class TestTheLoopsTextsSayWhatHappens:
         for key in stats:
             assert key in text, key
 
-    def test_cleanup_old_sessions_says_what_it_deletes(self):
-        text = self._desc("cleanup_old_sessions")
-        assert "every project" in text
-        assert "approved suggestions not yet applied" in text
-        assert "No preview" in text
+    def test_cleanup_old_sessions_is_gone(self):
+        """v0.15.1, as announced in 0.14: the tool that deleted every
+        project's old sessions with no preview is removed; sessions are
+        listed by age and removed one at a time."""
+        tools = server.mcp._tool_manager._tools
+        assert "cleanup_old_sessions" not in tools
+        assert "days_old" in tools["list_coding_sessions"].parameters[
+            "properties"]
+        assert "coding_session_id" in tools["delete_coding_session"] \
+            .parameters["required"]
 
     def test_edit_and_status_texts_give_the_working_advice(self):
         text = " ".join(self._desc("edit_suggestion").split())
@@ -644,8 +673,6 @@ class TestTheLoopsTextsSayWhatHappens:
                 "again") in text
         assert "then approve after editing" not in text
         assert "reopen" in self._desc("update_suggestion_status")
-        help_ = json.loads(server.explain_ai_coding_tools("edit_suggestion"))
-        assert any("reopen" in note for note in help_["notes"])
 
 
 class TestApprovalIsDescribedHonestly:
@@ -800,11 +827,11 @@ class TestAProposalsApprovalBindsIt:
         target, source = self._proposals(sid, "Isolation", "Mentoring")
         call("update_proposal_status", coding_session_id=sid,
              approve=[target, source])
-        merged = jcall("merge_proposals", coding_session_id=sid,
-                       from_proposal_guid=source, into_proposal_guid=target)
-        assert merged["source_status"] == "merged"
-        assert merged["target"]["status"] == "pending"
-        assert "approval_withdrawn" in merged
+        # (v0.15.1: merge_proposals removed; a session it merged in 0.15.0
+        # reads as before)
+        merged_as_in_0150(sid, source, target)
+        assert self._status(sid, source) == "merged"
+        assert self._status(sid, target) == "pending"
         again = jcall("update_proposal_status", coding_session_id=sid,
                       approve=[source, target])
         assert again["skipped_merged"] == 1 and again["approved"] == 1
@@ -822,31 +849,34 @@ class TestAProposalsApprovalBindsIt:
             ("Isolation", STRESSED), ("Isolation", COPE)]
 
     def test_a_merged_proposal_cannot_be_merged_again(self, setup_server):
+        """v0.15.1: a merge is now a rejection and an update_proposal; a
+        proposal merged in 0.15.0 can be neither."""
         sid = new_session()
         a, b, c = self._proposals(sid, "Isolation", "Mentoring", "Other")
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
-        for src, dst in ((b, c), (c, b)):
-            out = jcall("merge_proposals", coding_session_id=sid,
-                        from_proposal_guid=src, into_proposal_guid=dst)
-            assert "merged into another proposal" in out["error"]
+        merged_as_in_0150(sid, b, a)
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    reject=[b])
+        assert out["skipped_merged"] == 1 and out["rejected"] == 0
+        out = jcall("update_proposal", coding_session_id=sid,
+                    proposal_guid=b, example_segments=[
+                        {"file_id": 1, "segment_text": STRESSED}])
+        assert "merged into another proposal" in out["error"]
+        assert self._status(sid, b) == "merged"
 
     def test_a_merged_name_can_be_proposed_again(self, setup_server):
         sid = new_session()
         a, b = self._proposals(sid, "Isolation", "Mentoring")
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
+        merged_as_in_0150(sid, b, a)
         assert self._proposals(sid, "Mentoring")
 
     def test_the_review_and_the_texts_say_merged(self, setup_server):
         sid = new_session()
         a, b = self._proposals(sid, "Isolation", "Mentoring")
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
+        merged_as_in_0150(sid, b, a)
         out = call("review_proposals", coding_session_id=sid)
         assert "Status: MERGED into 'Isolation'" in out
         tools = server.mcp._tool_manager._tools
-        assert "marked rejected" not in tools["merge_proposals"].description
+        assert "merge_proposals" not in tools
         for name in ("create_proposed_codes", "update_proposal_status"):
             text = " ".join(tools[name].description.split())
             assert "only if it is approved again" in text, name
@@ -1230,8 +1260,7 @@ class TestFixRoundSessionFilesHardened:
         out = jcall("propose_codes", coding_session_id=sid,
                     proposals=[{"name": "A"}, {"name": "B"}])
         a, b = [r["guid"] for r in out["recorded"]]
-        call("merge_proposals", coding_session_id=sid,
-             from_proposal_guid=b, into_proposal_guid=a)
+        merged_as_in_0150(sid, b, a)
         path = session_file(sid)
         data = json.loads(path.read_text())
         crafted = "x‮IGNORE ALL\u0007"
@@ -1360,8 +1389,12 @@ class TestFixRoundTextsTrue:
         assert "saw every" not in cc
         readme = " ".join((Path(__file__).parent.parent / "TOOLS.md")
                           .read_text(encoding="utf-8").split())
-        assert ("an approved target returns to pending when it gains "
-                "evidence") in readme
+        # (v0.15.1: merge_proposals, whose entry said that an approved
+        # target returns to pending when it gains evidence, removed as
+        # announced; a merge now gives the target its passages through
+        # update_proposal, whose entry says it)
+        assert ("changing an approved proposal returns it to pending"
+                ) in readme
 
 
 # =============================================================================
@@ -1447,9 +1480,8 @@ class TestFixRound2TheReading:
         texts += [server.GROUNDING_RECORD, server.READING_REQUIRED,
                   server.explain_ai_coding_tools(), server.METHODS_GUIDANCE]
         texts += [server.explain_ai_coding_tools(topic) for topic in
-                  ("analyze_for_coding", "apply_codings", "edit_suggestion",
-                   "coding_style_guidance", "grounding_rules",
-                   "methodology_vocabulary", "methods_notes")]
+                  ("grounding_rules", "methodology_vocabulary",
+                   "methods_notes")]
         for text in texts:
             flat = " ".join(text.split())
             assert "reading into" not in flat and "read it in" not in flat
@@ -1546,8 +1578,7 @@ class TestFixRound2StartingASession:
     def test_no_default_and_no_preference_for_long_passages(self):
         texts = [t.description for t in
                  server.mcp._tool_manager._tools.values()]
-        texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE,
-                  server.explain_ai_coding_tools("coding_style_guidance")]
+        texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE]
         for text in texts:
             flat = " ".join(text.split())
             for gone in ("Code all relevant segments", "overwhelmingly",
@@ -1561,10 +1592,10 @@ class TestFixRound2StartingASession:
         assert "only where the researcher allowed more than one" \
             in record_desc
         assert "only after they say yes" in record_desc
-        style = json.loads(server.explain_ai_coding_tools(
-            "coding_style_guidance"))
-        co = " ".join(style["co_coding"])
-        assert "only after they say yes" in co
+        # (v0.15.1: the help topic coding_style_guidance, which repeated
+        # start_coding_session's description, removed as announced)
+        co = " ".join(server.mcp._tool_manager._tools[
+            "start_coding_session"].description.split())
         assert "a yes permits looking, not applying" in co
         assert "Actively consider MULTIPLE" not in co
 
@@ -1856,8 +1887,10 @@ class TestFixRound2WhatGoesInV015:
         description = server.mcp._tool_manager._tools[tool].description
         assert sentence in description, tool
         # ruling 70 moved the removals to v0.15.1 (the whole-branch
-        # review of v0.15.0, round 1)
-        assert sentence.startswith("Deprecated, removed in v0.15.1: ")
+        # review of v0.15.0, round 1); ruling 85, item 2 keeps the
+        # REFI-QDA export, whose sentence names its known faults instead
+        if sentence is not server.REFI_EXPORT_KNOWN_FAULTS:
+            assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
         """v0.15.0 (ruling 78; the files design, piece 5): the name list
@@ -1875,131 +1908,173 @@ class TestFixRound2WhatGoesInV015:
         assert "deprecated" not in summary.lower()
 
     def test_the_refi_qda_exports(self, setup_server, tmp_path):
-        self._described("export_refi_qda", server.DEPRECATED_REFI_EXPORT)
-        for words in ("files every coding under the AI coder name",
+        self._described("export_refi_qda", server.REFI_EXPORT_KNOWN_FAULTS)
+        # (v0.15.1: kept, its known faults named, ruling 85, item 2, in
+        # the answer's own field, known_faults, and no longer deprecated;
+        # tests/test_v0151_refi_known_faults.py)
+        for words in ("Known faults (a later release is meant to fix them)",
+                      "files every coding under the AI coder name",
                       "leaves out cases, annotations, journals and media",
-                      "includes rejected suggestions unmarked",
+                      "includes every suggestion, rejected ones too",
                       "QualCoder's own export (Project, Export, REFI-QDA "
                       "Project export)"):
-            assert words in server.DEPRECATED_REFI_EXPORT, words
+            assert words in server.REFI_EXPORT_KNOWN_FAULTS, words
+        assert "removed" not in server.REFI_EXPORT_KNOWN_FAULTS
         sid = new_session()
         g = record(sid, item())["recorded"][0]["guid"]
         session_export = jcall("export_refi_qda", coding_session_id=sid,
                                output_path=str(tmp_path / "s.qdpx"))
         assert session_export["success"] is True
-        assert session_export["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        assert session_export["known_faults"] == \
+            server.REFI_EXPORT_KNOWN_FAULTS
+        assert "deprecated" not in session_export
         approve_and_apply(sid, [g])
         project_export = jcall("export_refi_qda",
                                output_path=str(tmp_path / "p.qdpx"))
         assert project_export["success"] is True
-        assert project_export["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        assert project_export["known_faults"] == \
+            server.REFI_EXPORT_KNOWN_FAULTS
+        assert "deprecated" not in project_export
         refused = jcall("export_refi_qda", output_path="relative.qdpx")
         assert "error" in refused
-        assert refused["deprecated"] == server.DEPRECATED_REFI_EXPORT
+        assert refused["known_faults"] == server.REFI_EXPORT_KNOWN_FAULTS
+        assert "deprecated" not in refused
 
     def test_whole_tools_that_go(self, setup_server):
-        self._described("export_code_report", server.DEPRECATED_CODE_REPORT)
-        assert jcall("export_code_report", code_name="Stress")[
-            "deprecated"] == server.DEPRECATED_CODE_REPORT
-        self._described("cleanup_old_sessions", server.DEPRECATED_CLEANUP)
-        assert jcall("cleanup_old_sessions", days_old=3650)[
-            "deprecated"] == server.DEPRECATED_CLEANUP
-        self._described("merge_proposals",
-                        server.DEPRECATED_MERGE_PROPOSALS)
-        sid = new_session()
-        a, b = [r["guid"] for r in jcall(
-            "propose_codes", coding_session_id=sid,
-            proposals=[{"name": "One"}, {"name": "Two"}])["recorded"]]
-        merged = jcall("merge_proposals", coding_session_id=sid,
-                       from_proposal_guid=b, into_proposal_guid=a)
-        assert merged["success"] is True
-        assert merged["deprecated"] == server.DEPRECATED_MERGE_PROPOSALS
+        """v0.15.1: the three tools went, as announced, with their
+        sentences (tests/test_v0151_removed_tools.py); no tool's
+        description or answer carries a sentence on them."""
+        tools = server.mcp._tool_manager._tools
+        for name, constant in (
+                ("export_code_report", "DEPRECATED_CODE_REPORT"),
+                ("cleanup_old_sessions", "DEPRECATED_CLEANUP"),
+                ("merge_proposals", "DEPRECATED_MERGE_PROPOSALS")):
+            assert name not in tools
+            assert not hasattr(server, constant), constant
+            with pytest.raises(Exception, match=f"Unknown tool: {name}"):
+                call(name)
+        for name, tool in tools.items():
+            assert "removed in v0.15.1: get_coded_segments" not in (
+                tool.description or ""), name
 
     @staticmethod
     def _warned(answer, sentence, expected):
         text = answer if isinstance(answer, str) else json.dumps(answer)
         assert (sentence in text) is expected, (sentence, text[-300:])
 
-    def test_options_that_go_warn_only_when_used(self, setup_server,
-                                                 qualcoder_db_path):
-        for tool, sentence in (
-                ("delete_code", server.DEPRECATED_CASCADE),
-                ("apply_codings", server.DEPRECATED_OWNER),
-                ("import_text_file", server.DEPRECATED_OWNER),
-                ("explain_ai_coding_tools", server.DEPRECATED_HELP_TOPICS),
-                ("create_attribute_type",
-                 server.DEPRECATED_JOURNAL_ATTRIBUTES),
-                ("set_attribute", server.DEPRECATED_JOURNAL_ATTRIBUTES),
-                ("search_files", server.DEPRECATED_MEMO_SEARCH),
-                ("pseudonymise_source", server.DEPRECATED_EDIT_PARITY),
-                ("rename_file", server.DEPRECATED_RENAME_BACK)):
-            self._described(tool, sentence)
-        cascade = server.DEPRECATED_CASCADE
-        self._warned(jcall("delete_code", code_id=1, cascade=True),
-                     cascade, True)
-        self._warned(jcall("delete_code", code_id=1), cascade, False)
-        owner = server.DEPRECATED_OWNER
+    def test_arguments_that_went_are_refused(self, setup_server):
+        """v0.15.1: cascade, owner and search_memo went, as announced
+        (tests/test_v0151_removed_arguments.py): no description carries
+        their deprecation, a call that passes one is refused with what
+        replaces it, and a call without it is answered as usual."""
+        for tool, argument in (("delete_code", "cascade"),
+                               ("apply_codings", "owner"),
+                               ("import_text_file", "owner"),
+                               ("search_files", "search_memo")):
+            description = server.mcp._tool_manager._tools[tool].description
+            assert "Deprecated" not in description, tool
+            assert argument not in server.mcp._tool_manager._tools[
+                tool].parameters["properties"], tool
+        refused = jcall("delete_code", code_id=1, cascade=True)
+        assert refused["removed"] == {"cascade": server.REMOVED_ARGUMENTS[
+            ("delete_code", "cascade")]}
+        assert "removed" not in jcall("delete_code", code_id=1)
         sid = new_session()
         g = record(sid, item())["recorded"][0]["guid"]
         call("update_suggestion_status", coding_session_id=sid, approve=[g])
-        self._warned(call("apply_codings", coding_session_id=sid,
-                          create_backup=False, owner="Somebody Else"),
-                     owner, True)                  # refused, as JSON
-        applied = call("apply_codings", coding_session_id=sid,
-                       create_backup=False, owner="AI Coding Assistant")
+        refused = jcall("apply_codings", coding_session_id=sid,
+                        owner="AI Coding Assistant")
+        assert refused["removed"] == {"owner": server.REMOVED_ARGUMENTS[
+            ("apply_codings", "owner")]}
+        applied = call("apply_codings", coding_session_id=sid)
         assert "CODINGS APPLIED" in applied        # a text answer
-        assert applied.endswith("\n\n" + owner)
-        sid = new_session()
-        g = record(sid, item(COPE, "Coping"))["recorded"][0]["guid"]
-        call("update_suggestion_status", coding_session_id=sid, approve=[g])
-        self._warned(call("apply_codings", coding_session_id=sid,
-                          create_backup=False), owner, False)
-        self._warned(call("import_text_file", filename="a.txt",
-                          content="text", owner="Somebody Else",
-                          create_backup=False), owner, True)
-        self._warned(call("import_text_file", filename="b.txt",
-                          content="text", create_backup=False),
-                     owner, False)
-        topics = server.DEPRECATED_HELP_TOPICS
-        for topic in sorted(server.DEPRECATED_HELP_TOPIC_NAMES):
-            self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
-                         topics, True)
+        assert "removed in 0.15.1" not in applied
+        refused = jcall("import_text_file", filename="a.txt",
+                        content="text", owner="Somebody Else")
+        assert refused["removed"] == {"owner": server.REMOVED_ARGUMENTS[
+            ("import_text_file", "owner")]}
+        imported = jcall("import_text_file", filename="b.txt",
+                         content="text")
+        assert imported["success"] is True and "deprecated" not in imported
+        refused = jcall("search_files", pattern="x", search_memo=True)
+        assert refused["removed"] == {"search_memo": server.REMOVED_ARGUMENTS[
+            ("search_files", "search_memo")]}
+        assert "deprecated" not in jcall("search_files", pattern="x")
+
+    def test_options_that_go_warn_only_when_used(self, setup_server,
+                                                 qualcoder_db_path):
+        # (v0.15.1: cascade, owner and search_memo went, as announced;
+        # test_arguments_that_went_are_refused above; so did attributes on
+        # journal entries and the rename back recognised from backups,
+        # test_journal_attributes_and_the_rename_back_went below, and the
+        # overlap policy qualcoder_edit_parity,
+        # test_the_overlap_policy_that_went_is_refused below)
+        # (v0.15.1: the four help topics removed, as announced; each is
+        # answered that it was, and no answer is marked deprecated)
+        for topic in sorted(server.REMOVED_HELP_TOPICS):
+            answer = jcall("explain_ai_coding_tools", tool_name=topic)
+            assert answer["note"] == server.HELP_TOPIC_REMOVED
+            assert "deprecated" not in answer
         for topic in (None, "grounding_rules", "methods_notes"):
             self._warned(jcall("explain_ai_coding_tools", tool_name=topic),
-                         topics, False)
-        journal = server.DEPRECATED_JOURNAL_ATTRIBUTES
-        self._warned(jcall("create_attribute_type", name="Mood",
-                           applies_to=" Journal ", create_backup=False),
-                     journal, True)
-        self._warned(jcall("create_attribute_type", name="Age",
-                           applies_to="case", create_backup=False),
-                     journal, False)
-        self._warned(jcall("set_attribute", target_type="journal",
-                           target_id=1, attribute_name="Mood", value="x",
-                           create_backup=False), journal, True)
-        self._warned(jcall("set_attribute", target_type="case",
-                           target_id=1, attribute_name="Age", value="3",
-                           create_backup=False), journal, False)
-        memo = server.DEPRECATED_MEMO_SEARCH
-        self._warned(jcall("search_files", pattern="x", search_memo=True),
-                     memo, True)
-        self._warned(jcall("search_files", pattern="x"), memo, False)
-        parity = server.DEPRECATED_EDIT_PARITY
-        self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
-                           file_id=1, overlap_policy="qualcoder_edit_parity"),
-                     parity, True)
-        self._warned(jcall("pseudonymise_source", mapping=[{"original": "Tom", "pseudonym": "Pat"}],
-                           file_id=1), parity, False)
+                         server.HELP_TOPIC_REMOVED, False)
 
-    def test_in_core_the_memo_search_warning_marks_search_memos(
+    def test_the_overlap_policy_that_went_is_refused(self, setup_server,
+                                                     qualcoder_db_path):
+        """v0.15.1: pseudonymise_source's qualcoder_edit_parity went, as
+        announced (tests/test_v0151_one_overlap_policy.py): its
+        description carries no deprecation, a call that names the policy
+        is refused with what replaces it, and a call without it is
+        answered as usual."""
+        description = server.mcp._tool_manager._tools[
+            "pseudonymise_source"].description
+        assert "Deprecated" not in description
+        assert "qualcoder_edit_parity" not in description
+        mapping = [{"original": "Tom", "pseudonym": "Pat"}]
+        refused = jcall("pseudonymise_source", mapping=mapping, file_id=1,
+                        overlap_policy="qualcoder_edit_parity")
+        assert refused == {"error": server.EDIT_PARITY_REMOVED}
+        previewed = jcall("pseudonymise_source", mapping=mapping, file_id=1)
+        assert "deprecated" not in previewed
+        assert server.EDIT_PARITY_REMOVED not in json.dumps(previewed)
+
+    def test_the_memo_search_refusal_marks_search_memos_where_not_served(
             self, setup_server):
-        server._apply_toolset("core")      # the conftest restores it
+        # `core` serves search_memos since v0.15.1 (search_memos in
+        # `core`), so a set without it is made by removing it; the
+        # conftest restores the registry
+        server._apply_toolset("core")
+        sentence = server.REMOVED_ARGUMENTS[("search_files", "search_memo")]
         out = jcall("search_files", pattern="x", search_memo=True)
-        assert out["deprecated"] == server.DEPRECATED_MEMO_SEARCH.replace(
+        assert out["removed"]["search_memo"] == sentence
+        server.mcp.remove_tool("search_memos")
+        out = jcall("search_files", pattern="x", search_memo=True)
+        assert out["removed"]["search_memo"] == sentence.replace(
             "search_memos", "search_memos" + server.NOT_IN_THIS_TOOL_SET)
 
-    def test_a_rename_back_licensed_by_a_backup(self, setup_server,
-                                                qualcoder_db_path):
+    def test_journal_attributes_and_the_rename_back_went(
+            self, setup_server, qualcoder_db_path):
+        """v0.15.1: attributes on journal entries and the rename back
+        recognised from backups went, as announced
+        (tests/test_v0151_journal_and_rename_back.py): no description
+        carries their deprecation, a journal attribute is refused, a case
+        attribute is set as before, and a rename back to the name of the
+        text's copy in the documents folder is refused like any name
+        there."""
+        for tool in ("create_attribute_type", "set_attribute",
+                     "rename_file"):
+            description = server.mcp._tool_manager._tools[tool].description
+            assert "Deprecated" not in description, tool
+        sentence = server.JOURNAL_ATTRIBUTES_REMOVED
+        assert jcall("create_attribute_type", name="Mood",
+                     applies_to=" Journal ")["error"] == sentence
+        assert jcall("set_attribute", target_type="journal", target_id=1,
+                     attribute_name="Mood", value="x")["error"] == sentence
+        made = jcall("create_attribute_type", name="Place", applies_to="case")
+        assert made["success"] is True and "deprecated" not in made
+        changed = jcall("set_attribute", target_type="case", target_id=1,
+                        attribute_name="Age", value="3")
+        assert changed["success"] is True and "deprecated" not in changed
         project = Path(qualcoder_db_path)
         (project / "documents").mkdir(exist_ok=True)
         (project / "documents" / "legacy.txt").write_text("original")
@@ -2010,10 +2085,10 @@ class TestFixRound2WhatGoesInV015:
         server.switch_project(server.current_project_path)
         away = jcall("rename_file", file_id=5, new_name="legacy2.txt")
         assert away["changed"] is True and "deprecated" not in away
-        back = jcall("rename_file", file_id=5, new_name="legacy.txt",
-                     create_backup=False)
-        assert back["changed"] is True
-        assert back["deprecated"] == server.DEPRECATED_RENAME_BACK
+        back = jcall("rename_file", file_id=5, new_name="legacy.txt")
+        assert "already holds" in back["error"]
+        assert "restore_backup" in back["error"]
+        assert "deprecated" not in back
 
 
 class TestFixRound2TheCountWords:
@@ -2028,9 +2103,8 @@ class TestFixRound2TheCountWords:
         texts += [server.explain_ai_coding_tools(), server.METHODS_GUIDANCE,
                   server.GROUNDING_RULES, server.METHODOLOGY_VOCABULARY]
         texts += [server.explain_ai_coding_tools(topic) for topic in
-                  ("analyze_for_coding", "apply_codings", "edit_suggestion",
-                   "coding_style_guidance", "grounding_rules",
-                   "methodology_vocabulary", "methods_notes")]
+                  ("grounding_rules", "methodology_vocabulary",
+                   "methods_notes")]
         return texts
 
     def test_neither_word_is_served(self):
@@ -2191,7 +2265,9 @@ class TestFixRound2TheMinors:
             encoding="utf-8").split())
         assert "Every write operation creates a timestamped backup" \
             not in workflow
-        assert "unless it is called with `create_backup=false`" in workflow
+        # v0.15.1: Exegete takes a backup before every change, and no
+        # text offers to skip one (tests/test_v0151_ignored_argument.py)
+        assert "create_backup=false" not in workflow
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()
                     if l.startswith("- `start_coding_session("))

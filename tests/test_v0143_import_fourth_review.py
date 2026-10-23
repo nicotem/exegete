@@ -403,7 +403,7 @@ class TestTheTexts:
         assert ("an EPUB opened in Apple Books joins its library, and "
                 "iCloud if Books syncs") in readme
         # v0.15.0, the release review: the stamp names 0.15.0's column
-        assert ("as checked on 10 October 2026, beside Exegete 0.15.0"
+        assert ("as checked on 10 October 2026, beside Exegete 0.15.1"
                 in readme)
 
     def test_the_small_wording_points(self):
@@ -428,8 +428,13 @@ class TestTheTexts:
 
     def test_install_points_to_the_section_and_gives_windows_form(self):
         install = _doc("INSTALL.md")
+        # (the staleness audit of 20 October 2026: the section gives pip,
+        # pipx and uv tool; a copy of the source and uvx are named here)
         assert ("\"PDF and EPUB: the optional part\", above, says how to add "
-                "it for each way of installing") in install
+                "it with pip, pipx and uv tool; for a copy of the source, "
+                "\"Step 5: Install the Package\" does; for uvx, the entry "
+                "becomes `uvx --from \"exegete[pdf-epub]\" exegete`") \
+            in install
         assert '(`pip install "exegete[pdf-epub]"` adds it)' not in install
         assert ('$HOME\\exegete-venv\\Scripts\\pip install '
                 '"exegete[pdf-epub]"') in install

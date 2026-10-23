@@ -79,17 +79,46 @@ def _served(mode):
 
 class TestTheRemovalsInV0151:
 
-    def test_there_are_deprecation_sentences(self):
+    def test_no_deprecation_sentence_is_left(self):
         # 12 since read_pseudonym_list, and its sentence, were removed in
-        # v0.15.0 (the files design, piece 5)
-        assert len(DEPRECATIONS) >= 12, DEPRECATIONS
+        # v0.15.0 (the files design, piece 5); 11 since v0.15.1 accepts
+        # and ignores create_backup, import_text_file's false included
+        # (tests/test_v0151_ignored_argument.py); 7 since v0.15.1 removed
+        # three tools and four help topics, as announced, with their
+        # sentences (tests/test_v0151_removed_tools.py); 6 since the
+        # REFI-QDA export, kept, names its known faults under a name of
+        # its own, REFI_EXPORT_KNOWN_FAULTS, no longer a deprecation
+        # (tests/test_v0151_refi_known_faults.py); 3 since v0.15.1 removed
+        # cascade, owner and search_memo, as announced, with their
+        # sentences (tests/test_v0151_removed_arguments.py); 1 since it
+        # removed attributes on journal entries and the rename back
+        # recognised from backups
+        # (tests/test_v0151_journal_and_rename_back.py); none since it
+        # removed the overlap policy qualcoder_edit_parity
+        # (tests/test_v0151_one_overlap_policy.py), the last of them
+        assert DEPRECATIONS == [], DEPRECATIONS
+        assert "DEPRECATED_IMPORT_SKIP_BACKUP" not in DEPRECATIONS
+        assert "DEPRECATED_REFI_EXPORT" not in DEPRECATIONS
         assert "DEPRECATED_PSEUDONYM_LIST" not in DEPRECATIONS
+        for gone in ("DEPRECATED_CODE_REPORT", "DEPRECATED_CLEANUP",
+                     "DEPRECATED_MERGE_PROPOSALS", "DEPRECATED_HELP_TOPICS",
+                     "DEPRECATED_CASCADE", "DEPRECATED_OWNER",
+                     "DEPRECATED_MEMO_SEARCH",
+                     "DEPRECATED_JOURNAL_ATTRIBUTES",
+                     "DEPRECATED_RENAME_BACK", "DEPRECATED_EDIT_PARITY"):
+            assert not hasattr(server, gone), gone
 
-    @pytest.mark.parametrize("name", DEPRECATIONS)
-    def test_each_sentence_names_v0151(self, name):
-        sentence = getattr(server, name)
-        assert sentence.startswith("Deprecated, removed in v0.15.1: "), name
-        assert not BARE_V015.search(sentence), name
+    def test_the_refi_export_is_kept_with_its_faults_named(self):
+        """The owner's decision of 20 October 2026 (ruling 85, item 2): the
+        REFI-QDA export stays, to be fixed, so its sentence names its known
+        faults and announces no removal (under a name of its own since
+        v0.15.1, REFI_EXPORT_KNOWN_FAULTS, until the piece that fixes
+        it)."""
+        sentence = server.REFI_EXPORT_KNOWN_FAULTS
+        assert sentence.startswith("Known faults (a later release is meant "
+                                   "to fix them): ")
+        assert "Deprecated" not in sentence and "removed" not in sentence
+        assert not BARE_V015.search(sentence)
 
     @pytest.mark.parametrize("mode", ["full", "core"])
     def test_no_served_description_names_v015_alone(self, mode):
@@ -103,19 +132,28 @@ class TestTheRemovalsInV0151:
         found = [m.group(0) for m in BARE_V015.finditer(_read(name))]
         assert found == [], name
 
-    def test_what_comes_next_lists_v0151_and_v0152(self):
+    def test_what_comes_next_lists_v0151_to_v0153(self):
+        """The owner's decisions of 20 October 2026 (ruling 85): the
+        safety net in two releases, undo in the second (the sprint moved
+        it whole to v0.15.2), method in v0.15.3 with the earlier tool
+        names and the ignored backup option; the REFI-QDA export kept."""
         readme = _flat(_read("README.md"))
         nxt = readme[readme.index("## What comes next"):]
         nxt = nxt[:nxt.index("## ", 5)]
-        assert ("- v0.15.1, the safety net: undo everything a session did; "
-                "when replacing names, choose which mentions to keep; old "
-                "tools marked as going are retired (TOOLS.md names each)"
-                ) in nxt
-        assert ("- v0.15.2, method: how the assistant supports a study's "
-                "method, reviewed; shorter tool descriptions; the earlier "
-                "names of the two renamed tools retired") in nxt
-        assert "removed in 0.15.1" in readme
-        assert "removed in 0.15)" not in readme
+        items = {item.split(",")[0]: item for item in nxt.split(" - ")[1:]}
+        # v0.15.1's release preparation: its own item goes once it is
+        # released; what it brought is in the CHANGELOG's entry
+        assert list(items)[:3] == ["v0.15.2", "v0.15.3", "v0.16"]
+        assert "undo a session's changes" in items["v0.15.2"]
+        assert "choose which mentions to keep" in items["v0.15.2"]
+        assert "method" in items["v0.15.3"]
+        assert "the earlier names of the two renamed tools" \
+            in items["v0.15.3"]
+        assert "backup option" in items["v0.15.3"]
+        # the REFI-QDA export is kept (ruling 85, item 2): no removal
+        # announced for it anywhere in the README
+        assert "removed in 0.15" not in readme
+        assert "being withdrawn" not in readme
 
 
 # ===========================================================================
@@ -387,11 +425,14 @@ class TestTheDocumentsOtherPoints:
                 ) in stays
 
     def test_where_the_settings_are(self):
+        # v0.15.1, the small corrections: the restart a change there needs
+        # sits between the two places (tests/test_v0151_small_corrections.py)
         readme = _flat(_read("README.md"))
         assert ("Both names, and whether you also use QualCoder on this "
                 "computer, are set in Claude Desktop's Settings, Extensions, "
-                "Exegete, or elsewhere as INSTALL.md's [Environment "
-                "variables the server reads]") in readme
+                "Exegete (") in readme
+        assert ("or elsewhere as INSTALL.md's [Environment variables the "
+                "server reads]") in readme
 
     def test_the_hidden_name_s_departure_is_named(self):
         tools = _flat(_read("TOOLS.md"))

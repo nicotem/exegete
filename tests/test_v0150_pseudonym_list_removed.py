@@ -326,17 +326,29 @@ class TestNoShippedTextNamesIt:
 
 class TestTheCount:
 
-    def test_full_has_82_tools_and_core_25(self):
-        assert (FULL_TOOLS, CORE_TOOLS) == (82, 25)
+    def test_full_has_79_tools_and_core_27(self):
+        """82 at this piece; 79 since v0.15.1 removed three tools, as
+        announced in 0.14 (tests/test_v0151_removed_tools.py); core 26
+        since v0.15.1, restore_backup joining it, and 27, search_memos
+        joining it (tests/test_v0151_search_memos_core.py)."""
+        assert (FULL_TOOLS, CORE_TOOLS) == (79, 27)
         server._apply_toolset("full")
-        assert len(_listed()) == 82
+        assert len(_listed()) == 79
         server._apply_toolset("core")
-        assert len(_listed()) == 25
+        assert len(_listed()) == 27
 
 
 # ---------------------------------------------------------------------------
 # 9. The documents
 # ---------------------------------------------------------------------------
+
+def _rounded_full():
+    """`full`'s measured size as the documents round it, from the pin
+    test_toolset_modes.py holds to the measurement."""
+    sys.path.insert(0, str(Path(__file__).parent))
+    from test_toolset_modes import TestThePublishedSchemaBudget as Budget
+    return f"{round(Budget.FULL_MEASURED / 1000) * 1000:,}"
+
 
 class TestInstall:
 
@@ -399,12 +411,21 @@ class TestInstall:
 
     def test_the_counts(self):
         install = _flat(_read("INSTALL.md"))
-        assert "On Python 3.13, 4 of `full`'s 82 descriptions" in install
-        assert "`full` (default) registers 82 tools" in install
-        assert ("Exegete offers 82 tools by default, and the serialised "
-                "tool definitions alone measure about 207,000 characters, "
-                "roughly 52k tokens") in install
-        assert "(about 207,000 characters with `full`;" in install
+        # v0.15.1: 79 tools since three were removed, as announced in
+        # 0.14, and the rounded figure held to the measured pin
+        # (test_toolset_modes.py): about 208,000 with create_backup
+        # accepted and ignored, then about 209,000 with audio and video
+        # left out of backups, as the small corrections leave it, then
+        # about 205,000 with the three tools removed, still about
+        # 205,000 with the restore's paragraph on its preview, and about
+        # 206,000 with its sentence on a stale lock file
+        assert "On Python 3.13, 4 of `full`'s 79 descriptions" in install
+        assert "`full` (default) registers 79 tools" in install
+        rounded = _rounded_full()
+        assert ("Exegete offers 79 tools by default, and the serialised "
+                f"tool definitions alone measure about {rounded} characters, "
+                "roughly 51k tokens") in install
+        assert f"(about {rounded} characters with `full`;" in install
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
                 if len(t.description or "") > 4096]
@@ -416,17 +437,19 @@ class TestToolsReadmePrivacy:
 
     def test_tools(self):
         tools = _read("TOOLS.md")
+        # (79 since v0.15.1's removals)
         assert ("extension and when you configure Exegete yourself) "
-                "registers 82 tools,") in tools
+                "registers 79 tools,") in tools
         assert ("(`pseudonymise_source`): replace the names you list, or a "
                 "list you fill in on your own computer (`prepare_names_list`, "
                 "`save_names_list`), as whole words,") in tools
 
     def test_readme(self):
         readme = _read("README.md")
-        assert ("| `full` | 82: all, creating a project and two renamed "
-                "tools' earlier names included | about 207,000 characters, "
-                "52k tokens |") in readme
+        # (79 and 51k tokens since v0.15.1's removals)
+        assert ("| `full` | 79: all, creating a project and two renamed "
+                "tools' earlier names included | about "
+                f"{_rounded_full()} characters, 51k tokens |") in readme
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "
@@ -441,7 +464,11 @@ class TestToolsReadmePrivacy:
         privacy = _read("PRIVACY.md")
         assert ("`get_current_project` reports whether the file is present "
                 "and how many entries it has, never a name. "
-                + PRIVACY_REMOVED + " A names file made before the list last "
+                + PRIVACY_REMOVED
+                # v0.15.1, privacy by audience (the owner, 21 October
+                # 2026): the rule says which of the three things it protects
+                + " This protects the key (\"How your data flows\")."
+                + " A names file made before the list last "
                 "changed can lack some of its entries, which "
                 "`prepare_names_list` says, and entries that cannot be "
                 "written as one line of the file stay in `pseudonyms.json`, "
@@ -458,7 +485,8 @@ class TestToolsReadmePrivacy:
             "file Exegete prepares, so that the names do not pass through "
             "the conversation; an assistant that opens files by itself "
             "could still read that file (\"Files Exegete keeps on your "
-            "computer\").")
+            "computer\"). Filling it in there protects the key (\"How your "
+            "data flows\").")
         # Fix round 1: the next paragraph names its subject
         assert _flat(paragraphs[2]).startswith(
             "For what reaches the AI assistant, the list and "
@@ -540,8 +568,9 @@ class TestChangelog:
                 "separator with it: 1,310 characters fewer in `full`, 1,362 "
                 "on 3.11; `core` did not serve it. No other tool's entry "
                 "changed.") in measured
-        assert (f"the full brief {len(server.read_brief()):,}."
-                ) in measured
+        # 0.15.0's brief, history since v0.15.1's took out "unless the
+        # researcher asks for none" (its own Measured gives 13,211)
+        assert "the full brief 13,225." in measured
 
     def test_the_changes_it_describes_are_the_texts_served(self):
         """The release's account of the import's note and of

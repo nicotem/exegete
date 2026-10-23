@@ -60,7 +60,9 @@ branch at commit 9bddf17f86aa457aff72c3a38dbc10a37f296ad2 unless marked
 October 2026), or given as at the root of QualCoder's repository. "Author", where given, is what QualCoder's file header or
 git history records for those lines; how a git identity maps to a
 person is for the QualCoder project to confirm. "Why" is the reason the
-item was copied.
+item was copied. An entry marked withdrawn keeps its number, so that the
+entries' references to each other stay true; the code it described is no
+longer in Exegete.
 
 
 Routines in the package
@@ -110,17 +112,8 @@ Routines in the package
    would choose, ties included, which needs QualCoder's metric and its
    scan in its order.
 
-6. QualCoder's coding editor span walk (closely ported)
-   Here: src/exegete/pseudonymise.py, SpanMapper._parity.
-   From: code_text.py, lines 5893-5927 (apply_insert and apply_delete),
-   driven by the running offset of lines 5933-5950.
-   Author: Salomon-Mazatlan (a git identity in QualCoder's history, 33
-   of the 35 lines).
-   Why: under the optional overlap policy qualcoder_edit_parity, a coded
-   span moves, shrinks or is deleted exactly as QualCoder's own editor
-   would move, shrink or delete it when a name is deleted and its
-   pseudonym typed in its place; the order of the walk decides the
-   result.
+6. QualCoder's coding editor span walk (closely ported) (withdrawn)
+   Withdrawn in 0.15.1: the code it described was removed.
 
 7. QualCoder's sub-code descendant check (copied verbatim)
    Here: src/exegete/database.py,
@@ -322,7 +315,7 @@ Values in the package
     answers
     Here: src/exegete/database.py, PDF_PROBLEM_MESSAGES and
     QualcoderDatabase.search_files.
-    Here: src/exegete/server.py, DEPRECATED_REFI_EXPORT,
+    Here: src/exegete/server.py, REFI_EXPORT_KNOWN_FAULTS,
     get_project_summary and _opening_in_qualcoder_40.
     From: GUI/ui_main.py, lines 368, 370, 379 and 410; code_pdf.py,
     lines 2018-2020 and 5792; __main__.py, lines 2034-2035.
@@ -351,10 +344,12 @@ a project this server has written. They are restated in this project's
 own code; where the statement is a table or column list, it is the one
 the format dictates.
 
-32. QualCoder 3.8.2's lock file: its name, timeout and content.
+32. QualCoder 3.8.2's lock file: its name, timeout, content and
+    heartbeat interval.
     Here: src/exegete/database.py, QUALCODER_LOCK_FILENAME,
-    QUALCODER_LOCK_TIMEOUT and hold_project_lock.
-    From: 3.8.2 __main__.py, lines 131, 2546-2547 and 2637.
+    QUALCODER_LOCK_TIMEOUT, LOCK_REFRESH_SECONDS, ProjectLock and
+    hold_project_lock.
+    From: 3.8.2 __main__.py, lines 131, 133, 151-159, 2546-2547 and 2637.
 
 33. The names of QualCoder's coder-visibility views, and the four
     tables they show.
@@ -379,12 +374,20 @@ the format dictates.
     From: manage_files.py, lines 615-619, 1429-1434 and 3301-3308
     (3.8.2 manage_files.py, lines 2010-2020).
 
-36. The project folder layout and the project table's "about" marker.
-    Here: src/exegete/database.py, validate_qda_path and
-    QualcoderDatabase._check_version.
-    Here: src/exegete/new_project.py, SUBFOLDERS and about_line.
+36. The project folder layout, the name of QualCoder's AI folder
+    (ai_data) and the project table's "about" marker.
+    Here: src/exegete/database.py, validate_qda_path,
+    QualcoderDatabase._check_version and AI_DATA_FOLDER.
+    Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and
+    about_line.
     From: 3.8.2 __main__.py, lines 306, 2635 and 2700-2702; __main__.py,
-    lines 1767-1776, 1991 and 2011-2015.
+    lines 1767-1776, 1991 and 2011-2015; at the 4.0 tag, __main__.py,
+    lines 2193-2201, 2893 and 2895, ai_vectorstore.py, lines 576-577,
+    and ai_chat.py, lines 1693-1695.
+    Why: Exegete makes an empty ai_data folder when it creates a project
+    or copies one that has none, a named departure (QualCoder's New
+    Project makes only the four folders), so that QualCoder 4.0's first
+    open finds it.
 
 37. The name, entry shape and write format of pseudonyms.json.
     Here: src/exegete/database.py, PSEUDONYMS_JSON_NAME,
@@ -448,8 +451,7 @@ the format dictates.
 43. The names of QualCoder's sidecar files, of its _BKUP_ backup
     folders with the hour stamp in them, and of its settings folder.
     Here: src/exegete/database.py, _QUALCODER_BACKUP_STAMP,
-    backup_time_from_name, QualcoderDatabase.PSEUDONYMISE_SIDECARS and
-    QualcoderDatabase.earlier_name.
+    backup_time_from_name and QualcoderDatabase.PSEUDONYMISE_SIDECARS.
     Here: src/exegete/new_project.py, BACKUP_MARKERS,
     backup_siblings and check_parent_folder.
     Here: src/exegete/server.py, discover_projects,
@@ -485,20 +487,15 @@ the format dictates.
     QualcoderDatabase.documents_clash,
     QualcoderDatabase.documents_clashes and
     QualcoderDatabase.own_stored_names.
-    Here: src/exegete/server.py, _stored_copy_block and
-    _is_a_rename_back.
+    Here: src/exegete/server.py, _stored_copy_block.
     From: __main__.py, lines 1775-1776; manage_files.py, lines 2955 and
     3700-3707; refi.py, lines 2111-2117 (3.8.2 manage_files.py, lines
     2206-2207 and 2358-2366).
 
 47. That a file entry's id can be given again to a later entry, and
     that its date is set when the entry is created and is left as it is
-    by a rename.
-    Here: src/exegete/database.py, QualcoderDatabase.file_name_rows
-    and QualcoderDatabase.earlier_name.
-    From: __main__.py, lines 1790-1792; manage_files.py, lines
-    2600-2608; manage_files.py, line 1502 (3.8.2 __main__.py, lines
-    2350-2352).
+    by a rename (withdrawn).
+    Withdrawn in 0.15.1: the code it described was removed.
 
 48. The note columns of QualCoder's tables, the key each note is
     updated by, and the two kinds of note QualCoder dates when one is
@@ -557,12 +554,8 @@ QualCoder projects.
     52-65.
     Why: named parity cases, computed with QualCoder's function.
 
-53. The editor walk oracle (copied verbatim)
-    Here: tests/test_v012_pseudonymise_engine.py, MasterEditWalk.
-    From: code_text.py, lines 5893-5927.
-    Why: item 6 is checked against QualCoder's walk kept in QualCoder's
-    own shape (every row walked per edit, where item 6 walks every edit
-    per row), not against itself.
+53. The editor walk oracle (copied verbatim) (withdrawn)
+    Withdrawn in 0.15.1: the code it described was removed.
 
 54. The whole-word replacement pattern oracles (copied verbatim)
     Here: tests/test_v012_pseudonymise_engine.py, master_boundary_spans,
@@ -691,7 +684,6 @@ QualCoder projects.
     Here: tests/test_v013_names_left_in_text.py.
     Here: tests/test_v013_one_file_per_call.py.
     Here: tests/test_v013_rename_tools.py.
-    Here: tests/test_v013_rename_backups.py.
     Here: tests/test_v08_attributes.py.
     Here: tests/test_qa_v08_d1d2_attack.py.
     Here: tests/test_v014_create_project.py.
@@ -779,19 +771,19 @@ Documents
 These are in the repository only; no package contains them.
 
 76. A REFI-QDA coded-segment example (copied verbatim)
-    Here: QUALCODER_IMPORT_CAPABILITIES.md.
+    Here: docs/history/QUALCODER_IMPORT_CAPABILITIES.md.
     From: refi.py, lines 1660-1669 (the example in load_codings_for_text's
     docstring).
     Why: to show the REFI-QDA coded-segment format.
 
 77. A case CSV example (copied values)
-    Here: QUALCODER_IMPORT_CAPABILITIES.md.
+    Here: docs/history/QUALCODER_IMPORT_CAPABILITIES.md.
     From: 3.8.2 Examples/cases.csv, lines 1-4, at the root of
     QualCoder's repository.
     Why: to show the case CSV import format.
 
 78. Notes on QualCoder's schema (file-format facts)
-    Here: RESEARCH_SUMMARY.md.
+    Here: docs/history/RESEARCH_SUMMARY.md.
     From: __main__.py, lines 1788-1828; 3.8.2 __main__.py, lines
     2347-2417.
     Why: research notes on QualCoder's tables and columns, in prose.
@@ -848,3 +840,37 @@ LGPL (the maintainer's decision of 6 October 2026, which also switches the
 part on in the Claude Desktop extension). None of these libraries is
 contained in Exegete's package or its Claude Desktop extension file:
 they are fetched from PyPI on the researcher's computer.
+
+With Python 3.11 to 3.14 on Windows x64 and on Linux (x86-64 and Arm),
+the part brings PyMuPDF 2 (from v0.15.1), and with it nine libraries
+more, fetched from PyPI likewise, under these licences as the licence
+files and metadata inside the packages the lock gives those computers
+state them:
+
+- onnxruntime: MIT, Microsoft Corporation; its packages also carry
+  Microsoft's notices for the third-party software they contain
+  (onnxruntime/ThirdPartyNotices.txt).
+- numpy: BSD-3-Clause, NumPy Developers, with parts under 0BSD, MIT,
+  Zlib and CC0-1.0; its packages for Windows and Linux also contain
+  OpenBLAS (BSD-3-Clause) with LAPACK (BSD-3-Clause-Open-MPI) and the
+  GCC runtime libraries (GPL-3.0-or-later with the GCC Runtime Library
+  Exception), and on Linux x86-64 libquadmath (LGPL-2.1-or-later), each
+  named in the package's LICENSE.txt; its packages for Windows also
+  contain Microsoft's C++ runtime library (msvcp140.dll), Microsoft's
+  redistributable code under Microsoft's own terms, which LICENSE.txt
+  does not name.
+- networkx: BSD-3-Clause, NetworkX Developers.
+- psutil: BSD-3-Clause, Jay Loden, Dave Daeschler and Giampaolo Rodola.
+- protobuf: BSD-3-Clause, Google Inc.
+- PyYAML: MIT, Ingy döt Net and Kirill Simonov.
+- tabulate: MIT, Sergey Astanin and contributors.
+- flatbuffers: Apache-2.0, as its metadata says (its package carries no
+  licence file).
+- packaging: Apache-2.0 or BSD-2-Clause, Donald Stufft and individual
+  contributors.
+
+Two packages more, pymupdf-layout and pymupdf4llm, are empty at 2.0:
+their code and its trained models are inside PyMuPDF's own package,
+under PyMuPDF's statement, "Dual Licensed - GNU AFFERO GPL 3.0 or
+Artifex Commercial License". Every other computer takes PyMuPDF 1.x and
+none of these.

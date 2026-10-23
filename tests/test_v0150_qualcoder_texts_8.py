@@ -123,11 +123,13 @@ OLDER_CODE = ("On this project's older schema (from before sub-codes) the "
 OLDER_CATEGORY = (" On this project's older schema (from before sub-codes) "
                   "the source category's memo is removed with its row; the "
                   "mandatory backup keeps a copy.")
+# v0.15.1: cascade removed; the token covers the branch
+# (tests/test_v0151_removed_arguments.py)
 DELETE_BRANCH = (
     "1 sub-code(s) hang under this code. Deleting deletes the whole branch "
-    "and all its codings with one approval: execute_with carries "
-    "cascade=true, so approving this preview approves the branch. Move the "
-    "sub-codes first if they are needed.")
+    "and all its codings with one approval: this preview's token covers "
+    "every code of the branch, so approving this preview approves the "
+    "branch. Move the sub-codes first if they are needed.")
 CYCLE = ("That move would make the category its own ancestor (a cycle), "
          "which would cut it and its codes off from the code tree; "
          "refusing.")
@@ -314,13 +316,13 @@ class TestMergeCategory:
 class TestDeleteCodeWithSubCodes:
 
     def test_one_approval(self, ladder):
-        """Entry 6; the cascade it asks for is unchanged."""
+        """Entry 6; since v0.15.1 its token alone approves the branch."""
         ladder("v17", _with_subcode)
         out = json.loads(server.delete_code(1))
         shown = out["preview"]
         assert shown["note"] == DELETE_BRANCH
         assert shown["subcodes"] == ["Acute"]
-        assert out["execute_with"]["arguments"]["cascade"] is True
+        assert "cascade" not in out["execute_with"]["arguments"]
 
 
 class TestACategoryCycle:

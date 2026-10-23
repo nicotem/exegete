@@ -4,7 +4,7 @@
 it for its tools, without Claude Desktop.
 
     python scripts/smoke_desktop_extension.py PACKAGE.mcpb --into DIR
-        [--uv PATH] [--set KEY=VALUE ...] [--expect-tools N|manifest]
+        [--uv PATH] [--set KEY=VALUE ...] [--expect-tools N|manifest|core]
         [--create NAME] [--offline-restart]
         [--over OLD.mcpb [--emptied]]
 
@@ -142,6 +142,20 @@ async def ask(uv: str, config: dict, folder: Path, create: str = None,
     return seen
 
 
+def expected_tool_names(arg, manifest: dict):
+    """The tools --expect-tools asks for, sorted, or None when it gives a
+    number or nothing: `manifest`, exactly the tools the manifest lists;
+    `core` (v0.15.1), exactly Exegete's smaller set, CORE_TOOLSET,
+    imported only then, from the package installed beside this script
+    (the same commit)."""
+    if arg == "manifest":
+        return sorted(t["name"] for t in manifest.get("tools", []))
+    if arg == "core":
+        from exegete.server import CORE_TOOLSET
+        return sorted(CORE_TOOLSET)
+    return None
+
+
 def install(package: Path, into: Path, uv: str, keep: bool = False) -> tuple:
     """Unpack and `uv sync --quiet`, as the app does; (manifest, folder).
     With `keep`, the folder and its environment are left as they are and
@@ -169,9 +183,10 @@ def main(argv=None) -> int:
     parser.add_argument("--uv", default=shutil.which("uv") or "uv")
     parser.add_argument("--set", action="append", default=[],
                         metavar="KEY=VALUE", help="a setting's value")
-    parser.add_argument("--expect-tools", metavar="N|manifest",
-                        help="a number, or `manifest`: exactly the tools "
-                             "the manifest lists")
+    parser.add_argument("--expect-tools", metavar="N|manifest|core",
+                        help="a number; `manifest`: exactly the tools "
+                             "the manifest lists; or `core`: exactly the "
+                             "smaller set for local models")
     parser.add_argument("--create", metavar="NAME",
                         help="create a project with the default folder")
     parser.add_argument("--offline-restart", action="store_true",
@@ -205,11 +220,12 @@ def main(argv=None) -> int:
             failures.append(
                 f"the update is another extension: "
                 f"{extension_id(earlier)} then {extension_id(manifest)}")
-    if args.expect_tools == "manifest":
-        listed = sorted(t["name"] for t in manifest.get("tools", []))
+    listed = expected_tool_names(args.expect_tools, manifest)
+    if listed is not None:
         if seen["tool_names"] != listed:
             failures.append(
-                f"the server's tools are not the manifest's: missing "
+                f"the server's tools are not those --expect-tools "
+                f"{args.expect_tools} asks for: missing "
                 f"{sorted(set(listed) - set(seen['tool_names']))}, extra "
                 f"{sorted(set(seen['tool_names']) - set(listed))}")
     elif args.expect_tools is not None and \

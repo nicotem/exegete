@@ -288,6 +288,22 @@ def _notice_entries():
     return entries
 
 
+def _notice_entry_texts():
+    """{entry number: the entry's text, its lines joined by spaces}."""
+    lines = (REPO / "NOTICE").read_text(encoding="utf-8").splitlines()
+    texts, current = {}, None
+    for line in lines:
+        opened = _ENTRY.match(line)
+        if opened:
+            current = int(opened.group(1))
+            texts[current] = []
+        elif not line.strip() or not line.startswith(" "):
+            current = None
+        if current is not None:
+            texts[current].append(line.strip())
+    return {number: " ".join(parts) for number, parts in texts.items()}
+
+
 def _defined_names(path):
     """Every function, class and module or class level name in a .py
     file, by qualified name ("Class.method", "Class.NAME")."""
@@ -323,7 +339,24 @@ def _defined_names(path):
 # entry dropped, the rest renumbered over it, or a Here line changed
 # fails the test until this snapshot is edited in the same change, so
 # that no item leaves NOTICE by accident.
+# v0.15.1, the removals of arguments, part two: rename_file no longer
+# reads the project's backups, so QualcoderDatabase.earlier_name and
+# server._is_a_rename_back are gone, leaving entries 43 and 46 with their
+# other places, entry 47 withdrawn (file_name_rows no longer reads the
+# date, which only the backup reader compared), and entry 69 without
+# tests/test_v013_rename_backups.py, which tested that reader and went
+# with it.
+# v0.15.1, the removals of arguments, part three: pseudonymise_source's
+# overlap policy qualcoder_edit_parity went, and with it the walk it
+# ran (SpanMapper._parity) and the oracle that checked the walk
+# (MasterEditWalk), so entries 6 and 53 are withdrawn.
 NOTICE_ENTRIES = 81             # 0.14.3: document import, 79-81
+# Entries withdrawn in place (v0.15.1): the number and the title stay,
+# with "(withdrawn)", so that the entries' references to each other stay
+# true; the entry holds one line and no Here line.
+NOTICE_WITHDRAWN = {6, 47, 53}
+NOTICE_WITHDRAWN_LINE = (
+    "Withdrawn in 0.15.1: the code it described was removed.")
 NOTICE_HERE = (
     (1, "src/exegete/memo_privacy.py", "PERSONAL_NOTE_MARK",
      "_SEPARATOR_CHARS", "split_public_private_memo", "extract_ai_memo",
@@ -332,7 +365,6 @@ NOTICE_HERE = (
     (3, "src/exegete/coder_comparison.py", "statistics"),
     (4, "src/exegete/coder_comparison.py", "qualcoder_report_values"),
     (5, "src/exegete/database.py", "snap_to_palette"),
-    (6, "src/exegete/pseudonymise.py", "SpanMapper._parity"),
     (7, "src/exegete/database.py",
      "QualcoderDatabase.code_is_descendant"),
     (8, "src/exegete/database.py", "QualcoderDatabase.get_branch_cids"),
@@ -374,12 +406,13 @@ NOTICE_HERE = (
      "_stored_copy_block"),
     (30, "src/exegete/database.py", "PDF_PROBLEM_MESSAGES",
      "QualcoderDatabase.search_files"),
-    (30, "src/exegete/server.py", "DEPRECATED_REFI_EXPORT",
+    (30, "src/exegete/server.py", "REFI_EXPORT_KNOWN_FAULTS",
      "get_project_summary", "_opening_in_qualcoder_40"),
     (31, "src/exegete/reading_copy.py", "QUALCODER_WHITE_TEXT",
      "text_colour"),
     (32, "src/exegete/database.py", "QUALCODER_LOCK_FILENAME",
-     "QUALCODER_LOCK_TIMEOUT", "hold_project_lock"),
+     "QUALCODER_LOCK_TIMEOUT", "LOCK_REFRESH_SECONDS", "ProjectLock",
+     "hold_project_lock"),
     (33, "src/exegete/database.py", "VISIBILITY_VIEWS",
      "QualcoderDatabase.PSEUDONYMISE_MEMO_OWNED"),
     (34, "src/exegete/database.py", "SchemaCapabilities",
@@ -390,8 +423,9 @@ NOTICE_HERE = (
     (35, "src/exegete/server.py", "_stored_copy_block",
      "stored_file_name"),
     (36, "src/exegete/database.py", "validate_qda_path",
-     "QualcoderDatabase._check_version"),
-    (36, "src/exegete/new_project.py", "SUBFOLDERS", "about_line"),
+     "QualcoderDatabase._check_version", "AI_DATA_FOLDER"),
+    (36, "src/exegete/new_project.py", "SUBFOLDERS", "CREATED_FOLDERS",
+     "about_line"),
     (37, "src/exegete/database.py", "PSEUDONYMS_JSON_NAME",
      "read_project_pseudonyms", "read_project_pseudonyms_with_raw"),
     (37, "src/exegete/server.py", "_pseudonyms_json_merge",
@@ -420,8 +454,7 @@ NOTICE_HERE = (
      "QualcoderDatabase._pseudonymise_rows",
      "QualcoderDatabase.add_attribute_type"),
     (43, "src/exegete/database.py", "_QUALCODER_BACKUP_STAMP",
-     "backup_time_from_name", "QualcoderDatabase.PSEUDONYMISE_SIDECARS",
-     "QualcoderDatabase.earlier_name"),
+     "backup_time_from_name", "QualcoderDatabase.PSEUDONYMISE_SIDECARS"),
     (43, "src/exegete/new_project.py", "BACKUP_MARKERS",
      "backup_siblings", "check_parent_folder"),
     (43, "src/exegete/server.py", "discover_projects",
@@ -438,10 +471,7 @@ NOTICE_HERE = (
      "QualcoderDatabase.documents_clash",
      "QualcoderDatabase.documents_clashes",
      "QualcoderDatabase.own_stored_names"),
-    (46, "src/exegete/server.py", "_stored_copy_block",
-     "_is_a_rename_back"),
-    (47, "src/exegete/database.py", "QualcoderDatabase.file_name_rows",
-     "QualcoderDatabase.earlier_name"),
+    (46, "src/exegete/server.py", "_stored_copy_block"),
     (48, "src/exegete/database.py",
      "QualcoderDatabase.PSEUDONYMISE_MEMO_FIELDS",
      "QualcoderDatabase.PSEUDONYMISE_MEMO_KEYS",
@@ -457,7 +487,6 @@ NOTICE_HERE = (
     (51, "tests/test_v012_palette_idempotent.py", "upstream_color_matcher"),
     (52, "tests/test_v012_palette_idempotent.py",
      "TestPaletteParity.test_named_cases"),
-    (53, "tests/test_v012_pseudonymise_engine.py", "MasterEditWalk"),
     (54, "tests/test_v012_pseudonymise_engine.py", "master_boundary_spans",
      "legacy_boundary_spans",
      "TestNonChaining.test_why_that_mapping_is_refused_although_one_pass_survives_it",
@@ -509,7 +538,6 @@ NOTICE_HERE = (
     (69, "tests/test_v013_names_left_in_text.py"),
     (69, "tests/test_v013_one_file_per_call.py"),
     (69, "tests/test_v013_rename_tools.py"),
-    (69, "tests/test_v013_rename_backups.py"),
     (69, "tests/test_v08_attributes.py"),
     (69, "tests/test_qa_v08_d1d2_attack.py"),
     (69, "tests/test_v014_create_project.py"),
@@ -529,9 +557,9 @@ NOTICE_HERE = (
      "TestSavingTheMappingIntoPseudonymsJson.test_qualcoder_applying_the_written_file_gives_this_runs_text"),
     (75, "tests/test_v012_pseudonymise_tool.py",
      "TestSavingTheMappingIntoPseudonymsJson.test_pseudonyms_json_is_byte_identical_to_qualcoders_own_write"),
-    (76, "QUALCODER_IMPORT_CAPABILITIES.md"),
-    (77, "QUALCODER_IMPORT_CAPABILITIES.md"),
-    (78, "RESEARCH_SUMMARY.md"),
+    (76, "docs/history/QUALCODER_IMPORT_CAPABILITIES.md"),
+    (77, "docs/history/QUALCODER_IMPORT_CAPABILITIES.md"),
+    (78, "docs/history/RESEARCH_SUMMARY.md"),
     (79, "src/exegete/doc_readers.py", "getdocumenttext"),
     (80, "src/exegete/doc_readers.py", "_ODT_REPLACEMENTS",
      "_ODT_TAG_STARTS", "_ODT_ENTITIES", "odt_recipe"),
@@ -546,7 +574,19 @@ class TestNoticeStaysTrue:
         entries = _notice_entries()
         assert sorted(entries) == list(range(1, len(entries) + 1)), \
             sorted(entries)
-        assert not [n for n, where in entries.items() if not where]
+        # but an entry withdrawn in place, which holds the one line
+        assert {n for n, where in entries.items() if not where} == \
+            NOTICE_WITHDRAWN
+        texts = _notice_entry_texts()
+        for number in NOTICE_WITHDRAWN:
+            # the title, "(withdrawn)" after it, then the one line
+            withdrawn = re.fullmatch(r"\d+\. (.+?) \(withdrawn\)\.? (.+)",
+                                     texts[number])
+            assert withdrawn, (number, texts[number])
+            assert withdrawn.group(2) == NOTICE_WITHDRAWN_LINE, number
+            assert not any(label in texts[number] for label in _LABELS)
+        assert not [n for n, text in texts.items()
+                    if n not in NOTICE_WITHDRAWN and "withdrawn" in text]
 
     def test_every_file_and_name_it_gives_exists(self):
         stale = []

@@ -39,19 +39,18 @@ footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
 
 <h1>Install or update Exegete</h1>
 
-<p>The newest version is <strong>0.15.0-alpha</strong>, from 20 October 2026.</p>
+<p>The newest version is <strong>0.15.1-alpha</strong>, from 23 October 2026.</p>
 
-<p><strong>What's new:</strong> Exegete can now take your coder name and the
-AI's from its settings, reads each document once, so an import usually takes
-seconds, and lets you fill in the names list on your own computer, so the names
-do not pass through the conversation. Its answers no longer assume that you use
-QualCoder.
-<a href="https://github.com/nicotem/exegete/releases/tag/v0.15.0-alpha">The full
-notes for 0.15.0-alpha</a>, whose "Upgrading" part says what changes for
+<p><strong>What's new:</strong> Exegete now takes one backup before every
+change to a project's database, without its audio and video, and a restore's
+preview says what it would bring back. A file not saved as UTF-8 can be read in
+the character set you choose, and two settings are now switches.
+<a href="https://github.com/nicotem/exegete/releases/tag/v0.15.1-alpha">The full
+notes for 0.15.1-alpha</a>, whose "Upgrading" part says what changes for
 you.</p>
 
-<p><a class="download" href="https://github.com/nicotem/exegete/releases/download/v0.15.0-alpha/exegete-0.15.0-alpha.mcpb">Download Exegete 0.15.0-alpha for Claude Desktop</a></p>
-<p class="note">The file is called exegete-0.15.0-alpha.mcpb. Every version
+<p><a class="download" href="https://github.com/nicotem/exegete/releases/download/v0.15.1-alpha/exegete-0.15.1-alpha.mcpb">Download Exegete 0.15.1-alpha for Claude Desktop</a></p>
+<p class="note">The file is called exegete-0.15.1-alpha.mcpb. Every version
 before 1.0 is marked "alpha", meaning an early version; the newest alpha is the
 one to use.</p>
 
@@ -68,7 +67,7 @@ conversations.</p>
 <ol>
 <li><strong>Download.</strong> Click the button above. When it has finished,
 your browser shows the file in its list of downloads. Its name starts with
-exegete-0.15.0-alpha.</li>
+exegete-0.15.1-alpha.</li>
 <li><strong>Open it.</strong> Click the file there, or double-click it in your
 Downloads folder. Claude Desktop opens and shows Exegete, with the same
 reminder as the first time to install only extensions you trust. Click
@@ -88,11 +87,18 @@ Wait until the Claude Desktop icon has gone, then open the app again. If you
 are not sure it has quit, restarting the computer always works.</li>
 <li><strong>Check.</strong> In a new conversation, ask Claude: "Is Exegete up
 to date?". If Claude asks whether it may use Exegete, allow it. It should
-answer that you have 0.15.0-alpha. The assistant may need to open your project
+answer that you have 0.15.1-alpha. The assistant may need to open your project
 again.</li>
 </ol>
 
 <p>Use Exegete on more than one computer? Update it on each one.</p>
+
+<p><strong>New in 0.15.1.</strong> Three tools announced as going are removed
+(the full notes name each and say what replaces it), and a choice Claude
+Desktop saved for one of them no longer applies. The settings gain two
+switches, "Limit Exegete to its small tool set" and "I use QualCoder on
+this computer", both off after the update; the settings you chose stay as they
+were. After changing a setting, quit Claude Desktop and open it again.</p>
 
 <p><strong>Two tools have new names in 0.15.0.</strong>
 <code>analyze_for_coding</code> is now <code>start_coding_session</code>, and
@@ -111,7 +117,7 @@ it.</strong> Open Claude Desktop's Settings, then Extensions, then Advanced
 settings, click <strong>Install Extension...</strong>, and choose the
 file.</li>
 <li><strong>There are several Exegete files in my Downloads folder.</strong>
-Use the one with 0.15.0-alpha in its name.</li>
+Use the one with 0.15.1-alpha in its name.</li>
 <li><strong>Claude Desktop refuses the extension.</strong> The extension is not
 signed by its developer, and a computer or Claude account managed by your
 university or employer may refuse it. The decision is your IT team's: you
@@ -161,6 +167,15 @@ means, see
 "PDF and EPUB: the optional part"</a>. Without it, Exegete brings in the other
 documents and says when it cannot read a PDF or an EPUB.</p>
 
+<p>New in 0.15.1 on these routes: the three tools above are removed, and a
+call that passes an argument removed with them (<code>cascade</code>,
+<code>owner</code>, <code>search_memo</code>) is refused, naming what replaces
+it; two settings, <code>EXEGETE_SMALL_TOOLSET</code> and
+<code>EXEGETE_I_USE_QUALCODER</code>, are switches (<code>on</code>,
+<code>true</code> or <code>1</code>). With Python 3.11 to 3.14 on Windows x64,
+and on Linux on x86-64 and Arm, the optional part for PDF and EPUB now brings
+PyMuPDF 2; the full notes say what that means on Windows.</p>
+
 <p>New in 0.15.0 on these routes: the tool set <code>full</code>, the default,
 now includes creating a project; new projects go, as before, to
 <code>~/Documents/Exegete projects</code> unless <code>EXEGETE_WORKSPACE</code>
@@ -170,15 +185,15 @@ list the new settings, such as <code>EXEGETE_CODER_NAME</code>.</p>
 
 <h3>pip, in a virtual environment</h3>
 <p>Run the environment's own Python, for example:</p>
-<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "exegete==0.15.0a0"</code></pre>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "exegete==0.15.1a0"</code></pre>
 <p>In PowerShell on Windows:</p>
-<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "exegete==0.15.0a0"</code></pre>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "exegete==0.15.1a0"</code></pre>
 
 <h3>pipx</h3>
-<pre><code>pipx install --force "exegete==0.15.0a0"</code></pre>
+<pre><code>pipx install --force "exegete==0.15.1a0"</code></pre>
 
 <h3>uv tool</h3>
-<pre><code>uv tool install --force "exegete==0.15.0a0"</code></pre>
+<pre><code>uv tool install --force "exegete==0.15.1a0"</code></pre>
 
 <h3>uvx</h3>
 <p>uvx keeps running the version it fetched first until the command names
@@ -186,7 +201,7 @@ another, so there is nothing to type in Terminal. In the app's settings for
 Exegete (its entry for MCP servers), where the command is uvx, change
 <code>exegete</code> (with any version after an @), or
 <code>qualcoder-mcp</code>, Exegete's earlier name, to
-<code>exegete@0.15.0a0</code>. The app fetches the new version the next time it
+<code>exegete@0.15.1a0</code>. The app fetches the new version the next time it
 starts, which needs the internet that once.</p>
 
 <h3>A copy of the source (git)</h3>
@@ -195,21 +210,21 @@ on your branch, and refuses if the copy has changes of its own), then install
 it again with the copy's own Python:</p>
 <pre><code>cd "$HOME/Documents/exegete"
 git fetch --tags
-git merge --ff-only v0.15.0-alpha
+git merge --ff-only v0.15.1-alpha
 "$HOME/Documents/exegete/venv/bin/python" -m pip install -e .</code></pre>
 <p>In PowerShell on Windows:</p>
 <pre><code>cd "$HOME\Documents\exegete"
 git fetch --tags
-git merge --ff-only v0.15.0-alpha
+git merge --ff-only v0.15.1-alpha
 &amp; "$HOME\Documents\exegete\venv\Scripts\python.exe" -m pip install -e .</code></pre>
 <p>Use your own folder if the copy is elsewhere.</p>
 
 <h3>Under the earlier name, qualcoder-mcp</h3>
 <p>In a virtual environment, update both names together, with the
 environment's own Python:</p>
-<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "qualcoder-mcp==0.15.0a0" "exegete==0.15.0a0"</code></pre>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "qualcoder-mcp==0.15.1a0" "exegete==0.15.1a0"</code></pre>
 <p>In PowerShell on Windows:</p>
-<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "qualcoder-mcp==0.15.0a0" "exegete==0.15.0a0"</code></pre>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "qualcoder-mcp==0.15.1a0" "exegete==0.15.1a0"</code></pre>
 <p>With pipx or uv tool, move to the new name first:
 <a href="https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp">INSTALL.md,
 "Coming from qualcoder-mcp"</a>, has the steps. The earlier name's last release

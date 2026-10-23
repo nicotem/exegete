@@ -173,6 +173,11 @@
   }
  },
  "qualcoder_commit": "b95e021c93eb29a646ee7a8de196c281b7890ddf",
+ "same_text_with": {
+  "pymupdf": [
+   "2.0"
+  ]
+ },
  "versions": {
   "charset-normalizer": "3.5.2",
   "ebooklib": "0.20",

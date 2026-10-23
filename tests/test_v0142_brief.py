@@ -291,10 +291,13 @@ class TestTheSecondDoors:
         text = _resource("exegete://guidance/brief")
         assert text == server._mark_unregistered(server.BRIEF_FULL)
         mark = server.NOT_IN_THIS_TOOL_SET
-        for name in ("restore_backup", "compare_coders"):
+        # v0.15.1: restore_backup is in `core`, so export_codebook stands
+        # for the tools it lacks
+        for name in ("export_codebook", "compare_coders"):
             assert f"{name}{mark}" in text
         assert f"explain_ai_coding_tools(){mark}" in text
         assert f"read_brief{mark}" not in text
+        assert f"restore_backup{mark}" not in text
 
 
 # ---------------------------------------------------------------------------
@@ -520,8 +523,12 @@ class TestTheSizes:
     # v0.15.0 removed read_pseudonym_list (the files design, piece 5), so
     # the tools held to 0.14.2's figure are the others: its entry as
     # 0.14.2 served it, 1,234 characters, and its separator are left out
-    # of `full`'s (197,586 before); `core` never served it.
-    NOW_0142 = {"full": 196_350, "core": 64_687}
+    # of `full`'s (197,586 before); `core` never served it. v0.15.1
+    # removed export_code_report, cleanup_old_sessions and
+    # merge_proposals, as announced in 0.14: their entries as 0.14.2
+    # served them (1,846, 1,111 and 1,138) and their separators, 4,101
+    # characters, leave `full` (196,350 before); `core` never served them.
+    NOW_0142 = {"full": 192_249, "core": 64_687}
     # The same tools as this tree serves them: v0.14.3
     # lengthens two, read_file_with_codings (the `start` and
     # `without_codes` arguments) and import_text_file (its pointer to
@@ -579,7 +586,59 @@ class TestTheSizes:
     # so every other tool is still held to 0.14.2's figure. The files
     # design, piece 5, removes read_pseudonym_list: its entry, 1,308
     # characters here, and its separator leave `full` (197,026 before).
-    NOW = {"full": 195_716, "core": 64_942}
+    # v0.15.1, the ignored argument: create_backup's Args line in the 22
+    # tools that take it, its schema's default now null, and the texts
+    # that offered to skip a backup, in apply_codings, delete_coding,
+    # delete_annotation, import_text_file, list_backups and
+    # pseudonymise_source (1,577 characters more in `full`, 225 in
+    # `core`; tests/test_v0142_description_cut.py pins their words).
+    # v0.15.1, the stale texts: export_refi_qda's sentence names its known
+    # faults instead of its removal (ruling 85, item 2), 126 characters
+    # more in `full`; `core` does not serve the tool.
+    # v0.15.1, audio and video left out of backups: list_backups,
+    # prune_backups and restore_backup name the two folders; all three
+    # are in the tables below already (100 characters more in `full`,
+    # 36 in `core`, where list_backups alone is served). Its fix round 2:
+    # list_backups and prune_backups say so of the backups made from
+    # 0.15.1 on, and copy_project_to_workspace that it keeps the two
+    # folders (500 characters more in `full`, 172 in `core`, which serves
+    # list_backups and copy_project_to_workspace).
+    # v0.15.1, the small corrections: create_project's and
+    # copy_project_to_workspace's descriptions name the empty ai_data
+    # folder Exegete makes (218 characters more in `full`, 89 in `core`,
+    # which serves the copy alone; tests/test_v0151_small_corrections.py).
+    # v0.15.1, the removals: export_code_report, cleanup_old_sessions and
+    # merge_proposals leave `full`, their entries and separators 4,107
+    # characters here (198,237 before); explain_ai_coding_tools loses the
+    # help topics' deprecation sentence (166 fewer) and propose_codes says
+    # how to merge two proposals now (172 more).
+    # v0.15.1, the restore: restore_backup's paragraph on its preview and
+    # its lock file (399 characters more in `full`); in `core`, which it
+    # joins and where it is left out here as a tool added to the set
+    # after 0.14.2 (ADDED_TO_CORE_AFTER_0142), list_backups and
+    # delete_coding no longer mark it (132 characters fewer). Its fix
+    # round 1: the paragraph says that over a stale lock file none is
+    # held (73 characters more in `full`).
+    # v0.15.1, the removed arguments: delete_code, apply_codings,
+    # import_text_file and search_files lose cascade, owner and
+    # search_memo with their sentences (1,481 characters fewer in `full`
+    # from 194,608; 771 in `core` from 65,332;
+    # tests/test_v0151_removed_arguments.py).
+    # v0.15.1, attributes on journal entries and the rename back removed:
+    # create_attribute_type, set_attribute and rename_file lose their
+    # deprecation sentences (683 characters fewer in `full`, from
+    # 193,127; none in `core`, which serves none of the three;
+    # tests/test_v0151_journal_and_rename_back.py).
+    # v0.15.1, the overlap policy qualcoder_edit_parity removed:
+    # pseudonymise_source loses its deprecation sentence and the policy's
+    # paragraph among its arguments (700 characters fewer in `full`, from
+    # 192,444; `core` does not serve the tool;
+    # tests/test_v0151_one_overlap_policy.py).
+    # v0.15.1, search_memos in `core`: left out here as a tool added to
+    # the set after 0.14.2 (ADDED_TO_CORE_AFTER_0142); search_files'
+    # description there no longer marks it (66 characters fewer in
+    # `core`, from 64,561; tests/test_v0151_search_memos_core.py).
+    NOW = {"full": 191_744, "core": 64_495}
     CHANGED_AFTER_0142 = {"read_file_with_codings": 2_275,
                           "import_text_file": 4_553,
                           "copy_project_to_workspace": 2_232,
@@ -605,11 +664,10 @@ class TestTheSizes:
                           "set_project_ai_coder_name": 2_564,
                           # the coder names, piece 3
                           "export_refi_qda": 2_584,
-                          # the whole-branch review, round 1: the
-                          # removals in v0.15.1
-                          "cleanup_old_sessions": 1_111,
-                          "export_code_report": 1_846,
-                          "merge_proposals": 1_138,
+                          # (the whole-branch review, round 1, changed
+                          # three tools v0.15.1 then removed:
+                          # cleanup_old_sessions, export_code_report and
+                          # merge_proposals, left out of NOW_0142 above)
                           # not presuming QualCoder, piece 5
                           "add_annotation": 2_233,
                           "add_journal_entry": 1_534,
@@ -661,7 +719,9 @@ class TestTheSizes:
             # stay 0.14.2's (0.14.3: import_documents and
             # open_file_for_reading)
             payload = [e for e in payload
-                       if e["name"] not in ADDED_AFTER_0142]
+                       if e["name"] not in ADDED_AFTER_0142
+                       and not (mode == "core"
+                                and e["name"] in ADDED_TO_CORE_AFTER_0142)]
             others = [e for e in payload if e["name"] not in self.NEW]
             new = {e["name"]: e for e in payload if e["name"] in self.NEW}
             assert set(new) == {name for name, (_, sets) in self.NEW.items()
@@ -691,6 +751,9 @@ ADDED_AFTER_0142 = ("import_documents", "open_file_for_reading",
                     "analyze_for_coding", "analyze_file_with_coding",
                     "set_project_coder_name", "prepare_names_list",
                     "save_names_list")
+# Tools that joined `core` after 0.14.2, left out of its figure likewise
+# (v0.15.1: restore_backup and search_memos)
+ADDED_TO_CORE_AFTER_0142 = ("restore_backup", "search_memos")
 
 
 # ---------------------------------------------------------------------------

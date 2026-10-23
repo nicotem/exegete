@@ -177,10 +177,17 @@ class TestS31CreateAttributeType:
     def test_journal_domain_supported(self, setup_server,
                                       qualcoder_db_path):
         """'journal' is a REAL domain (§1) — must not be coerced into
-        case/file or rejected."""
+        case/file. v0.15.1: the tool refuses it, as announced
+        (tests/test_v0151_journal_and_rename_back.py), and the database
+        method still takes it."""
         out = json.loads(server.create_attribute_type(
             "Phase", "journal", create_backup=False))
-        assert out["success"] is True
+        assert out["error"] == server.JOURNAL_ATTRIBUTES_REMOVED
+        assert not _rows(qualcoder_db_path,
+                         "SELECT * FROM attribute WHERE name='Phase'")
+        with server.QualcoderDatabase(qualcoder_db_path,
+                                      read_only=False) as wdb:
+            wdb.add_attribute_type("Phase", "TestCoder", "journal")
         ph = _rows(qualcoder_db_path,
                    "SELECT id, attr_type FROM attribute WHERE name='Phase'")
         assert len(ph) == 1
@@ -278,11 +285,22 @@ class TestS41SetAttribute:
         assert after["date"] != "2020-01-01"
 
     def test_journal_set(self, setup_server, qualcoder_db_path):
-        json.loads(server.create_attribute_type("Phase", "journal",
-                                                create_backup=False))
+        # v0.15.1: the tool refuses a journal entry, as announced
+        # (tests/test_v0151_journal_and_rename_back.py); the database
+        # method still sets one, which this pins
+        with server.QualcoderDatabase(qualcoder_db_path,
+                                      read_only=False) as wdb:
+            wdb.add_attribute_type("Phase", "TestCoder", "journal")
         out = json.loads(server.set_attribute("journal", 1, "Phase",
                                               "pilot", create_backup=False))
-        assert out["attribute"]["target_name"] == "Entry 1"
+        assert out["error"] == server.JOURNAL_ATTRIBUTES_REMOVED
+        assert _rows(qualcoder_db_path, "SELECT value FROM attribute "
+                     "WHERE name='Phase'")[0]["value"] == ""
+        with server.QualcoderDatabase(qualcoder_db_path,
+                                      read_only=False) as wdb:
+            out = wdb.set_attribute_value("journal", 1, "Phase", "pilot",
+                                          "TestCoder")
+        assert out["target_name"] == "Entry 1"
         row = _rows(qualcoder_db_path,
                     "SELECT value FROM attribute WHERE name='Phase'")[0]
         assert row["value"] == "pilot"

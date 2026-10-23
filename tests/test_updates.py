@@ -337,7 +337,10 @@ class TestTheSetting:
             # the researcher's own coder name
             "coder_name": "EXEGETE_CODER_NAME",
             # and "Do you also use QualCoder on this computer?"
-            "uses_qualcoder": "EXEGETE_USES_QUALCODER"}
+            "uses_qualcoder": "EXEGETE_USES_QUALCODER",
+            # v0.15.1: the extension's two switches
+            "small_toolset": "EXEGETE_SMALL_TOOLSET",
+            "i_use_qualcoder": "EXEGETE_I_USE_QUALCODER"}
         assert not set(names.NEW_ONLY_SETTINGS.values()) & {
             n for pair in names.SETTINGS.values() for n in pair}
 
@@ -1168,11 +1171,18 @@ def test_install_says_the_extension_tells_of_new_versions():
     updating = section[section.index("**Updating**"):
                        section.index("**Removing**")]
     assert "does not look for new versions" not in section
-    assert updating == (
+    assert updating.startswith(
         "**Updating**: download the newer `.mcpb` and install it the same "
         "way. Exegete asks Claude to tell you when a newer version is "
-        "out, unless you switch that off (the third setting, above); with "
-        "a GitHub account, Watch, then Custom, then Releases, on the "
-        "repository's page also sends you a notice of each. ")
+        "out, unless you switch that off")
+    # the setting named by its title in the manifest, never by its place
+    # (the facts check, tests/test_v0151_facts.py, holds every quoted
+    # title and every setting named by place)
+    title = manifest["user_config"]["update_check"]["title"]
+    assert f'(the setting "{title}", above)' in updating
+    # (the staleness audit of 20 October 2026: no setting named by its
+    # place, since 0.15.0 put three settings before this one)
+    assert not re.search(r"the (?:first|second|third|fourth|fifth|sixth) "
+                         r"setting", section)
     assert "**Tell me when a new version is out**: on unless you switch " \
            "it off." in section

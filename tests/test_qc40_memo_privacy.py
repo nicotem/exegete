@@ -834,7 +834,9 @@ class TestReadPathsStrip:
             (server.get_coded_segments, (1,), {}),
             (server.search_coded_text, ("stressed",), {}),
             (server.read_file_with_codings, (1,), {}),
-            (server.export_code_report, ("Stress",), {}),
+            # (v0.15.1: export_code_report removed; the codes' memos by
+            # name, read the same way)
+            (server.search_coded_text, ("stressed",), {"code_name": "Stress"}),
             (server.list_attribute_types, (), {}),
             (server.get_case_attributes, (1,), {}),
             (server.get_file_attributes, (1,), {}),
@@ -979,14 +981,18 @@ class TestSearchDoesNotLeakPrivateZone:
 
     def test_search_files_memo_private_only_match_suppressed(
             self, private_everywhere):
+        # v0.15.1: search_files no longer reads memos (search_memo
+        # removed, as announced); a private suffix is not found there
         out = json.loads(server.search_files(
-            SECRET, search_filename=False, search_memo=True))
-        assert out["total_matches"] == 0
+            SECRET, search_filename=True, search_content=True))
+        assert out["total_matches"] == 0 and out["results"] == []
 
     def test_search_files_memo_preview_is_public(self, private_everywhere):
-        out = json.loads(server.search_files(
-            "file", search_filename=False, search_memo=True))
-        assert out["total_matches"] == 1
+        # search_memos, which searches file memos since v0.15.1, shows
+        # the file memo's public part only
+        out = json.loads(server.search_memos("file"))
+        files = [r for r in out["results"] if r["type"] == "file"]
+        assert len(files) == 1
         _assert_clean(json.dumps(out))
 
 
@@ -1032,14 +1038,13 @@ class TestExportDescriptionsDisclose:
             assert "Full memos on export" in doc, tool.__name__
             assert "#####" in doc, tool.__name__
 
-    def test_export_code_report_discloses_strip_and_no_override(self):
-        # It returns into the conversation and strips; the description
-        # must say so, symmetrically with its file-export siblings
-        # (QA round 1, F4)
-        doc = server.export_code_report.__doc__ or ""
-        assert "#####" in doc
-        assert "public part only" in doc
-        assert "no coder override" in doc
+    def test_the_report_that_stripped_is_gone(self):
+        # export_code_report returned into the conversation and stripped,
+        # and said so (QA round 1, F4); v0.15.1 removed it, as announced
+        # in 0.14, so no text speaks of it as a read that strips
+        assert not hasattr(server, "export_code_report")
+        for tool in server.mcp._tool_manager._tools.values():
+            assert "export_code_report" not in (tool.description or "")
 
 
 # =============================================================================
@@ -1052,10 +1057,12 @@ def _backups(project_path):
 
 
 class TestPrivateNoteDeleteGuards:
-    """(a) a row carrying a private note is always backed up before a
-    delete, whatever create_backup says; (b) the delete is refused without
+    """(a) a row carrying a private note is backed up before a delete,
+    whatever create_backup says, as every row is since v0.15.1 (Exegete
+    takes a backup before every change, so the note that said so for
+    these rows is gone); (b) the delete is refused without
     confirm_private_note_deletion, with a content-free refusal; rows
-    without a private note delete exactly as before. A memo rule, not a
+    without a private note delete as before. A memo rule, not a
     visibility rule: pre-4.0 and 4.0 projects behave identically."""
 
     def _annotation(self, qualcoder_db_path, memo):
@@ -1095,7 +1102,7 @@ class TestPrivateNoteDeleteGuards:
         assert out["deleted_coding"]["memo"] == "pub"       # stripped echo
         assert out["deleted_coding"]["private_note_removed"] is True
         assert "backup_path" in out
-        assert "create_backup=false does not apply" in out["backup_note"]
+        assert "backup_note" not in out
         assert len(_backups(qualcoder_db_path)) == 1
         assert _row(qualcoder_db_path,
                     "SELECT COUNT(*) AS n FROM code_text WHERE ctid = 1"
@@ -1118,24 +1125,25 @@ class TestPrivateNoteDeleteGuards:
         assert out["success"] is True and out["deleted"] is True
         assert SECRET not in raw
         assert out["private_note_removed"] is True
-        assert "backup_path" in out and "backup_note" in out
+        assert "backup_path" in out and "backup_note" not in out
         assert len(_backups(qualcoder_db_path)) == 1
 
     def test_row_without_private_note_deletes_as_before(
             self, setup_server, qualcoder_db_path):
-        # ctid 2 has an empty memo: no override, no forced backup
+        # ctid 2 has an empty memo: no override; one backup, as before
+        # every change (v0.15.1)
         out = json.loads(server.delete_coding(2, create_backup=False))
         assert out["success"] is True
-        assert "backup_path" not in out and "backup_note" not in out
+        assert "backup_path" in out and "backup_note" not in out
         assert "private_note_removed" not in out["deleted_coding"]
-        assert _backups(qualcoder_db_path) == []
+        assert len(_backups(qualcoder_db_path)) == 1
         anid = self._annotation(qualcoder_db_path, "plain")
         out = json.loads(server.delete_annotation(anid, create_backup=False))
         assert out["success"] is True and out["deleted"] is True
-        assert "backup_path" not in out
-        assert _backups(qualcoder_db_path) == []
+        assert "backup_path" in out and "backup_note" not in out
+        assert len(_backups(qualcoder_db_path)) == 2
 
-    def test_create_backup_true_on_private_row_states_the_backup(
+    def test_create_backup_true_on_private_row_takes_one_backup(
             self, setup_server, qualcoder_db_path):
         _exec(qualcoder_db_path,
               "UPDATE code_text SET memo = ? WHERE ctid = 1",
@@ -1145,8 +1153,8 @@ class TestPrivateNoteDeleteGuards:
             1, confirm_private_note_deletion=True))
         assert out["success"] is True
         assert "backup_path" in out
-        assert "backup_note" in out
-        assert "does not apply" not in out["backup_note"]
+        assert "backup_note" not in out
+        assert len(_backups(qualcoder_db_path)) == 1
 
     def test_db_layer_refuses_private_row_on_its_own(self, setup_server,
                                                      qualcoder_db_path):

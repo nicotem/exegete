@@ -51,8 +51,13 @@ class TestHowItStarts:
         monkeypatch.setenv("PYTHONPATH", "/somewhere")
         env = import_reading._small_environment()
         assert "SECRET_TOKEN" not in env and "PYTHONPATH" not in env
+        # and fixed settings: one on every system, three more on Linux
+        # (v0.15.1, tests/test_v0151_pymupdf_two.py)
+        from exegete.env_settings import (READER_LINUX_SETTINGS,
+                                          READER_SETTINGS)
         assert set(env) <= {"PATH", "LANG", "LC_ALL", "LC_CTYPE",
-                            "SYSTEMROOT", "SystemRoot"}
+                            "SYSTEMROOT", "SystemRoot"} | set(
+                                READER_LINUX_SETTINGS) | set(READER_SETTINGS)
 
     def test_it_reads_bytes_and_answers_in_plain_data(self):
         result = import_reading.read_in_process(

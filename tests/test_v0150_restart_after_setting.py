@@ -32,7 +32,8 @@ def _flat(text):
 
 def test_every_setting_s_description_ends_with_the_sentence():
     settings = TEMPLATE["user_config"]
-    assert len(settings) == 6
+    # v0.15.1: the extension's two switches joined the six
+    assert len(settings) == 8
     for key, option in settings.items():
         description = option["description"]
         assert description.endswith(" " + SENTENCE), key

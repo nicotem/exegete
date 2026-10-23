@@ -83,9 +83,10 @@ class TestNoProjectLoaded:
         data = json.loads(server.search_memos("test"))
         assert "No project selected" in data["error"]
 
-    def test_export_code_report_no_project(self):
+    def test_search_coded_text_by_code_name_no_project(self):
         # Tools are guarded: graceful JSON error instead of a raw exception
-        data = json.loads(server.export_code_report("Test"))
+        # (v0.15.1: export_code_report, which took a code name, removed)
+        data = json.loads(server.search_coded_text("x", code_name="Test"))
         assert "No project selected" in data["error"]
 
     def test_get_project_summary_no_project(self):
@@ -222,8 +223,10 @@ class TestAdditionalSqlInjection:
     ]
 
     @pytest.mark.parametrize("payload", PAYLOADS)
-    def test_export_code_report_injection(self, setup_server, payload):
-        result = server.export_code_report(payload)
+    def test_code_name_injection(self, setup_server, payload):
+        # (v0.15.1: export_code_report removed; search_coded_text resolves
+        # a code name by the same rule)
+        result = server.search_coded_text("stress", code_name=payload)
         data = json.loads(result)
         assert "error" in data
         # Verify DB intact
@@ -334,12 +337,9 @@ class TestSearchFilesMultiMode:
         assert data["total_matches"] >= 1
 
     def test_search_memo_only(self, setup_server):
-        result = server.search_files(
-            "Test memo",
-            search_filename=False,
-            search_content=False,
-            search_memo=True
-        )
+        # v0.15.1: search_files' search_memo removed, as announced;
+        # search_memos searches file memos
+        result = server.search_memos("Test memo")
         data = json.loads(result)
         assert isinstance(data, dict)
 
@@ -347,8 +347,7 @@ class TestSearchFilesMultiMode:
         result = server.search_files(
             "test",
             search_filename=True,
-            search_content=True,
-            search_memo=True
+            search_content=True
         )
         data = json.loads(result)
         assert isinstance(data, dict)

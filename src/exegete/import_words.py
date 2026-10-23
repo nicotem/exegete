@@ -404,7 +404,16 @@ HELD_BACK = {
                         "you say so for this import "
                         "(import_pdfs_with_listed_names).",
     "not_utf8": "It is not saved as UTF-8, the one form of text Exegete "
-                "reads, " + _WHY_NOT_UTF8 + _A_COPY,
+                "reads unless you choose another, " + _WHY_NOT_UTF8
+                + _A_COPY,
+    # v0.15.1: the reading the researcher chose does not read it.
+    "not_in_chosen_set": "It cannot be read in the character set chosen "
+                         "for it: in that set some of its bytes make no "
+                         "letter, or make control codes no text holds, or "
+                         "the set needs a mark at the file's start that "
+                         "it does not have, so nothing of it is stored. A "
+                         "preview without that choice shows one line of "
+                         "it in each set that can read it.",
     "not_utf8_web": "This web page is not saved as UTF-8, the one form of "
                     "text Exegete reads (whatever encoding the page "
                     "declares, since a declaration can be wrong), "
@@ -623,7 +632,126 @@ WARNINGS = {
         "under that name, as you said: the name reaches the AI provider "
         "whenever an answer names the file, and the project's copy of "
         "the original keeps it."),
+    # v0.15.1: a plain text file read in the character set chosen for it.
+    "chosen_reading": ("information",
+        "Read as {name}, as chosen: its text is stored as UTF-8, and the "
+        "original is copied unchanged."),
+    # v0.15.1: the places where a name from the list may still show in a
+    # form the list does not replace, counted by file and never named
+    # (doc_import.count_names_left); facts alone, since the remedies
+    # differ between the preview's note and the import's line
+    "listed_names_left": ("information",
+        "A name from your names list may still show here in a form the "
+        "list does not replace: {places} ({kinds})."),
+    "listed_names_left_at_least": ("information",
+        "A name from your names list may still show here in a form the "
+        "list does not replace: at least {places} (the count stopped "
+        "there)."),
+    "listed_names_left_not_checked": ("information",
+        "Whether a name from your names list still shows here in a form "
+        "the list does not replace was not checked in this call: the "
+        "count's allowance ran out, or the count could not be made."),
+    "listed_names_left_too_large": ("information",
+        "This file is too long to be checked, in any batch, against a "
+        "names list of this size, so a name from the list may still show "
+        "here in a form the list does not replace; with fewer names in "
+        "the list it could be checked."),
+    "listed_names_left_too_large_any_list": ("information",
+        "This file is too long to be checked, in any batch, against the "
+        "names list, so a name from the list may still show here in a "
+        "form the list does not replace, whatever the list's size."),
 }
+
+# v0.15.1: the readings of a plain text file not saved as UTF-8, shown in
+# the preview (doc_import.shown_readings), and the line a file read in
+# the set chosen for it gets in its memo. The set names are macOS's own
+# (doc_readers.READINGS), which TextEdit shows.
+READINGS_NOTE = (
+    "For the first five files held back as not saved in UTF-8, one line "
+    "of each is shown as read in each character set that can read it, in "
+    "a fixed order; sets that read the whole file alike are one. Exegete "
+    "does not guess which is right: pick the one that reads as the file "
+    "was written. These lines reach the AI provider, as the file's text "
+    "would once imported. No line is shown in which a name from the "
+    "project's names list appears in any reading, nor one holding a form "
+    "of it that the count of names left counts (other capitals, a first "
+    "name alone written with its capital, a name joined or split "
+    "differently). A line can still hold other names, a listed person's "
+    "surname alone or a first name in small letters, and in a file saved "
+    "in a set not offered here a listed name can appear with other "
+    "letters, and so be shown. A wrong pick "
+    "reads accented letters as others, and a listed name written with "
+    "them is then not replaced. The names are TextEdit's; in Word, "
+    "choose the encoding whose preview reads like the line. Say which "
+    "reads right, and the assistant previews again with that choice "
+    "(character_sets) before the import; or save a copy as UTF-8 "
+    "(saving_a_copy_as_utf8).")
+NO_LINE_SHOWN = (
+    "No line of this file is shown: every line that tells its readings "
+    "apart holds, in at least one reading, a name from the project's "
+    "names list or a form of one the list does not replace (a first name "
+    "alone, say), or the list cannot be read. A reading can still be "
+    "chosen by the file's name and the sets' names given here. Such "
+    "forms stay in the text once imported; a form written on one line "
+    "can be added to the names file, so that the import replaces it.")
+NO_READING_OFFERED = (
+    "No character set offered here reads this file without letters it "
+    "cannot make or control codes no text holds, so no line is shown: it "
+    "may be saved in a set not offered (Turkish, Baltic, Hebrew, Arabic, "
+    "Thai or Vietnamese, say), or as UTF-16 or UTF-32 without the mark "
+    "at its start that names it.")
+READINGS_TOO_LONG = (
+    "Read in any character set that can read it, this file is longer "
+    "than Exegete's limit for a document's text, so no line is shown.")
+READINGS_NOT_SHOWN = (
+    "Its lines are not shown: a preview shows those of five files at "
+    "most. Preview this file alone to see them.")
+READ_AS_CHOSEN_MEMO = (
+    "Read at its import as {name}, the character set chosen for it, as "
+    "the assistant reported the researcher's choice; the original in the "
+    "project's documents folder is unchanged.")
+
+# The kinds of place the count tells apart, in its order, each with its
+# fixed words (doc_import.count_names_left)
+NAMES_LEFT_KIND_WORDS = {
+    "other_capitals": "other capitals",
+    "other_characters": "other characters",
+    "joined_or_split_differently": "joined or split differently",
+    "inside_a_longer_word": "inside a longer word",
+    "put_back_by_a_pseudonym": "put back by a pseudonym",
+    "first_name_alone": "a first name alone",
+    "other": "other forms",
+}
+LISTED_NAMES_LEFT_NOTE = (
+    "The names list replaces each name only as it is written there: the "
+    "same capitals, whole words, its words on one line. A form it does "
+    "not hold stays in the stored text and reaches the AI provider "
+    "whenever the file is read: other capitals (JANE DOE), a first name "
+    "alone (Jane), a name joined or split differently (JaneDoe, Jane-Doe, "
+    "Jane and Doe on two lines), a name inside a longer word (Jane Does). "
+    "The counts read wider than the list, so a place can be another word "
+    "(a short name inside a longer one, a title), and no count promises "
+    "that no name shows. A form a line can hold is replaced once it has a "
+    "line of its own in the names file, with its pseudonym, and the list "
+    "is saved again (save_names_list); the next preview then counts it no "
+    "more. In a PDF no name is replaced: such a line holds the PDF back. "
+    "A name broken by a line break, a tab or an invisible character "
+    "cannot be a line, and no Exegete tool replaces it: it can be "
+    "corrected in the document before the import. A file not checked in "
+    "this call may be checked in a smaller batch, with fewer or shorter "
+    "files; one too long for a list of this size is checked in no batch.")
+
+
+def places_phrase(count: int) -> str:
+    """A count of places with its noun: "1 place", "4 places"."""
+    return f"{count} place{'' if count == 1 else 's'}"
+
+
+def kinds_phrase(kinds: Dict[str, int]) -> str:
+    """The kinds counted, in fixed words and the count's order: "other
+    capitals 1, a first name alone 2"."""
+    return ", ".join(f"{NAMES_LEFT_KIND_WORDS[kind]} {kinds[kind]}"
+                     for kind in NAMES_LEFT_KIND_WORDS if kinds.get(kind))
 
 
 def say(table: Dict[str, Any], code: str, **numbers: Any) -> str:

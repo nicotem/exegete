@@ -1152,83 +1152,90 @@ class TestReadOnlyFolder:
 # 10.10 THE OWNER ARGUMENT
 # =============================================================================
 
-EXPECTED_OWNER_REFUSAL = (
-    "The owner argument no longer chooses the coder name: this project's "
-    "AI coder name is \"{name}\" and every row Exegete writes is "
-    "stored under it, so that AI work stays distinguishable from the "
-    "researcher's and from other coders'. Omit owner, or, if the user "
-    "wants a different attribution, ask them and change the project's AI "
-    "coder name with set_project_ai_coder_name, then call this tool again "
-    "without owner. A human coder's name is never used for rows "
-    "Exegete writes. Nothing was written and no backup was made.")
+def _host(tool, **arguments):
+    """One call over the host's path (FastMCP's call_tool), parsed: the
+    path on which a removed argument is refused (v0.15.1)."""
+    import asyncio
+    out = asyncio.run(server.mcp.call_tool(tool, arguments))
+    blocks = out[0] if isinstance(out, tuple) else out
+    return json.loads("".join(getattr(b, "text", "") for b in blocks))
 
 
 class TestOwnerArgument:
+    """v0.15.1: the owner argument of apply_codings and import_text_file,
+    which since v0.12 could only repeat the project's AI coder name, was
+    removed, as announced in 0.14 (tests/test_v0151_removed_arguments.py).
+    Every value is refused alike, before the tool runs: nothing written,
+    no backup, the value not echoed, the ask and its order of checks
+    untouched."""
 
-    def test_the_exact_refusal_text(self, setup_server, qualcoder_db_path):
-        out = json.loads(server.import_text_file(
-            "x.txt", "Body.", owner="Someone Else"))
-        assert out["error"] == EXPECTED_OWNER_REFUSAL.format(
-            name=DEFAULT_AI_CODER_NAME)
-        assert out["action_required"] == \
-            "omit_owner_or_set_project_ai_coder_name"
-        assert out["ai_coder_name"] == DEFAULT_AI_CODER_NAME
-        assert "Someone Else" not in json.dumps(out)
+    def _refused(self, out, tool, value=None):
+        assert out["removed"] == {
+            "owner": server.REMOVED_ARGUMENTS[(tool, "owner")]}, out
+        assert "action_required" not in out
+        if value is not None and value.strip():
+            assert value not in json.dumps(out)
+
+    def test_another_name_is_refused_and_not_echoed(self, setup_server,
+                                                    qualcoder_db_path):
+        out = _host("import_text_file", filename="x.txt", content="Body.",
+                    owner="Someone Else")
+        self._refused(out, "import_text_file", "Someone Else")
         assert _backup_folders(qualcoder_db_path) == []
 
-    def test_equal_to_the_setting_is_accepted(self, setup_server,
-                                              qualcoder_db_path):
-        out = json.loads(server.import_text_file(
-            "same.txt", "Body.", owner=DEFAULT_AI_CODER_NAME,
-            create_backup=False))
-        assert out["success"] is True
+    def test_equal_to_the_setting_is_refused_too(self, setup_server,
+                                                 qualcoder_db_path):
+        """0.15.0 accepted it as a no-op; every value is refused now."""
+        out = _host("import_text_file", filename="same.txt",
+                    content="Body.", owner=DEFAULT_AI_CODER_NAME)
+        self._refused(out, "import_text_file")
+        assert _backup_folders(qualcoder_db_path) == []
 
-    def test_a_history_name_is_not_accepted(self, setup_server_unset,
-                                            qualcoder_db_path):
+    def test_a_history_name_is_refused(self, setup_server_unset,
+                                       qualcoder_db_path):
         server.set_project_ai_coder_name("A")
         server.set_project_ai_coder_name("B")
-        out = json.loads(server.import_text_file(
-            "hist.txt", "Body.", owner="A", create_backup=False))
-        assert out["error"] == EXPECTED_OWNER_REFUSAL.format(name="B")
+        out = _host("import_text_file", filename="hist.txt",
+                    content="Body.", owner="A")
+        self._refused(out, "import_text_file")
 
     @pytest.mark.parametrize("bad", ["Test\nCoder\x01", "x" * 5000,
                                      "AI ##### Agent", "   "])
-    def test_validation_still_comes_first(self, setup_server, bad):
-        """R1: a hostile owner gets its specific validation message, not
-        the restriction refusal, so the S-H3 step 1 pins keep holding."""
-        out = json.loads(server.import_text_file(
-            "hostile.txt", "Body.", owner=bad, create_backup=False))
-        assert "owner" in out["error"]
-        assert "no longer chooses" not in out["error"]
+    def test_a_hostile_owner_is_refused_unread(self, setup_server, bad):
+        """S-H3: a hostile owner is refused before any validation reads
+        it, and never echoed."""
+        out = _host("import_text_file", filename="hostile.txt",
+                    content="Body.", owner=bad)
+        self._refused(out, "import_text_file", bad)
 
-    def test_an_unset_project_asks_and_says_the_owner_was_not_applied(
+    def test_an_unset_project_refuses_the_argument_and_then_asks(
             self, setup_server_unset, qualcoder_db_path):
-        out = json.loads(server.import_text_file(
-            "askowner.txt", "Body.", owner="Someone Else",
-            create_backup=False))
-        assert out["error"] == EXPECTED_ASK + (
-            " The owner argument you passed was not applied; the name is "
-            "the user's to choose.")
-        assert "Someone Else" not in json.dumps(out)
+        out = _host("import_text_file", filename="askowner.txt",
+                    content="Body.", owner="Someone Else")
+        self._refused(out, "import_text_file", "Someone Else")
+        # without it, the ask, which no longer speaks of an owner
+        out = json.loads(server.import_text_file("askowner.txt", "Body."))
+        assert out["error"] == EXPECTED_ASK
+        assert "owner" not in out["error"]
 
     def test_apply_codings_refuses_before_the_backup(self, setup_server,
                                                     qualcoder_db_path):
         session = _approved_session(server, qualcoder_db_path)
-        out = json.loads(server.apply_codings(
-            session.session_id, owner="Someone Else"))
-        assert out["error"] == EXPECTED_OWNER_REFUSAL.format(
-            name=DEFAULT_AI_CODER_NAME)
+        out = _host("apply_codings", coding_session_id=session.session_id,
+                    owner="Someone Else")
+        self._refused(out, "apply_codings", "Someone Else")
         assert _backup_folders(qualcoder_db_path) == []
         reloaded = server.session_manager.load_session(session.session_id)
         assert len(reloaded.filter_by_status("approved")) == 1
 
-    def test_the_deprecation_is_in_both_docstrings(self):
+    def test_neither_docstring_speaks_of_an_owner_argument(self):
         for tool in (server.apply_codings, server.import_text_file):
             doc = " ".join((tool.__doc__ or "").split())
             # v0.14's coding-loop fix round 2 (owner ruling 25, question
-            # 8): removed in v0.15, where v1.0 was planned
-            assert server.DEPRECATED_OWNER in doc
-            assert "Only the project's AI coder name is accepted" in doc
+            # 8) announced the removal, which v0.15.1 made
+            assert "Deprecated" not in doc
+            assert "owner:" not in doc
+            assert "Only the project's AI coder name is accepted" not in doc
 
 
 # =============================================================================
@@ -1626,11 +1633,15 @@ class TestSurfacePins:
         """
         texts = [EXPECTED_ASK, ps.UNREADABLE_MESSAGE, ps.NEWER_FORMAT_MESSAGE,
                  ps.READ_ONLY_FOLDER_MESSAGE, ps.UNSET_HINT,
-                 EXPECTED_OWNER_REFUSAL,
+                 # v0.15.1: the owner refusal went with the argument; the
+                 # sentences that refuse it now are checked in its place
+                 *server.REMOVED_ARGUMENTS.values(),
                  server.set_project_ai_coder_name.__doc__ or ""]
         labels = ["EXPECTED_ASK", "UNREADABLE_MESSAGE",
                   "NEWER_FORMAT_MESSAGE", "READ_ONLY_FOLDER_MESSAGE",
-                  "UNSET_HINT", "EXPECTED_OWNER_REFUSAL",
+                  "UNSET_HINT",
+                  *(f"REMOVED_ARGUMENTS{key}"
+                    for key in server.REMOVED_ARGUMENTS),
                   "set_project_ai_coder_name.__doc__"]
         _house_rules(texts, labels)
 

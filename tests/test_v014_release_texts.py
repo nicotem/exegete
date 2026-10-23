@@ -37,14 +37,13 @@ def test_the_help_asks_for_the_three_questions_first():
     step_1 = _flat(overview["workflow"]["step_1"])
     assert step_1.startswith("Ask the researcher the three questions first")
     assert "with the answers as instruction" in step_1
-    topic = json.loads(server.explain_ai_coding_tools("analyze_for_coding"))
-    assert _flat(topic["parameters"]["instruction"]) == (
-        "Required: the researcher's answers to the three questions; ask "
-        "them first")
-    assert "ignoring letter case, spacing and Unicode form" in \
-        _flat(topic["parameters"]["code_names"])
-    assert topic["tips"][0] == ("Ask the three questions first; their "
-                                "answers are the instruction")
+    # (v0.15.1: the topic analyze_for_coding, which repeated
+    # start_coding_session's description, removed as announced in 0.14;
+    # the description says it)
+    described = _description("start_coding_session")
+    assert "BEFORE CALLING, ask the researcher three things" in described
+    assert ("Code names match exactly, else ignoring letter case, spacing "
+            "and Unicode form") in described
 
 
 def test_the_refusal_asks_whether_to_point_out():
@@ -76,10 +75,12 @@ def test_the_help_rules_are_exegetes_own():
 
 
 def test_the_refi_qda_warning_names_a_hidden_coders_codings():
-    warning = _flat(server.DEPRECATED_REFI_EXPORT)
-    assert "every coding under the AI coder name (a hidden coder's too)" \
-        in warning
-    assert "(a hidden coder's too)" in _description("export_refi_qda")
+    # (v0.15.1: the export's known faults, the hidden coder's codings
+    # among them, ruling 85, item 2)
+    warning = _flat(server.REFI_EXPORT_KNOWN_FAULTS)
+    assert ("every coding under the AI coder name, the researcher's own "
+            "and a hidden coder's included") in warning
+    assert "a hidden coder's included" in _description("export_refi_qda")
 
 
 def test_the_numeric_note_names_the_digits():
@@ -111,8 +112,13 @@ def test_the_export_descriptions_name_no_ruling():
         assert "owner-ruled" not in description, tool
 
 
-def test_the_manifest_says_a_call_can_ask_for_no_backup():
+def test_the_manifest_says_every_change_takes_a_backup():
+    """v0.15.1: no call can ask for none any more."""
     manifest = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
-    assert ("Every write is preceded by a backup of the project unless "
-            "the call asks for none.") in manifest["long_description"]
+    # v0.15.1's release preparation: two writes outside the database
+    # (the AI coder name's file, the names file) take none, so the
+    # sentence names the database
+    assert ("Exegete takes a backup of the project before every change to "
+            "its database.") in manifest["long_description"]
+    assert "asks for none" not in manifest["long_description"]

@@ -60,13 +60,22 @@ OLD_TOOLSET_NAMES = {"lifecycle": "full"}
 # installed; nobody sets it by hand. `coder_name` is the name
 # create_project gives each project it makes, without asking, when it is
 # filled in. `uses_qualcoder` is yes, no or not sure
-# (qualcoder_history.read_setting).
+# (qualcoder_history.read_setting). The desktop extension's two switches
+# (v0.15.1, ruling 83), read through env_settings.small_toolset_switch
+# and env_settings.i_use_qualcoder_switch and each read by
+# env_settings.read_switch: `small_toolset`, "Limit Exegete to its small
+# tool set", which gives `core` when on, whatever EXEGETE_TOOLSET
+# says; `i_use_qualcoder`, "I use QualCoder on this computer", which
+# gives the answer yes when on, whatever EXEGETE_USES_QUALCODER says.
+# Off, each leaves the choice to its text setting.
 NEW_ONLY_SETTINGS = {
     "update_check": "EXEGETE_UPDATE_CHECK",
     "installed_as": "EXEGETE_INSTALLED_AS",
     "call_seconds": "EXEGETE_CALL_SECONDS",
     "coder_name": "EXEGETE_CODER_NAME",
     "uses_qualcoder": "EXEGETE_USES_QUALCODER",
+    "small_toolset": "EXEGETE_SMALL_TOOLSET",
+    "i_use_qualcoder": "EXEGETE_I_USE_QUALCODER",
 }
 
 # The state folder in the home folder, and the one it is moved from once,

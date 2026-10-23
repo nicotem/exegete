@@ -33,8 +33,8 @@ body:
     id: mcp-version
     attributes:
       label: Exegete version
-      description: Run `exegete --version` in the environment you installed into (git installs, `python -m exegete.server --version`; an install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too). `pip show exegete`, `pipx list` and `uv tool list` also work; pip spells 0.15.0-alpha as 0.15.0a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
-      placeholder: e.g. 0.15.0a0
+      description: Run `exegete --version` in the environment you installed into (git installs, `python -m exegete.server --version`; an install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too). `pip show exegete`, `pipx list` and `uv tool list` also work; pip spells 0.15.1-alpha as 0.15.1a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
+      placeholder: e.g. 0.15.1a0
     validations:
       required: true
   - type: input
@@ -70,7 +70,7 @@ body:
     id: toolset
     attributes:
       label: Toolset (EXEGETE_TOOLSET, or QUALCODER_MCP_TOOLSET before 0.14.1)
-      description: "`full` is the default, every tool, creating a project included; `core` is the reduced set for local models; `lifecycle` was `full`'s name in the extension before 0.15.0. With the Claude Desktop extension, it is the extension's Tool set setting (`full` unless you changed it; an extension installed before 0.15.0 may show `lifecycle`, which works as `full`)."
+      description: "`full` is the default, every tool, creating a project included; `core` is the reduced set for local models; `lifecycle` was `full`'s name in the extension before 0.15.0. With the Claude Desktop extension, it is `core` when the extension's switch \"Limit Exegete to its small tool set\" is on or its Tool set setting says `core`, and `full` otherwise (an extension installed before 0.15.0 may show `lifecycle`, which works as `full`)."
       options:
         - full (default, or variable not set)
         - core

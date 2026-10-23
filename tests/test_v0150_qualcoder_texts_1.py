@@ -114,7 +114,8 @@ VISIBILITY = (
     "coder-visibility views is missing, so the project is damaged. A "
     "backup made before the damage still has the views: restoring it "
     "(list_backups, restore_backup) takes the project back to that "
-    "backup's state, all but its Exegete folder, which a restore keeps; "
+    "backup's state, all but its Exegete, audio and video folders, which "
+    "a restore keeps; "
     "QualCoder 4.0, if you use it, recreates the views "
     "when it opens the project.")
 
@@ -362,10 +363,11 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     """Fix round 1: Exegete writes the same file during its own writes,
     so a write cut short leaves the same leftover as a QualCoder 3.8
     that did not close cleanly; the note beside the corrected one says
-    both. Fix round 2: Exegete writes the file once and never refreshes
-    it, so a write that runs longer than 30 seconds shows as one while
-    it runs (the guard below); the note says what the file is, not why
-    it was left."""
+    both. Fix round 2: the note says what the file is, not why it was
+    left. v0.15.1: Exegete keeps its lock file fresh for the whole
+    write, so a long write no longer shows as a leftover (the guard
+    below), and the note no longer says it does; it still names both
+    programs as a source of the file (review round 1)."""
     lock = Path(qualcoder_db_path) / QUALCODER_LOCK_FILENAME
     lock.write_text(f"someone\n{time.time() - 3600}", encoding="utf-8")
     try:
@@ -373,39 +375,37 @@ def test_a_leftover_lock_is_not_blamed_on_qualcoder_alone(
     finally:
         lock.unlink()
     assert answer["qualcoder_open"] is False
-    assert answer["qualcoder_lock"] == {
-        "state": "stale", "holder": "someone",
-        "note": "A lock file not refreshed for over 30 seconds: "
-                "QualCoder 3.8.2 leaves one when it does not close cleanly, "
-                "and a write by Exegete leaves one when it is cut short, "
-                "or shows as one while it runs longer than that. Writes "
-                "proceed normally."}
+    assert answer["qualcoder_lock"]["state"] == "stale"
+    assert answer["qualcoder_lock"]["holder"] == "someone"
+    note = answer["qualcoder_lock"]["note"]
+    assert "while it runs" not in note
+    assert "Exegete" in note
+    assert "QualCoder" in note
 
 
-def test_guard_a_long_write_by_exegete_shows_as_a_leftover(
+def test_guard_a_long_write_by_exegete_never_shows_as_a_leftover(
         tmp_path, monkeypatch):
-    """Named as a guard of the fact the leftover note states (fix round
-    2), green before and after: Exegete writes its lock file once, when a
-    write begins, and never refreshes it, so a write still running after
-    30 seconds reads as a lock file not refreshed for that long."""
-    from types import SimpleNamespace
-
+    """The guard of fix round 2, inverted in v0.15.1: Exegete refreshes
+    its lock file while it holds it, so the time in the file moves on
+    and a write still running reads as active, never as a lock file not
+    refreshed for 30 seconds."""
     from exegete import database
+    monkeypatch.setattr(database, "LOCK_REFRESH_SECONDS", 0.05)
     folder = tmp_path / "Study.qda"
     folder.mkdir()
     lock = folder / QUALCODER_LOCK_FILENAME
     with database.hold_project_lock(folder) as held:
-        assert held is True
-        written = lock.read_text(encoding="utf-8")
+        assert held
+        written = float(lock.read_text(encoding="utf-8").splitlines()[1])
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            now = float(lock.read_text(encoding="utf-8").splitlines()[1])
+            if now > written:
+                break
+            time.sleep(0.05)
+        # The time in the file moved on: written again while held
+        assert now > written
         assert database.qualcoder_lock_state(folder)[0] == "active"
-        later = float(written.splitlines()[1]) + \
-            database.QUALCODER_LOCK_TIMEOUT + 1
-        monkeypatch.setattr(database, "time", SimpleNamespace(
-            time=lambda: later, sleep=time.sleep))
-        assert database.qualcoder_lock_state(folder)[0] == "stale"
-        monkeypatch.undo()
-        # Still the file written when the write began
-        assert lock.read_text(encoding="utf-8") == written
     assert not lock.exists()
 
 
@@ -554,10 +554,16 @@ class TestTheThreeDescriptions:
         # paragraph on the files Exegete keeps for the project
         # (tests/test_v0150_private_files.py, which pins it): taken out too
         from test_v0150_private_files import without_the_files_paragraph
+        # and v0.15.1's ignored create_backup changes pseudonymise_source's
+        # sentence on its backup: put back too
+        from test_v0151_ignored_argument import before_the_ignored_argument
+        from test_v0142_description_cut import (CHANGED_0151,
+                                                ONE_POLICY_0151)
         assert REMOVED not in descriptions and REMOVED not in raw
         for name, (length, solid, length_311) in BEFORE.items():
             assert NEW_WORDS[name] in descriptions[name], name
-            text = before_the_review(raw[name])
+            text = before_the_review(before_the_ignored_argument(
+                name, raw[name]))
             if name == "get_current_project":
                 text = without_the_files_paragraph(text)
                 assert text != raw[name], name
@@ -569,8 +575,11 @@ class TestTheThreeDescriptions:
                 assert len(text) <= length, name
             if indented:
                 assert len(text) <= length_311, name
-            assert name in CHANGED_0150 and WORDS[name] == \
-                CHANGED_0150[name], name
+            # (v0.15.1's removal of qualcoder_edit_parity changed
+            # pseudonymise_source again: its line, ONE_POLICY_0151)
+            assert name in CHANGED_0150 and WORDS[name] == {
+                **CHANGED_0151, **ONE_POLICY_0151}.get(
+                    name, CHANGED_0150[name]), name
 
 
 # ---------------------------------------------------------------------------
@@ -617,12 +626,14 @@ def test_guard_exegetes_import_applies_the_longer_name_first(
     assert text == "Participant B met Participant A.\n"
 
 
-def test_in_core_the_visibility_text_marks_restore_backup(tmp_path):
-    """Core does not register restore_backup, so the text marks it where
-    it is written, as every text a core tool can reach does
-    (tests/test_v014_server_wide.py)."""
+def test_in_core_the_visibility_text_names_restore_backup_unmarked(
+        tmp_path):
+    """Core registers restore_backup since v0.15.1 (it did not before,
+    and the text marked it where it is written, as every text a core
+    tool can reach does, tests/test_v014_server_wide.py): the text now
+    names it unmarked."""
     server._apply_toolset("core")       # the registry fixture restores it
-    assert "restore_backup" not in server.mcp._tool_manager._tools
+    assert "restore_backup" in server.mcp._tool_manager._tools
     folder = tmp_path / "Study.qda"
     new_project.write_project(folder, new_project.creation_statements(
         "Researcher", "x (Exegete)", "2026-10-13 10:00:00"))
@@ -638,5 +649,5 @@ def test_in_core_the_visibility_text_marks_restore_backup(tmp_path):
     finally:
         server.db.close()
         server.db, server.current_project_path = original
-    assert answer == {"error": VISIBILITY.replace(
-        "restore_backup", "restore_backup" + server.NOT_IN_THIS_TOOL_SET)}
+    assert answer == {"error": VISIBILITY}
+    assert server.NOT_IN_THIS_TOOL_SET not in answer["error"]

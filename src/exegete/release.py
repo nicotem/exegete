@@ -13,20 +13,17 @@ same character rule as everything else this server echoes.
 """
 
 # pyproject.toml's version, as written there
-VERSION = "0.15.0-alpha"
+VERSION = "0.15.1-alpha"
 # The release date, as the CHANGELOG heading gives it (set again on the
 # day if the release moves: the CHANGELOG heading, CITATION.cff and the
 # update site's two files hold the same date)
-RELEASED = "2026-10-20"
+RELEASED = "2026-10-23"
 # One or two plain sentences: what is new for a researcher
-# (0.15.0's note after an update reaches everyone coming from 0.14.2 or
-# 0.14.3, whether their checking is on or off; the coder names are
-# optional settings, so the summary says "can"; the renames and the
-# other changes a researcher may need to act on are in the release notes
-# and the CHANGELOG's "Upgrading from 0.14.3", which the update page
-# links)
-SUMMARY = ("Exegete can now take your coder name and the AI's from its "
-           "settings, reads each document once, so an import usually "
-           "takes seconds, and lets you fill in the names list on your own "
-           "computer, so the names do not pass through the conversation. "
-           "Its answers no longer assume that you use QualCoder.")
+# (0.15.1's note after an update; the removals, the switches' details
+# and what an update changes are in the release notes and the
+# CHANGELOG's "Upgrading from 0.15.0", which the update page links)
+SUMMARY = ("Exegete now takes one backup before every change to a project's "
+           "database, without its audio and video, and a restore's preview "
+           "says what it would bring back. A file not saved as UTF-8 can be "
+           "read in the character set you choose, and two settings are now "
+           "switches.")

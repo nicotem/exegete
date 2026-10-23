@@ -317,8 +317,19 @@ class TestTheStepsOnce:
         said = _said(preview)
         assert said.count("In TextEdit on a Mac") == 3
         # eight files held back cost about eight short reasons and the
-        # steps once each, not eight sets of steps
-        assert len(said) < 8 * 700 + 6000, len(said)
+        # steps once each, not eight sets of steps. v0.15.1: this bound
+        # measures the reasons and the steps; the readings the preview
+        # shows of the files not saved as UTF-8 (one line in each set that
+        # reads them, and the note on them) are bounded in
+        # tests/test_v0151_encoding_readings.py.
+        readings = ("readings", "cannot_be_read_as", "no_line_shown",
+                    "no_reading_offered", "readings_too_long",
+                    "readings_not_shown")
+        without = dict(preview, held_back=[
+            {key: value for key, value in held.items()
+             if key not in readings} for held in preview["held_back"]])
+        without.pop("reading_held_files", None)
+        assert len(_said(without)) < 8 * 700 + 6000, len(_said(without))
 
     def test_the_import_gives_them_too(self, project, folder):
         (folder / "a.txt").write_bytes(b"Plain words.\n")

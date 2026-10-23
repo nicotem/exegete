@@ -381,6 +381,12 @@ def assert_structured_error(result: str, *needles: str) -> dict:
     return data
 
 
+def assert_one_backup_taken(env: Env, before: set) -> None:
+    """v0.15.1: Exegete takes one backup before every change, whatever
+    create_backup says, so a write that failed after it leaves one."""
+    assert len(env.backup_names() - before) == 1
+
+
 def assert_connection_recovered(env: Env):
     """Assertion 3: global connection is read-only and the server still
     answers read tools (not bricked)."""
@@ -449,7 +455,7 @@ class TestApplyCodingsFaults:
         proxy = installed["conn"]
         assert proxy.commit_calls == 1 and proxy.rollback_calls == 1
         assert env.hash() == pre, "DB changed despite failed commit"
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists(), "our own lock file left behind"
         assert_connection_recovered(env)
         # the session must NOT be marked applied
@@ -517,7 +523,7 @@ class TestApplyCodingsFaults:
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "batch inserts survived the lock re-check abort"
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert env.lock.exists(), "foreign lock file was removed"
         assert_connection_recovered(env)
 
@@ -542,7 +548,7 @@ class TestImportTextFileFaults:
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "import survived the lock re-check abort"
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert env.lock.exists(), "foreign lock file was removed"
         assert_connection_recovered(env)
 
@@ -563,7 +569,7 @@ class TestImportTextFileFaults:
 
         assert_structured_error(result, "already exists")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -584,7 +590,7 @@ class TestImportTextFileFaults:
         assert_structured_error(result, "Database error",
                                 "Failed to import text file")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -605,7 +611,7 @@ class TestImportTextFileFaults:
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "uncommitted INSERT survived the failed rollback"
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert env.lock.exists()
         assert_connection_recovered(env)
 
@@ -628,7 +634,7 @@ class TestImportTextFileFaults:
 
         assert_structured_error(result, "already exists")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -651,7 +657,7 @@ class TestImportTextFileFaults:
         assert_structured_error(result, "Database error",
                                 "Failed to import text file")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -720,7 +726,7 @@ class TestLinkFileToCaseFaults:
 
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "case link survived the lock re-check abort"
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert env.lock.exists(), "foreign lock file was removed"
         assert_connection_recovered(env)
 
@@ -739,7 +745,7 @@ class TestLinkFileToCaseFaults:
 
         assert_structured_error(result, "Failed to link file to case")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -760,7 +766,7 @@ class TestLinkFileToCaseFaults:
 
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -783,7 +789,7 @@ class TestLinkFileToCaseFaults:
 
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -804,7 +810,7 @@ class TestLinkFileToCaseFaults:
 
         assert_structured_error(result, "Failed to link file to case")
         assert env.hash() == pre
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -859,7 +865,7 @@ class TestDeleteCodingFaults:
         assert_structured_error(result, "is in use by another program")
         assert env.hash() == pre, "DELETE survived the lock re-check abort"
         assert _count_codings(env) == 1
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert env.lock.exists(), "foreign lock file was removed"
         assert_connection_recovered(env)
 
@@ -878,7 +884,7 @@ class TestDeleteCodingFaults:
         assert_structured_error(result, "Failed to delete coding")
         assert env.hash() == pre
         assert _count_codings(env) == 1
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -898,7 +904,7 @@ class TestDeleteCodingFaults:
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
         assert _count_codings(env) == 1
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -921,7 +927,7 @@ class TestDeleteCodingFaults:
         assert_structured_error(result, "database is busy")
         assert env.hash() == pre
         assert _count_codings(env) == 1
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -942,7 +948,7 @@ class TestDeleteCodingFaults:
         assert_structured_error(result, "Failed to delete coding")
         assert env.hash() == pre
         assert _count_codings(env) == 1
-        assert env.backup_names() == before
+        assert_one_backup_taken(env, before)
         assert not env.lock.exists()
         assert_connection_recovered(env)
 
@@ -1074,12 +1080,23 @@ def _partial_copytree_patch(monkeypatch, env: Env, unrecoverable: bool = False):
 
 class TestRestoreBackupFaults:
 
-    def test_successful_restore_is_fully_new_with_safety_backup(self, restore_env):
-        """Baseline contract (also covers the stray-lock unlink OSError at
-        server.py:2847-2848 via an un-unlinkable *.lock directory inside the
-        backup): project == backup afterwards, safety backup == old state."""
+    def test_successful_restore_is_fully_new_with_safety_backup(
+            self, restore_env, monkeypatch):
+        """Baseline contract: project == backup afterwards, safety backup
+        == old state. Also covers the stray-lock unlink OSError: since
+        v0.15.1 a backup's top-level *.lock entries are left out of the
+        copy (the backup's old.lock folder never arrives), so the
+        un-unlinkable stuck.lock folder is made in the project during the
+        copy, as another program might."""
         env = restore_env
-        (env.backup_folder / "stuck.lock").mkdir()  # dir: unlink() -> OSError
+        (env.backup_folder / "old.lock").mkdir()
+        real_copy = server._copy_around_exegete_folder
+
+        def copy_then_stuck_lock(source, project_folder, **kwargs):
+            real_copy(source, project_folder, **kwargs)
+            (project_folder / "stuck.lock").mkdir()  # unlink() -> OSError
+        monkeypatch.setattr(server, "_copy_around_exegete_folder",
+                            copy_then_stuck_lock)
         pre_hash = env.hash()
         pre_state = env.state()
         backup_hash = db_hash(env.backup_folder)
@@ -1089,6 +1106,8 @@ class TestRestoreBackupFaults:
 
         data = json.loads(result)
         assert data.get("success") is True, data
+        assert (env.folder / "stuck.lock").is_dir()
+        assert not (env.folder / "old.lock").exists()
         assert env.hash() == backup_hash, "project is not fully the backup state"
         new = env.backup_names() - before
         assert len(new) == 1 and "_prerestore" in next(iter(new))
@@ -1099,36 +1118,72 @@ class TestRestoreBackupFaults:
 
     def test_lock_appears_between_probe_and_swap(self, restore_env, monkeypatch):
         """QualCoder opens the project between the write-lock probe and the
-        folder swap (server.py:2849-2852): nothing is replaced, the project
-        stays fully old, the connection is restored."""
+        restore's hold of the lock file, which since v0.15.1 begins before
+        the safety backup and lasts through the copy: refused as the hold
+        begins, nothing made (no safety backup), the project fully old,
+        the foreign lock left, the connection restored."""
         env = restore_env
         pre_hash = env.hash()
         pre_state = env.state()
         before = env.backup_names()
 
-        real_backup_project = server.backup_project
+        real_probe = server._project_is_write_locked
 
-        def backup_then_lock(project_path, **kwargs):
-            # mirrors backup_project's real signature (the report= keyword
-            # the safety backup passes since fix round 3, R3)
-            out = real_backup_project(project_path, **kwargs)
+        def probe_then_lock(data_qda):
+            locked = real_probe(data_qda)
             env.plant_lock(fresh=True)  # QualCoder grabs the project now
-            return out
+            return locked
 
-        monkeypatch.setattr(server, "backup_project", backup_then_lock)
+        monkeypatch.setattr(server, "_project_is_write_locked",
+                            probe_then_lock)
 
         result = H.execute_destructive(server.restore_backup, str(env.backup_folder))
 
-        assert_structured_error(result, "is in use by another program")
+        data = assert_structured_error(result, "is in use by another program")
+        assert "safety_backup" not in data
         assert env.hash() == pre_hash
         assert env.state() == pre_state, "project folder changed despite refusal"
-        # the safety backup made before the refusal is by design; it must
-        # hold the pre-call state
-        new = env.backup_names() - before
-        assert len(new) == 1
-        assert db_hash(env.work / next(iter(new))) == pre_hash
+        assert env.backup_names() == before
         assert env.lock.exists(), "foreign lock file was removed"
         assert_connection_recovered(env)
+
+    def test_safety_backup_fails_while_the_lock_is_held(
+            self, restore_env, monkeypatch):
+        """v0.15.1: the restore's hold of the lock file begins before its
+        safety backup, while the recovery begins only at the clear. A
+        safety backup that fails (a full disk) leaves the project as it
+        was, byte for byte, nothing beside it, no safety backup named; a
+        second restore of the same backup then succeeds. Red if the
+        recovery's `try` wraps the safety backup: the recovery clears the
+        project with no backup to copy back."""
+        env = restore_env
+        data_before = (env.folder / "data.qda").read_bytes()
+        pre_state = env.state()
+        siblings = set(p.name for p in env.work.iterdir())
+        held = []
+        real_backup_project = server.backup_project
+
+        def backup_fails(project_path, **kwargs):
+            held.append(server.qualcoder_lock_state(env.folder)[0])
+            raise OSError(28, "Injected: no space left on device")
+
+        monkeypatch.setattr(server, "backup_project", backup_fails)
+        result = H.execute_destructive(server.restore_backup,
+                                       str(env.backup_folder))
+        data = assert_structured_error(result)
+        assert held == ["active"]
+        assert "safety_backup" not in data
+        assert "success" not in data
+        assert (env.folder / "data.qda").read_bytes() == data_before
+        assert env.state() == pre_state
+        assert set(p.name for p in env.work.iterdir()) == siblings
+        assert not env.lock.exists()
+
+        monkeypatch.setattr(server, "backup_project", real_backup_project)
+        result = H.execute_destructive(server.restore_backup,
+                                       str(env.backup_folder))
+        assert json.loads(result).get("success") is True, result
+        assert env.hash() == db_hash(env.backup_folder)
 
     def test_swap_fails_before_any_copy_recovers_from_safety_backup(
             self, restore_env, monkeypatch):
@@ -1337,17 +1392,20 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         assert server.db.read_only is True
         assert server.db.conn.in_transaction is False
 
-    def test_a_second_connection_holding_the_lock_gets_the_same_answer(
+    def test_a_second_connection_holding_the_lock_is_refused_with_no_backup(
             self, fi_env, monkeypatch):
         """The other case, with a real RESERVED lock and a real timeout.
 
         The wait is shortened to 50 ms rather than faked, so what the
         write meets is SQLite's own "database is locked" from
         BEGIN IMMEDIATE, which is what a second writer past the
-        five-second busy timeout produces.
+        five-second busy timeout produces. Since v0.15.1 every write
+        takes that lock before its backup's database is copied, so the
+        write is refused there, as locked, and leaves no backup.
         """
         env = fi_env
         pre_hash = env.hash()
+        before = env.backup_names()
         original = QualcoderDatabase.begin_immediate
 
         def impatient(self):
@@ -1363,9 +1421,11 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
             holder.rollback()
             holder.close()
 
-        self._assert_says_it_did_not_commit(out, "the code was not deleted")
-        assert "close it or wait a moment, then retry" in out["error"]
-        assert Path(out["backup_path"]).is_dir()
+        # v0.15.1: SQLite's write lock is taken before the backup's
+        # database is copied, so the second writer is met there: refused
+        # as the lock it is, with no backup left and none named.
+        assert out == {"error": DB_LOCKED_MESSAGE}, out
+        assert env.backup_names() == before
         assert env.hash() == pre_hash
         assert server.db.read_only is True
 
@@ -1507,7 +1567,7 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         assert server.db.read_only is True
         assert server.db.conn.in_transaction is False
 
-    def test_a_second_writer_met_inside_a_converting_method_names_it(
+    def test_a_second_writer_on_a_tool_not_token_gated_leaves_no_backup(
             self, fi_env, monkeypatch):
         """QA Q-1, route 2: the mandate's second case on a tool that is
         not token-gated.
@@ -1517,22 +1577,23 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         and takes the sqlite arm. `set_memo` meets it inside a database
         method, and seventy of those convert it to `DatabaseLockedError`
         (`_raise_query_error`), which took the re-raise route instead.
-        A real second connection holds RESERVED and the write
-        connection's wait is shortened right after the backup, which is
-        the last thing that runs before the op.
+        A real second connection holds RESERVED. Since v0.15.1 the write
+        takes SQLite's lock before its backup's database, so it meets the
+        second writer there: refused as locked, no backup left or named
+        (the wait shortened before BEGIN IMMEDIATE).
         """
         env = fi_env
         pre_hash = env.hash()
         before = env.backup_names()
-        original = QualcoderDatabase.backup_before_write
+        original = QualcoderDatabase.begin_immediate
 
-        def impatient(self, *args, **kwargs):
-            path = original(self, *args, **kwargs)
+        def impatient(self):
+            # v0.15.1: the wait shortened before BEGIN IMMEDIATE, which
+            # every write now takes before its backup's database
             self.conn.execute("PRAGMA busy_timeout = 50")
-            return path
+            return original(self)
 
-        monkeypatch.setattr(QualcoderDatabase, "backup_before_write",
-                            impatient)
+        monkeypatch.setattr(QualcoderDatabase, "begin_immediate", impatient)
         holder = sqlite3.connect(str(env.folder / "data.qda"))
         holder.execute("BEGIN IMMEDIATE")
         try:
@@ -1542,11 +1603,10 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
             holder.rollback()
             holder.close()
 
-        assert out["error"] == DB_LOCKED_MESSAGE, out
-        taken = env.backup_names() - before
-        assert len(taken) == 1
-        assert Path(out["backup_path"]).is_dir()
-        assert Path(out["backup_path"]).name in taken
+        # Refused as locked at SQLite's lock, before the backup's
+        # database: no backup left, and none named (v0.15.1)
+        assert out == {"error": DB_LOCKED_MESSAGE}, out
+        assert env.backup_names() == before
         assert env.hash() == pre_hash
         assert server.db.read_only is True
 
@@ -1778,7 +1838,7 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
             for spelling in ("behavior", "analyze", "color"):
                 assert spelling not in body.lower(), (label, spelling)
 
-    def test_a_second_writer_met_by_the_import_method_names_it(
+    def test_a_second_writer_on_the_import_leaves_no_backup(
             self, fi_env, monkeypatch):
         """The import body's lock arm (re-verification R1-1 and R3 F-1).
         The import method, like `add_code`, re-raised a locked database
@@ -1786,20 +1846,22 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         second named case landed on the RuntimeError arm; since v0.14 it
         raises the lock as `DatabaseLockedError` with this server's own
         text (SQLite's message is never used), which lands on the lock
-        arm. Either way it names the backup. Driven as the `set_memo`
-        case is, on `import_text_file`."""
+        arm. Since v0.15.1 the import takes SQLite's lock before its
+        backup's database, so it is refused there, as locked, with no
+        backup left or named. Driven as the `set_memo` case is, on
+        `import_text_file`."""
         env = fi_env
         pre_hash = env.hash()
         before = env.backup_names()
-        original = QualcoderDatabase.backup_before_write
+        original = QualcoderDatabase.begin_immediate
 
-        def impatient(self, *args, **kwargs):
-            path = original(self, *args, **kwargs)
+        def impatient(self):
+            # v0.15.1: the wait shortened before BEGIN IMMEDIATE, which
+            # every write now takes before its backup's database
             self.conn.execute("PRAGMA busy_timeout = 50")
-            return path
+            return original(self)
 
-        monkeypatch.setattr(QualcoderDatabase, "backup_before_write",
-                            impatient)
+        monkeypatch.setattr(QualcoderDatabase, "begin_immediate", impatient)
         holder = sqlite3.connect(str(env.folder / "data.qda"))
         holder.execute("BEGIN IMMEDIATE")
         try:
@@ -1809,11 +1871,10 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
             holder.rollback()
             holder.close()
 
-        assert out["error"] == DB_LOCKED_MESSAGE, out
-        taken = env.backup_names() - before
-        assert len(taken) == 1
-        assert Path(out["backup_path"]).is_dir()
-        assert Path(out["backup_path"]).name in taken
+        # Refused as locked at SQLite's lock, before the backup's
+        # database: no backup left, and none named (v0.15.1)
+        assert out == {"error": DB_LOCKED_MESSAGE}, out
+        assert env.backup_names() == before
         assert env.hash() == pre_hash
         assert server.db.read_only is True
         assert server.db.conn.in_transaction is False
@@ -1841,8 +1902,10 @@ class TestPerformWriteUnexpectedException:
         # Since v0.14 the tool guard answers an error of a kind it does
         # not name by its kind, rather than letting it reach the MCP
         # library with its message; the clean-up is what this pins.
-        out = json.loads(server.set_memo("code", 1, "x",
-                                         create_backup=False))
+        # Called without create_backup, which no longer does anything
+        # (v0.15.1): a call that gives it is answered with a sentence
+        # saying so, refusals included.
+        out = json.loads(server.set_memo("code", 1, "x"))
         assert out == {"error": server.UNEXPECTED_ERROR.format(
             kind="KeyError")}
 
@@ -1901,7 +1964,7 @@ class TestBespokeWriteToolsC1Cleanup:
 
             assert_structured_error(result)                    # sanitized, no traceback
             assert env.hash() == pre, f"{label}: DB changed despite commit fault"
-            assert env.backup_names() == before
+            assert_one_backup_taken(env, before)
             assert server.db.read_only is True, f"{label}: left read-write"
             assert server.db.conn.in_transaction is False, \
                 f"{label}: pending transaction after fault"

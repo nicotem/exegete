@@ -13,6 +13,13 @@ import shutil
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+# v0.15.1: tests that read a PDF in their own process load PyMuPDF 2,
+# and with it onnxruntime, where 2.0 is installed; its usage reports to
+# Microsoft are on by default, so this process switches them off on
+# Linux and macOS (CI's own variables already do on its runners). The
+# reading process is unaffected: it never takes the host's environment
+# (env_settings.READER_SETTINGS carries its own).
+os.environ["ORT_DISABLE_TELEMETRY"] = "1"
 # The tests directory itself, so conftest can share one helper module
 # with the test files that import it by name (track5_helpers).
 sys.path.insert(0, str(Path(__file__).parent))

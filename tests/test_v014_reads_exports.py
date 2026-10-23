@@ -258,7 +258,7 @@ class TestCodebookPreviewsSayWhatChanges:
         preview = host("delete_code", code_id=1)
         graphs = preview["preview"]["saved_graph_rows_removed"]
         assert graphs["code_nodes"] == 2 and graphs["lines"] == 1
-        done = host("delete_code", code_id=1, cascade=True,
+        done = host("delete_code", code_id=1,
                     preview_token=preview["preview_token"])
         assert done["success"] is True, done
         assert _graph_rows(folder) == ([], [])
@@ -415,7 +415,8 @@ UNKNOWN = [
      "'Source' is a file attribute"),
     ("query_by_attribute", {"attr_name": "Height", "attr_value": "1"},
      "Attribute 'Height' does not exist"),
-    ("export_code_report", {"code_name": "Nope"}, "Code 'Nope' not found"),
+    # (v0.15.1: export_code_report, which refused an unknown code name as
+    # search_coded_text does above, removed as announced in 0.14)
 ]
 
 
@@ -488,13 +489,15 @@ class TestUnknownValuesAreRefused:
         assert out.get("success") is True, out
         assert Path(path).exists()
 
-    def test_export_code_report_takes_the_code_it_names(self, scoped):
+    def test_a_code_name_takes_the_code_it_names(self, scoped):
+        # (v0.15.1: export_code_report removed, as announced in 0.14; the
+        # code name is resolved by search_coded_text's same rule)
         sql(scoped, "INSERT INTO code_name VALUES (4, 'stress', '', 1, "
                     "'TestCoder', '2024-01-15', '#00FFFF')")
-        out = host("export_code_report", code_name="stress")
-        assert out["code"]["id"] == 4, out["code"]
+        out = host("search_coded_text", query="I", code_name="stress")
+        assert out["code_filter"] == "stress", out
         assert out["code_match"] == "exact"
-        both = host("export_code_report", code_name="STRESS")
+        both = host("search_coded_text", query="I", code_name="STRESS")
         assert sorted(c["id"] for c in both["candidates"]) == [1, 4]
 
 
@@ -749,21 +752,23 @@ class TestExportsSayWhatTheyHold:
         conn.commit()
         conn.close()
 
-    def test_a_code_report_past_1000_segments_says_so(
+    def test_a_code_past_1000_segments_is_read_page_by_page(
             self, setup_server, qualcoder_db_path):
+        # (v0.15.1: export_code_report, which stopped at 1,000 and said
+        # so, removed as announced in 0.14; get_coded_segments reads the
+        # same passages, every one of them, page by page)
         # Coping has 1 coding in the fixture; 1,000 more make 1,001
         self._codings(qualcoder_db_path, 2, 1000)
-        out = host("export_code_report", code_name="Coping")
-        assert out["segments_returned"] == 1000
-        assert out["segments_total"] == 1001
-        assert out["truncated"] is True
-        assert "get_coded_segments" in out["note"]
+        out = host("get_coded_segments", code_id=2)
+        assert out["selection"]["total_segments"] == 1001
+        assert out["page"]["has_more"] is True
+        assert out["next_request"]
 
-    def test_a_code_report_within_the_limit_is_whole(self, setup_server):
-        out = host("export_code_report", code_name="Stress")
-        assert (out["segments_returned"], out["segments_total"],
-                out["truncated"]) == (1, 1, False)
-        assert "note" not in out
+    def test_a_code_within_one_page_is_whole(self, setup_server):
+        out = host("get_coded_segments", code_id=1)
+        assert (out["segment_count"],
+                out["selection"]["total_segments"]) == (1, 1)
+        assert out["page"]["has_more"] is False
 
     def test_the_refi_note_agrees_with_the_file(self, setup_server,
                                                 tmp_path):
@@ -833,7 +838,9 @@ class TestExportsSayWhatTheyHold:
 
 class TestAFileValueRecordsTheAICoder:
 
-    @pytest.mark.parametrize("domain,target", [("file", 1), ("journal", 1)])
+    # (v0.15.1: no longer on a journal entry, as announced; the test
+    # below and tests/test_v0151_journal_and_rename_back.py)
+    @pytest.mark.parametrize("domain,target", [("file", 1)])
     def test_a_researcher_placeholder_takes_the_ai_name_and_date(
             self, setup_server, qualcoder_db_path, domain, target):
         sql(qualcoder_db_path, "INSERT INTO attribute_type VALUES "
@@ -855,6 +862,24 @@ class TestAFileValueRecordsTheAICoder:
             row = next(a for a in read["attributes"]
                        if a["name"] == "Setting")
             assert row["owner"] == H.DEFAULT_AI_CODER_NAME
+
+    def test_a_journal_placeholder_is_left_as_it_is(
+            self, setup_server, qualcoder_db_path):
+        """v0.15.1: attributes on journal entries were removed, as
+        announced; the researcher's row keeps its value, owner and date."""
+        sql(qualcoder_db_path, "INSERT INTO attribute_type VALUES "
+            "('Setting', '2024-01-15', 'Researcher', '', 'journal', "
+            "'character')")
+        sql(qualcoder_db_path, "INSERT INTO attribute (name, attr_type, "
+            "value, id, date, owner) VALUES ('Setting', 'journal', '', 1, "
+            "'2020-01-01 00:00:00', 'Researcher')")
+        out = host("set_attribute", target_type="journal", target_id=1,
+                   attribute_name="Setting", value="clinic",
+                   create_backup=False)
+        assert out["error"] == server.JOURNAL_ATTRIBUTES_REMOVED, out
+        assert sql(qualcoder_db_path, "SELECT value, owner, date FROM "
+                   "attribute WHERE name = 'Setting'") == [
+            ("", "Researcher", "2020-01-01 00:00:00")]
 
 
 class TestSubCodeMovesAndTheCascadeSayWhatHappens:
@@ -890,7 +915,8 @@ class TestSubCodeMovesAndTheCascadeSayWhatHappens:
             self, ladder):
         ladder("v17", lambda f: add_subcode(f, 10, "Kid", supercid=1))
         preview = host("delete_code", code_id=1)
-        assert preview["execute_with"]["arguments"]["cascade"] is True
+        # v0.15.1: cascade removed; the token alone approves the branch
+        assert "cascade" not in preview["execute_with"]["arguments"]
         assert "approving this preview approves the branch" in \
             preview["preview"]["note"]
 
@@ -1503,14 +1529,13 @@ class TestNameMatchingIsLinear:
     @pytest.mark.parametrize("tool,args,expect", [
         ("search_coded_text", {"query": "I", "code_name": "stress"},
          "code_match"),
-        ("export_code_report", {"code_name": "stress"}, "code_match"),
         ("link_file_to_case", {"file_id": 2, "case_name": "nobody",
                                "create_backup": False}, "error"),
         ("link_file_to_case", {"file_id": 2, "case_name": "case a",
                                "create_backup": False}, "success"),
         ("search_coded_text", {"query": "I", "code_name": CRAFTED},
          "error"),
-    ], ids=["code-name", "code-report", "case-not-found", "case-found",
+    ], ids=["code-name", "case-not-found", "case-found",
             "crafted-request"])
     def test_a_crafted_name_costs_linear_time(self, setup_server,
                                               qualcoder_db_path, tool,
@@ -1950,10 +1975,15 @@ class TestADamagedRowElsewhere:
     @pytest.mark.parametrize("damage", ["another-code-memo",
                                         "another-code-name",
                                         "another-category-name"])
-    def test_export_code_report_by_code_name(self, ladder, damage):
+    def test_the_code_details_by_its_id(self, ladder, damage):
+        """The code's details, path and category, as export_code_report
+        read them by name until v0.15.1 removed it (as announced in
+        0.14): the code resource reads them by id."""
         folder = ladder("v17")
-        _same_answer_after(folder, self.CODE_DAMAGE[damage],
-                           "export_code_report", code_name="stress")
+        before = json.loads(server.get_code_info(1))
+        assert "error" not in before, before
+        _damage(folder, self.CODE_DAMAGE[damage])
+        assert json.loads(server.get_code_info(1)) == before
 
     OWNER_DAMAGE = {
         "code_text":

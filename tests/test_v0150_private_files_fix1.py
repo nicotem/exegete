@@ -148,7 +148,18 @@ class TestThePlacesAndTheTable:
                 "`~/.exegete` and the reading folder (\"Reading a whole "
                 "file\"); - while an import reads a document, a working "
                 "folder in the system's temporary folder, which it removes "
-                "when that reading ends. Nowhere else.") in section
+                "when that reading ends. Nowhere else, apart from one check "
+                "you run yourself:") in section
+        # (the staleness audit of 20 October 2026: the transition check,
+        # which reads the hosts' configuration files and, asked to tidy,
+        # removes the old link and Claude Desktop's old logs)
+        for words in ("`exegete --check-transition` reads the assistant "
+                      "apps' configuration files", "and never changes them",
+                      "with `--tidy` it removes the link left at "
+                      "`~/.qualcoder_mcp`", "with `--tidy-old-logs` as well, "
+                      "Claude Desktop's log files under the extension's "
+                      "earlier name"):
+            assert words in section, words
 
     def test_the_earlier_names_in_sentences_of_their_own(self):
         section = _files_section()
@@ -157,12 +168,27 @@ class TestThePlacesAndTheTable:
                 "then Exegete keeps a link under that name pointing at "
                 "`~/.exegete`, as \"How your data flows\" says.") in section
         # the maintainer's sitting of 19 October 2026: the update moved a
-        # setting left at the earlier default
-        assert ("the extension's was `~/QualCoder projects` before 0.15.0, "
-                "and an update moves a setting left at that default to "
-                "`~/Exegete projects`. No project is moved, both folders are "
-                "searched, and setting it back to `~/QualCoder projects` "
-                "keeps new projects beside the earlier ones.") in section
+        # setting left at the earlier default; said as seen, once, with a
+        # folder chosen by hand not yet checked (the staleness audit of 20
+        # October 2026: one account in every document, held by its parts
+        # in tests/test_v0150_last_blockers.py; its fix round: the folders
+        # by their names in the code, both among the usual places)
+        from test_v0150_last_blockers import _says_the_account
+        from exegete import names
+        earlier = f"`~/{names.OLD_EXTENSION_WORKSPACE_FOLDER}`"
+        now = f"`~/{names.EXTENSION_WORKSPACE_FOLDER}`"
+        account = section[section.index(
+            f"the extension's was {earlier} before 0.15.0"):]
+        account = account[:account.index("| Kind |")]
+        _says_the_account(account)
+        assert now in account
+        for folder in (names.EXTENSION_WORKSPACE_FOLDER,
+                       names.OLD_EXTENSION_WORKSPACE_FOLDER):
+            assert "~/" + folder in server._USUAL_SEARCH_PLACES, folder
+        for words in ("No project is moved", "both folders are searched",
+                      f"setting it back to {earlier} keeps new projects "
+                      "beside the earlier ones"):
+            assert words in account, words
         assert "until you change its setting" not in section
 
     def test_the_rows_say_what_exegete_really_removes(self):
@@ -171,8 +197,10 @@ class TestThePlacesAndTheTable:
                 "and Linux |") in section
         assert ("| Exegete removes the texts an import's preview read, as "
                 "\"How your data flows\" says; coding sessions go at your "
-                "word (`delete_coding_session`, `cleanup_old_sessions`); the "
+                "word (`delete_coding_session`); the "
                 "rest stays until you delete it.") in section
+        # (v0.15.1: cleanup_old_sessions removed, as announced in 0.14)
+        assert "cleanup_old_sessions" not in section
         assert "says for each" not in section
         assert ("the folder for projects, or the folder you named for a new "
                 "project; where you export;") in section

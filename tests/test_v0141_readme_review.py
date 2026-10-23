@@ -98,22 +98,38 @@ def _without_the_dated_record(name, text):
     return text.replace(DATED_RECORD_0_11_0, "")
 
 
+def _documents():
+    """Every Markdown document at the top of the repository, and the
+    older ones kept in docs/history/ (v0.15.1), by their paths in it."""
+    return [path.relative_to(REPO).as_posix()
+            for path in sorted(REPO.glob("*.md"))
+            + sorted(REPO.glob("docs/history/*.md"))]
+
+
 def test_no_document_says_qualcoders_ai_keeps_the_private_part():
-    for path in sorted(REPO.glob("*.md")):
-        text = _without_the_dated_record(path.name, _flat(path.name))
+    for name in _documents():
+        text = _without_the_dated_record(name, _flat(name))
         for claim in ("QualCoder's own AI features never send",
                       "its built-in AI never sees"):
-            assert claim not in text, (path.name, claim)
-        assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(text), path.name
+            assert claim not in text, (name, claim)
+        assert not SAYS_QUALCODERS_AI_KEEPS_IT.search(text), name
 
 
 def test_the_private_part_is_stated_for_this_server_only():
     readme = _flat("README.md")
     data = readme[readme.index("## Where your data goes"):
                   readme.index("## Start here")]
+    # (the staleness audit of 20 October 2026: with the exception
+    # PRIVACY.md names, a project built to leak it; its fix round: the
+    # reference is to a heading PRIVACY.md has, which names Exegete)
     assert ("Exegete never passes the part of a memo from a `#####` "
             "mark onward (QualCoder's mark for a private note) to the "
-            "assistant, whichever program made the project.") in data
+            "assistant, whichever program made the project, unless the "
+            "project was built to leak it (PRIVACY.md, \"") in data
+    cited = data.split("project was built to leak it (PRIVACY.md, \"")[1]
+    cited = cited[:cited.index("\").")]
+    assert f"**{cited}.**" in _flat("PRIVACY.md")
+    assert "server" not in cited
     assert ("exported files keep the whole memo, private part "
             "included") in data
     privacy = _flat("PRIVACY.md")
@@ -206,7 +222,7 @@ def test_the_three_commitments():
     # v0.15.0, the release review: QualCoder's column as checked, beside
     # the Exegete the column now describes
     dated = section.index("QualCoder 3.8.2 and 4.0 as checked on 10 "
-                          "October 2026, beside Exegete 0.15.0:")
+                          "October 2026, beside Exegete 0.15.1:")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table
@@ -222,8 +238,8 @@ def test_the_three_commitments():
 # ---------------------------------------------------------------------------
 
 def test_no_document_says_qualcoders_server_has_no_external_transport():
-    for path in sorted(REPO.glob("*.md")):
-        assert "no external transport" not in _flat(path.name), path.name
+    for name in _documents():
+        assert "no external transport" not in _flat(name), name
 
 
 def test_the_upstream_server_is_stated_as_dated_fact():
@@ -316,10 +332,13 @@ def test_a_project_from_the_conversation_stays_in_one_qualcoder():
     assert ("Keep such a project in one QualCoder: moving it between 3.8.2 "
             "and 4.0 is what changes it.") in opening
     assert "Work on such a project in QualCoder 4.0." not in opening
+    # (the staleness audit of 20 October 2026: with 4.0, Exegete warns
+    # on signs of an open window, database.py, qualcoder_gui_signals)
     assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
-            "3.8.2 or 4.0. Exegete works with both, but can tell that "
-            "QualCoder has a project open only with 3.8.2 (below).") \
-        in _flat("README.md")
+            "3.8.2 or 4.0. Exegete works with both, but can tell for "
+            "certain that QualCoder has a project open only with 3.8.2; "
+            "with 4.0 it warns when it sees signs of an open window "
+            "(below).") in _flat("README.md")
 
 
 # ---------------------------------------------------------------------------

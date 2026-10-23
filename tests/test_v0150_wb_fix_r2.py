@@ -125,7 +125,9 @@ class TestClaudeCodesLimitsOnEveryPython:
         long = _long_paragraph()
         assert ("a figure under 16,384 lowers the limit for tools found "
                 "through tool search, so it cuts more, not less") in long
-        assert ("Measured for 0.15.0, the descriptions are longer on "
+        # v0.15.1: measured again, create_backup's line in 22
+        # descriptions and pseudonymise_source's sentence on its backup
+        assert ("Measured for 0.15.1, the descriptions are longer on "
                 "Python 3.10 to 3.12 than on 3.13, which strips the "
                 "indentation they are written with.") in long
 
@@ -138,22 +140,26 @@ class TestClaudeCodesLimitsOnEveryPython:
         lengths = {name: length for length, name in over}
         long = _long_paragraph()
         # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5)
-        said = re.search(r"On Python 3\.13, 4 of `full`'s 82 descriptions "
+        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
+        # removed three tools, as announced in 0.14
+        said = re.search(r"On Python 3\.13, 4 of `full`'s 79 descriptions "
                          r"are longer than 4,096 characters \(([^)]*)\)",
                          long).group(1)
         four = re.findall(r"`(\w+)`", said)
         assert len(four) == 4 and all(name in lengths for name in four)
         others = [name for length, name in over if name not in four]
-        assert len(others) == 1, others
+        # v0.15.1, the removed arguments: import_text_file, without owner,
+        # no longer passes 4,096 on 3.10 to 3.12, so the same four are all
+        # (tests/test_v0151_removed_arguments.py)
+        assert others == [], others
         same = (", ".join(f"{lengths[n]:,}" for n in four[:-1])
                 + f" and {lengths[four[-1]]:,}")
-        assert (f"on 3.10 to 3.12, {len(over)} are (the same four, at "
-                f"{same}, and `{others[0]}`, {lengths[others[0]]:,})"
-                ) in long
+        assert f"on 3.10 to 3.12, the same four are, at {same}." in long
         longest, name = over[0]
         assert name == "pseudonymise_source"
-        assert (f"its last 1,407 characters are cut even through tool "
+        # 1,441 since v0.15.1 (17,825 on 3.13); 754 since it removed the
+        # overlap policy qualcoder_edit_parity (17,138 on 3.13)
+        assert (f"its last 754 characters are cut even through tool "
                 f"search on 3.13, and its last {longest - 16384:,} on 3.10 "
                 f"to 3.12, its sentence on the lock file among them") in long
 
@@ -163,7 +169,12 @@ class TestClaudeCodesLimitsOnEveryPython:
         length = len(served[name])
         assert name == "pseudonymise_source" and length > 16384
         readme = _flat(_read("README.md"))
-        measured = _flat(_unreleased()[_unreleased().index("### Measured"):])
+        # v0.15.1 measures again: the current figure is in the
+        # [Unreleased] part's Measured, 0.15.0's is history
+        log = _read("CHANGELOG.md")
+        current = log[log.index("## [0.15.1-alpha]"):
+                      log.index("## [0.15.0-alpha]")]
+        measured = _flat(current[current.index("### Measured"):])
         if sys.version_info[:2] >= (3, 13):
             assert (f"`pseudonymise_source`'s ({length:,} on Python 3.13, "
                     ) in readme
@@ -187,23 +198,18 @@ class TestClaudeCodesLimitsOnEveryPython:
 
 # The three notes' new ending, each said as Exegete's gap or on a condition
 NOTES = {
-    "DEPRECATED_REFI_EXPORT": (
-        "rejected suggestions unmarked. Exegete has no other REFI-QDA "
-        "export yet; QualCoder's own export (Project, Export, REFI-QDA "
-        "Project export), for researchers who have QualCoder, keeps each "
-        "coder, the cases, notes and media."),
-    "DEPRECATED_JOURNAL_ATTRIBUTES": (
-        "which Exegete can set but never reads back (QualCoder's Journals "
-        "window, for researchers who use it, sets and shows them)."),
-    "DEPRECATED_RENAME_BACK": (
-        "a rename back recognised from the project's backups (QualCoder's "
-        "own Rename, if the researcher uses it, still makes one)."),
+    # (v0.15.1: the export is kept, its known faults named, ruling 85,
+    # item 2, under a name of its own; the ending the review asked for is
+    # unchanged)
+    "REFI_EXPORT_KNOWN_FAULTS": (
+        "Exegete has no other REFI-QDA export yet; QualCoder's own export "
+        "(Project, Export, REFI-QDA Project export), for researchers who "
+        "have QualCoder, keeps each coder, the cases, notes and media."),
+    # (v0.15.1: the journal attributes' and the rename back's notes went
+    # with what they announced; tests/test_v0151_journal_and_rename_back.py)
 }
 # Which tools' descriptions carry each
-CARRIERS = {"DEPRECATED_REFI_EXPORT": ("export_refi_qda",),
-            "DEPRECATED_JOURNAL_ATTRIBUTES": ("create_attribute_type",
-                                              "set_attribute"),
-            "DEPRECATED_RENAME_BACK": ("rename_file",)}
+CARRIERS = {"REFI_EXPORT_KNOWN_FAULTS": ("export_refi_qda",)}
 # What they said, with no condition
 UNCONDITIONAL = ("unmarked; QualCoder's own export",
                  "QualCoder's Journals window sets them",
@@ -227,7 +233,10 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
         for old in UNCONDITIONAL:
             assert old not in note, old
 
-    @pytest.mark.parametrize("constant", DEPRECATIONS)
+    # (the REFI-QDA export's sentence, no longer a deprecation since
+    # v0.15.1, is still a note that names QualCoder)
+    @pytest.mark.parametrize("constant",
+                             DEPRECATIONS + ["REFI_EXPORT_KNOWN_FAULTS"])
     def test_every_deprecation_names_qualcoder_on_a_condition(self,
                                                              constant):
         text = getattr(server, constant)
@@ -237,23 +246,27 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
     def test_the_documents(self):
         # the guide's opening box, without its quotation marks
         guide = _flat(_read("AI_CODING_GUIDE.md").replace("\n> ", "\n"))
-        assert ("it files every coding under the AI coder name. Exegete has "
-                "no other REFI-QDA export yet; QualCoder's own export, if "
-                "you use QualCoder, keeps each coder: Project, Export, "
-                "REFI-QDA Project export.)") in guide
-        assert ("(deprecated, removed in v0.15.1; QualCoder's own export, if "
-                "you use QualCoder, keeps each coder)") in guide
+        # (v0.15.1: the export kept, its faults named, ruling 85, item 2)
+        assert ("it files every coding under the AI coder name, yours "
+                "included. Exegete has no other REFI-QDA export yet; "
+                "QualCoder's own export, if you use QualCoder, keeps each "
+                "coder: Project, Export, REFI-QDA Project export.)") in guide
+        assert ("QualCoder's own export, if you use QualCoder, keeps each "
+                "coder)") in guide
+        assert "removed in v0.15.1; QualCoder's own export" not in guide
         tools = _flat(_read("TOOLS.md"))
         for words in (
                 "Exegete has no other REFI-QDA export yet, and QualCoder's "
                 "own export (Project, Export, REFI-QDA Project export), for "
                 "researchers who have QualCoder, keeps them",
-                "is deprecated, removed in v0.15.1 (QualCoder's own Rename, "
-                "if you use it, still makes one)",
-                "Exegete can set them but never reads them back (QualCoder's "
-                "Journals window, for researchers who use it, sets and "
-                "shows them)",
-                "rejected suggestions unmarked. Exegete has no other "
+                # (v0.15.1: the rename back and journal attributes removed)
+                "A name the project's backups show is not looked for: "
+                "`restore_backup`, or QualCoder's own Rename if you use it, "
+                "can put an earlier name back",
+                "attributes on journal entries were removed in 0.15.1, and "
+                "those already in a project stay (QualCoder's Journals "
+                "window, for researchers who use it, sets and shows them)",
+                "rejected suggestions, unmarked. Exegete has no other "
                 "REFI-QDA export yet; QualCoder's own export (Project, "
                 "Export, REFI-QDA Project export), for researchers who have "
                 "QualCoder, keeps them"):
@@ -347,18 +360,29 @@ class TestTheSmallerPoints:
 
     def test_the_readme_s_lists(self):
         readme = _flat(_read("README.md"))
+        # (the staleness audit of 20 October 2026: saving the names list
+        # previews first too; both lists follow the token registry)
         assert ("the larger ones (merging or deleting codes and categories, "
                 "replacing names, restoring backups, bringing documents in, "
-                "correcting your own coder name) show a preview first"
-                ) in readme
-        assert ("`restore_backup`, `prune_backups`, `set_project_coder_name` "
-                "(your own coder name, while nothing is recorded under it)."
-                ) in readme
+                "correcting your own coder name, saving the names list) show "
+                "a preview first") in readme
+        from exegete import preview_tokens
+        guarded = readme[readme.index("- **Guarded changes**"):]
+        guarded = guarded[:guarded.index("- **Documents in")]
+        for name in set(preview_tokens.REGISTRY) - {"import_documents"}:
+            assert f"`{name}`" in guarded, name
+        assert "`import_documents` (a preview, then the import on its " \
+               "token" in readme
+        assert ("`set_project_coder_name` (your own coder name, while "
+                "nothing is recorded under it), `save_names_list` (saving "
+                "the names list).") in readme
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
         install = _flat(_read("INSTALL.md"))
-        for words in ("setting, whose default is `full`. Any other value "
-                      "stops Exegete at start-up",
+        # v0.15.1: the switch's sentence now comes between "whose
+        # default is `full`." and "Any other value"
+        for words in ("setting, whose default is `full`.",
+                      "Any other value stops Exegete at start-up",
                       "used, and the log says so once at start; it never "
                       "stops Exegete. The desktop extension's settings do "
                       "not offer it.",

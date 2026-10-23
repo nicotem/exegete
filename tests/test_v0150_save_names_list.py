@@ -962,9 +962,15 @@ class TestTheWarnings:
         assert server.SAVE_NAMES_LIST_SHARED == SHARED
 
     def test_no_warning_on_a_clean_list(self, selected):
-        _write_names(selected, GOOD, "Brisemar Tull = Participant B")
+        # v0.15.1: each first name with a line of its own, its pseudonym
+        # distinct, so that no warning is due
+        _write_names(selected, GOOD, "Brisemar Tull = Participant B",
+                     "Quorvin = Participant Q2", "Brisemar = Participant B2")
         answer = _preview(selected)
         assert "warnings" not in answer
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"] == {
+                "count": 0, "lines": []}
         assert answer["preview"]["pseudonyms_putting_a_name_back"] == {
             "count": 0, "lines": []}
 
@@ -993,7 +999,8 @@ class TestTheWarnings:
         """Fix round 1: an older names file can change a pseudonym back,
         so a change warns as a removal does, and the researcher decides."""
         _write_list(selected, [("Quorvin Ashdale", "Participant Z")])
-        _write_names(selected, GOOD)
+        # v0.15.1: the first name with a line of its own
+        _write_names(selected, GOOD, "Quorvin = Participant Q2")
         answer = _preview(selected)
         assert answer["preview"]["effect"]["changed"] == 1
         assert answer["warnings"] == [server.SAVE_NAMES_LIST_CHANGES]
@@ -1057,13 +1064,75 @@ class TestTheWarnings:
             "said P today"
 
     def test_no_warning_on_a_clean_list_of_ordinary_names(self, selected):
+        # v0.15.1: each first word with a line of its own
         _write_names(selected, GOOD, "Jean-Paul O'Brien = Participant J",
-                     "Smith, Jane = Participant S")
+                     "Smith, Jane = Participant S",
+                     "Quorvin = Participant Q2", "Jean-Paul = Participant J2",
+                     "Smith = Participant S2")
         answer = _preview(selected)
         assert answer["preview"]["real_names_read_as_patterns"] == {
             "count": 0, "lines": []}
         assert answer["preview"]["kept_entries_with_a_backslash"] == 0
         assert "warnings" not in answer
+
+    # v0.15.1: a name of several words whose first word has no line of
+    # its own, which stays in the text alone; a warning, never blocking
+
+    def test_a_first_name_with_no_line_of_its_own(self, selected):
+        """Breaks: counted as blocking; the field dropped."""
+        _write_names(selected, GOOD, "Brisemar Tull = Participant B",
+                     "Brisemar = Participant B")
+        answer = _preview(selected)
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"] == {
+                "count": 1, "lines": [6]}
+        assert server.SAVE_NAMES_LIST_FIRST_NAMES in answer["warnings"]
+
+    def test_a_line_for_the_first_name_settles_it(self, selected):
+        _write_names(selected, GOOD, "Brisemar Tull = Participant B",
+                     "Brisemar = Participant B", "Quorvin = Participant Q2")
+        answer = _preview(selected)
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"] == {
+                "count": 0, "lines": []}
+        assert server.SAVE_NAMES_LIST_FIRST_NAMES not in answer["warnings"]
+
+    def test_the_first_name_is_compared_exactly_as_the_list_compares(
+            self, selected):
+        _write_names(selected, GOOD, "QUORVIN = Participant Q2",
+                     "de la Cruz = Participant C", "J Tull = Participant T")
+        answer = _preview(selected)
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"]["lines"] == [6]
+
+    def test_a_kept_entry_for_the_first_name_settles_it(self, selected):
+        """An entry of the list the names file cannot hold, kept as it is,
+        whose real name is the first word."""
+        _write_list(selected, [("Quorvin", "Mr = Q")])
+        _write_names(selected, GOOD)
+        answer = _preview(selected)
+        assert answer["preview"]["effect"][
+            "kept_entries_the_file_cannot_hold"] == 1
+        assert answer["preview"][
+            "names_without_a_line_for_their_first_name"]["count"] == 0
+
+    def test_the_first_names_warning_says_what_and_its_cautions(self):
+        text = server.SAVE_NAMES_LIST_FIRST_NAMES
+        for words in ("names_without_a_line_for_their_first_name",
+                      "so that word alone (a first name, say) stays in the "
+                      "text",
+                      "a first name that two people on the list share can "
+                      "carry one pseudonym only",
+                      "a line for a title (Dr, Mr) replaces that word "
+                      "everywhere"):
+            assert words in text, words
+
+    def test_the_first_names_warning_names_the_tool_that_counts(self):
+        """import_text_file applies the list too and counts nothing
+        (break: "Each import counts")."""
+        text = server.SAVE_NAMES_LIST_FIRST_NAMES
+        assert "import_documents" in text
+        assert "import_text_file" not in text
 
 
 # ---------------------------------------------------------------------------
@@ -1364,8 +1433,9 @@ class TestTheSave:
 
 
 def _after_the_backup(monkeypatch, then):
-    """backup_project as it is, then `then(folder)`: what happens between
-    the token's check and the lock."""
+    """backup_project as it is, then `then(folder)`: what happens during
+    the save's backup, under the lock and after everything was read
+    again (v0.15.1)."""
     real = server.backup_project
 
     def backup(folder, report=None):
@@ -1373,6 +1443,22 @@ def _after_the_backup(monkeypatch, then):
         then(Path(folder))
         return made
     monkeypatch.setattr(server, "backup_project", backup)
+
+
+def _before_the_lock(monkeypatch, folder, then):
+    """The lock file's check as it is, then `then(folder)`: what happens
+    between the token's check and the lock, before anything is read
+    again or backed up (v0.15.1)."""
+    real = server._qualcoder_open_error
+    fired = []
+
+    def check():
+        answer = real()
+        fired.append(True)
+        then(folder)
+        return answer
+    monkeypatch.setattr(server, "_qualcoder_open_error", check)
+    return fired
 
 
 def _no_temporary_file(folder):
@@ -1388,21 +1474,68 @@ class TestBetweenTheTokenAndTheWrite:
         before = _list_bytes(selected)
         _write_names(selected, GOOD)
         token = _preview(selected)["preview_token"]
-        _after_the_backup(monkeypatch, lambda folder: _write_names(
-            folder, "Quorvin Ashdale = Participant R"))
+        fired = _before_the_lock(monkeypatch, selected, lambda folder:
+                                 _write_names(
+                                     folder,
+                                     "Quorvin Ashdale = Participant R"))
         answer = _save(token)
+        assert fired, "the change never happened; the test proves nothing"
         assert answer["reason"] == "project_changed"
         assert answer["nothing_changed"] is True
-        assert answer["error"].endswith(
-            " A backup had already been taken before the change was "
-            "detected; it is unchanged and can be pruned.")
-        # fix round 1: in the names file's words, not of rows
+        # fix round 1: in the names file's words, not of rows; v0.15.1:
+        # read again before the backup, so none is made or named
         assert answer["error"].startswith(TOKEN_CHANGED_UNDER_THE_LOCK)
-        assert _backups(selected) == [answer["backup"]]
+        assert "already been taken" not in answer["error"]
+        assert "backup" not in answer
+        assert _backups(selected) == []
         assert _list_bytes(selected) == before
         assert _no_temporary_file(selected)
 
-    def test_a_refusal_found_under_the_lock_names_the_backup(
+    def test_a_refusal_found_under_the_lock_leaves_no_backup(
+            self, selected, monkeypatch, tmp_path):
+        _write_names(selected, GOOD)
+        token = _preview(selected)["preview_token"]
+        target = tmp_path / "kept.json"
+        target.write_text("[]", encoding="utf-8")
+        if not _symlink(tmp_path / "probe", target):
+            pytest.skip("links cannot be made here")
+        fired = _before_the_lock(monkeypatch, selected, lambda folder:
+                                 _symlink(folder / "pseudonyms.json",
+                                          target))
+        answer = _save(token)
+        assert fired, "the link was never made; the test proves nothing"
+        assert answer["reason"] == "pseudonyms_json_is_a_link"
+        assert answer["nothing_changed"] is True
+        assert "backup" not in answer
+        assert "can be pruned" not in answer["error"]
+        assert _backups(selected) == []
+        assert target.read_text(encoding="utf-8") == "[]"
+
+    def test_a_list_written_during_the_backup_is_left_as_written(
+            self, selected, monkeypatch):
+        """SQLite's lock and the lock file keep no program from
+        pseudonyms.json (QualCoder 4.0 writes it in place): one written
+        while the backup is made is left as that program wrote it, and
+        the backup made first is named."""
+        _write_list(selected, [("Ottoline", "Participant O")])
+        _write_names(selected, GOOD)
+        token = _preview(selected)["preview_token"]
+        _after_the_backup(monkeypatch, lambda folder: _write_list(
+            folder, [("Ottoline", "Participant O"),
+                     ("Wilfreda", "Participant W")]))
+        answer = _save(token)
+        assert answer["reason"] == "project_changed"
+        assert answer["nothing_changed"] is True
+        assert answer["error"].startswith(TOKEN_CHANGED_UNDER_THE_LOCK)
+        assert answer["error"].endswith(
+            " A backup had already been taken before the change was "
+            "detected; it is unchanged and can be pruned.")
+        assert _backups(selected) == [answer["backup"]]
+        assert [entry["original"] for entry in json.loads(
+            _list_bytes(selected))] == ["Ottoline", "Wilfreda"]
+        assert _no_temporary_file(selected)
+
+    def test_a_link_made_during_the_backup_is_left_alone(
             self, selected, monkeypatch, tmp_path):
         _write_names(selected, GOOD)
         token = _preview(selected)["preview_token"]
@@ -1413,12 +1546,11 @@ class TestBetweenTheTokenAndTheWrite:
         _after_the_backup(monkeypatch, lambda folder: _symlink(
             folder / "pseudonyms.json", target))
         answer = _save(token)
-        assert answer["reason"] == "pseudonyms_json_is_a_link"
-        assert answer["nothing_changed"] is True
+        assert answer["reason"] == "project_changed"
         assert _backups(selected) == [answer["backup"]]
-        assert answer["error"].endswith("it is unchanged and can be "
-                                        "pruned.")
+        assert (selected / "pseudonyms.json").is_symlink()
         assert target.read_text(encoding="utf-8") == "[]"
+        assert _no_temporary_file(selected)
 
     def test_a_failed_write_leaves_no_temporary_file(self, selected,
                                                      monkeypatch):
@@ -1467,14 +1599,16 @@ class TestBetweenTheTokenAndTheWrite:
                                                      monkeypatch):
         _write_names(selected, GOOD)
         token = _preview(selected)["preview_token"]
-        _after_the_backup(monkeypatch, lambda folder: (
+        fired = _before_the_lock(monkeypatch, selected, lambda folder: (
             folder / "project_in_use.lock").write_text(
                 f"someone\n{time.time()}\n", encoding="utf-8"))
         answer = _save(token)
+        assert fired, "the lock never appeared; the test proves nothing"
         assert "QualCoder" in answer["error"]
-        assert answer["error"].endswith(
-            f"The names list was not saved; the backup made first is kept: "
-            f"{answer['backup']}.")
+        # v0.15.1: the lock is taken before the backup, so none is made
+        assert answer["error"].endswith("The names list was not saved.")
+        assert "backup" not in answer
+        assert _backups(selected) == []
         assert answer["nothing_changed"] is True
         # fix round 1: a reason, as every other refusal of the tool has
         assert answer["reason"] == "project_locked"
@@ -1586,7 +1720,7 @@ class TestNoNameAnywhere:
         _write_names(selected, *(f"{r} = {p}" for r, p in
                                  zip(REAL, PSEUDONYMS)))
         token = _preview(selected)["preview_token"]
-        assert re.fullmatch(r"qcp1\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}", token)
+        assert re.fullmatch(r"qcp2\.\d+\.[0-9a-f]{8}\.[0-9a-f]{32}", token)
 
 
 # ---------------------------------------------------------------------------
@@ -1907,8 +2041,8 @@ class TestTheDocuments:
         assert lines[at - 1].startswith("- `prepare_names_list()` - ")
         assert lines[at + 1].startswith("- `create_project(")
         # 82 since read_pseudonym_list was removed (the files design,
-        # piece 5)
-        assert "registers 82 tools, two of them the earlier names" in \
+        # piece 5), 79 since v0.15.1 removed three tools, as announced
+        assert "registers 79 tools, two of them the earlier names" in \
             _flat(tools)
 
     def test_the_changelog_says_what_was_added(self):
@@ -1987,7 +2121,9 @@ class TestTheDocuments:
 
     def test_the_measurement_names_its_entry(self):
         log = _flat(_read("CHANGELOG.md"))
-        measured = log[log.index("### Measured"):log.index(
+        # 0.15.0's Measured (v0.15.1 has one of its own, above it)
+        release = log[log.index("## [0.15.0-alpha]"):]
+        measured = release[release.index("### Measured"):release.index(
             "## [0.14.3-alpha]")]
         # (piece 5's sentence on read_pseudonym_list's removal follows)
         assert ("And `save_names_list`, which saves the names file as the "
@@ -2007,8 +2143,9 @@ class TestTheDocuments:
             assert entry + len(", ") == 1294
         elif sys.version_info[:2] == (3, 11):
             assert entry + len(", ") == 1358
-        brief = len(server.read_brief())
-        assert f"the full brief {brief:,}." in measured
+        # 0.15.0's brief, history since v0.15.1's took out "unless the
+        # researcher asks for none" (its own Measured gives 13,211)
+        assert "the full brief 13,225." in measured
 
     def test_privacy_says_what_the_save_reads_and_writes(self):
         privacy = _flat(_read("PRIVACY.md"))

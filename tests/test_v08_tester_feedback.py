@@ -270,11 +270,12 @@ class TestF1bF2Guidance:
         assert "instruction" in analyze_doc          # span-style pattern
 
     def test_explain_covers_edit_and_style(self):
-        out = json.loads(server.explain_ai_coding_tools("edit_suggestion"))
-        assert "PENDING" in json.dumps(out)
-        out = json.loads(
-            server.explain_ai_coding_tools("coding_style_guidance"))
-        blob = json.dumps(out)
+        # (v0.15.1: the help topics edit_suggestion and
+        # coding_style_guidance removed, as announced in 0.14: they
+        # repeated these descriptions, which say it)
+        tools = server.mcp._tool_manager._tools
+        assert "PENDING" in tools["edit_suggestion"].description
+        blob = " ".join(tools["start_coding_session"].description.split())
         assert "whole sentences (the default)" in blob
         assert "instruction" in blob
 

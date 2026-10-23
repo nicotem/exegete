@@ -173,13 +173,15 @@ class TestTheToolsAreTheServers:
 
 class TestTheSettings:
 
-    def test_six_settings_and_nothing_secret(self):
+    def test_eight_settings_and_nothing_secret(self):
         config = TEMPLATE["user_config"]
         # v0.15.0: the two coder names joined the first three, and "Do
-        # you also use QualCoder on this computer?"
-        assert set(config) == {"toolset", "projects_folder", "coder_name",
-                               "ai_coder_name", "uses_qualcoder",
-                               "update_check"}
+        # you also use QualCoder on this computer?"; v0.15.1: the two
+        # switches
+        assert set(config) == {"small_toolset", "toolset",
+                               "projects_folder", "coder_name",
+                               "ai_coder_name", "i_use_qualcoder",
+                               "uses_qualcoder", "update_check"}
         assert not any(option.get("sensitive") for option in config.values())
         assert not any(option.get("required") for option in config.values())
 
@@ -256,6 +258,10 @@ class TestTheSettings:
         # and "Do you also use QualCoder on this computer?" (v0.15.0)
         expected[names.NEW_ONLY_SETTINGS["uses_qualcoder"]] = \
             "${user_config.uses_qualcoder}"
+        # and the two switches (v0.15.1)
+        for key in ("small_toolset", "i_use_qualcoder"):
+            expected[names.NEW_ONLY_SETTINGS[key]] = \
+                "${user_config." + key + "}"
         assert env == expected
         source = (REPO / "src" / "exegete" / "server.py").read_text(
             encoding="utf-8")
@@ -265,6 +271,9 @@ class TestTheSettings:
                            "project_settings.py").read_text(encoding="utf-8")
         assert "env_settings.coder_name(environ)" in settings_source
         assert source.count("env_settings.uses_qualcoder()") == 2
+        # v0.15.1: each switch read where its text setting is read
+        assert "env_settings.small_toolset_switch()" in source
+        assert "env_settings.i_use_qualcoder_switch()" in source
         assert database.WORKSPACE_ENV == "EXEGETE_WORKSPACE"
         assert database.WORKSPACE_REQUIRED_ENV == "EXEGETE_WORKSPACE_REQUIRED"
 
@@ -493,11 +502,12 @@ def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION):
                for p in platforms.split("."))
 
 
-def lock_wheel_gaps(lock, root, system, machine, root_extras=()):
-    """(package, version) the lock would install for `root` (with
-    `root_extras`) on that computer with no wheel that fits it."""
+def _lock_walk(lock, root, system, machine, root_extras=(),
+               python=build.PYTHON_VERSION):
+    """Each package the lock would install for `root` (with
+    `root_extras`) on that computer with CPython `python`, once."""
     from packaging.markers import Marker
-    environment = _marker_environment(system, machine)
+    environment = _marker_environment(system, machine, python)
     entries = {}
     for package in lock["package"]:
         entries.setdefault(package["name"], []).append(package)
@@ -510,7 +520,7 @@ def lock_wheel_gaps(lock, root, system, machine, root_extras=()):
         assert len(found) == 1, dependency
         return found[0]
 
-    gaps, seen = [], set()
+    seen, walked = set(), {}
     todo = [(entries[root][0], tuple(sorted(root_extras)))]
     while todo:
         package, extras = todo.pop()
@@ -527,13 +537,36 @@ def lock_wheel_gaps(lock, root, system, machine, root_extras=()):
                 continue
             todo.append((entry(dependency),
                          tuple(sorted(dependency.get("extra", [])))))
-        if package["name"] == root:
-            continue
+        if package["name"] != root:
+            walked[(package["name"], package["version"])] = package
+    return walked
+
+
+def lock_wheel_gaps(lock, root, system, machine, root_extras=(),
+                    python=build.PYTHON_VERSION):
+    """(package, version) the lock would install for `root` (with
+    `root_extras`) on that computer, with CPython `python`, with no
+    wheel that fits it."""
+    gaps = []
+    for (name, version), package in _lock_walk(
+            lock, root, system, machine, root_extras, python).items():
         wheels = [w["url"].rsplit("/", 1)[1]
                   for w in package.get("wheels", [])]
-        if not any(_wheel_fits(w, system, machine) for w in wheels):
-            gaps.append((package["name"], package["version"]))
+        if not any(_wheel_fits(w, system, machine, python) for w in wheels):
+            gaps.append((name, version))
     return sorted(set(gaps))
+
+
+def lock_walk_releases(lock, root, system, machine, root_extras=(),
+                       python=build.PYTHON_VERSION):
+    """{package: release} the same walk reaches (v0.15.1: PyMuPDF, and
+    numpy and networkx, are locked at two releases, one per computer and
+    Python)."""
+    walked = {}
+    for name, version in _lock_walk(lock, root, system, machine,
+                                    root_extras, python):
+        assert walked.setdefault(name, version) == version, name
+    return walked
 
 
 class TestAWheelForEveryComputer:
@@ -553,6 +586,8 @@ class TestAWheelForEveryComputer:
                     told.add((system, machine))
         assert told == set(ENVIRONMENTS)
         assert "cryptography" in settings["no-build-package"]
+        # v0.15.1: PyMuPDF 2.0 has only its source on some computers
+        assert "pymupdf" in settings["no-build-package"]
         assert self._lock()["required-markers"]
 
     def test_the_build_backend_is_pinned_for_uv(self):
@@ -898,14 +933,17 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
         return found
 
     def test_every_shipped_document(self):
-        documents = sorted(p for p in REPO.glob("*.md")
+        # with the older ones kept in docs/history/ (v0.15.1)
+        documents = sorted(p for p in [*REPO.glob("*.md"),
+                                       *REPO.glob("docs/history/*.md")]
                            if p.name != "CHANGELOG.md")
         assert {"README.md", "TOOLS.md", "AI_CODING_WORKFLOW.md",
                 "INSTALL.md", "PRIVACY.md"} <= {p.name for p in documents}
         offenders = []
         for path in documents:
             offenders += self._offenders(
-                path.name, path.read_text(encoding="utf-8"))
+                path.relative_to(REPO).as_posix(),
+                path.read_text(encoding="utf-8"))
         assert offenders == []
 
     def test_the_check_would_notice(self):

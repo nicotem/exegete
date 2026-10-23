@@ -51,13 +51,14 @@ EXPECTED_TOOLS = {
     # v0.15.0: the names file, filled in on the researcher's computer,
     # and its save as the project's names list
     "prepare_names_list", "save_names_list",
-    # read/analysis (15)
+    # read/analysis (14; v0.15.1 removed export_code_report, as
+    # announced in 0.14)
     "search_coded_text", "get_coded_segments", "search_files",
-    "get_coding_frequencies", "search_memos", "export_code_report",
+    "get_coding_frequencies", "search_memos",
     "get_project_summary", "read_file_with_codings", "list_attribute_types",
     "get_file_attributes", "get_case_attributes", "query_by_attribute",
     "find_cooccurring_codes", "get_case_code_matrix", "get_codes_by_case",
-    # (16th read)
+    # (15th read)
     "get_cases_by_code",
     # v0.14.3: reading a whole file on the computer, its
     # text kept off the conversation, in every tool set
@@ -72,9 +73,9 @@ EXPECTED_TOOLS = {
     # document import (0.14.3)
     "import_documents",
     "list_backups", "restore_backup", "export_refi_qda",
-    # sessions & help (5)
+    # sessions & help (4; v0.15.1 removed cleanup_old_sessions)
     "get_coding_session_info", "list_coding_sessions",
-    "delete_coding_session", "cleanup_old_sessions", "explain_ai_coding_tools",
+    "delete_coding_session", "explain_ai_coding_tools",
     # memo writing (2)
     "set_memo", "add_journal_entry",
     # codebook editing — non-destructive (7)
@@ -87,9 +88,10 @@ EXPECTED_TOOLS = {
     # annotations, category merge, cases (v0.8 phase D1)
     "add_annotation", "update_annotation", "delete_annotation",
     "merge_category", "create_case", "rename_case", "rename_file",
-    # inductive / open coding (v0.8 phase A)
+    # inductive / open coding (v0.8 phase A; v0.15.1 removed
+    # merge_proposals)
     "propose_codes", "review_proposals", "update_proposal",
-    "merge_proposals", "update_proposal_status", "create_proposed_codes",
+    "update_proposal_status", "create_proposed_codes",
     # attributes (v0.8 phase D2)
     "create_attribute_type", "set_attribute",
     # report exports (v0.8 phase B)

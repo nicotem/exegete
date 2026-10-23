@@ -330,9 +330,10 @@ class TestNoResponseCarriesSessionId:
         # sweep reaches through copy_project_to_workspace because its
         # `workspace` is not a tool argument) and for nothing else. Keep
         # it for that class and redirect the frozen constants as well:
-        # cleanup_old_sessions takes its production default (days_old=30)
-        # and unlinks session files (fix round 2, R2, which pinned the
-        # environment alone and therefore pinned nothing).
+        # delete_coding_session unlinks session files, as
+        # cleanup_old_sessions did with its production default
+        # (days_old=30) until v0.15.1 removed it (fix round 2, R2, which
+        # pinned the environment alone and therefore pinned nothing).
         real_home = Path.home()
         home = tmp_path / "probe_home"
         home.mkdir()
@@ -346,8 +347,8 @@ class TestNoResponseCarriesSessionId:
         # A guard is only a guard if it moved what it claims to move.
         # setup_server already points session_manager at tmp_path; assert
         # that rather than relying on the fixture staying as it is,
-        # because cleanup_old_sessions is called below and deletes session
-        # files wherever the manager is pointing.
+        # because the session tools called below delete session files
+        # wherever the manager is pointing.
         assert Path(database.default_workspace()).is_relative_to(tmp_path)
         assert Path(server._MRU_FILE).is_relative_to(tmp_path)
         assert Path(server.session_manager.storage_dir).is_relative_to(tmp_path)

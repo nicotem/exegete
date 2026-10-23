@@ -623,11 +623,16 @@ def test_computer_use_sees_the_screen():
                   "\"This means Claude can see any information visible on "
                   "your screen or those apps, including personal data, "
                   "sensitive documents, or private information belonging to "
-                  "you or others.\"",
-                  "So through any window on the screen, QualCoder's or a "
-                  "file viewer's, it can see a project, the private part of "
-                  "memos included."):
+                  "you or others.\""):
         assert words in privacy, words
+    # What follows from the quotes, by its parts: any window, a project's
+    # private notes included; QualCoder's window named only for a
+    # researcher who uses it (the staleness audit of 20 October 2026)
+    so = privacy[privacy.index("So through any window on the screen"):]
+    so = so[:so.index(".") + 1]
+    assert "it can see a project, the private part of memos included" in so
+    assert "a file viewer's" in so
+    assert "QualCoder's if you use it" in so
     assert "Through an application you allow, such as QualCoder" \
         not in privacy
     # v0.14.2, the README's first round of checks: the README says once,
@@ -657,11 +662,25 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "chat with the extension, with computer use off, no folder that "
             "holds your projects or transcripts connected to it, and no "
             "other extension that reads files. Codex reads well beyond its "
-            "folder without asking, and a setting that stops it has not yet "
-            "been tested.",
+            # (ruling 85, item 4: the setting's test dropped, its words
+            # those of OpenAI's page)
+            "folder without asking. OpenAI documents a setting, marked "
+            "Beta, that can keep Codex's own commands from reading outside "
+            "the folder it works in; it has not been tested with Exegete.",
             "- **What stays on the computer, and for how long.**",
             "the lists of suggestions waiting for review "
             "(`~/.exegete/sessions/`)",
+            # (the staleness audit of 20 October 2026: the reading folder
+            # and the run records, which PRIVACY's table already listed)
+            "the reading folder's pages, with a file's whole text and its "
+            "codings",
+            # (each place as reading_folder.root gives it, held there by
+            # tests/test_v0151_stale_texts.py, $XDG_CACHE_HOME included)
+            "macOS `~/Library/Caches/Exegete/Reading.noindex`",
+            "Windows `%LOCALAPPDATA%\\Exegete\\Reading`",
+            "Linux `~/.cache/exegete/reading`",
+            "the pseudonymisation run records "
+            "(`~/.exegete/pseudonymisation/`)",
             "Claude Desktop's log of the extension, which keeps every "
             "request and answer",
             "Codex's session files (`~/.codex/sessions`)",
@@ -757,9 +776,18 @@ def test_a_first_session_says_what_to_do_next():
             "\"Exegete projects\", in your home folder (the assistant's "
             "answer gives the full path): ask to open a file for "
             "reading, or open the project in QualCoder (Project, Open "
-            "Project), to see your coding in the text. [More requests to "
-            "try](https://github.com/nicotem/exegete/blob/main/TOOLS.md"
-            "#example-requests).") in first
+            "Project), to see your coding in the text.") in first
+    # (the staleness audit of 20 October 2026: on `core`, as LM Studio's
+    # recipe sets it, neither step works, CORE_TOOLSET; INSTALL's recipe
+    # says how to make the project once)
+    assert ("In LM Studio, with the `core` tool set, Exegete can neither "
+            "create a project nor bring documents in: \"A first project\", "
+            "in INSTALL.md's recipe for LM Studio, says how to do both "
+            "once. [More requests to try](https://github.com/nicotem/"
+            "exegete/blob/main/TOOLS.md#example-requests).") in first
+    for tool in ("create_project", "import_documents", "import_text_file"):
+        assert tool not in server.CORE_TOOLSET, tool
+    assert "**A first project.**" in _flat("INSTALL.md")
     import json
     manifest = json.loads(_read("packaging/desktop-extension/"
                                 "manifest.in.json"))
@@ -892,15 +920,17 @@ def test_qualcoder_4_0_is_named_as_released():
     get = _between(readme, "**QualCoder, if you want it.**",
                    "### ChatGPT's desktop app")
     assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
-            "3.8.2 or 4.0. Exegete works with both, but can tell that "
-            "QualCoder has a project open only with 3.8.2 (below). 3.8.2 "
-            "is listed just below 4.0, the release marked \"Latest\" when "
-            "this was checked, on 6 October 2026.") in get
+            "3.8.2 or 4.0. Exegete works with both, but can tell for "
+            "certain that QualCoder has a project open only with 3.8.2; "
+            "with 4.0 it warns when it sees signs of an open window "
+            "(below). 3.8.2 is listed just below 4.0, the release marked "
+            "\"Latest\" when this was checked, on 6 October 2026.") in get
     one = _between(readme, "**One program at a time.**",
                    "### Other assistants")
     assert ("With QualCoder 3.8.2, an open project is detected and the "
-            "change refused. In QualCoder 4.0 it cannot be detected, so "
-            "there only you can make sure;") in one
+            "change refused. In QualCoder 4.0 it cannot be detected for "
+            "certain: Exegete warns when it sees signs of an open 4.0 "
+            "window, but only you can make sure;") in one
     assert ("Exegete reads and writes projects in the formats of "
             "QualCoder 3.8.2 to 4.0, reading what each supports") in readme
     install = _flat("INSTALL.md")

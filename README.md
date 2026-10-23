@@ -7,6 +7,7 @@ AI assistant, compatible with QualCoder.**
 
 [![PyPI](https://img.shields.io/pypi/v/exegete)](https://pypi.org/project/exegete/)
 [![Licence: LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-blue)](https://github.com/nicotem/exegete/blob/main/COPYING.LESSER)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23496246.svg)](https://doi.org/10.5281/zenodo.23496246)
 
 Analyse your interviews by asking, in your own words. Your AI assistant
 reads, searches and suggests; you decide. Every suggested coding quotes
@@ -57,7 +58,7 @@ Exegete yet (listed below).
 - **Advanced user, developer or IT?**
   [For advanced users](https://github.com/nicotem/exegete#for-advanced-users):
   an MCP server over stdio, two tool sets, every tool,
-  `pipx install exegete`.
+  `pipx install "exegete[pdf-epub]"`.
 
 Exegete is free, open-source software, under QualCoder's own licence
 (LGPL-3.0-or-later), and costs nothing (your assistant may: see "Start
@@ -99,8 +100,8 @@ never put participant data in an issue.
   (other identifying details are not looked for).
 - **Export** the codebook, a coding report, frequencies and the
   case-by-code matrix as CSV, text or Markdown.
-- **Go back**: a backup before each change, by default, and a way to
-  restore one.
+- **Go back**: a backup before every change to the project's database,
+  taken by Exegete itself, and a way to restore one.
 
 **Not in Exegete yet**, and done in QualCoder for now: bringing in
 images, audio and video; coding by selecting text yourself; coding
@@ -146,7 +147,7 @@ project until you approve them and the assistant writes them. Other
 changes, such as making a code or writing a memo, are made when the
 tool runs; the larger ones (merging or deleting codes and categories,
 replacing names, restoring backups, bringing documents in, correcting
-your own coder name) show a preview first. A suggested
+your own coder name, saving the names list) show a preview first. A suggested
 coding's path:
 
 ```text
@@ -184,14 +185,17 @@ match what you said; if not, say so.
 request for a file that says whether a newer version exists, with
 nothing from your projects: at most once a week, and when you ask,
 while checking is on, as it is in the Claude Desktop extension unless
-you switch it off ("Updating", below). What the assistant reads through it (passages,
+you switch it off ("Updating", below). On Windows x64, a library it
+installs for PDFs also reports its use, with nothing from your projects
+(PRIVACY.md, "How your data flows"). What the assistant reads through it (passages,
 codes, memos, names) goes to the maker of the AI behind your assistant:
 Anthropic for Claude's apps, OpenAI for ChatGPT's desktop app and
 Codex, no one with a local model. Text you paste or attach goes in
 full; a document in the project, brought in through Exegete or
 imported in QualCoder, only as far as the assistant reads it: Exegete's preview
 of an import gives the assistant the documents' names, sizes, lengths
-and warnings, never their text
+and warnings, never their text, but for one line of a file not saved as
+UTF-8, as each character set reads it
 ([PRIVACY.md, "Bringing documents in"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#bringing-documents-in-0143)).
 
 **Assistants that open files by themselves.** Exegete's answers hold
@@ -208,7 +212,7 @@ which assistant you use and how it is set up:
 | **Claude Desktop's chat**, with the extension | No, when set up as below (as far as Anthropic's pages say) | Anthropic; on a Team or Enterprise account, under commercial terms | **This one**, set up as below |
 | **Claude's Cowork** | Yes, in the folders you connect to it | Anthropic | Claude Desktop's chat instead. If you use Cowork, keep projects and transcripts out of the folders you connect, with computer use off and no other extension that reads files |
 | **Claude Code** | Yes, without asking, in the folder it starts in and beyond | Anthropic; with an organisation's API key, under commercial terms | Claude Desktop's chat instead |
-| **ChatGPT's desktop app and Codex** (Experimental) | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode (a setting that stops it has not yet been tested with Exegete) | OpenAI | Claude Desktop's chat instead |
+| **ChatGPT's desktop app and Codex** (Experimental) | Codex: yes, well beyond its folder, without asking, even in "Ask for approval" and read-only mode (OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete) | OpenAI | Claude Desktop's chat instead |
 | **LM Studio**, with a local model (Experimental) | Its chat: no | Nowhere outside your computer: the model runs on it | **This one too**, with no other server or plugin that reads files. Choose the `core` tool set, since local models cope less well with many tools. No local model has been evaluated with Exegete yet |
 
 Exegete's own answers also tell the assistant where your project is, so
@@ -242,7 +246,9 @@ where chat and Cowork are one conversation, below):
 
 **Private notes and names.** Exegete never passes the part of a memo
 from a `#####` mark onward (QualCoder's mark for a private note) to the
-assistant, whichever program made the project. The mark works in
+assistant, whichever program made the project, unless the project was
+built to leak it (PRIVACY.md, "Error answers and Exegete's log").
+The mark works in
 memos, annotations and journal entries, not in the text of a
 transcript, and exported files keep the whole memo, private part
 included. Replacing names reduces the risk; it does not make anyone
@@ -308,9 +314,9 @@ a local model; its pages recommend 16 GB of memory or more.
    the file whose name starts with `exegete-` and ends in `.mcpb` from
    the newest release that has one under its Assets.
 3. **Install it**: double-click the file, click Install, then Install
-   again to fetch what it needs. Leave its "Tool set" setting as it
-   comes (`full`): `core`, the smaller set for local models, cannot
-   create a project
+   again to fetch what it needs. Leave its switch "Limit Exegete to its
+   small tool set" off, as it comes: the smaller set, `core`,
+   cannot create a project
    ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#claude-desktop-the-one-click-extension-recommended)).
 
 To check, click "+" in a new conversation, then Connectors: Exegete is
@@ -332,8 +338,9 @@ listed. Then:
 with its coding highlighted; QualCoder shows it too, and
 does what Exegete does not do yet:
 [download](https://github.com/ccbogel/QualCoder/releases) 3.8.2 or
-4.0. Exegete works with both, but can tell that QualCoder has a
-project open only with 3.8.2 (below). 3.8.2 is listed just below 4.0,
+4.0. Exegete works with both, but can tell for certain that QualCoder
+has a project open only with 3.8.2; with 4.0 it warns when it sees
+signs of an open window (below). 3.8.2 is listed just below 4.0,
 the release marked "Latest" when this was checked, on 6 October 2026.
 
 ### ChatGPT's desktop app and Codex (OpenAI)
@@ -341,10 +348,12 @@ the release marked "Latest" when this was checked, on 6 October 2026.
 These can start Exegete too (ChatGPT in a web browser cannot). Codex
 reads files by itself, so for participants' data this project suggests
 an assistant with no file access of its own, such as Claude Desktop's
-chat, until a setting that stops Codex's reads has been tested with
-Exegete.
+chat. OpenAI documents a setting, marked Beta, that can keep Codex's
+own commands from reading outside the folder it works in; it has not
+been tested with Exegete, so if you try it, you may want to check what
+Codex can still read before bringing in participants' data.
 Experimental: written from OpenAI's documentation, read on 30 September
-2026, and not yet tried by this project.
+2026, and not tried by this project.
 
 1. **Switch training off** before participants' data: while it is on,
    OpenAI may use your conversations to train its models. On a
@@ -381,6 +390,9 @@ extension or OpenAI's steps, the project is made, by default, in
 "Exegete projects", in your home folder (the assistant's answer gives
 the full path): ask to open a file for reading, or open the project in
 QualCoder (Project, Open Project), to see your coding in the text.
+In LM Studio, with the `core` tool set, Exegete can neither create a
+project nor bring documents in: "A first project", in INSTALL.md's
+recipe for LM Studio, says how to do both once.
 [More requests to try](https://github.com/nicotem/exegete/blob/main/TOOLS.md#example-requests).
 
 **Two coder names.** When it makes the project, the assistant asks for
@@ -392,7 +404,8 @@ kept per project, under which Exegete writes what is done through the
 conversation, unless the project was made while it was filled in
 Exegete's settings. Both names, and whether you also use QualCoder on
 this computer, are set in Claude Desktop's Settings, Extensions,
-Exegete, or elsewhere as INSTALL.md's
+Exegete (after changing one, quit Claude Desktop and open it again), or
+elsewhere as INSTALL.md's
 [Environment variables the server reads](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
 says.
 
@@ -409,8 +422,9 @@ without the old project's coding.
 **One program at a time.** If you also use QualCoder, close the
 project there before the assistant changes it. With QualCoder 3.8.2, an open project
 is detected and the change refused. In QualCoder 4.0 it cannot be
-detected, so there only you can make sure; an open 4.0 window shows
-the changes only once the project is opened again.
+detected for certain: Exegete warns when it sees signs of an open 4.0
+window, but only you can make sure; an open 4.0 window shows the
+changes only once the project is opened again.
 
 ### Other assistants, and updates
 
@@ -422,9 +436,12 @@ whose default tool set, `full`, can create a project too. There, new
 projects and copies go to `~/Documents/Exegete projects`, which iCloud
 or OneDrive may sync, unless
 [`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
-names another folder. Claude Code opens files by itself ("Where your
-data goes", above), so for participants' data this project suggests
-Claude Desktop's chat.
+names another folder. LM Studio, with a model that runs on your own
+computer, has a recipe of its own in seven steps, with the `core` tool
+set:
+[INSTALL.md, "LM Studio (fully local) (Experimental)"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#lm-studio-fully-local-experimental).
+Claude Code opens files by itself ("Where your data goes", above), so
+for participants' data this project suggests Claude Desktop's chat.
 
 **Updating.** Updates are never installed by themselves and never
 touch your projects. In the extension, Exegete tells you when a new
@@ -465,7 +482,7 @@ them, with where each comes from.
 is that the analytic work you can do in QualCoder, you can do from the
 conversation. It is not yet a fact: today the two differ in both
 directions. QualCoder 3.8.2 and 4.0 as checked on 10 October 2026,
-beside Exegete 0.15.0:
+beside Exegete 0.15.1:
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
@@ -474,17 +491,19 @@ beside Exegete 0.15.0:
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF with no text layer) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
 | Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting; not yet nesting an existing code under another |
-| Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
+| Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, setting an attribute on a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
 | Reports | Many, in its Reports menu | Some: codebook, coding report, frequencies, case-by-code matrix, co-occurrence |
-| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, being withdrawn (removed in 0.15.1) |
+| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, with known faults (every coding under the AI coder name; cases, annotations, journals and media left out); a later release is meant to fix them |
 | Comparing two coders | Per code, with a figure QualCoder labels Kappa | The same figure, and Cohen's kappa beside it; set against the AI coder name it is not agreement between independent coders |
 | Pseudonyms | Applied when a file is imported | Also applied to text already coded |
 | AI suggestions for coding | 3.8.2: an AI search finds passages, which you code; 4.0: its assistant codes as it works, within the AI permission you set (read only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
 
 **Interoperability.** Work on a project in QualCoder and from the
-conversation, one program at a time (above); QualCoder's own export
-(Project, Export, REFI-QDA Project export) writes the exchange file
-other packages read. Before you edit transcripts in QualCoder 3.8.2's
+conversation, one program at a time (above). Exegete's own export,
+`export_refi_qda`, writes the exchange file other packages read, with
+the known faults the table names; QualCoder's own export (Project,
+Export, REFI-QDA Project export), for researchers who use QualCoder,
+keeps each coder, the cases, notes and media. Before you edit transcripts in QualCoder 3.8.2's
 coding view, read
 [its edit-mode caution](https://github.com/nicotem/exegete/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution).
 
@@ -521,16 +540,20 @@ with its reason; and you work on a project in one program at a time.
 Exegete is a Model Context Protocol (MCP) server, which is why more
 than one assistant can use it. It runs locally over standard input and
 output, in Python 3.10 or newer, with no online service and no
-telemetry; its one request of its own is the check for new versions
+telemetry of its own (on Windows x64, a library it installs for PDFs
+reports its use: PRIVACY.md, "How your data flows"); its one request
+of its own is the check for new versions
 ("Updating", above). What the assistant reads through it goes to the maker of
 the AI behind it
 ([Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes)).
 It reads a project's SQLite database read-only; each tool that writes
-opens its own connection, after a backup (by default), and refuses
+opens its own connection, after a backup Exegete takes itself, and refuses
 while the project's lock file is active (QualCoder 3.8.2 has the
 project open, or another conversation using Exegete is writing to it). Each backup copies the
-whole project folder, with any media stored in it, next to the project;
-`prune_backups` clears old ones. Install it with `pipx install exegete`;
+project folder, except its audio and video folders (a restore keeps the
+project's), next to the project; `prune_backups` clears old ones.
+Install it with `pipx install "exegete[pdf-epub]"` (the part in brackets
+reads PDF and EPUB, with libraries under the AGPL; INSTALL.md says more);
 [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)
 covers every host and setting,
 [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#available-tools)
@@ -538,8 +561,8 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 82: all, creating a project and two renamed tools' earlier names included | about 207,000 characters, 52k tokens | hosted models, such as Claude or OpenAI's | every route |
-| `core` | 25: the coding loop and its safety tools | about 68,000 characters, 17k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core` |
+| `full` | 79: all, creating a project and two renamed tools' earlier names included | about 203,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `core` | 27: the coding loop and its safety tools | about 74,000 characters, 18k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:
@@ -570,7 +593,7 @@ the extension, is still accepted and means `full`.
   `delete_category`, `pseudonymise_source` (these five also say whose
   work is affected), `restore_backup`, `prune_backups`,
   `set_project_coder_name` (your own coder name, while nothing is
-  recorded under it).
+  recorded under it), `save_names_list` (saving the names list).
 - **Documents in, whole files read**: `import_documents`
   (a preview, then the import on its token, after a backup; PDF and
   EPUB need `exegete[pdf-epub]`) and `open_file_for_reading` (on the
@@ -580,10 +603,10 @@ the extension, is still accepted and means `full`.
   tool's description when it finds the tool through its tool search,
   as it does by default, and the first 4,096 when it loads the tool at
   the start (2,048 before its version 2.1.296). So the rules that
-  matter come first in each description, within 2,048 characters; the
-  rest reach the model through `read_brief` or the answers. One
+  matter come first in each description, within 2,048 characters, a
+  few named exceptions apart; the rest reach the model through `read_brief` or the answers. One
   description is longer than 16,384 characters, `pseudonymise_source`'s
-  (17,791 on Python 3.13, 18,919 on 3.10 to 3.12):
+  (17,138 on Python 3.13, 18,238 on 3.10 to 3.12):
   [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients)
   says how to let it through whole.
 - **Resources** (`exegete://...`), prompts, and
@@ -623,12 +646,13 @@ github.com/nicotem/exegete
 
 Plans, not promises: the order may change with what testers report.
 
-- v0.15.1, the safety net: undo everything a session did; when
-  replacing names, choose which mentions to keep; old tools marked as
-  going are retired (TOOLS.md names each)
-- v0.15.2, method: how the assistant supports a study's method,
+- v0.15.2, the safety net, second part: undo a session's changes; when
+  replacing names, choose which mentions to keep; coding sessions kept
+  with their project
+- v0.15.3, method: how the assistant supports a study's method,
   reviewed; shorter tool descriptions; the earlier names of the two
-  renamed tools retired
+  renamed tools, and the tools' backup option, which Exegete ignores
+  from v0.15.1, retired
 - v0.16, chat-first: more of the analysis shown in the conversation,
   as tables and graphs (codes that occur together, the code tree,
   counts by attribute); PDFs that say where their text came from;
@@ -649,6 +673,6 @@ Exegete is licensed under the GNU Lesser General Public License, version 3 or (a
 
 ## Acknowledgements
 
-- [QualCoder](https://github.com/ccbogel/QualCoder) by Dr Colin Curtain and Dr Kai Dröge ([homepage](https://qualcoder.wordpress.com/))
-- [Model Context Protocol](https://modelcontextprotocol.io/) by Anthropic
+- [QualCoder](https://github.com/ccbogel/QualCoder) by Dr Colin Curtain and Dr Kai Dröge ([homepage](https://qualcoder.org/))
+- [Model Context Protocol](https://modelcontextprotocol.io/), created by Anthropic and since December 2025 stewarded by the Agentic AI Foundation under the Linux Foundation
 - [Claude Desktop](https://claude.ai/download) by Anthropic

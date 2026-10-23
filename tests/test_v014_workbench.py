@@ -37,6 +37,10 @@ JOB_TIME_LIMITS = {
     "qualcoder-parity": 20,
     # v0.14.1, the rename: the old name's package and its upgrades
     "rename-upgrade": 20,
+    # v0.15.1: the links in the documents
+    "documents": 10,
+    # v0.15.1: the suite on the newest library releases, reporting only
+    "newest-libraries": 45,
 }
 
 

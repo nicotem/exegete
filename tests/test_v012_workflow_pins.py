@@ -210,11 +210,20 @@ WORKFLOW_JOBS = {
                # v0.14.1: the rename's old name's package and upgrades.
                "rename-upgrade",
                # 0.14.3: the import's text against QualCoder's own code.
-               "qualcoder-parity"},
+               "qualcoder-parity",
+               # v0.15.1: the links in the documents, on every push.
+               "documents",
+               # v0.15.1: the suite on the newest library releases,
+               # reporting only.
+               "newest-libraries"},
     "publish.yml": {"build", "publish-to-testpypi", "publish-to-pypi"},
     # v0.14.2: the update site, deployed from Actions, never from a branch
     # (the owner's decision of 5 October 2026)
     "pages.yml": {"check-site", "deploy-site"},
+    # v0.15.1: the links to other sites, once a week
+    "external-links.yml": {"external-links"},
+    # v0.15.1: the locked releases against the advisories, once a week
+    "advisories.yml": {"advisories"},
 }
 
 

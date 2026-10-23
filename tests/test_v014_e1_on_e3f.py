@@ -138,6 +138,20 @@ class TestArgumentsRemovedAndAdded:
         assert relabelled["reading"] == "interpretive"
 
 
+def _merged_as_in_0150(sid, source, target):
+    """A proposal merged away as 0.15.0's merge_proposals left the session
+    file: its passages added to the target's, itself `merged`, a final
+    status, with `merged_into` the target."""
+    path = _session_file(sid)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    by_guid = {p["guid"]: p for p in data["proposed_codes"]}
+    by_guid[target]["example_segments"] += by_guid[source][
+        "example_segments"]
+    by_guid[source]["status"] = "merged"
+    by_guid[source]["merged_into"] = target
+    path.write_text(json.dumps(data), encoding="utf-8")
+
+
 class TestSessionFilesBothWays:
 
     def test_removed_and_merged_hold_text_but_no_work_to_apply(
@@ -185,9 +199,10 @@ class TestSessionFilesBothWays:
                     for name, span in (("Coping", COPE),
                                        ("Maria's stress", "Maria said"))]})
             target, source = [r["guid"] for r in proposed["recorded"]]
-            await call("merge_proposals", {
-                "coding_session_id": merged, "from_proposal_guid": source,
-                "into_proposal_guid": target})
+            # merged as 0.15.0's merge_proposals left a session file
+            # (v0.15.1 removed the tool, as announced in 0.14; its
+            # sessions still load)
+            _merged_as_in_0150(merged, source, target)
             await call("update_proposal_status", {
                 "coding_session_id": merged, "reject": [target]})
             mapping = [{"original": "Maria", "pseudonym": "Joan"}]

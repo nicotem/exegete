@@ -228,7 +228,12 @@ class TestWhatTheSaveSaysOfQualCodersImports:
                                                     tmp_path):
         preview = _save_names(selected, "Mary Ann = Participant M",
                               "Ann Smith = Participant S")
-        assert "warnings" not in preview
+        # v0.15.1: "Mary" and "Ann" have no line of their own, which the
+        # save now says; nothing else is warned of
+        assert preview["warnings"] == [server.SAVE_NAMES_LIST_FIRST_NAMES]
+        assert preview["preview"][
+            "names_without_a_line_for_their_first_name"] == {
+                "count": 2, "lines": [6, 7]}
         saved = json.loads(server.save_names_list(
             preview_token=preview["preview_token"]))
         assert ("two names that overlap without either containing the "

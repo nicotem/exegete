@@ -4,6 +4,7 @@ use in conversation with an AI assistant, compatible with QualCoder. It runs
 as a Model Context Protocol server."""
 
 import errno
+import fnmatch
 import os
 import re
 import sys
@@ -39,6 +40,7 @@ from .database import (
     error_label,
     error_text,
     pseudonyms_json_fingerprint,
+    project_counts,
     CoderVisibilityUnreadable,
     coder_is_hidden,
     CoderListUnreadable,
@@ -69,6 +71,8 @@ from .database import (
     private_note_refusal,
     MAX_CODER_NAME_LENGTH,
     backup_project,
+    is_media_folder_entry,
+    BACKUP_BY_HAND_KEEPS_MEDIA,
     backup_sort_key,
     is_this_servers_backup_name,
     BACKUP_DATED_BY_NAME,
@@ -76,12 +80,18 @@ from .database import (
     backup_database_is_link,
     BackupWithoutDatabaseError,
     BACKUP_WITHOUT_DATABASE_MESSAGE,
+    CATEGORY_CYCLE_REFUSAL,
+    _is_locked_error,
     default_workspace,
     earlier_workspace_holds_projects,
     workspace_setting_problem,
     WORKSPACE_ENV,
     qualcoder_lock_state,
     qualcoder_open_message,
+    LOCK_NOT_A_FILE,
+    lock_not_a_file_message,
+    lock_not_a_file_warning,
+    odd_database_side_file,
     qualcoder_gui_signals,
     normalize_coder,
     hold_project_lock,
@@ -102,6 +112,7 @@ from . import pseudonymise as pseudo
 from . import new_project
 from . import names_file, parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
+from .file_kinds import ProjectFileKindError
 from . import doc_import, doc_readers, kept_texts
 from . import qualcoder_history
 from .cursors import (
@@ -145,6 +156,7 @@ from .preview_tokens import (
     load_secret,
     state_home as preview_tokens_state_home,
     old_state_home as preview_tokens_old_state_home,
+    token_version,
     verify,
 )
 from .project_settings import (
@@ -295,61 +307,115 @@ FREQUENCIES_COUNT_NOTE = (
     "applied most often are not thereby the most important, and one "
     "participant can account for many codings.")
 
+# The REFI-QDA export, deprecated in v0.14, is kept, to be fixed (ruling
+# 85, item 2): this sentence names its known faults and no removal, in
+# its description and, under known_faults, in every answer the tool
+# itself gives (not a refusal made by _tool_guard, outside it). The
+# QualCoder export it names is for researchers who have QualCoder, the
+# gap said as Exegete's (whole-branch review, round 2). Each fault is in
+# the code: one User, the AI coder, creates every selection and coding
+# (refi_export.py); the project export reads every coder's codings,
+# hidden ones included; no Cases or Notes element, text sources only;
+# a session's export takes every suggestion and writes no status. The
+# piece that fixes the export removes the sentence and its guards
+# (tests/test_v0151_refi_known_faults.py).
+REFI_EXPORT_KNOWN_FAULTS = (
+    "Known faults (a later release is meant to fix them): this export "
+    "files every coding under the AI coder name, the researcher's own and "
+    "a hidden coder's included, so another program shows them as the "
+    "AI's; it leaves out cases, annotations, journals and media; and a "
+    "session's export includes every suggestion, rejected ones too, with "
+    "nothing to say which. Exegete has no other REFI-QDA export yet; "
+    "QualCoder's own export (Project, Export, REFI-QDA Project export), "
+    "for researchers who have QualCoder, keeps each coder, the cases, "
+    "notes and media.")
+
 # What warns in v0.14 and goes in v0.15.1 (owner ruling 25, questions 3,
 # 7 and 8; ruling 70 moved the removals from v0.15 to v0.15.1): one
 # sentence, the same in the tool's description and in its answer, so a
-# test can pin one source of wording. The REFI-QDA export's, the
-# journals' and the rename back's name QualCoder's own feature only for
-# researchers who use it, the gap said as Exegete's (whole-branch review,
-# round 2). The tool that returned the names list, deprecated in v0.14
-# too, was removed in v0.15.0 (ruling 78): the names file replaces it.
-DEPRECATED_REFI_EXPORT = (
-    "Deprecated, removed in v0.15.1: this export files every coding under "
-    "the AI coder name (a hidden coder's too) and leaves out cases, "
-    "annotations, journals and media, and a session's export includes "
-    "rejected suggestions unmarked. Exegete has no other REFI-QDA export "
-    "yet; QualCoder's own export (Project, Export, REFI-QDA Project "
-    "export), for researchers who have QualCoder, keeps each coder, the "
-    "cases, notes and media.")
-DEPRECATED_CODE_REPORT = (
-    "Deprecated, removed in v0.15.1: get_coded_segments(code_id=...) reads "
-    "the same passages, page by page and without the 1,000 limit.")
-DEPRECATED_CLEANUP = (
-    "Deprecated, removed in v0.15.1: it deletes every project's old "
-    "sessions with no preview; delete_coding_session removes one.")
-DEPRECATED_CASCADE = (
-    "Deprecated, removed in v0.15.1: cascade; the preview token already "
-    "approves the whole branch.")
-DEPRECATED_OWNER = (
-    "Deprecated, removed in v0.15.1: owner, which can only repeat the "
-    "project's AI coder name.")
-DEPRECATED_IMPORT_SKIP_BACKUP = (
-    "Deprecated, removed in v0.15.1: create_backup=false; an import always "
-    "takes a backup first.")
-DEPRECATED_HELP_TOPICS = (
-    "Deprecated, removed in v0.15.1: the topics analyze_for_coding, "
-    "apply_codings, edit_suggestion and coding_style_guidance, which "
-    "repeat the tools' own descriptions.")
-DEPRECATED_HELP_TOPIC_NAMES = frozenset({
+# test can pin one source of wording. The tool that
+# returned the names list, deprecated in v0.14 too, was removed in
+# v0.15.0 (ruling 78): the names file replaces it. The three tools and
+# the four help topics announced here went in 0.15.1, as announced (the
+# CHANGELOG names them): a call of one of the tools is refused as an
+# unknown tool, and a removed topic is answered below. So did the
+# arguments delete_code's cascade, the owner of apply_codings and
+# import_text_file, and search_files' search_memo (REMOVED_ARGUMENTS),
+# attributes on journal entries (JOURNAL_ATTRIBUTES_REMOVED, below), the
+# rename back recognised from the project's backups (rename_file no
+# longer reads them), and pseudonymise_source's overlap policy
+# qualcoder_edit_parity (EDIT_PARITY_REMOVED, below).
+
+# The arguments removed in 0.15.1, as announced in 0.14: a call that
+# passes one is refused like any argument its tool does not declare
+# (unknown_arguments_refusal), nothing done, with this sentence naming
+# what replaces it in place of a "Did you mean" line, and under
+# "removed". Every value is refused alike, false and null included:
+# 0.15.0 accepted cascade=false without a word, and accepted silently now
+# it would delete a branch it once refused to delete.
+_OWNER_REMOVED = (
+    "owner was removed in 0.15.1: every row Exegete writes is stored under "
+    "the project's AI coder name, which set_project_ai_coder_name "
+    "changes; call {tool} without it.")
+REMOVED_ARGUMENTS: Dict[Tuple[str, str], str] = {
+    ("delete_code", "cascade"): (
+        "cascade was removed in 0.15.1: the preview's token approves the "
+        "whole branch, sub-codes included, so call delete_code without "
+        "it."),
+    ("apply_codings", "owner"): _OWNER_REMOVED.format(tool="apply_codings"),
+    ("import_text_file", "owner"): _OWNER_REMOVED.format(
+        tool="import_text_file"),
+    ("search_files", "search_memo"): (
+        "search_memo was removed in 0.15.1: search_memos searches file "
+        "memos and every other kind of note."),
+}
+
+# Attributes on journal entries, removed in 0.15.1, as announced in 0.14:
+# create_attribute_type with applies_to journal, and set_attribute with
+# target_type journal, answer this sentence as their first check, before
+# any other refusal, the lock and the backup. Journal attributes already
+# in a project stay as they are, and every read of them is as before.
+JOURNAL_ATTRIBUTES_REMOVED = (
+    "Attributes on journal entries were removed in 0.15.1: Exegete set "
+    "them but never read them back. Those already in the project stay as "
+    "they are. Nothing was written.")
+
+# pseudonymise_source's overlap_policy qualcoder_edit_parity, removed in
+# 0.15.1, as announced in 0.14: a call that names it is answered with
+# this sentence before the mapping, the file, a token or the project's
+# lock is looked at, no token issued and nothing written.
+# snap_to_pseudonym, the default, is the one policy left; overlap_policy
+# stays an argument, bound into the token as before.
+EDIT_PARITY_REMOVED = (
+    "overlap_policy qualcoder_edit_parity was removed in 0.15.1: it "
+    "deleted codings that sat on a name and was not exact parity with "
+    "QualCoder's editor. snap_to_pseudonym, the default and now the only "
+    "policy, grows such a coding to hold the whole pseudonym and deletes "
+    "nothing; call again without overlap_policy.")
+
+# The help topics explain_ai_coding_tools no longer has (0.15.1, as
+# announced in 0.14): asked for one, it answers with this sentence and the
+# topics it has, and no error, since the name was once a topic.
+REMOVED_HELP_TOPICS = frozenset({
     "analyze_for_coding", "apply_codings", "edit_suggestion",
     "coding_style_guidance"})
-DEPRECATED_MERGE_PROPOSALS = (
-    "Deprecated, removed in v0.15.1: reject the proposal instead, and add "
-    "its passages to the other with update_proposal if they belong there.")
-DEPRECATED_JOURNAL_ATTRIBUTES = (
-    "Deprecated, removed in v0.15.1: attributes on journal entries, which "
-    "Exegete can set but never reads back (QualCoder's Journals window, "
-    "for researchers who use it, sets and shows them).")
-DEPRECATED_MEMO_SEARCH = (
-    "Deprecated, removed in v0.15.1: search_memo; search_memos searches "
-    "file memos and every other kind of note.")
-DEPRECATED_EDIT_PARITY = (
-    "Deprecated, removed in v0.15.1: overlap_policy qualcoder_edit_parity, "
-    "which deletes codings on names and is not exact parity.")
-DEPRECATED_RENAME_BACK = (
-    "Deprecated, removed in v0.15.1: a rename back recognised from the "
-    "project's backups (QualCoder's own Rename, if the researcher uses it, "
-    "still makes one).")
+HELP_TOPIC_REMOVED = (
+    "This help topic was removed in 0.15.1 because it repeated the tools' "
+    "own descriptions: each tool's description documents its arguments, "
+    "refusals and overrides, and start_coding_session's says what to ask "
+    "the researcher before a coding session.")
+
+# create_backup, accepted and ignored (v0.15.1; owner ruling 85, item 6:
+# it goes with the tools' earlier names in the release on method).
+# Exegete takes one backup before every change, so the argument decides
+# nothing; a call that gives it, whatever its value, is answered with
+# this sentence under a key of its own, create_backup_ignored, never in
+# place of a "deprecated" one. The owner's words of 20 October 2026.
+IGNORED_CREATE_BACKUP = (
+    "create_backup no longer does anything: Exegete takes one backup "
+    "before every change, whatever it says. It is still accepted, so that "
+    "saved instructions keep working, until the release on method removes "
+    "it with the tools' earlier names.")
 
 # start_coding_session without the researcher's answers (owner ruling 25,
 # question 5, with the Saldaña reading's item 17)
@@ -567,8 +633,8 @@ for a way round it.
   item is marked approved, on the researcher's word; only then can
   apply_codings or create_proposed_codes write them.
 - Other changes (a new code, a memo, a case, an attribute) happen when
-  you call the tool at the researcher's request, with a backup of the
-  project first, unless the researcher asks for none.
+  you call the tool at the researcher's request; Exegete takes a backup
+  of the project before every change.
 - Deleting or merging codes and categories, restoring or pruning
   backups, pseudonymising a file, importing documents, saving the names
   list and correcting the researcher's coder name take two steps: a
@@ -737,9 +803,11 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
     return deco
 
 
-def _with_deprecation(answer: Any, sentence: str) -> Any:
-    """The answer with the deprecation sentence: the "deprecated" key of a
-    JSON object, else a last line of a text answer."""
+def _with_deprecation(answer: Any, sentence: str,
+                      key: str = "deprecated") -> Any:
+    """The answer with the deprecation sentence: the `key` of a JSON
+    object ("deprecated" unless another is given), else a last paragraph
+    of a text answer."""
     if not isinstance(answer, str):
         return answer
     try:
@@ -747,25 +815,35 @@ def _with_deprecation(answer: Any, sentence: str) -> Any:
     except ValueError:
         return f"{answer}\n\n{sentence}"
     if isinstance(payload, dict):
-        payload["deprecated"] = sentence
+        payload[key] = sentence
         return json.dumps(payload, indent=2)
     return answer
 
 
 def _deprecated(sentence: Any, before: Optional[str],
-                when: Optional[Callable[[Dict[str, Any]], bool]] = None):
+                when: Optional[Callable[[Dict[str, Any]], bool]] = None,
+                key: str = "deprecated", in_description: bool = True):
     """What goes in v0.15.1 (owner ruling 25, questions 3, 7 and 8; ruling
     70): the
     sentence in the tool's description (before the line holding
     `before`), and in every answer the tool gives, or, for an option,
-    only when `when(arguments)` holds. Sits inside _tool_guard.
+    only when `when(arguments)` holds. Sits inside _tool_guard, but for
+    `_ignores_create_backup`, which sits above it.
+
+    The answer carries it under `key`, "deprecated" unless another is
+    given: create_backup's sentence has a key of its own,
+    create_backup_ignored, so it never takes the place of a "deprecated"
+    one (v0.15.1), and the REFI-QDA export's sentence, which names its
+    known faults and no removal, has known_faults, since the export is
+    kept (ruling 85, item 2). With `in_description` false the description
+    is left as it is, for a sentence its Args line already gives.
 
     A sentence that names a tool the core set lacks, on a core tool, is
     given as a function returning it marked (`_mark_unregistered`), and
     is written into the docstring by hand: marking it when the tool is
     defined would mark tools not yet registered."""
     def deco(fn):
-        if isinstance(sentence, str):
+        if isinstance(sentence, str) and in_description:
             fn = _with_guidance(sentence, before=before)(fn)
         signature = inspect.signature(fn)
 
@@ -781,9 +859,23 @@ def _deprecated(sentence: Any, before: Optional[str],
                 except TypeError:
                     return answer
             return _with_deprecation(
-                answer, sentence if isinstance(sentence, str) else sentence())
+                answer, sentence if isinstance(sentence, str) else sentence(),
+                key)
         return wrapper
     return deco
+
+
+# The 22 tools that take create_backup: a call that gives it, whatever its
+# value, is answered with IGNORED_CREATE_BACKUP under create_backup_ignored,
+# every refusal included; a call without it carries nothing. Each tool's
+# Args line says so, in place of its description. It sits above
+# _tool_guard (fix round 1), so the refusals the guard makes of an error
+# raised inside the tool (a validator's, a busy database, no project
+# selected, an unexpected error) carry it too; the wrapper itself raises
+# nothing (_with_deprecation and the binding catch their own errors).
+_ignores_create_backup = _deprecated(
+    IGNORED_CREATE_BACKUP, before=None, key="create_backup_ignored",
+    in_description=False, when=lambda a: a.get("create_backup") is not None)
 
 
 def _is(value: Any, word: str) -> bool:
@@ -887,6 +979,10 @@ def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
     `apply_project_pseudonym=true` imported the real names (the claims
     audit, item 5). The declared arguments are the tool's input schema,
     the list the host itself was given.
+
+    An argument removed in 0.15.1 (REMOVED_ARGUMENTS) is refused the same
+    way, whatever its value, with its sentence, marked for the tool set
+    in use, in place of a "Did you mean" line, and under "removed".
     """
     if not isinstance(arguments, dict) or not arguments:
         return None
@@ -900,15 +996,24 @@ def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
             f"argument a tool does not know is refused rather than ignored, "
             f"so that a misspelt one cannot fall back to its default "
             f"unnoticed.")
+    removed: Dict[str, str] = {}
     for key, name in zip(unknown, shown):
+        sentence = REMOVED_ARGUMENTS.get((tool_name, key))
+        if sentence is not None:
+            removed[name] = _mark_unregistered(sentence)
+            text += f" {removed[name]}"
+            continue
         close = difflib.get_close_matches(str(key), declared, n=1,
                                           cutoff=0.75)
         if close:
             text += f" Did you mean '{close[0]}' for '{name}'?"
     text += (f" Its arguments are: {', '.join(declared)}." if declared
              else " It takes no arguments.")
-    return json.dumps({"error": text, "unknown_arguments": shown,
-                       "arguments": declared}, indent=2)
+    payload: Dict[str, Any] = {"error": text, "unknown_arguments": shown,
+                               "arguments": declared}
+    if removed:
+        payload["removed"] = removed
+    return json.dumps(payload, indent=2)
 
 
 # v0.14.1: the resources' addresses moved from qualcoder:// to
@@ -1239,7 +1344,8 @@ DB_UNAVAILABLE_ERROR = (
     "list_backups). While the database will not open, list_backups cannot "
     "read it either: the project's backups, if any, sit beside the project "
     "folder under its name with _backup_ or _BKUP_, and one can be copied "
-    "back by hand while no program has the project open."
+    "back by hand while no program has the project open. "
+    + BACKUP_BY_HAND_KEEPS_MEDIA
 )
 
 
@@ -1590,9 +1696,16 @@ def _uses_qualcoder_answer() -> str:
     """The researcher's answer to "Do you also use QualCoder on this
     computer?" (EXEGETE_USES_QUALCODER) as a project's history with
     QualCoder weighs it: yes, no or not sure. One reading for the
-    selected project's history and create_project's (v0.15.0)."""
+    selected project's history and create_project's (v0.15.0). Yes
+    whatever that says when the extension's switch "I use QualCoder on
+    this computer" (EXEGETE_I_USE_QUALCODER) is on (v0.15.1, ruling 83):
+    the switch never says no."""
+    switch_on, _switch_recognised = env_settings.read_switch(
+        env_settings.i_use_qualcoder_switch())
     answer, _recognised = qualcoder_history.read_setting(
         env_settings.uses_qualcoder())
+    if switch_on:
+        return qualcoder_history.YES
     return answer
 
 
@@ -1606,8 +1719,9 @@ def _qualcoder_history() -> Optional[qualcoder_history.History]:
     Worked out once, at the first consult after the project was
     installed (select_project consults it at once), with the process
     scan and the researcher's answer to "Do you also use QualCoder on
-    this computer?" (EXEGETE_USES_QUALCODER), and kept for the session,
-    in memory only. None, with nothing worked out or kept, when no
+    this computer?" (EXEGETE_USES_QUALCODER, or yes with the extension's
+    switch EXEGETE_I_USE_QUALCODER on: _uses_qualcoder_answer), and kept
+    for the session, in memory only. None, with nothing worked out or kept, when no
     project is selected or its path does not validate; a caller treats
     None as the level "none".
     """
@@ -1707,6 +1821,10 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             db = QualcoderDatabase(current_project_path, read_only=read_only)
             logger.info("Reconnected to the selected project")
             return db
+        except ProjectFileKindError:
+            # A side file that is not a regular file (v0.15.1): refused in
+            # its own words, never a fall through to another project
+            raise
         except Exception as e:
             logger.error("Failed to reconnect to database: %s",
                          error_label(e))
@@ -1725,9 +1843,11 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             # Neither the path nor the folder's name (v0.14)
             logger.info("Connected to the project set in %s",
                         env_settings.read("project_path").name)
-        except (DatabaseLockedError, UnsupportedSchemaError):
+        except (DatabaseLockedError, UnsupportedSchemaError,
+                ProjectFileKindError):
             # Their own texts, which carry no path: a lock is a moment,
-            # an old schema has its advice
+            # an old schema has its advice, a side file that is not a
+            # regular file its way through (v0.15.1)
             raise
         except (ValueError, OSError, RuntimeError, sqlite3.Error) as e:
             # One text for a configured project that cannot be opened,
@@ -1737,6 +1857,12 @@ def get_db(read_only: bool = True) -> QualcoderDatabase:
             raise ConfiguredProjectError(
                 CONFIGURED_PROJECT_UNAVAILABLE) from None
 
+    # The open connection's side files, looked at again at every call
+    # (v0.15.1): a named pipe put beside data.qda after the selection
+    # would make SQLite's next read of it wait for ever
+    odd = odd_database_side_file(db.db_path)
+    if odd is not None:
+        raise ProjectFileKindError(odd)
     return db
 
 
@@ -1748,7 +1874,8 @@ CONFIGURED_PROJECT_UNAVAILABLE = (
     "retry. While the database will not open, no tool here can read, back "
     "it up or restore it: its backups, if any, sit beside the project folder "
     "under its name with _backup_ or _BKUP_, and one can be copied back by "
-    "hand while no program has the project open.")
+    "hand while no program has the project open. "
+    + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 
 class ConfiguredProjectError(ValueError):
@@ -1927,21 +2054,6 @@ def _refuse_existing_row_change(kind: str, row_id: int, *,
     return None
 
 
-def _private_note_backup_note(result: Any, status: Dict[str, bool],
-                              create_backup: bool) -> None:
-    """State in a delete result that a backup was taken for a row carrying
-    a private note (S-P2 (a)); create_backup=false does not apply there."""
-    if not isinstance(result, dict) or "error" in result:
-        return
-    if status.get("private_note"):
-        result["backup_note"] = (
-            "A backup was taken before this delete because the row carried "
-            "a private note; create_backup=false does not apply to such "
-            "rows." if not create_backup else
-            "A backup was taken before this delete; the row carried a "
-            "private note, for which a backup is always taken.")
-
-
 def _attach_hidden_target_note(result: Any, key: Optional[str] = None) -> None:
     """Add the coder-visibility disclosure to a write echo for a hidden row.
 
@@ -1991,7 +2103,19 @@ def _qualcoder_open_error() -> Optional[Dict[str, Any]]:
     state, holder = qualcoder_lock_state(_current_project_folder())
     if state == "active":
         return {"error": qualcoder_open_message(holder)}
+    if state == LOCK_NOT_A_FILE:
+        # The lock file's name holds a named pipe, a folder or the like
+        # (v0.15.1): every write refused here, before its backup
+        return {"error": lock_not_a_file_message(holder)}
     return None
+
+
+def _lock_not_a_file_block(kind: str) -> Dict[str, Any]:
+    """`qualcoder_lock` while the lock file's name holds a named pipe, a
+    folder or the like (v0.15.1), as get_current_project and
+    start_coding_session give it: the state, the kind and the warning."""
+    return {"state": LOCK_NOT_A_FILE, "kind": kind,
+            "note": lock_not_a_file_warning(kind)}
 
 
 def _schema_block() -> Dict[str, Any]:
@@ -2040,21 +2164,31 @@ def _write_gate_error() -> Optional[Dict[str, Any]]:
     return _qualcoder_open_error()
 
 
-def _recheck_lock_before_commit(project_folder: Path, held: bool) -> None:
+def _recheck_lock_before_commit(project_folder: Path, held) -> None:
     """Close the TOCTOU window between pre-write checks and commit.
 
-    When our own lock is held, QualCoder cannot have opened the project in
-    between (it refuses on a fresh lock). When we proceeded over a stale
-    foreign lock we hold nothing, so re-check right before committing.
+    `held` is the `ProjectLock` `hold_project_lock` yields. While our own
+    lock is held and the file still holds our lines, QualCoder cannot have
+    opened the project in between: the lock is kept fresh for the whole
+    write (v0.15.1), and QualCoder refuses on a fresh lock. Otherwise (we
+    proceeded over a stale foreign lock, or the file no longer holds our
+    lines) re-check right before committing; an error reading the file
+    counts as an unreadable lock, stale, as `qualcoder_lock_state`
+    counts one.
 
     Raises:
         DatabaseLockedError: If QualCoder opened the project mid-write
     """
-    if held:
+    if held and held.still_ours():
         return
-    state, holder = qualcoder_lock_state(project_folder)
+    try:
+        state, holder = qualcoder_lock_state(project_folder)
+    except OSError:
+        return
     if state == "active":
         raise DatabaseLockedError(qualcoder_open_message(holder))
+    if state == LOCK_NOT_A_FILE:
+        raise DatabaseLockedError(lock_not_a_file_message(holder))
 
 
 def _resolve_category_by_name(name: str):
@@ -2702,10 +2836,10 @@ def _the_setter_refuses(name: str) -> bool:
         name == settings_coder_name()
 
 
-def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
+def _ask_refusal() -> Dict[str, Any]:
     """The ASK: no name is set, so nothing was written (D7 3.3).
 
-    A pure function of the sidecar, the environment and the arguments:
+    A pure function of the sidecar and the environment:
     repeating the refused call returns byte-identical JSON, and nothing
     is written, backed up, upgraded or consumed on the way here. A
     setting the setter would refuse is not offered (v0.15.0).
@@ -2746,9 +2880,6 @@ def _ask_refusal(owner_supplied: bool = False) -> Dict[str, Any]:
                  f"together.")
     text += (" The name can be changed at any time with the same tool; "
              "earlier rows keep the name they were written under.")
-    if owner_supplied:
-        text += (" The owner argument you passed was not applied; the name "
-                 "is the user's to choose.")
     return {
         "error": text,
         "action_required": _ASK_ACTION,
@@ -2787,32 +2918,7 @@ def _mismatch_refusal(current: str, declared: str) -> Dict[str, Any]:
     }
 
 
-def _owner_argument_refusal(current: str) -> Dict[str, Any]:
-    """The OWNER refusal: the argument no longer chooses the name (B1.10).
-
-    The supplied value is not echoed back (D6 3.9): only shapes we
-    ourselves wrote are reflected into the conversation, and the model
-    already knows what it passed.
-    """
-    return {
-        "error": (
-            f"The owner argument no longer chooses the coder name: this "
-            f"project's AI coder name is \"{current}\" and every row "
-            f"Exegete writes is stored under it, so that AI work stays "
-            f"distinguishable from the researcher's and from other "
-            f"coders'. Omit owner, or, if the user wants a different "
-            f"attribution, ask them and change the project's AI coder "
-            f"name with set_project_ai_coder_name, then call this tool "
-            f"again without owner. A human coder's name is never used for "
-            f"rows Exegete writes. Nothing was written and no backup "
-            f"was made."),
-        "action_required": "omit_owner_or_set_project_ai_coder_name",
-        "ai_coder_name": current,
-    }
-
-
 def _resolve_write_owner(
-        tool_owner: Optional[str] = None
 ) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     """The owner a database write may use, or the refusal that stops it.
 
@@ -2834,8 +2940,7 @@ def _resolve_write_owner(
 
     Order of checks (D7 3.2): an unreadable or newer-format sidecar, then
     unset, then the AI coder name in Exegete's settings conflicting with
-    the project's name, then a tool-supplied owner that is not the
-    project's name.
+    the project's name.
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -2846,13 +2951,11 @@ def _resolve_write_owner(
     if state.status == SIDECAR_NEWER_FORMAT:
         return None, {"error": newer_format_message(state.path)}
     if not state.is_set:
-        return None, _ask_refusal(owner_supplied=tool_owner is not None)
+        return None, _ask_refusal()
     current = state.name
     declared = host_declaration()
     if ai_coder_name_mismatch(declared, state.entry):
         return None, _mismatch_refusal(current, declared)
-    if tool_owner is not None and tool_owner != current:
-        return None, _owner_argument_refusal(current)
     settle_earlier_file(_current_project_folder(), state)
     return current, None
 
@@ -3132,7 +3235,7 @@ WRITE_FAILED_UNCERTAIN = (
     "(select_project). If it will not open, no tool here can restore it: "
     "the project's backups, if any, sit beside the project folder under "
     "its name with _backup_ or _BKUP_, and one can be copied back by hand "
-    "while no program has the project open.")
+    "while no program has the project open. " + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 # The retry advice above is for a fault that waiting can cure: the
 # database was locked or busy, the disk was full, an I/O error. The
@@ -3152,7 +3255,7 @@ WRITE_FAILED_REFUSED = (
     "open, no tool here can restore it: the project's backups, if any, sit "
     "beside the project folder under its name with _backup_ or _BKUP_, and "
     "one can be copied back by hand while no program has the project "
-    "open.")
+    "open. " + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 # Which of the two texts a fault gets is decided on the exception class
 # and then on its message text. That is a HEURISTIC: SQLite's messages
@@ -3235,35 +3338,146 @@ def _with_backup(answer: Dict[str, Any], backup_path) -> Dict[str, Any]:
     return answer
 
 
-def _perform_write(op, create_backup: bool = True,
+def _take_write_lock(write_db) -> None:
+    """(5) of a write's order (v0.15.1): SQLite's write lock, taken by
+    BEGIN IMMEDIATE on the write connection after the backup's tree is
+    copied and before its database is. A database another program keeps
+    locked past the connection's wait raises DatabaseLockedError, which
+    each write answers with the lock's own text."""
+    try:
+        write_db.begin_immediate()
+    except sqlite3.OperationalError as e:
+        if getattr(e, "sqlite_errorcode", None) in (5, 6) or \
+                _is_locked_error(e):
+            raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
+        raise
+
+
+def _answer_of_check(write_db, check, backup_fail_detail: str
+                     ) -> Optional[Dict[str, Any]]:
+    """(6): the write's checks again, under SQLite's lock. None to go on;
+    otherwise the answer, and the write stops with no backup: a
+    ValueError or RuntimeError answers its text, a StateChangedError its
+    payload, a dict is the answer itself ("nothing changed"). A locked
+    database is raised as at (5)."""
+    try:
+        answer = check(write_db)
+    except DatabaseLockedError:
+        raise
+    except StateChangedError as e:
+        return dict(e.payload)
+    except (ValueError, RuntimeError) as e:
+        return {"error": str(e)}
+    except sqlite3.Error as e:
+        logger.error("SQLite error while checking a write: %s",
+                     error_label(e))
+        return {"error": _write_failed_text(
+            _rollback_if_open(write_db), backup_fail_detail, e)}
+    return answer
+
+
+def _write_methods_checks(run):
+    """A write method's own checks as `_perform_write`'s `check`
+    (v0.15.1): `run(write_db)` calls the method's `check_*`, which only
+    reads and raises the refusal in the method's words. What the checks
+    found is not kept: the write method calls them again, under the same
+    lock, before it writes."""
+    def check(write_db):
+        run(write_db)
+        return None
+    return check
+
+
+def _backup_before_change(write_db, fail_message: str, check=None,
+                          backup_fail_detail: str = "nothing was written"):
+    """Steps (4) to (7) of every write's order (v0.15.1): Exegete, not
+    the assistant, takes one backup before each change.
+
+    (4) the backup's folder claimed under a hidden name and the project
+    copied into it but its database, outside SQLite's lock; (5) SQLite's
+    write lock; (6) `check`, the write's checks again under it; (7) the
+    backup's database, SQLite's own copy, which the write lock allows:
+    the state the checks saw; then the backup takes its name. Called
+    inside `hold_project_lock`; the change (8) and the commit (9)
+    follow.
+
+    Returns (backup_path, None) to go on, or (None, answer) when the
+    write stops here: every way out before (7) removes the backup's
+    folder, so a refusal leaves no backup.
+
+    Raises:
+        DatabaseLockedError: the database locked at (5) or (6)
+    """
+    try:
+        write_db.start_backup_before_write()
+    except Exception as e:
+        logger.error("Failed to create backup: %s", error_label(e))
+        return None, {"error": _backup_failed_text(
+            isinstance(e, DatabaseLockedError),
+            isinstance(e, BackupWithoutDatabaseError)),
+            "message": fail_message}
+    finished = False
+    try:
+        _take_write_lock(write_db)
+        if check is not None:
+            answer = _answer_of_check(write_db, check, backup_fail_detail)
+            if answer is not None:
+                return None, answer
+        try:
+            backup_path = write_db.backup_before_write()
+        except Exception as e:
+            logger.error("Failed to create backup: %s", error_label(e))
+            return None, {"error": _backup_failed_text(
+                isinstance(e, DatabaseLockedError),
+                isinstance(e, BackupWithoutDatabaseError)),
+                "message": fail_message}
+        finished = True
+        return backup_path, None
+    finally:
+        if not finished:
+            write_db.abandon_backup_before_write()
+
+
+def _perform_write(op, *, check=None,
                    backup_fail_detail: str = "nothing was written"):
     """Run a mutation under the full write-safety discipline.
 
     This is the single, uniform implementation of the write pattern every
-    write tool must follow: refuse on pre-v14 schema and while QualCoder
-    has the project open (heartbeat lock), upgrade to read-write, hold
-    QualCoder's project lock, back up before writing, run the mutation with
-    auto_commit deferred, re-check the lock to close the TOCTOU window,
-    commit, and downgrade to read-only on EVERY exit path including
-    exceptions.
+    write tool must follow, in this order (v0.15.1): (1) the tool's own
+    checks, read-only, before this is called; (2) refuse on pre-v14
+    schema and while QualCoder has the project open (heartbeat lock),
+    upgrade to read-write; (3) hold QualCoder's project lock; (4) to (7)
+    one backup, always (`_backup_before_change`): the project but its
+    database copied outside SQLite's lock, SQLite's write lock, `check`
+    under it, the backup's database; (8) the mutation with auto_commit
+    deferred; (9) re-check the lock to close the TOCTOU window, commit;
+    and downgrade to read-only on EVERY exit path including exceptions.
+    A refusal before (7), a database locked at (5) included, leaves no
+    backup; a failure after it names its backup.
 
     Args:
         op: Callable op(write_db) that performs the mutation with
             auto_commit=False and returns a JSON-serialisable success dict.
-        create_backup: Create a timestamped backup before writing.
+        check: Optional callable check(write_db), run under SQLite's write
+            lock before the backup's database is copied: None goes on; a
+            dict is the answer ("nothing changed"); a ValueError or
+            RuntimeError answers its text, a StateChangedError its
+            payload. Either way the write stops with no backup.
         backup_fail_detail: Tail of the "nothing was ..." message on backup
             failure (e.g. "nothing was deleted").
 
     Returns:
-        The op's success dict (with backup_path added when a backup was
-        made), or an {"error": ...} dict. Callers json.dumps the result.
+        The op's success dict (with backup_path added), or an
+        {"error": ...} dict. Callers json.dumps the result.
 
     Raises:
-        DatabaseLockedError: Only from before the backup is taken: QualCoder
-            grabbing the project between the write gate and the project
-            lock, or the database locked at the read-write upgrade (the
-            tool guard converts either to a friendly error). After the
-            backup it is answered in the returned dict with `backup_path`.
+        DatabaseLockedError: Only from before the backup is taken:
+            QualCoder grabbing the project between the write gate and the
+            project lock, the database locked at the read-write upgrade,
+            or another program holding SQLite's write lock at (5) (the
+            tool guard converts each to a friendly error, and no backup
+            is left). After the backup it is answered in the returned
+            dict with `backup_path`.
     """
     gate = _write_gate_error()
     if gate is not None:
@@ -3275,18 +3489,12 @@ def _perform_write(op, create_backup: bool = True,
     committed = False
     try:
         with hold_project_lock(project_folder) as lock_held:
-            if create_backup:
-                try:
-                    backup_path = write_db.backup_before_write()
-                except Exception as e:
-                    logger.error("Failed to create backup: %s", error_label(e))
-                    return {
-                        "error": _backup_failed_text(
-                            isinstance(e, DatabaseLockedError),
-                            isinstance(e, BackupWithoutDatabaseError)),
-                        "message": f"Aborting to protect your data: "
-                                   f"{backup_fail_detail}.",
-                    }
+            backup_path, stopped = _backup_before_change(
+                write_db, f"Aborting to protect your data: "
+                          f"{backup_fail_detail}.", check,
+                backup_fail_detail)
+            if stopped is not None:
+                return stopped
             try:
                 result = op(write_db)
                 _recheck_lock_before_commit(project_folder, lock_held)
@@ -3365,35 +3573,60 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
             "error": "No project selected. Use 'list_available_projects' "
                      "and 'select_project' to open one." + _mru_hint()
         }
+    # The open project first (v0.15.1, fix round 1): its own refusals
+    # in their own words, so that a side file refused below is known to
+    # belong to the session's project, another one
+    try:
+        current_db_path = validate_qda_path(current_project_path)
+    except (DatabaseLockedError, ProjectFileKindError):
+        raise
+    except Exception:
+        return {"error": "The currently open project could not be resolved. "
+                         "Re-open it with select_project."}
     try:
         session_db_path = validate_qda_path(session.project_path)
     except DatabaseLockedError:
         raise
+    except ProjectFileKindError:
+        # A side file of the session's project that is not a regular
+        # file: the open project passed the same look just now, so the
+        # session belongs to another project, whose entry the open
+        # project does not hold (v0.15.1, fix round 1). The same project
+        # under another spelling can only mean the entry appeared since:
+        # its own words
+        if SessionManager.same_project(session.project_path,
+                                       current_db_path):
+            raise
+        return _different_project_answer(
+            Path(SessionManager.canonical_database_path(
+                session.project_path)).parent.name,
+            current_db_path.parent.name)
     except Exception:
         return {
             "error": "The project this session was created in could not be found "
                      "(it may have been moved or deleted). Sessions can only be "
                      "used with the project they were created in."
         }
-    try:
-        current_db_path = validate_qda_path(current_project_path)
-    except DatabaseLockedError:
-        raise
-    except Exception:
-        return {"error": "The currently open project could not be resolved. "
-                         "Re-open it with select_project."}
 
     # One project under two spellings of its path (letter case, Unicode
     # form) is one database: compared as files, not strings (fix round 1)
     if not SessionManager.same_project(session_db_path, current_db_path):
-        return {
-            "error": "This session belongs to a different project than the one "
-                     "currently open. Writes are bound to the session's project; "
-                     "open it with select_project first.",
-            "session_project": session_db_path.parent.name,
-            "current_project": current_db_path.parent.name,
-        }
+        return _different_project_answer(session_db_path.parent.name,
+                                         current_db_path.parent.name)
     return None
+
+
+def _different_project_answer(session_project: str,
+                              current_project: str) -> Dict[str, Any]:
+    """The refusal of a session-bound write while another project is
+    open, naming both projects' folders."""
+    return {
+        "error": "This session belongs to a different project than the one "
+                 "currently open. Writes are bound to the session's project; "
+                 "open it with select_project first.",
+        "session_project": session_project,
+        "current_project": current_project,
+    }
 
 
 def _find_occurrences(text: str, needle: str, max_hits: int = 11) -> List[int]:
@@ -4222,7 +4455,7 @@ def _project_open_failure_result(project_path: str) -> Dict[str, Any]:
                  "can restore it: the project's backups, if any, sit "
                  "beside the project folder under its name with _backup_ "
                  "or _BKUP_, and one can be copied back by hand while no "
-                 "program has the project open."
+                 "program has the project open. " + BACKUP_BY_HAND_KEEPS_MEDIA
     }
     try:
         folder = Path(project_path)
@@ -4308,6 +4541,11 @@ def select_project(project_path: str) -> str:
     except DatabaseLockedError as e:
         logger.error("Project locked during select: %s", error_label(e))
         answer = {"success": False, "error": str(e)}
+    except ProjectFileKindError as e:
+        # A side file of SQLite's that is not a regular file (v0.15.1):
+        # its own words, which name no path, before the ValueError clause
+        logger.error("Project refused during select: %s", error_label(e))
+        answer = {"success": False, "error": str(e)}
     except UnsupportedSchemaError as e:
         logger.error("Unsupported schema during select: %s",
                      error_label(e))
@@ -4357,8 +4595,9 @@ def select_project(project_path: str) -> str:
 # project's history with QualCoder, `History.level`, and the setting),
 # and says which. At the level "none" there is none. Fix round 1: the
 # assistant cannot know whether QualCoder has the project open, so the
-# "project" text asks once, as the one for "yes" does, and the
-# "computer" text says that Exegete cannot tell.
+# "project" text asks once, as the one for "yes" did until the owner's
+# sitting of v0.15.1, and the "computer" text says that Exegete cannot
+# tell.
 NO_SIGN_WARNING_PROJECT = (
     "This project has been opened in QualCoder before. QualCoder 4.0 "
     "leaves no lock file, so ask the researcher once in this conversation "
@@ -4377,11 +4616,18 @@ NO_SIGN_WARNING_LEFTOVER_LOCK = (
     "uses QualCoder, ask them once in this conversation whether it has "
     "this project open now, and if it has, to close it there before any "
     "write.")
+# After the owner's sitting (v0.15.1): a statement that needs no answer.
+# Asked to ask once, the assistant turned the note into a question before
+# the first write; what Exegete checks for itself is said instead, the
+# refusal under the lock file and the warnings on QualCoder 4.0's signs,
+# neither of which consults the setting (qualcoder_history).
 NO_SIGN_WARNING_SAID_YES = (
     "The researcher has said they use QualCoder on this computer. "
-    "QualCoder 4.0 leaves no lock file, so ask them once in this "
-    "conversation whether it has this project open, and if it has, to "
-    "close it there before any write.")
+    "Exegete found no sign that QualCoder has this project open now. It "
+    "refuses every write while QualCoder 3.8.2 has the project open, and "
+    "select_project and get_current_project warn when they see signs "
+    "that QualCoder 4.0, which leaves no lock file, may have it open. "
+    "This needs no answer from the researcher.")
 NO_SIGN_WARNING_COMPUTER = (
     "QualCoder is on this computer, though nothing shows it has opened "
     "this project. QualCoder 4.0 leaves no lock file, so Exegete cannot "
@@ -4462,6 +4708,11 @@ def _select_project(project_path: str) -> Dict[str, Any]:
             f"data."
         )
     else:
+        if state == LOCK_NOT_A_FILE:
+            # v0.15.1: the lock file's name holds a named pipe, a folder
+            # or the like; reads work, writes are refused, and the signs
+            # below are gathered as for any lock that is not active
+            warnings.append(lock_not_a_file_warning(holder))
         # C5/T17 + P1-5: only released QualCoder (3.x) signals "open"
         # via the lock file; 4.0 removed the protocol, so detection
         # falls back to best-effort heuristics (WARN rung only; the
@@ -5412,19 +5663,22 @@ def get_current_project() -> str:
                         "active. Ask the researcher to close it in "
                         "QualCoder, or wait a moment, then re-check."
             }
+        elif state == LOCK_NOT_A_FILE:
+            # v0.15.1: not a regular file, never read; writes refused
+            result["qualcoder_lock"] = _lock_not_a_file_block(holder)
         elif state == "stale":
             result["qualcoder_lock"] = {
                 "state": "stale",
                 "holder": holder or "unknown",
                 # Exegete writes the same file during each of its own
-                # writes (hold_project_lock), once and never refreshed:
-                # a write cut short leaves the same leftover, and a
-                # write still running after 30 seconds reads as one.
+                # writes (hold_project_lock) and keeps it fresh until
+                # the write ends (v0.15.1): a write cut short, or a lock
+                # file it could not remove, leaves the same leftover.
                 "note": "A lock file not refreshed for over 30 seconds: "
                         "QualCoder 3.8.2 leaves one when it does not close "
-                        "cleanly, and a write by Exegete leaves one when "
-                        "it is cut short, or shows as one while it runs "
-                        "longer than that. Writes proceed normally."
+                        "cleanly, and Exegete leaves one when a write is "
+                        "cut short or its lock file could not be removed. "
+                        "Writes proceed normally."
             }
 
         # P1-5: best-effort 4.0 GUI-open heuristics (4.0 writes no lock
@@ -5857,6 +6111,20 @@ SAVE_NAMES_LIST_PATTERN = (
     "such a name may be left in the text, stop the import with an error, "
     "or replace other words. The researcher may want to check what those "
     "imports store.")
+# v0.15.1: the lines whose real name's first word has no line of its own
+# (pseudonymise.first_word), a warning that never blocks
+SAVE_NAMES_LIST_FIRST_NAMES = (
+    "Each real name is replaced only as written: the same capitals, whole "
+    "words, its words on one line. The lines in "
+    "names_without_a_line_for_their_first_name hold a name of several "
+    "words whose first word has no line of its own, so that word alone (a "
+    "first name, say) stays in the text. If the documents use it alone, "
+    "the researcher may give it a line with its pseudonym. Two cautions: a "
+    "first name that two people on the list share can carry one pseudonym "
+    "only, which then has to fit both, or no line; and a line for a title "
+    "(Dr, Mr) replaces that word everywhere. Each import_documents call "
+    "counts, by file, the places where a listed name may still show in "
+    "another form.")
 # Fix round 1: QualCoder 4.0's window signs, passed on as the import's and
 # the restore's previews pass them on, never a refusal
 SAVE_NAMES_LIST_GUI_HINT = (
@@ -5871,7 +6139,10 @@ NO_BACKUP_NAMES_LIST = (
     "No backup could be made, so the names list was not saved. The "
     "researcher can check that the disk has free space and that the "
     "project folder can be written to, then preview again.")
-# restore_backup's words for a backup taken before a change was found
+# A change found once a backup is made (v0.15.1): a names list written
+# during save_names_list's backup, and a project or backup changed, or
+# the project's lock file taken over, during restore_backup's safety
+# backup. Every other refusal of these two comes before the backup.
 BACKUP_KEPT_ANYWAY = (
     " A backup had already been taken before the change was detected; it "
     "is unchanged and can be pruned.")
@@ -6086,6 +6357,13 @@ def _names_list_review(folder: Path) -> _NamesListReview:
     # backslash
     patterns = [line for line, real_name, _ in pairs
                 if _read_as_a_pattern(real_name)]
+    # v0.15.1: the lines whose real name has a first word that is the real
+    # name of no line and no kept entry, compared exactly, as the list
+    # compares; that word alone stays in the text
+    own_lines = set(lines_of) | set(kept_names)
+    first_names = [line for line, real_name, _ in pairs
+                   if (word := pseudo.first_word(real_name)) is not None
+                   and word not in own_lines]
     kept_backslash = sum(1 for index in kept
                          if "\\" in existing[index]["pseudonym"])
     # 6. The guard: the engine's own check of the list a save would write
@@ -6147,6 +6425,7 @@ def _names_list_review(folder: Path) -> _NamesListReview:
         "pseudonyms_putting_a_name_back": put_back_block,
         "pseudonyms_on_more_than_one_line": _capped(shared),
         "real_names_read_as_patterns": _capped(patterns),
+        "names_without_a_line_for_their_first_name": _capped(first_names),
         "kept_entries_with_a_backslash": kept_backslash,
         "effect": {
             "entries_after": len(items),
@@ -6172,6 +6451,8 @@ def _names_list_review(folder: Path) -> _NamesListReview:
         warnings.append(SAVE_NAMES_LIST_KEPT_BACKSLASH)
     if patterns:
         warnings.append(SAVE_NAMES_LIST_PATTERN)
+    if first_names:
+        warnings.append(SAVE_NAMES_LIST_FIRST_NAMES)
     rows = {"names_file": hashlib.sha256(raw_file).hexdigest(),
             "list": pseudonyms_json_fingerprint(folder)}
     return _NamesListReview(None, preview, rows, blocking, warnings,
@@ -6250,8 +6531,8 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
                 _token_error("preview_secret_unavailable", "save_names_list"))
         return json.dumps(payload, indent=2)
 
-    # The save, as restore_backup's: the token, the lock file, a backup,
-    # then everything read again under the lock
+    # The save (v0.15.1): the token, the lock file, everything read again
+    # under the lock, then a backup, so a refusal leaves none
     state = fingerprint_rows(review.preview, review.rows)
     try:
         outcome = verify(preview_token, "save_names_list", token_args,
@@ -6266,35 +6547,38 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
         return json.dumps({**lock_error, "reason": "project_locked",
                            "nothing_changed": True})
     try:
-        backup = backup_project(folder)
-    except Exception as e:                              # noqa: BLE001
-        logger.error("save_names_list made no backup: %s", error_label(e))
-        return json.dumps({"error": NO_BACKUP_NAMES_LIST,
-                           "reason": "no_backup",
-                           "nothing_changed": True}, indent=2)
-    kept_backup = {"nothing_changed": True, "backup": backup.name}
-    try:
         with hold_project_lock(folder):
             again = _names_list_review(folder)
             if again.refusal is not None:
-                # A refusal found only now, after the backup: its own
-                # words, and the backup named
-                return json.dumps({
-                    **again.refusal,
-                    "error": again.refusal["error"] + BACKUP_KEPT_ANYWAY,
-                    **kept_backup}, indent=2)
+                return json.dumps(again.refusal, indent=2)
             if again.blocking or \
                     fingerprint_rows(again.preview, again.rows) != state:
                 return json.dumps({
                     "error": TOKEN_ERROR_TEXTS_BY_TOOL[(
-                        "save_names_list", "project_changed")]
-                    + BACKUP_KEPT_ANYWAY,
-                    "reason": "project_changed", **kept_backup}, indent=2)
+                        "save_names_list", "project_changed")],
+                    "reason": "project_changed", "nothing_changed": True},
+                    indent=2)
+            # The list as the token signed it and as it was read again
+            kept = again.rows["list"]
+            try:
+                backup = backup_project(folder)
+            except Exception as e:                      # noqa: BLE001
+                logger.error("save_names_list made no backup: %s",
+                             error_label(e))
+                return json.dumps({"error": NO_BACKUP_NAMES_LIST,
+                                   "reason": "no_backup",
+                                   "nothing_changed": True}, indent=2)
+            kept_backup = {"nothing_changed": True, "backup": backup.name}
             tmp: Optional[Path] = None
             try:
                 tmp = _write_pseudonyms_json_data_tmp(folder, again.data,
                                                       again.existing_mode)
-                os.replace(str(tmp), str(folder / PSEUDONYMS_JSON_NAME))
+                # The lock file does not keep every program from the
+                # list: one written since it was read again is not
+                # written over (below)
+                if pseudonyms_json_fingerprint(folder) == kept:
+                    os.replace(str(tmp), str(folder / PSEUDONYMS_JSON_NAME))
+                    tmp = None
             except Exception as e:                      # noqa: BLE001
                 if tmp is not None:
                     try:
@@ -6307,12 +6591,24 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
                     "error": NAMES_LIST_NOT_WRITTEN.format(
                         kind=type(e).__name__, backup=backup.name),
                     "reason": "not_saved", **kept_backup}, indent=2)
+            if tmp is not None:
+                # The list changed during the backup: left as the other
+                # program wrote it, and the backup made first named
+                try:
+                    tmp.unlink()
+                except OSError:
+                    pass
+                return json.dumps({
+                    "error": TOKEN_ERROR_TEXTS_BY_TOOL[(
+                        "save_names_list", "project_changed")]
+                    + BACKUP_KEPT_ANYWAY,
+                    "reason": "project_changed", **kept_backup}, indent=2)
     except DatabaseLockedError as e:
-        # The lock file appeared between the check and the lock
+        # The lock file appeared between the check and the lock, before
+        # anything was read again or backed up
         return json.dumps({
-            "error": f"{e} The names list was not saved; the backup made "
-                     f"first is kept: {backup.name}.",
-            "reason": "project_locked", **kept_backup}, indent=2)
+            "error": f"{e} The names list was not saved.",
+            "reason": "project_locked", "nothing_changed": True}, indent=2)
     logger.info("save_names_list saved the project's names list "
                 "(%d entries).", len(again.data))
     return json.dumps({
@@ -6341,12 +6637,13 @@ def copy_project_to_workspace(
     The copy carries the whole project tree, ai_data/ included (the AI
     prompt library and chat history are user data), but omits the
     regenerable ai_data/search.sqlite, sqlite sidecar files (the
-    database's journal and WAL files included) and lock files, the same
-    exclusions backups use. The database is copied with SQLite's own
-    online backup, so a copy taken while QualCoder is writing holds what
-    was last committed; QualCoder's own saves wait while it runs, and on
-    a database of about 4 GB or more a save in an open QualCoder window
-    can fail. QualCoder rebuilds search.sqlite when it opens the copy. Symlinks inside the project
+    database's journal and WAL files included) and lock files, like
+    backups, but keeps the audio and video folders. A copy of a project
+    without an ai_data folder gets an empty one, as a new project does.
+    The database is copied with SQLite's own online backup, so a copy taken
+    while QualCoder is writing holds what was last committed; QualCoder's own
+    saves wait while it runs, and on a database of about 4 GB or more a save
+    in an open QualCoder window can fail. QualCoder rebuilds search.sqlite when it opens the copy. Symlinks inside the project
     that point outside the project folder (or dangle) are not followed:
     they are skipped and reported (skipped_symlinks, with names), so a
     shared or untrusted project folder cannot pull outside files into
@@ -7145,20 +7442,17 @@ def get_coded_segments(code_id: int, limit: int = 100,
 
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
-@_deprecated(lambda: _mark_unregistered(DEPRECATED_MEMO_SEARCH), before=None,
-             when=lambda a: a.get("search_memo") is True)
 def search_files(
     pattern: str,
     search_filename: bool = True,
     search_content: bool = False,
-    search_memo: bool = False,
     case_sensitive: bool = False,
     limit: int = 50,
     exclude_code_ids: Optional[List[int]] = None,
     cursor: Optional[str] = None,
     max_matches_per_file: int = 5
 ) -> str:
-    """Search for files by name, content, or memo.
+    """Search for files by name or content.
 
     This tool helps you find specific files in the project without searching
     the entire filesystem. Perfect for locating interview transcripts by
@@ -7167,7 +7461,6 @@ def search_files(
     PERFORMANCE GUIDE:
     - Filename search: fast (milliseconds): searches file names only
     - Content search: slower (can take seconds for 100+ files): searches full text
-    - Memo search: file memos, the public part only (before '#####')
 
     IMPORTANT - CLARIFICATION WORKFLOW:
     When a user's request is ambiguous (e.g., "search for files containing paul"):
@@ -7200,13 +7493,10 @@ def search_files(
     cursor WITH THE SAME other arguments to continue; a cursor is bound
     to them. Nothing is stored between calls.
 
-    Deprecated, removed in v0.15.1: search_memo; search_memos searches file memos and every other kind of note.
-
     Args:
         pattern: Text to search for (case-insensitive by default)
         search_filename: Search in file names (default: True, fast)
         search_content: Search in file content/fulltext (default: False, slower)
-        search_memo: Search in file memos (default: False, fast)
         case_sensitive: Use case-sensitive matching (default: False)
         limit: Maximum number of files to return per page (default: 50)
         exclude_code_ids: Codes whose coded spans are already accounted
@@ -7231,9 +7521,9 @@ def search_files(
             - file_id: ID for use with other tools
             - file_name: Name of the file
             - file_type: Type (text, audio, video, image, pdf)
-            - matched_in: {filename: bool, content: bool, memo: bool}
+            - matched_in: {filename: bool, content: bool}
             - match_count: The number of matches LISTED for this file
-              (its name, its memo, and the content matches shown), not
+              (its name and the content matches shown), not
               the number in the file: content matches are capped by
               max_matches_per_file
             - content_matches_found, content_matches_excluded,
@@ -7284,7 +7574,6 @@ def search_files(
         "pattern": pattern,
         "search_filename": search_filename,
         "search_content": search_content,
-        "search_memo": search_memo,
         "case_sensitive": case_sensitive,
         "limit": limit,
         "exclude_code_ids": exclude_ids,
@@ -7311,7 +7600,6 @@ def search_files(
             pattern=pattern,
             search_filename=search_filename,
             search_content=search_content,
-            search_memo=search_memo,
             case_sensitive=case_sensitive,
             limit=limit,
             max_matches_per_file=max_matches_per_file,
@@ -7360,8 +7648,7 @@ def search_files(
             "search_parameters": {
                 "pattern": pattern,
                 "searched_filename": search_filename,
-                "searched_content": search_content,
-                "searched_memo": search_memo
+                "searched_content": search_content
             }
         }, indent=2)
 
@@ -7468,90 +7755,10 @@ def search_memos(query: str, limit: int = 50) -> str:
     return json.dumps(payload, indent=2)
 
 
-# How many segments export_code_report returns (v0.14, claims audit item
-# 16: named, and said in the answer when a code has more).
-CODE_REPORT_SEGMENT_LIMIT = 1000
-
-
-@mcp.tool(annotations=TOOL_READS)
-@_tool_guard
-@_deprecated(DEPRECATED_CODE_REPORT, before="This tool creates")
-def export_code_report(code_name: str) -> str:
-    """Generate a comprehensive report for a specific code.
-
-    This tool creates a detailed report including code metadata, up to
-    1,000 of its coded text segments, and frequency information. The
-    answer says how many text segments there are (segments_total) and
-    whether the report stopped short (truncated); get_coded_segments
-    pages through all of them with its cursor.
-
-    Memo privacy (QualCoder 4.0 convention): this report is returned
-    into the conversation, not written to a file, so every memo it
-    contains is the public part only (text before the first '#####'
-    marker). Unlike the file exports (export_refi_qda, export_codebook,
-    export_coded_segments_report) it never carries the private zone.
-
-    Coder visibility (projects with the coder-visibility capability,
-    QualCoder 3.8.2 and 4.0 onwards): segments reflect visible
-    coders by default and the result then carries a coder_visibility
-    block. There is no coder override on this tool; use
-    get_coded_segments(coder=...) for that.
-
-    Args:
-        code_name: The name of the code to generate a report for. The
-                   same name after spacing and Unicode form are
-                   normalised is used first, otherwise one that differs
-                   only by letter case; a name matching no code, or two,
-                   is refused with the code names
-
-    Returns:
-        JSON object with the code's information, up to 1,000 of its coded
-        text segments, segments_returned, segments_total and truncated
-    """
-    # Find the code by name, by the codebook tools' rule: the first
-    # lower() match used to pick "Trust" for "trust" when both exist
-    # (v0.14, claims audit item 12)
-    code_row, code_match, refusal = _resolve_code_name_filter(get_db(),
-                                                              code_name)
-    if refusal is not None:
-        return json.dumps(refusal, indent=2)
-    if code_row is None:
-        return json.dumps({"error": "code_name must not be empty"})
-
-    # Get detailed information, by the resolved code's id (fix round 3)
-    code_id = code_row["id"]
-    details = get_db().get_code_details(code_id)
-    segments = get_db().get_coded_text_segments(
-        code_id, limit=CODE_REPORT_SEGMENT_LIMIT)
-    # The report stops at 1,000 segments; it used to say nothing, while
-    # its own statistics gave the full count (v0.14, claims audit item
-    # 16). Both counts are the visible text codings on existing files.
-    total = details["statistics"]["text_segments"]
-    truncated = total > len(segments)
-
-    payload = {
-        "code": details,
-        "code_match": code_match,
-        "segments": segments,
-        "segments_returned": len(segments),
-        "segments_total": total,
-        "truncated": truncated,
-        "report_generated": True
-    }
-    if truncated:
-        payload["note"] = (
-            f"This report holds the first {len(segments):,} of the code's "
-            f"{total:,} text segments. get_coded_segments(code_id="
-            f"{code_id}) reads all of them, page by page with its cursor.")
-    note = _coder_visibility_note()
-    if note:
-        payload["coder_visibility"] = note
-    return _ai_json(payload, indent=2)
-
-
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(DEPRECATED_REFI_EXPORT, before="REFI-QDA is the interchange")
+@_deprecated(REFI_EXPORT_KNOWN_FAULTS, before="REFI-QDA is the interchange",
+             key="known_faults")
 def export_refi_qda(
     output_path: str,
     coding_session_id: Optional[str] = None,
@@ -9448,6 +9655,13 @@ def start_coding_session(
 qualcoder_open: true
 action_required: {action_required}
 """
+    elif state == LOCK_NOT_A_FILE:
+        # v0.15.1: no banner (no program has the project open), but the
+        # session's approved codings could not be written until the
+        # entry is moved, so the instructions say so first
+        qualcoder_banner = f"""
+**Note:** {lock_not_a_file_warning(holder)}
+"""
 
     not_found_lines = ""
     if not_found:
@@ -9530,6 +9744,9 @@ Once the assistant records and presents suggestions, you can:
     if state == "active":
         envelope["action_required"] = action_required
     else:
+        if state == LOCK_NOT_A_FILE:
+            # As get_current_project gives it (v0.15.1)
+            envelope["qualcoder_lock"] = _lock_not_a_file_block(holder)
         # P1-5: the ask rung of the ladder also listens to the 4.0
         # GUI-open heuristics (4.0 writes no lock file). WARN-level: ask
         # the user, never refuse on a heuristic.
@@ -9788,6 +10005,12 @@ def _contexts_for_display(session: AICodingSession,
     which is the only place a span's text is shown."""
     try:
         open_here = _check_session_project(session) is None
+    except ProjectFileKindError:
+        # The open project's side file (v0.15.1): its own words, never
+        # the note that the session's project is another. A side file
+        # of the session's project, when another is open, gives the
+        # different-project answer there, and so the note (fix round 1)
+        raise
     except Exception:
         open_here = False
     if not open_here:
@@ -9854,11 +10077,13 @@ def _proposal_merged_refusal(p) -> str:
             f"merged into.")
 
 
-def _code_name_collisions(name: str) -> Optional[str]:
+def _code_name_collisions(name: str, codes=None) -> Optional[str]:
     """Existing code name(s) a proposal name collides with (QA5-1 style:
     exact match first, else case-insensitive matches under name_key), or
-    None."""
-    codes = get_db().list_codes()
+    None. `codes` is the codebook read on the caller's connection, the
+    selected project's otherwise."""
+    if codes is None:
+        codes = get_db().list_codes()
     exact = [c["name"] for c in codes if c["name"] == name]
     if exact:
         return exact[0]
@@ -10885,21 +11110,132 @@ Use `apply_codings` with session ID `{session_id}` to write approved suggestions
     return output
 
 
+# A suggestion whose reasoning is not text (a session file made by hand
+# or damaged): refused before any lock, as the marker is, rather than
+# failing in the write after the backup or written as its printed form
+# (v0.15.1).
+REASONING_NOT_TEXT = ("its reasoning is not text. Reject this suggestion "
+                      "and record it again.")
+
+
+class _CodingsChecked(NamedTuple):
+    """What apply_codings' checks found on one connection."""
+    failures: List[Dict[str, Any]]
+    file_cache: Dict[int, Optional[Dict[str, Any]]]
+    memos: Dict[str, str]
+    to_write: List[Any]
+    already_existing: List[Dict[str, Any]]
+
+
+def _check_approved_codings(db_, approved, owner: str) -> _CodingsChecked:
+    """apply_codings' checks, which only read: each approved suggestion
+    against the project (its reasoning text, the file, the code, the
+    positions and the text at them), each one's memo made, then the
+    codings already there. Run on the read-only connection before any
+    lock, and again on the write connection under SQLite's write lock,
+    before the backup's database is copied (v0.15.1), so what another
+    program changed meanwhile is refused, or found already there, with
+    no backup. The search runs only when nothing failed."""
+    codes_by_id = {c["id"] for c in db_.list_codes()}
+    file_cache: Dict[int, Optional[Dict[str, Any]]] = {}
+    failures: List[Dict[str, Any]] = []
+    memos: Dict[str, str] = {}
+    for sugg in approved:
+        problem = None
+        if sugg.file_id not in file_cache:
+            file_cache[sugg.file_id] = db_.get_file_content(sugg.file_id)
+        file_content = file_cache[sugg.file_id]
+        fulltext = (file_content or {}).get("content") or ""
+        marker = private_marker_refusal(sugg.reasoning, "its reasoning")
+        if marker is not None:
+            # a session recorded before v0.14 refused the marker
+            problem = {"reason": marker + " Reject this suggestion and "
+                                          "record it again."}
+        elif sugg.reasoning is not None and \
+                not isinstance(sugg.reasoning, str):
+            problem = {"reason": REASONING_NOT_TEXT}
+        elif file_content is None:
+            problem = {"reason": f"file_id {sugg.file_id} does not exist"}
+        elif _unusable_pdf_reason(file_content) is not None:
+            problem = {"reason": _unusable_pdf_reason(file_content)}
+        elif not file_content.get("is_text") or not fulltext:
+            problem = {"reason": f"file '{file_content['name']}' is not a text "
+                                 f"source; text codings require text content"}
+        elif sugg.code_id not in codes_by_id:
+            problem = {"reason": f"code_id {sugg.code_id} does not exist"}
+        elif not (isinstance(sugg.start_pos, int) and isinstance(sugg.end_pos, int)
+                  and 0 <= sugg.start_pos < sugg.end_pos <= len(fulltext)):
+            problem = {"reason": f"positions {sugg.start_pos}-{sugg.end_pos} are "
+                                 f"out of range for the file (length {len(fulltext)})"}
+        elif fulltext[sugg.start_pos:sugg.end_pos] not in (
+                sugg.segment_text, sugg.segment_text.replace("\u2029", "\n")):
+            problem = {
+                "reason": "segment text does not match the file text at the "
+                          "stored positions; re-record this suggestion with "
+                          "record_suggestions (it verifies and corrects positions)",
+                "expected_snippet": _snippet(fulltext[sugg.start_pos:sugg.end_pos]),
+                "provided_snippet": _snippet(sugg.segment_text),
+            }
+        if problem is not None:
+            failures.append({
+                "guid": sugg.guid,
+                "file_id": sugg.file_id,
+                "code_name": sugg.code_name,
+                **problem
+            })
+        else:
+            # The reading in words, then the reasoning; never a number
+            # (owner rulings 21 and 25)
+            memos[sugg.guid] = memo_with_reading(sugg.reasoning,
+                                                 sugg.reading)
+
+    # Idempotency per suggestion (D5 section 3.3; 4.0's per-coding
+    # already_exists, ai_mcp_server.py:1602-1619 at 9bddf17): an approved
+    # suggestion whose identical coding (code, file, span, owner) is
+    # already in the BASE table is left as it is, marked applied in the
+    # session, and reported with its ctid; the others are written in one
+    # transaction. Detected before the backup so a fully redundant batch
+    # costs nothing and cannot fail on the unique constraint.
+    already_existing: List[Dict[str, Any]] = []
+    to_write: List[Any] = []
+    if not failures:
+        for sugg in approved:
+            ctid = db_.find_text_coding(sugg.code_id, sugg.file_id,
+                                        sugg.start_pos, sugg.end_pos, owner)
+            if ctid is None:
+                to_write.append(sugg)
+            else:
+                already_existing.append({"guid": sugg.guid, "ctid": ctid,
+                                         "file": sugg.file_name,
+                                         "code": sugg.code_name})
+    return _CodingsChecked(failures, file_cache, memos, to_write,
+                           already_existing)
+
+
+def _codings_failed_validation(failures, total_approved: int
+                               ) -> Dict[str, Any]:
+    return {
+        "error": f"{len(failures)} approved suggestion(s) failed validation; "
+                 f"nothing was written and no backup was created. Fix or "
+                 f"reject the listed suggestions, then apply again.",
+        "failures": failures,
+        "total_approved": total_approved
+    }
+
+
 @mcp.tool(annotations=TOOL_ADDS)
+@_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_OWNER, before="Args:",
-             when=lambda a: a.get("owner") is not None)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Safety guarantees:")
 def apply_codings(
     coding_session_id: str,
-    create_backup: bool = True,
-    owner: Optional[str] = None
+    create_backup: Optional[bool] = None
 ) -> str:
     """Apply approved coding suggestions to the project database.
 
     THIS WRITES TO THE DATABASE. This is the final step that actually modifies
-    your project. Only approved suggestions will be applied. A backup is created
-    first by default for safety.
+    your project. Only approved suggestions will be applied. Exegete takes a
+    backup of the project first, as before every change.
 
     Safety guarantees:
     - Refused while the project's lock file is active (QualCoder 3.8.2 has
@@ -10928,10 +11264,8 @@ def apply_codings(
 
     Args:
         coding_session_id: The session ID with approved suggestions
-        create_backup: Create timestamped backup before writing (default: True)
-        owner: Deprecated (above). Only the project's AI coder name is
-               accepted, as a no-op; any other value is refused before
-               backup or write (set_project_ai_coder_name changes it)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         Detailed confirmation of what was written to the database
@@ -10970,16 +11304,7 @@ def apply_codings(
             "statistics": session.get_statistics()
         }, indent=2)
 
-    # A tool-supplied owner is VALIDATED first and RESTRICTED second
-    # (Appendix A, R1): a hostile string still gets the validation text it
-    # got in v0.11 (S-H3 step 1), and a well-formed one that is not the
-    # project's AI coder name is refused before any backup or write.
-    if owner is not None:
-        try:
-            owner = validate_coder_name(owner, "owner")
-        except ValueError as e:
-            return json.dumps({"error": str(e)})
-    owner, owner_error = _resolve_write_owner(owner)
+    owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
@@ -10987,78 +11312,13 @@ def apply_codings(
     # BEFORE upgrading and BEFORE creating a backup (SEC D-2). This catches
     # missing files/codes, non-text sources (QA F6), and position/text
     # mismatches (QA F7) without leaving backup litter or partial state.
-    ro_db = get_db()
-    codes_by_id = {c["id"] for c in ro_db.list_codes()}
-    file_cache: Dict[int, Optional[Dict[str, Any]]] = {}
-    failures = []
-    for sugg in approved:
-        problem = None
-        if sugg.file_id not in file_cache:
-            file_cache[sugg.file_id] = ro_db.get_file_content(sugg.file_id)
-        file_content = file_cache[sugg.file_id]
-        fulltext = (file_content or {}).get("content") or ""
-        marker = private_marker_refusal(sugg.reasoning, "its reasoning")
-        if marker is not None:
-            # a session recorded before v0.14 refused the marker
-            problem = {"reason": marker + " Reject this suggestion and "
-                                          "record it again."}
-        elif file_content is None:
-            problem = {"reason": f"file_id {sugg.file_id} does not exist"}
-        elif _unusable_pdf_reason(file_content) is not None:
-            problem = {"reason": _unusable_pdf_reason(file_content)}
-        elif not file_content.get("is_text") or not fulltext:
-            problem = {"reason": f"file '{file_content['name']}' is not a text "
-                                 f"source; text codings require text content"}
-        elif sugg.code_id not in codes_by_id:
-            problem = {"reason": f"code_id {sugg.code_id} does not exist"}
-        elif not (isinstance(sugg.start_pos, int) and isinstance(sugg.end_pos, int)
-                  and 0 <= sugg.start_pos < sugg.end_pos <= len(fulltext)):
-            problem = {"reason": f"positions {sugg.start_pos}-{sugg.end_pos} are "
-                                 f"out of range for the file (length {len(fulltext)})"}
-        elif fulltext[sugg.start_pos:sugg.end_pos] not in (
-                sugg.segment_text, sugg.segment_text.replace("\u2029", "\n")):
-            problem = {
-                "reason": "segment text does not match the file text at the "
-                          "stored positions; re-record this suggestion with "
-                          "record_suggestions (it verifies and corrects positions)",
-                "expected_snippet": _snippet(fulltext[sugg.start_pos:sugg.end_pos]),
-                "provided_snippet": _snippet(sugg.segment_text),
-            }
-        if problem is not None:
-            failures.append({
-                "guid": sugg.guid,
-                "file_id": sugg.file_id,
-                "code_name": sugg.code_name,
-                **problem
-            })
-
-    if failures:
-        return json.dumps({
-            "error": f"{len(failures)} approved suggestion(s) failed validation; "
-                     f"nothing was written and no backup was created. Fix or "
-                     f"reject the listed suggestions, then apply again.",
-            "failures": failures,
-            "total_approved": len(approved)
-        }, indent=2)
-
-    # Idempotency per suggestion (D5 section 3.3; 4.0's per-coding
-    # already_exists, ai_mcp_server.py:1602-1619 at 9bddf17): an approved
-    # suggestion whose identical coding (code, file, span, owner) is
-    # already in the BASE table is left as it is, marked applied in the
-    # session, and reported with its ctid; the others are written in one
-    # transaction. Detected before the backup so a fully redundant batch
-    # costs nothing and cannot fail on the unique constraint.
-    already_existing = []
-    to_write = []
-    for sugg in approved:
-        ctid = ro_db.find_text_coding(sugg.code_id, sugg.file_id,
-                                      sugg.start_pos, sugg.end_pos, owner)
-        if ctid is None:
-            to_write.append(sugg)
-        else:
-            already_existing.append({"guid": sugg.guid, "ctid": ctid,
-                                     "file": sugg.file_name,
-                                     "code": sugg.code_name})
+    # The same checks run again under SQLite's write lock (v0.15.1).
+    checked = _check_approved_codings(get_db(), approved, owner)
+    if checked.failures:
+        return json.dumps(_codings_failed_validation(
+            checked.failures, len(approved)), indent=2)
+    already_existing = checked.already_existing
+    to_write = checked.to_write
 
     def _already_existing_lines() -> List[str]:
         if not already_existing:
@@ -11075,7 +11335,7 @@ def apply_codings(
                          f"guid={r['guid']})")
         return lines
 
-    if not to_write:
+    def _nothing_to_write() -> str:
         session.mark_applied([r["guid"] for r in already_existing],
                              ctids={r["guid"]: r["ctid"]
                                     for r in already_existing})
@@ -11088,6 +11348,9 @@ def apply_codings(
                       "report that the suggestions were already applied.")
         return "\n".join(output)
 
+    if not to_write:
+        return _nothing_to_write()
+
     # Refuse on pre-v14 schemas and while QualCoder has the project open
     # (heartbeat lock file: SQLite locks say nothing about an idle session)
     lock_error = _write_gate_error()
@@ -11099,6 +11362,36 @@ def apply_codings(
     # Upgrade to read-write mode for writing codings
     write_db = get_db(read_only=False)
 
+    # The checks again on the write connection, under SQLite's write
+    # lock and before the backup's database (v0.15.1): a refusal, or every
+    # coding found already there, stops the write with no backup.
+    validated_texts = checked.file_cache
+    rechecked: List[_CodingsChecked] = []
+
+    def _check(wdb):
+        again = _check_approved_codings(wdb, approved, owner)
+        if again.failures:
+            return _codings_failed_validation(again.failures, len(approved))
+        # C7: every file to be coded still holds the text the positions
+        # were validated against before any lock (catches a lockless
+        # QualCoder 4.0 editor and any stale-lock race the gate missed);
+        # from here to the commit SQLite's lock keeps it so
+        for fid in sorted({s.file_id for s in again.to_write}):
+            validated_text = (validated_texts[fid] or {}).get(
+                "content") or ""
+            try:
+                wdb.verify_fulltext_unchanged(
+                    fid, wdb.fingerprint_of_text(validated_text))
+            except ValueError as e:
+                return {"error": f"Failed to apply codings (all changes "
+                                 f"rolled back): {error_text(e)}",
+                        "applied_before_failure": 0,
+                        "total_approved": len(approved)}
+        rechecked.append(again)
+        if not again.to_write:
+            return {"nothing_to_write": True}
+        return None
+
     # Apply all codings in a single transaction (all-or-nothing), holding
     # QualCoder's project lock so it cannot open the project mid-write
     results = []
@@ -11106,25 +11399,36 @@ def apply_codings(
 
     try:
         with hold_project_lock(project_folder) as lock_held:
-            # Create backup
-            if create_backup:
-                try:
-                    backup_path = write_db.backup_before_write()
-                except Exception as e:
-                    logger.error("Failed to create backup: %s", error_label(e))
-                    _downgrade_to_readonly()
-                    return json.dumps({
-                        "error": _backup_failed_text(
-                            isinstance(e, DatabaseLockedError),
-                            isinstance(e, BackupWithoutDatabaseError)),
-                        "message": "Aborting to protect your data: nothing was written."
-                    })
+            # One backup, always (v0.15.1): the project but its database
+            # copied, SQLite's write lock, the checks again, the backup's
+            # database
+            try:
+                backup_path, stopped = _backup_before_change(
+                    write_db, "Aborting to protect your data: nothing was "
+                              "written.", _check,
+                    backup_fail_detail="no codings were applied")
+            except BaseException:
+                _rollback_if_open(write_db)
+                _downgrade_to_readonly()
+                raise
+            if stopped is not None:
+                _rollback_if_open(write_db)
+                _downgrade_to_readonly()
+                if rechecked and not rechecked[0].to_write:
+                    # Another program wrote them meanwhile: the session
+                    # is saved after the rollback, the check only read
+                    already_existing = rechecked[0].already_existing
+                    return _nothing_to_write()
+                return json.dumps(stopped)
 
+            # What the checks found under the lock is what is written
+            under_lock = rechecked[0]
+            to_write = under_lock.to_write
+            already_existing = under_lock.already_existing
+            file_cache = under_lock.file_cache
             try:
                 for sugg in to_write:
-                    # The reading in words, then the reasoning; never a
-                    # number (owner rulings 21 and 25)
-                    memo = memo_with_reading(sugg.reasoning, sugg.reading)
+                    memo = under_lock.memos[sugg.guid]
 
                     # Write the authoritative fulltext slice (validated above)
                     # so seltext always equals fulltext[pos0:pos1] on disk
@@ -11150,14 +11454,6 @@ def apply_codings(
                         "guid": sugg.guid
                     })
 
-                # C7: the writes above hold SQLite's reserved lock; verify
-                # every touched file's text still matches what positions
-                # were validated against (catches a lockless QualCoder 4.0
-                # editor and any stale-lock race the gate missed)
-                for fid in sorted({s.file_id for s in to_write}):
-                    validated_text = (file_cache[fid] or {}).get("content") or ""
-                    write_db.verify_fulltext_unchanged(
-                        fid, write_db.fingerprint_of_text(validated_text))
                 # Close the TOCTOU window, then commit all at once
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
@@ -11280,18 +11576,14 @@ def apply_codings(
 
 
 @mcp.tool(annotations=TOOL_ADDS)
+@_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_OWNER, before="Args:",
-             when=lambda a: a.get("owner") is not None)
-@_deprecated(DEPRECATED_IMPORT_SKIP_BACKUP, before="Args:",
-             when=lambda a: a.get("create_backup") is False)
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def import_text_file(
     filename: str,
     content: str,
     memo: str = "",
-    owner: Optional[str] = None,
-    create_backup: bool = True,
+    create_backup: Optional[bool] = None,
     case_name: Optional[str] = None,
     apply_project_pseudonyms: bool = False
 ) -> str:
@@ -11333,11 +11625,8 @@ def import_text_file(
                   take for this text's stored copy
         content: The full text content of the file
         memo: Optional memo/description for the file
-        owner: Deprecated (above). Only the project's AI coder name is
-               accepted, as a no-op; any other value is refused before
-               backup or write (set_project_ai_coder_name changes it)
-        create_backup: Create timestamped backup before writing (default:
-                       True; false is deprecated, above)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         case_name: Optional existing case to link the new file to.
                    The same name after spacing and Unicode form are
                    normalised is used first; otherwise one that differs
@@ -11391,6 +11680,10 @@ def import_text_file(
             # refusal text quotes a value from it (D1 3.10, Security S3).
             validated = pseudo.validate_mapping(entries, "exact",
                                                 may_echo_names=False)
+        except ProjectFileKindError:
+            # The project's side file (v0.15.1), not pseudonyms.json:
+            # its own words, without the advice on that file
+            raise
         except (ValueError, OSError, RuntimeError) as e:
             return json.dumps({"error": _pseudonyms_json_error(
                 e, PSEUDONYMS_JSON_ADVICE_IMPORT)}, indent=2)
@@ -11437,16 +11730,10 @@ def import_text_file(
                 "error": ("After applying this project's pseudonyms the "
                           "content is empty; nothing was imported.")},
                 indent=2)
-    # Validated first, restricted second (Appendix A, R1); the rows this
-    # import writes carry the project's AI coder name.
-    # validate_text_file_import repeats the character check as defence in
+    # The rows this import writes carry the project's AI coder name;
+    # validate_text_file_import checks its characters again as defence in
     # depth.
-    if owner is not None:
-        try:
-            owner = validate_coder_name(owner, "owner")
-        except ValueError as e:
-            return json.dumps({"error": str(e)})
-    owner, owner_error = _resolve_write_owner(owner)
+    owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
@@ -11480,6 +11767,30 @@ def import_text_file(
     # Upgrade to read-write mode
     write_db = get_db(read_only=False)
 
+    def _check(wdb):
+        """The validation and the case's lookup again, on the write
+        connection under SQLite's write lock and before the backup's
+        database (v0.15.1): a file name taken or a case gone meanwhile is
+        refused with no backup, in the same words."""
+        nonlocal case, case_match
+        try:
+            wdb.validate_text_file_import(
+                name=filename.strip(), content=content, owner=owner,
+                memo=memo)
+        except (ValueError, TypeError) as e:
+            return {"error": str(e)}
+        except DatabaseLockedError:
+            raise
+        except RuntimeError as e:
+            return {"error": f"Database error: {str(e)}"}
+        if case_name is not None:
+            again, match, case_error = _resolve_case_argument(
+                wdb.list_cases(), None, case_name, takes_case_id=False)
+            if case_error is not None:
+                return case_error
+            case, case_match = again, match
+        return None
+
     # SEC C-1: this tool keeps its bespoke error contract (TypeError and a
     # "Database error:" prefix on RuntimeError, and a two-write transaction),
     # so it is NOT migrated to _perform_write — but it now carries the
@@ -11495,18 +11806,14 @@ def import_text_file(
     case_link = None
     try:
         with hold_project_lock(project_folder) as lock_held:
-            # Create backup
-            if create_backup:
-                try:
-                    backup_path = write_db.backup_before_write()
-                except Exception as e:
-                    logger.error("Failed to create backup: %s", error_label(e))
-                    return json.dumps({
-                        "error": _backup_failed_text(
-                            isinstance(e, DatabaseLockedError),
-                            isinstance(e, BackupWithoutDatabaseError)),
-                        "message": "Aborting to protect your data."
-                    })
+            # One backup, always (v0.15.1): the project but its database
+            # copied, SQLite's write lock, the checks again, the backup's
+            # database
+            backup_path, stopped = _backup_before_change(
+                write_db, "Aborting to protect your data.", _check,
+                backup_fail_detail="the file was not imported")
+            if stopped is not None:
+                return json.dumps(stopped)
 
             # Perform the import (the database layer re-validates: defense
             # in depth); commit only after re-checking the QualCoder lock
@@ -11622,7 +11929,7 @@ def _import_owner_stop() -> Optional[str]:
     if state.status == SIDECAR_NEWER_FORMAT:
         return newer_format_message(state.path)
     if not state.is_set:
-        return _ask_refusal(owner_supplied=False)["error"]
+        return _ask_refusal()["error"]
     declared = host_declaration()
     if ai_coder_name_mismatch(declared, state.entry):
         return _mismatch_refusal(state.name, declared)["error"]
@@ -11710,9 +12017,32 @@ def _reading_folder_root() -> Optional[Path]:
         return None
 
 
+def _readings_check(state, compiled, name_check, project_folder: Path):
+    """What the readings of a file not saved as UTF-8 are checked against
+    before the preview shows a line of them (v0.15.1): the compiled names
+    list, or what a list that cannot be used is checked with; with the
+    list switched off for the import, the list all the same, read for
+    this check alone, never applied and never stopping the import (a list
+    that cannot be read then shows no line). None: no list, or an empty
+    one."""
+    if state == "entries":
+        return compiled
+    if state == "unusable":
+        return name_check
+    if state != "off":
+        return None
+    try:
+        (_state, _count, off_compiled, _canonical, _stop,
+         off_check) = _import_names_list(True, project_folder)
+    except Exception:
+        return doc_import.EveryName()
+    return off_compiled if off_compiled is not None else off_check
+
+
 def _import_context(project_folder: Path, apply_pseudonyms: bool,
                     pdfs_with_names: bool, file_names_with_names: bool,
-                    memo: str, garbled_letters: bool = False):
+                    memo: str, garbled_letters: bool = False,
+                    character_sets: Optional[Dict[str, str]] = None):
     (state, count, compiled, canonical, names_stop,
      name_check) = _import_names_list(apply_pseudonyms, project_folder)
     db = get_db()
@@ -11742,13 +12072,23 @@ def _import_context(project_folder: Path, apply_pseudonyms: bool,
         max_characters=MAX_TEXT_CONTENT_LENGTH, memo=memo,
         # The time this call may take, read afresh for each call; its
         # warning, if any, is logged once at start (main), never here.
-        call_seconds=doc_import.call_seconds()[0])
+        call_seconds=doc_import.call_seconds()[0],
+        readings_check=_readings_check(state, compiled, name_check,
+                                       project_folder),
+        character_sets=dict(character_sets or {}))
     return ctx, names_stop
 
 
-def _folder_megabytes(folder: Path) -> float:
+def _folder_megabytes(folder: Path, leave_out_media: bool = False) -> float:
+    """The size of the files in a folder, links not followed; with
+    `leave_out_media`, without the entries at its top a backup leaves out
+    (`database.is_media_folder_entry`, v0.15.1)."""
     total = 0
-    for root, _dirs, files in os.walk(folder):
+    for root, dirs, files in os.walk(folder):
+        if leave_out_media and root == os.fspath(folder):
+            dirs[:] = [d for d in dirs if not is_media_folder_entry(folder, d)]
+            files = [f for f in files
+                     if not is_media_folder_entry(folder, f)]
         for name in files:
             try:
                 total += os.lstat(os.path.join(root, name)).st_size
@@ -11760,18 +12100,22 @@ def _folder_megabytes(folder: Path) -> float:
 def _import_backup_note(project_folder: Path, adding_bytes: int):
     backups = [b for b in _collect_backups(project_folder)
                if b["kind"] == OWN_BACKUP_KIND]
-    return {"backup": "one backup of the whole project is taken first, "
-                      "before anything is written",
-            "backup_size_mb": _folder_megabytes(project_folder),
+    return {"backup": "one backup of the project, its audio and video "
+                      "folders aside, is taken first, before anything is "
+                      "written",
+            "backup_size_mb": _folder_megabytes(project_folder,
+                                                leave_out_media=True),
             "backups_already_take_mb": round(
                 sum(b["size_mb"] for b in backups), 1),
             "this_batch_adds_mb": round(adding_bytes / (1024 * 1024), 1),
-            "backup_tip": "Each import takes a backup of the whole "
-                          "project, originals included, so bringing "
-                          "several files in at once keeps backups few."}
+            "backup_tip": "Each import takes a backup of the project, its "
+                          "audio and video folders aside, originals "
+                          "included, so bringing several files in at once "
+                          "keeps backups few."}
 
 
-def _import_arguments_error(paths, memo) -> Optional[str]:
+def _import_arguments_error(paths, memo,
+                            character_sets=None) -> Optional[str]:
     if (not isinstance(paths, list) or not paths
             or len(paths) > doc_import.MAX_PATHS):
         return (f"paths must be a list of 1 to {doc_import.MAX_PATHS} full "
@@ -11786,6 +12130,25 @@ def _import_arguments_error(paths, memo) -> Optional[str]:
     if len(memo) > doc_import.MAX_MEMO:
         return (f"memo is too long ({len(memo)} characters; limit "
                 f"{doc_import.MAX_MEMO}); nothing was done.")
+    if character_sets is not None:
+        # v0.15.1: {a file as the preview names it: the character_set of
+        # the reading picked}, the keys READINGS gives alone.
+        if (not isinstance(character_sets, dict)
+                or len(character_sets) > doc_import.MAX_BATCH):
+            return (f"character_sets must map at most "
+                    f"{doc_import.MAX_BATCH} files, each as the preview "
+                    f"names it, to the character_set of a reading the "
+                    f"preview shows; nothing was done.")
+        for given, key in character_sets.items():
+            if (not isinstance(given, str) or not 1 <= len(given) <= 4096
+                    or "\x00" in given):
+                return ("Each file in character_sets must be named as the "
+                        "preview names it; nothing was done.")
+            if not isinstance(key, str) or key not in \
+                    doc_readers.READING_NAMES:
+                return ("Each value in character_sets must be the "
+                        "character_set of a reading the preview shows; "
+                        "nothing was done.")
     return None
 
 
@@ -11825,12 +12188,37 @@ IMPORT_DONE_LINES = {
                 "you said: a name written with garbled letters is not "
                 "matched by a names list, so it reaches the AI provider "
                 "whenever that file is read."),
+    # v0.15.1: said when a file brought in carries any of the warnings of
+    # the count of names left (doc_import.count_names_left)
+    "listed_names_left": (
+        "In some of these files a name from your names list may still "
+        "show, in a form the list does not replace, as each file's count "
+        "says. Once a form a line can hold has a line of its own in the "
+        "names file and the list is saved again, later imports replace "
+        "it, and pseudonymise_source with the project's list replaces it "
+        "in a file already in the project (not in a PDF, where no tool "
+        "replaces a name). A name broken by a line break, a tab or an "
+        "invisible character cannot be a line, and no Exegete tool "
+        "replaces it. For a file not checked in this call, "
+        "pseudonymise_source's preview with the project's list counts, "
+        "within its own allowance, the names left in every file, the one "
+        "it names first (first names alone aside); a file too long for a "
+        "list of this size is not counted there either."),
     "file_name_names": ("A file came in under a name that holds a name from "
                         "your list, as you said: that name reaches the AI "
                         "provider whenever an answer names the file, and "
                         "the project's copy of the original keeps it."),
     "prune": ("The project's backups now take about {size} MB; "
               "prune_backups removes old ones."),
+    # v0.15.1: a file read in the character set chosen for it.
+    "chosen_sets": ("Files read in the character set you chose were stored "
+                    "as UTF-8, each with a line in its memo saying how; "
+                    "their originals are unchanged in the project's "
+                    "documents folder. To check one, open it with "
+                    "open_file_for_reading; if it reads wrongly, say so "
+                    "now: restoring the backup taken just before takes the "
+                    "import back, and the file can then come in with "
+                    "another choice."),
     "pdf_release": ("If this project is opened in QualCoder 4.0: it "
                     "checks a PDF's stored text against its own reading of "
                     "the PDF, which can differ with another release of the "
@@ -11863,18 +12251,19 @@ def import_documents(
     import_pdfs_with_listed_names: bool = False,
     import_file_names_with_listed_names: bool = False,
     import_files_with_garbled_letters: bool = False,
+    character_sets: Optional[Dict[str, str]] = None,
     show_text: bool = False,
     memo: str = ""
 ) -> str:
-    """Bring documents from the researcher's computer into the selected project; their text never passes through the conversation. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
+    """Bring documents from the researcher's computer into the selected project; their text never passes through the conversation, but one line of a file not in UTF-8. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
 
-    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never the text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
+    Two steps. Call with paths and no preview_token: nothing is written; the answer is a preview (names, sizes, lengths and warnings, never other text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
 
     Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The names list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
     Refused or kept out, saying why: while another conversation using Exegete or QualCoder 3.8.2 has the project in use (its lock file); paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
 
-    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure. For typed text, use import_text_file; for a converted document, see explain_ai_coding_tools('converted_documents').
+    Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure.
 
     Args:
         paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
@@ -11883,13 +12272,14 @@ def import_documents(
         import_pdfs_with_listed_names: default false
         import_file_names_with_listed_names: default false
         import_files_with_garbled_letters: default false
+        character_sets: on the researcher's word, {file as previewed: character_set}
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
         memo: a note for every file; at most 10,000 characters
     """
     # Each call's reading time is counted from here
     # (doc_import.call_seconds).
     call_started = doc_import.clock()
-    error = _import_arguments_error(paths, memo)
+    error = _import_arguments_error(paths, memo, character_sets)
     if error is None:
         marker = private_marker_refusal(memo, "memo")
         if marker is not None:
@@ -11910,7 +12300,7 @@ def import_documents(
     ctx, names_stop = _import_context(
         project_folder, apply_project_pseudonyms,
         import_pdfs_with_listed_names, import_file_names_with_listed_names,
-        memo, bool(import_files_with_garbled_letters))
+        memo, bool(import_files_with_garbled_letters), character_sets)
     ctx.call_started = call_started
     stops = []
     gate = _write_gate_error()
@@ -11931,7 +12321,7 @@ def import_documents(
         import_file_names_with_listed_names=(
             import_file_names_with_listed_names),
         import_files_with_garbled_letters=import_files_with_garbled_letters,
-        memo=memo)
+        character_sets=character_sets, memo=memo)
     if preview_token is None:
         # show_text is the preview's alone: it writes a page for the
         # researcher and decides nothing the token binds.
@@ -11947,6 +12337,9 @@ def import_documents(
 def _import_documents_preview(paths, ctx, stops, token_args,
                               show_text: bool = False) -> str:
     result = doc_import.survey(paths, ctx)
+    # v0.15.1: where a listed name may still show in a form the list does
+    # not replace, by file, over what the survey read
+    doc_import.count_names_left(result.items, ctx)
     adding = sum(i.size for i in result.items if i.status == "ready")
     preview = doc_import.preview_answer(
         result, ctx, stops,
@@ -11966,23 +12359,29 @@ def _import_documents_preview(paths, ctx, stops, token_args,
         if page is not None:
             preview["page_to_check"] = page
         return json.dumps(preview, indent=2, ensure_ascii=False)
+    arguments = {
+        "paths": list(paths),
+        "apply_project_pseudonyms": token_args["apply_project_pseudonyms"],
+        "import_pdfs_with_listed_names": token_args[
+            "import_pdfs_with_listed_names"],
+        "import_file_names_with_listed_names": token_args[
+            "import_file_names_with_listed_names"],
+        "import_files_with_garbled_letters": token_args[
+            "import_files_with_garbled_letters"],
+        "memo": token_args["memo"]}
+    if "character_sets" in token_args:
+        # Given back only when given (v0.15.1): the file labels and keys.
+        arguments["character_sets"] = dict(token_args["character_sets"])
+    # The note is named only in a preview that carries it
+    shown = ("the summary, the names list line, listed_names_left_note and "
+             "every warning" if "listed_names_left_note" in preview else
+             "the summary, the names list line and every warning")
     try:
         payload = _issue_preview(
             "import_documents", token_args, preview, [],
-            "Show the researcher the summary, the names list line and "
-            "every warning, and wait for their word before calling again "
-            "with the token.",
-            {"paths": list(paths),
-             "apply_project_pseudonyms": token_args[
-                 "apply_project_pseudonyms"],
-             "import_pdfs_with_listed_names": token_args[
-                 "import_pdfs_with_listed_names"],
-             "import_file_names_with_listed_names": token_args[
-                 "import_file_names_with_listed_names"],
-             "import_files_with_garbled_letters": token_args[
-                 "import_files_with_garbled_letters"],
-             "memo": token_args["memo"]},
-            state_preview=result.fingerprint(ctx))
+            f"Show the researcher {shown}, and wait for their word before "
+            "calling again with the token.",
+            arguments, state_preview=result.fingerprint(ctx))
     except PreviewSecretUnavailable:
         return json.dumps(
             _token_error("preview_secret_unavailable", "import_documents"))
@@ -12067,20 +12466,37 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
     try:
         with hold_project_lock(project_folder) as lock_held:
             doc_import.sweep_temporary_copies(project_folder / "documents")
+            # Each file read again under the lock file and before the
+            # backup (v0.15.1): one changed since the preview is refused
+            # with no backup. SQLite's lock does not guard files outside
+            # the project, so this read holds neither.
             try:
-                backup_path = write_db.backup_before_write()
-            except Exception as e:
-                logger.error("Failed to create backup: %s", error_label(e))
+                doc_import.read_again(result, ctx)
+            except doc_import.BatchFailed as e:
                 return json.dumps({
-                    "error": _backup_failed_text(
-                        isinstance(e, DatabaseLockedError),
-                        isinstance(e, BackupWithoutDatabaseError)),
-                    "message": "Aborting to protect your data."})
+                    "error": doc_import.BATCH_FAILURES[e.code],
+                    "nothing_changed": True}, indent=2, ensure_ascii=False)
+            # One backup, always (v0.15.1): the project but its database
+            # copied, SQLite's write lock, the backup's database
+            backup_path, stopped = _backup_before_change(
+                write_db, "Aborting to protect your data.",
+                backup_fail_detail="no file was imported")
+            if stopped is not None:
+                return json.dumps(stopped)
             try:
                 taken = doc_import.write_batch(
                     write_db.insert_imported_document, result, ctx, owner,
                     written)
                 if not taken:
+                    # Not reached: write_batch takes the first ready file
+                    # (it always has its whole time) or raises, and a
+                    # batch with no ready file is refused before the lock.
+                    # Kept as a guard. The refusals that do come after
+                    # the backup, and name it, are write_batch's below: a
+                    # file changed in the seconds after the read again, a
+                    # file read differently (differs), a name taken in
+                    # the folder of originals, that folder no longer an
+                    # ordinary folder (v0.15.1; test_v0151_one_backup.py)
                     return json.dumps(_with_backup({
                         "error": "No file was imported: every file was held "
                                  "back or refused when read again.",
@@ -12150,6 +12566,9 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
     """What the import answers: each file's id, name, length and
     warnings, the names replaced, the backup; then the lines for the
     assistant to show. Never the text."""
+    # v0.15.1: counted after the commit, outside the project's lock file
+    # and SQLite's write lock, over the texts the import stored
+    doc_import.count_names_left(taken, ctx)
     files = []
     for item in taken:
         entry = doc_import.file_entry(item)
@@ -12219,6 +12638,13 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
         lines.append(IMPORT_DONE_LINES["file_name_names"])
     if any(i.check_text is not None for i in taken):
         lines.append(IMPORT_DONE_LINES["garbled"])
+    # Keyed on the stored file's character set, never on the argument
+    # (v0.15.1); after the commit, so it cannot raise.
+    if any(doc_import.chosen_name(i.read) is not None for i in taken):
+        lines.append(IMPORT_DONE_LINES["chosen_sets"])
+    if any(code in doc_import.NAMES_LEFT_CODES for i in taken
+           for code in i.warning_codes):
+        lines.append(IMPORT_DONE_LINES["listed_names_left"])
     if any(i.kind == doc_readers.PDF for i in taken):
         lines.append(IMPORT_DONE_LINES["pdf_release"].format(
             version=answer.get("pymupdf_version") or "unknown"))
@@ -12239,12 +12665,13 @@ def _import_done_answer(result, taken, ctx, owner, backup_path,
 
 
 @mcp.tool(annotations=TOOL_ADDS)
+@_ignores_create_backup
 @_tool_guard
 def link_file_to_case(
     file_id: int,
     case_id: Optional[int] = None,
     case_name: Optional[str] = None,
-    create_backup: bool = True
+    create_backup: Optional[bool] = None
 ) -> str:
     """Link a source file to a case so it appears in case-based analyses.
 
@@ -12274,7 +12701,8 @@ def link_file_to_case(
                    same case, or nothing is linked. The answer's
                    case_match says which rule matched ("id", "exact" or
                    "case_insensitive")
-        create_backup: Create timestamped backup before writing (default: True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the created link (case, file, covered span)
@@ -12327,8 +12755,11 @@ def link_file_to_case(
             "case_match": case_match,
         }
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="nothing was linked")
+    result = _perform_write(
+        _op, check=_write_methods_checks(
+            lambda wdb: wdb.check_link_file_to_case(case["id"], file_id,
+                                                    owner)),
+        backup_fail_detail="nothing was linked")
     return json.dumps(result, indent=2)
 
 
@@ -12337,8 +12768,9 @@ def link_file_to_case(
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_CHANGES)
+@_ignores_create_backup
 @_tool_guard
-def delete_coding(coding_id: int, create_backup: bool = True,
+def delete_coding(coding_id: int, create_backup: Optional[bool] = None,
                   allow_hidden_coder: bool = False,
                   confirm_private_note_deletion: bool = False) -> str:
     """Delete a single coded segment from the project database.
@@ -12358,10 +12790,9 @@ def delete_coding(coding_id: int, create_backup: bool = True,
       code_id, file_id) plus a coder_visibility note.
     - Private note (any project): a coding whose memo carries a '#####'
       private section the assistant cannot see is REFUSED unless
-      confirm_private_note_deletion=true, and a backup is ALWAYS taken
-      for such a row even with create_backup=false. Note that this
-      refusal, or the forced backup, tells you that a private note
-      exists on the row (never its content); the owner accepts that.
+      confirm_private_note_deletion=true. Note that this refusal tells
+      you that a private note exists on the row (never its content);
+      the owner accepts that.
     When both apply, both overrides are required and both refusals come
     back in one response.
 
@@ -12370,11 +12801,11 @@ def delete_coding(coding_id: int, create_backup: bool = True,
     to it) or another program is writing to the database; for QualCoder
     4.0, get_current_project shows any signs of an open window, and if
     there are some, ask the researcher before writing.
-    A backup is created first by default, so the deletion can be undone with
-    restore_backup if needed. When the coding came from an AI coding
-    session of this project (apply_codings), that suggestion is marked
-    removed in its session and the answer names the session
-    (sessions_updated): it can then be approved and applied again, or
+    Exegete takes a backup first, as before every change, so the deletion
+    can be undone with restore_backup if needed. When the coding came
+    from an AI coding session of this project (apply_codings), that
+    suggestion is marked removed in its session and the answer names the
+    session (sessions_updated): it can then be approved and applied again, or
     reopened and edited, and the same passage can be recorded again. Not
     for a hidden coder's row, whose answer stays ids only.
 
@@ -12382,8 +12813,8 @@ def delete_coding(coding_id: int, create_backup: bool = True,
         coding_id: The ctid of the coding to delete. You can find ctids in
                    the output of apply_codings, get_coded_segments, or
                    read_file_with_codings (segment_id).
-        create_backup: Create timestamped backup before deleting (default:
-                   True; ignored, always on, for a row carrying a private note)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to delete a hidden coder's coding
         confirm_private_note_deletion: Override to delete a coding whose
                    memo carries a private note
@@ -12404,7 +12835,6 @@ def delete_coding(coding_id: int, create_backup: bool = True,
         confirm_private_note_deletion=confirm_private_note_deletion)
     if refusal is not None:
         return json.dumps(refusal, indent=2)
-    status = get_db().existing_row_status("coding", coding_id) or {}
 
     # SEC C-1: route through _perform_write so the unconditional
     # rollback-if-uncommitted + downgrade discipline (its finally block)
@@ -12431,11 +12861,12 @@ def delete_coding(coding_id: int, create_backup: bool = True,
             "deleted_coding": deleted,
         }
 
-    # S-P2 (a): a row carrying a private note is always backed up first
     result = _perform_write(
-        _op, create_backup=create_backup or bool(status.get("private_note")),
+        _op, check=_write_methods_checks(
+            lambda wdb: wdb.check_delete_coding(
+                coding_id, allow_hidden_coder,
+                confirm_private_note_deletion)),
         backup_fail_detail="nothing was deleted")
-    _private_note_backup_note(result, status, create_backup)
     # The loop's undo tells the loop (v0.14, the claims audit's item 10)
     deleted = result.get("deleted_coding") if isinstance(result, dict) else None
     if (result.get("success") and isinstance(deleted, dict)
@@ -12526,9 +12957,9 @@ def _mark_removed_in_sessions(deleted: Dict[str, Any]) -> List[Dict[str, Any]]:
 def list_backups() -> str:
     """List the automatic backups of the currently open project.
 
-    Every write operation (apply_codings, import_text_file, delete_coding,
-    restore_backup and the other write tools) creates a timestamped backup
-    folder next to the project by default, named
+    Exegete takes a backup before every change (apply_codings,
+    import_text_file, delete_coding, restore_backup and the other write
+    tools): a timestamped folder next to the project, named
     '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
     together with QualCoder's own '<project>_BKUP_*' backups found next to
     the project (kind 'qualcoder'), newest first, so you can pick one for
@@ -12546,9 +12977,12 @@ def list_backups() -> str:
     data), but exclude the regenerable vector-search database
     ai_data/search.sqlite (which duplicates every text source in
     plaintext) and sqlite sidecar files, like QualCoder's own backups;
-    QualCoder rebuilds search.sqlite on project open. The project
-    database is copied with SQLite's own online backup, so a backup
-    taken while QualCoder is writing holds what was last committed, and
+    QualCoder rebuilds search.sqlite on project open. Those made from
+    0.15.1 on leave out the audio and video folders too; one made
+    earlier may hold files in them (holds_audio_or_video, read
+    from it). The database is copied with SQLite's own online backup,
+    so a backup taken while QualCoder is writing holds what was last
+    committed, and
     its journal and WAL files are never copied. A backup that holds
     them (copied mid-write, or made before v0.14) is marked `unclean`
     and restore_backup refuses it. Unlike
@@ -12561,7 +12995,8 @@ def list_backups() -> str:
 
     Returns:
         JSON with the project name and an array of backups
-        (name, path, kind, created, dated_from, age_days, size_mb)
+        (name, path, kind, created, dated_from, age_days, size_mb,
+        holds_audio_or_video, audio_video_files)
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -12586,8 +13021,9 @@ def list_backups() -> str:
     notes = _list_backups_notes(
         project_folder, any(b["kind"] == "qualcoder" for b in backups),
         history.level if history is not None else "none")
-    # The notes and the hint name restore_backup and prune_backups, which
-    # the core set does not register; there they are marked so.
+    # The notes and the hint name prune_backups, which the core set does
+    # not register (restore_backup is in it since v0.15.1); there they
+    # are marked so.
     return json.dumps({
         **answer,
         "notes": [_mark_unregistered(note) for note in notes],
@@ -12616,25 +13052,40 @@ QUALCODER_38_BACKUPS_NOTE = (
     "If the researcher uses QualCoder 3.8.0 to 3.8.2, it may keep further "
     "backups in the folder set in its settings; those are not listed "
     "here.")
-# What a backup holds is a fact about Exegete's backups, said always;
-# what it adds on ai_data/ only when the project holds that folder with
+# What a backup holds is a fact about Exegete's backups, said always:
+# those made from 0.15.1 on leave the audio and video folders out, and an
+# earlier one may hold files in them, which each backup's
+# holds_audio_or_video says, read from the folder (v0.15.1, fix round 2;
+# after the owner's sitting, from the files: empty folders, which every
+# project made by Exegete or QualCoder has, are no mark); what it adds on
+# ai_data/ only when the project holds that folder with
 # something in it (fix round 1; v0.15.0: Exegete makes it empty at
 # creation, qualcoder_history.ai_data_found). QualCoder 3.8.2 makes the
 # folder too, with the prompt library (ai_prompts.py:465) and the chat
 # history (ai_chat.py:185-187) in it and
 # its own search index under ai_data/vectorstore (ai_vectorstore.py:297),
 # at the tag 3.8.2, which backups keep; only 4.0's ai_data/search.sqlite
-# is left out (BACKUP_IGNORE_PATTERNS).
+# is left out (BACKUP_IGNORE_PATTERNS). v0.15.1, the stale texts (the
+# privacy reader): the note says so, since 3.8's store holds the sources'
+# text as 4.0's index does, and PRIVACY.md names it.
 BACKUPS_HOLD_NOTE = (
-    "Backups hold the whole project folder, except lock files and "
-    "SQLite's working files.")
+    "Exegete's backups hold the whole project folder except lock files "
+    "and SQLite's working files; those made from 0.15.1 on leave out its "
+    "audio and video folders too, while one made by an earlier version "
+    "may hold them, with recordings the project no longer has. Each "
+    "backup's holds_audio_or_video says whether it holds any file in "
+    "those folders, read from the backup itself, and audio_video_files "
+    "how many; empty folders are not marked.")
 AI_DATA_BACKUPS_NOTE = (
     "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
     "also holds its AI prompt library and chat history, which backups "
     "keep (and pruning removes). Backups leave out QualCoder 4.0's AI "
     "search index, ai_data/search.sqlite, which QualCoder rebuilds when it "
     "next opens the project with AI enabled, so a restored project without "
-    "one is normal.")
+    "one is normal. They keep QualCoder 3.8's AI search store, "
+    "ai_data/vectorstore/faiss_store.bin, which holds the text of the "
+    "project's sources, so each backup of a project that has one holds "
+    "another copy of that text.")
 
 
 def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
@@ -12678,10 +13129,11 @@ def _list_backups_notes(project_folder: Path, qualcoder_listed: bool,
 UNCLEAN_BACKUP_NOTE = (
     "This backup holds its database's journal or WAL file beside it (it "
     "was copied while a program was writing to the project; backups made "
-    "before v0.14 copied these files), or its data.qda is a link. What it "
-    "holds depends on the platform that opens it, or on where the link "
-    "points, so restore_backup refuses it; choose another backup. It can "
-    "be pruned like any other.")
+    "before v0.14 copied these files), or its data.qda is a link, or a "
+    "side file of its database is not an ordinary file. What it holds "
+    "depends on the platform that opens it, or on where the link points, "
+    "so restore_backup refuses it; choose another backup. It can be "
+    "pruned like any other.")
 
 
 def _backup_log_name(name: str, project_folder: Path) -> str:
@@ -12708,7 +13160,14 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     Families: this server's {name}_backup_{ts}[...].qda (kind 'exegete',
     including the *_prerestore safety copies) and QualCoder's own
     {name}_BKUP_{...}.qda (kind 'qualcoder'). Each entry carries name,
-    path, kind, created, age_days and size_mb.
+    path, kind, created, age_days and size_mb, and whether it holds
+    files in audio or video folders (`holds_audio_or_video`, read from
+    the folder, never from its name or date: a backup made before
+    0.15.1 holds the folders, v0.15.1 fix round 2), with
+    `audio_video_files`, how many, when it does. Folders with no file
+    in them give no mark (after the owner's sitting: every project made
+    by Exegete or QualCoder has them, empty), so the mark follows the
+    same files as the prune's count (`_media_files`).
     """
     backups: List[Dict[str, Any]] = []
     order: Dict[str, Tuple[datetime, int]] = {}
@@ -12733,12 +13192,16 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                     "name": entry.name,
                     "path": str(entry),
                     "kind": kind,
-                    "created": created.strftime("%Y-%m-%d %H:%M:%S"),
+                    "created": created.strftime(BACKUP_TIME_FORMAT),
                     "dated_from": dated_from,
                     "age_days": round(
                         max(0.0, (now - created).total_seconds()) / 86400, 1),
                     "size_mb": round(size_bytes / (1024 * 1024), 2),
                 }
+                media = len(_media_files(entry))
+                item["holds_audio_or_video"] = media > 0
+                if media:
+                    item["audio_video_files"] = media
                 side = unclean_backup_side_files(entry)
                 linked = backup_database_is_link(entry)
                 if side or linked:
@@ -12772,8 +13235,8 @@ def prune_backups(keep_last: Optional[int] = None,
     """Delete this project's own backup snapshots to reclaim disk space.
 
     DESTRUCTIVE to your recovery points: preview first, then execute with
-    the token that preview returns. Every write creates a full-project
-    backup copy and they accumulate forever; this tool prunes them by a
+    the token that preview returns. Every write creates a backup copy of
+    the project and they accumulate forever; this tool prunes them by a
     retention policy you choose:
 
     - keep_last=N: keep only the N newest of Exegete's backups
@@ -12808,16 +13271,22 @@ def prune_backups(keep_last: Optional[int] = None,
     A reason to prune beyond disk space: a backup taken before a
     `pseudonymise_source` run holds the text as it was, real names
     included, and so does any `pseudonyms.json` the project carries,
-    since a backup copies the whole tree. A project is not pseudonymised
+    since a backup copies that file too. A project is not pseudonymised
     while those copies sit beside it, so once a run is verified, pruning
     is part of finishing it. Removing them also removes your recovery
     point, which is the trade; keep at least one until you are sure.
 
     This does not touch the live project database, so it works even while
-    QualCoder has the project open. Each backup is a whole project tree,
+    QualCoder has the project open. Each backup is the project tree,
     ai_data/ included (minus the regenerable search.sqlite and sqlite
     sidecars, as in QualCoder's own backups), so pruning also removes
     those recovery points for the AI prompt library and chat history.
+    Backups made from 0.15.1 on leave out the audio and video folders;
+    one made earlier may hold them, with recordings the project no
+    longer has, which pruning removes too. So the preview gives, for
+    each backup it would remove, audio_video_files_only_here: the files
+    there that neither the project nor a backup kept holds (same name
+    and size), with a note.
 
     Args:
         keep_last: Keep only this many of Exegete's newest backups (0
@@ -12902,6 +13371,13 @@ def prune_backups(keep_last: Optional[int] = None,
                                              to_remove)
     if only_copies["copies"]:
         notes.append(_prune_only_copies_note(only_copies, done=False))
+    # Recordings only a backup to be removed holds (v0.15.1, fix round
+    # 2): a backup made before 0.15.1 holds the audio and video folders,
+    # and the project may no longer have what is in them
+    media_only = _prune_media_only_copies(project_folder, all_backups,
+                                          to_remove)
+    if media_only:
+        notes.append(_prune_media_only_note(media_only, done=False))
     removes_newest_prerestore = False
     prerestore_removed = [b for b in to_remove if "_prerestore" in b["name"]]
     if prerestore_removed:
@@ -12926,11 +13402,15 @@ def prune_backups(keep_last: Optional[int] = None,
     token_args = canonical_args("prune_backups", keep_last=keep_last,
                                 older_than_days=older_than_days)
     if preview_token is None:
+        only_here = dict(media_only)
         preview = {
             "requires_confirmation": True,
             "would_remove": [
                 {"name": b["name"], "age_days": b["age_days"],
-                 "size_mb": b["size_mb"]} for b in to_remove],
+                 "size_mb": b["size_mb"],
+                 **({"audio_video_files_only_here": only_here[b["name"]]}
+                    if b["name"] in only_here else {})}
+                for b in to_remove],
             "would_keep": [b["name"] for b in kept],
             "reclaimed_mb": reclaimed_mb,
             **_never_removed_block(not_ours),
@@ -12968,7 +13448,11 @@ def prune_backups(keep_last: Optional[int] = None,
                     # Signed, so a set that changes before the execute (a
                     # file removed outside this server) refuses it rather
                     # than removing a copy the preview did not name.
-                    "only_copies": only_copies["copies"]})
+                    "only_copies": only_copies["copies"],
+                    # and so the recordings' (fix round 2): a recording
+                    # the project loses after the preview is not removed
+                    # unsaid
+                    "media_only_copies": media_only})
         except PreviewSecretUnavailable:
             return json.dumps(
                 _token_error("preview_secret_unavailable", "prune_backups"))
@@ -12979,7 +13463,8 @@ def prune_backups(keep_last: Optional[int] = None,
     state = fingerprint_rows(
         {"would_remove": [b["name"] for b in to_remove],
          "would_keep": [b["name"] for b in kept],
-         "only_copies": only_copies["copies"]}, fingerprint)
+         "only_copies": only_copies["copies"],
+         "media_only_copies": media_only}, fingerprint)
     try:
         outcome = verify(preview_token, "prune_backups", token_args,
                          _token_project(), state)
@@ -13020,6 +13505,8 @@ def prune_backups(keep_last: Optional[int] = None,
     notes = []
     if only_copies["copies"]:
         notes.append(_prune_only_copies_note(only_copies, done=True))
+    if media_only:
+        notes.append(_prune_media_only_note(media_only, done=True))
     if removes_newest_prerestore:
         notes.append(_prune_prerestore_note(done=True))
     if notes:
@@ -13103,6 +13590,96 @@ def _prune_only_copies_note(only_copies: Dict[str, List[Any]],
                    "; copy it somewhere safe first if it is still needed.")
 
 
+def _prune_media_only_copies(project_folder: Path,
+                             backups: List[Dict[str, Any]],
+                             to_remove: List[Dict[str, Any]]
+                             ) -> List[List[Any]]:
+    """The backups a prune would remove that hold files in their audio or
+    video folders (`_media_files`) which neither the project nor any of
+    Exegete's backups the prune keeps holds, compared by the path below
+    the folder and the size, never read out: sorted `[folder name,
+    count]` pairs, which the token signs. A backup made before 0.15.1
+    holds those folders; one made since holds none, so it is passed by
+    without a walk of anything else. QualCoder's own backups do not count
+    as keeping a copy, since QualCoder deletes them past its
+    `backup_num`, as `_prune_only_mapping_copies` holds (v0.15.1, fix
+    round 2)."""
+    removing = {b["name"] for b in to_remove}
+    kept: Optional[set] = None
+    found = []
+    for backup in to_remove:
+        held = _media_files(Path(backup["path"]))
+        if not held:
+            continue
+        if kept is None:
+            kept = {(top.casefold(), below, size)
+                    for other in backups
+                    if other["kind"] == OWN_BACKUP_KIND
+                    and other["name"] not in removing
+                    for (top, below), size in _media_files(
+                        Path(other["path"])).items()}
+        count = sum(
+            1 for (top, below), size in held.items()
+            if (top.casefold(), below, size) not in kept
+            and not _project_has_media_file(project_folder, top, below,
+                                            size))
+        if count:
+            found.append([backup["name"], count])
+    return sorted(found)
+
+
+def _project_has_media_file(project_folder: Path, top: str, below: str,
+                            size: int) -> bool:
+    """Whether the project has a file of `size` bytes at `below` in its
+    audio or video folder `top` (as a backup spells it; the disk takes
+    the name as it takes names), a link there followed, as the project
+    reaches its recordings through one. Never raises."""
+    path = Path(project_folder) / top
+    if below:
+        path = path.joinpath(*below.split("/"))
+    try:
+        info = os.stat(path)
+    except (OSError, ValueError):
+        return False
+    return stat.S_ISREG(info.st_mode) and info.st_size == size
+
+
+def _prune_media_only_note(media_only: List[List[Any]], done: bool) -> str:
+    """The prune's note on the recordings only the backups it removes
+    hold, before (`done` False) or after the removal: each backup's
+    folder name with its count, never a file's name; in the singular
+    where one backup, or one file, is meant."""
+    one = len(media_only) == 1
+    single = sum(count for _, count in media_only) == 1
+    named = ", ".join(
+        f"{name} ({count} file{'' if count == 1 else 's'})"
+        for name, count in media_only)
+    what = ("a file" if single else "files") + (
+        f" in {'its' if one else 'their'} audio or video folders")
+    if done:
+        return (("The backup this removed held " if one
+                 else "Backups this removed held ")
+                + f"{what} that neither the project nor a backup Exegete "
+                f"kept held (by name and size): {named}. "
+                + ("It may have been the only copy of a recording."
+                   if single else
+                   "They may have been the only copies of recordings."))
+    return (("The backup this would remove holds " if one
+             else "Backups this would remove hold ")
+            + f"{what} that neither the project nor a backup Exegete keeps "
+            f"holds (by name and size): {named}. A backup made before "
+            f"0.15.1 holds those folders. Once "
+            + ("it is" if one else "they are")
+            + " removed, Exegete knows of no other copy, so "
+            + ("it may be the only copy of a recording: if it is still "
+               "needed, copy it" if single else
+               "they may be the only copies of recordings: copy any "
+               "still needed")
+            + " out of " + ("the backup" if one else "those backups")
+            + " first, or keep "
+            + (("the backup" if single else "it") if one else "them") + ".")
+
+
 def _prune_prerestore_note(done: bool) -> str:
     """The prune's note when it removes the newest pre-restore safety
     backup, before (`done` False) or after the removal."""
@@ -13129,43 +13706,155 @@ def _project_is_write_locked(data_qda: Path) -> bool:
                 pass
 
 
+# The project's names list (pseudonyms.json) in a restore (v0.15.1): how
+# the backup's compares with the project's, as one kind
+# (`_names_list_change`) from which the preview's sentence and the success
+# note (`_restore_pseudonyms_json_note`) are both built. By fingerprints
+# of the two files' bytes only, never a name or a count of names.
+NAMES_LIST_SENTENCES = {
+    "same": "The project's names list (pseudonyms.json) is the same in the "
+            "backup.",
+    "replaced": "The project's names list (pseudonyms.json) is replaced by "
+                "the backup's, which differs.",
+    "removed": "The project's names list (pseudonyms.json) is removed: the "
+               "backup has none.",
+    "brought_back": "The backup's names list is brought back: the project "
+                    "has none now.",
+    "link": "The project's names list is a symbolic link, which the restore "
+            "removes without changing the file it points to.",
+    "unknown": "Whether the names list changes cannot be told: one of the "
+               "two could not be read.",
+}
+# Said after it when the list changes and the project's Exegete folder
+# holds the names file, which a restore keeps as it is (v0.15.0)
+NAMES_FILE_OUT_OF_STEP = (
+    "The names file in the project's Exegete folder is kept as it is, so it "
+    "may no longer match the names list; saving the list again "
+    "(save_names_list) brings them back in step.")
+
+
+def _names_list_change(before: Optional[str],
+                       after: Optional[str]) -> Optional[str]:
+    """How a restore changes the project's names list, from
+    `pseudonyms_json_fingerprint` of the project (`before`) and of the
+    backup, or of the project once restored (`after`): None when neither
+    has one; "link" when the project's is a symbolic link; "unknown" when
+    both have one and either could not be read; otherwise "same",
+    "removed", "brought_back" or "replaced" (v0.15.1)."""
+    if before is None and after is None:
+        return None
+    if before == "link":
+        return "link"
+    if "unreadable" in (before, after) and None not in (before, after):
+        return "unknown"
+    if before == after:
+        return "same"
+    if after is None:
+        return "removed"
+    if before is None:
+        return "brought_back"
+    return "replaced"
+
+
+def _names_list_note(project_folder: Path, before: Optional[str],
+                     after: Optional[str]) -> Optional[str]:
+    """The restore preview's sentence on the names list, with
+    NAMES_FILE_OUT_OF_STEP when the list changes and the names file is
+    in the project's Exegete folder (looked at, never read); None when
+    neither has a list."""
+    kind = _names_list_change(before, after)
+    if kind is None:
+        return None
+    note = NAMES_LIST_SENTENCES[kind]
+    if kind != "same":
+        try:
+            names_file_there = os.path.lexists(private_files.place(
+                project_folder, private_files.NAMES_FILE))
+        except (OSError, ValueError):
+            names_file_there = False
+        if names_file_there:
+            # It names save_names_list, which the core set does not
+            # register: marked where it is written
+            note = f"{note} {_mark_unregistered(NAMES_FILE_OUT_OF_STEP)}"
+    return note
+
+
 def _restore_pseudonyms_json_note(before: Optional[str],
                                   after: Optional[str],
                                   safety_backup: Path) -> Optional[str]:
     """What a restore did to the project's pseudonyms.json, when it did
-    anything: the file appeared, disappeared or changed. The one the
-    project had is said to be in the safety backup only when that
-    backup's own file is the same (a link is not copied into a backup).
-    Names no file's content; the safety backup by its folder name."""
-    if before == after:
+    anything: the file appeared, disappeared or changed, by the kind
+    `_names_list_change` gives (v0.15.1; nothing said when the two are
+    alike, even both unreadable, as before). The one the project had is
+    said to be in the safety backup only when that backup's own file is
+    the same (a link is not copied into a backup). Names no file's
+    content; the safety backup by its folder name. The tools it names
+    that the core set does not register are marked where they are
+    written."""
+    kind = _names_list_change(before, after)
+    if kind in (None, "same") or before == after:
         return None
     kept = (before is not None
             and pseudonyms_json_fingerprint(safety_backup) == before)
     where = (f"The one the project had is in the safety backup "
              f"{safety_backup.name}; keep that backup, or copy the file "
              f"back into the project folder, while it is still needed: "
-             f"prune_backups removes safety backups too."
+             + _mark_unregistered("prune_backups removes safety backups "
+                                  "too.")
              if kept else
              f"The safety backup {safety_backup.name} holds no copy of the "
              f"one the project had (a symbolic link is not copied into a "
              f"backup).")
     if after is None:
+        # "removed", or the project's link where the backup has none
         return (f"This project had a pseudonyms.json before the restore and "
                 f"the backup restored has none, so the project no longer "
                 f"has one. That file may be the only record of a "
-                f"pseudonymisation mapping (a pseudonymise_source run's save "
-                f"writes one). {where}")
-    if before is None:
+                f"pseudonymisation mapping (a "
+                + _mark_unregistered("pseudonymise_source")
+                + f" run's save writes one). {where}")
+    if kind == "brought_back":
         return (f"The backup restored carries a pseudonyms.json that this "
                 f"project did not have before the restore; its names are "
                 f"replaced on later text or transcript imports: by "
-                f"Exegete's import_documents unless apply_project_pseudonyms "
+                f"Exegete's " + _mark_unregistered("import_documents")
+                + f" unless apply_project_pseudonyms "
                 f"is false, and by QualCoder on every one (not a PDF). "
                 f"The safety backup {safety_backup.name} holds the project "
                 f"as it was, without one.")
     return (f"The backup restored carries a pseudonyms.json that differs "
             f"from the one this project had before the restore, which may "
             f"be the only record of a pseudonymisation mapping. {where}")
+
+
+# A restore's preview and its answer count the rows of each kind
+# (database.project_counts, v0.15.1); said when a database could not be
+# read for them, its counts then null
+COUNTS_NOT_READ = {
+    "project": "The project's database could not be read just now "
+               "(another program may be writing to it, or it cannot be "
+               "opened), so its counts are null.",
+    "backup": "The backup's database could not be read (it cannot be "
+              "opened), so its counts are null.",
+    "both": "Neither database could be read just now (another program may "
+            "be writing to the project's, or one cannot be opened), so "
+            "both counts are null.",
+}
+# How a backup's time is written, in list_backups and a restore (v0.15.1)
+BACKUP_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+
+def _backup_taken(backup_folder: Path, prefix: str,
+                  qualcoder_made: bool) -> Tuple[Optional[str], Optional[str]]:
+    """When a backup was taken and what that time is read from, as
+    list_backups gives them (`created` and `dated_from`); (None, None)
+    when the folder cannot be read. Never raises."""
+    try:
+        created, _counter, dated_from = backup_sort_key(
+            backup_folder, prefix, to_the_hour=qualcoder_made)
+    except (OSError, ValueError, OverflowError):
+        return None, None
+    return created.strftime(BACKUP_TIME_FORMAT), dated_from
 
 
 # A restore keeps the project's Exegete folder as it is, never taking the
@@ -13233,6 +13922,23 @@ def _is_exegete_entry(top: Path, name: str) -> bool:
         own.st_dev, own.st_ino)
 
 
+def _kept_by_restore(folder: Path, name: str,
+                     lock_held: bool = False) -> bool:
+    """Whether a restore keeps the top-level entry `name` of the project
+    folder (or leaves it out of the backup it copies from, `folder`): the
+    entry at the Exegete folder's name (`_is_exegete_entry`), or one at
+    the audio or the video folder's name, whatever it is (v0.15.1). The
+    media test is the one a backup's leave-out makes
+    (`database.is_media_folder_entry`), so what a backup leaves out is
+    exactly what a restore keeps. With `lock_held`, the restore holds the
+    project's lock file, which it keeps where it is until its hold ends
+    (v0.15.1): QualCoder 3.8.2 and a second copy of Exegete find the
+    project in use for the whole copy. Never raises."""
+    return ((lock_held and name == QUALCODER_LOCK_FILENAME)
+            or _is_exegete_entry(folder, name)
+            or is_media_folder_entry(folder, name))
+
+
 def _holds_exegete_folder(folder: Path) -> bool:
     """Whether a project folder, or a backup, has the project's Exegete
     folder: a real folder, read with `lstat`, at a top-level name
@@ -13282,19 +13988,23 @@ def _gone_already(function, path, failure) -> None:
         raise error
 
 
-def _clear_all_but_exegete_folder(project_folder: Path) -> None:
-    """Remove every top-level entry of the project folder but the one at
-    the Exegete folder's name (each name `_is_exegete_entry` takes,
-    whatever is there: the folder, a file, a link), which a restore
-    leaves where it is, as it is: nothing in it is read, copied or
-    removed (v0.15.0). A link or a junction is removed as a link, never
+def _clear_all_but_exegete_folder(project_folder: Path,
+                                  lock_held: bool = False) -> None:
+    """Remove every top-level entry of the project folder but those a
+    restore keeps (`_kept_by_restore`: the one at the Exegete folder's
+    name, v0.15.0, and those at the audio and the video folder's names,
+    v0.15.1, whatever is there: a folder, a file, a link; with
+    `lock_held`, the lock file the restore holds, v0.15.1), which a
+    restore leaves where they are, as they are: nothing in them is read,
+    copied or removed. A link or a junction is removed as a link, never
     followed; a folder with everything in it. An entry another program
     removed since the listing (a temporary file, a .DS_Store) is gone
     already and passed over. Raises on any other failure, which the
     restore's recovery from the safety backup answers."""
     with os.scandir(project_folder) as entries:
         going = [entry.path for entry in entries
-                 if not _is_exegete_entry(project_folder, entry.name)]
+                 if not _kept_by_restore(project_folder, entry.name,
+                                         lock_held)]
     for path in going:
         try:
             info = os.lstat(path)
@@ -13317,16 +14027,25 @@ def _clear_all_but_exegete_folder(project_folder: Path) -> None:
 def _copy_around_exegete_folder(source: Path, project_folder: Path,
                                 *, leave_out_folder: bool) -> None:
     """Copy `source` (the backup; in the recovery, the safety backup) into
-    the project folder, around the entry `_clear_all_but_exegete_folder`
-    left at the Exegete folder's name. With `leave_out_folder`, the
-    source's top-level entry at that name (each name `_is_exegete_entry`
-    takes) is left out, whatever it is; nothing below the top is. Any
-    other entry of the source that would land on something still in the
-    project raises before anything is copied, rather than mixing the
-    source's files into the folder kept. Raises on any failure."""
+    the project folder, around the entries `_clear_all_but_exegete_folder`
+    left. The source's top-level entries at the audio and the video
+    folder's names are always left out, whatever they are (v0.15.1: the
+    project's own are kept), and so are its top-level lock files, named
+    as a backup leaves them out (`*.lock`, v0.15.1: a backup made by an
+    earlier version, or by QualCoder, can hold one, which would meet the
+    lock file the restore holds); with `leave_out_folder`, so is its
+    entry at the Exegete folder's name (each name `_is_exegete_entry`
+    takes); nothing below the top is. Any other entry of the source that
+    would land on something still in the project raises before anything
+    is copied, rather than mixing the source's files into a folder kept.
+    Raises on any failure."""
     top = os.path.normcase(os.path.abspath(source))
 
     def leave_out(name: str) -> bool:
+        if is_media_folder_entry(source, name):
+            return True
+        if fnmatch.fnmatch(name, "*.lock"):
+            return True
         return leave_out_folder and _is_exegete_entry(source, name)
 
     for name in os.listdir(source):
@@ -13340,6 +14059,80 @@ def _copy_around_exegete_folder(source: Path, project_folder: Path,
         return {name for name in names if leave_out(name)}
     shutil.copytree(source, project_folder, ignore=ignore,
                     dirs_exist_ok=True)
+
+
+# Said on the preview of restoring one of QualCoder's own backups, with
+# MEDIA_HELD_NOTE when it holds files in its audio or video folder
+# (v0.15.1; one note whether or not it holds any, fix round 1)
+MEDIA_KEPT_NOTE = (
+    "The project's audio and video folders are kept as they are, not taken "
+    "from the backup.")
+MEDIA_HELD_NOTE = "The backup's copies ({files}) stay in it."
+
+# Said when a failed restore found the project folder gone (another
+# program removed it) and copied the safety backup in its place: that
+# backup, like every backup Exegete makes, holds no audio or video
+# folders (v0.15.1, fix round 1)
+RECOVERED_WITHOUT_MEDIA = (
+    "The project folder had gone, so the safety backup was copied in its "
+    "place; that backup holds no audio or video folders, so any recordings "
+    "the project had are not in the recovered project.")
+
+
+def _media_kept_note(count: int) -> str:
+    """MEDIA_KEPT_NOTE, then MEDIA_HELD_NOTE with its count when the backup
+    holds files there: "1 file", "3 files"."""
+    if not count:
+        return MEDIA_KEPT_NOTE
+    return MEDIA_KEPT_NOTE + " " + MEDIA_HELD_NOTE.format(
+        files=f"{count} file" if count == 1 else f"{count} files")
+
+
+def _media_files_in(folder: Path) -> int:
+    """How many files a backup holds in the entries at its top that a
+    restore leaves out as audio or video (`_media_files`). Names
+    nothing. Never raises."""
+    return len(_media_files(folder))
+
+
+def _media_files(folder: Path) -> Dict[Tuple[str, str], int]:
+    """Every file a project or a backup (`folder`) holds in the entries at
+    its top that a backup leaves out and a restore keeps as audio or
+    video (`is_media_folder_entry`), each as (the entry's name as the
+    folder spells it, the path below it joined with "/", empty for a
+    file at the top) with its size. A folder's files at any depth; a
+    link or a junction, at the top or below it, is neither entered nor
+    counted (v0.15.1; fix round 2, below the top too, where os.walk
+    entered a junction on Windows). The names stay inside Exegete:
+    every caller counts. Never raises."""
+    found: Dict[Tuple[str, str], int] = {}
+    try:
+        with os.scandir(folder) as entries:
+            tops = [(entry.name, entry.path) for entry in entries
+                    if is_media_folder_entry(folder, entry.name)]
+    except Exception:                                   # noqa: BLE001
+        return found
+    for name, path in tops:
+        pending = [(path, None)]
+        while pending:
+            here, below = pending.pop()
+            try:
+                info = os.lstat(here)
+                if (stat.S_ISLNK(info.st_mode)
+                        or reading_folder.is_link(Path(here))):
+                    continue
+                if stat.S_ISREG(info.st_mode):
+                    found[(name, below or "")] = info.st_size
+                elif stat.S_ISDIR(info.st_mode):
+                    with os.scandir(here) as entries:
+                        for entry in entries:
+                            pending.append((
+                                entry.path,
+                                entry.name if below is None
+                                else f"{below}/{entry.name}"))
+            except Exception:                           # noqa: BLE001
+                continue
+    return found
 
 
 def _project_holds_exegete_entry(project_folder: Path) -> bool:
@@ -13399,7 +14192,15 @@ def restore_backup(backup_path: str,
 
     The project's Exegete folder (files the researcher fills in) is kept
     as it is, never taken from the backup; the preview says when either
-    has one.
+    has one. So are its audio and video folders.
+
+    The preview gives when the backup was taken (backup_taken), how many
+    files, codes, codings and the rest the project has now and the backup
+    has (counts), and what happens to the names list, pseudonyms.json
+    (names_list_note). The project's lock file is held, kept fresh, for
+    the whole restore, so QualCoder 3.8.2, or another conversation using
+    Exegete, finds the project in use until it ends; over a stale lock
+    file, none is held and the restore removes that file.
 
     Args:
         backup_path: Path to the backup folder (from list_backups)
@@ -13477,11 +14278,34 @@ def restore_backup(backup_path: str,
             "hint": "Call restore_backup again with the preview_token to "
                     "proceed."
         }
+        # What the restore would bring back (v0.15.1), outside the signed
+        # state, as the signs below are: when the backup was taken, as
+        # list_backups gives it; how many rows of each kind the project
+        # has now and the backup has, every coder's together, no coder
+        # named (the backup read-only and immutable, its side files
+        # refused above); and what happens to the names list, by the two
+        # files' fingerprints, never a name
+        preview["backup_taken"], preview["backup_dated_from"] = \
+            _backup_taken(backup_folder,
+                          prefixes[1] if qualcoder_made else prefixes[0],
+                          qualcoder_made)
+        counts_now = project_counts(project_folder)
+        counts_backup = project_counts(backup_folder, immutable=True)
+        preview["counts"] = {"now": counts_now, "in_backup": counts_backup}
+        if counts_now is None or counts_backup is None:
+            preview["counts_note"] = COUNTS_NOT_READ[
+                "both" if counts_now is None and counts_backup is None
+                else "project" if counts_now is None else "backup"]
+        names_note = _names_list_note(project_folder,
+                                      *fingerprint["names_lists"])
+        if names_note:
+            preview["names_list_note"] = names_note
         if qualcoder_made:
-            preview["note"] = (
-                "This is a QualCoder-made backup: depending on QualCoder's "
-                "settings it may not contain audio/video media files."
-            )
+            # A restore keeps the project's audio and video folders and
+            # never takes the backup's (v0.15.1): said always, with a
+            # count when the backup holds files there, never a name
+            preview["note"] = _media_kept_note(
+                _media_files_in(backup_folder))
         # P1-5: the preview is this tool's own ask rung. WARN-level only:
         # report the 4.0 GUI-open heuristics and ask, never refuse on
         # them (QA round 1, F18)
@@ -13540,101 +14364,187 @@ def restore_backup(backup_path: str,
     if _project_is_write_locked(project_data):
         return json.dumps({"error": DB_LOCKED_MESSAGE})
 
-    # The AI coder name before the swap: the restore replaces the whole
-    # project folder, sidecar included, so the setting reverts to the
-    # backup's version and the result has to say so (B1.14).
-    name_before = read_sidecar(project_folder).name
-    # The same for pseudonyms.json, which the swap replaces with the
-    # backup's (or removes): the result says so, because the file the
-    # project had may be the only record of a pseudonymisation mapping
-    # (Brief 2, merge fix M3). A fingerprint only, never the bytes.
-    mapping_before = pseudonyms_json_fingerprint(project_folder)
-    # Whether the project has its Exegete folder, which the swap leaves
-    # where it is (v0.15.0), for the note.
-    exegete_had = _holds_exegete_folder(project_folder)
-
-    # Safety backup of the current state (rename to mark it as pre-restore)
-    safety_report: Dict[str, Any] = {}
-    safety_backup = backup_project(project_folder, report=safety_report)
-    marked = safety_backup.with_name(
-        safety_backup.name[:-len(".qda")] + "_prerestore.qda"
-    )
-    try:
-        safety_backup.rename(marked)
-        safety_backup = marked
-    except OSError:
-        pass  # keep the unmarked name if rename fails
-
-    # Close the connection, swap the folder, reopen read-only
     global db
-    if db is not None:
-        try:
-            db.close()
-        except Exception:
-            pass
-        db = None
-
-    if _restore_fingerprint(project_folder, backup_folder) != fingerprint:
-        # The project (or the backup) changed between the preview and
-        # this moment. The safety backup above stays; it is exactly the
-        # state the researcher has now.
-        return json.dumps({
-            "error": TOKEN_ERROR_TEXTS["project_changed"].format(
-                tool="restore_backup")
-            + " A backup had already been taken before the change was "
-              "detected; it is unchanged and can be pruned.",
-            "reason": "project_changed",
-            "nothing_changed": True,
-            "safety_backup": str(safety_backup),
-        })
-
+    # The project's lock file is held from here to the end of the copy,
+    # or of the recovery, kept fresh as every write's is (v0.15.1):
+    # QualCoder 3.8.2, and another conversation using Exegete, find the
+    # project in use for the whole restore, safety backup included. The
+    # clear and the recovery keep the file where it is (`lock_held`), so
+    # it never goes while the project is part copied. Over a stale lock
+    # another program left, nothing is held, as before: the clear removes
+    # that file. A refusal on entering the hold comes before anything is
+    # made.
+    safety_report: Dict[str, Any] = {}
+    failed_mid_swap = False
+    recovered = False
+    folder_kept = False
+    folder_gone = False
     try:
-        with hold_project_lock(project_folder):
-            # Everything in the project goes but its Exegete folder, which
-            # stays where it is, as it is, never read or copied (v0.15.0):
-            # a file of any name in it, at any depth, saved at any moment,
-            # is kept. Then everything from the backup but its entry of
-            # that name. A failure in either goes to the recovery below,
-            # which leaves the folder where it is too.
-            _clear_all_but_exegete_folder(project_folder)
-            _copy_around_exegete_folder(backup_folder, project_folder,
-                                        leave_out_folder=True)
-            # Old backups may contain a copied lock file; QualCoder never
-            # puts lock files in backups and neither do we (anymore)
-            for stray_lock in project_folder.glob("*.lock"):
+        with hold_project_lock(project_folder) as held:
+            # The AI coder name before the swap: the restore replaces the
+            # whole project folder, sidecar included, so the setting
+            # reverts to the backup's version and the result has to say
+            # so (B1.14).
+            name_before = read_sidecar(project_folder).name
+            # The same for pseudonyms.json, which the swap replaces with
+            # the backup's (or removes): the result says so, because the
+            # file the project had may be the only record of a
+            # pseudonymisation mapping (Brief 2, merge fix M3). A
+            # fingerprint only, never the bytes.
+            mapping_before = pseudonyms_json_fingerprint(project_folder)
+            # Whether the project has its Exegete folder, which the swap
+            # leaves where it is (v0.15.0), for the note.
+            exegete_had = _holds_exegete_folder(project_folder)
+
+            # Close the connection, check both databases again, back up,
+            # check them once more, swap the folder, reopen read-only
+            if db is not None:
                 try:
-                    stray_lock.unlink()
-                except OSError:
+                    db.close()
+                except Exception:
                     pass
+                db = None
+
+            if _restore_fingerprint(project_folder,
+                                    backup_folder) != fingerprint:
+                # The project (or the backup) changed between the preview
+                # and this moment: refused before the safety backup
+                # (v0.15.1), so this refusal leaves no backup.
+                return json.dumps({
+                    "error": TOKEN_ERROR_TEXTS["project_changed"].format(
+                        tool="restore_backup"),
+                    "reason": "project_changed",
+                    "nothing_changed": True,
+                })
+
+            # Safety backup of the current state (rename to mark it as
+            # pre-restore). A failure here raises past the recovery
+            # below, which only ever starts once the safety backup is
+            # made: no safety backup, nothing cleared.
+            safety_backup = backup_project(project_folder,
+                                           report=safety_report)
+            marked = safety_backup.with_name(
+                safety_backup.name[:-len(".qda")] + "_prerestore.qda"
+            )
+            try:
+                safety_backup.rename(marked)
+                safety_backup = marked
+            except OSError:
+                pass  # keep the unmarked name if rename fails
+
+            if _restore_fingerprint(project_folder,
+                                    backup_folder) != fingerprint:
+                # Changed while the safety backup was made (QualCoder 4.0,
+                # which writes no lock file, saving as the backup's copy of
+                # the database ends would land in neither the restored
+                # project nor the backup). Refused, as 0.15.0 refused it,
+                # with the safety backup named; the project is left as the
+                # other program saved it.
+                return json.dumps({
+                    "error": TOKEN_ERROR_TEXTS["project_changed"].format(
+                        tool="restore_backup") + BACKUP_KEPT_ANYWAY,
+                    "reason": "project_changed",
+                    "nothing_changed": True,
+                    "safety_backup": str(safety_backup),
+                })
+
+            # The lock file checked once more before anything is removed,
+            # as every write checks it before its change (v0.15.1): a
+            # lock another program took over while this one was stale
+            # (Exegete asleep past 30 seconds, say), or one that is now
+            # active over a stale lock this restore did not hold, refuses
+            # the restore, nothing changed, the safety backup named.
+            try:
+                _recheck_lock_before_commit(project_folder, held)
+            except DatabaseLockedError as e:
+                return json.dumps({
+                    "error": str(e) + BACKUP_KEPT_ANYWAY,
+                    "nothing_changed": True,
+                    "safety_backup": str(safety_backup),
+                })
+
+            try:
+                # Everything in the project goes but its Exegete folder,
+                # which stays where it is, as it is, never read or copied
+                # (v0.15.0), its audio and video folders (v0.15.1) and the
+                # lock file this restore holds (v0.15.1): a file of any
+                # name in the Exegete folder, at any depth, saved at any
+                # moment, is kept. Then everything from the backup but its
+                # entries of those names and its lock files. A failure in
+                # either goes to the recovery below, which leaves them
+                # where they are too.
+                _clear_all_but_exegete_folder(project_folder,
+                                              lock_held=bool(held))
+                _copy_around_exegete_folder(backup_folder, project_folder,
+                                            leave_out_folder=True)
+                # Lock files left out of the copy, a lock file another
+                # program made during it is removed, as one an older
+                # backup brought used to be; never the one this restore
+                # holds, which its hold's end removes
+                for stray_lock in project_folder.glob("*.lock"):
+                    if held and stray_lock.name == QUALCODER_LOCK_FILENAME:
+                        continue
+                    try:
+                        stray_lock.unlink()
+                    except OSError:
+                        pass
+            except Exception as e:
+                # Attempt recovery from the safety backup, still holding
+                # the lock file. A copytree that fails PARTWAY (e.g. disk
+                # full) leaves a PARTIAL project folder — the backup's
+                # data.qda without the rest — which the previous
+                # exists()-guard mistook for "project still there",
+                # leaving a live half-replaced project that the next read
+                # tool silently reconnects to (fault-injection D1). Remove
+                # any partial folder first so the safety-backup recovery
+                # always runs on a clean slate.
+                logger.error("Restore failed mid-swap: %s", error_label(e))
+                failed_mid_swap = True
+                try:
+                    if os.path.lexists(project_folder):
+                        # Everything here but the Exegete folder (and the
+                        # lock file held) was cleared or is a partial copy:
+                        # cleared again, the folder left where it is, and
+                        # the safety backup copied around it; the safety
+                        # backup's own copy of the folder comes back only
+                        # when nothing is at that name any more (v0.15.0)
+                        _clear_all_but_exegete_folder(
+                            project_folder, lock_held=bool(held))
+                        folder_kept = _project_holds_exegete_entry(
+                            project_folder)
+                        _copy_around_exegete_folder(
+                            safety_backup, project_folder,
+                            leave_out_folder=folder_kept)
+                    else:
+                        # Another program removed the project folder, with
+                        # its audio and video folders, which the safety
+                        # backup does not hold (v0.15.1, fix round 1)
+                        folder_gone = True
+                        shutil.copytree(safety_backup, project_folder)
+                    recovered = True
+                except Exception as recovery_error:
+                    logger.error("Recovery also failed: %s",
+                                 error_label(recovery_error))
     except DatabaseLockedError:
-        # QualCoder opened the project between the check and the swap
+        # Another program's lock file, active as the hold began, or the
+        # database kept locked through the safety backup's copy (which
+        # removes its unfinished folder): nothing was made, so no safety
+        # backup is named
         switch_project(current_project_path)
         raise
-    except Exception as e:
-        # Attempt recovery from the safety backup. A copytree that fails
-        # PARTWAY (e.g. disk full) leaves a PARTIAL project folder — the
-        # backup's data.qda without the rest — which the previous
-        # exists()-guard mistook for "project still there", leaving a live
-        # half-replaced project that the next read tool silently reconnects
-        # to (fault-injection D1). Remove any partial folder first so the
-        # safety-backup recovery always runs on a clean slate.
-        logger.error("Restore failed mid-swap: %s", error_label(e))
-        folder_kept = False
-        try:
-            if os.path.lexists(project_folder):
-                # Everything here but the Exegete folder was cleared or
-                # is a partial copy: cleared again, the folder left where
-                # it is, and the safety backup copied around it; the
-                # safety backup's own copy of the folder comes back only
-                # when nothing is at that name any more (v0.15.0)
-                _clear_all_but_exegete_folder(project_folder)
-                folder_kept = _project_holds_exegete_entry(project_folder)
-                _copy_around_exegete_folder(safety_backup, project_folder,
-                                            leave_out_folder=folder_kept)
-            else:
-                shutil.copytree(safety_backup, project_folder)
-            switch_project(current_project_path)
-            recovered: Dict[str, Any] = {
+
+    if failed_mid_swap:
+        # The hold has ended: the lock file is gone, so a project folder
+        # left empty can go too (below)
+        if recovered:
+            try:
+                switch_project(current_project_path)
+            except Exception as recovery_error:
+                logger.error("Recovery also failed: %s",
+                             error_label(recovery_error))
+                recovered = False
+        if recovered:
+            answer: Dict[str, Any] = {
                 "error": "Restore failed, but the project was recovered "
                          "from the safety backup; nothing was lost.",
                 "safety_backup": str(safety_backup),
@@ -13648,30 +14558,35 @@ def restore_backup(backup_path: str,
                 # be false here (fix round 4). Links in the project's
                 # Exegete folder are lost only when the folder was not
                 # left in place (v0.15.0)
-                recovered["error"] = (
+                answer["error"] = (
                     "Restore failed, but the project was recovered from "
                     "the safety backup. That backup skipped the symlinks "
                     f"{_skipped_where(safety_report)}, so the "
                     "recovered project no longer contains those link "
                     "entries (what they pointed to is untouched); "
                     "recreate them by hand if they are needed.")
-            _attach_skipped_symlinks(recovered, safety_report,
+            if folder_gone:
+                # "Nothing was lost" would be untrue: the recordings went
+                # with the folder
+                answer["error"] = (
+                    answer["error"].replace("; nothing was lost.", ".")
+                    + " " + RECOVERED_WITHOUT_MEDIA)
+            _attach_skipped_symlinks(answer, safety_report,
                                      prefix="safety_backup_",
                                      folder_kept=folder_kept)
-            return json.dumps(recovered)
-        except Exception as recovery_error:
-            logger.error("Recovery also failed: %s",
-                         error_label(recovery_error))
+            return json.dumps(answer)
         failed: Dict[str, Any] = {
             "error": "Restore failed. The pre-restore state is preserved in "
-                     "the safety backup; copy it back over the project folder "
-                     "to recover.",
+                     "the safety backup; copy its contents back into the "
+                     "project folder to recover, leaving its audio and "
+                     "video folders as they are.",
             "safety_backup": str(safety_backup),
         }
         # The project's Exegete folder is never removed by the swap or the
         # recovery, so it is normally still there, as it was (v0.15.0).
         # A project folder left empty goes, as it went before the folder
-        # was kept (a folder holding anything stays)
+        # was kept (a folder holding anything stays); the lock file the
+        # restore held went at the hold's end, above
         try:
             os.rmdir(project_folder)
         except OSError:
@@ -13714,6 +14629,14 @@ def restore_backup(backup_path: str,
     # where a broken promise did the damage, so it does not rely on one
     # (fix round 4, S1).
     try:
+        # When the backup restored was taken, as the preview said, and
+        # what the project now holds, by kind (v0.15.1)
+        result["backup_taken"] = _backup_taken(
+            backup_folder, prefixes[1] if qualcoder_made else prefixes[0],
+            qualcoder_made)[0]
+        result["counts"] = project_counts(project_folder)
+        if result["counts"] is None:
+            result["counts_note"] = COUNTS_NOT_READ["project"]
         name_after = read_sidecar(project_folder).name
         if name_after != name_before:
             if name_after is None:
@@ -13909,53 +14832,6 @@ def delete_coding_session(coding_session_id: str) -> str:
         return json.dumps({"error": error_text(e)})
 
 
-@mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
-@_deprecated(DEPRECATED_CLEANUP, before="Deletes every session file")
-def cleanup_old_sessions(days_old: int = 30) -> str:
-    """Clean up old coding sessions, for every project on this computer.
-
-    Deletes every session file whose last change is older than days_old
-    days, whichever project it belongs to, including sessions that hold
-    approved suggestions not yet applied. No preview is given and a
-    deleted session cannot be recovered; codings already applied stay in
-    their projects. To remove one session, use delete_coding_session; to
-    see what is there first, list_coding_sessions.
-
-    Args:
-        days_old: Delete sessions whose last change is older than N days
-                  (default: 30; at least 1)
-
-    Returns:
-        JSON with count of deleted sessions
-
-    Example:
-        "Clean up sessions older than 30 days"
-        "Delete coding sessions older than 60 days"
-    """
-    try:
-        if not isinstance(days_old, int) or days_old < 1:
-            return json.dumps({
-                "error": "days_old must be a positive integer (>= 1); "
-                         "refusing to delete recent or all sessions. To remove "
-                         "a specific session use delete_coding_session."
-            })
-
-        deleted_count = session_manager.cleanup_old_sessions(days_old)
-
-        return json.dumps({
-            "success": True,
-            "deleted_count": deleted_count,
-            "days_old": days_old,
-            "message": f"Deleted {deleted_count} sessions older than {days_old} days"
-        }, indent=2)
-
-    except Exception as e:
-        logger.error("Error in cleanup_old_sessions: %s", error_label(e))
-        return json.dumps({"error": error_text(e)})
-
-
-
 # The pandoc defaults file the converted_documents topic names (0.14.3,
 # decision 3): two lines, checked against this digest before
 # its place is given, so a file changed on the disk is never named.
@@ -14046,21 +14922,8 @@ def _used_the_earlier_name() -> bool:
     return os.path.lexists(state_folder.old_path())
 
 
-def _help_topic(tool_name: Optional[str]) -> Optional[str]:
-    """The help topic a name asks for: a renamed tool's new name reads the
-    topic its earlier name has, while the deprecated topics last
-    (whole-branch review, round 1: help asked for under the name every
-    text now uses was answered "Unknown tool")."""
-    earlier = {new: old for old, new in RENAMED_TOOLS.items()}.get(
-        tool_name)
-    return earlier if earlier in DEPRECATED_HELP_TOPIC_NAMES else tool_name
-
-
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
-@_deprecated(DEPRECATED_HELP_TOPICS, before="Args:",
-             when=lambda a: _help_topic(a.get("tool_name"))
-             in DEPRECATED_HELP_TOPIC_NAMES)
 def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     """Get help and examples for AI coding tools.
 
@@ -14104,7 +14967,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "researcher said yes to",
                 "step_5": "Apply approved codings to database (apply_codings: "
                           "bound to the session's project, all-or-nothing, "
-                          "a backup first unless create_backup is false)",
+                          "a backup first, as before every change)",
                 "step_6": "Recover if needed: delete_coding removes a single "
                           "coding (on projects with the coder-visibility "
                           "capability it refuses a hidden coder's row without "
@@ -14112,7 +14975,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "'#####' private note without "
                           "confirm_private_note_deletion); list_backups + "
                           "restore_backup roll the project back (all but its "
-                          "Exegete folder, which a restore keeps). The "
+                          "Exegete, audio and video folders, which a restore "
+                          "keeps). The "
                           "destructive codebook tools, restore_backup and "
                           "prune_backups are two-step: call without "
                           "preview_token to see exactly what would change and "
@@ -14209,7 +15073,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "suggestion before applying (Exegete writes what is "
                 "marked approved; it cannot see who approved it)",
                 "Write approved codings to the project (with a backup "
-                "first, unless create_backup is false)",
+                "first, as before every change)",
                 "Writes are refused while the project's lock file is active "
                 "(QualCoder 3.8.2 has the project open, or another "
                 "conversation using Exegete is writing to it) or another "
@@ -14219,116 +15083,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "researcher before writing",
                 "Session persistence: resume work at any time",
                 "Full recovery tools: delete_coding, list_backups, restore_backup"
-            ]
-        },
-        # The deprecated topic keeps the tool's earlier name until the
-        # help topics go (v0.15.1); its text names the tool by its new one
-        "analyze_for_coding": {
-            "purpose": "Starts a coding session (start_coding_session): "
-                       "records the files, codes and "
-                       "instruction the researcher asked for, and returns "
-                       "the session id and the next steps. It reads no file "
-                       "and makes no suggestion: you read each file with "
-                       "read_file_with_codings and record suggestions "
-                       "with record_suggestions",
-            "when_to_use": "Before suggesting codings for the researcher to "
-                           "review, one session per request",
-            "parameters": {
-                "file_ids": "The files the session covers (required); "
-                            "suggestions on any other file are refused",
-                "code_names": "The codes the session covers, matched "
-                              "exactly, else ignoring letter case, spacing "
-                              "and Unicode form; None for every code. "
-                              "Suggestions under any other code are refused",
-                "instruction": "Required: the researcher's answers to "
-                               "the three questions; ask them first"
-            },
-            "examples": [
-                {"prompt": "Suggest codings for files 1, 2 and 3",
-                 "explanation": "A session over three files with every code"},
-                {"prompt": "Suggest codings for the transcripts with the "
-                           "code 'Workplace stress' only",
-                 "explanation": "code_names=['Workplace stress']: a "
-                                "suggestion under any other code is refused"},
-                {"prompt": "Look at file 5 for what is said about motivation",
-                 "explanation": "The instruction carries the focus; the "
-                                "codes stay those named, or all"}
-            ],
-            "tips": [
-                "Ask the three questions first; their answers are the "
-                "instruction",
-                "Start with one file to test before batch coding",
-                "A file id or code name that matches nothing comes back in "
-                "not_found: tell the researcher",
-                "Save the session id and pass it to every follow-up tool as coding_session_id"
-            ]
-        },
-        "apply_codings": {
-            "purpose": "Write approved coding suggestions to the project",
-            "when_to_use": "After reviewing suggestions and approving the ones you want",
-            "workflow": [
-                "1. Run start_coding_session on your files",
-                "2. Record the suggestions with record_suggestions",
-                "3. Review with review_suggestions",
-                "4. Adjust spans/codes in place with edit_suggestion",
-                "5. Approve/reject with update_suggestion_status",
-                "6. Apply approved codings with apply_codings",
-                "7. A backup is created before writing by default; "
-                "delete_coding removes one coding and marks its suggestion "
-                "removed in the session; restore_backup rolls the project "
-                "back (all but its Exegete folder, which a restore keeps)"
-            ]
-        },
-        "edit_suggestion": {
-            "purpose": "Adjust a PENDING suggestion's span (extend/shrink/"
-                       "move) and/or its code during review, before approval",
-            "when_to_use": "When the researcher wants a wider quote, a "
-                           "tighter span, or a different code on a "
-                           "suggestion, instead of rejecting and "
-                           "re-recording",
-            "notes": [
-                "Pending suggestions only: to edit an approved or "
-                "rejected one, reopen it (update_suggestion_status "
-                "reopen=[guid]), edit it, and ask the researcher to decide "
-                "again; an applied one is in the project, and delete_coding "
-                "removes it and marks the suggestion removed, after which "
-                "it can be reopened too",
-                "use_alternative='shorter'|'longer' applies a ready-made "
-                "span Exegete computed (core sentence / enclosing "
-                "paragraph), the one-call answer to 'make it "
-                "shorter/longer'; alternatives are recomputed after every "
-                "edit",
-                "New spans are re-verified against the file text with the "
-                "same machinery as record_suggestions",
-                "Moving a suggestion to another code clears its explicit "
-                "or interpretive label, given for the old code, unless "
-                "reading is passed with the change; reading alone "
-                "relabels it",
-                "Proposal evidence spans are edited the same way via "
-                "update_proposal(example_segments=...)"
-            ]
-        },
-        "coding_style_guidance": {
-            "purpose": "Passage length and more than one code per passage, "
-                       "as the researcher chose them at the start of the "
-                       "session",
-            "span_style": [
-                "Ask how long a coded passage should be: a phrase, whole "
-                "sentences (the default) or a whole answer; pass the "
-                "answer in start_coding_session's instruction and honour it",
-                "Researchers can widen or narrow any span at review with "
-                "edit_suggestion, where shorter and longer alternatives "
-                "exist (use_alternative)",
-                "After three same-direction picks, ask whether to change "
-                "the length for the rest of the session"
-            ],
-            "co_coding": [
-                "Ask whether a passage may carry more than one code; only "
-                "then record a second code on it, its reason saying why "
-                "both apply",
-                "A pairing the researcher adds at review is looked for "
-                "elsewhere only after they say yes: a yes permits "
-                "looking, not applying"
             ]
         },
         "grounding_rules": {
@@ -14497,7 +15251,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     }
 
     asked = tool_name
-    tool_name = _help_topic(tool_name)
 
     if tool_name == "brief":
         # v0.14.2: the assistant's brief, the very text read_brief and
@@ -14523,10 +15276,6 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
 
     else:
         topics = [
-                "analyze_for_coding",
-                "apply_codings",
-                "edit_suggestion",
-                "coding_style_guidance",
                 "grounding_rules",
                 "methodology_vocabulary",
                 "methods_notes",
@@ -14539,6 +15288,16 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                "have a dedicated help entry here; every other tool "
                "documents its arguments, refusals and overrides in its "
                "own description.")
+        if asked in REMOVED_HELP_TOPICS:
+            # A topic removed in 0.15.1, as announced in 0.14: said so,
+            # with no error, since the name was once a topic; its new
+            # name, start_coding_session, has none, as any other tool
+            return json.dumps({
+                "topic": asked,
+                "note": HELP_TOPIC_REMOVED,
+                "available_tools": topics,
+                "tip": tip,
+            }, indent=2)
         if asked in ALL_TOOL_NAMES:
             # One of Exegete's tools, with no topic of its own: not
             # "unknown" (whole-branch review, round 1); marked where the
@@ -14577,9 +15336,12 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
 
     WORKFLOW: start_coding_session creates a session -> you read
     the files and record the codes you see emerging with this tool ->
-    present them -> the user refines (update_proposal / merge_proposals)
-    and decides (update_proposal_status) -> create_proposed_codes writes
-    the approved ones.
+    present them -> the user refines (update_proposal; to merge two,
+    reject one with update_proposal_status, then give the other its own
+    passages and the rejected one's together in update_proposal's
+    example_segments, which replaces the list) and decides
+    (update_proposal_status) -> create_proposed_codes writes the approved
+    ones.
 
     Args:
         coding_session_id: The session ID from start_coding_session
@@ -14754,7 +15516,9 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         "rejected": rejected,
         "proposal_statistics": session.proposal_statistics(),
         "next_step": "Present the proposals to the user; refine with "
-                     "update_proposal / merge_proposals, decide with "
+                     "update_proposal (to merge two, reject one and give "
+                     "the other both sets of passages in example_segments, "
+                     "which replaces the list), decide with "
                      "update_proposal_status, then write the approved ones "
                      "with create_proposed_codes.",
     }
@@ -15091,76 +15855,6 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(DEPRECATED_MERGE_PROPOSALS, before="Session-only")
-def merge_proposals(coding_session_id: str, from_proposal_guid: str,
-                    into_proposal_guid: str) -> str:
-    """Combine two code PROPOSALS before creation.
-
-    Session-only (unlike merge_codes). The target keeps its name, colour,
-    category and definition and gains the source's passages
-    (deduplicated). The source is marked MERGED, a final status: never
-    approved or created. An approved target returns to pending
-    (approval_withdrawn): show it to the researcher again.
-
-    Args:
-        coding_session_id: The session ID
-        from_proposal_guid: The proposal merged away (becomes merged)
-        into_proposal_guid: The proposal that absorbs the evidence
-    """
-    # Bridge fix: some MCP middleware strips arguments named
-    # 'session_id' (reserved for its own routing); the tool
-    # argument is coding_session_id, aliased for the body.
-    session_id = coding_session_id
-    if not session_manager.session_exists(session_id):
-        return json.dumps({"error": f"Session {session_id} not found"})
-    session = session_manager.load_session(session_id)
-    source = session.get_proposal_by_guid(from_proposal_guid)
-    target = session.get_proposal_by_guid(into_proposal_guid)
-    if source is None or target is None:
-        return json.dumps({"error": "Both proposals must exist in this session"})
-    if from_proposal_guid == into_proposal_guid:
-        return json.dumps({"error": "Cannot merge a proposal into itself"})
-    for p in (source, target):
-        if p.status == "created":
-            return json.dumps({
-                "error": f"Proposal '{p.name}' was already created; merge "
-                         f"the real codes with merge_codes instead."
-            })
-        if p.status == "merged":
-            return json.dumps({"error": _proposal_merged_refusal(p)})
-
-    existing_spans = {(s["file_id"], s["start_pos"], s["end_pos"])
-                      for s in target.example_segments}
-    moved = 0
-    for seg in source.example_segments:
-        key = (seg["file_id"], seg["start_pos"], seg["end_pos"])
-        if key not in existing_spans:
-            target.example_segments.append(seg)
-            existing_spans.add(key)
-            moved += 1
-    source.status = "merged"
-    source.merged_into = target.guid
-    withdrawn = target.status == "approved" and moved > 0
-    if withdrawn:
-        target.status = "pending"
-    session.last_modified = datetime.now().isoformat()
-    session_manager.save_session(session)
-    result = {
-        "success": True,
-        "message": f"Merged proposal '{source.name}' into '{target.name}'",
-        "evidence_moved": moved,
-        "target": {"guid": target.guid, "name": target.name,
-                   "status": target.status,
-                   "evidence_count": len(target.example_segments)},
-        "source_status": "merged",
-    }
-    if withdrawn:
-        result["approval_withdrawn"] = APPROVAL_WITHDRAWN
-    return json.dumps(result, indent=2)
-
-
-@mcp.tool(annotations=TOOL_CHANGES)
-@_tool_guard
 def update_proposal_status(coding_session_id: str,
                            approve: Optional[List[str]] = None,
                            reject: Optional[List[str]] = None) -> str:
@@ -15212,84 +15906,46 @@ def update_proposal_status(coding_session_id: str,
     }, indent=2)
 
 
-@mcp.tool(annotations=TOOL_ADDS)
-@_tool_guard
-@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
-def create_proposed_codes(coding_session_id: str,
-                          create_backup: bool = True) -> str:
-    """Create the APPROVED code proposals in the project codebook.
+# What a proposal holds that is not text (a session file made by hand or
+# damaged), refused before any lock rather than failing in the write
+# after the backup or written as its printed form (v0.15.1). The rationale
+# is not checked: this tool never writes it, and update_proposal cannot
+# set it.
+PROPOSAL_NOT_TEXT = ("its {field} is not text. Set it again with "
+                     "update_proposal.")
 
-    THIS WRITES TO THE DATABASE: each approved proposal becomes a code
-    (palette colour if none chosen, placed in its category), and no
-    passage is coded. Then suggest the passages one by one in the same
-    session (record_suggestions), each new code's example passages first
-    (the answer lists them), for the researcher to decide.
 
-    Every approved proposal is validated BEFORE the backup and the write:
-    the name must still be unique against the live codebook (a name that
-    matches an existing code exactly, or once letter case, spacing and
-    Unicode form are ignored, refuses the batch; rename the proposal
-    first) and the category must exist. Any failure -> nothing is
-    written. Only APPROVED proposals are created: a rejected one only if
-    it is approved again, a merged one never.
-
-    Refused while the project's lock file is active (QualCoder 3.8.2 has
-    the project open, or another conversation using Exegete is writing
-    to it) or another program is writing to the database; for QualCoder
-    4.0, get_current_project shows any signs of an open window, and if
-    there are some, ask the researcher before writing.
-
-    Args:
-        coding_session_id: The session with approved proposals
-        create_backup: Create a timestamped backup before writing (default True)
-
-    Returns:
-        JSON with the created codes (proposal guid -> real code id, plus
-        the name and the colour as stored, and color_requested /
-        color_snapped when the proposal carried a colour),
-        example_passages (to suggest first; outside_session marks one in
-        a file this session does not cover), and per-proposal failures.
-    """
-    # Bridge fix: some MCP middleware strips arguments named
-    # 'session_id' (reserved for its own routing); the tool
-    # argument is coding_session_id, aliased for the body.
-    session_id = coding_session_id
-    if not session_manager.session_exists(session_id):
-        return json.dumps({"error": f"Session {session_id} not found"})
-    session = session_manager.load_session(session_id)
-    mismatch = _check_session_project(session)
-    if mismatch is not None:
-        return json.dumps(mismatch, indent=2)
-
-    approved = [p for p in session.proposed_codes if p.status == "approved"]
-    if not approved:
-        created_n = len([p for p in session.proposed_codes
-                         if p.status == "created"])
-        message = ("No approved proposals to create. Use "
-                   "update_proposal_status to approve proposals first.")
-        if created_n:
-            message = (f"No approved proposals to create: {created_n} "
-                       f"proposal(s) in this session were already created.")
-        return json.dumps({"error": message,
-                           "proposal_statistics": session.proposal_statistics()},
-                          indent=2)
-
-    # ---- pre-validation on the read-only connection (before backup) ----
-    ro_db = get_db()
-    cats = ro_db.list_categories()
+def _check_approved_proposals(db_, approved):
+    """create_proposed_codes' checks, which only read: (refusal, category
+    ids), the refusal None when every approved proposal can be created.
+    Run on the read-only connection before any lock, and again on the
+    write connection under SQLite's write lock, before the backup's
+    database is copied (v0.15.1)."""
+    cats = db_.list_categories()
+    codes = db_.list_codes()
     failures = []
     batch_names: set = set()
     category_ids: Dict[str, int] = {}
 
     for p in approved:
         problem = None
+        not_text = next((field for field, value in (
+            ("name", p.name), ("definition (memo)", p.memo))
+            if (value is None and field == "name")
+            or (value is not None and not isinstance(value, str))), None)
+        if not_text is not None:
+            failures.append({"guid": p.guid,
+                             "name": p.name if not_text != "name" else None,
+                             "reason": PROPOSAL_NOT_TEXT.format(
+                                 field=not_text)})
+            continue
         # name_key, not strip().lower(): 'Work  stress' and 'Work stress'
         # are one name to add_code (it stores normalize_name), so keying
         # the batch any other way lets twins through pre-validation and
         # collide on the insert, after the backup (D5 section 3.3 promises
         # validation before the backup and the write).
         key = name_key(p.name)
-        collision = _code_name_collisions(p.name)
+        collision = _code_name_collisions(p.name, codes)
         marker = private_marker_refusal(p.memo, "its definition (memo)")
         if marker is not None:
             # a session recorded before v0.14 refused the marker
@@ -15328,15 +15984,98 @@ def create_proposed_codes(coding_session_id: str,
             batch_names.add(key)
 
     if failures:
-        return json.dumps({
+        return {
             "error": f"{len(failures)} approved proposal(s) failed validation; "
                      f"nothing was written and no backup was created.",
             "failures": failures,
-        }, indent=2)
+        }, category_ids
+    return None, category_ids
+
+
+@mcp.tool(annotations=TOOL_ADDS)
+@_ignores_create_backup
+@_tool_guard
+@_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
+def create_proposed_codes(coding_session_id: str,
+                          create_backup: Optional[bool] = None) -> str:
+    """Create the APPROVED code proposals in the project codebook.
+
+    THIS WRITES TO THE DATABASE: each approved proposal becomes a code
+    (palette colour if none chosen, placed in its category), and no
+    passage is coded. Then suggest the passages one by one in the same
+    session (record_suggestions), each new code's example passages first
+    (the answer lists them), for the researcher to decide.
+
+    Every approved proposal is validated BEFORE the backup and the write:
+    the name must still be unique against the live codebook (a name that
+    matches an existing code exactly, or once letter case, spacing and
+    Unicode form are ignored, refuses the batch; rename the proposal
+    first) and the category must exist. Any failure -> nothing is
+    written. Only APPROVED proposals are created: a rejected one only if
+    it is approved again, a merged one never.
+
+    Refused while the project's lock file is active (QualCoder 3.8.2 has
+    the project open, or another conversation using Exegete is writing
+    to it) or another program is writing to the database; for QualCoder
+    4.0, get_current_project shows any signs of an open window, and if
+    there are some, ask the researcher before writing.
+
+    Args:
+        coding_session_id: The session with approved proposals
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
+
+    Returns:
+        JSON with the created codes (proposal guid -> real code id, plus
+        the name and the colour as stored, and color_requested /
+        color_snapped when the proposal carried a colour),
+        example_passages (to suggest first; outside_session marks one in
+        a file this session does not cover), and per-proposal failures.
+    """
+    # Bridge fix: some MCP middleware strips arguments named
+    # 'session_id' (reserved for its own routing); the tool
+    # argument is coding_session_id, aliased for the body.
+    session_id = coding_session_id
+    if not session_manager.session_exists(session_id):
+        return json.dumps({"error": f"Session {session_id} not found"})
+    session = session_manager.load_session(session_id)
+    mismatch = _check_session_project(session)
+    if mismatch is not None:
+        return json.dumps(mismatch, indent=2)
+
+    approved = [p for p in session.proposed_codes if p.status == "approved"]
+    if not approved:
+        created_n = len([p for p in session.proposed_codes
+                         if p.status == "created"])
+        message = ("No approved proposals to create. Use "
+                   "update_proposal_status to approve proposals first.")
+        if created_n:
+            message = (f"No approved proposals to create: {created_n} "
+                       f"proposal(s) in this session were already created.")
+        return json.dumps({"error": message,
+                           "proposal_statistics": session.proposal_statistics()},
+                          indent=2)
+
+    # ---- pre-validation on the read-only connection (before backup) ----
+    # The same checks run again under SQLite's write lock (v0.15.1)
+    refusal, _ = _check_approved_proposals(get_db(), approved)
+    if refusal is not None:
+        return json.dumps(refusal, indent=2)
 
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
+
+    # The checks again on the write connection, under SQLite's write lock
+    # and before the backup's database (v0.15.1): a name taken or a
+    # category removed meanwhile is refused with no backup, and the
+    # categories' ids are the ones read under the lock
+    category_ids: Dict[str, int] = {}
+
+    def _check(wdb):
+        refusal, ids = _check_approved_proposals(wdb, approved)
+        category_ids.update(ids)
+        return refusal
 
     def _op(wdb):
         created = []
@@ -15375,7 +16114,7 @@ def create_proposed_codes(coding_session_id: str,
                            f"is coded yet",
                 "created_codes": created}
 
-    result = _perform_write(_op, create_backup=create_backup,
+    result = _perform_write(_op, check=_check,
                             backup_fail_detail="no codes were created")
 
     if "error" not in result:
@@ -15426,11 +16165,12 @@ def create_proposed_codes(coding_session_id: str,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_CHANGES)
+@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def set_memo(target_type: str, target_id: Optional[int] = None,
              memo: str = Field(...),
-             create_backup: bool = True,
+             create_backup: Optional[bool] = None,
              allow_hidden_coder: bool = False) -> str:
     """Write (or clear) the memo on a code, category, file, coding, or
     case, or the project memo.
@@ -15472,7 +16212,8 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
                    id / coding ctid / case caseid); null, or left out, for
                    'project'
         memo: The memo text ('' clears it)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to write on a hidden coder's coding
                             (target_type 'coding' only)
 
@@ -15518,17 +16259,19 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
             **wdb.set_memo(target_type, target_id, memo, auto_commit=False,
                            allow_hidden_coder=allow_hidden_coder),
         },
-        create_backup=create_backup,
+        check=_write_methods_checks(lambda wdb: wdb.check_set_memo(
+            target_type, target_id, memo, allow_hidden_coder)),
         backup_fail_detail="the memo was not changed",
     )
     return _ai_json(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS)
+@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_journal_entry(name: str, entry: str,
-                      create_backup: bool = True) -> str:
+                      create_backup: Optional[bool] = None) -> str:
     """Add a research journal entry to the project.
 
     THIS WRITES TO THE DATABASE. Journals are free-form research notes
@@ -15543,7 +16286,8 @@ def add_journal_entry(name: str, entry: str,
     Args:
         name: A short unique title for the entry
         entry: The journal text
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the new entry's id, name and date
@@ -15565,7 +16309,8 @@ def add_journal_entry(name: str, entry: str,
             "journal_entry": wdb.add_journal_entry(
                 name, entry, owner, auto_commit=False),
         },
-        create_backup=create_backup,
+        check=_write_methods_checks(
+            lambda wdb: wdb.check_add_journal_entry(name, entry, owner)),
         backup_fail_detail="the journal entry was not added",
     )
     return json.dumps(result, indent=2)
@@ -15576,12 +16321,13 @@ def add_journal_entry(name: str, entry: str,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
+@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Colours are stored")
 def create_code(name: str, category: Optional[str] = None,
                 color: Optional[str] = None, memo: Optional[str] = None,
                 parent_code_id: Optional[int] = None,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Create a new code in the codebook.
 
     THIS WRITES TO THE DATABASE. Adds a code that can then be applied to
@@ -15627,7 +16373,8 @@ def create_code(name: str, category: Optional[str] = None,
         memo: Optional code definition/memo
         parent_code_id: Optional cid of an existing code to nest under
                         (v16+ sub-code; mutually exclusive with category)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the new code's id, name, category and color, or the
@@ -15681,13 +16428,20 @@ def create_code(name: str, category: Optional[str] = None,
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
-    def _op(wdb):
-        # In-transaction re-check: a row that appeared while we prepared
-        # (another writer) yields the same answer, decorated with the
-        # backup_path _perform_write adds (disclosed, not hidden)
+    def _check(wdb):
+        """Under SQLite's write lock, before the backup's database
+        (v0.15.1): the duplicate again, then add_code's checks of where
+        the code goes (the category and the parent code, ids resolved
+        before any lock, on the write connection's own reading of the
+        schema). A row that appeared or went while we prepared (another
+        writer) is answered here, with no backup."""
         dup = _existing(wdb.list_codes())
         if dup is not None:
             return dup
+        wdb.check_add_code(category_id, parent_code_id)
+        return None
+
+    def _op(wdb):
         cid = wdb.add_code(name=norm_name, owner=owner, memo=memo,
                            category_id=category_id, color=color,
                            parent_code_id=parent_code_id,
@@ -15714,15 +16468,16 @@ def create_code(name: str, category: Optional[str] = None,
             **disclosure,
         }
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the code was not created")
+    result = _perform_write(
+        _op, check=_check, backup_fail_detail="the code was not created")
     return _ai_json(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@_ignores_create_backup
 @_tool_guard
 def rename_code(code_id: int, new_name: str,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Rename a code. THIS WRITES TO THE DATABASE. Names are unique.
 
     A new name that matches ANOTHER code case-insensitively is refused
@@ -15741,7 +16496,8 @@ def rename_code(code_id: int, new_name: str,
         code_id: The code's cid
         new_name: The new name (must not collide with another code,
                   case-insensitively)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -15772,23 +16528,22 @@ def rename_code(code_id: int, new_name: str,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer, _ = _precheck(wdb.list_codes())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         return {"success": True, "changed": True, "message": "Renamed code",
                 **wdb.rename_code(code_id, new_name, auto_commit=False)}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the code was not renamed")
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1): a refusal or "unchanged" leaves no backup
+    result = _perform_write(
+        _op, check=lambda wdb: _precheck(wdb.list_codes())[0],
+        backup_fail_detail="the code was not renamed")
     return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@_ignores_create_backup
 @_tool_guard
 def recolor_code(code_id: int, color: str,
-                 create_backup: bool = True) -> str:
+                 create_backup: Optional[bool] = None) -> str:
     """Set a code's colour (#RRGGBB). THIS WRITES TO THE DATABASE.
 
     Colours are stored as the nearest QualCoder palette colour (120 fixed
@@ -15811,7 +16566,8 @@ def recolor_code(code_id: int, color: str,
     Args:
         code_id: The code's cid
         color: Hex colour in #RRGGBB format (snapped onto the palette)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     target = snap_to_palette(validate_color(color))
     code_id = validate_id(code_id, "code_id")
@@ -15837,11 +16593,6 @@ def recolor_code(code_id: int, color: str,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb)
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         out = wdb.recolor_code(code_id, color, auto_commit=False)
         message = (f"Recoloured code '{out['name']}' from {out['old_color']} "
                    f"to {out['new_color']}")
@@ -15852,16 +16603,20 @@ def recolor_code(code_id: int, color: str,
         return {"success": True, "changed": True, "message": message,
                 **out, **disclosure}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the code colour was not changed")
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
+    result = _perform_write(
+        _op, check=_precheck,
+        backup_fail_detail="the code colour was not changed")
     return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@_ignores_create_backup
 @_tool_guard
 def move_code_to_category(code_id: int,
                           category: Optional[str] = None,
-                          create_backup: bool = True) -> str:
+                          create_backup: Optional[bool] = None) -> str:
     """Move a code into a category (or out of any category).
 
     THIS WRITES TO THE DATABASE. The result names the category the code
@@ -15892,7 +16647,8 @@ def move_code_to_category(code_id: int,
                   Unicode form are ignored; the result names the row it
                   resolved to), or null/omitted to make the code
                   uncategorised
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     category_id = None
     if category is not None:
@@ -15905,10 +16661,19 @@ def move_code_to_category(code_id: int,
     caps = getattr(ro_db, "capabilities", None)
     has_supercid = bool(caps is not None and caps.has_supercid)
 
-    def _precheck(rows):
+    def _precheck(db_):
+        rows = db_.list_codes()
         row = next((c for c in rows if c["id"] == code_id), None)
         if row is None:
             return {"error": f"Code ID {code_id} does not exist"}
+        if category_id is not None:
+            # Resolved by name before any lock: looked up again by id, so
+            # under SQLite's write lock a category removed meanwhile is
+            # refused before the backup (v0.15.1), in the write's words
+            try:
+                db_.check_category_exists(category_id)
+            except ValueError as e:
+                return {"error": str(e)}
         # 4.0 compares BOTH parent pointers (ai_mcp_server.py:2046 at
         # 9bddf17): a sub-code (supercid set, catid NULL) moved to "no
         # category" clears supercid, so it is not a no-op
@@ -15927,16 +16692,11 @@ def move_code_to_category(code_id: int,
     gate = _write_gate_error()
     if gate is not None:
         return json.dumps(gate)
-    answer = _precheck(ro_db.list_codes())
+    answer = _precheck(ro_db)
     if answer is not None:
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb.list_codes())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         moved = wdb.move_code_to_category(code_id, category_id,
                                          auto_commit=False)
         # Name the category the write landed in, not only its id (fix
@@ -15962,17 +16722,20 @@ def move_code_to_category(code_id: int,
                 "message": f"Moved code '{moved['name']}' {where}",
                 "new_category": new_name, **moved}
 
-    result = _perform_write(_op, create_backup=create_backup,
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
+    result = _perform_write(_op, check=_precheck,
                             backup_fail_detail="the code was not moved")
     return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
+@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_category(name: str, parent_category: Optional[str] = None,
                     memo: Optional[str] = None,
-                    create_backup: bool = True) -> str:
+                    create_backup: Optional[bool] = None) -> str:
     """Create a code category. THIS WRITES TO THE DATABASE.
 
     Categories group codes (and can nest under a parent category). Names
@@ -16003,7 +16766,8 @@ def create_category(name: str, parent_category: Optional[str] = None,
                          names the row it resolved to); omit for a
                          top-level category
         memo: Optional category memo
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     marker = private_marker_refusal(memo, "memo")
     if marker is not None:
@@ -16022,21 +16786,32 @@ def create_category(name: str, parent_category: Optional[str] = None,
             rows, norm_name, parent_category=parent_category,
             supercatid=supercatid, memo=memo)
 
+    def _check(db_):
+        """The duplicate, then the parent (resolved by name before any
+        lock, looked up again by id): None to write, the already_exists
+        answer, or the write's refusal."""
+        dup = _existing(db_.list_categories())
+        if dup is not None:
+            return dup
+        if supercatid is not None:
+            try:
+                db_.check_category_exists(supercatid)
+            except ValueError as e:
+                return {"error": str(e)}
+        return None
+
     gate = _write_gate_error()
     if gate is not None:
         return json.dumps(gate)
-    dup = _existing(get_db().list_categories())
-    if dup is not None:
-        return _ai_json(dup, indent=2)
+    answer = _check(get_db())
+    if answer is not None:
+        return _ai_json(answer, indent=2)
 
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
 
     def _op(wdb):
-        dup = _existing(wdb.list_categories())
-        if dup is not None:
-            return dup
         created = wdb.add_category(norm_name, owner, supercatid=supercatid,
                                    memo=memo, auto_commit=False)
         # parent_category is resolved by name, so say which row it hit,
@@ -16050,15 +16825,20 @@ def create_category(name: str, parent_category: Optional[str] = None,
                 "message": message,
                 "category": {**created, "parent_name": parent_name}}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the category was not created")
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1): a row that appeared or went while we prepared
+    # (another writer) is answered there, with no backup
+    result = _perform_write(
+        _op, check=_check,
+        backup_fail_detail="the category was not created")
     return _ai_json(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@_ignores_create_backup
 @_tool_guard
 def rename_category(category_id: int, new_name: str,
-                    create_backup: bool = True) -> str:
+                    create_backup: Optional[bool] = None) -> str:
     """Rename a category. THIS WRITES TO THE DATABASE. Names are unique.
 
     A new name that matches ANOTHER category case-insensitively is
@@ -16077,7 +16857,8 @@ def rename_category(category_id: int, new_name: str,
         category_id: The category's catid
         new_name: The new name (must not collide with another category,
                   case-insensitively)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -16103,25 +16884,24 @@ def rename_category(category_id: int, new_name: str,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb.list_categories())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         return {"success": True, "changed": True,
                 "message": "Renamed category",
                 **wdb.rename_category(category_id, new_name,
                                       auto_commit=False)}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the category was not renamed")
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
+    result = _perform_write(
+        _op, check=lambda wdb: _precheck(wdb.list_categories()),
+        backup_fail_detail="the category was not renamed")
     return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@_ignores_create_backup
 @_tool_guard
 def move_category(category_id: int, parent_category: Optional[str] = None,
-                  create_backup: bool = True) -> str:
+                  create_backup: Optional[bool] = None) -> str:
     """Reparent a category under another category (or to the top level).
 
     THIS WRITES TO THE DATABASE. The result names the parent the category
@@ -16146,7 +16926,8 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
                          Unicode form are ignored; the result names the
                          row it resolved to), or null/omitted to move to
                          the top level
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_supercatid = None
     if parent_category is not None:
@@ -16161,10 +16942,19 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
         if row is None:
             return {"error": f"Category ID {category_id} does not exist"}
         # 4.0's order (ai_mcp_server.py:1968-1982 at 9bddf17): existence,
-        # then the cycle guard, then unchanged. A cycle is left to the DB
-        # layer's refusal so the error precedence is preserved.
+        # then the cycle guard, then unchanged; the write's own order
+        # (move_category in database.py) puts the parent's existence
+        # between the first two. The cycle is refused here, before any
+        # lock and again under SQLite's write lock, in the write's words
+        # (v0.15.1): it used to be left to the write, after the backup.
+        if new_supercatid is not None:
+            # resolved by name before any lock, looked up again by id
+            try:
+                db_.check_category_exists(new_supercatid)
+            except ValueError as e:
+                return {"error": str(e)}
         if db_.would_create_category_cycle(category_id, new_supercatid):
-            return None
+            return {"error": CATEGORY_CYCLE_REFUSAL}
         if row.get("parent_id") == new_supercatid:
             if new_supercatid is None:
                 where = "at the top level"
@@ -16186,11 +16976,6 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
         return json.dumps(answer, indent=2)
 
     def _op(wdb):
-        answer = _precheck(wdb)
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         moved = wdb.move_category(category_id, new_supercatid,
                                   auto_commit=False)
         # The parent is resolved by name too (fix round 3, S4).
@@ -16201,8 +16986,11 @@ def move_category(category_id: int, parent_category: Optional[str] = None,
                 "message": f"Moved category '{moved['name']}' {where}",
                 "new_parent": parent_name, **moved}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the category was not moved")
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1)
+    result = _perform_write(
+        _op, check=_precheck,
+        backup_fail_detail="the category was not moved")
     return json.dumps(result, indent=2)
 
 
@@ -16254,7 +17042,7 @@ TOKEN_ERROR_TEXTS = {
     # text names the one thing that is certain, which is that the token
     # did not verify, lists what that is usually caused by, and gives
     # the single remedy they share. Where `project_changed` IS true it
-    # is still said: the in-transaction re-check under `_state_guarded`
+    # is still said: the re-check under the write lock (`_state_check`)
     # fires on a token that DID verify, and keeps its own wording
     # (D3 3.5 plus 4.3; fix round 4, carried to v0.13 A4).
     "project_changed_or_rotated": (
@@ -16352,11 +17140,17 @@ def _restore_state_core(project_folder, backup_folder) -> Dict[str, Any]:
 
 
 def _restore_fingerprint(project_folder, backup_folder) -> Dict[str, Any]:
-    """What a restore would overwrite, and what it would overwrite it with."""
+    """What a restore would overwrite, and what it would overwrite it with:
+    the two databases and, since v0.15.1, the two names lists
+    (`pseudonyms_json_fingerprint`), so that a list saved, changed or
+    removed after the preview makes its token stale, refused as a changed
+    project."""
     return {
         "project": _qda_file_stamp(Path(project_folder) / "data.qda"),
         "backup": _qda_file_stamp(Path(backup_folder) / "data.qda"),
         "backup_name": Path(backup_folder).name,
+        "names_lists": [pseudonyms_json_fingerprint(project_folder),
+                        pseudonyms_json_fingerprint(backup_folder)],
     }
 
 
@@ -16424,29 +17218,28 @@ def _token_project() -> str:
     return os.path.normcase(str(validate_qda_path(current_project_path)))
 
 
-def _state_guarded(fingerprint_fn, expected: str, op_fn, tool: str):
-    """Wrap a write so it re-checks the rows after taking the lock (H2).
+def _state_check(state_of_fn, expected: str, tool: str, then=None):
+    """The token's state compared again under SQLite's write lock (H2),
+    as the write's `check` (v0.15.1): before the backup's database is
+    copied, so a project changed since the preview is refused with no
+    backup.
 
-    BEGIN IMMEDIATE takes SQLite's RESERVED lock before we re-read, so
-    between the re-read and the mutation no other writer can commit
-    against the rows we are about to change. Without it the window
-    between the read-only fingerprint and the delete is open, which is
-    exactly the window the token exists to close. Lives here so the
-    flagship's pseudonymisation can reuse it.
+    `_perform_write` takes SQLite's write lock (BEGIN IMMEDIATE) before
+    it calls this, so between the comparison and the change no other
+    writer can commit against the rows about to change. `then(wdb)`, a
+    tool's own checks under the same lock, runs only when the state
+    holds, and answers as a check does.
     """
-    def guarded(wdb):
-        wdb.begin_immediate()
-        if fingerprint_fn(wdb) != expected:
+    def check(wdb):
+        if state_of_fn(wdb) != expected:
             raise StateChangedError({
                 "error": TOKEN_ERROR_TEXTS["project_changed"].format(
-                    tool=tool)
-                + " A backup had already been taken before the change was "
-                  "detected; it is unchanged and can be pruned.",
+                    tool=tool),
                 "reason": PROJECT_CHANGED,
                 "nothing_changed": True,
             })
-        return op_fn(wdb)
-    return guarded
+        return None if then is None else then(wdb)
+    return check
 
 
 def _issue_preview(tool: str, args: Dict[str, Any], preview: Dict[str, Any],
@@ -16486,8 +17279,6 @@ def _issue_preview(tool: str, args: Dict[str, Any], preview: Dict[str, Any],
                       if override_required is None else override_required)
     if needs_override:
         arguments["allow_hidden_coder"] = True
-    if preview.get("subcode_count", 0):
-        arguments["cascade"] = True
     arguments["preview_token"] = token
     payload: Dict[str, Any] = {
         "requires_confirmation": True,
@@ -16555,7 +17346,8 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
                          override_required_fn=None,
                          warnings_fn=None,
                          execute_guard_fn=None,
-                         state_of_fn=None) -> Dict[str, Any]:
+                         state_of_fn=None,
+                         check_fn=None) -> Dict[str, Any]:
     """Preview -> token -> safety-backup gate for destructive operations.
 
     Without a token this returns a preview (read-only, no backup, no
@@ -16563,10 +17355,12 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
     authorises that operation and nothing else. With a token it verifies
     the token against the tool, the arguments, the project and a
     fingerprint of the rows in the blast radius, checks the hidden-coder
-    gate, and only then runs the mutation under the full write discipline
-    with a mandatory backup and an in-transaction re-check.
+    gate, and only then runs the mutation under the full write discipline:
+    the state compared again under SQLite's write lock, then the
+    mandatory backup, then the change (v0.15.1: a project changed since
+    the preview leaves no backup).
 
-    The five optional hooks exist so the flagship reuses this gate rather
+    The six optional hooks exist so the flagship reuses this gate rather
     than paralleling it, and every one of them defaults to the behaviour
     the six codebook tools already had:
 
@@ -16591,7 +17385,11 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
       exists because the default route recomputes a whole readable
       preview, presentation and all, inside the write transaction: for
       the flagship that meant a second full residue scan of every memo
-      in the project while holding SQLite's RESERVED lock.
+      in the project while holding SQLite's RESERVED lock;
+    - `check_fn(write_db)` is the tool's own checks again, under SQLite's
+      write lock after the state is compared, before the backup's
+      database (v0.15.1): None goes on, a dict is the answer, and either
+      way a refusal there leaves no backup.
     """
     def state_of(db_) -> str:
         """The signed state: what the preview says AND which rows it covers.
@@ -16651,9 +17449,9 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
         if refusal is not None:
             return refusal
 
-    # Always back up before a destructive write (no create_backup=False here)
-    result = _perform_write(_state_guarded(state_of, state, op_fn, tool),
-                            create_backup=True,
+    result = _perform_write(op_fn,
+                            check=_state_check(state_of, state, tool,
+                                               check_fn),
                             backup_fail_detail=backup_fail_detail)
     if isinstance(result, dict) and "error" not in result \
             and "collateral" in preview:
@@ -16752,10 +17550,7 @@ def merge_codes(from_code_id: int, into_code_id: int,
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(DEPRECATED_CASCADE, before="Args:",
-             when=lambda a: a.get("cascade") is True)
 def delete_code(code_id: int, preview_token: Optional[str] = None,
-                cascade: bool = False,
                 allow_hidden_coder: bool = False) -> str:
     """Delete a code AND all its codings. DESTRUCTIVE: preview then confirm.
 
@@ -16783,10 +17578,10 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
     sub-code, and all their codings) in one transaction, exactly as
     QualCoder's own delete, which asks once in a dialog naming the
     sub-codes. The preview is that dialog here: it names the sub-codes,
-    and its execute_with carries cascade=true when there are any, so the
-    researcher's approval of the preview is the approval of the branch.
-    An execute without cascade=true on such a code is refused. Review
-    the preview before confirming.
+    and the token it returns covers every code of the branch and their
+    codings, so the researcher's approval of the preview is the approval
+    of the branch, and a sub-code added or moved after it makes the token
+    stale. Review the preview before confirming.
     Move the sub-codes first if they are needed. On those projects the
     deleted codes' nodes and lines on QualCoder's saved graphs are
     removed too, as QualCoder 4.0's own delete removes them; the preview
@@ -16796,9 +17591,6 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
         code_id: The code's cid
         preview_token: The token from this operation's preview; omit it to
                  get the preview
-        cascade: Must be true to delete a code that has sub-codes (the
-                 whole branch dies; default false refuses instead); the
-                 preview's execute_with sets it. Deprecated (above)
         allow_hidden_coder: Required when the preview reports codings that
                  belong to a coder currently hidden in QualCoder
     """
@@ -16809,14 +17601,16 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
             row_owner=ro.code_owner(code_id))
         return preview
 
-    execute_args: Dict[str, Any] = {"code_id": code_id}
-    if cascade:
-        execute_args["cascade"] = True
+    # The whole branch, always (0.15.1, cascade removed): the token's
+    # fingerprint (fingerprint_rows_delete_code) covers every code of the
+    # branch and their codings, so the branch deleted is the one the
+    # researcher approved, and a sub-code added or moved since makes the
+    # token stale.
     result = _guarded_destructive(
         preview_fn=_preview,
         op_fn=lambda wdb: {"success": True, "message": "Deleted code",
                            "preview_verified": True,
-                           **wdb.delete_code(code_id, cascade=cascade,
+                           **wdb.delete_code(code_id, cascade=True,
                                              auto_commit=False)},
         fingerprint_fn=lambda db_: db_.fingerprint_rows_delete_code(code_id),
         tool="delete_code",
@@ -16825,11 +17619,11 @@ def delete_code(code_id: int, preview_token: Optional[str] = None,
         allow_hidden_coder=allow_hidden_coder,
         backup_fail_detail="the code was not deleted",
         confirm_hint="This will destroy the code and all its coded segments "
-                     "(and, with cascade=true, its whole sub-code branch). "
+                     "(and its whole sub-code branch, when it has one). "
                      "Review total_codings_to_delete and the collateral "
                      "breakdown, then call delete_code again with "
                      "preview_token. A backup is made first.",
-        execute_arguments=execute_args,
+        execute_arguments={"code_id": code_id},
     )
     return json.dumps(result, indent=2)
 
@@ -17820,16 +18614,6 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"remap, which QualCoder's schema forbids. The execute is "
             f"refused until this is resolved; see "
             f"unique_constraint_collisions.")
-    if totals.get("rows_deleted"):
-        warnings.append(
-            f"Warning: overlap_policy=qualcoder_edit_parity would DELETE "
-            f"{totals['rows_deleted']} row(s) whose span sits inside a "
-            f"replaced name, which is what QualCoder's coding-view walk "
-            f"does when fed this tool's exact edit list; the editor's own "
-            f"diff may factor a shared prefix or suffix out of a "
-            f"replacement (Tom to Tim) and keep a coding this policy "
-            f"deletes. The default policy, snap_to_pseudonym, deletes "
-            f"nothing.")
     pre_existing = [item for item in preview.get("files", [])
                     if item.get("pre_existing_pseudonym_occurrences")]
     if pre_existing:
@@ -18712,8 +19496,6 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(DEPRECATED_EDIT_PARITY, before="Args:",
-             when=lambda a: a.get("overlap_policy") == "qualcoder_edit_parity")
 def pseudonymise_source(
     mapping: Optional[List[Dict[str, Any]]] = None,
     *,
@@ -18751,7 +19533,8 @@ def pseudonymise_source(
     preview_token=<the token>. The token is valid for 60 minutes and only
     while the text and the rows it covers are unchanged; if the project
     changed in between, the execute is refused and you must preview
-    again. A backup is always created first and cannot be turned off.
+    again. Exegete takes a backup first, as before every change; a run
+    that changes nothing takes none.
 
     Deterministic and rule-based. ONLY the names in the mapping are
     replaced, as whole words, case-sensitively unless case_mode says
@@ -18886,15 +19669,6 @@ def pseudonymise_source(
                  marked the name marks the pseudonym, a coding that cut
                  into a name grows to contain the whole pseudonym, and
                  nothing is ever emptied or deleted.
-                 "qualcoder_edit_parity": the walk QualCoder's own
-                 coding-view editor applies, fed this tool's exact edit
-                 list, which DELETES a coding that sits on a name and
-                 trims one that merely touches it. The editor itself
-                 diffs the two texts first, and its diff library may
-                 factor a shared prefix or suffix out of a replacement
-                 (Tom to Tim) and keep a coding this policy deletes.
-                 Use it only when matching that walk matters more than
-                 keeping the codings.
         rewrite_memos: Also rewrite the public part of every note (the
                  twelve kinds of note: codings, annotations, case links,
                  files, cases, codes, categories, the project, attribute
@@ -19041,6 +19815,8 @@ def pseudonymise_source(
         return json.dumps({"error": (
             f"case_mode must be one of "
             f"{', '.join(pseudo.CASE_MODES)}.")}, indent=2)
+    if overlap_policy == "qualcoder_edit_parity":
+        return json.dumps({"error": EDIT_PARITY_REMOVED}, indent=2)
     if overlap_policy not in pseudo.OVERLAP_POLICIES:
         return json.dumps({"error": (
             f"overlap_policy must be one of "
@@ -19082,6 +19858,9 @@ def pseudonymise_source(
         try:
             mapping, sidecar_encoding = read_project_pseudonyms(
                 _current_project_folder())
+        except ProjectFileKindError:
+            # The project's side file (v0.15.1), not pseudonyms.json
+            raise
         except (ValueError, OSError, RuntimeError) as e:
             return json.dumps({"error": _pseudonyms_json_error(
                 e, PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE)}, indent=2)
@@ -19239,9 +20018,8 @@ def pseudonymise_source(
                     "Two or more rows would land on the same span after "
                     "remapping (unique_constraint_collisions in the preview "
                     "lists them), which QualCoder's schema forbids. Nothing "
-                    "was written: delete one row of each pair, or choose "
-                    "overlap_policy=qualcoder_edit_parity, which deletes "
-                    "spans that sit inside a replaced name."),
+                    "was written: delete one row of each pair, then "
+                    "preview again."),
                 "reason": "unique_constraint_collision",
                 "nothing_changed": True,
             }
@@ -19323,7 +20101,11 @@ def pseudonymise_source(
     # name in the journal and the name on disk cannot disagree. The
     # bind is keyed with the secret for this tool (`KEYED_BIND`), so
     # the secret is read here, once, and the refusal when it cannot be
-    # is the one the token gate would have given a line later.
+    # is the one the token gate would have given a line later. The bind
+    # is computed in the presented token's version: a run approved by a
+    # token in the old form, accepted for its hour after an update,
+    # records the old form's bind, the one such a token carries, rather
+    # than the current form's.
     when = datetime.now(timezone.utc)
     try:
         secret = load_secret()
@@ -19332,7 +20114,7 @@ def pseudonymise_source(
             _token_error("preview_secret_unavailable", "pseudonymise_source"),
             indent=2)
     bind = bind_id("pseudonymise_source", token_args, _token_project(),
-                   secret)
+                   secret, version=token_version(preview_token))
     manifest_name = f"run_{when.strftime('%Y%m%dT%H%M%SZ')}_{bind}.json"
     # The project path the manifest records, settled here with the rest
     # and never re-resolved after the commit: see _pseudonymise_manifest.
@@ -19368,6 +20150,26 @@ def pseudonymise_source(
         return fingerprint_rows(wdb.pseudonymise_effect(plan, memo_plan),
                                 wdb.pseudonymise_row_digests(plan, memo_plan))
 
+    def _save_check(wdb):
+        """The save's checks again, under SQLite's write lock and before
+        the backup's database (v0.15.1): a names list that cannot be
+        saved, or that conflicts, is refused with no backup. The merge is
+        kept for `_op`, with the fingerprint of the file taken before it
+        was read, so a file changed after this read is merged again."""
+        if not save:
+            return None
+        folder = _current_project_folder()
+        fingerprint = pseudonyms_json_fingerprint(folder)
+        try:
+            merge = _pseudonyms_json_merge(folder, validated)
+        except _SaveRefused as e:
+            return _pseudonyms_json_refusal(e)
+        if merge["conflicts"]:
+            return _pseudonyms_json_conflict(merge)
+        captured["pseudonyms_json_merge"] = merge
+        captured["pseudonyms_json_fingerprint"] = fingerprint
+        return None
+
     def _op(wdb):
         plan = captured.get("write_plan")
         if plan is None:                  # pragma: no cover - defensive
@@ -19398,19 +20200,24 @@ def pseudonymise_source(
         if save:
             # The save, between the rewrite and the journal entry: the
             # merged list to a temporary file beside the target, renamed
-            # into place only after the commit. Checked again here, under
-            # the lock and after the backup: the file may have moved since
-            # the check before the backup, and a refusal now rolls the run
-            # back and names the backup.
+            # into place only after the commit. The merge is the one the
+            # check made under the lock, before the backup; SQLite's lock
+            # does not guard the file, so its fingerprint is taken again
+            # here, and a file changed during the backup is merged again,
+            # a refusal now rolling the run back and naming the backup.
             folder = _current_project_folder()
-            try:
-                merge = _pseudonyms_json_merge(folder, validated)
-            except _SaveRefused as e:
-                raise RuntimeError(_pseudonyms_json_refusal(e)["error"]) \
-                    from None
-            if merge["conflicts"]:
-                raise RuntimeError(_pseudonyms_json_conflict(merge)["error"])
-            captured["pseudonyms_json_merge"] = merge
+            merge = captured.get("pseudonyms_json_merge")
+            if merge is None or pseudonyms_json_fingerprint(folder) != \
+                    captured.get("pseudonyms_json_fingerprint"):
+                try:
+                    merge = _pseudonyms_json_merge(folder, validated)
+                except _SaveRefused as e:
+                    raise RuntimeError(
+                        _pseudonyms_json_refusal(e)["error"]) from None
+                if merge["conflicts"]:
+                    raise RuntimeError(
+                        _pseudonyms_json_conflict(merge)["error"])
+                captured["pseudonyms_json_merge"] = merge
             captured["pseudonyms_json_tmp"] = _write_pseudonyms_json_tmp(
                 folder, merge["merged"], merge["existing_mode"])
         retention["entries_to_add"] = (
@@ -19493,6 +20300,7 @@ def pseudonymise_source(
             warnings_fn=_pseudonymise_warnings,
             execute_guard_fn=_collisions_refusal,
             state_of_fn=_state_on_write_connection,
+            check_fn=_save_check,
         )
     finally:
         # A run that did not commit leaves no pseudonyms.json behind for
@@ -19713,10 +20521,11 @@ def _pseudonymise_journal_attempt(wdb, plan: Dict[str, Any],
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS)
+@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
-                   create_backup: bool = True) -> str:
+                   create_backup: Optional[bool] = None) -> str:
     """Attach a note (annotation) to a text span of a file.
 
     THIS WRITES TO THE DATABASE. An annotation is a researcher note
@@ -19739,7 +20548,8 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
         start_pos: 0-based character offset (inclusive)
         end_pos: End offset (exclusive, > start_pos)
         memo: The note text (must be non-empty)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Returns:
         JSON with the new annotation (anid, span, note). If it contains
@@ -19775,16 +20585,20 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
             )
         return result
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the annotation was not added")
+    result = _perform_write(
+        _op, check=_write_methods_checks(
+            lambda wdb: wdb.check_add_annotation(file_id, start_pos, end_pos,
+                                                 memo, owner)),
+        backup_fail_detail="the annotation was not added")
     return _ai_json(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
+@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def update_annotation(annotation_id: int, memo: str,
-                      create_backup: bool = True,
+                      create_backup: Optional[bool] = None,
                       allow_hidden_coder: bool = False) -> str:
     """Edit an annotation's note. AN EMPTY NOTE DELETES THE ANNOTATION.
 
@@ -19819,7 +20633,8 @@ def update_annotation(annotation_id: int, memo: str,
         annotation_id: The annotation's anid (from read_file_with_codings
                        or search_memos)
         memo: The new note text ('' deletes the annotation)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to edit a hidden coder's annotation
     """
     marker = private_marker_refusal(memo, "memo")
@@ -19835,7 +20650,8 @@ def update_annotation(annotation_id: int, memo: str,
                      **wdb.update_annotation(
                          annotation_id, memo, auto_commit=False,
                          allow_hidden_coder=allow_hidden_coder)},
-        create_backup=create_backup,
+        check=_write_methods_checks(lambda wdb: wdb.check_update_annotation(
+            annotation_id, memo, allow_hidden_coder)),
         backup_fail_detail="the annotation was not changed",
     )
     _attach_hidden_target_note(result)
@@ -19843,15 +20659,17 @@ def update_annotation(annotation_id: int, memo: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
+@_ignores_create_backup
 @_tool_guard
-def delete_annotation(annotation_id: int, create_backup: bool = True,
+def delete_annotation(annotation_id: int,
+                      create_backup: Optional[bool] = None,
                       allow_hidden_coder: bool = False,
                       confirm_private_note_deletion: bool = False) -> str:
     """Delete an annotation by its anid.
 
     THIS WRITES TO THE DATABASE. Removes one annotation (the note on a
-    text span), never the text, codings, or anything else. A backup is
-    created first by default.
+    text span), never the text, codings, or anything else. Exegete takes
+    a backup first, as before every change.
 
     Two guards, each with an explicit override the user must ask for:
     - Hidden coder (projects with the coder-visibility capability that hide
@@ -19863,10 +20681,9 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
       carries ids only plus a coder_visibility note.
     - Private note (any project): an annotation whose note carries a
       '#####' private section the assistant cannot see is REFUSED unless
-      confirm_private_note_deletion=true, and a backup is ALWAYS taken
-      for such a row even with create_backup=false. Note that this
-      refusal, or the forced backup, tells you that a private note
-      exists on the row (never its content); the owner accepts that.
+      confirm_private_note_deletion=true. Note that this refusal tells
+      you that a private note exists on the row (never its content);
+      the owner accepts that.
     When both apply, both overrides are required and both refusals come
     back in one response.
 
@@ -19878,9 +20695,8 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
 
     Args:
         annotation_id: The annotation's anid
-        create_backup: Create a timestamped backup before writing (default
-                       True; ignored, always on, for a row carrying a
-                       private note)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
         allow_hidden_coder: Override to delete a hidden coder's annotation
         confirm_private_note_deletion: Override to delete an annotation
                        whose note carries a private section
@@ -19891,8 +20707,6 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
         confirm_private_note_deletion=confirm_private_note_deletion)
     if refusal is not None:
         return json.dumps(refusal, indent=2)
-    status = get_db().existing_row_status("annotation", annotation_id) or {}
-    # S-P2 (a): a row carrying a private note is always backed up first
     result = _perform_write(
         lambda wdb: {"success": True,
                      "message": "Deleted annotation",
@@ -19901,10 +20715,11 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
                          allow_hidden_coder=allow_hidden_coder,
                          confirm_private_note_deletion=(
                              confirm_private_note_deletion))},
-        create_backup=create_backup or bool(status.get("private_note")),
+        check=_write_methods_checks(lambda wdb: wdb.check_delete_annotation(
+            annotation_id, allow_hidden_coder,
+            confirm_private_note_deletion)),
         backup_fail_detail="the annotation was not deleted",
     )
-    _private_note_backup_note(result, status, create_backup)
     _attach_hidden_target_note(result)
     return _ai_json(result, indent=2)
 
@@ -19914,10 +20729,11 @@ def delete_annotation(annotation_id: int, create_backup: bool = True,
 # ============================================================================
 
 @mcp.tool(annotations=TOOL_ADDS_ONCE)
+@_ignores_create_backup
 @_tool_guard
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_case(name: str, memo: Optional[str] = None,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Create a new case (participant/subject) in the project.
 
     THIS WRITES TO THE DATABASE. Cases group data by participant; link
@@ -19944,7 +20760,8 @@ def create_case(name: str, memo: Optional[str] = None,
     Args:
         name: The case name (unique among cases, case-insensitively)
         memo: Optional case memo
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Example:
         "Create a case for participant Dana"
@@ -19971,16 +20788,17 @@ def create_case(name: str, memo: Optional[str] = None,
         return json.dumps(owner_error, indent=2)
 
     def _op(wdb):
-        dup = _existing(wdb.list_cases())
-        if dup is not None:
-            return dup
         created = wdb.add_case(norm_name, owner, memo=memo, auto_commit=False)
         return {"success": True, "created": True,
                 "message": f"Created case '{created['name']}'",
                 "case": created}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the case was not created")
+    # The check again under SQLite's write lock, before the backup's
+    # database (v0.15.1): a case of that name added meanwhile (another
+    # writer) is answered there, with no backup
+    result = _perform_write(
+        _op, check=lambda wdb: _existing(wdb.list_cases()),
+        backup_fail_detail="the case was not created")
     return _ai_json(result, indent=2)
 
 
@@ -20065,15 +20883,14 @@ RENAME_CASE_NOTE = (
     "date, notes, file links and attributes are kept.")
 
 
-def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
-                      backup_taken: bool = True) -> str:
+def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
     """rename_case's note (v0.15.0, piece 12): the places in Exegete
     always; each of QualCoder's places only on its sign (its count in
     old_name_left_in, a saved query, a QualCoder backup beside the
     project, the AI chat history); what QualCoder's imports and Merge
     Projects can bring back when the project's history with QualCoder is
-    not "none". "Including the one just taken" only when the rename took
-    a backup (`backup_taken`, its create_backup; fix round 1)."""
+    not "none". "Including the one just taken": Exegete takes a backup
+    before every change (v0.15.1)."""
     places = [
         "in notes, journal entries, file text and attribute values (the "
         "pseudonymisation preview counts those, notes and journal entries "
@@ -20090,8 +20907,7 @@ def _rename_case_note(left_in: Dict[str, Any], signs: _RenameSigns,
         "in the names of files named after the case (their ids are in "
         "old_name_left_in.file_ids, and rename_file renames them)")
     places.append(
-        "in every backup"
-        + (", including the one just taken" if backup_taken else "")
+        "in every backup, including the one just taken"
         + " (list_backups lists them; prune_backups removes Exegete's"
         + (", and QualCoder's own _BKUP_ copies only the researcher can "
            "remove" if signs.qualcoder_backups else "") + ")")
@@ -20116,9 +20932,10 @@ _RENAME_QC40_PARAGRAPH = (
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@_ignores_create_backup
 @_tool_guard
 def rename_case(case_id: int, new_name: str,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Rename a case. THIS WRITES TO THE DATABASE. Only the name changes.
 
     As in QualCoder's Manage Cases, only the case's name is written: its
@@ -20153,7 +20970,8 @@ def rename_case(case_id: int, new_name: str,
         case_id: The case's id (caseid)
         new_name: The new name (must not collide with another case,
                   ignoring letter case, spacing and Unicode form)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     new_name = normalize_name(new_name)
     if not new_name:
@@ -20185,26 +21003,21 @@ def rename_case(case_id: int, new_name: str,
     qualcoder_seen = history is not None and history.level != "none"
 
     def _op(wdb):
-        # SQLite's write lock first, then the re-check: the write gate is
-        # blind to QualCoder 4.0, so this re-check is the only guard
-        # against another writer, and it holds until the commit.
-        wdb.begin_immediate()
-        answer = _precheck(wdb.case_name_rows())
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         renamed = wdb.rename_case(case_id, new_name, auto_commit=False)
         left_in = wdb.old_name_left_in("case", case_id, renamed["old_name"])
         return {"success": True, "changed": True, "message": "Renamed case",
                 **renamed,
                 "old_name_left_in": left_in,
                 "note": _rename_case_note(left_in, _rename_signs(
-                    wdb, project_folder, qualcoder_seen),
-                    backup_taken=bool(create_backup))}
+                    wdb, project_folder, qualcoder_seen))}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the case was not renamed")
+    # SQLite's write lock first, then the re-check, before the backup's
+    # database (v0.15.1): the write gate is blind to QualCoder 4.0, so
+    # this re-check is the only guard against another writer, and the
+    # lock holds it true until the commit.
+    result = _perform_write(
+        _op, check=lambda wdb: _precheck(wdb.case_name_rows()),
+        backup_fail_detail="the case was not renamed")
     return json.dumps(result, indent=2)
 
 
@@ -20216,17 +21029,14 @@ RENAME_FILE_NOTE = (
     "stored path, date, notes, codings and case links are kept.")
 
 
-def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns,
-                      backup_taken: bool = True) -> str:
+def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
     """rename_file's note (v0.15.0, piece 12): Exegete's places always;
     QualCoder's saved SQL queries when one is saved; what QualCoder's
     Merge Projects can bring back when the project's history with
-    QualCoder is not "none". "Including the one just taken" only when
-    the rename took a backup (`backup_taken`, its create_backup; fix
-    round 1)."""
-    note = (RENAME_FILE_NOTE + " Every backup"
-            + (", including the one just taken," if backup_taken else "")
-            + " keeps the old name, and so do "
+    QualCoder is not "none". "Including the one just taken": Exegete
+    takes a backup before every change (v0.15.1)."""
+    note = (RENAME_FILE_NOTE + " Every backup, including the one just "
+            "taken, keeps the old name, and so do "
             "Exegete's coding-session files"
             + (" and any of QualCoder's saved SQL queries that name it "
                "(not read here)" if signs.saved_queries else "")
@@ -20463,49 +21273,7 @@ def stored_file_name(mediapath: Optional[str]) -> Optional[str]:
     return re.split(r"[\\/]", tail)[-1] or None
 
 
-def _text_evidence_key(text: Any) -> Tuple[str, str]:
-    """The carried answer's key for a text: its type and a SHA-256 digest
-    of its bytes (fix round 4, F3A-3: a NULL text and the text 'None', or
-    a bytes text and the string of its repr, no longer share a key)."""
-    if text is None:
-        return ("NoneType", "")
-    data = text if isinstance(text, bytes) else \
-        str(text).encode("utf-8", "surrogatepass")
-    return (type(text).__name__, hashlib.sha256(data).hexdigest())
-
-
-def _is_a_rename_back(rows, file_id: int, clash: str, find_earlier) -> bool:
-    """Whether the documents/ file `clash` is this text's own copy under
-    a name it had before (the lead's ruling on QA-4).
-
-    A text with no stored path owns `documents/<its name>`; a backup that
-    shows this same entry (its id, its date and, since fix round 3, its
-    text) with a name matching `clash` is the evidence that the file was
-    its copy. Refused
-    all the same when any other entry claims the file now, by its stored
-    path or by its own name, compared as the documents/ rule compares;
-    that is checked first, so no backup is read for it.
-    """
-    key = documents_name_key(clash)
-    for other in rows:
-        if other["id"] == file_id:
-            continue
-        path = other["mediapath"]
-        if path and path.startswith("/docs/"):
-            claim = path[len("/docs/"):]
-        elif not path:
-            claim = other["name"]
-        else:
-            continue
-        if isinstance(claim, str) and documents_name_key(claim) == key:
-            return False
-    return find_earlier(("documents", key),
-                        lambda name: documents_name_key(name) == key,
-                        same_text=True) is not None
-
-
-def _file_rename_precheck(db, file_id: int, candidate: str,
-                          evidence: Optional[Dict[Any, Any]] = None):
+def _file_rename_precheck(db, file_id: int, candidate: str):
     """A result to answer without writing, or None to proceed.
 
     In order: the unknown id; the identical name, answered unchanged
@@ -20515,14 +21283,9 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
     compare); a text document's documents/ clash; the ending rule; and
     master's `unnamed_file_<n>` for a file n it would auto-rename.
 
-    `evidence` carries what the project's backups showed from the
-    read-only pre-check into the re-check inside the transaction, so the
-    backups are read once per question in a call (fix round 2, R1-4),
-    and a carried answer counts only if it still answers the question
-    as the re-check asks it (fix round 3, F2A-1).
+    Nothing here reads the project's backups (0.15.1): a rename back is
+    no longer recognised from them.
     """
-    if evidence is None:
-        evidence = {}
     rows = db.file_name_rows()
     by_id = {r["id"]: r for r in rows}
     row = by_id.get(file_id)
@@ -20547,42 +21310,10 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
                 "candidates": [{"id": r["id"], "name": r["name"]}
                                for r in others]}
     mediapath = row["mediapath"]
-
-    def find_earlier(tag, accept, same_text: bool = False) -> Optional[str]:
-        """A name this entry had before that `accept` accepts, read from
-        the project's backups only when a rule would refuse (QA-4: a
-        rename back), and once per call for each question. With
-        `same_text` (the documents/ half, F2A-2) the backup's row must
-        hold this entry's current text as well."""
-        text = db.current_text(file_id) if same_text else None
-        # No evidence from an empty, missing or unreadable text (fix
-        # round 4, F3A-1, F3A-2), decided before the carried answer or
-        # any backup is consulted.
-        if same_text and (text is None or text in (b"", "")
-                          or text is db.TEXT_UNREADABLE):
-            return None
-        tag = (tag, row.get("date"),
-               _text_evidence_key(text) if same_text else None)
-        if tag not in evidence:
-            evidence[tag] = db.earlier_name(file_id, row.get("date"), accept,
-                                            same_text=same_text, text=text)
-        name = evidence[tag]
-        # A name carried from the pre-check counts only if it still
-        # answers the question as the re-check asks it (fix round 3,
-        # F2A-1): the project may have changed in between, for example
-        # a recording linked to this text, and then an earlier ending
-        # must not license a transcript losing both of its own.
-        return name if name is not None and accept(name) else None
-
     if not mediapath or mediapath.startswith(("/docs/", "docs:")):
         clashes = db.documents_clashes(
             candidate, own_names=db.own_stored_names(mediapath, old))
         clash = clashes[0] if clashes else None
-        # Two files there that one disk folds into one cannot both be
-        # this entry's copy, so a rename back needs exactly one.
-        if len(clashes) == 1 and not mediapath and \
-                _is_a_rename_back(rows, file_id, clash, find_earlier):
-            clash = None
         if clash is not None:
             message = documents_clash_message(candidate, clash)
             if not mediapath:
@@ -20591,10 +21322,7 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
                             "name back (restoring an earlier backup undoes "
                             "everything done after it, any pseudonymisation "
                             "run included), or QualCoder's own Rename, if "
-                            "the researcher uses it; "
-                            "Exegete recognises a rename back only from a "
-                            "backup that shows this entry with that name "
-                            "and, for its documents copy, the same text.")
+                            "the researcher uses it.")
             return {"error": message}
     recordings = [r["name"] for r in rows
                   if r["av_text_id"] == file_id and r["id"] != file_id]
@@ -20603,12 +21331,6 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
     base = [stored] if stored else []
     ending = file_ending_problem(old_name, candidate, mediapath, recordings,
                                  earlier=base)
-    if ending is not None and find_earlier(
-            ("ending", candidate),
-            lambda name: file_ending_problem(
-                old_name, candidate, mediapath, recordings,
-                earlier=base + [name]) is None) is not None:
-        ending = None
     if ending is not None:
         return {"error": ending}
     for other in rows:
@@ -20626,10 +21348,10 @@ def _file_rename_precheck(db, file_id: int, candidate: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES_ONCE)
+@_ignores_create_backup
 @_tool_guard
-@_with_guidance(DEPRECATED_RENAME_BACK, before="The result carries")
 def rename_file(file_id: int, new_name: str,
-                create_backup: bool = True) -> str:
+                create_backup: Optional[bool] = None) -> str:
     """Rename a file's entry. THIS WRITES TO THE DATABASE. Only the name.
 
     Exactly as QualCoder's Manage Files "Rename database entry": only the
@@ -20664,12 +21386,10 @@ def rename_file(file_id: int, new_name: str,
     stored file's extension; a text with no stored file whose name ends
     in '.txt' or has no dot keeps it that way. QualCoder's own Rename can
     still make those changes. Any other name changes freely
-    ('Thomas.Jones' to 'P01'). A rename back is not refused: an ending
-    the file had before (its stored file's own name, or a project backup
-    showing this entry, same id and date) may be restored, except a
-    transcript losing both endings or a media file its extension; a text
-    with no stored file may take back its documents copy under a name
-    such a backup shows, with the same text.
+    ('Thomas.Jones' to 'P01'). An ending the name of its stored file has
+    may be put back, except a transcript losing both endings or a media
+    file its extension; a name the project's backups show is not looked
+    for.
 
     The result carries `changed: true`, `old_name`, `file_type`, and
     what kept the old name: `stored_copy` (an imported file's copy in the
@@ -20687,7 +21407,8 @@ def rename_file(file_id: int, new_name: str,
     Args:
         file_id: The file's id
         new_name: The new name
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
     """
     file_id = validate_id(file_id, "file_id")
     if not isinstance(new_name, str):
@@ -20698,9 +21419,7 @@ def rename_file(file_id: int, new_name: str,
     if gate is not None:
         return json.dumps(gate)
     db = get_db()
-    # What the backups showed, carried into the re-check (R1-4).
-    evidence: Dict[Any, Any] = {}
-    answer = _file_rename_precheck(db, file_id, candidate, evidence)
+    answer = _file_rename_precheck(db, file_id, candidate)
     if answer is not None:
         return json.dumps(answer, indent=2)
     # What the notes say of QualCoder's places (v0.15.0, piece 12): the
@@ -20710,13 +21429,6 @@ def rename_file(file_id: int, new_name: str,
     qualcoder_seen = history is not None and history.level != "none"
 
     def _op(wdb):
-        # SQLite's write lock first, then the re-check (as rename_case).
-        wdb.begin_immediate()
-        answer = _file_rename_precheck(wdb, file_id, candidate, evidence)
-        if answer is not None:
-            if "error" in answer:
-                raise ValueError(answer["error"])
-            return answer
         rows = wdb.file_name_rows()
         row = next(r for r in rows if r["id"] == file_id)
         stored = _stored_copy_block(wdb, row["mediapath"], row["name"])
@@ -20735,31 +21447,28 @@ def rename_file(file_id: int, new_name: str,
                 "old_name_left_in": left_in,
                 **index,
                 "note": _rename_file_note(left_in, _rename_signs(
-                    wdb, project_folder, qualcoder_seen),
-                    backup_taken=bool(create_backup))}
+                    wdb, project_folder, qualcoder_seen))}
 
-    result = _perform_write(_op, create_backup=create_backup,
-                            backup_fail_detail="the file was not renamed")
+    # SQLite's write lock first, then the re-check, before the backup's
+    # database (as rename_case, v0.15.1)
+    result = _perform_write(
+        _op, check=lambda wdb: _file_rename_precheck(
+            wdb, file_id, candidate),
+        backup_fail_detail="the file was not renamed")
     if result.get("changed"):
         _forget_reading_copies([file_id])
-    # A rename back that only a backup licensed goes in v0.15.1 (owner
-    # ruling 25, question 8)
-    if result.get("changed") and any(name is not None
-                                     for name in evidence.values()):
-        result["deprecated"] = DEPRECATED_RENAME_BACK
     return json.dumps(result, indent=2)
 
 
 @mcp.tool(annotations=TOOL_ADDS)
+@_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
-             when=lambda a: _is(a.get("applies_to"), "journal"))
 @_with_guidance(MARKER_REFUSED_DESCRIPTION, before="Args:")
 def create_attribute_type(name: str, applies_to: str,
                           value_type: str = "character",
                           memo: Optional[str] = None,
-                          create_backup: bool = True) -> str:
-    """Define a new attribute for cases, files or journals.
+                          create_backup: Optional[bool] = None) -> str:
+    """Define a new attribute for cases or files.
 
     THIS WRITES TO THE DATABASE. Attributes are typed variables attached
     to every entity of one domain (e.g. a case attribute "Age" gives
@@ -20781,19 +21490,25 @@ def create_attribute_type(name: str, applies_to: str,
 
     Args:
         name: The attribute name (unique across ALL domains)
-        applies_to: 'case', 'file' or 'journal' (QualCoder's real domain
-                    set; there is no 'both')
+        applies_to: 'case' or 'file' ('journal', QualCoder's third
+                    domain, is refused: Exegete no longer sets attributes
+                    on journal entries)
         value_type: 'character' (default) or 'numeric'. Numeric values
                     are stored as text, checked to be finite numbers by
                     set_attribute and compared as numbers by
                     query_by_attribute. There is no path back from numeric data to
                     character-only in Exegete, so choose carefully.
         memo: Optional description of what the attribute captures
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Example:
         "Add a numeric Age attribute for cases"
     """
+    # Removed in 0.15.1: the first check, before any other refusal, the
+    # lock and the backup
+    if _is(applies_to, "journal"):
+        return json.dumps({"error": JOURNAL_ATTRIBUTES_REMOVED}, indent=2)
     marker = private_marker_refusal(memo, "memo")
     if marker is not None:
         return json.dumps({"error": marker}, indent=2)
@@ -20807,7 +21522,8 @@ def create_attribute_type(name: str, applies_to: str,
                      "attribute_type": wdb.add_attribute_type(
                          name, owner, applies_to, value_type=value_type,
                          memo=memo, auto_commit=False)},
-        create_backup=create_backup,
+        check=_write_methods_checks(lambda wdb: wdb.check_add_attribute_type(
+            name, owner, applies_to, value_type, memo)),
         backup_fail_detail="the attribute was not created",
     )
     if "error" not in result:
@@ -20820,12 +21536,11 @@ def create_attribute_type(name: str, applies_to: str,
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
+@_ignores_create_backup
 @_tool_guard
-@_deprecated(DEPRECATED_JOURNAL_ATTRIBUTES, before="Args:",
-             when=lambda a: _is(a.get("target_type"), "journal"))
 def set_attribute(target_type: str, target_id: int, attribute_name: str,
-                  value: str, create_backup: bool = True) -> str:
-    """Set (or clear) an attribute value on a case, file or journal.
+                  value: str, create_backup: Optional[bool] = None) -> str:
+    """Set (or clear) an attribute value on a case or a file.
 
     THIS WRITES TO THE DATABASE. The attribute must already exist (see
     create_attribute_type and list_attribute_types) and must belong to
@@ -20848,16 +21563,21 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     there are some, ask the researcher before writing.
 
     Args:
-        target_type: 'case', 'file' or 'journal'
-        target_id: The case ID, file ID or journal ID
+        target_type: 'case' or 'file'
+        target_id: The case ID or file ID
         attribute_name: The attribute to set (exact name; see
                         list_attribute_types)
         value: The value as a string ("" clears/unsets)
-        create_backup: Create a timestamped backup before writing (default True)
+        create_backup: No longer used: Exegete takes a backup before every
+                       change (accepted until the release on method)
 
     Example:
         "Set Age to 34 for case 2"
     """
+    # Removed in 0.15.1: the first check, before the owner, the lock and
+    # the backup
+    if _is(target_type, "journal"):
+        return json.dumps({"error": JOURNAL_ATTRIBUTES_REMOVED}, indent=2)
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
@@ -20868,7 +21588,9 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
                      "attribute": wdb.set_attribute_value(
                          target_type, target_id, attribute_name, value,
                          owner, auto_commit=False)},
-        create_backup=create_backup,
+        check=_write_methods_checks(
+            lambda wdb: wdb.check_set_attribute_value(
+                target_type, target_id, attribute_name, value, owner)),
         backup_fail_detail="the attribute value was not changed",
     )
     return json.dumps(result, indent=2)
@@ -22440,9 +23162,11 @@ def create_project(name: str, directory: Optional[str] = None,
 
     Makes the project folder "<name>.qda", in directory or in the folder set
     for projects (get_current_project's projects_folder), with its four
-    subfolders and a database in QualCoder 4.0's format, exactly as QualCoder
-    4.0's own New Project makes them, then selects the project so material can
-    be imported at once. Nothing existing is ever changed: a name already in
+    subfolders and a database in QualCoder 4.0's format, as QualCoder 4.0's
+    own New Project makes them, and an empty ai_data folder (QualCoder makes
+    it when it first opens a project; made here so that QualCoder 4.0's
+    first open finds it), then selects the project so material can be
+    imported at once. Nothing existing is ever changed: a name already in
     use is refused, never replaced or given a "_1".
 
     THE RESEARCHER'S CODER NAME: do not ask for it before the first call.
@@ -22668,7 +23392,7 @@ async def check_for_updates() -> str:
 # nothing (it starts a coding session) and analyze_file_with_coding reads
 # a file with its codings, so each now has a name that says what it does.
 # The earlier names are still listed, with one sentence, until the release
-# on method (planned as v0.15.2) removes them, so that an instruction or a
+# on method (planned as v0.15.3) removes them, so that an instruction or a
 # conversation that names one still reaches the tool. Each runs the very
 # same function, with the same arguments, annotations and answer;
 # registered after the last tool, so the others keep their order. An
@@ -22721,6 +23445,9 @@ CORE_TOOLSET = frozenset({
     "get_project_summary",
     # file search and read-with-coding
     "search_files", "read_file_with_codings",
+    # the search of notes of every kind, file memos included (since
+    # v0.15.1, when search_files stopped searching file memos)
+    "search_memos",
     # reading a whole file on the computer, its text kept off the
     # conversation (v0.14.3): most useful with local models,
     # where reading a file otherwise pulls all of it into a small context
@@ -22736,8 +23463,11 @@ CORE_TOOLSET = frozenset({
     # needs an owner refuses until the project's AI coder name is set,
     # so a core-mode host must be able to answer that (ruling 10)
     "set_project_ai_coder_name",
-    # the safety pair: workspace isolation and undo
+    # the safety tools: a copy of the project, undoing a coding, the
+    # backups and the restore (restore_backup since v0.15.1, as decided
+    # on 27 September 2026)
     "copy_project_to_workspace", "delete_coding", "list_backups",
+    "restore_backup",
     # the earlier names of start_coding_session and read_file_with_codings
     # (0.15.0, RENAMED_TOOLS), in every set that has the new ones, until
     # the release on method removes them
@@ -22819,7 +23549,10 @@ def _install_folder() -> Optional[Path]:
 def _resolve_toolset_mode() -> str:
     """Read EXEGETE_TOOLSET (default full); `lifecycle`, the earlier name
     of `full`, is read as `full` in any letter case; unknown values
-    raise."""
+    raise, whatever the switch says. Then `core` when the extension's
+    switch "Limit Exegete to its small tool set"
+    (EXEGETE_SMALL_TOOLSET, v0.15.1, ruling 83) is on, and otherwise the
+    text's value: either one asking for the smaller set gives it."""
     reading = env_settings.read("toolset")
     raw = ("full" if reading.value is None else reading.value).strip().lower()
     raw = names.OLD_TOOLSET_NAMES.get(raw, raw)
@@ -22832,6 +23565,10 @@ def _resolve_toolset_mode() -> str:
             f"earlier name of 'full', is still read until "
             f"{names.OLD_SPELLINGS_UNTIL}."
         )
+    small_on, _recognised = env_settings.read_switch(
+        env_settings.small_toolset_switch())
+    if small_on:
+        return "core"
     return raw
 
 
@@ -22847,9 +23584,9 @@ def _refresh_served_texts() -> Dict[str, Any]:
     tool it names that this set does not register (v0.14, server-wide).
 
     The instructions and the tool descriptions are written for the full
-    set; in `core` they name tools `core` lacks (restore_backup,
-    search_memos, explain_ai_coding_tools), and a model told to call a
-    tool it cannot see is sent nowhere. The prompts and the methods
+    set; in `core` they name tools `core` lacks (import_text_file,
+    explain_ai_coding_tools), and a model told to call a tool it cannot
+    see is sent nowhere. The prompts and the methods
     notes are marked when they are read (`_mark_unregistered`), since
     they are rendered on each request.
 
@@ -23037,11 +23774,23 @@ def main(argv: Optional[List[str]] = None, *,
         logger.warning(LIFECYCLE_NOTE.format(setting=toolset_reading.name))
     # v0.15.0: "Do you also use QualCoder on this computer?" (ruling 73,
     # item 8); a word that is not yes, no or not sure is read as not
-    # sure, said here once, never its value, and never stops Exegete
+    # sure, said here once, never its value, and never stops Exegete.
+    # v0.15.1: with the switch "I use QualCoder on this computer" on, the
+    # answer is yes, and the line says so in place of "not sure".
     _answer, recognised = qualcoder_history.read_setting(
         env_settings.uses_qualcoder())
     if not recognised:
-        logger.warning(qualcoder_history.SETTING_NOT_RECOGNISED)
+        qualcoder_switch_on, _switch_recognised = env_settings.read_switch(
+            env_settings.i_use_qualcoder_switch())
+        logger.warning(
+            qualcoder_history.SETTING_NOT_RECOGNISED_SWITCH_ON
+            if qualcoder_switch_on else
+            qualcoder_history.SETTING_NOT_RECOGNISED)
+    # v0.15.1: the extension's two switches (ruling 83); a value that is
+    # not an on or off word is read as off, said here once, never its
+    # value, and never stops Exegete
+    for line in env_settings.switch_warnings():
+        logger.warning(line)
 
     # Check for optional pre-configured project (Option B: Fixed Project)
     # EXPERIMENTAL: reduced tool surface for local-model hosts. Fail

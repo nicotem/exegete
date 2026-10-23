@@ -1,6 +1,6 @@
 [project]
 name = "exegete"
-version = "0.15.0-alpha"
+version = "0.15.1-alpha"
 description = "Exegete: a qualitative analysis application you use in conversation with an AI assistant, compatible with QualCoder. An MCP server, formerly qualcoder-mcp."
 authors = [{name = "Niccolò Tempini", email = "n.tempini@exeter.ac.uk"}]
 # PEP 639 SPDX licence expression (setuptools >= 77). LGPL-3.0-or-later
@@ -55,6 +55,18 @@ dependencies = [
     # (verified empirically in a fresh venv). Lifting the cap is an
     # explicit migration project, not a routine bump.
     "mcp>=1.17.0,<2",
+    # Two libraries the MCP library brings, named because Exegete imports
+    # them itself (server.py), and a library Exegete imports is among its
+    # requirements (CONTRIBUTING.md); neither is a model's client. Each
+    # takes the MCP library's own range (mcp 1.30.0 asks for these
+    # floors), with an upper limit at its next major release, so that an
+    # install from PyPI meets a new major release only with a release of
+    # Exegete that has been tried with it.
+    # pydantic, for an argument's description (Field); a compiled core.
+    "pydantic>=2.11.0,<3",
+    # anyio, for the one tool that waits in a worker thread
+    # (check_for_updates, through to_thread.run_sync).
+    "anyio>=4.5,<5",
     # Document import (0.14.3). defusedxml parses the XML inside Word
     # files and refuses entity declarations; striprtf is QualCoder's RTF
     # reader, pinned exactly because the stored text must not change
@@ -86,14 +98,29 @@ Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 # whole, under the AGPL's terms, as QualCoder's own installs are;
 # Exegete's own code stays LGPL, and a PyPI install without the part is
 # untouched. lxml (which EbookLib needs) at 6.1.0 or newer, the release
-# that fixed its latest advisory; PyMuPDF at 1.26.7 or newer, for the
-# same reason, and below 2 (0.15.0): PyMuPDF 2.0 brings new libraries of
-# its own and has not been looked at yet, so every route (pip, PyPI and
-# the extension's lock) reads PDFs with the 1.x the checks passed with.
+# that fixed its latest advisory, and below 7 (v0.15.1: a compiled library
+# EPUBs are read through, so its next major release waits for a release
+# of Exegete tried with it). PyMuPDF at 1.26.7 or newer, for the same
+# reason, in two lines (v0.15.1, the owner's ruling of 21 October 2026):
+# 2.x where it and the libraries it brings (onnxruntime, numpy) have
+# ready-made packages, Windows x64 and Linux on x86-64 and Arm with
+# Python 3.11 to 3.14; 1.x everywhere else: Python 3.10, which 2.0 does
+# not support; Python 3.15 and later, where onnxruntime has no package
+# yet; Windows on Arm; and every Mac for now, since onnxruntime needs
+# macOS 14 on Apple silicon and no marker tells macOS releases apart
+# safely. The first line is the exact complement of the second (markers
+# have no "not"), so every computer takes one, and neither reads the
+# system's release. Windows x64 is named both as Windows' own Python
+# reports it ("AMD64") and as uv does when asked about another computer
+# ("x86_64", as in CI's dry run for x86_64-pc-windows-msvc), so the dry
+# run installs what a real Windows x64 computer installs. The 2.x line
+# comes second, since the newest-libraries job's table
+# (.github/workflows/ci.yml) keeps a library's last line.
 pdf-epub = [
-    "pymupdf>=1.26.7,<2",
+    "pymupdf>=1.26.7,<2; python_version < '3.11' or python_version >= '3.15' or (sys_platform == 'win32' and platform_machine != 'AMD64' and platform_machine != 'x86_64') or (sys_platform == 'linux' and platform_machine != 'x86_64' and platform_machine != 'aarch64') or (sys_platform != 'win32' and sys_platform != 'linux')",
+    "pymupdf>=2.0,<3; python_version >= '3.11' and python_version < '3.15' and ((sys_platform == 'win32' and (platform_machine == 'AMD64' or platform_machine == 'x86_64')) or (sys_platform == 'linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64')))",
     "ebooklib>=0.20",
-    "lxml>=6.1.0",
+    "lxml>=6.1.0,<7",
 ]
 dev = [
     # QualCoder's own character set guesser, for scripts/qualcoder_parity.py
@@ -208,8 +235,11 @@ required-environments = [
 # of OpenSSL. With it, uv locks a version that has a wheel for each
 # computer: 50.0.2 in general, 48.0.1 on Intel Macs (the last with a
 # universal2 wheel) and 46.0.3 on Windows on Arm (the last with a
-# win_arm64 wheel).
-no-build-package = ["cryptography"]
+# win_arm64 wheel). PyMuPDF too (v0.15.1): 2.0 has no wheel for Intel
+# Macs or Windows on Arm, only its source (88.8 MB), so a lock that
+# reached 2.0 there would build it; with this, such a lock cannot be
+# made.
+no-build-package = ["cryptography", "pymupdf"]
 # Keeps Intel Macs on 48.0.1, which fixes the OpenSSL its older wheels
 # bundled, rather than the 46.0.3 Windows on Arm needs.
 constraint-dependencies = [

@@ -218,17 +218,16 @@ class TestSearchMemos:
 
 
 class TestExportCodeReport:
-    """Test export_code_report tool."""
+    """export_code_report was removed in v0.15.1, as announced in 0.14:
+    get_coded_segments reads the same passages."""
 
-    def test_valid_code(self, setup_server):
-        result = server.export_code_report("Stress")
-        # Returns formatted text, not JSON
-        assert "Stress" in result
+    def test_it_is_gone(self, setup_server):
+        assert not hasattr(server, "export_code_report")
+        assert "export_code_report" not in server.mcp._tool_manager._tools
 
-    def test_nonexistent_code(self, setup_server):
-        result = server.export_code_report("NonexistentCode")
-        data = json.loads(result)
-        assert "error" in data
+    def test_get_coded_segments_reads_the_code(self, setup_server):
+        data = json.loads(server.get_coded_segments(code_id=1))
+        assert "error" not in data
 
 
 class TestGetProjectSummary:
@@ -579,28 +578,17 @@ class TestDeleteCodingSession:
 
 
 class TestCleanupOldSessions:
-    """Test cleanup_old_sessions tool."""
+    """cleanup_old_sessions was removed in v0.15.1, as announced in 0.14:
+    nothing removes every session at once (QA F9: days_old=0 once wiped
+    them all); delete_coding_session removes one."""
 
-    def test_cleanup(self, setup_server):
-        result = server.cleanup_old_sessions(days_old=30)
-        data = json.loads(result)
-        assert data["success"] is True
-        assert "deleted_count" in data
-
-    def test_cleanup_rejects_zero_days(self, setup_server, session_with_suggestions):
-        """days_old=0 used to silently wipe ALL sessions (QA F9)."""
-        result = server.cleanup_old_sessions(days_old=0)
-        data = json.loads(result)
-        assert "error" in data
-        # the session must still exist
+    def test_it_is_gone(self, setup_server, session_with_suggestions):
+        assert not hasattr(server, "cleanup_old_sessions")
+        assert not hasattr(setup_server.session_manager,
+                           "cleanup_old_sessions")
         assert setup_server.session_manager.session_exists(
             session_with_suggestions.session_id
         )
-
-    def test_cleanup_rejects_negative_days(self, setup_server):
-        result = server.cleanup_old_sessions(days_old=-5)
-        data = json.loads(result)
-        assert "error" in data
 
 
 # =============================================================================
@@ -617,9 +605,15 @@ class TestExplainAiCodingTools:
         assert "workflow" in data
 
     def test_specific_tool(self, setup_server):
-        result = server.explain_ai_coding_tools("analyze_for_coding")
+        result = server.explain_ai_coding_tools("grounding_rules")
         data = json.loads(result)
         assert "purpose" in data
+
+    def test_a_removed_topic(self, setup_server):
+        """v0.15.1: the topic analyze_for_coding removed, as announced."""
+        data = json.loads(server.explain_ai_coding_tools("analyze_for_coding"))
+        assert data["note"] == server.HELP_TOPIC_REMOVED
+        assert "error" not in data
 
     def test_unknown_tool(self, setup_server):
         result = server.explain_ai_coding_tools("unknown_tool")
@@ -654,35 +648,30 @@ class TestImportTextFile:
         assert data["success"] is True
 
     def test_import_custom_owner_is_refused(self, setup_server):
-        """v0.12: the owner argument no longer chooses the coder name.
-
-        Every row this server writes carries the PROJECT's AI coder name,
-        which the user chose; a human coder's name is never used for rows
-        the server writes (D7 section 6). The value passed is not echoed
-        back (D6 3.9).
+        """v0.12: the owner argument no longer chose the coder name, and
+        v0.15.1 removed it, as announced (tests/test_v0151_removed_arguments
+        .py). Every row this server writes carries the PROJECT's AI coder
+        name, which the user chose; a human coder's name is never used for
+        rows the server writes (D7 section 6). The value passed is not
+        echoed back (D6 3.9).
         """
-        result = server.import_text_file(
-            filename="custom_owner.txt",
-            content="Content.",
-            owner="Researcher A",
-            create_backup=False
-        )
-        data = json.loads(result)
-        assert "error" in data
-        assert data["action_required"] == \
-            "omit_owner_or_set_project_ai_coder_name"
-        assert data["ai_coder_name"] == DEFAULT_AI_CODER_NAME
+        import asyncio
+        out = asyncio.run(server.mcp.call_tool("import_text_file", {
+            "filename": "custom_owner.txt", "content": "Content.",
+            "owner": "Researcher A"}))
+        blocks = out[0] if isinstance(out, tuple) else out
+        data = json.loads("".join(getattr(b, "text", "") for b in blocks))
+        assert data["removed"] == {"owner": server.REMOVED_ARGUMENTS[
+            ("import_text_file", "owner")]}
         assert "Researcher A" not in json.dumps(data)
-        assert "no backup was made" in data["error"]
+        assert "nothing was done" in data["error"]
 
-    def test_import_owner_equal_to_the_project_name_is_a_no_op(
+    def test_import_without_owner_writes_under_the_project_name(
             self, setup_server):
-        """Passing exactly the project's AI coder name still works, so a
-        caller that spells out the default is not punished for it."""
+        """The project's AI coder name, which owner could only repeat."""
         result = server.import_text_file(
             filename="same_owner.txt",
             content="Content.",
-            owner=DEFAULT_AI_CODER_NAME,
             create_backup=False
         )
         data = json.loads(result)

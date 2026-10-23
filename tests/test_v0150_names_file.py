@@ -970,8 +970,9 @@ class TestExportsKeepOut:
             output_path=str(target), overwrite=True, **extra))
         refusal = {"error": EXPORT_REFUSAL}
         if tool == "export_refi_qda":
-            # deprecated: every answer carries the sentence
-            refusal["deprecated"] = server.DEPRECATED_REFI_EXPORT
+            # every answer the tool itself gives names its known faults
+            # (v0.15.1, ruling 85, item 2)
+            refusal["known_faults"] = server.REFI_EXPORT_KNOWN_FAULTS
         assert answer == refusal, answer
         assert names.read_bytes() == before
         assert sorted(os.listdir(other / "Exegete")) == sorted(
@@ -1298,8 +1299,9 @@ class TestTheDocuments:
         assert tools.index("**Project Management:**") < tools.index(
             TOOLS_ENTRY) < tools.index("**Keeping Exegete up to date:**")
         # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5)
-        assert "registers 82 tools, two of them the earlier names" in \
+        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
+        # removed three tools, as announced in 0.14
+        assert "registers 79 tools, two of them the earlier names" in \
             _flat(tools)
 
     def test_privacy_names_the_file_among_the_files_you_fill_in(self):
@@ -1371,6 +1373,10 @@ class TestTheDocuments:
             "`pseudonyms.json` with the file's names, keeping only the "
             "list's entries the file cannot hold as a line, and the file "
             "itself stays as it is. "
+            # v0.15.1, privacy by audience (the owner, 21 October 2026):
+            # the rule says which of the three things it protects
+            "Counts and line numbers, never names, protect the key (\"How "
+            "your data flows\"). "
             "The export tools refuse to "
             "write in any project's `Exegete` folder, so an export cannot "
             "replace a file you "

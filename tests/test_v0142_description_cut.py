@@ -760,7 +760,10 @@ CHANGED_0151 = {
     "delete_coding": (2772, 2226, "20b73b09f4af1cfc"),
     "import_text_file": (3979, 2949, "32c2ba85d34a6301"),
     "link_file_to_case": (1781, 1353, "5b8da085c5673f75"),
-    "list_backups": (2348, 1974, "6beb69c8efa75fac"),
+    # after the owner's sitting (tests/test_v0151_sitting_fixes.py):
+    # one made earlier "may hold files in them", the mark being read
+    # from the files; the length kept
+    "list_backups": (2348, 1973, "95e747703091a2c1"),
     "move_category": (1398, 1072, "cbf3cb5c7691d6b2"),
     "move_code_to_category": (1735, 1370, "aaea0c1644efe794"),
     "prune_backups": (3380, 2754, "ad1f10aba1338ff2"),

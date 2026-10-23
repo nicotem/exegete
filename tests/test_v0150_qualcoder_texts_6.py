@@ -72,11 +72,15 @@ LEFTOVER_LOCK = (
     "uses QualCoder, ask them once in this conversation whether it has "
     "this project open now, and if it has, to close it there before any "
     "write.")
+# v0.15.1, after the owner's sitting (tests/test_v0151_sitting_fixes.py
+# pins the fact: it asks nothing): what Exegete checks for itself
 SAID_YES = (
     "The researcher has said they use QualCoder on this computer. "
-    "QualCoder 4.0 leaves no lock file, so ask them once in this "
-    "conversation whether it has this project open, and if it has, to "
-    "close it there before any write.")
+    "Exegete found no sign that QualCoder has this project open now. It "
+    "refuses every write while QualCoder 3.8.2 has the project open, and "
+    "select_project and get_current_project warn when they see signs "
+    "that QualCoder 4.0, which leaves no lock file, may have it open. "
+    "This needs no answer from the researcher.")
 COMPUTER = (
     "QualCoder is on this computer, though nothing shows it has opened "
     "this project. QualCoder 4.0 leaves no lock file, so Exegete cannot "

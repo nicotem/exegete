@@ -4595,8 +4595,9 @@ def select_project(project_path: str) -> str:
 # project's history with QualCoder, `History.level`, and the setting),
 # and says which. At the level "none" there is none. Fix round 1: the
 # assistant cannot know whether QualCoder has the project open, so the
-# "project" text asks once, as the one for "yes" does, and the
-# "computer" text says that Exegete cannot tell.
+# "project" text asks once, as the one for "yes" did until the owner's
+# sitting of v0.15.1, and the "computer" text says that Exegete cannot
+# tell.
 NO_SIGN_WARNING_PROJECT = (
     "This project has been opened in QualCoder before. QualCoder 4.0 "
     "leaves no lock file, so ask the researcher once in this conversation "
@@ -4615,11 +4616,18 @@ NO_SIGN_WARNING_LEFTOVER_LOCK = (
     "uses QualCoder, ask them once in this conversation whether it has "
     "this project open now, and if it has, to close it there before any "
     "write.")
+# After the owner's sitting (v0.15.1): a statement that needs no answer.
+# Asked to ask once, the assistant turned the note into a question before
+# the first write; what Exegete checks for itself is said instead, the
+# refusal under the lock file and the warnings on QualCoder 4.0's signs,
+# neither of which consults the setting (qualcoder_history).
 NO_SIGN_WARNING_SAID_YES = (
     "The researcher has said they use QualCoder on this computer. "
-    "QualCoder 4.0 leaves no lock file, so ask them once in this "
-    "conversation whether it has this project open, and if it has, to "
-    "close it there before any write.")
+    "Exegete found no sign that QualCoder has this project open now. It "
+    "refuses every write while QualCoder 3.8.2 has the project open, and "
+    "select_project and get_current_project warn when they see signs "
+    "that QualCoder 4.0, which leaves no lock file, may have it open. "
+    "This needs no answer from the researcher.")
 NO_SIGN_WARNING_COMPUTER = (
     "QualCoder is on this computer, though nothing shows it has opened "
     "this project. QualCoder 4.0 leaves no lock file, so Exegete cannot "
@@ -12970,9 +12978,9 @@ def list_backups() -> str:
     ai_data/search.sqlite (which duplicates every text source in
     plaintext) and sqlite sidecar files, like QualCoder's own backups;
     QualCoder rebuilds search.sqlite on project open. Those made from
-    0.15.1 on also leave out the audio and video folders; one made
-    earlier may hold them (holds_audio_or_video, read from the
-    backup). The database is copied with SQLite's own online backup,
+    0.15.1 on leave out the audio and video folders too; one made
+    earlier may hold files in them (holds_audio_or_video, read
+    from it). The database is copied with SQLite's own online backup,
     so a backup taken while QualCoder is writing holds what was last
     committed, and
     its journal and WAL files are never copied. A backup that holds
@@ -13046,8 +13054,10 @@ QUALCODER_38_BACKUPS_NOTE = (
     "here.")
 # What a backup holds is a fact about Exegete's backups, said always:
 # those made from 0.15.1 on leave the audio and video folders out, and an
-# earlier one may hold them, which each backup's holds_audio_or_video
-# says, read from the folder (v0.15.1, fix round 2); what it adds on
+# earlier one may hold files in them, which each backup's
+# holds_audio_or_video says, read from the folder (v0.15.1, fix round 2;
+# after the owner's sitting, from the files: empty folders, which every
+# project made by Exegete or QualCoder has, are no mark); what it adds on
 # ai_data/ only when the project holds that folder with
 # something in it (fix round 1; v0.15.0: Exegete makes it empty at
 # creation, qualcoder_history.ai_data_found). QualCoder 3.8.2 makes the
@@ -13063,8 +13073,9 @@ BACKUPS_HOLD_NOTE = (
     "and SQLite's working files; those made from 0.15.1 on leave out its "
     "audio and video folders too, while one made by an earlier version "
     "may hold them, with recordings the project no longer has. Each "
-    "backup's holds_audio_or_video says whether it holds them, read from "
-    "the backup itself.")
+    "backup's holds_audio_or_video says whether it holds any file in "
+    "those folders, read from the backup itself, and audio_video_files "
+    "how many; empty folders are not marked.")
 AI_DATA_BACKUPS_NOTE = (
     "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
     "also holds its AI prompt library and chat history, which backups "
@@ -13150,10 +13161,13 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
     including the *_prerestore safety copies) and QualCoder's own
     {name}_BKUP_{...}.qda (kind 'qualcoder'). Each entry carries name,
     path, kind, created, age_days and size_mb, and whether it holds
-    audio or video folders (`holds_audio_or_video`, read from the
-    folder, never from its name or date: a backup made before 0.15.1
-    holds them, v0.15.1 fix round 2), with `audio_video_files`, the
-    files in them, when it does.
+    files in audio or video folders (`holds_audio_or_video`, read from
+    the folder, never from its name or date: a backup made before
+    0.15.1 holds the folders, v0.15.1 fix round 2), with
+    `audio_video_files`, how many, when it does. Folders with no file
+    in them give no mark (after the owner's sitting: every project made
+    by Exegete or QualCoder has them, empty), so the mark follows the
+    same files as the prune's count (`_media_files`).
     """
     backups: List[Dict[str, Any]] = []
     order: Dict[str, Tuple[datetime, int]] = {}
@@ -13183,10 +13197,11 @@ def _collect_backups(project_folder: Path) -> List[Dict[str, Any]]:
                     "age_days": round(
                         max(0.0, (now - created).total_seconds()) / 86400, 1),
                     "size_mb": round(size_bytes / (1024 * 1024), 2),
-                    "holds_audio_or_video": _holds_media_folder(entry),
                 }
-                if item["holds_audio_or_video"]:
-                    item["audio_video_files"] = len(_media_files(entry))
+                media = len(_media_files(entry))
+                item["holds_audio_or_video"] = media > 0
+                if media:
+                    item["audio_video_files"] = media
                 side = unclean_backup_side_files(entry)
                 linked = backup_database_is_link(entry)
                 if side or linked:
@@ -14118,26 +14133,6 @@ def _media_files(folder: Path) -> Dict[Tuple[str, str], int]:
             except Exception:                           # noqa: BLE001
                 continue
     return found
-
-
-def _holds_media_folder(folder: Path) -> bool:
-    """Whether a backup (or a project) holds a real folder, read with
-    `lstat`, at a top-level name a backup leaves out as audio or video
-    (`is_media_folder_entry`): a link or a junction there is not one.
-    Read from the folder, never from its name or date (v0.15.1, fix
-    round 2). Never raises."""
-    try:
-        with os.scandir(folder) as entries:
-            for entry in entries:
-                if not is_media_folder_entry(folder, entry.name):
-                    continue
-                info = entry.stat(follow_symlinks=False)
-                if (stat.S_ISDIR(info.st_mode)
-                        and not reading_folder.is_link(Path(entry.path))):
-                    return True
-    except Exception:                                   # noqa: BLE001
-        return False
-    return False
 
 
 def _project_holds_exegete_entry(project_folder: Path) -> bool:

@@ -424,11 +424,15 @@ def test_the_listing_says_of_each_backup_whether_it_holds_them(
     if can_link:
         # a link or a junction at the name is not a folder it holds
         assert listed[linked.name]["holds_audio_or_video"] is False
-    # empty folders, as a project made by Exegete has, are still folders
+    # empty folders, as every project made by Exegete or QualCoder has,
+    # hold no file and give no mark (after the owner's sitting,
+    # tests/test_v0151_sitting_fixes.py)
     for kind in ("audio", "video"):
         shutil.rmtree(new_name_with / kind)
         (new_name_with / kind).mkdir()
-    assert _listed()[new_name_with.name]["audio_video_files"] == 0
+    emptied = _listed()[new_name_with.name]
+    assert emptied["holds_audio_or_video"] is False
+    assert "audio_video_files" not in emptied
 
 
 def test_pruning_the_only_copy_of_a_recording_is_said_first(selected):

@@ -102,14 +102,16 @@ RETENTION = " (retention never touches QualCoder's own backups)"
 # its sign, in the same note
 # v0.15.1: and the audio and video folders, which backups made from
 # 0.15.1 on leave out and one made earlier may hold (its fix round 2,
-# tests/test_v0151_media_out.py)
+# tests/test_v0151_media_out.py); after the owner's sitting, the mark
+# read from the files in them (tests/test_v0151_sitting_fixes.py)
 BACKUPS_HOLD = (
     "Exegete's backups hold the whole project folder except lock files "
     "and SQLite's working files; those made from 0.15.1 on leave out its "
     "audio and video folders too, while one made by an earlier version "
     "may hold them, with recordings the project no longer has. Each "
-    "backup's holds_audio_or_video says whether it holds them, read from "
-    "the backup itself.")
+    "backup's holds_audio_or_video says whether it holds any file in "
+    "those folders, read from the backup itself, and audio_video_files "
+    "how many; empty folders are not marked.")
 AI_DATA = (
     "When a project has been used in QualCoder (3.8.2 or 4.0), ai_data/ "
     "also holds its AI prompt library and chat history, which backups "

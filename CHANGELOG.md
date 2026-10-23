@@ -76,8 +76,10 @@ loads the new tool list.
   project's `exegete.json`) and `prepare_names_list` (the names file).
 - **Backups leave out the audio and video folders, and a restore keeps
   the project's.** A backup made by 0.15.1 holds no recordings;
-  `list_backups` marks each backup that does (`holds_audio_or_video`),
-  as one made by 0.15.0 or by QualCoder may. A recording the project no
+  `list_backups` marks each backup that holds a file in its audio or
+  video folders (`holds_audio_or_video`, with the count in
+  `audio_video_files`), as one made by 0.15.0 or by QualCoder may;
+  folders with nothing in them give no mark. A recording the project no
   longer has may be kept only in such an older backup, and pruning it
   removes it: the preview of `prune_backups` counts such files
   (`audio_video_files_only_here`), so you can copy them out first.
@@ -273,7 +275,10 @@ loads the new tool list.
   no can be given only in the text setting. Whatever either says,
   Exegete still refuses to write while QualCoder 3.8.2 has a project
   open, and still warns when it sees signs that QualCoder 4.0 may have
-  one open.
+  one open. When the answer is yes and selecting a project finds no
+  sign of QualCoder there, the selection's note says what Exegete
+  checks for itself and asks nothing of you; in 0.15.0 the note had the
+  assistant ask you once whether QualCoder had the project open.
 - **The text settings stay**, with their keys, titles and defaults, so a
   value saved in 0.15.0 keeps working, and the Terminal routes are
   unchanged. The extension passes the switches as
@@ -600,8 +605,9 @@ loads the new tool list.
   says how many files. A recording the project no longer has may now be
   kept only in such a backup, and pruning the backup removes it: copy it
   out first if you need it. `list_backups` says of each backup whether
-  it holds audio or video folders (`holds_audio_or_video`, read from the
-  backup itself, with `audio_video_files`), and the preview of
+  it holds a file in its audio or video folders
+  (`holds_audio_or_video`, read from the backup itself, with the count
+  in `audio_video_files`; empty folders give no mark), and the preview of
   `prune_backups` gives, for each backup it would remove, how many files
   there neither the project nor a backup it keeps holds, by name and
   size (`audio_video_files_only_here`), with a note naming the backup
@@ -876,6 +882,13 @@ loads the new tool list.
   macOS 14 on Apple silicon, and the lock file cannot tell one release
   of macOS from another, so it gives every Mac 1.28.2. Both releases
   read the test documents' PDFs to the same text.
+- **QualCoder writes the coder name set in QualCoder into each project
+  it opens**, as the project's own coder name (QualCoder 3.8.2 and 4.0;
+  when the two differ, it first asks whether to keep its name or switch
+  to the project's). Exegete leaves the name as QualCoder wrote it, and
+  selecting the project says so when it differs from your coder name in
+  Exegete's settings (`coder_name_notes`). The maintainer's sitting for
+  this release met it with QualCoder 4.0.
 - **A project made in Exegete before 0.15.0**, and not yet opened in
   QualCoder 4.0, can stop once at its first open there with an error
   about its `ai_data` folder; opening it again works. The error most

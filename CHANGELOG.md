@@ -13,24 +13,24 @@ Nothing yet.
 
 v0.15.1, the second of the v0.15 releases and the first part of the
 safety net. What a researcher notices first: Exegete itself takes one
-backup before every change to the project's database, at the last
-moment and whatever a call asks, and a change it refuses leaves no
-backup; backups leave out the audio and video folders, and a restore
-keeps the project's; a restore's preview says what it would bring back,
-and `restore_backup` is in the smaller tool set too; a plain text file
-not saved as UTF-8 can be read in the character set you choose, from
-one line shown as each set reads it; an import counts, by file, the
-places where a name from the names list may still show in a form the
-list does not replace; and two settings are switches in the desktop
-extension. The removals announced in 0.14 are made (three tools, four
-help topics and some arguments), except the REFI-QDA export, which
-stays, its known faults named. Less visible: the approval token's tag
-is now under its signature; Exegete's lock file is kept fresh for the
-whole of every write; a named pipe or a folder where a project keeps
-its lock file or SQLite's side files is refused rather than making a
-tool wait; and on Windows x64 and Linux, PDFs are read with PyMuPDF 2,
-which on Windows x64 makes a few reports of its use to Windows'
-diagnostic data ("Known limits", below).
+backup before every change to the project's database, at the last moment
+and whatever a call asks, and a change it refuses leaves no backup;
+backups leave out the audio and video folders, and a restore keeps the
+project's; a restore's preview says what it would bring back, and
+`restore_backup` is in the smaller tool set too; a plain text file not
+saved as UTF-8 can be read in the character set you choose, from one
+line shown as each set reads it; an import counts, by file, the places
+where a name from the names list may still show in a form the list does
+not replace; and two settings are switches in the desktop extension. The
+removals announced in 0.14 are made (three tools, four help topics and
+some arguments), except the REFI-QDA export, which stays, its known
+faults named. Less visible: the approval token's tag is now under its
+signature; Exegete's lock file is kept fresh for the whole of every
+write; a named pipe or a folder where a project keeps its lock file or
+SQLite's side files is refused rather than making a tool wait; and on
+Windows x64 and Linux (x86-64 and Arm) with Python 3.11 to 3.14, PDFs
+are read with PyMuPDF 2, which on Windows x64 makes a few reports of its
+use to Windows' diagnostic data ("Known limits", below).
 
 The maintainer decided the questions behind these on 20, 21 and 22
 October 2026. Undo, which was planned for this release, moves whole to
@@ -87,11 +87,11 @@ loads the new tool list.
   0.15.0 takes first.
 - **A refused change leaves no backup**, so a refusal no longer adds a
   backup to the list. A write whose backup SQLite cannot copy whole (a
-  damaged database) is now refused, with the reason, rather than
-  copying the database file as it is. A backup cut short because
-  Exegete's process ended during the copy is no longer listed, kept by
-  a prune or restored, and the next backup removes it once it is an
-  hour old.
+  damaged database) is now refused rather than copying the database file
+  as it is, though its answer gives a cause that does not apply ("Known
+  limits", below). A backup cut short because Exegete's process ended
+  during the copy is no longer listed, kept by a prune or restored, and
+  the next backup removes it once it is an hour old.
 - **Two switches in the extension's settings**, "Use the small tool
   set, for local models" and "I use QualCoder on this computer", both
   off after the update. "Tool set" and "Do you also use QualCoder on
@@ -178,13 +178,18 @@ loads the new tool list.
   their tag is under their signature. A preview made by 0.15.0 just
   before the update gives a token (`qcp1.`) that 0.15.1 still accepts
   for its hour, so the call copied from it can be run after the update,
-  with three exceptions, refused as changed or as carrying a removed
-  argument: a restore previewed with 0.15.0, a `delete_code` preview
-  for a code with sub-codes (its call carries the removed argument), and a
-  `save_names_list` preview (its signed state now holds a new count).
-  Preview again, and the new token works. A token made by 0.15.1 is not
-  accepted by 0.15.0, which matters only with two versions on one
-  computer, or after going back.
+  except in six cases, each refused with nothing done: a restore
+  previewed with 0.15.0 (refused as changed); a `delete_code` preview
+  for a code with sub-codes (its call carries the removed argument); a
+  `save_names_list` preview (its signed state now holds a new count); a
+  `prune_backups` preview (its signed state now also covers the
+  recordings that only an old backup holds); a `pseudonymise_source`
+  preview made with `overlap_policy` `qualcoder_edit_parity`, a value
+  now refused; and an `import_documents` preview that held back or
+  refused a file after reading it (Exegete kept that decision in memory
+  only, and the update restarts it). Preview again, and the new token
+  works. A token made by 0.15.1 is not accepted by 0.15.0, which matters
+  only with two versions on one computer, or after going back.
 - **The restore.** Its preview now says when the backup was taken, what
   the project and the backup hold (counts, never a name) and what
   happens to the names list; a names list saved, changed or removed
@@ -446,36 +451,35 @@ loads the new tool list.
 
 ### PDFs with PyMuPDF 2, and files refused as damaged
 
-- **PDFs are read with PyMuPDF 2 on Windows x64 and Linux.** With
-  Python 3.11 to 3.14 there (on Linux, on x86-64 and Arm) (the desktop extension's Python, 3.13,
-  among them), the optional part `pdf-epub` now brings PyMuPDF 2.0 and
-  the nine libraries it needs: onnxruntime, numpy, networkx, protobuf,
-  flatbuffers, psutil, PyYAML, tabulate and packaging (NOTICE gives
-  their licences). Macs, Windows on Arm, Linux on other processors, Python 3.10,
-  and Python 3.15 and later keep PyMuPDF 1.x (1.28.2 in the extension): PyMuPDF 2 or
-  onnxruntime has no ready-made package there, or, on Apple silicon
-  Macs, needs macOS 14. Both releases read the test documents' PDFs to
-  the text QualCoder 4.0's own functions store, and CI checks Exegete's
-  text against QualCoder's with each. A PDF's reading is now given 2 GB
-  of memory, since with PyMuPDF 2 it can need more than 1 GB on Linux;
-  every other kind of file keeps 1 GB, and a PDF refused for memory
-  names 2048 MB. On Linux
-  the reading process starts with three fixed settings that keep the
-  memory its threads reserve small (`MALLOC_ARENA_MAX`,
+- **PDFs are read with PyMuPDF 2 on Windows x64 and Linux.** With Python
+  3.11 to 3.14 there (on Linux, on x86-64 and Arm; the desktop
+  extension's Python, 3.13, among them), the optional part `pdf-epub`
+  now brings PyMuPDF 2.0 and the nine libraries it needs: onnxruntime,
+  numpy, networkx, protobuf, flatbuffers, psutil, PyYAML, tabulate and
+  packaging (NOTICE gives their licences). Macs, Windows on Arm, Linux
+  on other processors, Python 3.10, and Python 3.15 and later keep
+  PyMuPDF 1.x (1.28.2 in the extension): PyMuPDF 2 or onnxruntime has no
+  ready-made package there, or, on Apple silicon Macs, needs macOS 14.
+  Both releases read the test documents' PDFs to the text QualCoder
+  4.0's own functions store, and CI checks Exegete's text against
+  QualCoder's with each. A PDF's reading is now given 2 GB of memory,
+  since with PyMuPDF 2 it can need more than 1 GB on Linux; every other
+  kind of file keeps 1 GB, and a PDF refused for memory names 2048 MB.
+  On Linux the reading process starts with three fixed settings that
+  keep the memory its threads reserve small (`MALLOC_ARENA_MAX`,
   `OPENBLAS_NUM_THREADS`, `OMP_NUM_THREADS`). onnxruntime's usage
   reports to Microsoft, on by default, are switched off in the reading
   process (`ORT_DISABLE_TELEMETRY`, and onnxruntime's own switch): on
-  Linux entirely; on Windows, where that switch can be reached only
-  once onnxruntime has loaded, all but the few reports it makes as it
-  loads, which hold facts about the computer, its graphics adapters and
+  Linux entirely; on Windows, where that switch can be reached only once
+  onnxruntime has loaded, all but the few reports it makes as it loads,
+  which hold facts about the computer, its graphics adapters and
   onnxruntime, and nothing from your documents (PRIVACY.md, "How your
   data flows", says what they hold and what you can do; "Known limits",
-  below). The cost on those
-  computers: about 75 to 90 MB more to download and 150 to 190 MB more
-  on disk in the extension, and 0.4 to 1 second more to start each
-  PDF's reading. INSTALL.md names the computers where pip cannot install
-  the part, with a way through. 0.15.0's notes named the hold to 1.x
-  among their known limits.
+  below). The cost on those computers: about 75 to 90 MB more to
+  download and 150 to 190 MB more on disk in the extension, and 0.4 to 1
+  second more to start each PDF's reading. INSTALL.md names the
+  computers where pip cannot install the part, with a way through.
+  0.15.0's notes named the hold to 1.x among their known limits.
 - **Where psutil comes with PyMuPDF 2, the check for a running QualCoder
   goes through it.** On Windows x64 and Linux with Python 3.11 to 3.14,
   the desktop extension included, psutil now comes with the optional
@@ -637,8 +641,8 @@ loads the new tool list.
   stays in use for the whole restore.** `restore_backup`'s preview now
   gives when the backup was taken (`backup_taken`, with
   `backup_dated_from`, as `list_backups` dates it); how many files,
-  codes, categories, codings, cases, annotations and journal entries
-  the project has now and the backup has (`counts`, every coder's rows
+  codes, categories, codings, cases, annotations and journal entries the
+  project has now and the backup has (`counts`, every coder's rows
   together, never naming one; null, with `counts_note`, for a database
   that cannot be read at that moment); and whether the project's names
   list (`pseudonyms.json`) is the same in the backup, replaced by the
@@ -652,21 +656,20 @@ loads the new tool list.
   restore's checks to the end of its copy, or of its recovery; before,
   the restore took it only for the copy, and its own clearing of the
   project removed it, so the copy ran without one. QualCoder 3.8.2, or
-  another conversation using Exegete, now finds the project in use
-  until the restore ends, rather than being able to open it half
-  copied. Over a lock file already stale (not refreshed for over 30
-  seconds, as one left by a program that stopped without removing it,
-  or by a write cut short), nothing is held, as before: the restore
-  removes that file and copies with no lock file in place, so a
-  program opening the project meanwhile is not told that it is in use.
-  A lock file another program takes over before the project is
-  cleared (possible only once Exegete's has gone unrefreshed for 30
-  seconds, as when the computer sleeps) refuses the restore with
-  nothing removed, and the answer names the safety backup. A lock file in the backup is
-  never copied into the project. The answer repeats `backup_taken` and
-  gives the restored project's `counts`. A restore previewed with
-  0.15.0 is refused as a changed project after the update: preview it
-  again.
+  another conversation using Exegete, now finds the project in use until
+  the restore ends, rather than being able to open it half copied. Over
+  a lock file already stale (not refreshed for over 30 seconds, as one
+  left by a program that stopped without removing it, or by a write cut
+  short), nothing is held, as before: the restore removes that file and
+  copies with no lock file in place, so a program opening the project
+  meanwhile is not told that it is in use. A lock file another program
+  takes over before the project is cleared (possible only once Exegete's
+  has gone unrefreshed for 30 seconds, as when the computer sleeps)
+  refuses the restore with nothing removed, and the answer names the
+  safety backup. A lock file in the backup is never copied into the
+  project. The answer repeats `backup_taken` and gives the restored
+  project's `counts`. A restore previewed with 0.15.0 is refused as a
+  changed project after the update: preview it again.
 - **`restore_backup` is in the `core` set**, beside `list_backups`, so a
   local model working with the smaller set can restore a backup, in the
   same two steps. `core` now has 27 tools, with `search_memos` (see
@@ -676,18 +679,18 @@ loads the new tool list.
 
 - **The approval token's tag is now under its signature.** The token a
   two-step tool's preview gives (`preview_token`) carries a short tag
-  naming the operation it was made for; the signature did not cover
-  that tag, so a token whose tag had been altered still worked for its
-  own operation. It now covers it: a token with an altered tag is
-  refused as made for another operation, with nothing changed. Tokens
-  now start `qcp2.`. A token made by 0.15.0 or earlier (`qcp1.`) is
-  still accepted for its hour, so a preview made just before an update
-  can still be run after it, unless the project or the operation has
-  changed since (some operations are refused differently in this
-  release); then preview again. A pseudonymisation run records the tag
-  of the token that approved it, in either form, in its journal entry
-  and its run manifest. A token made by this release is not accepted
-  by 0.15.0, which answers that it is not a token Exegete issued: this
+  naming the operation it was made for; the signature did not cover that
+  tag, so a token whose tag had been altered still worked for its own
+  operation. It now covers it: a token with an altered tag is refused as
+  made for another operation, with nothing changed. Tokens now start
+  `qcp2.`. A token made by 0.15.0 or earlier (`qcp1.`) is still accepted
+  for its hour, so a preview made just before an update can still be run
+  after it, unless the project or the operation has changed since
+  ("Upgrading from 0.15.0", above, names the previews refused after the
+  update); then preview again. A pseudonymisation run records the tag of
+  the token that approved it, in either form, in its journal entry and
+  its run manifest. A token made by this release is not accepted by
+  0.15.0, which answers that it is not a token Exegete issued: this
   matters only when two versions of Exegete run on one computer, or
   after going back to 0.15.0.
 
@@ -756,16 +759,17 @@ loads the new tool list.
 - **The documents read again against the code, and put right where they
   were no longer true**: the REFI-QDA export is kept, and its
   description and answers name its known faults instead of its removal
-  (below); the plans give undo to v0.15.2
-  and method to v0.15.3; the setting OpenAI documents for Codex is said
-  to be untested, with no test promised; PRIVACY.md names QualCoder
-  3.8's AI search store, which backups keep (as `list_backups`' note now
-  says), what `compare_coders` names and what stays on the computer, the
-  reading folder included; the steps for uninstalling say that Claude
-  Desktop's log of the extension and the assistants' own records of the
-  conversation stay; the install and update commands carry the optional part for PDF and
-  EPUB; and the account of the extension's folder setting after an
-  update says what was seen, and where.
+  (above, "The REFI-QDA export is kept, its faults named"); the plans
+  give undo to v0.15.2 and method to v0.15.3; the setting OpenAI
+  documents for Codex is said to be untested, with no test promised;
+  PRIVACY.md names QualCoder 3.8's AI search store, which backups keep
+  (as `list_backups`' note now says), what `compare_coders` names and
+  what stays on the computer, the reading folder included; the steps for
+  uninstalling say that Claude Desktop's log of the extension and the
+  assistants' own records of the conversation stay; the install and
+  update commands carry the optional part for PDF and EPUB; and the
+  account of the extension's folder setting after an update says what
+  was seen, and where.
 - **PRIVACY.md says what its rules protect.** Its part on what reaches
   the AI provider now opens with it: the provider has whatever you let
   the assistant read, so an answer that returns text the assistant has
@@ -806,19 +810,26 @@ loads the new tool list.
   v0.15.2; until then `restore_backup` takes a project back to a backup,
   undoing everything done after it.
 - **A lock file left by an Exegete process that ended during a write
-  stays until it is removed by hand.** QualCoder 3.8 then finds the
-  project in use, and later writes by Exegete, which read the file as
-  left over once it is 30 seconds old, go ahead without a lock file of
-  their own, so QualCoder 3.8 is not told of them. If QualCoder 3.8 says
-  a project is in use when nothing is using it, you could move
-  `project_in_use.lock` out of the project folder, once you are sure no
-  program has the project open.
+  stays until it is removed:** by hand, by a restore, or by QualCoder
+  3.8.2, which, once the file has gone 30 seconds without being
+  refreshed, says that the project was not properly closed, opens it
+  when you press OK, and takes the file over. Until then, later writes
+  by Exegete, which read the file as left over once it is 30 seconds
+  old, go ahead without a lock file of their own, so QualCoder 3.8.2 is
+  not told of them. Once you are sure no program has the project open,
+  you could move `project_in_use.lock` out of the project folder, so
+  that Exegete's writes take a lock file of their own again.
 - **A link at the lock file's name that leads nowhere** lets writes go
   ahead without the lock file. Such a link arises only from a folder
   copied with a tool that keeps links.
 - **A backup stopped by a named pipe** in the project folder says to
   check disk space and permissions, which is not the cause: the pipe is.
   Moving it out of the project folder lets the backup through.
+- **A write whose backup SQLite cannot copy whole** (a damaged database)
+  is refused, nothing written, and its answer says to check disk space
+  and permissions, which is not the cause either: if the disk has room
+  and the project folder can be written to, the database itself may be
+  damaged.
 - **A backup cut short stays beside the project under a hidden name**
   until the next backup removes it, once it is an hour old: whatever it
   had copied stays there meanwhile, the names list and the names file
@@ -863,8 +874,8 @@ loads the new tool list.
 - **Every Mac keeps PyMuPDF 1.x for now.** PyMuPDF 2 or onnxruntime,
   which it needs, has no ready-made package for some Macs and needs
   macOS 14 on Apple silicon, and the lock file cannot tell one release
-  of macOS from another, so it gives every Mac 1.28.2. Both releases read the test documents' PDFs to the
-  same text.
+  of macOS from another, so it gives every Mac 1.28.2. Both releases
+  read the test documents' PDFs to the same text.
 - **A project made in Exegete before 0.15.0**, and not yet opened in
   QualCoder 4.0, can stop once at its first open there with an error
   about its `ai_data` folder; opening it again works. The error most
@@ -1086,9 +1097,10 @@ the extension installs; then a part for contributors, and the
 measurements.
 
 Plans since this release: the removals came in 0.15.1, with the first
-part of the safety net; undo, choosing what a pseudonymisation run
-changes and coding sessions kept with their project moved to v0.15.2,
-and method to v0.15.3. The entry is as it was published.
+part of the safety net, all but the REFI-QDA export, which stays; undo,
+choosing what a pseudonymisation run changes and coding sessions kept
+with their project moved to v0.15.2, and method to v0.15.3. The rest of
+the entry is as it was published.
 
 ### Upgrading from 0.14.3
 

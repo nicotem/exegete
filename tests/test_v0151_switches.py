@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """v0.15.1, two settings as switches (ruling 83): the extension's page
-gains "Use the small tool set, for local models" and "I use QualCoder on
+gains "Limit Exegete to its small tool set" and "I use QualCoder on
 this computer", beside the text settings, which are still read.
 
 - Each switch is read by env_settings.read_switch: on, true or 1 is on;
@@ -229,7 +229,7 @@ class TestNeverLifted:
 # =============================================================================
 
 CONFIG = TEMPLATE["user_config"]
-SWITCHES = {"small_toolset": ("Use the small tool set, for local models",
+SWITCHES = {"small_toolset": ("Limit Exegete to its small tool set",
                               SMALL, "toolset"),
             "i_use_qualcoder": ("I use QualCoder on this computer", I_USE,
                                 "uses_qualcoder")}

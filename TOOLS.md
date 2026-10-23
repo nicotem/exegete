@@ -995,7 +995,7 @@ declares, and each tool's own description says what each one does.
 
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in Exegete's environment (in the extension,
-> the switch "Use the small tool set, for local models"), only the
+> the switch "Limit Exegete to its small tool set"), only the
 > 27-tool supervised coding set is registered: read_brief,
 > list_available_projects, select_project, get_current_project,
 > get_project_summary,

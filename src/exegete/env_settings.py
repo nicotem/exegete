@@ -275,8 +275,8 @@ SWITCH_OFF = ("off", "false", "0")
 
 def small_toolset_switch(environ: Optional[Mapping[str, str]] = None
                          ) -> Optional[str]:
-    """EXEGETE_SMALL_TOOLSET, the extension's switch "Use the small tool
-    set, for local models", which has one spelling only (names.
+    """EXEGETE_SMALL_TOOLSET, the extension's switch "Limit Exegete to
+    its small tool set", which has one spelling only (names.
     NEW_ONLY_SETTINGS): its raw value, or None when it is not set.
     read_switch says what each value means."""
     env = os.environ if environ is None else environ

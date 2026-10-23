@@ -49,15 +49,15 @@
   "user_config": {
     "small_toolset": {
       "type": "boolean",
-      "title": "Use the small tool set, for local models",
-      "description": "Off: every tool, creating a new project included (recommended). On: a smaller set for local models, which cope less well with many tools; it cannot create a project. Typing core in \"Tool set\" does the same: if either asks for the smaller set, it is used. After changing a setting, quit Claude Desktop and open it again.",
+      "title": "Limit Exegete to its small tool set",
+      "description": "Useful with a local model that has little room for the tools' descriptions: on, Exegete offers its small tool set, 27 tools instead of all 79, which cannot create a project. Off: every tool, creating a new project included (recommended). Typing core in \"Tool set\" does the same: if either asks for the small tool set, it is used. After changing a setting, quit Claude Desktop and open it again.",
       "default": false,
       "required": false
     },
     "toolset": {
       "type": "string",
       "title": "Tool set",
-      "description": "Type one of two words. full: every tool, creating a new project included (recommended). core: a smaller set for local models. If this shows lifecycle, the earlier name of full, it works as full. Any other word stops the extension from starting. If the switch \"Use the small tool set, for local models\" is on, the smaller set is used whether this says full or core. After changing a setting, quit Claude Desktop and open it again.",
+      "description": "Type one of two words. full: every tool, creating a new project included (recommended). core: a smaller set for local models. If this shows lifecycle, the earlier name of full, it works as full. Any other word stops the extension from starting. If the switch \"Limit Exegete to its small tool set\" is on, the smaller set is used whether this says full or core. After changing a setting, quit Claude Desktop and open it again.",
       "default": "full",
       "required": false
     },

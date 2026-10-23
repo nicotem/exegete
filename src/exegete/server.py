@@ -23550,7 +23550,7 @@ def _resolve_toolset_mode() -> str:
     """Read EXEGETE_TOOLSET (default full); `lifecycle`, the earlier name
     of `full`, is read as `full` in any letter case; unknown values
     raise, whatever the switch says. Then `core` when the extension's
-    switch "Use the small tool set, for local models"
+    switch "Limit Exegete to its small tool set"
     (EXEGETE_SMALL_TOOLSET, v0.15.1, ruling 83) is on, and otherwise the
     text's value: either one asking for the smaller set gives it."""
     reading = env_settings.read("toolset")

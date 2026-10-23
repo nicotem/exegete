@@ -349,8 +349,8 @@ class TestTheExtension:
         option = MANIFEST["user_config"]["toolset"]
         assert option["type"] == "string"
         assert option["default"] == "full"
-        # v0.15.1: the words, as before; then the switch "Use the small
-        # tool set, for local models", named by its title, gives the
+        # v0.15.1: the words, as before; then the switch "Limit Exegete
+        # to its small tool set", named by its title, gives the
         # smaller set over either word (tests/test_v0151_switches.py,
         # what the words say); the restart sentence last
         assert option["description"].startswith(SETTING_DESCRIPTION)
@@ -384,8 +384,8 @@ class TestTheExtension:
                 "a project included; `core` is the reduced set for local "
                 "models; `lifecycle` was `full`'s name in the extension "
                 "before 0.15.0.") in block
-        # v0.15.1: with the extension, `core` when the switch "Use the
-        # small tool set, for local models" is on or "Tool set" says
+        # v0.15.1: with the extension, `core` when the switch "Limit
+        # Exegete to its small tool set" is on or "Tool set" says
         # `core`, `full` otherwise; `lifecycle` still works as `full`
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
         assert (f"it is `core` when the extension's switch \\\"{switch}\\\" "

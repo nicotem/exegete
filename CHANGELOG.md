@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
-## [0.15.1-alpha] - 2026-10-26
+## [0.15.1-alpha] - 2026-10-23
 
 v0.15.1, the second of the v0.15 releases and the first part of the
 safety net. What a researcher notices first: Exegete itself takes one
@@ -94,8 +94,8 @@ loads the new tool list.
   limits", below). A backup cut short because Exegete's process ended
   during the copy is no longer listed, kept by a prune or restored, and
   the next backup removes it once it is an hour old.
-- **Two switches in the extension's settings**, "Use the small tool
-  set, for local models" and "I use QualCoder on this computer", both
+- **Two switches in the extension's settings**, "Limit Exegete to its
+  small tool set" and "I use QualCoder on this computer", both
   off after the update. "Tool set" and "Do you also use QualCoder on
   this computer?" are still read, so nothing needs changing; but if
   "Tool set" says `core`, the smaller set stays with the new switch
@@ -262,7 +262,7 @@ loads the new tool list.
 
 ### Two settings as switches in the extension
 
-- **"Use the small tool set, for local models"**, a switch on the
+- **"Limit Exegete to its small tool set"**, a switch on the
   desktop extension's settings page, off by default. On, Exegete
   registers `core`, the smaller set for local models, which cannot
   create a project; off, "Tool set" decides, as before. If either asks

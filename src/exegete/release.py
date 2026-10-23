@@ -17,7 +17,7 @@ VERSION = "0.15.1-alpha"
 # The release date, as the CHANGELOG heading gives it (set again on the
 # day if the release moves: the CHANGELOG heading, CITATION.cff and the
 # update site's two files hold the same date)
-RELEASED = "2026-10-26"
+RELEASED = "2026-10-23"
 # One or two plain sentences: what is new for a researcher
 # (0.15.1's note after an update; the removals, the switches' details
 # and what an update changes are in the release notes and the

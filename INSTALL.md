@@ -32,7 +32,7 @@ EPUB documents ("PDF and EPUB: the optional part", below).
    fetch a few dependencies. The first install takes a minute or two.
 4. **Look at its settings** (Settings, Extensions, Exegete).
    The defaults suit a first session:
-   - **Use the small tool set, for local models**: off unless you
+   - **Limit Exegete to its small tool set**: off unless you
      switch it on. Off, Exegete offers every tool, creating a new
      project included (recommended); on, a smaller set for local
      models, which cannot create a project. Typing `core` in "Tool set"
@@ -42,7 +42,7 @@ EPUB documents ("PDF and EPUB: the optional part", below).
      models. Type one of the two words: any other word stops the
      extension from starting. Installed before 0.15.0, it may show
      `lifecycle`, the earlier name of `full`; it works as `full`. If
-     the switch "Use the small tool set, for local models" is on, the
+     the switch "Limit Exegete to its small tool set" is on, the
      smaller set is used whether this says `full` or `core`.
    - **Folder for projects**: where new projects are created and
      working copies of projects are kept. The default,
@@ -802,8 +802,8 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   asking for `core` gives `core`.
   Any other value stops Exegete at start-up with an error naming the
   valid values. Resources and prompts are not affected.
-- `EXEGETE_SMALL_TOOLSET` (0.15.1): the extension's switch "Use the
-  small tool set, for local models". `on`, `true` or `1`, in any letter
+- `EXEGETE_SMALL_TOOLSET` (0.15.1): the extension's switch "Limit
+  Exegete to its small tool set". `on`, `true` or `1`, in any letter
   case, gives `core` whichever of `full` and `core` `EXEGETE_TOOLSET`
   says (an unknown word there still stops Exegete); `off`, `false`,
   `0`, unset or blank leaves the choice to `EXEGETE_TOOLSET`. Any other

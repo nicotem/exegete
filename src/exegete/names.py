@@ -63,8 +63,8 @@ OLD_TOOLSET_NAMES = {"lifecycle": "full"}
 # (qualcoder_history.read_setting). The desktop extension's two switches
 # (v0.15.1, ruling 83), read through env_settings.small_toolset_switch
 # and env_settings.i_use_qualcoder_switch and each read by
-# env_settings.read_switch: `small_toolset`, "Use the small tool set, for
-# local models", which gives `core` when on, whatever EXEGETE_TOOLSET
+# env_settings.read_switch: `small_toolset`, "Limit Exegete to its small
+# tool set", which gives `core` when on, whatever EXEGETE_TOOLSET
 # says; `i_use_qualcoder`, "I use QualCoder on this computer", which
 # gives the answer yes when on, whatever EXEGETE_USES_QUALCODER says.
 # Off, each leaves the choice to its text setting.

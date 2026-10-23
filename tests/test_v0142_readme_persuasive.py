@@ -269,8 +269,8 @@ def _tools(mode="full"):
 # that and no more: 40,445. Its fix round: the backup before each change
 # to the project's database, and PRIVACY's heading on Exegete's log, 23
 # characters more: 40,468.
-# v0.15.1, the two switches: "Getting started" leaves the switch "Use
-# the small tool set, for local models" off, and the tool sets' table
+# v0.15.1, the two switches: "Getting started" leaves the switch "Limit
+# Exegete to its small tool set" off, and the tool sets' table
 # names it beside `EXEGETE_TOOLSET=core`. That takes 80 characters, and
 # the limit is raised by that and no more: 40,548.
 # v0.15.1, the small corrections: "Two coder names" says that a change

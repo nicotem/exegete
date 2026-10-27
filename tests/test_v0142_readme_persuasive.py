@@ -933,9 +933,11 @@ def test_what_comes_next_is_plans():
     # owner's decisions of 20 October 2026, ruling 85, item 1: the safety
     # net in two releases, v0.15.1 and v0.15.2, with undo in the second,
     # and method in v0.15.3; v0.15.1's release preparation takes its own
-    # item out, as 0.14.3's did)
+    # item out, as 0.14.3's did; the owner's form of 27 October, ruling
+    # 105: coding sessions kept with their project in v0.15.3, method in
+    # v0.15.4)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15.2", "v0.15.3", "v0.16", "v0.17", "Later"]
+        "v0.15.2", "v0.15.3", "v0.15.4", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do

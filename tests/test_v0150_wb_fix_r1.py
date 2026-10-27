@@ -132,24 +132,30 @@ class TestTheRemovalsInV0151:
         found = [m.group(0) for m in BARE_V015.finditer(_read(name))]
         assert found == [], name
 
-    def test_what_comes_next_lists_v0151_to_v0153(self):
+    def test_what_comes_next_lists_v0152_to_v0154(self):
         """The owner's decisions of 20 October 2026 (ruling 85): the
         safety net in two releases, undo in the second (the sprint moved
-        it whole to v0.15.2), method in v0.15.3 with the earlier tool
-        names and the ignored backup option; the REFI-QDA export kept."""
+        it whole to v0.15.2), method with the earlier tool names and the
+        ignored backup option; the REFI-QDA export kept. His form of 27
+        October (ruling 105): coding sessions kept with their project in
+        a v0.15.3 of their own, method in v0.15.4 (the releases
+        themselves are held to scripts/release_plan.py by the facts
+        check)."""
         readme = _flat(_read("README.md"))
         nxt = readme[readme.index("## What comes next"):]
         nxt = nxt[:nxt.index("## ", 5)]
-        items = {item.split(",")[0]: item for item in nxt.split(" - ")[1:]}
+        items = {item.split(",")[0].split(":")[0]: item
+                 for item in nxt.split(" - ")[1:]}
         # v0.15.1's release preparation: its own item goes once it is
         # released; what it brought is in the CHANGELOG's entry
-        assert list(items)[:3] == ["v0.15.2", "v0.15.3", "v0.16"]
+        assert list(items)[:4] == ["v0.15.2", "v0.15.3", "v0.15.4", "v0.16"]
         assert "undo a session's changes" in items["v0.15.2"]
         assert "choose which mentions to keep" in items["v0.15.2"]
-        assert "method" in items["v0.15.3"]
+        assert "coding sessions kept with their project" in items["v0.15.3"]
+        assert "method" in items["v0.15.4"]
         assert "the earlier names of the two renamed tools" \
-            in items["v0.15.3"]
-        assert "backup option" in items["v0.15.3"]
+            in items["v0.15.4"]
+        assert "backup option" in items["v0.15.4"]
         # the REFI-QDA export is kept (ruling 85, item 2): no removal
         # announced for it anywhere in the README
         assert "removed in 0.15" not in readme

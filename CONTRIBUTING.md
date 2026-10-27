@@ -312,6 +312,8 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)
+│   ├── release_plan.py         # What comes in which release: the table the texts are held to
+│   ├── code_texts.py           # The texts the package's code holds, read without running it
 │   ├── check_advisories.py     # Asks OSV's database of advisories about every release in the lock
 │   ├── extension_libraries.py  # What the desktop extension installs on each computer, as one table
 │   ├── compare_release_surface.py  # Compares what two releases offer an assistant and a researcher

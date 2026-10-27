@@ -23392,7 +23392,7 @@ async def check_for_updates() -> str:
 # nothing (it starts a coding session) and analyze_file_with_coding reads
 # a file with its codings, so each now has a name that says what it does.
 # The earlier names are still listed, with one sentence, until the release
-# on method (planned as v0.15.3) removes them, so that an instruction or a
+# on method (planned as v0.15.4) removes them, so that an instruction or a
 # conversation that names one still reaches the tool. Each runs the very
 # same function, with the same arguments, annotations and answer;
 # registered after the last tool, so the others keep their order. An

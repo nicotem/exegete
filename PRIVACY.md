@@ -7,7 +7,7 @@ an informed decision, which many AI tools do not. It is not legal
 advice.
 
 Two tools were renamed in 0.15.0, and their earlier names are still
-listed until a later release (planned as v0.15.3) removes them
+listed until a later release (planned as v0.15.4) removes them
 (TOOLS.md, "Earlier names"). What this document says of either tool
 holds under both its names.
 

@@ -647,12 +647,12 @@ github.com/nicotem/exegete
 Plans, not promises: the order may change with what testers report.
 
 - v0.15.2, the safety net, second part: undo a session's changes; when
-  replacing names, choose which mentions to keep; coding sessions kept
-  with their project
-- v0.15.3, method: how the assistant supports a study's method,
+  replacing names, choose which mentions to keep
+- v0.15.3: coding sessions kept with their project
+- v0.15.4, method: how the assistant supports a study's method,
   reviewed; shorter tool descriptions; the earlier names of the two
-  renamed tools, and the tools' backup option, which Exegete ignores
-  from v0.15.1, retired
+  renamed tools, and the tools' backup option, which Exegete already
+  ignores, retired
 - v0.16, chat-first: more of the analysis shown in the conversation,
   as tables and graphs (codes that occur together, the code tree,
   counts by attribute); PDFs that say where their text came from;

@@ -245,6 +245,9 @@ def test_write_stops_on_other_libraries(script, monkeypatch, capsys,
     reason = script.library_refusal()
     assert f"{library} 0.0.1 is installed" in reason
     assert f"uv.lock gives {library} {locked}" in reason
+    # and the way out: the install from the lock (the review's round 1:
+    # CONTRIBUTING's step 3 takes PyPI's newest releases)
+    assert "`uv sync --frozen --extra dev --extra pdf-epub`" in reason
     # Through the command, in this process: nothing pinned, nothing
     # written
     monkeypatch.setattr(script, "pin_environment",
@@ -272,12 +275,18 @@ def test_no_path_of_this_computer_is_in_the_snapshot(script):
         assert script.FOLDER_PREFIX not in text, name
 
 
-def test_the_registry_is_as_it_was_after_a_render(script):
+def test_the_registry_is_as_it_was_after_a_render(script, monkeypatch):
+    # An opening text that names a tool `core` lacks, so that `core`'s
+    # differs from `full`'s, as it does not today, and one left as `core`
+    # marks it would show (the review's round 1)
+    opening = server.SERVER_INSTRUCTIONS + " Then call create_project."
+    monkeypatch.setattr(server, "SERVER_INSTRUCTIONS", opening)
+    monkeypatch.setattr(server.mcp._mcp_server, "instructions", opening)
     tools = server.mcp._tool_manager._tools
     before = list(tools.items())
-    opening = server.mcp._mcp_server.instructions
     first = script.render("full")
-    script.render("core")
+    assert "create_project" + server.NOT_IN_THIS_TOOL_SET in \
+        script.render("core")
     assert [name for name in tools] == [name for name, _ in before]
     assert all(tools[name] is tool for name, tool in before)
     assert server.mcp._mcp_server.instructions == opening

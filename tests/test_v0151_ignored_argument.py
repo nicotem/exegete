@@ -16,7 +16,6 @@ offers to skip a backup.
 import json
 import re
 import sqlite3
-import sys
 from pathlib import Path
 
 import pytest

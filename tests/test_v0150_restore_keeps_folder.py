@@ -26,7 +26,6 @@ speak of a restore).
 import errno
 import io
 import json
-import hashlib
 import logging
 import os
 import re

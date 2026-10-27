@@ -1011,7 +1011,7 @@ declares, and each tool's own description says what each one does.
 > Required for local models, optional elsewhere; unknown values fail
 > loudly at startup. Measured on Python 3.13 with the libraries in
 > `uv.lock` (the serialised tool definitions: name, description and
-> input schema), the definitions run to about 200,000 characters for
+> input schema), the definitions run to about 203,000 characters for
 > `full`, roughly 51k tokens at four characters per token, and about
 > 74,000 characters for `core`, roughly 18k tokens. On Python 3.11 and
 > 3.12 the same definitions measure about five per cent more, because

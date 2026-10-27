@@ -37,7 +37,7 @@ def _flat(text):
 
 def _served(mode):
     """The descriptions a host is sent in `mode`, the tools that mode
-    removes put back afterwards, as test_toolset_modes measures them."""
+    removes put back afterwards."""
     removed = server._apply_toolset(mode)
     try:
         return {t.name: t.description or ""

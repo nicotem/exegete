@@ -520,7 +520,10 @@ MEMORY_PATTERNS = (
 # (v0.15.2): a figure passes within SIZE_TOLERANCE of the snapshot's,
 # which leaves a figure rounded to two significant figures 2 to 5 per
 # cent of room before a document must change. Each pattern names its
-# set; a size is written "200,000", or "51k" for thousands.
+# set; a size is written "203,000", or "51k" for thousands. A figure in
+# tokens beside one in characters for the same set is a quarter of it,
+# within half the thousand it is rounded to (TOKENS_ROUNDED), so that
+# the two agree at the four characters a token the documents state.
 
 
 def _size(group: str) -> str:
@@ -528,6 +531,7 @@ def _size(group: str) -> str:
 
 
 SIZE_TOLERANCE = 0.05
+TOKENS_ROUNDED = 1000
 SIZE_PATTERNS = (
     # TOOLS.md's paragraph on the tool sets
     (r"\babout\s+" + _size("n") + r"\s+characters\s+for\s+`full`,\s+"
@@ -1350,9 +1354,24 @@ def _size_value(stated: str) -> int:
         else int(stated.replace(",", ""))
 
 
+def _characters_beside(groups, group: str, match) -> Optional[int]:
+    """For a figure in tokens, the figure in characters its sentence
+    gives the same set, when the two disagree at four characters a token
+    by more than half the thousand the tokens are rounded to; else None."""
+    kinds = {kind: other for other, quantities in groups.items()
+             for mode, kind in (q.split() for q in quantities)
+             if mode == groups[group][0].split()[0]}
+    if kinds.get("tokens") != group or "characters" not in kinds:
+        return None
+    characters = _size_value(match[kinds["characters"]])
+    return characters if abs(_size_value(match[group]) - characters / 4) \
+        > TOKENS_ROUNDED / 2 else None
+
+
 def check_sizes(facts: Facts, document: Document) -> List[Place]:
     """Each size a pattern finds is within SIZE_TOLERANCE of every
-    quantity its group names: the documents round it."""
+    quantity its group names: the documents round it; and a figure in
+    tokens agrees with the one in characters beside it."""
     fact = "the sizes"
     places = []
     for pattern, groups in SIZE_PATTERNS:
@@ -1366,12 +1385,18 @@ def check_sizes(facts: Facts, document: Document) -> List[Place]:
                        > SIZE_TOLERANCE * QUANTITIES[q][1](facts)]
                 reads = frozenset(field for q in quantities
                                   for field in QUANTITIES[q][0])
-                places.append(_place(
-                    document, match.start(group), fact, match[group], reads,
-                    None if not off else (
-                        f'"{words}" gives {match[group]}, more than '
-                        f'{SIZE_TOLERANCE:.0%} from what the snapshot gives: '
-                        f'{" and ".join(off)}')))
+                beside = _characters_beside(groups, group, match)
+                wrong = None
+                if off:
+                    wrong = (f'"{words}" gives {match[group]}, more than '
+                             f'{SIZE_TOLERANCE:.0%} from what the snapshot '
+                             f'gives: {" and ".join(off)}')
+                elif beside is not None:
+                    wrong = (f'"{words}" gives {match[group]} beside '
+                             f'{beside:,} characters, which at four '
+                             f'characters a token are {beside / 4:,.0f}')
+                places.append(_place(document, match.start(group), fact,
+                                     match[group], reads, wrong))
     return places
 
 
@@ -2474,6 +2499,30 @@ def test_a_size_is_held_within_its_tolerance(sentence, wrong):
     assert places[0].reads == (frozenset() if wrong
                                else frozenset({"full_characters"}))
     assert bool(places[0].wrong) == wrong, places[0].wrong
+
+
+# A size in tokens beside one in characters, in a scratch TOOLS.md,
+# against a snapshot that gives `full` 202,814 characters: each figure is
+# within five per cent, and the tokens agree with the characters beside
+# them, at four characters a token, or not (the review's round 1)
+TOKEN_SENTENCES = (
+    ("the definitions run to about 203,000 characters for `full`, roughly "
+     "51k tokens at four characters per token", False),
+    ("the definitions run to about 200,000 characters for `full`, roughly "
+     "51k tokens at four characters per token", True),
+    ("the definitions run to about 200,000 characters for `full`, roughly "
+     "50k tokens at four characters per token", False),
+)
+
+
+@pytest.mark.parametrize("sentence, wrong", TOKEN_SENTENCES)
+def test_the_tokens_agree_with_the_characters_beside_them(sentence, wrong):
+    facts = replace(facts_from_the_code(), full_characters=202_814)
+    places = check_sizes(facts, _document("TOOLS.md", [sentence]))
+    assert [p.stated.endswith("k") for p in places] == [False, True]
+    characters, tokens = places
+    assert characters.wrong is None, characters.wrong
+    assert bool(tokens.wrong) == wrong, tokens.wrong
 
 
 def test_a_reworded_sentence_is_no_longer_found(tmp_path):

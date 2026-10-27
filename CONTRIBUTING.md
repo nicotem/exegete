@@ -136,8 +136,11 @@ is looked at first.
    `sizes.json`, and a test fails when the code and the snapshot
    differ: when you change any of these texts, a tool's arguments or
    the libraries in `uv.lock`, write the snapshot again with
-   `python scripts/served_texts.py write` on Python 3.13, in the
-   development install, and read its diff whole. Update `TOOLS.md`
+   `python scripts/served_texts.py write` on Python 3.13, with the
+   releases of mcp and pydantic that `uv.lock` gives (the install of
+   step 3 may take newer ones;
+   `uv sync --frozen --extra dev --extra pdf-epub` installs the
+   lock's), and read its diff whole. Update `TOOLS.md`
    (the tool reference), `README.md`, `INSTALL.md` and `PRIVACY.md` where they
    describe the behaviour you changed; `PRIVACY.md` is the contract for
    what a tool result may disclose. Links are checked on every push
@@ -364,6 +367,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── brand/                  # Exegete's mark
 │   ├── history/                # Early plans and analyses, kept as a record
 │   ├── snapshot/               # What Exegete sends the assistant before a project is open, and the brief, with their sizes
+│   ├── structure/              # The structural table of each release (scripts/structure_table.py)
 │   └── update-check/           # The design of the check for new versions, as a record
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/

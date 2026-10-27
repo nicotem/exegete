@@ -462,7 +462,7 @@ instruction."""
 # _with_paragraphs puts each back where it stood in a tool's docstring,
 # in these line breaks, so that every description reads as it did with
 # the paragraph typed in. A rewording is made here; the descriptions it
-# changes show in the diff of tests/fixtures/served_descriptions.txt,
+# changes show in the diff of docs/snapshot/full.txt and core.txt,
 # written again with scripts/served_texts.py. apply_codings gives the
 # lock paragraph's words as one of its safety guarantees, in other line
 # breaks: a rewording is made there too.

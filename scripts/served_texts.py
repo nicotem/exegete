@@ -283,10 +283,7 @@ def installed(library):
 
 def locked(library):
     """The releases uv.lock gives `library`."""
-    try:
-        import tomllib
-    except ModuleNotFoundError:  # Python 3.10, where the tests have tomli
-        import tomli as tomllib
+    import tomllib
     with open(REPO / "uv.lock", "rb") as handle:
         packages = tomllib.load(handle)["package"]
     return {package["version"] for package in packages
@@ -302,7 +299,9 @@ def library_refusal():
         if here not in given:
             return (f"Not written: {library} {here} is installed, and "
                     f"uv.lock gives {library} {', '.join(sorted(given))}; "
-                    f"install from the lock (CONTRIBUTING.md, step 3).")
+                    f"install the lock's releases with `uv sync --frozen "
+                    f"--extra dev --extra pdf-epub` (CONTRIBUTING.md, "
+                    f"step 6).")
     return None
 
 

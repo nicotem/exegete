@@ -7,77 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Exegete needs Python 3.11 or newer.** Python 3.10 is no longer
-  supported or tested. On Python 3.10, pip and pipx keep the last
-  release that supported it, 0.15.1-alpha.1; to update, install
-  Exegete again with Python 3.11 or newer. The Claude Desktop
-  extension is not affected: it runs on the Python 3.13 it installs.
-
-### The documents
-
-- **The facts check reads versions, counts, lists and examples too**
-  (`tests/test_v0151_facts.py`): the libraries' releases a document
-  names against `uv.lock`, and a requirement against `pyproject.toml`;
-  the tools that preview first and the runtime dependencies, counted;
-  the routes with Claude against INSTALL.md's table; README's tools
-  that preview first, TOOLS.md's tools that report signs of a QualCoder
-  window, and the state folder and the reading folder where PRIVACY.md
-  and INSTALL.md say what Exegete keeps; CONTRIBUTING.md's map of the
-  clone against the files git tracks (seven scripts added to it); the
-  reading folder's paths; full example paths, such as
-  `/Users/YOUR_NAME/Exegete projects`, as the folders for projects; and
-  an example in one of QualCoder's own folders only beside "if you use
-  QualCoder" (QUICKSTART.md and PROJECT_SELECTION_GUIDE.md now give
-  Exegete's folders first).
-
-### For contributors
-
-- **A paragraph that several tool descriptions share is written once**,
-  as a constant in `src/exegete/server.py`: the refusal while the
-  project's lock file is active, the two steps of a preview and its
-  token, the full memos on export, and the counts under coder
-  visibility. `_with_paragraphs` puts each back where it stood, so a
-  rewording is made in one place. No description changes:
-  `tests/fixtures/served_descriptions.txt` holds every description of
-  both tool sets, written by `scripts/served_texts.py`, and
-  `tests/test_served_texts.py` compares it with what Exegete serves.
-- **CI runs in two tiers.** Its first job, `tier`
-  (`scripts/ci_tier.py`), chooses. A push to `main` or to an
-  integration branch, `feat/<name>`, a pull request and a run started
-  by hand take the full tier, the twenty-two jobs. A push to any other
-  branch takes the fast tier: the suite once, on Ubuntu with Python
-  3.13, and the documents job, with the desktop extension's jobs only
-  when the branch changed the packaging, the lock or a script they run.
-  Only an explicit fast answer narrows a run, so a fault in the choice
-  runs every job. The weekly link check also reads the newest
-  integration branch.
-- **The suite runs on Python 3.11 and 3.13 on every system, and on 3.14
-  on Ubuntu**, in place of 3.10 and 3.13. `uv.lock` was made again for
-  the new floor: every release in it stays as it was, and only what
-  Python 3.10 alone needed has left it (tomli, exceptiongroup,
-  backports-asyncio-runner and rpds-py 0.30.0).
-- **A table of the code's structure is kept for each release**
-  (`scripts/structure_table.py`, writing `docs/structure/<version>.md`):
-  the ten largest files and the ten most complex functions of `src/`
-  and of `tests/`, how many functions each grade holds, and the suite's
-  and CI's times, measured from one commit read through git, with the
-  standard library alone. The first tables are those of 0.14.3-alpha,
-  0.15.0-alpha and 0.15.1-alpha.1. With `--functions` the script lists
-  the functions of grade D or worse, or of over 200 code lines, for
-  comparing two commits.
-- **What comes in which release is one table, and the texts are held to
-  it** (`scripts/release_plan.py`, read by `tests/test_v0151_facts.py`):
-  when a document or a text in the code names a release to come, its
-  sentence must name something the plan gives that release, and
-  README's "What comes next" keeps no release already made. The code's
-  texts (the tools' descriptions, notes, refusals, help topics and log
-  lines) are read from the source by `scripts/code_texts.py`, which
-  imports nothing from the package. The plan follows the owner's
-  decision of 27 October: coding sessions kept with their project come
-  in a release of their own, v0.15.3, and the release on method becomes
-  v0.15.4, as README.md, PRIVACY.md and TOOLS.md now say.
+The changes since the last release are added here when the next
+release is prepared.
 
 ## [0.15.1-alpha.1] - 2026-10-23
 

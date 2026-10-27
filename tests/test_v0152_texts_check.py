@@ -298,7 +298,8 @@ def test_what_is_not_a_breach(tmp_path):
             "Use `a != b` to compare, and `RELAY` as it is written.\n\n"
             'Ask the researcher: "Which files?"\n\n'
             "P01 and P02 said little (P01 first).\n\n"
-            "The README, the GNU LESSER GENERAL PUBLIC LICENSE and UTF-8.\n\n"
+            "The README, QUICKSTART, the GNU LESSER GENERAL PUBLIC LICENSE "
+            "and UTF-8.\n\n"
             "The owner of a row keeps it; truly anonymised data differs.\n\n"
             "NOTICE item 15 names it.\n"),
         "src/exegete/notes.py": (

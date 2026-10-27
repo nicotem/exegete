@@ -179,21 +179,23 @@ class Habit(NamedTuple):
     not_in: Tuple[str, ...] = ()
 
 
-# Words in capitals that are names, not emphasis: acronyms, file names,
-# settings, the licence's title and Windows's reserved device names
+# Words in capitals that are names, not emphasis: acronyms, the
+# repository's documents named without ".md", settings, the licence's
+# title and Windows's reserved device names
 ACRONYMS = (
     "AFFERO", "AGPL", "ANSI", "API", "ASCII", "ATLAS", "AUX", "BOM",
     "CAQDAS", "CHANGELOG", "CJK", "CLI", "COM", "CON", "CONIN", "CONOUT",
-    "CPU", "CRLF", "CSV", "DDL", "DEBUG", "DOCX", "DOI", "DOS", "DPA", "DPO",
-    "EBCDIC", "EEA", "EPUB", "EUC", "FAQ", "GBK", "GCC", "GDPR", "GENERAL",
-    "GNU", "GPL", "GUI", "GUID", "HOME", "HTML", "HTTP", "HTTPS", "IDE",
-    "IDTA", "INFO", "IRB", "ISO", "JAVA", "JSON", "LAPACK", "LESSER", "LGPL",
-    "LICENSE", "LLM", "LLMS", "LPT", "MAXQDA", "MCP", "MCPB", "MIT", "NFC",
-    "NFKC", "NOTICE", "NPU", "NUL", "NULL", "OCR", "ODT", "ORCID", "OSV",
-    "PATH", "PDF", "PDFS", "PNG", "POSIX", "PRN", "PUBLIC", "QDA", "QDPX",
-    "RAM", "README", "REFI", "RSRP", "RTF", "SDK", "SHA", "SPDX", "SQL",
-    "SSD", "SSH", "STDIO", "SVG", "TCP", "TXT", "URL", "URLS", "USB", "UTF",
-    "WAL", "WSL", "XML", "ZIP", "ZWJ", "ZWNJ")
+    "CONTRIBUTING", "CPU", "CRLF", "CSV", "DDL", "DEBUG", "DOCX", "DOI",
+    "DOS", "DPA", "DPO", "EBCDIC", "EEA", "EPUB", "EUC", "FAQ", "GBK", "GCC",
+    "GDPR", "GENERAL", "GNU", "GPL", "GUI", "GUID", "HOME", "HTML", "HTTP",
+    "HTTPS", "IDE", "IDTA", "INFO", "INSTALL", "IRB", "ISO", "JAVA", "JSON",
+    "LAPACK", "LESSER", "LGPL", "LICENSE", "LLM", "LLMS", "LPT", "MAXQDA",
+    "MCP", "MCPB", "MIT", "NFC", "NFKC", "NOTICE", "NPU", "NUL", "NULL",
+    "OCR", "ODT", "ORCID", "OSV", "PATH", "PDF", "PDFS", "PNG", "POSIX",
+    "PRIVACY", "PRN", "PUBLIC", "QDA", "QDPX", "QUICKSTART", "RAM",
+    "README", "REFI", "RSRP", "RTF", "SDK", "SHA", "SPDX", "SQL", "SSD",
+    "SSH", "STDIO", "SUPPORT", "SVG", "TCP", "TOOLS", "TXT", "URL", "URLS",
+    "USB", "UTF", "WAL", "WSL", "XML", "ZIP", "ZWJ", "ZWNJ")
 CAPITALS = (r"(?<![\w'\u2019$%#+/\\.{-])(?!(?:" + "|".join(ACRONYMS) + r")\b)"
             r"[A-Z]{3,}(?:['\u2019-][A-Z]+)*(?![\w'\u2019/=-]|\.\w)")
 

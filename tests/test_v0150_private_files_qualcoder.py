@@ -10,9 +10,10 @@ with `shutil.copytree`, ignoring only its search index and SQLite's side
 files and, when audio and video are not to be backed up, those media: no
 `.txt` file and no folder named `Exegete`.
 
-Run in CI's parity job, where QUALCODER_SOURCE names QualCoder's source
-checked out read only (the gate at the 4.0 release, the watch on its
-newest code); skipped elsewhere. QualCoder is never run: its source is
+Run in CI's parity job, at the 4.0 release, and in the weekly watch on
+QualCoder's newest code (.github/workflows/qualcoder-watch.yml), where
+QUALCODER_SOURCE names QualCoder's source checked out read only; skipped
+elsewhere. QualCoder is never run: its source is
 read and parsed, nothing in it is imported or executed.
 """
 

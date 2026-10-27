@@ -405,13 +405,13 @@ jobs:
 
   # 0.14.3: the import's stored text against QualCoder's
   # own extraction functions, run without QualCoder's interface
-  # (scripts/qualcoder_parity.py): a gate at the release the readers
-  # follow, QualCoder 4.0 (tag 4.0, commit b95e021), and a watch on
-  # QualCoder's newest code, whose changes are a notice for the lead,
-  # never a failure. QualCoder's source is checked out read only;
-  # QualCoder itself is never run.
+  # (scripts/qualcoder_parity.py), at the release the readers follow,
+  # QualCoder 4.0 (tag 4.0, commit b95e021). QualCoder's source is
+  # checked out read only; QualCoder itself is never run. v0.15.2: the
+  # watch on QualCoder's newest code, which ran here beside it, runs once
+  # a week in a workflow of its own, .github/workflows/qualcoder-watch.yml.
   qualcoder-parity:
-    name: QualCoder parity (${{ matrix.which }})
+    name: QualCoder parity (4.0)
     # v0.15.2: the full tier only (the `tier` job)
     needs: tier
     if: needs.tier.outputs.fast != 'true'
@@ -419,16 +419,6 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-    continue-on-error: ${{ matrix.which == 'watch' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - which: gate
-            # QualCoder 4.0, the release (tag 4.0)
-            ref: b95e021c93eb29a646ee7a8de196c281b7890ddf
-          - which: watch
-            ref: master
 
     steps:
       - name: Check out repository
@@ -440,7 +430,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: ccbogel/QualCoder
-          ref: ${{ matrix.ref }}
+          # QualCoder 4.0, the release (tag 4.0)
+          ref: b95e021c93eb29a646ee7a8de196c281b7890ddf
           path: qualcoder-src
           persist-credentials: false
 
@@ -462,18 +453,16 @@ jobs:
           python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
           python -m pip install --no-deps -e .
 
-      # Both entries install from the lock (v0.15.1). The gate then
-      # reinstalls the EbookLib release the record names, which the lock
-      # already holds (tests/test_v0150_lock.py), so its text is compared,
-      # not skipped, should the two ever part. PyMuPDF stays as the lock
-      # gives it here, 2.0 (v0.15.1), a release the record lists as
-      # giving QualCoder's functions the same text (`same_text_with`), so
-      # the gate compares QualCoder's own functions with Exegete's under
-      # 2.0 and the suite compares each release with the record. The
-      # watch now watches QualCoder's newest code alone; the newest
-      # library releases have a job of their own, newest-libraries.
-      - name: The record's EbookLib release (gate)
-        if: matrix.which == 'gate'
+      # The job installs from the lock (v0.15.1), then reinstalls the
+      # EbookLib release the record names, which the lock already holds
+      # (tests/test_v0150_lock.py), so its text is compared, not skipped,
+      # should the two ever part. PyMuPDF stays as the lock gives it here,
+      # 2.0 (v0.15.1), a release the record lists as giving QualCoder's
+      # functions the same text (`same_text_with`), so the job compares
+      # QualCoder's own functions with Exegete's under 2.0 and the suite
+      # compares each release with the record. The newest library
+      # releases have a job of their own, newest-libraries.
+      - name: The record's EbookLib release
         shell: bash
         run: |
           pins=$(python -c "import json; v = json.load(open('tests/fixtures/import_expected.json'))['versions']; print('ebooklib==' + v['ebooklib'])")
@@ -482,20 +471,13 @@ jobs:
       - name: Exegete's text against QualCoder's
         env:
           QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src
-          EXEGETE_PARITY_GATE: ${{ matrix.which == 'gate' && '1' || '' }}
+          # switches on the checks that belong to the 4.0 release
+          EXEGETE_PARITY_GATE: "1"
         # and QualCoder's backup, which copies the project folder whole,
         # its Exegete folder included (v0.15.0, the files design); and the
         # names list save_names_list writes, read and applied as
         # QualCoder's import reads and applies it (piece 4)
         run: python -m pytest -ra tests/test_v0143_import_parity.py tests/test_v0150_private_files_qualcoder.py tests/test_v0150_save_names_list_qualcoder.py
-
-      - name: What QualCoder's newest code stores differently
-        if: matrix.which == 'watch'
-        shell: bash
-        run: |
-          if ! python scripts/qualcoder_parity.py --qualcoder qualcoder-src --check tests/fixtures/import_expected.json; then
-            echo "::notice title=QualCoder parity watch::QualCoder's newest code stores different text for some test documents; the job log names them"
-          fi
 
   # v0.14.1, the rename: the old name's package, built on every full run,
   # the upgrade paths through the old name, offline, and the published

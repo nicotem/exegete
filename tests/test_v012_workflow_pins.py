@@ -227,6 +227,9 @@ WORKFLOW_JOBS = {
     "external-links.yml": {"external-links"},
     # v0.15.1: the locked releases against the advisories, once a week
     "advisories.yml": {"advisories"},
+    # v0.15.2: the import's text against QualCoder's newest code, once a
+    # week (it ran in ci.yml's parity job before)
+    "qualcoder-watch.yml": {"qualcoder-watch"},
 }
 
 

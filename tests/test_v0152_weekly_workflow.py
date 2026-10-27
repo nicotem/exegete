@@ -23,7 +23,6 @@ shown by their runs on the piece's branch.
 """
 
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -42,9 +41,11 @@ NPM_REGISTRY = "https://registry.npmjs.org/"
 
 def _npm_entries():
     """The validator's lock read here on its own: (name, version) of each
-    entry under node_modules/ resolved from npm's registry."""
+    entry under node_modules/ resolved from npm's registry, by the name
+    npm writes in the entry when it has one (an alias), else the folder's."""
     lock = json.loads(VALIDATOR_LOCK.read_text(encoding="utf-8"))
-    return [(path.rsplit("node_modules/", 1)[1], entry["version"])
+    return [(entry.get("name") or path.rsplit("node_modules/", 1)[1],
+             entry["version"])
             for path, entry in lock["packages"].items()
             if "node_modules/" in path
             and entry.get("resolved", "").startswith(NPM_REGISTRY)]
@@ -150,6 +151,25 @@ def test_known_advisories_are_gone_only_for_the_locks_asked(actions, capsys):
         [line] = [line for line in gone if advisory in line]
         assert "its entry in KNOWN_NPM can go" in line
     assert not set(advisories.KNOWN) & set(advisories.KNOWN_NPM)
+
+
+def test_an_aliased_library_is_asked_by_its_own_name(tmp_path):
+    """npm writes the library's own name in the entry of one installed
+    under another name: OSV is asked about that library, not the folder's
+    name, which can be another library on npm."""
+    lock = tmp_path / "package-lock.json"
+    lock.write_text(json.dumps({"lockfileVersion": 3, "packages": {
+        "": {},
+        "node_modules/string-width-cjs": {
+            "name": "string-width", "version": "4.2.3",
+            "resolved": f"{NPM_REGISTRY}string-width/-/"
+                        f"string-width-4.2.3.tgz"},
+        "node_modules/@scope/tool": {
+            "version": "1.0.0",
+            "resolved": f"{NPM_REGISTRY}@scope/tool/-/tool-1.0.0.tgz"}}}),
+        encoding="utf-8")
+    assert advisories.locked_releases(lock) == [
+        ("string-width", "4.2.3"), ("@scope/tool", "1.0.0")]
 
 
 NPM_ENTRY = {"version": "1.0.0",

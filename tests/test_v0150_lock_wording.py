@@ -175,39 +175,6 @@ NEW_WORDS = {
         "project there first."),
 }
 
-# For the tests that compare a description with a pin taken before this
-# change (tests/test_v0150_qualcoder_texts_13.py, test_v0150_renames_tools.py
-# and test_v0150_restore_keeps_folder.py): the words it replaced, as
-# Python 3.13 served them, so that a description put back is as it was
-OLD_START = (
-    "QUALCODER OPEN: if the result has `qualcoder_open: true`, STOP: ask\n"
-    "the user to close the project in QualCoder, re-check with\n"
-    "get_current_project, and go on only when it is false. QualCoder 4.0\n"
-    "writes no lock file: a `qualcoder_gui_hint` (best-effort signals)\n"
-    "means ask whether a window has the project open; an empty list is no\n"
-    "proof.")
-BLOCKS = {"start_coding_session": [(NEW_WORDS["start_coding_session"],
-                                    OLD_START)]}
-# the write tools' sentence and restore_backup's item 4, in place
-TOKENS = (
-    (r"(QualCoder\s+)3\.8\.2(\s+has\s+the\s+project\s+open,\s+or\s+another)",
-     r"\g<1>3.8\2"),
-    (r"(open\s+window,\s+and\s+)if(\s+there\s+are\s+some)", r"\1when\2"),
-)
-
-
-def put_back_the_lock_wording(name, text):
-    """`text`, tool `name`'s description, with this change's words taken
-    out and those they replaced put back."""
-    for new, old in BLOCKS.get(name, ()):
-        pattern = r"\s+".join(map(re.escape, new.split()))
-        text, count = re.subn(pattern, lambda found: old, text)
-        assert count == 1, (name, new[:40])
-    for pattern, old in TOKENS:
-        text = re.sub(pattern, old, text)
-    return text
-
-
 # What they said before, each gone
 OLD_WORDS = (
     "Also reports whether QualCoder currently has this project open",
@@ -318,33 +285,6 @@ class TestTheSixDescriptions:
     def test_closing_qualcoder_is_asked_only_of_those_who_use_it(
             self, served, tool):
         assert unconditional_requests(served[tool]) == [], tool
-
-    def test_put_back_each_is_as_it_was(self):
-        """A guard for the put-back the older tests use: with it, the
-        descriptions are as tests/test_v0142_description_cut.py pinned
-        them before this change."""
-        from test_v0142_description_cut import _fingerprint
-        # v0.15.1: restore_backup's sentence on the audio and video
-        # folders taken out too (tests/test_v0151_media_out.py)
-        from test_v0150_restore_keeps_folder import MEDIA_SENTENCE
-        before = {"start_coding_session": (6042, 4908, "662931b185aced31"),
-                  "restore_backup": (2877, 2367, "9014851203733822"),
-                  "delete_coding": (2867, 2307, "be5e2d1ea0338a1e")}
-        # and v0.15.1's ignored create_backup: put back first
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        # and the restore piece's paragraph (tests/test_v0151_restore.py)
-        from test_v0151_restore import without_the_preview_paragraph
-        server._apply_toolset("full")
-        for name, (length, solid, digest) in before.items():
-            text = put_back_the_lock_wording(
-                name, before_the_ignored_argument(
-                    name, without_the_preview_paragraph(
-                        server.mcp.original_descriptions[name])).replace(
-                        " " + MEDIA_SENTENCE, ""))
-            got = _fingerprint(text)
-            assert got[1:] == (solid, digest), name
-            if sys.version_info[:2] == (3, 13):
-                assert got[0] == length, name
 
     def test_the_paragraph_the_renames_share(self):
         assert server._RENAME_QC40_PARAGRAPH.startswith(
@@ -546,19 +486,31 @@ class TestTheChangelog:
     def test_install_s_figures_for_start_coding_session(self, served):
         """INSTALL.md gives the descriptions past 4,096 characters, on
         Python 3.13 and on 3.10 to 3.12; start_coding_session's moved."""
+        # v0.15.2, the snapshot: INSTALL rounds them, each held within
+        # five per cent of the length here (the exact lengths are in
+        # docs/snapshot/sizes.json)
+        from test_v0151_facts import SIZE_TOLERANCE
         install = _flat(_read("INSTALL.md"))
-        length = f"{len(served['start_coding_session']):,}"
+
+        def near(stated, name):
+            length = len(served[name])
+            return abs(int(stated.replace(",", "")) - length) \
+                <= SIZE_TOLERANCE * length
         if sys.version_info >= (3, 13):
-            assert f"`start_coding_session`, {length};" in install
+            found = re.search(r"`start_coding_session`, about ([\d,]+);",
+                              install)
+            assert found and near(found.group(1), "start_coding_session")
         else:
-            four = [f"{len(served[name]):,}" for name in (
-                "pseudonymise_source", "start_coding_session",
-                "search_files", "record_suggestions")]
             # v0.15.1, the removed arguments: import_text_file, without
             # owner, no longer passes 4,096 there, so the four are all
             # (tests/test_v0151_removed_arguments.py)
-            assert ("the same four are, at {}, {}, {} and {}.".format(*four)
-                    in install)
+            found = re.search(r"the same four are, at about ([\d,]+), "
+                              r"([\d,]+), ([\d,]+) and ([\d,]+)\.", install)
+            assert found
+            for stated, name in zip(found.groups(), (
+                    "pseudonymise_source", "start_coding_session",
+                    "search_files", "record_suggestions")):
+                assert near(stated, name), name
 
     def test_the_measurement(self):
         measured = _flat(_unreleased()[_unreleased().index("### Measured"):])

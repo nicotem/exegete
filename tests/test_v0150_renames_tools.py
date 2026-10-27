@@ -20,7 +20,6 @@ and the reworded texts; and the documents.
 """
 
 import asyncio
-import hashlib
 import json
 import logging
 import os
@@ -37,13 +36,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import exegete.server as server  # noqa: E402
 from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).parent))
-from test_v0150_qualcoder_texts_5 import (  # noqa: E402
-    LOCK_PARAGRAPH_BEFORE, put_back_the_lock_paragraph)
-from test_v0150_qualcoder_texts_13 import (  # noqa: E402
-    put_back_the_four_outcomes)
-from test_v0150_lock_wording import (  # noqa: E402
-    put_back_the_lock_wording)
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -77,61 +69,19 @@ def _listed(mode):
     return {t.name: t for t in asyncio.run(server.mcp.list_tools())}
 
 
-def _fingerprint(description):
-    """As tests/test_v0142_description_cut.py takes it: length, characters
-    that are not white space, and the digest of the sorted words."""
-    words = description.split()
-    return (len(description), len("".join(words)),
-            hashlib.sha256(" ".join(sorted(words)).encode()).hexdigest()[:16])
-
-
-# ---------------------------------------------------------------------------
-# The registry
-# ---------------------------------------------------------------------------
-
-# Each description that names one of the two tools, as Exegete served it
-# before they were renamed (tests/test_v0142_description_cut.py's
-# fingerprint), under the tool's name now. Put back the earlier names,
-# word for word, and each is that description again.
-BEFORE_THE_RENAME = {
-    "start_coding_session": (6098, 4956, "552625d8365c92bd"),
-    "read_file_with_codings": (2293, 1878, "892912ccbe8f76ac"),
-    "compare_coders": (3006, 2460, "765d945ba6b6883d"),
-    "delete_coding": (2994, 2422, "962d9d72f5644a1d"),
-    "edit_suggestion": (3385, 2717, "b13c5dd2091df330"),
-    "propose_codes": (2692, 2141, "8ad7a5689cff30b5"),
-    "record_suggestions": (4447, 3566, "0f2d93c94c263b3d"),
-    "review_suggestions": (1325, 1091, "b2fdf147231e0eee"),
-    "search_files": (4802, 3796, "ce6edca1ab903ed5"),
-    "update_annotation": (2054, 1711, "152afc076a1be138"),
-    "update_suggestion_status": (1535, 1261, "650e200880ca4dcd"),
-    # and the example dropped from its list (a help topic of that name
-    # stays, deprecated, but the tool's new name is not one)
-    "explain_ai_coding_tools": (672, 545, "cf35605c177bddf7"),
-}
+# The descriptions that named one of the two tools before the rename,
+# under the tool's name now
+NAMED_THE_TWO = (
+    "start_coding_session", "read_file_with_codings", "compare_coders",
+    "delete_coding", "edit_suggestion", "propose_codes",
+    "record_suggestions", "review_suggestions", "search_files",
+    "update_annotation", "update_suggestion_status",
+    # and the one whose list of examples the earlier name left (a help
+    # topic of that name stays, deprecated, but the tool's new name is
+    # not one)
+    "explain_ai_coding_tools",
+)
 DROPPED_EXAMPLE = '"How do I use analyze_for_coding?"'
-
-
-def _put_back(text):
-    for old, new in RENAMED.items():
-        text = re.sub(rf"\b{new}\b", old, text)
-    # The whole-branch review of v0.15.0, round 1, moved the removals
-    # announced for v0.15 to v0.15.1 (ruling 70): put back the release the
-    # rename's descriptions named, so that what the rename changed is
-    # still checked to be the names alone
-    return text.replace("removed in v0.15.1:", "removed in v0.15:")
-
-
-# A later v0.15.0 piece that rewords one of the descriptions above:
-# not presuming QualCoder, piece 5 (tests/test_v0150_qualcoder_texts_5.py)
-# made the write tools' closing paragraph one sentence, in delete_coding
-# and update_annotation among others. The paragraph as it stood before,
-# as Python 3.13 serves it, is put back too, so that what the rename
-# changed is still checked to be the names alone. Piece 13
-# (tests/test_v0150_qualcoder_texts_13.py) took the attribution to
-# QualCoder 4.0's assistant out of the four outcomes' sentence in the
-# text start_coding_session's description shares; that sentence is put
-# back the same way.
 
 
 class TestTheRegistry:
@@ -179,37 +129,16 @@ class TestTheRegistry:
         assert names[-3:] == ["check_for_updates", "analyze_for_coding",
                               "analyze_file_with_coding"]
 
-    def test_the_descriptions_changed_only_by_the_names(self):
+    def test_no_description_uses_an_earlier_name(self):
+        """Every description names the two tools by their new names alone
+        (v0.15.2, the snapshot: the fingerprints of the descriptions as
+        they were before the rename are retired; docs/snapshot/ holds
+        every description as Exegete serves it)."""
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
-        exact = sys.version_info[:2] == (3, 13)
-        # v0.15.1's ignored create_backup and removals: put back first
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        from test_v0151_removed_tools import before_the_removals
-        for name, (length, solid, digest) in BEFORE_THE_RENAME.items():
-            text = before_the_ignored_argument(name, registered[name])
-            # (v0.15.1: explain_ai_coding_tools' notice, which named the
-            # deprecated topic, went with the topics; put back below)
-            assert not EARLIER.search(_flat(text)), name
-            text = before_the_removals(name, text)
-            if name in LOCK_PARAGRAPH_BEFORE:
-                text = put_back_the_lock_paragraph(name, text)
-            if name == "start_coding_session":
-                # and the fourth reading of the documents' paragraph on
-                # the lock file (tests/test_v0150_lock_wording.py)
-                text = put_back_the_four_outcomes(
-                    put_back_the_lock_wording(name, text))
-            text = _put_back(text)
-            dropped = name == "explain_ai_coding_tools"
-            if dropped:
-                # the words only: the line's indentation is the
-                # interpreter's
-                assert DROPPED_EXAMPLE not in text
-                text += " " + DROPPED_EXAMPLE
-            got = _fingerprint(text)
-            assert got[1:] == (solid, digest), name
-            if exact and not dropped:
-                assert got[0] == length, name
+        assert set(NAMED_THE_TWO) <= set(registered)
+        for name, description in registered.items():
+            assert not EARLIER.search(_flat(description)), name
 
 
 # ---------------------------------------------------------------------------

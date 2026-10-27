@@ -586,25 +586,3 @@ def before_the_removed_arguments(name, description):
             description, "(its name and the content matches shown), not",
             "(its name, its memo, and the content matches shown), not")
     return description
-
-
-def test_the_descriptions_put_back_are_as_served_before():
-    """A guard for the put-back the older tests use: with it, the four
-    descriptions this piece changed are as they were served before it
-    (tests/test_v0142_description_cut.py), on any interpreter, and each
-    differs from what is served now."""
-    import sys
-    from test_v0142_description_cut import (ARGUMENTS_0151,
-                                            WORDS_BEFORE_ARGUMENTS_0151,
-                                            _fingerprint)
-    server._apply_toolset("full")
-    assert set(ARGUMENTS_0151) == {tool for tool, _ in REMOVED}
-    for name in ARGUMENTS_0151:
-        now = server.mcp.original_descriptions[name]
-        then = before_the_removed_arguments(name, now)
-        assert then != now, name
-        got = _fingerprint(then)
-        before = WORDS_BEFORE_ARGUMENTS_0151[name]
-        assert got[1:] == before[1:], name
-        if sys.version_info[:2] == (3, 13):
-            assert got[0] == before[0], name

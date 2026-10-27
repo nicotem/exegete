@@ -799,18 +799,18 @@ BEFORE = {
 class TestNoDescriptionGrew:
 
     # v0.14.3 adds two tools, and lengthens two descriptions
-    # on purpose (tests/test_v0142_description_cut.py pins their words in
-    # CHANGED_0143); every other description is still held to 0.14.1's
+    # on purpose (their words are in docs/snapshot/); every other
+    # description is still held to 0.14.1's
     NEW_IN_0143 = {"open_file_for_reading", "import_documents"}
     CHANGED_IN_0143 = {"read_file_with_codings", "import_text_file"}
     # and v0.15.0 lengthens two on purpose. As its design says (the
     # renames, piece 2), list_available_projects names the extension's
     # folder for projects and its earlier default among its places
-    # (tests/test_v0150_renames_folder.py; its words pinned in
-    # tests/test_v0142_description_cut.py, CHANGED_0150)
+    # (tests/test_v0150_renames_folder.py; its words are in
+    # docs/snapshot/)
     # And the coder names, piece 1 (tests/test_v0150_coder_name_settings.py;
-    # their words pinned in tests/test_v0142_description_cut.py,
-    # CHANGED_0150): create_project's paragraph on the researcher's coder
+    # their words are in docs/snapshot/): create_project's paragraph on
+    # the researcher's coder
     # name, which Exegete's settings may now give, and the setter's
     # refusal of that name, each longer, as the design says
     # And the coder names, piece 3 (tests/test_v0150_ai_coder_name_setting.py):
@@ -840,8 +840,8 @@ class TestNoDescriptionGrew:
     # descriptions that name them, where start_coding_session is two
     # characters longer than analyze_for_coding; "Exegete's backups" in
     # list_backups and prune_backups (tests/test_v0150_renames_tools.py;
-    # their words pinned in tests/test_v0142_description_cut.py,
-    # CHANGED_0150). Their earlier names are listed with one sentence.
+    # their words are in docs/snapshot/). Their earlier names are
+    # listed with one sentence.
     RENAMED_IN_0150 = {"edit_suggestion", "list_backups", "propose_codes",
                        "prune_backups", "record_suggestions",
                        "review_suggestions", "update_suggestion_status"}
@@ -858,8 +858,8 @@ class TestNoDescriptionGrew:
     # and the whole-branch review of v0.15.0, round 1: every deprecation
     # sentence now says "removed in v0.15.1" (ruling 70), two characters
     # more, and the names list's leads with pseudonyms.json in the project
-    # folder (tests/test_v0150_wb_fix_r1.py; their words pinned in
-    # tests/test_v0142_description_cut.py, CHANGED_0150)
+    # folder (tests/test_v0150_wb_fix_r1.py; their words are in
+    # docs/snapshot/)
     REMOVALS_MOVED_0150 = {
         "apply_codings", "cleanup_old_sessions", "create_attribute_type",
         "delete_code", "explain_ai_coding_tools", "export_code_report",
@@ -867,9 +867,8 @@ class TestNoDescriptionGrew:
         "pseudonymise_source", "rename_file", "search_files",
         "set_attribute"}
     # and v0.15.1, the small corrections
-    # (tests/test_v0151_small_corrections.py; its words pinned in
-    # tests/test_v0142_description_cut.py,
-    # CHANGED_0151_TEXTS): copy_project_to_workspace says that a copy of a
+    # (tests/test_v0151_small_corrections.py; its words are in
+    # docs/snapshot/): copy_project_to_workspace says that a copy of a
     # project without an ai_data folder gets an empty one, a sentence
     # longer, as the design says (create_project is counted above)
     CHANGED_IN_0151 = {"copy_project_to_workspace"}
@@ -919,24 +918,18 @@ class TestNoDescriptionGrew:
 
     def test_the_reworded_ones_are_the_ones_the_changelog_counts(self):
         """40 of the 74 tools 0.14.1 had, and read_brief; one of the 40,
-        read_pseudonym_list, was removed in v0.15.0."""
+        read_pseudonym_list, was removed in v0.15.0. The record of the
+        40 is tests/test_v0142_description_cut.py's REWORDED_0142
+        (v0.15.2, the snapshot: no description is compared with it any
+        more, and docs/snapshot/ holds each as Exegete serves it)."""
         server._apply_toolset("full")
         sys.path.insert(0, str(Path(__file__).parent))
         import test_v0142_description_cut as cut
         registered = server.mcp.original_descriptions
-        # A description changed after 0.14.2 (v0.15.0's, in
-        # cut.CHANGED_0150) no longer shows the words 0.14.2 served; for
-        # those, cut.REWORDED_0142 records whether 0.14.2 changed them.
-        later = set(cut.CHANGED_0150)
-        reworded = {name for name, (length, solid, digest)
-                    in cut.WORDS_0141.items()
-                    if (name in cut.REWORDED_0142 if name in later
-                        else cut._fingerprint(registered[name])[1:]
-                        != (solid, digest))}
+        reworded = set(cut.REWORDED_0142)
         assert not reworded & self.REMOVED_IN_0150
         assert not self.REMOVED_IN_0150 & set(registered)
         assert len(reworded | self.REMOVED_IN_0150) == 40, sorted(reworded)
-        assert reworded == set(cut.REWORDED_0142)
         entry = _flat(_changelog_entry())
         assert ("rewritten in 40 of the 74 tools 0.14.1 had, each no longer "
                 "than 0.14.1's, and in `read_brief`") in entry

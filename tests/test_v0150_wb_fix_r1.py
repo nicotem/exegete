@@ -175,20 +175,10 @@ NAMES_LIST = (
     "it.")
 
 
-# The sentence before this round, for the tests that compare a
-# description with what an earlier piece pinned
+# The sentence before this round
 OLD_NAMES_LIST = (
     "Deprecated, removed in v0.15: QualCoder's Pseudonyms dialog (the "
     "button in Manage Files) shows this list without sending it anywhere.")
-
-
-def before_the_review(description):
-    """A served description with this round's two changes put back: the
-    names list's deprecation as it was, and "removed in v0.15" for
-    "removed in v0.15.1", so that a test of an earlier piece still
-    compares with what that piece pinned."""
-    return description.replace(NAMES_LIST, OLD_NAMES_LIST).replace(
-        "removed in v0.15.1:", "removed in v0.15:")
 
 
 class TestTheNamesListsDeprecation:

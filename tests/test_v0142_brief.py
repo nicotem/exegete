@@ -508,9 +508,9 @@ class TestTheSizes:
     tool list, by check_for_updates' in `full` (pull
     request #11), and by nothing else: every other description is as
     v0.14.1 served it or, where the rewording of how Exegete describes
-    itself reached it, shorter (tests/test_v0142_description_cut.py pins
+    itself reached it, shorter (docs/snapshot/ holds
     their words, tests/test_v0142_selfrep.py that none is longer;
-    test_toolset_modes.py pins the new totals). v0.14.3
+    docs/snapshot/sizes.json holds the new totals). v0.14.3
     adds two tools, left out here, and lengthens two descriptions,
     measured apart below. v0.15.0 makes `full` and `lifecycle` one set,
     `full`, with `lifecycle`'s tools, so `full`'s figures below are the
@@ -535,7 +535,7 @@ class TestTheSizes:
     # import_documents), and, from the maintainer's sitting, shortens
     # copy_project_to_workspace and create_project (the folder set for
     # projects, and the coder name as QualCoder 4.0 labels it);
-    # tests/test_v0142_description_cut.py pins their words. v0.15.0
+    # docs/snapshot/ holds their words. v0.15.0
     # rewords the names list in get_current_project, read_pseudonym_list
     # and pseudonymise_source (not presuming QualCoder, piece 1), and
     # lengthens list_available_projects, which names the extension's
@@ -591,7 +591,7 @@ class TestTheSizes:
     # that offered to skip a backup, in apply_codings, delete_coding,
     # delete_annotation, import_text_file, list_backups and
     # pseudonymise_source (1,577 characters more in `full`, 225 in
-    # `core`; tests/test_v0142_description_cut.py pins their words).
+    # `core`; docs/snapshot/ holds their words).
     # v0.15.1, the stale texts: export_refi_qda's sentence names its known
     # faults instead of its removal (ruling 85, item 2), 126 characters
     # more in `full`; `core` does not serve the tool.

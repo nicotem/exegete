@@ -392,9 +392,8 @@ def test_the_scan_finds_each_kind_of_offer():
 
 
 # ---------------------------------------------------------------------------
-# The descriptions as 0.15.0 served them, for the older tests that compare
-# with what an earlier piece pinned (as test_v0150_wb_fix_r1's
-# before_the_review does for its round)
+# The descriptions as 0.15.0 served them, for the older tests that hold
+# a description to an earlier length (tests/test_v0150_lock_wording.py)
 # ---------------------------------------------------------------------------
 
 NEW_ARGS_LINE = re.compile(
@@ -527,35 +526,3 @@ def before_the_ignored_argument(name, description):
         description = description.replace(
             owner, f"\n\n{OLD_IMPORT_SKIP_BACKUP}{owner}")
     return description
-
-
-# The descriptions v0.15.1's piece on audio and video in backups changed
-# as well, whose 0.15.0 words this piece's put-back cannot give back
-ALSO_CHANGED_BY_MEDIA_OUT = {"list_backups", "prune_backups",
-                             "restore_backup", "copy_project_to_workspace"}
-
-
-def test_the_descriptions_put_back_are_0150s():
-    """A guard for the put-back the older tests use: with it, each
-    description this piece changed is as 0.15.0 served it
-    (tests/test_v0142_description_cut.py's CHANGED_0150)."""
-    from test_v0142_description_cut import (CHANGED_0150, CHANGED_0151,
-                                            _fingerprint)
-    server._apply_toolset("full")
-    for name in CHANGED_0151:
-        put_back = before_the_ignored_argument(
-            name, server.mcp.original_descriptions[name])
-        if name in ALSO_CHANGED_BY_MEDIA_OUT:
-            # v0.15.1, audio and video left out of backups, changed these
-            # too (tests/test_v0151_media_out.py pins their words): the
-            # put-back finds this piece's lines in list_backups and gives
-            # back 0.15.0's, and leaves the other three as they are
-            if name == "list_backups":
-                assert "Every write operation (apply_codings, " in put_back
-            else:
-                assert put_back == server.mcp.original_descriptions[name]
-            continue
-        got = _fingerprint(put_back)
-        assert got[1:] == CHANGED_0150[name][1:], name
-        if sys.version_info[:2] == (3, 13):
-            assert got[0] == CHANGED_0150[name][0], name

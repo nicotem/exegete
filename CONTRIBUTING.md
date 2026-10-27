@@ -118,16 +118,25 @@ is looked at first.
    what a tool result may disclose. Links are checked on every push
    (`scripts/check_links.py`): when you rename a heading, it names every
    link to it, the update page's included. The facts the documents
-   repeat are checked too (`tests/test_v0151_facts.py`): the folders,
-   the time per import call and the tool counts against the code's
-   constants; every install command of Exegete names the optional part
-   for PDF and EPUB, in its brackets or its paragraph; the extension's
-   settings are named by their titles, never by their place in the
-   list; and every name a document calls a tool or an argument is one
-   Exegete has. When you change one of them in the code, the check
-   names every sentence that still gives the old one. When you remove a
-   tool or an argument, add it, with the release, to the test's
-   `RETIRED` table.
+   repeat are checked too (`tests/test_v0151_facts.py`): the folders
+   (in full example paths too, such as
+   `/Users/YOUR_NAME/Exegete projects`), the reading folder, the time
+   per import call and the counts against the code's constants; the
+   libraries' releases against `uv.lock`, and the requirements against
+   `pyproject.toml`; the lists of the tools that preview first and of
+   those that report signs of a QualCoder window, what PRIVACY.md and
+   INSTALL.md say Exegete keeps on the computer, and the map of the
+   clone below against the files git tracks; every install command of
+   Exegete names the optional part for PDF and EPUB, in its brackets or
+   its paragraph; an example in one of QualCoder's own folders has "if
+   you use QualCoder" in its paragraph; the extension's settings are
+   named by their titles, never by their place in the list; and every
+   name a document calls a tool or an argument is one Exegete has. When
+   you change one of them in the code, the check names every sentence
+   that still gives the old one, in the forms it reads. When you remove
+   a tool or an argument, add it, with the release, to the test's
+   `RETIRED` table; when you add a module or a script, add it to the
+   map.
 
 ## Review before merge
 

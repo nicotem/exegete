@@ -45,9 +45,14 @@ PLANNED = {
         "85, 105"),
     "shorter tool descriptions": ("feature", "0.15.4", (
         r"\bshorte(?:r|ned)\s+(?:tool\s+)?descriptions\b",), "104, 105"),
+    # "their", "the tools'" or "of the two": the two tools' names, not
+    # INSTALL's "the earlier names of two renamed tools" among the full
+    # set's, nor the section "Earlier names" a sentence points to
     "the two tools' earlier names": ("earlier name", "0.15.4", (
-        r"\bearlier\s+names\b", r"\banalyze_for_coding\b",
-        r"\banalyze_file_with_coding\b"), "73, 85, 105"),
+        r"\b(?:their|the\s+tools')\s+earlier\s+names\b",
+        r"\bearlier\s+names\s+of\s+the\s+two\b",
+        r"\banalyze_for_coding\b", r"\banalyze_file_with_coding\b"),
+        "73, 85, 105"),
     "create_backup": ("argument", "0.15.4", (
         r"\bcreate_backup\b", r"\bbackup\s+option\b"), "85, 105"),
     "the analysis shown in the conversation": ("feature", "0.16", (

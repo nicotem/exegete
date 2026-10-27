@@ -2081,11 +2081,12 @@ def _a_reference_s_verdict(rows, release: Tuple[int, ...],
 
 
 def _a_mention_s_verdict(row, given: List[Tuple[str, Tuple[int, ...]]],
-                         stated: str) -> Tuple[FrozenSet[str],
-                                               Optional[str]]:
-    """A row named in a sentence that names releases to come is named with
-    its own among them ("later" is none); with none to come, it is
-    right and reads nothing."""
+                         stated: str, where: str = "sentence"
+                         ) -> Tuple[FrozenSet[str], Optional[str]]:
+    """A row named beside releases to come, those of its sentence or, when
+    its sentence names none, of its part of the paragraph (`where`), is
+    named with its own among them ("later" is none); with none to come,
+    it is right and reads nothing."""
     name, planned_for, _ = row
     if not given:
         return frozenset(), None
@@ -2096,7 +2097,7 @@ def _a_mention_s_verdict(row, given: List[Tuple[str, Tuple[int, ...]]],
         f'"{stated}" ({name}) ' + (f"is planned for {planned_for}"
                                    if planned_for != "later"
                                    else "has no release set")
-        + ", and its sentence gives " + ", ".join(each for each, _ in given))
+        + f", and its {where} gives " + ", ".join(each for each, _ in given))
 
 
 @functools.lru_cache(maxsize=None)
@@ -2139,13 +2140,20 @@ def _releases_to_come(document: Document, rows, named, version,
                         rows, release, sentence, inside, stated)
                 places.append(Place(document.name, line, fact, stated, reads,
                                     wrong))
+            coming = [(sentence, (words_given, release)) for _, sentence,
+                      release, words_given in references if release > version]
             for at, after, row in inside:
                 stated = " ".join(text[at:after].split())
-                reads, wrong = _a_mention_s_verdict(rows[row], [
-                    (words_given, release) for _, sentence, release,
-                    words_given in references
-                    if sentence[0] <= at < sentence[1] and release > version],
-                    stated)
+                # its sentence's releases to come or, when it names none,
+                # its part's: "create_backup ... It is accepted until the
+                # release on method removes it" names create_backup as "it"
+                given = [each for sentence, each in coming
+                         if sentence[0] <= at < sentence[1]]
+                where = "sentence"
+                if not given and coming:
+                    given, where = [each for _, each in coming], "paragraph"
+                reads, wrong = _a_mention_s_verdict(rows[row], given, stated,
+                                                    where)
                 places.append(Place(document.name,
                                     paragraph.line(document, at), fact,
                                     stated, reads, wrong))
@@ -2156,9 +2164,10 @@ def check_future_releases(facts: Facts, document: Document) -> List[Place]:
     """A release to come that a text names is the release the plan gives
     to something its sentence names or, when the sentence names nothing
     the plan holds, its paragraph (each list item read apart). A planned
-    item named in a sentence beside releases to come is named beside its
-    own; beside none, it is right. README's "What comes next" names no
-    release already made. Releases are compared by their numbers, and
+    item named beside releases to come, its sentence's or, when its
+    sentence names none, its paragraph's, is named beside its own; beside
+    none, it is right. README's "What comes next" names no release
+    already made. Releases are compared by their numbers, and
     pyproject.toml's version is the last one made. A paragraph that names
     no release, by its number or as "the release on", is not read."""
     if not MAY_NAME_A_RELEASE.search(document.text):
@@ -2366,7 +2375,7 @@ CHANGES = (
     ("reading_folders", lambda f: dict(f.reading_folders, darwin=f.
                                        reading_folders["darwin"].replace(
                                            "/Exegete/", "/Other/"))),
-    # v0.15.2: the first row of the plan's first release moved one
+    # v0.15.2: the first row of the plan some text states moved one
     # release on (today undo, from 0.15.2 to 0.15.3)
     ("planned", lambda f: _one_row_moved(f)[1]),
     # v0.15.2: each set's tool definitions a tenth larger
@@ -2375,13 +2384,23 @@ CHANGES = (
 )
 
 
+def _stated_rows() -> FrozenSet[str]:
+    """The rows of the plan some place on the branch reads."""
+    _, _, outcome = _on_the_branch()
+    return frozenset(key.split(":", 1)[1] for place in outcome.places
+                     for key in place.reads if key.startswith("planned:"))
+
+
 def _one_row_moved(facts: Facts) -> Tuple[str, Dict[str, Tuple[str, ...]]]:
-    """The first row, in the plan's order, of its first release, and the
-    plan with that row one release on."""
-    first = min(_release(release) for release, _ in facts.planned.values()
-                if release != "later")
-    name = next(name for name, (release, _) in facts.planned.items()
-                if release != "later" and _release(release) == first)
+    """The first row some text states, by its release and then the plan's
+    order, and the plan with that row one release on. At a release's
+    preparation the next release's first row may be stated nowhere yet
+    (at v0.15.2's, the REFI-QDA fix, moved on to 0.15.3), and moving it
+    would find nothing wrong although the fact holds."""
+    stated = _stated_rows()
+    _, name = min((_release(release), index, name) for index, (
+        name, (release, _)) in enumerate(facts.planned.items())
+        if release != "later" and name in stated)[1:]
     release, words = facts.planned[name]
     return name, dict(facts.planned, **{name: (_one_on(release), words)})
 
@@ -2819,7 +2838,7 @@ def _a_version_on(facts: Facts, text: str) -> Tuple[str, object]:
 
 
 def _a_row_moved(facts: Facts, text: str) -> Tuple[str, object]:
-    """The plan's first row of its first release one release on."""
+    """The row _one_row_moved chooses, one release on."""
     name, moved = _one_row_moved(facts)
     release = facts.planned[name][0]
     row = f"{json.dumps(name)}: ("
@@ -3532,6 +3551,19 @@ FUTURE_SENTENCES = (
      "right"),
     ("TOOLS.md", "Undo comes first. Look for v0.15.4.", "wrong"),
     ("TOOLS.md", "The release on method is coming.", "wrong"),
+    # v0.15.2: a planned item named beside a release to come is named
+    # beside its own, and one with no release set beside none
+    ("TOOLS.md", "v0.15.2: undo and shorter tool descriptions", "wrong"),
+    ("TOOLS.md", "v0.15.4 brings shorter tool descriptions; coding images "
+     "comes later.", "wrong"),
+    # and a planned item whose sentence names no release is read with
+    # its paragraph's, as in "create_backup ... until the release on
+    # method removes it"
+    ("TOOLS.md", "`create_backup` no longer does anything. It is accepted "
+     "until the release on method brings shorter tool descriptions.",
+     "right"),
+    ("TOOLS.md", "`create_backup` no longer does anything. It is accepted "
+     "until v0.15.2 brings undo.", "wrong"),
     # each list item is read apart
     ("TOOLS.md", "- v0.15.2: undo\n- v0.15.4: shorter tool descriptions",
      "right"),
@@ -3599,6 +3631,7 @@ ROW_SENTENCES = {
     "shorter tool descriptions": ("shorter tool descriptions",),
     "the two tools' earlier names": (
         "their earlier names are still listed",
+        "the earlier names of the two renamed tools",
         "`analyze_for_coding` is now `start_coding_session`",
         "`analyze_file_with_coding` is now `read_file_with_codings`"),
     "create_backup": ("`create_backup` no longer does anything",
@@ -3688,7 +3721,8 @@ def test_the_code_texts_are_read():
     """The create_backup note, the help topic on the old name, the update
     note for the old name and the log lines on the earlier spellings are
     places of the fact; the earlier names' row moved names the note, and
-    the rename's rows moved name the other three."""
+    so does create_backup's moved alone, which the note names in a
+    sentence of its own; the rename's rows moved name the other three."""
     real, documents, before = _on_the_branch()
     note = (SERVER_SOURCE, _code_text_line(
         SERVER_SOURCE, "until the release on method removes it"))
@@ -3707,6 +3741,11 @@ def test_the_code_texts_are_read():
     moved = _releases_places(replace(real, planned=dict(
         real.planned, **{names_row: (_one_on(release), words)})), documents)
     assert any(place.wrong for place in _code_place(moved, *note))
+    release, words = real.planned["create_backup"]
+    moved = _releases_places(replace(real, planned=dict(
+        real.planned, create_backup=(_one_on(release), words))), documents)
+    assert [place.stated for place in _code_place(moved, *note)
+            if place.wrong] == ["create_backup"]
     renamed = {name for name, (_, _, _, rulings) in _plan(
         REPO).PLANNED.items() if "41" in rulings.split(", ")}
     moved = _releases_places(replace(real, planned={
@@ -3799,6 +3838,20 @@ def test_the_code_texts_are_read_by_this_fact_alone():
                 if not FACTS[place.fact].code_texts}
 
     assert earlier(check_documents(real, without)) == earlier(outcome)
+
+
+def test_the_moved_row_is_one_some_text_states():
+    """At a release's preparation the next release's first row may be
+    stated nowhere yet: the case for the plan then moves the first row
+    that some text states, so that it still finds the places."""
+    real, _, outcome = _on_the_branch()
+    first = min(_release(release) for release, _ in real.planned.values()
+                if release != "later")
+    unstated = "a row no text states"
+    planned = {unstated: (_shown(first), (r"\bzqxv\b",)), **real.planned}
+    name, moved = _one_row_moved(replace(real, planned=planned))
+    assert name != unstated and moved[unstated] == planned[unstated]
+    assert any(f"planned:{name}" in place.reads for place in outcome.places)
 
 
 def _rows_made(facts: Facts) -> List[str]:

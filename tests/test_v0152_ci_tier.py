@@ -206,6 +206,30 @@ def test_the_base_is_the_integration_branch(tmp_path):
     assert "`origin/main`" in line and "`pyproject.toml`" in line
 
 
+@needs_git
+def test_a_file_moved_out_or_renamed_wakes_them(tmp_path, monkeypatch):
+    """A file moved out of `packaging/`, or a script of theirs renamed,
+    counts by its old path too. git's own default, finding renames, is
+    set here, so a computer that turns it off cannot make this pass."""
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "diff.renames")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "true")
+    root = _clone(tmp_path)
+    _commit(root, "packaging/desktop-extension/notes.txt", "words\n" * 20)
+    _commit(root, "scripts/smoke_desktop_extension.py", "print(1)\n" * 20)
+    _git(root, "update-ref", "refs/remotes/origin/feat/v0152", "HEAD")
+    for n, (old, new) in enumerate((
+            ("packaging/desktop-extension/notes.txt", "notes.txt"),
+            ("scripts/smoke_desktop_extension.py", "scripts/smoke.py"))):
+        branch = f"v0152/move-{n}"
+        _git(root, "checkout", "-q", "-b", branch, "feat/v0152")
+        _git(root, "mv", old, new)
+        _git(root, "commit", "-q", "-m", f"move {old}")
+        fast, skip, line = _decide(root, branch)
+        assert (fast, skip) == (True, False), line
+        assert f"`{old}`" in line
+
+
 # ---------------------------------------------------------------------------
 # The outputs
 # ---------------------------------------------------------------------------

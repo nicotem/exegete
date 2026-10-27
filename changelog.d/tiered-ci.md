@@ -11,7 +11,7 @@
 - **CI runs in two tiers.** Its first job, `tier`
   (`scripts/ci_tier.py`), chooses. A push to `main` or to an
   integration branch, `feat/<name>`, a pull request and a run started
-  by hand take the full tier, the twenty-two jobs. A push to any other
+  by hand take the full tier, the twenty-one jobs. A push to any other
   branch takes the fast tier: the suite once, on Ubuntu with Python
   3.13, and the documents job, with the desktop extension's jobs only
   when the branch changed the packaging, the lock or a script they run.

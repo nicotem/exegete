@@ -239,10 +239,11 @@ def test_the_table_goes_to_the_step_summary(lock, tmp_path, monkeypatch):
 
 def test_each_known_advisory_says_when_and_why():
     """What the security review reads: each entry's library, releases,
-    the date it was accepted and its reason."""
-    assert advisories.KNOWN
-    for advisory, (library, releases, date, reason) in \
-            advisories.KNOWN.items():
+    the date it was accepted and its reason; the validator's list too
+    (v0.15.2)."""
+    assert advisories.KNOWN and advisories.KNOWN_NPM
+    for advisory, (library, releases, date, reason) in [
+            *advisories.KNOWN.items(), *advisories.KNOWN_NPM.items()]:
         assert re.fullmatch(r"(GHSA|PYSEC)-[\w-]+", advisory), advisory
         assert library and releases and reason.strip(), advisory
         assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", date), advisory
@@ -468,12 +469,16 @@ def test_the_advisory_check_runs_weekly_and_when_what_it_checks_changes():
     assert '- cron: "0 6 * * 1"' in text
     assert "\n  workflow_dispatch:\n" in text
     paths = re.search(r"\n    paths:\n((?:      - .+\n)+)", text).group(1)
+    # v0.15.2: the validator's lock too, asked in the same run
     assert sorted(re.findall(r'"([^"]+)"', paths)) == [
-        ".github/workflows/advisories.yml", "scripts/check_advisories.py",
-        "uv.lock"]
+        ".github/workflows/advisories.yml",
+        "packaging/desktop-extension/validator/package-lock.json",
+        "scripts/check_advisories.py", "uv.lock"]
     steps = _steps("advisories.yml", "advisories")
-    assert "python scripts/check_advisories.py uv.lock" in \
-        steps["The locked releases against OSV's advisories"]
+    assert ("run: python scripts/check_advisories.py uv.lock "
+            "packaging/desktop-extension/validator/package-lock.json") in \
+        [line.strip() for line in
+         steps["The locked releases against OSV's advisories"].splitlines()]
 
 
 def test_the_agents_install_line_installs_from_the_lock():

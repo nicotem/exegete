@@ -3,14 +3,17 @@ name: Weekly advisory check
 # v0.15.1: every release in uv.lock against the published advisories
 # (scripts/check_advisories.py, which asks OSV, https://osv.dev), once a
 # week, since an advisory can be published for a release the lock
-# already holds without any change here. A new advisory fails; one
-# already read and accepted (KNOWN in the script, each with its date and
-# reason) is a notice, and so is an accepted one no longer reported,
-# whose entry can then go. The table is in the step summary. A workflow
-# of its own, so that a push changing only the lock checks the
-# advisories and no third-party site. A schedule runs from main only, so
-# a push that changes this workflow, the script or the lock also runs
-# it, on its branch.
+# already holds without any change here. v0.15.2: and every release in
+# the official validator's lock (packaging/desktop-extension/validator),
+# the libraries CI installs to check the desktop extension's manifest,
+# where `npm ci` runs no audit. A new advisory fails; one already read
+# and accepted (KNOWN in the script, or KNOWN_NPM for the validator's,
+# each with its date and reason) is a notice, and so is an accepted one
+# no longer reported, whose entry can then go. The table is in the step
+# summary. A workflow of its own, so that a push changing only a lock
+# checks the advisories and no third-party site. A schedule runs from
+# main only, so a push that changes this workflow, the script or either
+# lock also runs it, on its branch.
 on:
   schedule:
     # Mondays at 06:00 UTC
@@ -21,6 +24,7 @@ on:
       - ".github/workflows/advisories.yml"
       - "scripts/check_advisories.py"
       - "uv.lock"
+      - "packaging/desktop-extension/validator/package-lock.json"
 
 jobs:
   advisories:
@@ -44,4 +48,4 @@ jobs:
           python-version: "3.13"
 
       - name: The locked releases against OSV's advisories
-        run: python scripts/check_advisories.py uv.lock
+        run: python scripts/check_advisories.py uv.lock packaging/desktop-extension/validator/package-lock.json

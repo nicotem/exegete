@@ -418,15 +418,122 @@ def test_the_same_action_is_pinned_the_same_way_everywhere():
         assert len(versions) == 1, (action, [p["where"] for p in pins], versions)
 
 
-def test_changelog_ci_entry_names_the_pinned_versions():
-    text = CHANGELOG.read_text(encoding="utf-8")
-    start = text.index("### CI")
-    entry = text[start:text.index("\n### ", start + 1)
-                 if "\n### " in text[start + 1:] else len(text)]
-    for pin in _pins():
-        short = pin["action"].split("/")[-1]
-        claim = f"{short} {pin['version']}"
-        assert claim in entry, (pin["where"], claim)
+# v0.15.2: the change log is read as entries, newest first: the current
+# entry (the CHANGELOG's [Unreleased] part, with every fragment under
+# changelog.d/ once that folder is in use), then each released entry.
+# For each pinned action, the newest entry naming it at any version must
+# name the version it is pinned at, so a bump is named once, in the
+# current entry, and a released entry is never asked to change. The
+# first "### CI" heading was read before, which a bump could pass only by
+# editing a released entry. Each entry's lines are joined, so a mention
+# wrapped across two lines counts.
+
+def changelog_entries(root=REPO_ROOT):
+    """[(name, text)], newest first, each text on one line."""
+    text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    current, released = [], []
+    for part in re.split(r"(?m)^(?=## \[)", text)[1:]:
+        heading = part.split("\n", 1)[0].strip()
+        if heading.startswith("## [Unreleased]"):
+            current.append(part)
+        else:
+            version = heading[len("## ["):].split("]", 1)[0]
+            released.append((f"the {version} entry", part))
+    folder = root / "changelog.d"
+    if folder.is_dir():
+        current += [path.read_text(encoding="utf-8")
+                    for path in sorted(folder.glob("*.md"))]
+    entries = [("the current entry", "\n".join(current)), *released]
+    return [(name, " ".join(body.split())) for name, body in entries]
+
+
+def where_a_change_is_named(root=REPO_ROOT):
+    """Where CONTRIBUTING.md's step 6 has a change described: a fragment
+    once the fragments are in use (their folder, or the script that
+    gathers them at release), else the [Unreleased] part."""
+    if ((root / "changelog.d").is_dir()
+            or (root / "scripts" / "assemble_changelog.py").is_file()):
+        return "a fragment under changelog.d/"
+    return "the [Unreleased] part of CHANGELOG.md"
+
+
+def pins_the_changelog_misses(pins, root=REPO_ROOT):
+    """A sentence for each pinned action whose newest mention in the
+    change log is not the version it is pinned at, or which no entry
+    names; the sentence says what to write, and where."""
+    entries = changelog_entries(root)
+    missed = []
+    for action, version in sorted({(pin["action"], pin["version"])
+                                   for pin in pins}):
+        short = action.split("/")[-1]
+        before = r"(?<![A-Za-z0-9-])" + re.escape(short)
+        named = re.compile(before + r" v\d")
+        pinned = re.compile(before + " " + re.escape(version) + r"(?!\d)")
+        newest = next(((name, text) for name, text in entries
+                       if named.search(text)), None)
+        if newest is not None and pinned.search(newest[1]):
+            continue
+        found = (f"{newest[0]} names it at another version" if newest
+                 else "no entry names it")
+        missed.append(f"{action} is pinned at {version}, but {found}: "
+                      f"name {short} {version} in "
+                      f"{where_a_change_is_named(root)}")
+    return missed
+
+
+def test_a_pin_bump_is_read_in_the_current_entry(tmp_path):
+    """Synthetic change logs, then the real one. A bump with nothing
+    written is refused, saying what to write and where; written in the
+    [Unreleased] part, in a fragment, or across two lines, it passes; an
+    action named in no entry is refused, as is a longer version."""
+    pins = [{"action": "actions/upload-artifact", "version": "v7.0.2"},
+            {"action": "actions/checkout", "version": "v7.0.1"}]
+    root = tmp_path / "repo"
+    root.mkdir()
+
+    def write(unreleased="", fragment=None):
+        (root / "CHANGELOG.md").write_text(
+            "# Changelog\n\n## [Unreleased]\n\n" + unreleased
+            + "\n## [0.14.2-alpha] - 2026-10-09\n\n### CI\n\n"
+            "- Pins: actions/upload-artifact v7.0.1 and\n"
+            "  actions/checkout v7.0.1.\n", encoding="utf-8")
+        if fragment is not None:
+            (root / "changelog.d").mkdir(exist_ok=True)
+            (root / "changelog.d" / "bump.md").write_text(
+                "### For contributors\n\n" + fragment, encoding="utf-8")
+
+    def named(missed, *facts):
+        return all(fact in missed for fact in facts)
+
+    write()
+    [missed] = pins_the_changelog_misses(pins, root)
+    assert named(missed, "actions/upload-artifact", "0.14.2-alpha",
+                 "upload-artifact v7.0.2", "[Unreleased]")
+    write("### For contributors\n\n- actions/upload-artifact v7.0.2.\n")
+    assert pins_the_changelog_misses(pins, root) == []
+
+    write(fragment="- Nothing about the pins.\n")
+    [missed] = pins_the_changelog_misses(pins, root)
+    assert named(missed, "upload-artifact v7.0.2", "changelog.d/")
+    assert "[Unreleased]" not in missed
+    write(fragment="- The pins move: actions/upload-artifact\n  v7.0.2.\n")
+    assert pins_the_changelog_misses(pins, root) == []
+    # a name that only ends like an action's is not that action
+    write(fragment="- upload-artifact v7.0.2; also my-checkout v2.\n")
+    assert pins_the_changelog_misses(pins, root) == []
+
+    # v7.0.20 is not v7.0.2, and it is the newest mention
+    write(fragment="- actions/upload-artifact v7.0.20.\n")
+    [missed] = pins_the_changelog_misses(pins, root)
+    assert named(missed, "upload-artifact v7.0.2", "the current entry")
+    # named nowhere at any version
+    deploy = {"action": "actions/deploy-pages", "version": "v5.0.1"}
+    missed = pins_the_changelog_misses(pins + [deploy], root)
+    assert len(missed) == 2 and named(missed[0], "deploy-pages v5.0.1",
+                                      "changelog.d/")
+
+    # the repository's own change log names every pin
+    assert pins_the_changelog_misses(_pins()) == []
 
 
 class TestTheJobParserRefusesWhatItCannotRead:

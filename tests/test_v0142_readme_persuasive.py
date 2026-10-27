@@ -297,7 +297,12 @@ def _tools(mode="full"):
 # short" says that on Windows x64 that library reports its use, with
 # nothing from the projects, pointing to PRIVACY.md. That takes 138
 # characters, and the limit is raised by that and no more: 40,977.
-README_LIMIT = 40_977
+# v0.15.2, the snapshot's fix round 1: the sentence on docs/snapshot/
+# says that it holds what Exegete sends the assistant before a project
+# is open, with the brief, and that the tools' answers, which carry the
+# project's texts, are not in it. That takes 104 characters, and the
+# limit is raised by that and no more: 41,081.
+README_LIMIT = 41_081
 
 
 def test_the_readme_stays_short():
@@ -775,9 +780,13 @@ def test_the_tool_set_table():
             "the libraries in `uv.lock`, at four characters a token; about "
             "five per cent more on 3.11 and 3.12.") in flat
     # and where the exact figures are (v0.15.2, the snapshot)
+    # (its fix round 1: what the folder holds is bounded, and the
+    # answers, which carry the project's texts, are said not to be in it)
     assert ("[docs/snapshot/](https://github.com/nicotem/exegete/tree/main/"
-            "docs/snapshot) gives the exact figures, and every text "
-            "Exegete sends the assistant.") in flat
+            "docs/snapshot) gives the exact figures, and what Exegete sends "
+            "the assistant before a project is open, with the brief; the "
+            "tools' answers, which carry your project's texts, are not in "
+            "it.") in flat
 
 
 # ---------------------------------------------------------------------------

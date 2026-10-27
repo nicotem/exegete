@@ -373,7 +373,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── release_plan.py         # What comes in which release: the table the texts are held to
 │   ├── code_texts.py           # The texts the package's code holds, read without running it
 │   ├── check_advisories.py     # Asks OSV's database of advisories about every release in the lock
-│   ├── served_texts.py         # Everything Exegete sends the assistant, written to docs/snapshot/ or compared with it
+│   ├── served_texts.py         # What Exegete sends the assistant before a project is open, and the brief, written to docs/snapshot/ or compared with it
 │   ├── extension_libraries.py  # What the desktop extension installs on each computer, as one table
 │   ├── compare_release_surface.py  # Compares what two releases offer an assistant and a researcher
 │   ├── release_version.py      # What a published release builds, read from its tag
@@ -385,7 +385,7 @@ exegete/                     # the clone (its folder's name does not matter)
 ├── docs/
 │   ├── brand/                  # Exegete's mark
 │   ├── history/                # Early plans and analyses, kept as a record
-│   ├── snapshot/               # Everything Exegete sends the assistant, and its sizes, as served
+│   ├── snapshot/               # What Exegete sends the assistant before a project is open, and the brief, with their sizes
 │   └── update-check/           # The design of the check for new versions, as a record
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/

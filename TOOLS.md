@@ -1017,9 +1017,11 @@ declares, and each tool's own description says what each one does.
 > 3.12 the same definitions measure about five per cent more, because
 > those interpreters keep the docstring indentation that 3.13 strips.
 > [docs/snapshot/](docs/snapshot/) gives the exact figures, in
-> `sizes.json`, and every text Exegete sends the assistant, written
-> again by `scripts/served_texts.py` whenever one changes. See the LM
-> Studio recipe in INSTALL.md for what that means for context length.
+> `sizes.json`, and what Exegete sends the assistant before a project
+> is open, with the brief, written again by `scripts/served_texts.py`
+> whenever one of these texts changes; the tools' answers, which carry
+> the project's texts, are not in it. See the LM Studio recipe in
+> INSTALL.md for what that means for context length.
 
 **Project Management:**
 - `read_brief()` - The assistant's brief (provisional): how Exegete expects the assistant to work with you. Its description asks the assistant to call it once at the start of every conversation about a project; it returns the full brief, or in the `core` set the short version, and reads nothing from the project. In every tool set (see "What the assistant is told" above)

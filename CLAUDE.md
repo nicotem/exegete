@@ -91,9 +91,10 @@ of a project from the conversation. It runs as an MCP server.
 - **Never touch a real QualCoder installation, a real project or any AI
   assistant's configuration.** Tests use fixtures and synthetic data
   only.
-- **What the assistant receives is kept in `docs/snapshot/`**, with its
-  sizes: when a description, a tool's arguments or another text sent
-  before a project is open changes, write it again with
+- **What the assistant receives before a project is open, and the
+  brief, are kept in `docs/snapshot/`**, with their sizes (the tools'
+  answers are not): when a description, a tool's arguments or another
+  of these texts changes, write it again with
   `python scripts/served_texts.py write` on Python 3.13 and review the
   diff; a test fails until then. Rules a model must not miss sit within
   a description's first 2,048 characters: Claude Code cut there before

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Write out everything Exegete sends the assistant, to read a change to
-it as a diff.
+"""Write out what Exegete sends the assistant before a project is open,
+and the brief, to read a change to it as a diff.
 
     python scripts/served_texts.py write [--out FOLDER]
     python scripts/served_texts.py check
@@ -309,8 +309,9 @@ def library_refusal():
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="python scripts/served_texts.py",
-        description="Write or check docs/snapshot/, everything Exegete "
-                    "sends the assistant.")
+        description="Write or check docs/snapshot/: what Exegete sends "
+                    "the assistant before a project is open, and the "
+                    "brief.")
     commands = parser.add_subparsers(dest="command", required=True)
     write = commands.add_parser("write", help="write the snapshot again")
     write.add_argument("--out", type=Path, default=SNAPSHOT,

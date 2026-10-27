@@ -569,9 +569,10 @@ tool's definition (name, description and arguments) with each request:
 measured on Python 3.13 with the libraries in `uv.lock`, at four
 characters a token; about five per cent more on 3.11 and 3.12.
 [docs/snapshot/](https://github.com/nicotem/exegete/tree/main/docs/snapshot)
-gives the exact figures, and every text Exegete sends the assistant.
-`lifecycle`, the earlier name of `full`, is still accepted in
-`EXEGETE_TOOLSET` and means `full`.
+gives the exact figures, and what Exegete sends the assistant before a
+project is open, with the brief; the tools' answers, which carry your
+project's texts, are not in it. `lifecycle`, the earlier name of
+`full`, is still accepted in `EXEGETE_TOOLSET` and means `full`.
 
 **Beyond the basics**:
 

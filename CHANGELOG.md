@@ -41,18 +41,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   visibility. `_with_paragraphs` puts each back where it stood, so a
   rewording is made in one place. No description changes: the snapshot
   below holds every description as it was.
-- **Everything Exegete sends the assistant is kept in
-  `docs/snapshot/`**: for each tool set, the opening text, every tool's
-  entry as a host receives it (its description, the schemas of its
-  arguments and of its answer, its annotations), the prompts, the
-  resources and `read_brief`'s answer, with their sizes in
-  `sizes.json`. `python scripts/served_texts.py write`, on Python 3.13
-  with the libraries in `uv.lock`, writes it again, and a change to any
-  of these texts is reviewed as a diff of those files;
+- **What Exegete sends the assistant before a project is open is kept in
+  `docs/snapshot/`, with the brief**: for each tool set, the opening
+  text, every tool's entry as a host receives it (its description, the
+  schemas of its arguments and of its answer, its annotations), the
+  prompts, the resources and `read_brief`'s answer, with their sizes in
+  `sizes.json`; the other tools' answers, which carry the project's
+  texts, are not in it. `python scripts/served_texts.py write`, on
+  Python 3.13 with the libraries in `uv.lock`, writes it again, and a
+  change to any of these texts is reviewed as a diff of those files;
   `tests/test_served_texts.py` fails when the code and the snapshot
   differ. README.md, INSTALL.md and TOOLS.md give the sizes rounded and
-  point there for the exact figures, which the facts check holds them
-  to within five per cent. The exact sizes pinned in
+  point there for the exact figures, which the facts check holds them to
+  within five per cent. The exact sizes pinned in
   `tests/test_toolset_modes.py`, and the tests that held descriptions to
   fingerprints of their earlier words, are gone.
 - **CI runs in two tiers.** Its first job, `tier`

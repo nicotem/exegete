@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""What Exegete sends the assistant is the snapshot committed in
-docs/snapshot/.
+"""What Exegete sends the assistant before a project is open, and the
+brief, are the snapshot committed in docs/snapshot/.
 
 scripts/served_texts.py renders, for each tool set, `full` and `core`,
 everything Exegete sends the assistant before a project is open (the
@@ -282,6 +282,66 @@ def test_the_registry_is_as_it_was_after_a_render(script):
     assert all(tools[name] is tool for name, tool in before)
     assert server.mcp._mcp_server.instructions == opening
     assert script.render("full") == first
+
+
+# What the snapshot holds, where a text says it: what Exegete sends the
+# assistant before a project is open, and the brief; not the tools'
+# answers, which carry the project's texts (the review's round 1, 27
+# October: "every text Exegete sends the assistant" was untrue). In the
+# documents, each sentence that names the snapshot and says what Exegete
+# sends the assistant says "before a project is open"; in the script and
+# in these tests' first lines, every such sentence does.
+SAYING = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
+          "CHANGELOG.md", "CLAUDE.md", "CONTRIBUTING.md",
+          ".github/workflows/ci.yml")
+NAMES_THE_SNAPSHOT = re.compile(
+    r"docs/snapshot|served_texts\.py|\bthe snapshot\b", re.I)
+SAYS_WHAT_IS_SENT = re.compile(
+    r"\bsends? the assistant\b|\bthe assistant receives\b", re.I)
+BOUNDED = "before a project is open"
+
+
+def _sentences(text):
+    """A text's sentences and the parts a colon or a semicolon divides,
+    white space set aside, the marks of a quote or a comment at a line's
+    start left out; each line of a tree drawn with "├──" or "└──" stands
+    alone."""
+    text = re.sub(r"(?m)^(.*[├└]──.*)$", r"\n\1\n", text)
+    text = re.sub(r"(?m)^[ \t]*[#>]+[ \t]?", "", text)
+    for paragraph in re.split(r"\n[ \t]*\n", text):
+        yield from re.split(r"(?<=[.:;!?])\s+", " ".join(paragraph.split()))
+
+
+def _unbounded(sentences, every=False):
+    """The sentences that say what Exegete sends the assistant, about the
+    snapshot (or `every` one), without "before a project is open"."""
+    return [sentence for sentence in sentences
+            if SAYS_WHAT_IS_SENT.search(sentence)
+            and (every or NAMES_THE_SNAPSHOT.search(sentence))
+            and BOUNDED not in sentence.lower()]
+
+
+def test_where_the_snapshot_is_named_it_is_bounded():
+    found, unbounded = set(), []
+    for name in SAYING:
+        sentences = list(_sentences((REPO / name).read_text(
+            encoding="utf-8")))
+        unbounded += [(name, s) for s in _unbounded(sentences)]
+        if any(SAYS_WHAT_IS_SENT.search(s) and NAMES_THE_SNAPSHOT.search(s)
+               for s in sentences):
+            found.add(name)
+    tree = ast.parse((REPO / "scripts" / "served_texts.py").read_text(
+        encoding="utf-8"))
+    strings = [node.value for node in ast.walk(tree)
+               if isinstance(node, ast.Constant)
+               and isinstance(node.value, str)]
+    strings.append(__doc__)
+    for text in strings:
+        unbounded += [("scripts/served_texts.py", s) for s in _unbounded(
+            _sentences(text), every=True)]
+    assert unbounded == [], unbounded
+    # the two documents a researcher reads say it
+    assert {"README.md", "TOOLS.md"} <= found, found
 
 
 NUMBERS = ("one", "two", "three", "four", "five", "six", "seven", "eight",

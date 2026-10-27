@@ -561,7 +561,7 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 79: all, creating a project and two renamed tools' earlier names included | about 200,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `full` | 79: all, creating a project and two renamed tools' earlier names included | about 203,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 27: the coding loop and its safety tools | about 74,000 characters, 18k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
 
 That is how much of a model's context a host uses when it sends every

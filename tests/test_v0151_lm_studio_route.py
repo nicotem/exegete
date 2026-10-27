@@ -19,7 +19,8 @@ needs for PDF and EPUB, in both of its forms; Step 5's example project
 is where Exegete's own folder for projects is, named as create_project
 names a project; the first project's paragraph rests on what `core`
 leaves out; Step 3 states its sizes in one sentence. The sizes
-themselves are held to the measurement in tests/test_toolset_modes.py.
+themselves are held, within five per cent, to docs/snapshot/sizes.json
+by tests/test_v0151_facts.py.
 """
 
 import importlib.util

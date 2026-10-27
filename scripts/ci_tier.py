@@ -21,7 +21,9 @@ item 3: less repetition in testing, the same checks).
   that exists, else `origin/main`. A change already merged into the
   integration branch therefore does not wake them on every later piece,
   and a branch that changed one of those files keeps running them on
-  each push. When git cannot answer, they run.
+  each push. A file moved or renamed counts by its old path as well as
+  its new one, so a move out of `packaging/` wakes them too. When git
+  cannot answer, they run.
 
 The event and the ref come from the environment (`GITHUB_EVENT_NAME`,
 `GITHUB_REF`), never from a line of the workflow, and every ref reaches
@@ -116,8 +118,10 @@ def changed_paths(branch: str,
     """(the base, every path the branch changed since it left the base)."""
     since = base(branch, cwd)
     fork = _answer(["merge-base", since, "HEAD"], cwd).strip()
-    names = _answer(["-c", "core.quotepath=off", "diff", "--name-only", "-z",
-                     fork, "HEAD", "--"], cwd)
+    # Without --no-renames, git names a moved or renamed file by its new
+    # path alone, and a move out of packaging/ would wake nothing.
+    names = _answer(["-c", "core.quotepath=off", "diff", "--name-only",
+                     "--no-renames", "-z", fork, "HEAD", "--"], cwd)
     return since, [name for name in names.split("\0") if name]
 
 

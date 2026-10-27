@@ -609,6 +609,185 @@ jobs:
           python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
           python -m pip install --no-deps -e .
 
+      # A probe, never merged (the piece of the documents' commands): does
+      # one Ctrl+C stop Exegete started in a terminal? This commit in a
+      # virtual environment of its own, in a scratch home; the table goes
+      # to the summary. Removed in the next commit.
+      - name: Probe, one Ctrl+C to Exegete in a terminal
+        continue-on-error: true
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/probe-venv"
+          "$RUNNER_TEMP/probe-venv/bin/python" -m pip install --quiet --require-hashes -r "$RUNNER_TEMP/locked.txt"
+          "$RUNNER_TEMP/probe-venv/bin/python" -m pip install --quiet --no-deps .
+          mkdir -p "$RUNNER_TEMP/probe-home" "$RUNNER_TEMP/probe-tmp"
+          cat > "$RUNNER_TEMP/probe_ctrl_c.py" <<'PROBE'
+          #!/usr/bin/env python3
+          """A probe, never merged: does one Ctrl+C stop Exegete started in a terminal?
+
+              python3 probe_ctrl_c.py OUTPUT_DIR COMMAND [ARG...]
+
+          Run with HOME, USERPROFILE and TMPDIR already pinned to a scratch folder.
+          Each trial starts COMMAND afresh with a terminal (a pty, made its
+          controlling terminal, as a terminal window's is) on its standard input,
+          and its standard output and error into one file. After the note and five
+          quiet seconds:
+
+            A. one SIGINT to its process group; running at 1, 5, 10 and 30 s?
+               then the terminal closed; at 1, 5 and 10 s? then a second SIGINT;
+               at 1, 5 and 10 s?
+            B. one SIGINT; 10 s; a second SIGINT, the terminal kept open; at 1, 5
+               and 10 s?
+            C. one SIGINT; 10 s; Enter typed in the terminal; at 1, 5 and 10 s?
+
+          Whatever still runs at a trial's end is killed. Standard library only.
+          """
+
+          import fcntl
+          import os
+          import signal
+          import subprocess
+          import sys
+          import termios
+          import time
+
+          NOTE_END = "Press Ctrl+C to stop this process."
+
+
+          def start(command, output):
+              master, slave = os.openpty()
+
+              def controlling_terminal():
+                  # A program started from a background job inherits SIGINT and
+                  # SIGQUIT ignored (and SIGHUP under nohup): a terminal's program
+                  # has the defaults
+                  for number in (signal.SIGINT, signal.SIGQUIT, signal.SIGHUP,
+                                 signal.SIGTERM):
+                      signal.signal(number, signal.SIG_DFL)
+                  fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+
+              env = {key: os.environ[key] for key in ("HOME", "USERPROFILE", "TMPDIR")}
+              env.update(PATH="/usr/bin:/bin", LANG="C.UTF-8",
+                         EXEGETE_UPDATE_CHECK="off")
+              handle = open(output, "wb")
+              process = subprocess.Popen(command, stdin=slave, stdout=handle,
+                                         stderr=subprocess.STDOUT, env=env,
+                                         cwd=env["HOME"], start_new_session=True,
+                                         preexec_fn=controlling_terminal)
+              os.close(slave)
+              handle.close()
+              return process, master
+
+
+          def settle(process, output, limit=60.0):
+              """Seconds until the note and then five quiet seconds, or a reason."""
+              started = time.monotonic()
+              size, quiet_since = -1, time.monotonic()
+              while time.monotonic() - started < limit:
+                  if process.poll() is not None:
+                      return f"ended by itself before settling ({process.returncode})"
+                  now_size = os.path.getsize(output)
+                  if now_size != size:
+                      size, quiet_since = now_size, time.monotonic()
+                  with open(output, encoding="utf-8", errors="replace") as handle:
+                      seen = NOTE_END in handle.read()
+                  if seen and time.monotonic() - quiet_since >= 5:
+                      return round(time.monotonic() - started, 1)
+                  time.sleep(0.1)
+              return "no note and five quiet seconds within 60 s"
+
+
+          def watch(process, event, marks, rows, since):
+              """Record whether it runs at each mark (seconds after `since`)."""
+              for mark in marks:
+                  while time.monotonic() - since < mark:
+                      if process.poll() is not None and "ended" not in rows[-1][-1]:
+                          at = round(time.monotonic() - since, 2)
+                          rows.append((event, f"{at}", f"ended ({describe(process)})"))
+                      time.sleep(0.05)
+                  rows.append((event, f"{mark}", "running" if process.poll() is None
+                               else f"ended ({describe(process)})"))
+
+
+          def describe(process):
+              code = process.returncode
+              if code is None:
+                  return "running"
+              if code < 0:
+                  return f"signal {signal.Signals(-code).name}"
+              return f"exit {code}"
+
+
+          def trial(name, command, folder):
+              output = os.path.join(folder, f"trial-{name}.txt")
+              process, master = start(command, output)
+              rows = [("start", "0", "running")]
+              settled = settle(process, output)
+              rows.append(("note, then 5 s quiet", str(settled),
+                           "running" if process.poll() is None else describe(process)))
+              if process.poll() is None:
+                  pgid = os.getpgid(process.pid)
+                  os.killpg(pgid, signal.SIGINT)
+                  since = time.monotonic()
+                  if name == "A":
+                      watch(process, "after one SIGINT", (1, 5, 10, 30), rows, since)
+                      os.close(master)
+                      master = None
+                      since = time.monotonic()
+                      watch(process, "after the terminal closed", (1, 5, 10), rows,
+                            since)
+                      if process.poll() is None:
+                          os.killpg(pgid, signal.SIGINT)
+                          since = time.monotonic()
+                          watch(process, "after a second SIGINT", (1, 5, 10), rows,
+                                since)
+                  elif name == "B":
+                      watch(process, "after one SIGINT", (1, 5, 10), rows, since)
+                      if process.poll() is None:
+                          os.killpg(pgid, signal.SIGINT)
+                          since = time.monotonic()
+                          watch(process, "after a second SIGINT, terminal open",
+                                (1, 5, 10), rows, since)
+                  else:
+                      watch(process, "after one SIGINT", (1, 5, 10), rows, since)
+                      if process.poll() is None:
+                          os.write(master, b"\n")
+                          since = time.monotonic()
+                          watch(process, "after Enter typed", (1, 5, 10), rows, since)
+                  if process.poll() is None:
+                      os.killpg(pgid, signal.SIGKILL)
+                      process.wait()
+                      rows.append(("killed at the end", "", describe(process)))
+              if master is not None:
+                  os.close(master)
+              print(f"\n### Trial {name}: {' '.join(command)}")
+              print("| event | seconds | program |")
+              print("|---|---|---|")
+              for event, seconds, state in rows:
+                  print(f"| {event} | {seconds} | {state} |")
+              with open(output, encoding="utf-8", errors="replace") as handle:
+                  lines = handle.read().splitlines()
+              print(f"\nIts output, last {min(len(lines), 30)} of {len(lines)} lines:")
+              for line in lines[-30:]:
+                  print("    " + line[:300])
+
+
+          def main():
+              folder, command = sys.argv[1], sys.argv[2:]
+              os.makedirs(folder, exist_ok=True)
+              print(f"Python {sys.version.split()[0]} on {sys.platform}")
+              for name in ("A", "B", "C"):
+                  trial(name, command, folder)
+
+
+          if __name__ == "__main__":
+              main()
+          PROBE
+          HOME="$RUNNER_TEMP/probe-home" USERPROFILE="$RUNNER_TEMP/probe-home" TMPDIR="$RUNNER_TEMP/probe-tmp" \
+            python "$RUNNER_TEMP/probe_ctrl_c.py" "$RUNNER_TEMP/probe" "$RUNNER_TEMP/probe-venv/bin/exegete" | tee "$RUNNER_TEMP/probe.md"
+          cat "$RUNNER_TEMP/probe.md" >> "$GITHUB_STEP_SUMMARY"
+          test ! -e "$HOME/.exegete" && test ! -e "$HOME/.qualcoder_mcp"
+
       # The documents' facts against the code, and what Exegete sends
       # the assistant before a project is open, and the brief, against
       # docs/snapshot/

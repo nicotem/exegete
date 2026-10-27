@@ -11,10 +11,12 @@ prompts and arguments, the libraries' releases in the lock and the
 requirements, the runtime dependencies, the package's modules and
 scripts, and the tools that report signs of a QualCoder window. An
 example that puts a project in one of QualCoder's folders says that
-it is for those who use QualCoder. When the code changes one of them,
-every sentence that still gives the old one fails here, named by its
-file and line, on the push that makes the change (the owner's ruling
-85).
+it is for those who use QualCoder. A release to come that a text names,
+in the documents or in the code's own texts, is the one the plan
+(scripts/release_plan.py) gives to what its sentence names. When the
+code changes one of them, every sentence that still gives the old one
+fails here, named by its file and line, on the push that makes the
+change (the owner's ruling 85).
 
 The values are always read from the code's constants and files
 (`facts_from_the_code`), never from a copy written here, and the
@@ -41,6 +43,7 @@ is fetched.
 import ast
 import bisect
 import functools
+import importlib.util
 import json
 import re
 import shutil
@@ -74,17 +77,21 @@ SERVER_SOURCE = "src/exegete/server.py"
 # The folders whose tracked Python files CONTRIBUTING's map names
 PACKAGE_FOLDER = "src/exegete"
 SCRIPTS_FOLDER = "scripts"
+# What comes in which release (v0.15.2): data only, read under the root
+PLAN = "scripts/release_plan.py"
 # The files under the root the facts are read from
-FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE)
+FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN)
 # Every document read. Not read: the CHANGELOG's released entries, the
 # other documents kept as a record of early versions in docs/history/
 # (FEATURE_ANALYSIS.md and the other plans and analyses) and
 # docs/update-check/ (a design record). IMPORT_INSTRUCTIONS.md, moved
 # to docs/history/ with them, is read there by the first five facts
-# alone: it names the state folder. Not read either: the texts Exegete
-# serves the assistant (its tools' descriptions, its brief, its notes
-# and refusals), and Exegete's own update steps (updates.py,
-# transition.py), which are code.
+# alone: it names the state folder. The texts Exegete's code holds (its
+# tools' descriptions, its brief, its notes, refusals, help topics and
+# log lines, in every module of src/exegete) are read by one fact
+# alone, the releases to come (v0.15.2), through scripts/code_texts.py:
+# each text is a document of its own, named by its module and the line
+# it starts on.
 DOCUMENTS = (
     "README.md", "INSTALL.md", "PRIVACY.md", "TOOLS.md", "QUICKSTART.md",
     "SUPPORT.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
@@ -149,6 +156,13 @@ class Facts:
     # the reading folder on each system, its parts joined by "/", the
     # home folder as "~"
     reading_folders: Dict[str, str]
+    # v0.15.2: the version pyproject.toml gives, by its release numbers
+    # ("0.15.1-alpha.1" is (0, 15, 1)); the plan's rows, each with its
+    # release (a version, or "later") and the words that name it; and the
+    # releases the plan calls by a name, by version
+    version: Tuple[int, ...]
+    planned: Dict[str, Tuple[str, Tuple[str, ...]]]
+    releases: Dict[str, str]
 
 
 def _pdf_epub_extra(project: dict) -> str:
@@ -313,6 +327,21 @@ def _reading_folders() -> Dict[str, str]:
             system, Path("~"))).parts) for system in SYSTEMS}
 
 
+def _release(numbers: str) -> Tuple[int, ...]:
+    """A release by its numbers, three at least: "1.0" is (1, 0, 0)."""
+    read = tuple(int(number) for number in numbers.split("."))
+    return read + (0,) * (3 - len(read))
+
+
+def _plan(root: Path):
+    """The plan under `root`, scripts/release_plan.py: data only, so it is
+    run as a module of its own and never registered."""
+    spec = importlib.util.spec_from_file_location("release_plan", root / PLAN)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def facts_from_the_code(root: Path = REPO,
                         tracked: Optional[Tuple[str, ...]] = None) -> Facts:
     """Each value from the constant or the file the code itself uses:
@@ -324,6 +353,7 @@ def facts_from_the_code(root: Path = REPO,
     manifest = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
     tools = server.mcp._tool_manager._tools
     listed = _tracked(str(root)) if tracked is None else tuple(tracked)
+    plan = _plan(root)
     return Facts(
         state_folder=names.STATE_FOLDER,
         old_state_folder=names.OLD_STATE_FOLDER,
@@ -363,7 +393,12 @@ def facts_from_the_code(root: Path = REPO,
         scripts=_python_files(listed, SCRIPTS_FOLDER),
         signal_tools=_signal_tools((root / SERVER_SOURCE).read_text(
             encoding="utf-8")),
-        reading_folders=_reading_folders())
+        reading_folders=_reading_folders(),
+        version=_release(re.match(r"\d+(?:\.\d+)*", project["version"])
+                         .group(0)),
+        planned={name: (release, tuple(words)) for name, (
+            _, release, words, _) in plan.PLANNED.items()},
+        releases=dict(plan.RELEASES))
 
 
 # The counts the documents give, each with the constants it is held to.
@@ -626,6 +661,35 @@ READING_FOLDER_PATH = (r"(?<![\w%~/.-])(?P<path>(?:"
 # who use QualCoder
 IF_YOU_USE_QUALCODER = r"(?i:\bif\s+you\s+(?:also\s+)?use\s+QualCoder\b)"
 
+# A release a text names (v0.15.2): `vN.N` or `vN.N.N`; "Exegete N.N";
+# "the release on <name>" for a name the plan gives a release; a bare N.N
+# after "removed in", "retired in", "planned as" or "planned for"; and
+# "version N.N" where its sentence or its paragraph names Exegete or
+# qualcoder-mcp
+_NUMBERS = r"(?P<release>\d+\.\d+(?:\.\d+)?)(?!\.?\d)"
+RELEASE_NAMED = (
+    r"(?<![\w./-])v" + _NUMBERS, r"\bExegete\s+" + _NUMBERS,
+    r"(?i:\bthe\s+release\s+on\s+)(?P<name>[\w-]+)",
+    r"(?i:\b(?:removed|retired)\s+in\s+|\bplanned\s+(?:as|for)\s+)"
+    + _NUMBERS)
+VERSION_NAMED = r"(?i:\bversion\s+)" + _NUMBERS
+NAMES_EXEGETE = r"(?i:\bexegete\b|\bqualcoder-mcp\b)"
+# Not read: inside an address (any scheme's, or a Markdown link's
+# target), nor in a sentence that names another program whose own
+# releases the documents give in these forms: Claude Code's (README,
+# INSTALL, PRIVACY, CLAUDE.md) and the settings Anthropic documents for
+# it (PRIVACY). Kept to what the documents need: a program left out is
+# named by the check, never passed over in silence
+ADDRESS = r"\b[a-z][a-z0-9+.-]*://[^\s<>\"'`)\]]*|\]\([^)\s]*\)"
+OTHER_PROGRAMS = frozenset({"Claude Code", "Anthropic"})
+# README's section on what comes next, where no release already made
+# stays
+NEXT_SECTION = ("README.md", "What comes next")
+# A line that starts a list item: a paragraph's items are read apart
+LIST_ITEM = r"(?m)^(?:[-*+]|\d+[.)])\s"
+# What a text that names a release holds, at the least
+MAY_NAME_A_RELEASE = re.compile(r"\d\.\d|(?i:release\s+on)")
+
 
 @dataclass(frozen=True)
 class Fact:
@@ -634,6 +698,8 @@ class Fact:
     patterns: Tuple[str, ...]    # the patterns that find it
     # read in docs/history/ and the CHANGELOG's [Unreleased] part too
     history: bool = False
+    # read in the texts Exegete's code holds too (read_code_texts)
+    code_texts: bool = False
     # documents not read for this fact (each with its reason, above it)
     left_out: Tuple[str, ...] = ()
     # the fields of Facts it needs, checked only when none is None (the
@@ -739,6 +805,14 @@ FACTS: Dict[str, Fact] = {
         documents=("INSTALL.md", "QUICKSTART.md",
                    "PROJECT_SELECTION_GUIDE.md"),
         patterns=(IF_YOU_USE_QUALCODER, USUAL_PLACES_LIST)),
+    "the releases to come": Fact(
+        code="pyproject.toml: the version; scripts/release_plan.py: "
+             "PLANNED and RELEASES",
+        documents=("README.md", "INSTALL.md", "PRIVACY.md", "TOOLS.md",
+                   "CONTRIBUTING.md", "packaging/pypi-old-name/README.md",
+                   UPDATE_PAGE, SERVER_SOURCE, "src/exegete/updates.py"),
+        patterns=RELEASE_NAMED + (VERSION_NAMED, NAMES_EXEGETE, ADDRESS),
+        code_texts=True),
 }
 # The version and its date are held already: tests/test_updates.py and
 # tests/test_v0142_pages.py hold pyproject.toml, the CHANGELOG heading,
@@ -762,19 +836,26 @@ class Document:
     first_line: int = 1
     # the CHANGELOG's current part: read for wrong values only
     wrong_values_only: bool = False
+    # one of the code's texts (v0.15.2), and whether every place in it is
+    # named by its first line (literals joined over several lines)
+    code_text: bool = False
+    one_line: bool = False
 
     def line_of(self, offset: int) -> int:
+        if self.one_line:
+            return self.first_line
         return self.first_line + bisect.bisect_right(self.starts, offset) - 1
 
 
 def _document(name: str, lines: List[str], first_line: int = 1,
-              wrong_values_only: bool = False) -> Document:
+              wrong_values_only: bool = False, code_text: bool = False,
+              one_line: bool = False) -> Document:
     flat = [re.sub(r"^\s*(?:>\s*)*", "", line).rstrip() for line in lines]
     starts = [0]
     for line in flat[:-1]:
         starts.append(starts[-1] + len(line) + 1)
     return Document(name, "\n".join(flat), tuple(lines), tuple(starts),
-                    first_line, wrong_values_only)
+                    first_line, wrong_values_only, code_text, one_line)
 
 
 def current_changelog_part(
@@ -796,9 +877,39 @@ def current_changelog_part(
     return start + 2, part
 
 
+def _code_texts_script():
+    spec = importlib.util.spec_from_file_location(
+        "code_texts", REPO / "scripts" / "code_texts.py")
+    module = importlib.util.module_from_spec(spec)
+    # registered first: its dataclass looks its module up by name
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+code_texts = _code_texts_script()
+
+
+@functools.lru_cache(maxsize=None)
+def _code_text_document(text) -> Document:
+    return _document(text.module, text.text.split("\n"), text.line,
+                     code_text=True, one_line=not text.keeps_lines)
+
+
+def read_code_texts(root: Path = REPO) -> List[Document]:
+    """The texts of every module of src/exegete under `root`, as
+    scripts/code_texts.py reads them, each a document of its own read as
+    Markdown. The package's folder missing fails, never passes unread."""
+    assert (root / code_texts.PACKAGE).is_dir(), (
+        f"{code_texts.PACKAGE}: the package is missing")
+    return [_code_text_document(text)
+            for text in code_texts.code_texts(root)]
+
+
 def read_documents(root: Path = REPO) -> List[Document]:
-    """Every document the table names, and the CHANGELOG's current part.
-    A document missing from `root` fails, never passes unread."""
+    """Every document the table names, the CHANGELOG's current part and
+    the code's texts. A document missing from `root` fails, never passes
+    unread."""
     documents = []
     for name in DOCUMENTS:
         path = root / name
@@ -810,7 +921,7 @@ def read_documents(root: Path = REPO) -> List[Document]:
     if current is not None:
         documents.append(_document(CHANGELOG, current[1], current[0],
                                    wrong_values_only=True))
-    return documents
+    return documents + read_code_texts(root)
 
 
 # ---------------------------------------------------------------------------
@@ -1737,6 +1848,197 @@ def check_qualcoder_folders(facts: Facts, document: Document) -> List[Place]:
     return places
 
 
+def _units(text: str) -> List[Tuple[int, int]]:
+    """A paragraph's parts read apart: what comes before its first list
+    item, and each item, with its wrapped lines."""
+    starts = sorted({0} | {found.start()
+                           for found in re.finditer(LIST_ITEM, text)})
+    return list(zip(starts, starts[1:] + [len(text)]))
+
+
+def _sentences(text: str, start: int, end: int) -> List[Tuple[int, int]]:
+    """text[start:end] cut where _sentence cuts: at ".", "!" or "?"
+    before white space."""
+    cuts = [found.end() for found in re.compile(r"[.!?](?=\s)").finditer(
+        text, start, end)]
+    bounds = [start] + cuts + [end]
+    return list(zip(bounds, bounds[1:]))
+
+
+@functools.lru_cache(maxsize=16)
+def _row_words(rows: Tuple[Tuple[str, str, Tuple[str, ...]], ...]):
+    """One pattern for the words of every row, a group for each row."""
+    if not rows:
+        return None
+    return re.compile("|".join(
+        f"(?P<row{index}>" + "|".join(f"(?:{words})" for words in each)
+        + ")" for index, (_, _, each) in enumerate(rows)), re.I)
+
+
+@functools.lru_cache(maxsize=4)
+def _programs(names: FrozenSet[str]):
+    return re.compile(r"\b(?:" + "|".join(
+        r"\s+".join(re.escape(word) for word in name.split())
+        for name in sorted(names)) + r")\b") if names else None
+
+
+def _shown(release: Tuple[int, ...]) -> str:
+    return ".".join(str(number) for number in release)
+
+
+# A release a text names: where, its sentence, its numbers and its words
+Reference = Tuple[int, Tuple[int, int], Tuple[int, ...], str]
+
+
+def _references(text: str, start: int, end: int, by_name: Dict[str, tuple],
+                programs) -> List[Reference]:
+    """The releases text[start:end] names (one part of a paragraph): none
+    inside an address or in a sentence that names another program, no
+    "version N.N" in a part that names neither Exegete nor qualcoder-mcp,
+    and no name the plan does not give a release."""
+    sentences = _sentences(text, start, end)
+    addresses = [found.span() for found in re.compile(ADDRESS).finditer(
+        text, start, end)]
+    names_exegete = re.search(NAMES_EXEGETE, text[start:end]) is not None
+    found_here: List[Reference] = []
+    for pattern in RELEASE_NAMED + (VERSION_NAMED,):
+        for found in re.compile(pattern).finditer(text, start, end):
+            at = found.start()
+            sentence = next(span for span in sentences
+                            if span[0] <= at < span[1])
+            if any(a <= at < b for a, b in addresses) or (
+                    programs and programs.search(text, *sentence)) or (
+                    pattern == VERSION_NAMED and not names_exegete):
+                continue
+            release = (by_name.get(found["name"].lower())
+                       if "name" in found.re.groupindex
+                       else _release(found["release"]))
+            if release is not None:
+                found_here.append((at, sentence, release,
+                                   " ".join(found.group(0).split())))
+    return found_here
+
+
+def _a_reference_s_verdict(rows, release: Tuple[int, ...],
+                           sentence: Tuple[int, int], inside,
+                           stated: str) -> Tuple[FrozenSet[str],
+                                                 Optional[str]]:
+    """A release to come is right when its sentence, or its part of the
+    paragraph when the sentence names nothing planned, names a row of
+    that release; it reads that row when it is the only one."""
+    scope = [row for at, _, row in inside if sentence[0] <= at < sentence[1]]
+    where = "sentence"
+    if not scope:
+        scope, where = [row for _, _, row in inside], "paragraph"
+    backing = {rows[row][0] for row in scope if rows[row][1] != "later"
+               and _release(rows[row][1]) == release}
+    if backing:
+        return frozenset({f"planned:{name}" for name in backing}) \
+            if len(backing) == 1 else frozenset(), None
+    listed = sorted({f"{rows[row][0]} ({rows[row][1]})" for row in scope})
+    return frozenset(), (
+        f'"{stated}" names {_shown(release)}, a release to come, and '
+        f"nothing its {where} names is planned for it"
+        + (f": {', '.join(listed)}" if listed else ""))
+
+
+def _a_mention_s_verdict(row, given: List[Tuple[str, Tuple[int, ...]]],
+                         stated: str) -> Tuple[FrozenSet[str],
+                                               Optional[str]]:
+    """A row named in a sentence that names releases to come is named with
+    its own among them ("later" is none); with none to come, it is
+    right and reads nothing."""
+    name, planned_for, _ = row
+    if not given:
+        return frozenset(), None
+    if planned_for != "later" and _release(planned_for) in {
+            release for _, release in given}:
+        return frozenset({f"planned:{name}"}), None
+    return frozenset(), (
+        f'"{stated}" ({name}) ' + (f"is planned for {planned_for}"
+                                   if planned_for != "later"
+                                   else "has no release set")
+        + ", and its sentence gives " + ", ".join(each for each, _ in given))
+
+
+@functools.lru_cache(maxsize=None)
+def _releases_to_come(document: Document, rows, named, version,
+                      others) -> Tuple[Place, ...]:
+    """The places of check_future_releases, for one document and plan."""
+    fact = "the releases to come"
+    words, programs = _row_words(rows), _programs(others)
+    by_name = {name.lower(): _release(release) for release, name in named}
+    section = (_section(document, NEXT_SECTION[1])
+               if document.name == NEXT_SECTION[0]
+               and not document.code_text else None)
+    places: List[Place] = []
+    for paragraph in paragraphs(document):
+        text = paragraph.text
+        # a paragraph that can name no release is passed over whole
+        if paragraph.code or not MAY_NAME_A_RELEASE.search(text):
+            continue
+        mentions = [(found.start(), found.end(), int(found.lastgroup[3:]))
+                    for found in words.finditer(text)] if words else []
+        for start, end in _units(text):
+            references = _references(text, start, end, by_name, programs)
+            inside = [mention for mention in mentions
+                      if start <= mention[0] < end]
+            for at, sentence, release, stated in references:
+                line = paragraph.line(document, at)
+                if section and release <= version and section[0] <= (
+                        line - document.first_line) <= section[1]:
+                    reads, wrong = frozenset(), (
+                        f'"{stated}" in "{NEXT_SECTION[1]}" is a release '
+                        f"already made: the version is {_shown(version)}")
+                elif release <= version:
+                    continue
+                else:
+                    reads, wrong = _a_reference_s_verdict(
+                        rows, release, sentence, inside, stated)
+                places.append(Place(document.name, line, fact, stated, reads,
+                                    wrong))
+            for at, after, row in inside:
+                stated = " ".join(text[at:after].split())
+                reads, wrong = _a_mention_s_verdict(rows[row], [
+                    (words_given, release) for _, sentence, release,
+                    words_given in references
+                    if sentence[0] <= at < sentence[1] and release > version],
+                    stated)
+                places.append(Place(document.name,
+                                    paragraph.line(document, at), fact,
+                                    stated, reads, wrong))
+    return tuple(places)
+
+
+def check_future_releases(facts: Facts, document: Document) -> List[Place]:
+    """A release to come that a text names is the release the plan gives
+    to something its sentence names or, when the sentence names nothing
+    the plan holds, its paragraph (each list item read apart). A planned
+    item named in a sentence beside releases to come is named beside its
+    own; beside none, it is right. README's "What comes next" names no
+    release already made. Releases are compared by their numbers, and
+    pyproject.toml's version is the last one made. A paragraph that names
+    no release, by its number or as "the release on", is not read."""
+    if not MAY_NAME_A_RELEASE.search(document.text):
+        return []
+    return list(_releases_to_come(document, *_plan_key(facts),
+                                  facts.version, OTHER_PROGRAMS))
+
+
+# The facts last given to check_future_releases, with their plan as a key
+_LAST_PLAN: List[object] = [None, None]
+
+
+def _plan_key(facts: Facts) -> Tuple[tuple, tuple]:
+    """The plan's rows and names as tuples, the same facts read once."""
+    if _LAST_PLAN[0] is not facts:
+        _LAST_PLAN[:] = [facts, (tuple(
+            (name, release, tuple(words))
+            for name, (release, words) in facts.planned.items()),
+            tuple(facts.releases.items()))]
+    return _LAST_PLAN[1]
+
+
 CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the projects folder": check_projects_folder,
     "the usual places": check_usual_places,
@@ -1756,6 +2058,7 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the project structure": check_project_structure,
     "the reading folder": check_reading_folder,
     "QualCoder's folders": check_qualcoder_folders,
+    "the releases to come": check_future_releases,
 }
 
 
@@ -1782,8 +2085,10 @@ class Outcome:
 
 def _reads(fact: Fact, document: Document) -> bool:
     """Whether the fact reads the document: docs/history/ and the
-    CHANGELOG only for the first five facts, and none of a fact's
-    documents left out."""
+    CHANGELOG only for the first five facts, the code's texts only for
+    the facts that say so, and none of a fact's documents left out."""
+    if document.code_text:
+        return fact.code_texts
     if document.name in fact.left_out:
         return False
     return fact.history or not (document.name.startswith(HISTORY)
@@ -1861,7 +2166,10 @@ def _first_switch(facts: Facts) -> str:
 
 # Each constant given another value, as a change in the code would give
 # it. The earlier names are not here: no document states a count without
-# them today, so the CHANGELOG's test below holds them.
+# them today, so the CHANGELOG's test below holds them. Nor are the
+# version and the plan's names for releases: a version one release on
+# makes no statement wrong by itself, and a name renamed leaves its
+# statements unread, so tests of their own below hold them.
 CHANGES = (
     ("state_folder", lambda f: f.state_folder + "-test"),
     ("old_state_folder", lambda f: f.old_state_folder + "-test"),
@@ -1913,7 +2221,21 @@ CHANGES = (
     ("reading_folders", lambda f: dict(f.reading_folders, darwin=f.
                                        reading_folders["darwin"].replace(
                                            "/Exegete/", "/Other/"))),
+    # v0.15.2: the first row of the plan's first release moved one
+    # release on (today undo, from 0.15.2 to 0.15.3)
+    ("planned", lambda f: _one_row_moved(f)[1]),
 )
+
+
+def _one_row_moved(facts: Facts) -> Tuple[str, Dict[str, Tuple[str, ...]]]:
+    """The first row, in the plan's order, of its first release, and the
+    plan with that row one release on."""
+    first = min(_release(release) for release, _ in facts.planned.values()
+                if release != "later")
+    name = next(name for name, (release, _) in facts.planned.items()
+                if release != "later" and _release(release) == first)
+    release, words = facts.planned[name]
+    return name, dict(facts.planned, **{name: (_one_on(release), words)})
 
 
 def _one_on(release: str) -> str:
@@ -1924,7 +2246,8 @@ def _one_on(release: str) -> str:
 
 def test_every_constant_is_changed_by_one_test():
     assert {field.name for field in fields(Facts)} - {
-        name for name, _ in CHANGES} == {"earlier_names"}
+        name for name, _ in CHANGES} == {"earlier_names", "version",
+                                         "releases"}
 
 
 def _affected(name: str, before, after) -> set:
@@ -1998,7 +2321,11 @@ def test_a_changed_constant_reports_exactly_the_places_that_state_it(
 
 
 def _scratch_copy(tmp_path: Path) -> Path:
-    for name in DOCUMENTS + (CHANGELOG,) + FILES_READ:
+    """The documents, the files the facts are read from and the package's
+    modules, whose texts one fact reads, copied under `tmp_path`."""
+    modules = tuple(path.relative_to(REPO).as_posix() for path in sorted(
+        (REPO / PACKAGE_FOLDER).rglob("*.py")))
+    for name in DOCUMENTS + (CHANGELOG,) + FILES_READ + modules:
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / name, tmp_path / name)
     return tmp_path
@@ -2247,6 +2574,35 @@ def _add_a_signal_tool(facts: Facts, text: str) -> Tuple[str, object]:
             facts.signal_tools | {"one_tool_more"})
 
 
+def _a_version_on(facts: Facts, text: str) -> Tuple[str, object]:
+    """pyproject.toml's version one release on, as release preparation
+    moves it."""
+    found = re.search(r'(?m)^version = "(?P<version>[^"]+)"', text)
+    later = _one_on(_shown(facts.version))
+    return (text[:found.start("version")] + later
+            + text[found.end("version"):], _release(later))
+
+
+def _a_row_moved(facts: Facts, text: str) -> Tuple[str, object]:
+    """The plan's first row of its first release one release on."""
+    name, moved = _one_row_moved(facts)
+    release = facts.planned[name][0]
+    row = f"{json.dumps(name)}: ("
+    start = text.index(row)
+    at = text.index(json.dumps(release), start)
+    return (text[:at] + json.dumps(moved[name][0])
+            + text[at + len(json.dumps(release)):], moved)
+
+
+def _a_release_renamed(facts: Facts, text: str) -> Tuple[str, object]:
+    """The first release the plan calls by a name, called by another."""
+    version, name = sorted(facts.releases.items())[0]
+    given = f"{json.dumps(version)}: {json.dumps(name)}"
+    return (text.replace(given, f"{json.dumps(version)}: "
+                         f"{json.dumps(name + '-test')}", 1),
+            dict(facts.releases, **{version: name + "-test"}))
+
+
 # Where each value read from a file comes from: the file under the root
 # given, and an edit of it, which gives the value it should read
 FILE_SOURCES = {
@@ -2256,6 +2612,9 @@ FILE_SOURCES = {
     "requirements": (PYPROJECT, _change_a_requirement),
     "runtime_dependencies": (PYPROJECT, _add_a_dependency),
     "signal_tools": (SERVER_SOURCE, _add_a_signal_tool),
+    "version": (PYPROJECT, _a_version_on),
+    "planned": (PLAN, _a_row_moved),
+    "releases": (PLAN, _a_release_renamed),
 }
 # The values read from git's list of the tracked files: the folder each
 # is read from
@@ -2880,3 +3239,384 @@ def test_a_path_is_in_a_folder_by_its_parts():
         document = _document("INSTALL.md", [f"`{path}`"])
         assert [place.stated for place in check_qualcoder_folders(
             facts, document)] == folders, path
+
+
+# ---------------------------------------------------------------------------
+# v0.15.2: the releases to come, and the code's texts
+# ---------------------------------------------------------------------------
+# A plan for the sentences below, fixed so that they do not move with the
+# real one: releases to come, one called by a name, and an item with no
+# release set
+SENTENCE_PLAN = {
+    "undo": ("0.15.2", (r"\bundo\b",)),
+    "create_backup": ("0.15.4", (r"\bcreate_backup\b",)),
+    "shorter tool descriptions": ("0.15.4", (
+        r"\bshorter\s+tool\s+descriptions\b",)),
+    "the old name's package": ("1.0", (
+        r"\breleased\s+beside\s+(?:every\s+)?Exegete\b",)),
+    "coding images": ("later", (r"\bcoding\s+images\b",)),
+}
+SENTENCE_RELEASES = {"0.15.4": "method", "0.16": "chat-first"}
+
+
+@functools.lru_cache(maxsize=1)
+def _sentence_facts() -> Facts:
+    return replace(facts_from_the_code(), version=(0, 15, 1),
+                   planned=SENTENCE_PLAN, releases=SENTENCE_RELEASES)
+
+
+# A document, a text in it, and what the check makes of the text
+FUTURE_SENTENCES = (
+    ("TOOLS.md", "v0.15.2: undo", "right"),
+    ("TOOLS.md", "v0.15.3: undo", "wrong"),
+    ("TOOLS.md", "v0.16: coding images", "wrong"),
+    ("TOOLS.md", "Exegete 0.16 shows tables.", "wrong"),
+    ("TOOLS.md", "It is accepted until the release on method removes "
+     "`create_backup`.", "right"),
+    ("TOOLS.md", "It is accepted until the release on chat-first removes "
+     "`create_backup`.", "wrong"),
+    # a planned item named with no release to come in its sentence
+    ("TOOLS.md", "- `create_attribute_type(name, memo, create_backup)` - "
+     "attributes on journal entries were removed in 0.15.1", "right"),
+    ("TOOLS.md", "`create_backup` no longer does anything.", "not read"),
+    # a sentence that names nothing planned is read with its paragraph
+    ("TOOLS.md", "Shorter tool descriptions are coming. Look for v0.15.4.",
+     "right"),
+    ("TOOLS.md", "Undo comes first. Look for v0.15.4.", "wrong"),
+    ("TOOLS.md", "The release on method is coming.", "wrong"),
+    # each list item is read apart
+    ("TOOLS.md", "- v0.15.2: undo\n- v0.15.4: shorter tool descriptions",
+     "right"),
+    ("TOOLS.md", "- v0.15.2: shorter tool descriptions\n- v0.15.4: undo",
+     "wrong"),
+    # "version N.N" is read beside Exegete or its earlier name alone
+    ("packaging/pypi-old-name/README.md", "It is released beside every "
+     "Exegete release until version 1.0.", "right"),
+    ("packaging/pypi-old-name/README.md", "qualcoder-mcp works until "
+     "version 1.0.", "wrong"),
+    # not read: a release made, other programs' releases, an address
+    ("TOOLS.md", "The `cascade` argument was removed in 0.15.1.",
+     "not read"),
+    ("PRIVACY.md", "With Claude Code v2.1.283 or later, auto mode is the "
+     "built-in default.", "not read"),
+    ("INSTALL.md", "From version 2.1.199, Claude Code asks before every "
+     "call of `import_documents`.", "not read"),
+    # INSTALL's item on Claude Code, and PRIVACY's sentence on the
+    # settings Anthropic documents for it
+    ("INSTALL.md", "- **Claude Code.** In **Manual** mode it asks before a "
+     "call. In **auto** mode, read-only actions are approved; auto is the "
+     "starting mode for interactive sessions from\nversion 2.1.283, and "
+     "before that on Pro, Max and Team plans.", "not read"),
+    ("PRIVACY.md", "Anthropic documents settings that narrow this: `Read` "
+     "deny rules for\nyour projects folder, `permissions."
+     "blockReadsOutsideWorkingDirectories`\n(version 2.1.257 or later). "
+     "Exegete reads none of them.", "not read"),
+    ("TOOLS.md", "The notes: <https://github.com/nicotem/exegete/releases/"
+     "tag/v0.16.0-alpha>", "not read"),
+    ("TOOLS.md", "[The notes](https://github.com/nicotem/exegete/releases/"
+     "tag/v0.16.0-alpha)", "not read"),
+    # README's section on what comes next keeps no release already made
+    ("README.md", "## What comes next\n\n- v0.15.1: undo", "wrong"),
+    ("README.md", "## What comes next\n\n- v0.15.2: undo", "right"),
+    ("TOOLS.md", "## What comes next\n\n- v0.15.1: undo", "right"),
+)
+
+
+@pytest.mark.parametrize("name, text, verdict", FUTURE_SENTENCES)
+def test_future_releases_in_a_sentence(name, text, verdict):
+    places = check_future_releases(_sentence_facts(),
+                                   _document(name, text.split("\n")))
+    assert _verdict(places) == verdict, places
+
+
+# For each row of the plan, a sentence for each of its words, in order
+ROW_SENTENCES = {
+    "undo": ("v0.15.2: undo a session's changes",),
+    "the occurrences choice": (
+        "when replacing names, choose which mentions to keep",
+        "the occurrences choice"),
+    "the REFI-QDA fix": ("the REFI-QDA export fix",
+                         "fixes to the REFI-QDA export"),
+    "PyMuPDF 2.0 on Apple silicon": ("PyMuPDF 2.0 on Apple silicon Macs",),
+    "coding sessions kept with their project": (
+        "coding sessions kept with their project",),
+    "the housekeeping that touches data": (
+        "the housekeeping that touches data",),
+    "the review of method": (
+        "how the assistant supports a study's method, reviewed",
+        "the review of method"),
+    "shorter tool descriptions": ("shorter tool descriptions",),
+    "the two tools' earlier names": (
+        "their earlier names are still listed",
+        "`analyze_for_coding` is now `start_coding_session`",
+        "`analyze_file_with_coding` is now `read_file_with_codings`"),
+    "create_backup": ("`create_backup` no longer does anything",
+                      "the tools' backup option"),
+    "the analysis shown in the conversation": (
+        "more of the analysis shown in the conversation",
+        "as tables and graphs"),
+    "PDFs that say where their text came from": (
+        "PDFs that say where their text came from",),
+    "fuller counts of the names left": (
+        "fuller counts of where names remain after replacing them",),
+    "a user manual": ("a user manual",),
+    "codings placed by the passage they quote": (
+        "codings placed by the passage they quote",),
+    "the old name's package": (
+        "The old name's package is kept",
+        "The earlier name's last release comes with Exegete 1.0",
+        "the last release of this package will say so",
+        "It is released beside every Exegete release",
+        "the old way of starting keeps working"),
+    "the earlier spellings": (
+        "Earlier spellings, read until v1.0",
+        "the old setting spellings still work",
+        "its earlier setting names are read only until then",
+        "two spellings of one setting",
+        "the old `QUALCODER_MCP_...` ones",
+        "`QUALCODER_PROJECT_PATH` is read"),
+    "lifecycle": ("`lifecycle` is read as `full`",),
+    "qualcoder_mcp.json": ("a small `qualcoder_mcp.json` beside it",),
+    "the qualcoder:// addresses": (
+        "the old `qualcoder://...` ones are still answered",
+        "the earlier addresses are still answered",
+        "the old resource addresses still work"),
+    "a sandbox for the reading process": ("it runs without a sandbox",),
+    "the evaluation of local models": (
+        "We have not yet evaluated local models with Exegete",),
+    "coding images, audio and video": (
+        "coding images, audio, video and areas of PDF pages",),
+    "more QualCoder 4.0 conventions": ("more QualCoder 4.0 conventions",),
+}
+
+
+def test_each_row_of_the_plan_is_named_alone_by_its_words():
+    """Each row has a kind, a release (a version, or "later"), its rulings
+    or "roadmap", and words each found in its sentence above, which names
+    that row and no other."""
+    plan = _plan(REPO)
+    assert set(ROW_SENTENCES) == set(plan.PLANNED)
+    rows = tuple((name, release, tuple(words)) for name, (
+        _, release, words, _) in plan.PLANNED.items())
+    every = _row_words(rows)
+    for name, (kind, release, words, rulings) in plan.PLANNED.items():
+        assert kind in ("tool", "argument", "earlier name", "feature"), name
+        assert release == "later" or re.fullmatch(
+            r"\d+\.\d+(?:\.\d+)?", release), name
+        assert re.fullmatch(r"\d+(?:, \d+)*|roadmap", rulings), name
+        assert len(ROW_SENTENCES[name]) == len(words), name
+        for pattern, sentence in zip(words, ROW_SENTENCES[name]):
+            assert re.search(pattern, sentence, re.I), (name, pattern)
+            assert {rows[int(found.lastgroup[3:])][0] for found in
+                    every.finditer(sentence)} == {name}, (name, sentence)
+    assert set(plan.RELEASES) <= {release for _, release, _ in rows}
+
+
+def _releases_places(facts: Facts, documents) -> List[Place]:
+    """The places of the releases to come alone, as check_documents finds
+    them."""
+    fact = FACTS["the releases to come"]
+    return [place for document in documents if _reads(fact, document)
+            for place in check_future_releases(facts, document)]
+
+
+def _code_place(places: List[Place], module: str, line: int) -> List[Place]:
+    return [place for place in places
+            if (place.document, place.line) == (module, line)]
+
+
+def _code_text_line(module: str, words: str) -> int:
+    """The line of the one text of `module` that holds `words`."""
+    found = [text.line for text in code_texts.code_texts(REPO)
+             if text.module == module and words in text.text]
+    assert len(found) == 1, (module, words, found)
+    return found[0]
+
+
+def test_the_code_texts_are_read():
+    """The create_backup note, the help topic on the old name, the update
+    note for the old name and the log lines on the earlier spellings are
+    places of the fact; the earlier names' row moved names the note, and
+    the rename's rows moved name the other three."""
+    real, documents, before = _on_the_branch()
+    note = (SERVER_SOURCE, _code_text_line(
+        SERVER_SOURCE, "until the release on method removes it"))
+    topic = (SERVER_SOURCE, _code_text_line(SERVER_SOURCE,
+                                            "still work until v1.0"))
+    update = ("src/exegete/updates.py", _code_text_line(
+        "src/exegete/updates.py", "comes with Exegete 1.0"))
+    spelling = ("src/exegete/env_settings.py", _code_text_line(
+        "src/exegete/env_settings.py", "the earlier spelling of"))
+    for module, line in (note, topic, update, spelling):
+        found = _code_place(before.places, module, line)
+        assert found and not any(place.wrong for place in found), (
+            module, line)
+    names_row = "the two tools' earlier names"
+    release, words = real.planned[names_row]
+    moved = _releases_places(replace(real, planned=dict(
+        real.planned, **{names_row: (_one_on(release), words)})), documents)
+    assert any(place.wrong for place in _code_place(moved, *note))
+    renamed = {name for name, (_, _, _, rulings) in _plan(
+        REPO).PLANNED.items() if "41" in rulings.split(", ")}
+    moved = _releases_places(replace(real, planned={
+        name: ("1.1" if name in renamed else release, words)
+        for name, (release, words) in real.planned.items()}), documents)
+    for place in (topic, update, spelling):
+        assert any(each.wrong for each in _code_place(moved, *place)), place
+
+
+SERVED_SOURCE = '''"""A module's docstring, which nothing serves at all."""
+from . import names
+
+
+@mcp.tool()
+def a_tool():
+    """A tool's docstring, which FastMCP serves as its description."""
+    return {"answer": "a dictionary's value of five words"}
+
+
+def _private():
+    """A private function's docstring, which is never served."""
+
+
+def built(value):
+    return f"Read until {names.UNTIL}, then {value} ends the text."
+
+
+SHORT = "three words only"
+RAW = r"a raw text of five words"
+logger.info("a line for the log, of seven words")
+'''
+
+
+def test_code_texts_reads_what_is_served(tmp_path):
+    """A tool's docstring, a dictionary's value and an f-string, once and
+    with names.py's text in it; not another docstring, the f-string's
+    parts, or a text of three words. Each text says what the texts check
+    filters by: a raw literal, the call it stands in, the name it is
+    assigned to."""
+    package = tmp_path / code_texts.PACKAGE
+    package.mkdir(parents=True)
+    (package / "names.py").write_text('UNTIL = "v1.0"\n', encoding="utf-8")
+    (package / "one.py").write_text(SERVED_SOURCE, encoding="utf-8")
+    read = [(text.line, text.text, text.docstring, text.raw, text.call,
+             text.name) for text in code_texts.code_texts(tmp_path)
+            if text.module == f"{code_texts.PACKAGE}/one.py"]
+    assert read == [
+        (7, "A tool's docstring, which FastMCP serves as its description.",
+         True, False, None, None),
+        (8, "a dictionary's value of five words", False, False, None, None),
+        (16, "Read until v1.0, then " + code_texts.GAP + " ends the text.",
+         False, False, None, None),
+        (20, "a raw text of five words", False, True, None, "RAW"),
+        (21, "a line for the log, of seven words", False, False,
+         "logger.info", None)]
+
+
+def test_a_triple_quoted_text_keeps_its_lines_and_joined_ones_do_not(
+        tmp_path):
+    package = tmp_path / code_texts.PACKAGE
+    package.mkdir(parents=True)
+    (package / "one.py").write_text(
+        'FIRST = """One text of words,\nwritten over\nthree lines."""\n'
+        'SECOND = ("One text of words, "\n          "joined over two.")\n',
+        encoding="utf-8")
+    first, second = code_texts.code_texts(tmp_path)
+    assert (first.line, first.keeps_lines) == (1, True)
+    assert (second.line, second.keeps_lines) == (4, False)
+    document = _code_text_document(second)
+    assert document.line_of(len(document.text) - 1) == 4
+
+
+def test_the_code_texts_are_read_by_this_fact_alone():
+    """Every earlier fact finds the same places with the code's texts
+    given as without them."""
+    real, documents, outcome = _on_the_branch()
+    without = [document for document in documents
+               if not document.code_text]
+    assert len(without) < len(documents)
+
+    def earlier(found: Outcome) -> set:
+        return {(_key(place), tuple(sorted(place.reads)), place.wrong)
+                for place in found.places
+                if not FACTS[place.fact].code_texts}
+
+    assert earlier(check_documents(real, without)) == earlier(outcome)
+
+
+def _rows_made(facts: Facts) -> List[str]:
+    """The rows of the plan whose release is no longer to come."""
+    return sorted(name for name, (release, _) in facts.planned.items()
+                  if release != "later"
+                  and _release(release) <= facts.version)
+
+
+def test_the_plan_holds_no_release_already_made():
+    """At release preparation, the rows of the release leave the plan: a
+    version at the plan's first release names each of its rows."""
+    real = facts_from_the_code()
+    assert _rows_made(real) == []
+    first = min(_release(release) for release, _ in real.planned.values()
+                if release != "later")
+    assert _rows_made(replace(real, version=first)) == sorted(
+        name for name, (release, _) in real.planned.items()
+        if release != "later" and _release(release) == first)
+
+
+def test_a_made_release_is_no_longer_future():
+    """With the version at the plan's first release, README's item for that
+    release in "What comes next" is named as a release already made."""
+    real, documents, _ = _on_the_branch()
+    first, written = min((_release(release), release) for release, _ in
+                         real.planned.values() if release != "later")
+    readme = (REPO / NEXT_SECTION[0]).read_text(encoding="utf-8")
+    item = re.search(r"(?m)^- v" + re.escape(written) + r"(?![\d.])",
+                     readme)
+    assert item, f"README names no v{written} item"
+    line = readme.count("\n", 0, item.start()) + 1
+    assert [place for place in _releases_places(
+        replace(real, version=first), documents)
+        if (place.document, place.line) == (NEXT_SECTION[0], line)
+        and place.wrong and "already made" in place.wrong]
+
+
+def _names_found(facts: Facts, documents) -> List[str]:
+    """The names the plan gives releases that some text uses: "the release
+    on <name>", or the name in a paragraph's item that names the release
+    as `vN.N`."""
+    found = []
+    for version, name in facts.releases.items():
+        on = re.compile(r"(?i:\bthe\s+release\s+on\s+)" + re.escape(name)
+                        + r"(?![\w-])")
+        beside = re.compile(r"(?<![\w./-])v" + re.escape(version)
+                            + r"(?!\.?\d)")
+        called = re.compile(r"(?<![\w-])" + re.escape(name) + r"(?![\w-])",
+                            re.I)
+        if any(on.search(paragraph.text) or any(
+                beside.search(paragraph.text, start, end)
+                and called.search(paragraph.text, start, end)
+                for start, end in _units(paragraph.text))
+               for document in documents
+               for paragraph in paragraphs(document)):
+            found.append(name)
+    return found
+
+
+def test_each_release_name_is_found():
+    """Each name the plan gives a release is one a text uses, so that "the
+    release on <name>" is read; a name renamed in the plan is not."""
+    real, documents, _ = _on_the_branch()
+    assert _names_found(real, documents) == list(real.releases.values())
+    version, name = sorted(real.releases.items())[0]
+    assert name + "-test" not in _names_found(replace(
+        real, releases={version: name + "-test"}), documents)
+
+
+def test_the_rename_rows_follow_names():
+    """The rows of the rename (ruling 41) end with the release
+    names.OLD_SPELLINGS_UNTIL gives, read at each check."""
+    rows = [(name, release) for name, (_, release, _, rulings) in _plan(
+        REPO).PLANNED.items() if "41" in rulings.split(", ")]
+    assert rows
+    until = names.OLD_SPELLINGS_UNTIL.lstrip("v")
+    assert {release for _, release in rows} == {until}, rows

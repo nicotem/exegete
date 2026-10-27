@@ -180,19 +180,24 @@ class TestTheRestartIsSaid:
 class TestTheMethodRelease:
 
     def test_no_text_plans_the_earlier_number(self):
-        assert _method_release() == "v0.15.3"
+        # the owner's form of 27 October (ruling 105): method is v0.15.4
+        assert _method_release() == "v0.15.4"
         sources = [str(p.relative_to(REPO)) for p in
                    sorted((REPO / "src" / "exegete").rglob("*.py"))]
         for name in DOCUMENTS + tuple(sources):
             text = _flat(_read(name))
-            assert "planned as v0.15.2" not in text, name
-            assert "v0.15.2, the method release" not in text, name
+            for earlier in ("v0.15.2", "v0.15.3"):
+                assert f"planned as {earlier}" not in text, name
+                assert f"{earlier}, the method release" not in text, name
 
-    def test_the_unreleased_entry_names_the_planned_release(self):
+    def test_the_released_entry_keeps_the_release_it_named(self):
+        """0.15.1-alpha's entry is a record of its release: it names the
+        method release as planned then (ruling 85), and the later move to
+        v0.15.4 (ruling 105) does not rewrite it."""
         entry = _flat(_unreleased())
         found = re.findall(r"until (v\d+\.\d+\.\d+), the method release",
                            entry)
-        assert found and set(found) == {_method_release()}, found
+        assert found and set(found) == {"v0.15.3"}, found
 
     def test_the_released_entry_keeps_its_history(self):
         text = _read("CHANGELOG.md")

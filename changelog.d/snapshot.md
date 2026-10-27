@@ -13,5 +13,6 @@
   differ. README.md, INSTALL.md and TOOLS.md give the sizes rounded and
   point there for the exact figures, which the facts check holds them to
   within five per cent. The exact sizes pinned in
-  `tests/test_toolset_modes.py`, and the tests that held descriptions to
-  fingerprints of their earlier words, are gone.
+  `tests/test_toolset_modes.py` and `tests/test_v0142_brief.py`, and the
+  tests that held descriptions to fingerprints of their earlier words,
+  are gone.

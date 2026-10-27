@@ -711,16 +711,18 @@ page on MCP in Claude Code, read on 15 October 2026; before Claude
 Code 2.1.296, 2,048). Exegete puts the rules a model must not miss
 within each description's first 2,048 characters, a few named
 exceptions apart, which reach the model through `read_brief` or the
-tools' answers. Measured for 0.15.1, the descriptions are longer on
-Python 3.11 and 3.12 than on 3.13, which strips the indentation they are
-written with. On Python 3.13, 4 of `full`'s 79 descriptions are longer
-than 4,096 characters (`pseudonymise_source`, 17,138;
-`start_coding_session`, 6,038; `search_files`, 4,537;
-`record_suggestions`, 4,455); on 3.11 and 3.12, the same four are, at
-18,238, 6,282, 4,873 and 4,691.
-`pseudonymise_source` is longer than 16,384, so its last 754
-characters are cut even through tool search on 3.13, and its last
-1,854 on 3.11 and 3.12, its sentence on the lock file among them.
+tools' answers. The descriptions are longer on Python 3.11 and 3.12
+than on 3.13, which strips the indentation they are written with. On
+Python 3.13, 4 of `full`'s 79 descriptions are longer than 4,096
+characters (`pseudonymise_source`, about 17,000;
+`start_coding_session`, about 6,000; `search_files`, about 4,500;
+`record_suggestions`, about 4,500); on 3.11 and 3.12, the same four are,
+at about 18,000, 6,300, 4,900 and 4,700.
+[docs/snapshot/sizes.json](docs/snapshot/sizes.json) gives each
+description's exact length on Python 3.13.
+`pseudonymise_source` is longer than 16,384, so its last part, its
+sentence on the lock file included, is cut even through tool search,
+and a longer part on 3.11 and 3.12.
 Claude Code's own setting `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`
 (version 2.1.280 or later) replaces both limits with one figure:
 20000, for example, lets every Exegete description through whole on
@@ -1153,12 +1155,13 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 79 tools by
 default, and the serialised tool definitions alone measure about
-203,000 characters, roughly 51k tokens, against about 74,000
-characters, roughly 18k tokens, for the 27 tools of `core` (202,814
-and 73,968 characters, measured for 0.15.1 on Python 3.13; TOOLS.md
-says how). The full set exceeds LM Studio's 8k default context several
-times over before you type a word, and tool counts this size are far
-past where small-model tool selection degrades. Set
+200,000 characters, roughly 51k tokens, against about 74,000
+characters, roughly 18k tokens, for the 27 tools of `core` (measured
+on Python 3.13 with the libraries in `uv.lock`; TOOLS.md says how, and
+[docs/snapshot/](docs/snapshot/) gives the exact figures). The full set
+exceeds LM Studio's 8k default context several times over before you
+type a word, and tool counts this size are far past where small-model
+tool selection degrades. Set
 `EXEGETE_TOOLSET=core` (in the config of Step 5) to register only the
 27-tool supervised coding set.
 
@@ -1635,7 +1638,7 @@ safeguard", below, says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 203,000 characters with `full`; TOOLS.md says how that
+  (about 200,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

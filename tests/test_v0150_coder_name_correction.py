@@ -41,7 +41,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server                       # noqa: E402
-from tool_counts import FULL_TOOLS  # noqa: E402
+from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 from exegete import database, names                  # noqa: E402
 
 OLD, NEW = "NT", "Niccolò Tempini"
@@ -1170,4 +1170,4 @@ class TestTheTool:
 
     def test_the_counts(self):
         assert len(server.STANDARD_TOOL_NAMES) == FULL_TOOLS
-        assert len(server.CORE_TOOLSET) == 27   # restore_backup and search_memos (v0.15.1)
+        assert len(server.CORE_TOOLSET) == CORE_TOOLS

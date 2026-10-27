@@ -39,7 +39,10 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server  # noqa: E402
-from assemble_changelog import current_measurement  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).parent))
+# the documents round a size to two significant figures (v0.15.2)
+from test_v0151_facts import SIZE_TOLERANCE  # noqa: E402
 
 DEPRECATIONS = sorted(name for name in dir(server)
                       if name.startswith("DEPRECATED_")
@@ -129,10 +132,13 @@ class TestClaudeCodesLimitsOnEveryPython:
                 "through tool search, so it cuts more, not less") in long
         # v0.15.1: measured again, create_backup's line in 22
         # descriptions and pseudonymise_source's sentence on its backup
-        # (v0.15.2: Python 3.11 or newer)
-        assert ("Measured for 0.15.1, the descriptions are longer on "
-                "Python 3.11 and 3.12 than on 3.13, which strips the "
-                "indentation they are written with.") in long
+        # (v0.15.2: Python 3.11 or newer; rounded, the exact lengths in
+        # docs/snapshot/sizes.json)
+        assert ("The descriptions are longer on Python 3.11 and 3.12 than "
+                "on 3.13, which strips the indentation they are written "
+                "with.") in long
+        assert ("[docs/snapshot/sizes.json](docs/snapshot/sizes.json) gives "
+                "each description's exact length on Python 3.13.") in long
 
     @pytest.mark.skipif(not (3, 11) <= sys.version_info[:2] < (3, 13),
                         reason="the figures are Python 3.11 and 3.12's")
@@ -142,10 +148,7 @@ class TestClaudeCodesLimitsOnEveryPython:
                        if len(d) > 4096), reverse=True)
         lengths = {name: length for length, name in over}
         long = _long_paragraph()
-        # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        said = re.search(r"On Python 3\.13, 4 of `full`'s 79 descriptions "
+        said = re.search(r"On Python 3\.13, 4 of `full`'s \d+ descriptions "
                          r"are longer than 4,096 characters \(([^)]*)\)",
                          long).group(1)
         four = re.findall(r"`(\w+)`", said)
@@ -155,16 +158,20 @@ class TestClaudeCodesLimitsOnEveryPython:
         # no longer passes 4,096 on 3.10 to 3.12, so the same four are all
         # (tests/test_v0151_removed_arguments.py)
         assert others == [], others
-        same = (", ".join(f"{lengths[n]:,}" for n in four[:-1])
-                + f" and {lengths[four[-1]]:,}")
-        assert f"on 3.11 and 3.12, the same four are, at {same}." in long
+        # v0.15.2: each rounded, within five per cent of the length here
+        then = re.search(r"on 3\.11 and 3\.12, the same four are, at about "
+                         r"([\d,]+), ([\d,]+), ([\d,]+) and ([\d,]+)\.",
+                         long)
+        assert then, long
+        for name, figure in zip(four, then.groups()):
+            stated = int(figure.replace(",", ""))
+            assert abs(stated - lengths[name]) <= SIZE_TOLERANCE * lengths[
+                name], (name, stated, lengths[name])
         longest, name = over[0]
-        assert name == "pseudonymise_source"
-        # 1,441 since v0.15.1 (17,825 on 3.13); 754 since it removed the
-        # overlap policy qualcoder_edit_parity (17,138 on 3.13)
-        assert (f"its last 754 characters are cut even through tool "
-                f"search on 3.13, and its last {longest - 16384:,} on 3.11 "
-                f"and 3.12, its sentence on the lock file among them") in long
+        assert name == "pseudonymise_source" and longest > 16384
+        assert ("so its last part, its sentence on the lock file included, "
+                "is cut even through tool search, and a longer part on 3.11 "
+                "and 3.12") in long
 
     def test_the_readme_and_the_changelog_name_the_longest(self):
         served = _served("full")
@@ -172,19 +179,23 @@ class TestClaudeCodesLimitsOnEveryPython:
         length = len(served[name])
         assert name == "pseudonymise_source" and length > 16384
         readme = _flat(_read("README.md"))
-        # v0.15.1 measures again: the current figure is in the
-        # [Unreleased] part's Measured, 0.15.0's is history. From
-        # v0.15.2, where the release being written keeps it:
-        # changelog.d/measured.md, else the CHANGELOG's newest Measured
-        measured = _flat(current_measurement(REPO))
-        if sys.version_info[:2] >= (3, 13):
-            assert (f"`pseudonymise_source`'s ({length:,} on Python 3.13, "
-                    ) in readme
-            assert (f"`pseudonymise_source` ({length:,} characters; "
-                    ) in measured
-        else:
-            assert f", {length:,} on 3.11 and 3.12):" in readme
-            assert f"; {length:,} on 3.11), passes 16,384" in measured
+        # v0.15.2: the README rounds its length on each Python, held here
+        # within five per cent of the length on the Python running the
+        # test; the exact one is in docs/snapshot/sizes.json
+        found = re.search(r"`pseudonymise_source`'s \(about ([\d,]+) on "
+                          r"Python 3\.13, about ([\d,]+) on 3\.11 and "
+                          r"3\.12\):", readme)
+        assert found, readme
+        stated = int(found.group(1 if sys.version_info[:2] >= (3, 13)
+                                 else 2).replace(",", ""))
+        assert abs(stated - length) <= SIZE_TOLERANCE * length, stated
+        # 0.15.1's own figures, in its Measured part, as history
+        log = _read("CHANGELOG.md")
+        entry = log[log.index("## [0.15.1-alpha]"):
+                    log.index("## [0.15.0-alpha]")]
+        measured = _flat(entry[entry.index("### Measured"):])
+        assert ("`pseudonymise_source` (17,138 characters; 18,238 on 3.11), "
+                "passes 16,384") in measured
         assert ("One description is longer than 16,384 characters, "
                 "`pseudonymise_source`'s") in readme
         assert ("[INSTALL.md](https://github.com/nicotem/exegete/blob/main/"

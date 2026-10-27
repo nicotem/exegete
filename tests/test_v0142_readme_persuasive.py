@@ -35,7 +35,6 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server                   # noqa: E402
 from exegete import names                         # noqa: E402
-from assemble_changelog import current_measurement  # noqa: E402
 
 
 def _read(name):
@@ -721,21 +720,12 @@ def test_the_assistants_table():
 # ---------------------------------------------------------------------------
 
 def _measured():
-    # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
-    # carries them (test_toolset_modes.py pins them); v0.15.1 moves them
-    # again (create_backup accepted and ignored), so they are in the
-    # Unreleased part above 0.15.0's. From v0.15.2, where the release
-    # being written keeps them: changelog.d/measured.md, else the
-    # CHANGELOG's newest Measured section
-    measured = _flat(current_measurement(REPO))
-    found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",
-                      measured)
-    full, core = (int(n.replace(",", "")) for n in found.groups())
-    # the 3.11 figures follow the environment named in brackets
-    later = re.search(r"on Python 3\.11\.13 \([^)]*\), ([\d,]+) and",
-                      measured)
-    return ({"full": full, "core": core},
-            int(later.group(1).replace(",", "")))
+    """Each set's tool count, as docs/snapshot/sizes.json gives it
+    (v0.15.2, the snapshot: the sizes in the table are held by
+    tests/test_v0151_facts.py, and the per cent on Python 3.11 and 3.12
+    by tests/test_served_texts.py)."""
+    sizes = json.loads(_read("docs/snapshot/sizes.json"))
+    return {mode: sizes[mode]["tool_count"] for mode in ("full", "core")}
 
 
 def test_the_tool_set_table():
@@ -748,13 +738,13 @@ def test_the_tool_set_table():
             for row in _rows(section, "| `")}
     # v0.15.0: one set, `full`, every tool; `lifecycle` is its earlier name
     assert list(rows) == ["full", "core"]
-    sizes, full_on_311 = _measured()
+    counts = _measured()
     for mode, cells in rows.items():
         count = len(_tools(mode))
+        assert count == counts[mode], mode
         assert cells[1].startswith(f"{count}: "), mode
-        size = sizes[mode]
-        assert cells[2] == (f"about {round(size / 1000) * 1000:,} "
-                            f"characters, {round(size / 4000)}k tokens"), mode
+        assert re.fullmatch(r"about \d[\d,]* characters, \d+k tokens",
+                            cells[2]), mode
     assert "create_project" in _tools("full")
     assert "create_project" not in _tools("core")
     # the defaults: the extension's manifest, the server's own, and none
@@ -781,10 +771,13 @@ def test_the_tool_set_table():
     flat = _flat(section)
     assert ("That is how much of a model's context a host uses when it "
             "sends every tool's definition (name, description and "
-            "arguments) with each request: measured on Python 3.13, at four "
-            "characters a token; about five per cent more on 3.11 and "
-            "3.12.") in flat
-    assert round(100 * (full_on_311 / sizes["full"] - 1)) == 5
+            "arguments) with each request: measured on Python 3.13 with "
+            "the libraries in `uv.lock`, at four characters a token; about "
+            "five per cent more on 3.11 and 3.12.") in flat
+    # and where the exact figures are (v0.15.2, the snapshot)
+    assert ("[docs/snapshot/](https://github.com/nicotem/exegete/tree/main/"
+            "docs/snapshot) gives the exact figures, and every text "
+            "Exegete sends the assistant.") in flat
 
 
 # ---------------------------------------------------------------------------

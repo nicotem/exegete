@@ -747,46 +747,46 @@ class TestTheDocuments:
 
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
-        # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        assert ("registers 79 tools, two of them the earlier names of two "
-                "renamed tools (see \"Earlier names\" below)") in tools
-        # 26 since restore_backup joined `core` (v0.15.1), 27 since
-        # search_memos did (v0.15.1)
-        assert ("only the 27-tool supervised coding set is registered: "
-                "read_brief,") in tools.replace("> ", "")
+        # the counts are the snapshot's (tests/tool_counts.py)
+        assert (f"registers {FULL_TOOLS} tools, two of them the earlier "
+                "names of two renamed tools (see \"Earlier names\" below)"
+                ) in tools
+        assert (f"only the {CORE_TOOLS}-tool supervised coding set is "
+                "registered: read_brief,") in tools.replace("> ", "")
         assert ("search_files, read_file_with_codings, search_memos, "
                 "open_file_for_reading,") in tools.replace("> ", "")
         assert ("copy_project_to_workspace, delete_coding, list_backups, "
                 "restore_backup, and the two earlier names below."
                 ) in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
-        assert "`full` (default) registers 79 tools, every tool," in install
+        assert (f"`full` (default) registers {FULL_TOOLS} tools, every "
+                "tool,") in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
-        assert "`core` registers the 27-tool supervised coding set" in install
-        assert "Exegete offers 79 tools by default" in install
-        assert "register only the 27-tool supervised coding set" in install
+        assert (f"`core` registers the {CORE_TOOLS}-tool supervised coding "
+                "set") in install
+        assert f"Exegete offers {FULL_TOOLS} tools by default" in install
+        assert (f"register only the {CORE_TOOLS}-tool supervised coding set"
+                ) in install
         readme = _read("README.md")
-        assert ("| `full` | 79: all, creating a project and two renamed "
-                "tools' earlier names included |") in readme
-        assert "| `core` | 27: the coding loop and its safety tools |" \
-            in readme
+        assert (f"| `full` | {FULL_TOOLS}: all, creating a project and two "
+                "renamed tools' earlier names included |") in readme
+        assert (f"| `core` | {CORE_TOOLS}: the coding loop and its safety "
+                "tools |") in readme
         for name in DOCUMENTS:
             flat = _flat(_read(name))
             for stale in ("78 tools", "23-tool", "registers 78", "| 78:",
                           "| 23:"):
                 assert stale not in flat, (name, stale)
 
-    def test_the_figures_are_the_pinned_ones(self):
-        sys.path.insert(0, str(Path(__file__).parent))
-        from test_toolset_modes import TestThePublishedSchemaBudget as pins
+    def test_each_document_gives_both_sizes(self):
+        # v0.15.2, the snapshot: the figures are held by
+        # tests/test_v0151_facts.py, within five per cent of
+        # docs/snapshot/sizes.json
         readme, install = _read("README.md"), _flat(_read("INSTALL.md"))
         tools = _flat(_read("TOOLS.md").replace("\n>", " "))
         for text in (readme, install, tools):
-            assert f"about {pins.FULL_ROUNDED} characters" in text
-            assert f"about {pins.CORE_ROUNDED} characters" in text
+            assert len(re.findall(r"about \d[\d,]* characters", text)) >= 2
 
     def test_contributing_keeps_its_other_examples(self):
         # The examples of names kept as written, neither of them a renamed

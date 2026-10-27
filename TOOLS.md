@@ -1009,16 +1009,17 @@ declares, and each tool's own description says what each one does.
 > copy_project_to_workspace, delete_coding, list_backups,
 > restore_backup, and the two earlier names below.
 > Required for local models, optional elsewhere; unknown values fail
-> loudly at startup. Measured for 0.15.1 (the
-> serialised tool definitions: name, description and input schema, the
-> same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
-> definitions run to about 203,000 characters for `full`, roughly 51k
-> tokens at four characters per token, and about 74,000 characters for
-> `core`, roughly 18k tokens. On Python 3.11 and 3.12 the same
-> definitions measure about five per cent more, because those
-> interpreters keep the docstring indentation that 3.13 strips. See the
-> LM Studio recipe in INSTALL.md for what that means for context
-> length.
+> loudly at startup. Measured on Python 3.13 with the libraries in
+> `uv.lock` (the serialised tool definitions: name, description and
+> input schema), the definitions run to about 200,000 characters for
+> `full`, roughly 51k tokens at four characters per token, and about
+> 74,000 characters for `core`, roughly 18k tokens. On Python 3.11 and
+> 3.12 the same definitions measure about five per cent more, because
+> those interpreters keep the docstring indentation that 3.13 strips.
+> [docs/snapshot/](docs/snapshot/) gives the exact figures, in
+> `sizes.json`, and every text Exegete sends the assistant, written
+> again by `scripts/served_texts.py` whenever one changes. See the LM
+> Studio recipe in INSTALL.md for what that means for context length.
 
 **Project Management:**
 - `read_brief()` - The assistant's brief (provisional): how Exegete expects the assistant to work with you. Its description asks the assistant to call it once at the start of every conversation about a project; it returns the full brief, or in the `core` set the short version, and reads nothing from the project. In every tool set (see "What the assistant is told" above)

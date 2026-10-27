@@ -651,7 +651,14 @@ class TestHeartbeatProtocol:
             assert len(lines) == 2
             assert lines[0] == getpass.getuser()
             age = time.time() - float(lines[1])   # parses as epoch float
-            assert 0 <= age < 5
+            # The lock writes the time to six decimals, which can round it
+            # up to half a microsecond past the moment it was read; where
+            # `time.time()` moves in steps (15.6 ms on Windows before
+            # Python 3.13), this reading can fall in the same step, so a
+            # current lock can read a fraction of a microsecond ahead
+            # (-4.77e-07 on Windows). A hundredth of a second allows that
+            # and still refuses a time that is not current.
+            assert -0.01 <= age < 5
         assert not _lock(qualcoder_db_path).exists()  # removed on exit
 
     def test_own_lock_held_during_write_window(self, setup_server,

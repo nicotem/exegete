@@ -8,7 +8,7 @@
   of our own work. A sentence that a reader judges right as it stands
   passes once they accept it with a reason in
   `scripts/check_texts_ledger.tsv`, as CONTRIBUTING.md's style rules
-  describe. The ledger starts with 1,392 lines marked as seeded: they
+  describe. The ledger starts with 1,391 lines marked as seeded: they
   hold the sentences found when the check was added, which no reader
   has read yet. At release preparation, `--release` fails while a
   seeded line is left in the README, QUICKSTART, the update page or the

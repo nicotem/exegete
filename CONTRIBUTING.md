@@ -89,8 +89,9 @@ is looked at first.
    QualCoder 4.0, and one watching QualCoder's newest code, whose
    changes are a notice, never a failure. Two try the upgrade from the
    package's earlier name, on Ubuntu and on Windows. One checks the
-   documents: their links (`scripts/check_links.py`) and the facts
-   they repeat (`tests/test_v0151_facts.py`, below); their links to
+   documents: their links (`scripts/check_links.py`), their texts
+   (`scripts/check_texts.py`, under Style rules) and the facts they
+   repeat (`tests/test_v0151_facts.py`, below); their links to
    other sites are checked once a week instead, by a workflow of its
    own (`external-links.yml`), where a page that is gone fails and a
    site that turns robots away or answers slowly is a notice. One runs
@@ -228,6 +229,27 @@ rather than fewer.
 - **No em dashes in prose.** This applies to documentation, docstrings,
   error strings, CHANGELOG entries and commit messages. Use a colon, a
   comma, parentheses or a new sentence.
+- **The texts check.** `python scripts/check_texts.py` reads the
+  documents and the texts in the code, and fails on three kinds of
+  sentence. The first names QualCoder other than about QualCoder itself
+  or its format, on a sign that QualCoder is in use, or as a choice the
+  researcher may make. The second asks everyone to close QualCoder. The
+  third shows one of the plainest habits of style to leave out, such as
+  an exclamation mark, a word of praise or a word of our own work like
+  "pinned"; each habit is an entry of `VOICE`, at the script's head.
+  Rewrite the sentence it names. If the sentence is right as it stands,
+  a reader accepts it with a reason:
+  `python scripts/check_texts.py --accept "<reason>" --file <file>`
+  adds a line for each finding in that file to
+  `scripts/check_texts_ledger.tsv`, and the review reads every line
+  added. A line whose reason begins with "seeded" holds a sentence that
+  no reader has read yet: `--list seeded --file <file>` prints them, a
+  reader replaces the reason by hand with their own, and `--prune`
+  removes the lines of sentences since rewritten. `--readability`
+  prints each document's measures, which never fail. At release
+  preparation, `--release` also fails while a seeded line is left in
+  README.md, QUICKSTART.md, the update page or the extension's
+  manifest.
 - **Capability probes, never version strings.** Behaviour keys on the
   existence of tables, columns and views (`SchemaCapabilities` in
   `database.py`), the way QualCoder's own migration ladder does. The

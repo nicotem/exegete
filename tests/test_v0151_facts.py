@@ -19,10 +19,11 @@ file and line, on the push that makes the change (the owner's ruling
 The values are always read from the code's constants and files
 (`facts_from_the_code`), never from a copy written here, and the
 statements from the documents as they are now. The CHANGELOG is read in
-its `[Unreleased]` part alone, for wrong values only, and only by the
-first five facts: a sprint's entry lists that sprint's changes and need
-not repeat any fact, and the released entries are a record of their own
-release, which a later release must never rewrite.
+its `[Unreleased]` part alone, with the fragments its next entry is
+written from (changelog.d/, v0.15.2), for wrong values only, and only by
+the first five facts: a sprint's entry lists that sprint's changes and
+need not repeat any fact, and the released entries are a record of their
+own release, which a later release must never rewrite.
 
 The table below is the whole of what is checked: for each fact, the
 code it reads, the documents that state it (each must still state it at
@@ -63,6 +64,11 @@ from exegete import (doc_import, env_settings, import_reading, names,
 
 REPO = Path(__file__).resolve().parents[1]
 GB = 1024 * 1024 * 1024
+# The fragments the CHANGELOG's next entry is written from, read as
+# release preparation reads them (scripts/assemble_changelog.py)
+sys.path.insert(0, str(REPO / "scripts"))
+import assemble_changelog  # noqa: E402
+FRAGMENTS = assemble_changelog.FOLDER + "/"
 
 MANIFEST = "packaging/desktop-extension/manifest.in.json"
 CHANGELOG = "CHANGELOG.md"
@@ -84,7 +90,9 @@ FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE)
 # alone: it names the state folder. Not read either: the texts Exegete
 # serves the assistant (its tools' descriptions, its brief, its notes
 # and refusals), and Exegete's own update steps (updates.py,
-# transition.py), which are code.
+# transition.py), which are code. Read besides, by the first five facts
+# and for wrong values alone: the CHANGELOG's `[Unreleased]` part and
+# the fragments in changelog.d/ (read_documents).
 DOCUMENTS = (
     "README.md", "INSTALL.md", "PRIVACY.md", "TOOLS.md", "QUICKSTART.md",
     "SUPPORT.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
@@ -780,8 +788,9 @@ def _document(name: str, lines: List[str], first_line: int = 1,
 def current_changelog_part(
         lines: List[str]) -> Optional[Tuple[int, List[str]]]:
     """The `[Unreleased]` part, as (its first line, its lines), when it
-    holds more than "Nothing yet."; None otherwise. A released entry is
-    never returned."""
+    holds more than "Nothing yet." or the placeholder that says where
+    the changes go (v0.15.2); None otherwise. A released entry is never
+    returned."""
     try:
         start = next(i for i, line in enumerate(lines)
                      if line.startswith("## [Unreleased]"))
@@ -791,14 +800,15 @@ def current_changelog_part(
                 if lines[i].startswith("## [")), len(lines))
     part = lines[start + 1:end]
     words = " ".join(" ".join(part).split())
-    if not words or words == "Nothing yet.":
+    if not words or words in ("Nothing yet.", assemble_changelog.PLACEHOLDER):
         return None
     return start + 2, part
 
 
 def read_documents(root: Path = REPO) -> List[Document]:
-    """Every document the table names, and the CHANGELOG's current part.
-    A document missing from `root` fails, never passes unread."""
+    """Every document the table names, the CHANGELOG's current part and
+    the fragments its next entry is written from, each named by its
+    path. A document missing from `root` fails, never passes unread."""
     documents = []
     for name in DOCUMENTS:
         path = root / name
@@ -809,6 +819,9 @@ def read_documents(root: Path = REPO) -> List[Document]:
     current = current_changelog_part(changelog)
     if current is not None:
         documents.append(_document(CHANGELOG, current[1], current[0],
+                                   wrong_values_only=True))
+    for fragment in assemble_changelog.read_fragments(root):
+        documents.append(_document(fragment.path, list(fragment.lines),
                                    wrong_values_only=True))
     return documents
 
@@ -1781,12 +1794,13 @@ class Outcome:
 
 
 def _reads(fact: Fact, document: Document) -> bool:
-    """Whether the fact reads the document: docs/history/ and the
-    CHANGELOG only for the first five facts, and none of a fact's
-    documents left out."""
+    """Whether the fact reads the document: docs/history/, the CHANGELOG
+    and its fragments only for the first five facts, and none of a
+    fact's documents left out."""
     if document.name in fact.left_out:
         return False
-    return fact.history or not (document.name.startswith(HISTORY)
+    return fact.history or not (document.name.startswith((HISTORY,
+                                                          FRAGMENTS))
                                 or document.name == CHANGELOG)
 
 
@@ -2095,6 +2109,47 @@ def test_an_empty_unreleased_part_reads_nothing():
              "- `full` registers 1 tools"]
     assert current_changelog_part(lines) is None
     assert current_changelog_part(lines[4:]) is None
+    # v0.15.2: the placeholder, over two lines as the CHANGELOG wraps it
+    words = assemble_changelog.PLACEHOLDER.split()
+    assert current_changelog_part(
+        lines[:2] + [" ".join(words[:6]), " ".join(words[6:])] + lines[3:]
+    ) is None
+
+
+def _fragment(root: Path, text: str) -> str:
+    """A fragment of the next entry in a scratch copy, by its path."""
+    name = FRAGMENTS + "a-piece.md"
+    (root / name).parent.mkdir(parents=True, exist_ok=True)
+    (root / name).write_bytes(text.encode("utf-8"))
+    return name
+
+
+def test_a_wrong_value_in_a_fragment_names_its_file_and_line(tmp_path):
+    """v0.15.2: the fragments are read as the [Unreleased] part is, for
+    wrong values only."""
+    facts = facts_from_the_code()
+    full = len(facts.registered_tools)
+    root = _scratch_copy(tmp_path)
+    name = _fragment(root, f"### Changed\n\n- `full` now registers {full - 1} "
+                           f"tools.\n- `full` now registers {full} tools.\n")
+    outcome = check_documents(facts, read_documents(root))
+    assert [(p.document, p.line, p.stated) for p in _unknown(outcome)] == [
+        (name, 3, str(full - 1))]
+    assert outcome.missing == ()
+
+
+def test_a_fragment_is_read_by_the_first_five_facts_alone(tmp_path):
+    """An install command without the part for PDF and EPUB, which only
+    the install commands' fact would name, is not reported in a
+    fragment: a sprint's entry need not say how to install."""
+    root = _scratch_copy(tmp_path)
+    name = _fragment(root, "### Changed\n\n- Install it with `pipx install "
+                           "exegete`.\n")
+    documents = read_documents(root)
+    assert name in [document.name for document in documents]
+    outcome = check_documents(facts_from_the_code(), documents)
+    assert _unknown(outcome) == []
+    assert outcome.missing == ()
 
 
 # A sentence, and what the check makes of it ({ext}: the extension's

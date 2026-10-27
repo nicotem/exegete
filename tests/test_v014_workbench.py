@@ -27,9 +27,13 @@ REPO = Path(__file__).resolve().parents[1]
 
 JOB_TIME_LIMIT_MINUTES = 90
 PER_TEST_LIMIT_SECONDS = 600
-# Every job's limit, the suite's first. v0.14's desktop extension added
-# two short jobs, each with a limit of its own (the reasons in ci.yml).
+# Every job's limit, in the workflow's order. v0.14's desktop extension
+# added two short jobs, each with a limit of its own (the reasons in
+# ci.yml).
 JOB_TIME_LIMITS = {
+    # v0.15.2: which tier the run takes, first, since every job but the
+    # documents job waits for it (tests/test_v0152_ci_tier.py)
+    "tier": 5,
     "test": JOB_TIME_LIMIT_MINUTES,
     "desktop-extension": 20,
     "desktop-extension-same": 10,

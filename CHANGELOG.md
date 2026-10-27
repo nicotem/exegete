@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   QualCoder" (QUICKSTART.md and PROJECT_SELECTION_GUIDE.md now give
   Exegete's folders first).
 
+### For contributors
+
+- **CI runs in two tiers.** Its first job, `tier`
+  (`scripts/ci_tier.py`), chooses. A push to `main` or to an
+  integration branch, `feat/<name>`, a pull request and a run started
+  by hand take the full tier, the twenty-one jobs. A push to any other
+  branch takes the fast tier: the suite once, on Ubuntu with Python
+  3.13, and the documents job, with the desktop extension's jobs only
+  when the branch changed the packaging, the lock or a script they run.
+  Only an explicit fast answer narrows a run, so a fault in the choice
+  runs every job. The weekly link check also reads the newest
+  integration branch.
+
 ## [0.15.1-alpha.1] - 2026-10-23
 
 A patch release made the same day as 0.15.1-alpha, for two things a

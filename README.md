@@ -62,10 +62,10 @@ Exegete yet (listed below).
 
 Exegete is free, open-source software, under QualCoder's own licence
 (LGPL-3.0-or-later), and costs nothing (your assistant may: see "Start
-here"). It is tested on Windows, macOS and Linux with every change. It
-is an early version (an alpha) built by one researcher, independently
-of QualCoder's developers; parts marked Experimental have had little or
-no use yet.
+here"). It is tested on Windows, macOS and Linux with every change
+before it is released. It is an early version (an alpha) built by one
+researcher, independently of QualCoder's developers; parts marked
+Experimental have had little or no use yet.
 Questions and ideas go to
 [GitHub Issues](https://github.com/nicotem/exegete/issues), not email;
 never put participant data in an issue.
@@ -613,8 +613,8 @@ still accepted in `EXEGETE_TOOLSET` and means `full`.
   `exegete --check-transition` for a move from qualcoder-mcp.
 
 **Tested.** More than 8,000 automated tests run on Windows, macOS and
-Linux, with Python 3.10 and 3.13, on every change pushed; they test
-Exegete, not a researcher's use of it
+Linux, with Python 3.10 and 3.13, on every change before it is
+released; they test Exegete, not a researcher's use of it
 ([CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md)).
 
 **The repository**, each document linked from this page:

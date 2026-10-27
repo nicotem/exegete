@@ -215,7 +215,10 @@ WORKFLOW_JOBS = {
                "documents",
                # v0.15.1: the suite on the newest library releases,
                # reporting only.
-               "newest-libraries"},
+               "newest-libraries",
+               # v0.15.2: which tier the run takes
+               # (tests/test_v0152_ci_tier.py).
+               "tier"},
     "publish.yml": {"build", "publish-to-testpypi", "publish-to-pypi"},
     # v0.14.2: the update site, deployed from Actions, never from a branch
     # (the owner's decision of 5 October 2026)

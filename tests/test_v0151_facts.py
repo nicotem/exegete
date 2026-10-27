@@ -3803,6 +3803,18 @@ def test_code_texts_reads_what_is_served(tmp_path):
          "logger.info", None)]
 
 
+def test_code_texts_refuses_a_root_without_the_package(tmp_path):
+    """A root with no src/exegete is refused, by the function and by its
+    command, never read as a package that holds no texts."""
+    with pytest.raises(FileNotFoundError):
+        code_texts.code_texts(tmp_path)
+    run = subprocess.run([sys.executable, str(REPO / "scripts" /
+                                              "code_texts.py"), str(tmp_path)],
+                         capture_output=True, text=True)
+    assert run.returncode != 0 and run.stdout == ""
+    assert code_texts.PACKAGE in run.stderr
+
+
 def test_a_triple_quoted_text_keeps_its_lines_and_joined_ones_do_not(
         tmp_path):
     """A place in one triple-quoted text is named by its own line; in

@@ -154,8 +154,13 @@ def _texts(module: str, source: str,
 
 def code_texts(root: Path) -> List[CodeText]:
     """The texts of every module under root/src/exegete, module by module
-    and line by line."""
+    and line by line. A root without that folder raises
+    FileNotFoundError: a check given the wrong folder must fail, never
+    pass with no texts read."""
     package = Path(root) / PACKAGE
+    if not package.is_dir():
+        raise FileNotFoundError(
+            f"{package}: no such folder; give the repository's root")
     names: Tuple[Tuple[str, str], ...] = ()
     if (package / NAMES_MODULE).is_file():
         names = tuple(sorted(
@@ -171,5 +176,9 @@ def code_texts(root: Path) -> List[CodeText]:
 
 
 if __name__ == "__main__":
-    for each in code_texts(Path(sys.argv[1] if len(sys.argv) > 1 else ".")):
+    try:
+        read = code_texts(Path(sys.argv[1] if len(sys.argv) > 1 else "."))
+    except FileNotFoundError as error:
+        sys.exit(str(error))
+    for each in read:
         print(f"{each.module}:{each.line}: {' '.join(each.text.split())[:90]}")

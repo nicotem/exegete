@@ -13,7 +13,7 @@ README's one-click extension is the easier start.
 
 ## Prerequisites Checklist
 
-- [ ] Python 3.10 or higher installed
+- [ ] Python 3.11 or higher installed
 - [ ] Claude Desktop installed, or any other MCP client: Claude Code
       users can skip the Desktop config below and just run
       `claude mcp add exegete -- <venv-python> -m exegete.server`

@@ -11,10 +11,12 @@ the full matrix, and only an explicit fast answer narrows a run.
 Pinned here: the tier of each kind of run; what wakes the extension's
 jobs, a git error included; the base a branch is counted from, in a
 real repository; the outputs and the summary line; the wiring in
-ci.yml, which fails towards the full tier; and the weekly link check's
-reading of the integration branch. That GitHub accepts the wiring is
-shown by runs on GitHub: a push (the fast tier) and a run started by
-hand (the full tier).
+ci.yml, which fails towards the full tier; the Pythons the suite runs
+on (the owner's ruling of 27 October 2026: 3.11, the oldest Exegete
+supports, and 3.13 on every system, 3.14 on Ubuntu alone); and the
+weekly link check's reading of the integration branch. That GitHub
+accepts the wiring is shown by runs on GitHub: a push (the fast tier)
+and a run started by hand (the full tier).
 """
 
 import importlib.util
@@ -23,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -335,6 +338,34 @@ def test_ci_wires_the_tiers():
                and not line.lstrip().startswith("#")]
     assert reading and all(FAST_VALUE.match(line) or CONDITION.match(line)
                            for line in reading), reading
+
+
+def test_the_pythons_the_suite_runs_on():
+    """3.11 and 3.13 on every system, 3.14 on Ubuntu alone; the oldest
+    is the floor pyproject.toml gives, and the classifiers name every
+    Python from it to the newest tested."""
+    with open(REPO / "pyproject.toml", "rb") as handle:
+        project = tomllib.load(handle)["project"]
+    assert project["requires-python"] == ">=3.11"
+    job = next(job for job in _jobs(WORKFLOWS / "ci.yml")
+               if job["name"] == "test")
+    lines = [line.strip() for line in job["lines"]
+             if not line.lstrip().startswith("#")]
+    systems, pythons = _list(lines, "os"), _list(lines, "python-version")
+    assert pythons == ["3.11", "3.13", "3.14"]
+    assert project["requires-python"] == f">={pythons[0]}"
+    left_out = set(re.findall(r'- os: (\S+)\n\s+python-version: "([\d.]+)"',
+                              "\n".join(job["lines"])))
+    assert left_out == {("windows-latest", "3.14"), ("macos-latest", "3.14")}
+    tested = {(system, python) for system in systems for python in pythons
+              if (system, python) not in left_out}
+    assert {python for system, python in tested
+            if system == "ubuntu-latest"} == set(pythons)
+    assert {python for system, python in tested
+            if system != "ubuntu-latest"} == {"3.11", "3.13"}
+    classified = [c.rsplit(" :: ", 1)[1] for c in project["classifiers"]
+                  if c.startswith("Programming Language :: Python :: 3.")]
+    assert classified == ["3.11", "3.12", "3.13", "3.14"]
 
 
 # ---------------------------------------------------------------------------

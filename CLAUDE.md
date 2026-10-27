@@ -12,7 +12,7 @@ of a project from the conversation. It runs as an MCP server.
 
 ## Commands
 
-- **Install for development** (Python 3.10 or newer) from the lock,
+- **Install for development** (Python 3.11 or newer) from the lock,
   the releases CI tests with:
   `uv sync --frozen --extra dev --extra pdf-epub`, which makes `.venv`
   in the repository and installs the package there, editable.
@@ -20,10 +20,11 @@ of a project from the conversation. It runs as an MCP server.
   allows instead, as an install from PyPI does.
 - **Tests:** `python -m pytest -q` from the repository root. The full
   suite takes about twelve minutes on a Mac, longer on Windows CI; CI
-  runs it on Ubuntu, Windows and macOS with Python 3.10 and 3.13 on
-  `main` and the integration branches (`feat/*`), and on Ubuntu with
-  3.13 alone on other branches (CONTRIBUTING.md, item 5). Every
-  behaviour change needs a test that fails without it.
+  runs it on Ubuntu, Windows and macOS with Python 3.11 and 3.13, and
+  on Ubuntu with 3.14, on `main` and the integration branches
+  (`feat/*`), and on Ubuntu with 3.13 alone on other branches
+  (CONTRIBUTING.md, item 5). Every behaviour change needs a test that
+  fails without it.
 - **Dependencies:** after changing `pyproject.toml`, run `uv lock`, and
   check with `uv lock --check`.
 - **The Claude Desktop extension:**

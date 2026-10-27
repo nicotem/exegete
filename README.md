@@ -363,7 +363,7 @@ Experimental: written from OpenAI's documentation, read on 30 September
    let OpenAI train on that conversation.
 2. **Then follow
    [INSTALL.md's steps](https://github.com/nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-app-and-codex-experimental)**,
-   by the Terminal route (a few typed commands; Python 3.10 or newer):
+   by the Terminal route (a few typed commands; Python 3.11 or newer):
    they make the app ask before every change Exegete makes.
 3. **Give Codex a folder of its own**, as those steps do: it keeps your
    study's files out of the place Codex works in, but does not stop
@@ -539,7 +539,7 @@ with its reason; and you work on a project in one program at a time.
 
 Exegete is a Model Context Protocol (MCP) server, which is why more
 than one assistant can use it. It runs locally over standard input and
-output, in Python 3.10 or newer, with no online service and no
+output, in Python 3.11 or newer, with no online service and no
 telemetry of its own (on Windows x64, a library it installs for PDFs
 reports its use: PRIVACY.md, "How your data flows"); its one request
 of its own is the check for new versions
@@ -567,7 +567,7 @@ every tool.
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:
 measured on Python 3.13, at four characters a token; about five per
-cent more on 3.10 to 3.12. `lifecycle`, the earlier name of `full`, is
+cent more on 3.11 and 3.12. `lifecycle`, the earlier name of `full`, is
 still accepted in `EXEGETE_TOOLSET` and means `full`.
 
 **Beyond the basics**:
@@ -606,15 +606,15 @@ still accepted in `EXEGETE_TOOLSET` and means `full`.
   matter come first in each description, within 2,048 characters, a
   few named exceptions apart; the rest reach the model through `read_brief` or the answers. One
   description is longer than 16,384 characters, `pseudonymise_source`'s
-  (17,138 on Python 3.13, 18,238 on 3.10 to 3.12):
+  (17,138 on Python 3.13, 18,238 on 3.11 and 3.12):
   [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients)
   says how to let it through whole.
 - **Resources** (`exegete://...`), prompts, and
   `exegete --check-transition` for a move from qualcoder-mcp.
 
 **Tested.** More than 8,000 automated tests run on Windows, macOS and
-Linux, with Python 3.10 and 3.13, on every change before it is
-released; they test Exegete, not a researcher's use of it
+Linux, with Python 3.11 and 3.13 (and 3.14 on Linux), on every change
+before it is released; they test Exegete, not a researcher's use of it
 ([CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md)).
 
 **The repository**, each document linked from this page:

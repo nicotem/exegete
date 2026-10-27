@@ -220,7 +220,7 @@ provisional: a later release may change it.
 Before starting, make sure you have:
 
 - ✅ **A computer** with macOS, Windows or Linux (paths differ
-  slightly), and **Python 3.10 or newer**. Opening a file for you to
+  slightly), and **Python 3.11 or newer**. Opening a file for you to
   read (v0.14.3) needs a screen: on Linux, a desktop
   session; in an SSH session nothing opens, and Exegete gives the
   page's place instead
@@ -347,10 +347,10 @@ protobuf, flatbuffers, psutil, PyYAML, tabulate and packaging.
 Everywhere else it brings PyMuPDF 1.x, as before: where PyMuPDF 2 or
 onnxruntime has no ready-made package (Intel Macs, Windows on Arm, and
 Python 3.15 and later), since the Claude Desktop extension never
-compiles one; on Python 3.10, which PyMuPDF 2 does not support; and, for
-now, on Apple silicon Macs, where onnxruntime needs macOS 14 and a Mac
-on an earlier release could not install it. Both releases read the test
-documents' PDFs to the same text, the text QualCoder 4.0's own
+compiles one; and, for now, on Apple silicon Macs, where onnxruntime
+needs macOS 14 and a Mac on an earlier release could not install it.
+Both releases read the test documents' PDFs to the same text, the text
+QualCoder 4.0's own
 functions store. PyMuPDF 2 costs more: about 75 to 90 MB more to
 download and 150 to 190 MB more on disk in the Claude Desktop extension
 ("What hosts do with the tools' read and write marks", below, gives
@@ -712,15 +712,15 @@ Code 2.1.296, 2,048). Exegete puts the rules a model must not miss
 within each description's first 2,048 characters, a few named
 exceptions apart, which reach the model through `read_brief` or the
 tools' answers. Measured for 0.15.1, the descriptions are longer on
-Python 3.10 to 3.12 than on 3.13, which strips the indentation they are
+Python 3.11 and 3.12 than on 3.13, which strips the indentation they are
 written with. On Python 3.13, 4 of `full`'s 79 descriptions are longer
 than 4,096 characters (`pseudonymise_source`, 17,138;
 `start_coding_session`, 6,038; `search_files`, 4,537;
-`record_suggestions`, 4,455); on 3.10 to 3.12, the same four are, at
+`record_suggestions`, 4,455); on 3.11 and 3.12, the same four are, at
 18,238, 6,282, 4,873 and 4,691.
 `pseudonymise_source` is longer than 16,384, so its last 754
 characters are cut even through tool search on 3.13, and its last
-1,854 on 3.10 to 3.12, its sentence on the lock file among them.
+1,854 on 3.11 and 3.12, its sentence on the lock file among them.
 Claude Code's own setting `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`
 (version 2.1.280 or later) replaces both limits with one figure:
 20000, for example, lets every Exegete description through whole on
@@ -1123,7 +1123,7 @@ verify offline operation yourself (Step 7) if your data-management plan
 depends on it.
 
 Requirements: a machine that can run a mid-size local model (16 GB RAM
-is a realistic minimum), LM Studio installed, Python 3.10+.
+is a realistic minimum), LM Studio installed, Python 3.11+.
 
 **Step 1. Install Exegete**, with its optional part for PDF and EPUB:
 
@@ -1365,7 +1365,7 @@ environments", a separate setting that neither changes. Rating a reply
 Claude's plans take the same advice, in the same words (the README's
 checks before participants' data).
 
-**Step 1. Install Exegete.** It needs Python 3.10 or newer ("What
+**Step 1. Install Exegete.** It needs Python 3.11 or newer ("What
 You'll Need", above). In the Terminal (macOS or Linux):
 
 ```bash
@@ -1947,8 +1947,8 @@ reason.
 If you get "python command not found":
 
 1. Install Python from https://www.python.org/downloads/
-2. Or install via Homebrew (any Python 3.10 or newer works; the test
-   matrix runs 3.10 and 3.13):
+2. Or install via Homebrew (any Python 3.11 or newer works; the tests
+   run on 3.11 and 3.13, and on 3.14 on Linux):
    ```bash
    brew install python
    ```

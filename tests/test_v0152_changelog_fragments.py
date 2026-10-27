@@ -192,6 +192,12 @@ MALFORMED = {
     "another heading in measured.md":
         ("measured.md", "### Measured\n\n- 1.\n\n### Added\n\n- A.\n", 5),
     "no heading at all": ("a.md", "\n", None),
+    "text underlined with =":
+        ("a.md", "### Added\n\nAn opening\n==========\n\n- A.\n", 4),
+    "text underlined with - in a list":
+        ("a.md", "### Added\n\n- Release notes\n  -------------\n", 4),
+    "a code fence never closed":
+        ("a.md", "### Added\n\n- A.\n\n```\nmake test\n", 5),
 }
 
 
@@ -217,6 +223,11 @@ NO_FAULT = {
         "### Added\n\n- As [the guide](https://example.org/guide) says.\n",
     "a heading of the fourth level": "### Changed\n\n#### A part\n\n- A.\n",
     "a heading with closing marks": "### Fixed ###\n\n- A.\n",
+    "a code block closed": "### Added\n\n```\n## make test\n```\n",
+    "a line drawn across": "### Added\n\n- A.\n\n---\n\n- B.\n",
+    "a line drawn under a section's heading": "### Added\n---\n\n- A.\n",
+    "a line drawn under code":
+        "### Added\n\n```\nmake test\n```\n---\n\n- A.\n",
 }
 
 
@@ -234,6 +245,7 @@ def test_what_is_no_fault_is_accepted(tmp_path, case):
     ("a date not written YYYY-MM-DD", 1, "DATE"),
     ("a date that is no date", 1, "DATE"),
     ("a version that is not one", 1, "VERSION"),
+    ("a version ending in a line break", 1, "VERSION"),
     ("no [Unreleased] heading", 2, "CHANGELOG.md"),
     ("no CHANGELOG", 2, "CHANGELOG.md"),
 ])
@@ -250,8 +262,9 @@ def test_the_other_refusals_name_their_cause(tmp_path, capsys, case, code,
             b"## [Unreleased]", b"## Unreleased"))
     if case == "no CHANGELOG":
         changelog.unlink()
-    version = f"{VERSION}] - x" if case == "a version that is not one" \
-        else VERSION
+    version = {"a version that is not one": f"{VERSION}] - x",
+               "a version ending in a line break": f"{VERSION}\n"}.get(
+                   case, VERSION)
     date = {"a date not written YYYY-MM-DD": "3 November 2026",
             "a date that is no date": "2026-11-31"}.get(case, DATE)
     digests = _digests(root)

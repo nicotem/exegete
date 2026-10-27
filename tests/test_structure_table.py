@@ -7,9 +7,11 @@ suite and CI from the inputs it is given. Pinned here: the table's
 sections on this checkout's HEAD; the count, construct by construct;
 the grades' bands; the code lines; the two inputs' readers; the
 standard library alone; the long and complex list at both thresholds;
-the refusal to write over a table of another commit; and the tables
-kept for the releases measured so far. Every test but the first and the
-last works on made-up texts, with neither git nor the repository.
+the refusal to write over a table of another commit, or over this
+commit's suite and CI lines with "not given"; the refusal of a log of
+part of the suite; and the tables kept for the releases measured so
+far. Every test but the first and the last works on made-up texts, with
+neither git nor the repository.
 """
 
 import ast
@@ -194,15 +196,33 @@ def test_the_inputs_are_read(script, monkeypatch, tmp_path):
     run.write_text(json.dumps(RUN), encoding="utf-8")
     assert script.main(["--out", str(out), "--pytest-log", str(log),
                         "--ci-run", str(run), "--ci-attempts", "2"]) == 0
-    last = _section(out.read_text(encoding="utf-8"), "The suite and CI")
+    table = out.read_text(encoding="utf-8")
+    last = _section(table, "The suite and CI")
     assert "Python 3.13.5" in last[0]
     assert "10,097 passed" in last[1] and "16 min 53 s" in last[1]
-    assert "the commit measured" in last[2]
+    assert last[2].endswith("(the commit measured)")
     assert "33 min 12 s" in last[3]  # the run's start to the last job's end
     assert last[4].endswith(": 2")
     jobs = [line[4:].split(":")[0] for line in last if line.startswith("  - ")]
     assert jobs == ["Windows, part 1", "Linux", "Documents"]
     assert script.NOT_GIVEN not in "\n".join(last)
+    # the files measured are the trees' Python files alone
+    assert _section(table, "Largest files")[0] == (
+        "The ten longest Python files of each tree, by lines.")
+    assert _section(table, "Functions by grade")[0].startswith(
+        "In `src/`, 1 functions in 1 Python files; in `tests/`, 0 in 0.")
+
+
+@pytest.mark.parametrize("head, said", [
+    (A, "success, at commit `aaaaaaa` (the commit measured)"),
+    (B, "success, at commit `bbbbbbb` (not the commit measured)"),
+    (None, "success, at commit not given")])
+def test_ci_s_commit_is_compared_with_the_commit_measured(script, head,
+                                                          said):
+    run = dict(RUN, headSha=head) if head else {
+        key: value for key, value in RUN.items() if key != "headSha"}
+    lines = script._suite_and_ci(A, None, script.read_ci_run(run), None)
+    assert lines[2] == f"- CI's run, its first attempt: {said}"
 
 
 def test_only_the_standard_library():
@@ -269,6 +289,86 @@ def test_a_table_of_another_commit_is_kept(script, monkeypatch, tmp_path):
     monkeypatch.setattr(script, "measure", measured)
     assert script.main(["--out", str(out), "--replace"]) == 0
     assert f"Measured at commit `{A}`" in out.read_text(encoding="utf-8")
+
+
+def test_this_commit_s_table_keeps_its_suite_and_ci(script, monkeypatch,
+                                                    tmp_path):
+    """A table of the commit measured is written again only with the
+    inputs that gave its suite and CI lines, or with --replace."""
+    _made_up(script, monkeypatch, {"src/m.py": "def f():\n    pass\n"})
+    log, run, out = (tmp_path / "suite.log", tmp_path / "run.json",
+                     tmp_path / "table.md")
+    log.write_text(LOG, encoding="utf-8")
+    run.write_text(json.dumps(RUN), encoding="utf-8")
+    inputs = {"--pytest-log": str(log), "--ci-run": str(run),
+              "--ci-attempts": "1"}
+    every = [part for pair in inputs.items() for part in pair]
+    assert script.main(["--out", str(out)] + every) == 0
+    kept = out.read_bytes()
+    for left_out in inputs:
+        given = [part for option, value in inputs.items()
+                 if option != left_out for part in (option, value)]
+        assert script.main(["--out", str(out)] + given) == 2, left_out
+        assert out.read_bytes() == kept, left_out
+    assert script.main(["--out", str(out)] + every) == 0
+    assert out.read_bytes() == kept
+    assert script.main(["--out", str(out), "--replace"]) == 0
+    last = _section(out.read_text(encoding="utf-8"), "The suite and CI")
+    assert all(line.endswith(script.NOT_GIVEN) for line in last), last
+    # its lines all "not given", it is written again without inputs
+    assert script.main(["--out", str(out)]) == 0
+
+
+def _log(collected, summary):
+    """A pytest log with its collected line, if any, and its summary."""
+    return "\n".join([
+        "platform linux -- Python 3.13.5, pytest-8.4.2, pluggy-1.6.0"]
+        + ([collected] if collected else [])
+        + ["", "tests/test_made_up.py ....", "", f"==== {summary} ====", ""])
+
+
+# A log, and what its refusal names: the kind, or the counts
+@pytest.mark.parametrize("collected, summary, named", [
+    ("collected 10160 items / 10117 deselected / 43 selected",
+     "43 passed, 10117 deselected in 3.00s", "10,117 deselected"),
+    ("collected 10 items", "9 passed, 1 xfailed in 1.00s", "1 xfailed"),
+    # two errors make up the count: refused for the xpassed alone
+    ("collected 10 items", "8 passed, 1 xpassed, 2 errors in 1.00s",
+     "1 xpassed"),
+    ("collected 10160 items", "5000 passed, 20 skipped in 400.00s",
+     "5,020 of the 10,160"),
+    ("collected 10 items / 2 errors", "2 errors in 0.50s", "0 of the 10"),
+    (None, "10097 passed, 50 skipped in 1013.20s", "-q")],
+    ids=["deselected", "xfailed", "xpassed", "stopped-early",
+         "collection-errors", "no-collected-line"])
+def test_a_log_of_part_of_the_suite_is_refused(script, monkeypatch, tmp_path,
+                                               capsys, collected, summary,
+                                               named):
+    _made_up(script, monkeypatch, {"src/m.py": "def f():\n    pass\n"})
+    log, out = tmp_path / "suite.log", tmp_path / "table.md"
+    log.write_text(_log(collected, summary), encoding="utf-8")
+    assert script.main(["--out", str(out), "--pytest-log", str(log)]) == 1
+    assert not out.exists()
+    assert named in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("collected, summary, said", [
+    ("collected 10 items", "9 passed, 1 error in 1.00s",
+     "9 passed, 0 skipped, 0 failed, 1 error, in 1 s"),
+    ("collected 10 items", "8 passed, 2 errors in 1.00s",
+     "8 passed, 0 skipped, 0 failed, 2 errors, in 1 s"),
+    # an error at a test's tear-down, beside its outcome
+    ("collected 10 items", "10 passed, 1 error in 1.00s",
+     "10 passed, 0 skipped, 0 failed, 1 error, in 1 s"),
+    # a module skipped whole: among the skipped, not the collected
+    ("collected 10 items / 1 skipped", "10 passed, 1 skipped in 1.00s",
+     "10 passed, 1 skipped, 0 failed, in 1 s"),
+    ("collecting 3 items\rcollected 10 items", "8 passed, 2 skipped in 61.00s",
+     "8 passed, 2 skipped, 0 failed, in 1 min 1 s")],
+    ids=["one-error", "two-errors", "tear-down", "module-skipped",
+         "terminal"])
+def test_a_log_of_the_whole_suite_is_read(script, collected, summary, said):
+    assert script.read_pytest_log(_log(collected, summary))["suite"] == said
 
 
 @pytest.mark.parametrize("version, commit", [

@@ -17,13 +17,19 @@ nothing on the network, and writes one file or none.
 What it writes: `docs/structure/<version>.md`, or `--out`. An opening
 paragraph names the commit, its date and the ids of its `src` and
 `tests` trees, which a reader compares with the release tag's; then
-the ten largest files of each tree, the ten most complex functions of
-each, how many functions each grade holds, and last the suite and CI,
-each line "not given" without its input:
+the ten largest Python files of each tree, the ten most complex
+functions of each, how many functions each grade holds, and last the
+suite and CI, each line "not given" without its input:
 
-- `--pytest-log`: the full suite's output, run without `-q`, for its
-  Python (pytest's `platform ... Python X` line) and its closing
-  summary (passed, skipped, failed, seconds);
+- `--pytest-log`: the full suite's output, run once without `-q`, for
+  its Python (pytest's `platform ... Python X` line) and its closing
+  summary (passed, skipped, failed, errors, seconds). A log of part of
+  the suite is refused (status 1, nothing written): one that deselected
+  tests, one with tests marked as expected to fail (xfailed or xpassed,
+  which the table's line does not count), one without pytest's
+  `collected N items` line (a run with `-q`), and one whose summary
+  does not account for every test collected (a run stopped early). A
+  run of some files alone cannot be told from its log;
 - `--ci-run`: the JSON of `gh run view ID --repo nicotem/exegete
   --attempt 1 --json conclusion,headSha,startedAt,jobs`. GitHub moves a
   run's start to its rerun's, so the first attempt's JSON is the one
@@ -35,7 +41,10 @@ each line "not given" without its input:
 A kept table is not replaced: when the output file exists and its
 opening names another commit, or none, the script stops with status 2
 before measuring and leaves the file as it was, unless given
-`--replace`.
+`--replace`. A table of the same commit is kept in the same way when it
+gives a line of the suite or CI that this run, without that line's
+input, would write as "not given": the log and the JSON are kept
+nowhere in the repository.
 
 `--functions` writes no file. It prints every function of grade D or
 worse, or of over 200 code lines, one per line (its file, name, count
@@ -48,9 +57,12 @@ more for a loop's `else`; each `except` handler (`except*` included);
 each `with` and `async with`; each `assert`; each comprehension clause
 and each of its `if` clauses; each `and` or `or` (its operands minus
 one); and each `match` case. Only the body counts, not decorators,
-defaults or annotations. A nested function or class is its own row and
-adds nothing to its parent; a lambda counts inside its function. Names
-are qualified (`Class.method`, `outer.inner`). The grades are radon's
+defaults or annotations. Rows are functions: a nested function is its
+own row and adds nothing to its parent; a class is no row and adds
+nothing to the function it stands in, its methods being rows of their
+own; code in a class body outside its methods counts in no row; a
+lambda counts inside its function. Names are qualified
+(`Class.method`, `outer.inner`). The grades are radon's
 published bands: A 1 to 5, B 6 to 10, C 11 to 20, D 21 to 30, E 31 to
 40, F 41 and over. The count is not radon's: `with`, `async with`, a
 `match`'s wildcard case and `except*` add 1 here and nothing in radon,
@@ -92,6 +104,14 @@ _VERSION = re.compile(r'^version = "([^"]+)"$', re.M)
 _FILE_NAME = re.compile(r"[0-9A-Za-z][0-9A-Za-z.+-]*")
 _MEASURED = re.compile(r"Measured at commit `([0-9a-f]{40})`")
 _OPENING_BYTES = 4096
+# The lines of the last section, each with the input that gives it
+SUITE_AND_CI = (
+    ("The suite's Python", "--pytest-log"),
+    ("The suite", "--pytest-log"),
+    ("CI's run, its first attempt", "--ci-run"),
+    ("CI's time, from the run's start to its last job's end", "--ci-run"),
+    ("CI attempts", "--ci-attempts"),
+    ("CI's jobs, slowest first", "--ci-run"))
 
 
 class Refused(Exception):
@@ -147,8 +167,8 @@ def adds(node: ast.AST) -> int:
 
 def complexity(function: ast.AST) -> int:
     """The function's count: 1, and what each node of its body adds,
-    leaving out nested functions and classes, which are rows of their
-    own."""
+    leaving out nested functions, which are rows of their own, and
+    nested classes, whose methods are."""
     count = 1
     stack = list(function.body)
     while stack:
@@ -324,35 +344,74 @@ def read_version(pyproject: str) -> str:
     return match.group(1)
 
 
-def check_kept(out: Path, commit: str, replace: bool) -> None:
+def check_kept(out: Path, commit: str, replace: bool,
+               given: frozenset = frozenset()) -> None:
     """Refused when `out` holds a table of another commit, or names no
-    commit, unless `replace`: run before anything is measured."""
+    commit, or is this commit's and gives a line of the suite or CI whose
+    input is not among `given` (the options given), unless `replace`: run
+    before anything is measured."""
     if replace or not out.exists():
         return
+    match = _MEASURED.search(_read_kept(out, _OPENING_BYTES))
+    if match is None or match.group(1) != commit:
+        named = (f"commit {match.group(1)[:7]}" if match is not None
+                 else "no commit")
+        raise Refused(f"{out} names {named}, not {commit[:7]}, and is kept "
+                      f"as it was; --replace writes over it")
+    _check_suite_and_ci_kept(out, _read_kept(out), given)
+
+
+def _read_kept(out: Path, size: int = -1) -> str:
     try:
         with open(out, "rb") as handle:
-            opening = handle.read(_OPENING_BYTES).decode("utf-8", "replace")
+            return handle.read(size).decode("utf-8", "replace")
     except OSError as error:
         raise Failed(f"{out} could not be read: {error}")
-    match = _MEASURED.search(opening)
-    if match is not None and match.group(1) == commit:
-        return
-    named = (f"commit {match.group(1)[:7]}" if match is not None
-             else "no commit")
-    raise Refused(f"{out} names {named}, not {commit[:7]}, and is kept as "
-                  f"it was; --replace writes over it")
+
+
+def _check_suite_and_ci_kept(out: Path, kept: str, given: frozenset) -> None:
+    """Refused when this commit's table gives a line of the suite or CI
+    whose input is not among `given`: the run would write it as "not
+    given", and the inputs are kept nowhere in the repository."""
+    lost = [(label, option) for label, option in SUITE_AND_CI
+            if option not in given and _gives(kept, label)]
+    if lost:
+        raise Refused(
+            f"{out} is the table of this commit, and this run would write "
+            f"these lines of it as \"{NOT_GIVEN}\": "
+            + "; ".join(f'"{label}"' for label, _ in lost)
+            + ". It is kept as it was: give "
+            + " and ".join(sorted({option for _, option in lost}))
+            + " again, or --replace writes over it")
+
+
+def _gives(table: str, label: str) -> bool:
+    """Whether the table's line `- <label>:` gives something other than
+    "not given" (CI's jobs are given on the lines after their own)."""
+    for line in table.split("\n"):
+        if line.startswith(f"- {label}:"):
+            return line[len(label) + 3:].strip() != NOT_GIVEN
+    return False
 
 
 # The suite and CI, from the optional inputs
 
 _PLATFORM = re.compile(r"^platform (\S+) -- Python ([0-9][^,\s]*)", re.M)
-_OUTCOME = re.compile(r"(\d+) (passed|failed|skipped|error)s?\b")
+_OUTCOME = re.compile(
+    r"(\d+) (passed|failed|skipped|deselected|xfailed|xpassed|error)s?\b")
 _SECONDS = re.compile(r" in (\d+(?:\.\d+)?)s\b")
+# pytest's line after collecting: "collected 10160 items", then
+# " / 2 errors", " / 3 deselected", " / 1 skipped" (modules skipped
+# whole) and " / 43 selected" where any
+_COLLECTED = re.compile(
+    r"(?:^|\r)collected (\d+) items?((?: / \d+ [a-z]+)*)\s*$", re.M)
+# What makes a log one of part of the suite, or what the line leaves out
+_PARTIAL = ("deselected", "xfailed", "xpassed")
 
 
 def read_pytest_log(text: str) -> Dict[str, Optional[str]]:
     """The suite's Python and its closing summary, each None when the
-    log does not give it."""
+    log does not give it; Failed for a log of part of the suite."""
     found = {"python": None, "suite": None}
     platform = _PLATFORM.search(text)
     if platform:
@@ -362,14 +421,44 @@ def read_pytest_log(text: str) -> Dict[str, Optional[str]]:
         outcomes = {kind: int(number)
                     for number, kind in _OUTCOME.findall(line)}
         if seconds and outcomes:
+            _check_whole(text, outcomes)
             said = [f"{outcomes.get(kind, 0):,} {kind}"
                     for kind in ("passed", "skipped", "failed")]
-            if outcomes.get("error"):
-                said.append(f"{outcomes['error']:,} errors")
+            errors = outcomes.get("error", 0)
+            if errors:
+                said.append(f"{errors:,} error" + ("" if errors == 1
+                                                   else "s"))
             found["suite"] = (", ".join(said) + ", in "
                               + duration(float(seconds.group(1))))
             break
     return found
+
+
+def _check_whole(text: str, outcomes: Dict[str, int]) -> None:
+    """Failed unless the log is of one run of every test it collected.
+    Each test collected ends passed, failed, skipped or in an error at
+    its set-up; a module skipped whole is counted among the skipped but
+    not among the collected; an error at a test's tear-down is counted
+    beside its outcome."""
+    partial = [f"{outcomes[kind]:,} {kind}" for kind in _PARTIAL
+               if outcomes.get(kind)]
+    if partial:
+        raise Failed(f"the pytest log is not of the whole suite: it gives "
+                     f"{', '.join(partial)}")
+    collected = _COLLECTED.findall(text)
+    if not collected:
+        raise Failed("the pytest log has no \"collected N items\" line: "
+                     "run the whole suite without -q")
+    count, parts = collected[-1]
+    parts = {kind: int(number)
+             for number, kind in re.findall(r" / (\d+) ([a-z]+)", parts)}
+    expected = int(count) + parts.get("skipped", 0)
+    ended = sum(outcomes.get(kind, 0)
+                for kind in ("passed", "failed", "skipped"))
+    if not ended <= expected <= ended + outcomes.get("error", 0):
+        raise Failed(f"the pytest log's summary accounts for {ended:,} of "
+                     f"the {expected:,} tests collected: a run that "
+                     f"stopped early, or of part of the suite")
 
 
 def _when(value) -> Optional[datetime]:
@@ -451,7 +540,7 @@ def _most_complex(functions: List[Function], tree: str) -> List[str]:
 def _by_grade(files: List[File], functions: List[Function]) -> List[str]:
     src, tests = _in("src", functions), _in("tests", functions)
     lines = [f"In `src/`, {len(src):,} functions in "
-             f"{len(_in('src', files)):,} files; in `tests/`, "
+             f"{len(_in('src', files)):,} Python files; in `tests/`, "
              f"{len(tests):,} in {len(_in('tests', files)):,}.", "",
              "| Grade | For counts of | `src/` | `tests/` |",
              "|---|---|---:|---:|"]
@@ -474,20 +563,22 @@ def _suite_and_ci(commit: str, suite, ci, attempts) -> List[str]:
     run = NOT_GIVEN
     if ci:
         head = ci.get("head")
-        where = (NOT_GIVEN if not head else "the commit measured"
-                 if head == commit else "not the commit measured")
-        run = (f"{ci.get('conclusion') or NOT_GIVEN}, at commit "
-               f"`{(head or NOT_GIVEN)[:7]}` ({where})")
+        at = NOT_GIVEN
+        if head:
+            at = f"`{head[:7]}` (" + ("the commit measured" if head == commit
+                                      else "not the commit measured") + ")"
+        run = f"{ci.get('conclusion') or NOT_GIVEN}, at commit {at}"
     seconds = ci.get("seconds")
     jobs = ci.get("jobs") or []
-    lines = [
-        f"- The suite's Python: {suite.get('python') or NOT_GIVEN}",
-        f"- The suite: {suite.get('suite') or NOT_GIVEN}",
-        f"- CI's run, its first attempt: {run}",
-        "- CI's time, from the run's start to its last job's end: "
-        + (duration(seconds) if seconds is not None else NOT_GIVEN),
-        f"- CI attempts: {attempts if attempts is not None else NOT_GIVEN}",
-        "- CI's jobs, slowest first:" + ("" if jobs else f" {NOT_GIVEN}")]
+    # in SUITE_AND_CI's order, each after a space; CI's jobs follow on
+    # lines of their own
+    values = (f" {suite.get('python') or NOT_GIVEN}",
+              f" {suite.get('suite') or NOT_GIVEN}", f" {run}",
+              f" {duration(seconds) if seconds is not None else NOT_GIVEN}",
+              f" {attempts if attempts is not None else NOT_GIVEN}",
+              "" if jobs else f" {NOT_GIVEN}")
+    lines = [f"- {label}:{value}"
+             for (label, _), value in zip(SUITE_AND_CI, values)]
     lines += [f"  - {name}: " + (duration(s) if s is not None else NOT_GIVEN)
               for name, s in jobs]
     return lines
@@ -513,7 +604,7 @@ def render(version: str, commit: Commit, files: List[File],
         "line, strings included; code lines leave out blank lines, "
         "comment lines and strings that span several lines.", "",
         f"## {HEADINGS[0]}", "",
-        "The ten longest files of each tree, by lines.", ""]
+        "The ten longest Python files of each tree, by lines.", ""]
     for tree in TREES:
         lines += [f"In `{tree}/`:", ""] + _largest(files, tree) + [""]
     lines += [f"## {HEADINGS[1]}", "",
@@ -526,6 +617,13 @@ def render(version: str, commit: Commit, files: List[File],
         "", f"## {HEADINGS[3]}", ""] + _suite_and_ci(
         commit.id, suite, ci, attempts)
     return "\n".join(lines) + "\n"
+
+
+def _inputs_given(args) -> frozenset:
+    """The options for the suite and CI this run was given."""
+    return frozenset(option for option, value in (
+        ("--pytest-log", args.pytest_log), ("--ci-run", args.ci_run),
+        ("--ci-attempts", args.ci_attempts)) if value is not None)
 
 
 def main(argv=None) -> int:
@@ -552,7 +650,7 @@ def main(argv=None) -> int:
             return 0
         version = read_version(pyproject)
         out = args.out or REPO / "docs" / "structure" / f"{version}.md"
-        check_kept(out, commit.id, args.replace)
+        check_kept(out, commit.id, args.replace, _inputs_given(args))
         suite = ci = None
         try:
             if args.pytest_log:

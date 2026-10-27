@@ -112,7 +112,15 @@ is looked at first.
 6. **Document the change.** Add an entry under `Unreleased` in
    `CHANGELOG.md` (Keep a Changelog format). Update the docstring of
    every tool whose arguments or behaviour changed: the docstrings are
-   the documentation the AI model reads. Update `TOOLS.md` (the tool
+   the documentation the AI model reads. A paragraph that several tools
+   share, such as the refusal while the project's lock file is active,
+   is written once, as a constant in `src/exegete/server.py` that
+   `_with_paragraphs` puts back into each of their docstrings, and is
+   changed there. Every description Exegete serves is also kept in
+   `tests/fixtures/served_descriptions.txt`, and a test fails when the
+   two differ: when you change a description, write that file again
+   with `python scripts/served_texts.py write` on Python 3.13 and read
+   its diff. Update `TOOLS.md` (the tool
    reference), `README.md`, `INSTALL.md` and `PRIVACY.md` where they
    describe the behaviour you changed; `PRIVACY.md` is the contract for
    what a tool result may disclose. Links are checked on every push

@@ -3313,8 +3313,10 @@ FUTURE_SENTENCES = (
      "Exegete reads none of them.", "not read"),
     ("TOOLS.md", "The notes: <https://github.com/nicotem/exegete/releases/"
      "tag/v0.16.0-alpha>", "not read"),
-    ("TOOLS.md", "[The notes](https://github.com/nicotem/exegete/releases/"
-     "tag/v0.16.0-alpha)", "not read"),
+    ("TOOLS.md", "The notes: <https://example.org/notes?release=v0.16>",
+     "not read"),
+    ("TOOLS.md", "[The notes](https://example.org/notes?release=v0.16)",
+     "not read"),
     # README's section on what comes next keeps no release already made
     ("README.md", "## What comes next\n\n- v0.15.1: undo", "wrong"),
     ("README.md", "## What comes next\n\n- v0.15.2: undo", "right"),
@@ -3480,7 +3482,7 @@ def _private():
 
 
 def built(value):
-    return f"Read until {names.UNTIL}, then {value} ends the text."
+    return f"Each one is read until {names.UNTIL}, and {value} ends it."
 
 
 SHORT = "three words only"
@@ -3506,8 +3508,8 @@ def test_code_texts_reads_what_is_served(tmp_path):
         (7, "A tool's docstring, which FastMCP serves as its description.",
          True, False, None, None),
         (8, "a dictionary's value of five words", False, False, None, None),
-        (16, "Read until v1.0, then " + code_texts.GAP + " ends the text.",
-         False, False, None, None),
+        (16, "Each one is read until v1.0, and " + code_texts.GAP
+         + " ends it.", False, False, None, None),
         (20, "a raw text of five words", False, True, None, "RAW"),
         (21, "a line for the log, of seven words", False, False,
          "logger.info", None)]
@@ -3515,15 +3517,21 @@ def test_code_texts_reads_what_is_served(tmp_path):
 
 def test_a_triple_quoted_text_keeps_its_lines_and_joined_ones_do_not(
         tmp_path):
+    """A place in one triple-quoted text is named by its own line; in
+    literals joined over several lines, whose line breaks are escapes
+    of their own, by the first line."""
     package = tmp_path / code_texts.PACKAGE
     package.mkdir(parents=True)
     (package / "one.py").write_text(
         'FIRST = """One text of words,\nwritten over\nthree lines."""\n'
-        'SECOND = ("One text of words, "\n          "joined over two.")\n',
+        'SECOND = ("One text of words,\\nwith a break, "\n'
+        '          "joined over two.\\nAnd a third line.")\n',
         encoding="utf-8")
     first, second = code_texts.code_texts(tmp_path)
     assert (first.line, first.keeps_lines) == (1, True)
+    assert _code_text_document(first).line_of(len(first.text) - 1) == 3
     assert (second.line, second.keeps_lines) == (4, False)
+    assert second.text.count("\n") == 2
     document = _code_text_document(second)
     assert document.line_of(len(document.text) - 1) == 4
 

@@ -321,6 +321,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── check_pages_site.py     # Checks the update site against this release
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)
 │   ├── check_advisories.py     # Asks OSV's database of advisories about every release in the lock
+│   ├── served_texts.py         # Every tool description Exegete serves, written to a file or compared with it
 │   ├── extension_libraries.py  # What the desktop extension installs on each computer, as one table
 │   ├── compare_release_surface.py  # Compares what two releases offer an assistant and a researcher
 │   ├── release_version.py      # What a published release builds, read from its tag

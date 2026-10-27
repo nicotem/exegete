@@ -224,8 +224,10 @@ def test_the_newest_job_reports_and_never_blocks():
     text = _text(job)
     assert "    continue-on-error: true" in job["lines"]
     assert "matrix:" not in text and "strategy:" not in text
-    assert not any(line.lstrip().startswith("needs:")
-                   for line in job["lines"])
+    # v0.15.2: it waits for the tier alone, and runs on the full tier
+    # (tests/test_v0152_ci_tier.py)
+    assert [line.strip() for line in job["lines"]
+            if line.lstrip().startswith("needs:")] == ["needs: tier"]
     for name, other in jobs.items():
         needs = [line for line in other["lines"]
                  if line.lstrip().startswith("needs:")]

@@ -906,10 +906,13 @@ def test_the_advanced_section_rests_on_the_code():
 def test_how_it_is_tested_matches_the_workflow():
     flat = _flat(_section("For advanced users", "What comes next"))
     # (the whole-branch review of v0.15.0, round 2: both suites pass more
-    # than 8,300)
+    # than 8,300; v0.15.2, the two tiers of CI: the full matrix runs on
+    # the integration branch and main, which every change reaches before
+    # a release, tests/test_v0152_ci_tier.py)
     assert ("More than 8,000 automated tests run on Windows, macOS and "
-            "Linux, with Python 3.10 and 3.13, on every change pushed; they "
-            "test Exegete, not a researcher's use of it") in flat
+            "Linux, with Python 3.10 and 3.13, on every change before it is "
+            "released; they test Exegete, not a researcher's use of it") \
+        in flat
     workflow = _read(".github/workflows/ci.yml")
     assert "os: [ubuntu-latest, windows-latest, macos-latest]" in workflow
     assert "python-version: [\"3.10\", \"3.13\"]" in workflow

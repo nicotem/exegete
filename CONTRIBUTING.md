@@ -65,17 +65,20 @@ is looked at first.
    codings, a 500k-character document) is opt-in behind
    `TRACK6_GIANT=1` and is not part of a normal run.
 5. **Continuous integration** runs on every pushed branch and on pull
-   requests to `main`: twenty jobs. The jobs that run tests, all but
-   the one on the newest releases below, install the libraries from the
-   lock, `uv.lock`, each release checked against its hash: the releases
-   the desktop extension installs, so a new release on PyPI cannot turn
-   a job red overnight, and a change to the requirements or the version
-   in `pyproject.toml` without `uv lock` fails on the push. Ten run the
-   suite, on Python 3.10 and 3.13: one job each on Ubuntu and on macOS,
-   and three on Windows, where the suite is slowest and runs in three
-   parts made of whole test files (`tests/conftest.py`). To run one part
-   on your own computer,
-   set `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
+   requests to `main`, in one of two tiers, which its first job, `tier`,
+   chooses (`scripts/ci_tier.py` says how). The jobs that run tests,
+   all but the one on the newest releases below, install the libraries
+   from the lock, `uv.lock`, each release checked against its hash: the
+   releases the desktop extension installs, so a new release on PyPI
+   cannot turn a job red overnight, and a change to the requirements or
+   the version in `pyproject.toml` without `uv lock` fails on the push.
+   A push to `main` or to an integration branch, `feat/<name>`, a pull
+   request and a run started by hand take the full tier: twenty-one
+   jobs. Ten run the suite, on Python 3.10 and 3.13: one job each on
+   Ubuntu and on macOS, and three on Windows, where the suite is slowest
+   and runs in three parts made of whole test files
+   (`tests/conftest.py`). To run one part on your own computer, set
+   `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
    three; left empty, every test runs. Three build the desktop
    extension, one on each system, and install and start it as Claude
    Desktop does (the Linux one also validates it with the official
@@ -94,9 +97,18 @@ is looked at first.
    library `pyproject.toml` allows, what an install from PyPI takes
    today; it may fail and only reports, and its summary gives the
    releases it installed and the newest of each bounded library on
-   PyPI. Every job must be green, the watch and the newest releases
-   apart. The workflow actions are pinned by commit SHA with a version
-   comment beside each pin; if you add or bump an action, keep that
+   PyPI. A push to any other branch takes the fast tier: `tier`, the
+   suite on Ubuntu with Python 3.13 and the documents job, and the
+   desktop extension's jobs as well when the branch changed
+   `packaging/`, `pyproject.toml`, `uv.lock` or a script those jobs
+   run, counted from where the branch left its integration branch
+   (`feat/<p>` for a branch `<p>/<key>`), or else from `main`. Every
+   job that runs must be green, the watch and the newest releases
+   apart. A change to a workflow, to `pyproject.toml` or to `uv.lock`
+   also runs once on the full tier on its own branch before it is
+   merged: on GitHub, Actions, then CI, then Run workflow, with the
+   branch chosen. The workflow actions are pinned by commit SHA with a
+   version comment beside each pin; if you add or bump an action, keep that
    shape (Dependabot maintains the pins). A bump also means recording
    the new SHA against the tag it really is, in `VERIFIED_TAGS` in
    `tests/test_v012_workflow_pins.py`;
@@ -316,6 +328,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   └── release.py           # This release's version, date and summary, for the note after an update
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/
+│   ├── ci_tier.py              # Which tier of CI a run takes, and whether the extension's jobs run
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release

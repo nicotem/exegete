@@ -10,6 +10,9 @@ name: Weekly link check
 # A workflow of its own, so that a push changing anything else never
 # checks third-party sites. A schedule runs from main only, so a push
 # that changes this workflow or the script also runs it, on its branch.
+# v0.15.2: a run on the schedule or started by hand also checks the
+# newest integration branch, `feat/*`, whose documents change for a week
+# or more before they reach main.
 on:
   schedule:
     # Mondays at 06:00 UTC
@@ -24,9 +27,10 @@ jobs:
   external-links:
     name: links to other sites
     runs-on: ubuntu-latest
-    # The script's own budget is ten minutes; a request may still be
-    # waiting for its answer when it ends.
-    timeout-minutes: 15
+    # The script's own budget is ten minutes for each of its two checks
+    # (this commit's documents, then the integration branch's); a request
+    # may still be waiting for its answer when one ends.
+    timeout-minutes: 30
     permissions:
       contents: read
 
@@ -34,6 +38,8 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          # Every branch, for the integration branch's check below.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Python 3.13
@@ -43,3 +49,26 @@ jobs:
 
       - name: The links to other sites
         run: python scripts/check_links.py --external
+
+      # v0.15.2: the newest integration branch by its last commit's date,
+      # read from a worktree of its own with the script checked out above,
+      # and named in the step summary. Not on a push, which checks its own
+      # branch alone. The branch reaches the shell only as a quoted
+      # variable.
+      - name: The links to other sites, on the integration branch
+        if: ${{ !cancelled() && github.event_name != 'push' }}
+        shell: bash
+        run: |
+          ref=$(git for-each-ref --sort=-committerdate --count=1 --format='%(refname)' refs/remotes/origin/feat/)
+          if [ -z "$ref" ]; then
+            echo "::notice title=integration branch::No feat/* branch: only this commit's documents were checked."
+            exit 0
+          fi
+          branch="${ref#refs/remotes/origin/}"
+          if [ "$(git rev-parse "$ref^{commit}")" = "$(git rev-parse HEAD)" ]; then
+            echo "The integration branch is the commit checked above."
+            exit 0
+          fi
+          git worktree add --detach "$RUNNER_TEMP/integration" "$ref"
+          echo "### The integration branch, $branch" >> "$GITHUB_STEP_SUMMARY"
+          python scripts/check_links.py --external --root "$RUNNER_TEMP/integration"

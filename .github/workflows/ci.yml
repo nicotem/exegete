@@ -8,8 +8,47 @@ on:
   workflow_dispatch:
 
 jobs:
+  # v0.15.2, the two tiers (ruling 100): which jobs this run takes, chosen
+  # in one place, scripts/ci_tier.py, which says how. A push to a branch
+  # other than `main` and `feat/*` takes the fast tier: the suite once, on
+  # Ubuntu with Python 3.13, and the documents job, with the desktop
+  # extension's jobs only when the branch changed the packaging, the lock
+  # or a script they run. Every other run takes the full tier, the whole
+  # matrix. Only an explicit `true` narrows a run: the exclusions and
+  # conditions below read an empty or missing output as the full tier,
+  # and a failure here skips the jobs that need it and turns the run red.
+  tier:
+    name: tier
+    runs-on: ubuntu-latest
+    # A checkout and a few git commands; five minutes ends a hang.
+    timeout-minutes: 5
+    # Reads the checkout, nothing else.
+    permissions:
+      contents: read
+    # Without this block, `needs.tier.outputs` reads empty everywhere.
+    outputs:
+      fast: ${{ steps.choose.outputs.fast }}
+      skip_extension: ${{ steps.choose.outputs.skip_extension }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # Every branch and its history, for the point where this branch
+          # left its integration branch or main.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The runner's own Python, since the script needs the standard
+      # library alone. The event and the ref reach it through its
+      # environment, never pasted into this line.
+      - name: Choose the tier
+        id: choose
+        run: python3 scripts/ci_tier.py
+
   test:
     name: tests (${{ matrix.os }}, py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format(', part {0} of 3', matrix.part) || '' }})
+    needs: tier
     runs-on: ${{ matrix.os }}
     # A limit on the whole job (v0.14): GitHub's default is six hours, so
     # a hung test held a runner that long. In the 120 green runs from 7 to
@@ -48,6 +87,13 @@ jobs:
             part: 2
           - os: macos-latest
             part: 3
+          # v0.15.2, the fast tier (the `tier` job): Ubuntu with Python
+          # 3.13 alone. Each value names a matrix entry only on an
+          # explicit fast answer; otherwise it is 'none', which names no
+          # entry and leaves the full matrix.
+          - os: ${{ needs.tier.outputs.fast == 'true' && 'windows-latest' || 'none' }}
+          - os: ${{ needs.tier.outputs.fast == 'true' && 'macos-latest' || 'none' }}
+          - python-version: ${{ needs.tier.outputs.fast == 'true' && '3.10' || 'none' }}
 
     steps:
       # Actions are SHA-pinned (supply-chain hardening); the trailing
@@ -162,6 +208,12 @@ jobs:
 
   desktop-extension:
     name: desktop extension (${{ matrix.os }})
+    # v0.15.2: on the fast tier, only when the branch changed the
+    # packaging, the lock or a script this job runs (scripts/ci_tier.py
+    # names them); on the full tier, always. An empty answer runs it.
+    # desktop-extension-same, which needs this job, follows it.
+    needs: tier
+    if: needs.tier.outputs.skip_extension != 'true'
     runs-on: ${{ matrix.os }}
     # Building, validating and trying the package takes a few minutes
     # (the try fetches Python and the locked dependencies through uv);
@@ -351,6 +403,9 @@ jobs:
   # QualCoder itself is never run.
   qualcoder-parity:
     name: QualCoder parity (${{ matrix.which }})
+    # v0.15.2: the full tier only (the `tier` job)
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -433,16 +488,19 @@ jobs:
             echo "::notice title=QualCoder parity watch::QualCoder's newest code stores different text for some test documents; the job log names them"
           fi
 
-  # v0.14.1, the rename: the old name's package, built on every push, the
-  # upgrade paths through the old name, offline, and the published 0.14.0
-  # working through the state folder's link. The wheelhouse is fetched
-  # once; the tests then install only from it (--no-index), so the real
-  # PyPI's qualcoder-mcp can never make them pass. Linux runs them all
+  # v0.14.1, the rename: the old name's package, built on every full run,
+  # the upgrade paths through the old name, offline, and the published
+  # 0.14.0 working through the state folder's link. The wheelhouse is
+  # fetched once; the tests then install only from it (--no-index), so the
+  # real PyPI's qualcoder-mcp can never make them pass. Linux runs them all
   # (the upgrade paths are pip's and uv's, not the platform's), and the
   # transition check's steps followed with the real uv tool and pipx;
   # Windows runs the 0.14.0 proof, through a junction.
   rename-upgrade:
     name: the rename (${{ matrix.os }})
+    # v0.15.2: the full tier only (the `tier` job)
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
     runs-on: ${{ matrix.os }}
     # Two wheels, a handful of scratch environments and offline installs
     # take a few minutes; twenty ends a hang well before the suite's.
@@ -575,6 +633,9 @@ jobs:
   # (PyMuPDF 2.0, the MCP library's 2.0) is seen without being installed.
   newest-libraries:
     name: the newest library releases (reports only)
+    # v0.15.2: the full tier only (the `tier` job); still no job needs it
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
     runs-on: ubuntu-latest
     # Measured on its first run (20 October 2026, run 39416267478): this
     # job took 28 minutes, its install included, and the suite on Ubuntu

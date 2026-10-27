@@ -97,7 +97,10 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
             "Exegete is free, open-source software, under QualCoder's own "
             "licence (LGPL-3.0-or-later), and costs nothing (your assistant "
             "may: see \"Start here\"). It is tested on Windows, macOS and "
-            "Linux with every change.",
+            # (v0.15.2, the two tiers of CI: the full matrix runs on the
+            # integration branch and main, which every change reaches
+            # before a release)
+            "Linux with every change before it is released.",
             "an early version (an alpha) built by one researcher, "
             "independently of QualCoder's developers",
             "parts marked Experimental have had little or no use yet",

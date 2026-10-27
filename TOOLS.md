@@ -1174,7 +1174,7 @@ narrower set (see its own entry).
 
 Two tools were renamed in 0.15.0. Their earlier names are still listed,
 and do exactly what the new ones do, until a later release (planned as
-v0.15.3) removes them: `analyze_for_coding` is now
+v0.15.4) removes them: `analyze_for_coding` is now
 `start_coding_session`, and `analyze_file_with_coding` is now
 `read_file_with_codings`. If your host remembers a choice to run one of
 the earlier names without asking, it may ask again for the new one.

@@ -150,6 +150,18 @@ def test_code_lines_leave_out_strings_and_comments(script):
     assert (file.lines, file.code_lines) == (11, 4)
 
 
+def test_windows_line_ends_change_nothing(script):
+    """A Windows checkout's git archive gives its text with \\r\\n."""
+    assert script.read_version(
+        '[project]\r\nname = "exegete"\r\nversion = "0.15.2-alpha"\r\n'
+    ) == "0.15.2-alpha"
+    source = ('def f():\n    """A text\n    over two lines."""\n'
+              '    # a comment\n\n    return [a for a in b if a]\n')
+    for ends in ("\r\n", "\r"):
+        assert script.measure({"src/m.py": source.replace("\n", ends)}) \
+            == script.measure({"src/m.py": source}), repr(ends)
+
+
 def _made_up(script, monkeypatch, sources, commit=A):
     """The git readers replaced by a made-up commit and its texts."""
     monkeypatch.setattr(script, "read_commit", lambda ref: script.Commit(

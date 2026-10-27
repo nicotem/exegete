@@ -317,7 +317,8 @@ def read_archive(commit: str) -> Tuple[Dict[str, str], str]:
 
 
 def read_version(pyproject: str) -> str:
-    match = _VERSION.search(pyproject)
+    # git archive gives a Windows checkout's line ends, \r\n
+    match = _VERSION.search(pyproject.replace("\r\n", "\n"))
     if match is None or not _FILE_NAME.fullmatch(match.group(1)):
         raise Failed("pyproject.toml names no version that can name a file")
     return match.group(1)

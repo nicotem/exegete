@@ -417,6 +417,41 @@ def test_each_address_is_asked_once():
         places
 
 
+@needs_git
+def test_an_address_known_to_lead_nowhere_is_counted_never_asked(
+        tmp_path, monkeypatch):
+    """v0.15.2: an address in KNOWN_GONE is not asked and fails nothing;
+    the summary line counts it. Every other address is asked as before."""
+    gone, kept = "https://old.example/project", "https://new.example/page"
+    monkeypatch.setattr(links, "KNOWN_GONE", {gone: "renamed; kept"})
+    root = _tree(tmp_path / "tree", {
+        "NOTES.md": f"[old]({gone}#part)\n[new]({kept})\n"})
+    calls = []
+    report = links.check_external(root, ask=_asker({gone: 404, kept: 404},
+                                                   calls),
+                                  sleep=lambda seconds: None)
+    assert {url for url, _ in calls} == {kept}
+    assert _where(report.failures) == [("NOTES.md", 2, kept)]
+    assert report.counts["known"] == 1
+    assert "1 known to lead nowhere" in links.summary_line(report, True, 1)
+
+
+@needs_git
+def test_each_address_known_to_lead_nowhere_is_still_in_a_document():
+    """An entry goes when the last link to its address goes; each says
+    why it is kept."""
+    try:
+        tracked = links.tracked_files(REPO)
+    except links.NoGit as error:
+        pytest.skip(f"not a git checkout: {error}")
+    places = links.external_addresses(
+        links.links_of(links.Repository(REPO, tracked)))
+    assert links.KNOWN_GONE
+    for address, reason in links.KNOWN_GONE.items():
+        assert address in places, address
+        assert reason.strip(), address
+
+
 # ---------------------------------------------------------------------------
 # The output and the exit codes
 # ---------------------------------------------------------------------------

@@ -38,7 +38,8 @@ when refused), redirects followed, 20 seconds, one retry after 30. A 404,
 a 410 or a name that does not resolve fails; 401, 403, 429, 5xx,
 timeouts and other answers are notices (some sites turn robots away).
 The run has a budget of ten minutes: an address not reached in time is
-a notice, and the summary counts them.
+a notice, and the summary counts them. An address in KNOWN_GONE, known to
+lead nowhere and kept on purpose, is not asked; the summary counts it.
 
 Each problem is printed as `file:line: target: reason`, as an ::error
 or a ::notice under GitHub Actions, and listed in the step summary.
@@ -87,6 +88,20 @@ TIMEOUT_SECONDS = 20
 RETRY_AFTER_SECONDS = 30
 BUDGET_SECONDS = 600
 USER_AGENT = "Exegete link check (https://github.com/nicotem/exegete)"
+
+# Addresses to other sites known to lead nowhere and kept on purpose, each
+# with its reason (v0.15.2): the weekly run does not ask them, and its
+# summary counts them. An entry goes when no document holds its address
+# any more, which tests/test_v0151_links.py checks.
+OLD_REPOSITORY = ("the repository was renamed and created again, so its "
+                  "old address leads nowhere; the change log's history "
+                  "keeps the address it had")
+KNOWN_GONE = {
+    "https://github.com/nicotem/qualcoder_mcp/compare/v0.1.0...v0.2.0":
+        OLD_REPOSITORY,
+    "https://github.com/nicotem/qualcoder_mcp/releases/tag/v0.1.0":
+        OLD_REPOSITORY,
+}
 
 
 class NoGit(Exception):
@@ -580,9 +595,16 @@ def check_addresses(places: Dict[str, List[Link]],
 
 
 def check_external(root: Path = REPO, **options) -> Report:
-    """The weekly check over the repository's links to other sites."""
+    """The weekly check over the repository's links to other sites; an
+    address in KNOWN_GONE is counted, never asked."""
     repo = Repository(root, tracked_files(root))
-    return check_addresses(external_addresses(links_of(repo)), **options)
+    places = external_addresses(links_of(repo))
+    known = [address for address in places if address in KNOWN_GONE]
+    for address in known:
+        del places[address]
+    report = check_addresses(places, **options)
+    report.counts["known"] = len(known)
+    return report
 
 
 # ---------------------------------------------------------------------------
@@ -605,7 +627,8 @@ def summary_line(report: Report, external: bool, seconds: float) -> str:
                 f"{len(report.failures)} failures, "
                 f"{len(report.notices)} notices "
                 f"({counts['unreached']} addresses not reached within "
-                f"the budget)")
+                f"the budget; {counts.get('known', 0)} known to lead "
+                f"nowhere, in KNOWN_GONE, not asked)")
     return (f"{counts['files']} files read in {seconds:.2f} s: "
             f"{counts['relative']} relative links ({counts['anchored']} "
             f"with an anchor) and {counts['own']} links to the "

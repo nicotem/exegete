@@ -9,6 +9,7 @@
   `scripts/assemble_changelog.py` writes the entry from these files and
   deletes them (CONTRIBUTING.md, step 6). `tests/test_v0151_facts.py`
   reads them for wrong values, as it read the `[Unreleased]` part, and
-  the tests that hold the published size of what a host is sent read it
-  from `changelog.d/measured.md` once a change writes it, and from the
+  the three tests that compare the size of what a host is sent with the
+  current measurement read that measurement from
+  `changelog.d/measured.md` once a change writes it, and from the
   CHANGELOG's newest Measured section until then.

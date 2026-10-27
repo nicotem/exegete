@@ -38,7 +38,7 @@ is looked at first.
 2. **Fork and branch.** `main` is never committed to directly; every
    change arrives on a branch and is merged from a pull request against
    `main`.
-3. **Install for development** (Python 3.10 or newer):
+3. **Install for development** (Python 3.11 or newer):
 
    ```bash
    git clone https://github.com/<you>/exegete.git
@@ -73,11 +73,12 @@ is looked at first.
    cannot turn a job red overnight, and a change to the requirements or
    the version in `pyproject.toml` without `uv lock` fails on the push.
    A push to `main` or to an integration branch, `feat/<name>`, a pull
-   request and a run started by hand take the full tier: twenty-one
-   jobs. Ten run the suite, on Python 3.10 and 3.13: one job each on
-   Ubuntu and on macOS, and three on Windows, where the suite is slowest
-   and runs in three parts made of whole test files
-   (`tests/conftest.py`). To run one part on your own computer, set
+   request and a run started by hand take the full tier: twenty-two
+   jobs. Eleven run the suite: on Python 3.11, the oldest Exegete
+   supports, and 3.13, one job each on Ubuntu and on macOS, and three on
+   Windows, where the suite is slowest and runs in three parts made of
+   whole test files (`tests/conftest.py`); on Python 3.14, the newest,
+   one on Ubuntu. To run one part on your own computer, set
    `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
    three; left empty, every test runs. Three build the desktop
    extension, one on each system, and install and start it as Claude

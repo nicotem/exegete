@@ -776,12 +776,12 @@ def test_the_tool_set_table():
     assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
     # the sentence under it, with the interpreters and the per cent
     # (v0.14.2, the README's second round of checks: shorter, the same
-    # facts)
+    # facts; v0.15.2: Python 3.11 or newer)
     flat = _flat(section)
     assert ("That is how much of a model's context a host uses when it "
             "sends every tool's definition (name, description and "
             "arguments) with each request: measured on Python 3.13, at four "
-            "characters a token; about five per cent more on 3.10 to "
+            "characters a token; about five per cent more on 3.11 and "
             "3.12.") in flat
     assert round(100 * (full_on_311 / sizes["full"] - 1)) == 5
 
@@ -813,7 +813,8 @@ def test_the_advanced_section_rests_on_the_code():
     # v0.15.1, PyMuPDF 2 with its runtime (ruling 96): no telemetry of
     # Exegete's own, but on Windows x64 onnxruntime, which PyMuPDF 2
     # loads, reports once for each PDF read
-    for words in ("in Python 3.10 or newer, with no online service and no "
+    # v0.15.2: Python 3.11 or newer (the owner's ruling of 27 October)
+    for words in ("in Python 3.11 or newer, with no online service and no "
                   "telemetry of its own (on Windows x64, a library it "
                   "installs for PDFs reports its use: PRIVACY.md, \"How "
                   "your data flows\"); its one request of its own is the "
@@ -842,7 +843,7 @@ def test_the_advanced_section_rests_on_the_code():
         assert words in opening, words
     with open(REPO / "pyproject.toml", "rb") as handle:
         project = tomllib.load(handle)["project"]
-    assert project["requires-python"] == ">=3.10"
+    assert project["requires-python"] == ">=3.11"
     database = _read("src/exegete/database.py")
     assert "?mode=ro" in database
     assert "The whole project tree is copied" in database
@@ -910,12 +911,13 @@ def test_how_it_is_tested_matches_the_workflow():
     # the integration branch and main, which every change reaches before
     # a release, tests/test_v0152_ci_tier.py)
     assert ("More than 8,000 automated tests run on Windows, macOS and "
-            "Linux, with Python 3.10 and 3.13, on every change before it is "
-            "released; they test Exegete, not a researcher's use of it") \
-        in flat
+            "Linux, with Python 3.11 and 3.13 (and 3.14 on Linux), on every "
+            "change before it is released; they test Exegete, not a "
+            "researcher's use of it") in flat
     workflow = _read(".github/workflows/ci.yml")
     assert "os: [ubuntu-latest, windows-latest, macos-latest]" in workflow
-    assert "python-version: [\"3.10\", \"3.13\"]" in workflow
+    # 3.14 on Ubuntu alone (tests/test_v0152_ci_tier.py)
+    assert "python-version: [\"3.11\", \"3.13\", \"3.14\"]" in workflow
     triggers = workflow[workflow.index("\non:\n"):workflow.index("\njobs:")]
     assert "push:\n    branches: [\"**\"]" in triggers
 

@@ -153,8 +153,10 @@ class TestTheTwoLines:
 
 class TestTheLockAgrees:
 
-    @pytest.mark.parametrize("python", ["3.10", "3.11", "3.12", "3.13",
-                                        "3.14"])
+    # Each Python the lock is made for: from 0.15.2, 3.11 or newer
+    # (pyproject.toml's requires-python), so the lock holds no walk for
+    # 3.10, which the markers above still give a line of its own.
+    @pytest.mark.parametrize("python", ["3.11", "3.12", "3.13", "3.14"])
     def test_the_walk_reaches_the_release_each_line_names(self, python):
         lock = _lock()
         for system, machine in ENVIRONMENTS:

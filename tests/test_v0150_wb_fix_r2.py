@@ -127,12 +127,13 @@ class TestClaudeCodesLimitsOnEveryPython:
                 "through tool search, so it cuts more, not less") in long
         # v0.15.1: measured again, create_backup's line in 22
         # descriptions and pseudonymise_source's sentence on its backup
+        # (v0.15.2: Python 3.11 or newer)
         assert ("Measured for 0.15.1, the descriptions are longer on "
-                "Python 3.10 to 3.12 than on 3.13, which strips the "
+                "Python 3.11 and 3.12 than on 3.13, which strips the "
                 "indentation they are written with.") in long
 
-    @pytest.mark.skipif(not (3, 10) <= sys.version_info[:2] < (3, 13),
-                        reason="the figures are Python 3.10 to 3.12's")
+    @pytest.mark.skipif(not (3, 11) <= sys.version_info[:2] < (3, 13),
+                        reason="the figures are Python 3.11 and 3.12's")
     def test_installs_figures_on_3_10_to_3_12(self):
         served = _served("full")
         over = sorted(((len(d), name) for name, d in served.items()
@@ -154,14 +155,14 @@ class TestClaudeCodesLimitsOnEveryPython:
         assert others == [], others
         same = (", ".join(f"{lengths[n]:,}" for n in four[:-1])
                 + f" and {lengths[four[-1]]:,}")
-        assert f"on 3.10 to 3.12, the same four are, at {same}." in long
+        assert f"on 3.11 and 3.12, the same four are, at {same}." in long
         longest, name = over[0]
         assert name == "pseudonymise_source"
         # 1,441 since v0.15.1 (17,825 on 3.13); 754 since it removed the
         # overlap policy qualcoder_edit_parity (17,138 on 3.13)
         assert (f"its last 754 characters are cut even through tool "
-                f"search on 3.13, and its last {longest - 16384:,} on 3.10 "
-                f"to 3.12, its sentence on the lock file among them") in long
+                f"search on 3.13, and its last {longest - 16384:,} on 3.11 "
+                f"and 3.12, its sentence on the lock file among them") in long
 
     def test_the_readme_and_the_changelog_name_the_longest(self):
         served = _served("full")
@@ -181,7 +182,7 @@ class TestClaudeCodesLimitsOnEveryPython:
             assert (f"`pseudonymise_source` ({length:,} characters; "
                     ) in measured
         else:
-            assert f", {length:,} on 3.10 to 3.12):" in readme
+            assert f", {length:,} on 3.11 and 3.12):" in readme
             assert f"; {length:,} on 3.11), passes 16,384" in measured
         assert ("One description is longer than 16,384 characters, "
                 "`pseudonymise_source`'s") in readme

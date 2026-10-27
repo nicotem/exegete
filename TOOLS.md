@@ -1014,7 +1014,7 @@ declares, and each tool's own description says what each one does.
 > same method as the CHANGELOG, under Python 3.13.5 with mcp 1.30.0), the
 > definitions run to about 203,000 characters for `full`, roughly 51k
 > tokens at four characters per token, and about 74,000 characters for
-> `core`, roughly 18k tokens. On Python 3.10 to 3.12 the same
+> `core`, roughly 18k tokens. On Python 3.11 and 3.12 the same
 > definitions measure about five per cent more, because those
 > interpreters keep the docstring indentation that 3.13 strips. See the
 > LM Studio recipe in INSTALL.md for what that means for context

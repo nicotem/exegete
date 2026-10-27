@@ -70,7 +70,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.13"]
+        # v0.15.2 (the owner's ruling of 27 October 2026): Python 3.11,
+        # the oldest Exegete supports, and 3.13, the desktop extension's,
+        # on every system; 3.14, the newest, on Ubuntu alone (the
+        # exclusions below).
+        python-version: ["3.11", "3.13", "3.14"]
         # v0.15: Windows runs the suite in three parts, a job each, as one
         # job there took 40 to 60 minutes; Linux and macOS keep one job,
         # part 1 alone (the exclusions below). tests/conftest.py makes
@@ -87,13 +91,18 @@ jobs:
             part: 2
           - os: macos-latest
             part: 3
+          - os: windows-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.14"
           # v0.15.2, the fast tier (the `tier` job): Ubuntu with Python
           # 3.13 alone. Each value names a matrix entry only on an
           # explicit fast answer; otherwise it is 'none', which names no
           # entry and leaves the full matrix.
           - os: ${{ needs.tier.outputs.fast == 'true' && 'windows-latest' || 'none' }}
           - os: ${{ needs.tier.outputs.fast == 'true' && 'macos-latest' || 'none' }}
-          - python-version: ${{ needs.tier.outputs.fast == 'true' && '3.10' || 'none' }}
+          - python-version: ${{ needs.tier.outputs.fast == 'true' && '3.11' || 'none' }}
+          - python-version: ${{ needs.tier.outputs.fast == 'true' && '3.14' || 'none' }}
 
     steps:
       # Actions are SHA-pinned (supply-chain hardening); the trailing

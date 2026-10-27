@@ -23,8 +23,10 @@ import pytest
 from track5_helpers import write_fixture_sidecar
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 import exegete.server as server
+from assemble_changelog import current_measurement  # noqa: E402
 from tool_counts import FULL_TOOLS  # noqa: E402
 
 from mcp import ClientSession, StdioServerParameters
@@ -634,11 +636,15 @@ class TestThePublishedSchemaBudget:
         arguments removed), so the current entry is the Unreleased one
         alone, and 0.15.0's figure is history (`_v0150_entry`). From
         the release on, the current entry is 0.15.1's, under an
-        Unreleased heading that says nothing yet.
+        Unreleased heading that says nothing yet. From v0.15.2 a change
+        writes no longer in the CHANGELOG but in a fragment, and the
+        figure is read where the release being written keeps it:
+        changelog.d/measured.md once a change measures again, else the
+        newest Measured section of the CHANGELOG, 0.15.1's until the
+        next entry is assembled (scripts/assemble_changelog.py).
         """
-        text = cls._read("CHANGELOG.md")
-        return text[text.index("## [0.15.1-alpha]"):
-                    text.index("## [0.15.0-alpha]")]
+        return " ".join(current_measurement(REPO).replace(
+            "\n>", " ").split())
 
     @classmethod
     def _v0150_entry(cls):

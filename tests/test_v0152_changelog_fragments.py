@@ -156,7 +156,7 @@ MALFORMED = {
         ("a.md", "### Added\n\n\n### Fixed\n\n- B.\n", 1),
     "a release's heading":
         ("a.md", "### Added\n\n- A.\n\n## [0.15.2-alpha] - 2026-11-03\n", 5),
-    "a first-level heading": ("a.md", "# Notes\n\n### Added\n\n- A.\n", 1),
+    "a first-level heading": ("a.md", "### Added\n\n- A.\n\n# Notes\n", 5),
     "a relative link":
         ("a.md", "### Added\n\n- As [the guide](INSTALL.md) says.\n", 3),
     "a link to a heading of the fragment":

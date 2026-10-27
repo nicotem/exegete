@@ -36,8 +36,10 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server  # noqa: E402
+from assemble_changelog import current_measurement  # noqa: E402
 
 DEPRECATIONS = sorted(name for name in dir(server)
                       if name.startswith("DEPRECATED_")
@@ -170,11 +172,10 @@ class TestClaudeCodesLimitsOnEveryPython:
         assert name == "pseudonymise_source" and length > 16384
         readme = _flat(_read("README.md"))
         # v0.15.1 measures again: the current figure is in the
-        # [Unreleased] part's Measured, 0.15.0's is history
-        log = _read("CHANGELOG.md")
-        current = log[log.index("## [0.15.1-alpha]"):
-                      log.index("## [0.15.0-alpha]")]
-        measured = _flat(current[current.index("### Measured"):])
+        # [Unreleased] part's Measured, 0.15.0's is history. From
+        # v0.15.2, where the release being written keeps it:
+        # changelog.d/measured.md, else the CHANGELOG's newest Measured
+        measured = _flat(current_measurement(REPO))
         if sys.version_info[:2] >= (3, 13):
             assert (f"`pseudonymise_source`'s ({length:,} on Python 3.13, "
                     ) in readme

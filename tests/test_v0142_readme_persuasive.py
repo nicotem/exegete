@@ -31,9 +31,11 @@ except ModuleNotFoundError:          # Python 3.10
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server                   # noqa: E402
 from exegete import names                         # noqa: E402
+from assemble_changelog import current_measurement  # noqa: E402
 
 
 def _read(name):
@@ -722,11 +724,10 @@ def _measured():
     # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
     # carries them (test_toolset_modes.py pins them); v0.15.1 moves them
     # again (create_backup accepted and ignored), so they are in the
-    # Unreleased part above 0.15.0's
-    changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [0.15.1-alpha]",
-                           "## [0.15.0-alpha]"))
-    measured = entry[entry.index("### Measured"):]
+    # Unreleased part above 0.15.0's. From v0.15.2, where the release
+    # being written keeps them: changelog.d/measured.md, else the
+    # CHANGELOG's newest Measured section
+    measured = _flat(current_measurement(REPO))
     found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",
                       measured)
     full, core = (int(n.replace(",", "")) for n in found.groups())

@@ -24,6 +24,7 @@ wait a moment, or close the project in QualCoder. These tests hold:
 """
 
 import asyncio
+import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -225,58 +226,21 @@ OLD_WORDS = (
     "Exegete cannot see a 4.0 window",
 )
 
-# A request to close QualCoder, or a project in it, made only of those
-# who use it: "if you (also) use QualCoder" in the same sentence or
-# earlier in the same paragraph or list item, or "if they use it" in the
-# same sentence (an "it" further back may be another program); or a
-# refusal's own words, which offer waiting as well
-_IF_USED = r"\b[Ii]f (?:you|they|the researcher)(?: also)? uses? "
-CONDITION = re.compile(_IF_USED + r"QualCoder\b|, or wait a moment;")
-CONDITION_HERE = re.compile(_IF_USED + r"it\b")
-# Closing, quitting or exiting it, or making sure that it is closed or
-# not running
-REQUEST = re.compile(
-    r"\b(?:close|closed|closing|make sure|quit|quits|quitting|exit|exits"
-    r"|exiting|not (?:be )?running)\b", re.I)
-# Sentences about QualCoder itself, which ask nothing before a write
-ABOUT_QUALCODER = re.compile(
-    r"\bclos(?:e|ed|ing) and reopen|report the copy as not properly closed")
-# Quitting Claude Desktop, so that a change in the extension's settings
-# reaches Exegete, asks nothing of QualCoder (v0.15.1, the small
-# corrections: the README's sentence that names the settings, the
-# QualCoder one among them)
-QUITTING_CLAUDE_DESKTOP = re.compile(
-    r"\bquit Claude Desktop\b|\bClaude Desktop has been quit\b")
+def _texts_check():
+    spec = importlib.util.spec_from_file_location(
+        "check_texts", REPO / "scripts" / "check_texts.py")
+    module = importlib.util.module_from_spec(spec)
+    # registered first: its dataclasses look their module up by name
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
-def _blocks(text):
-    """Paragraphs and list items."""
-    return re.split(r"\n\s*\n|\n\s*(?=[-*] |\d+\. )", text)
-
-
-def _sentences(text):
-    """Sentences, cut where a full stop, a question mark or an
-    exclamation mark is followed by a space and a capital, a mark or a
-    list item, so that '3.8.2' stays whole."""
-    return re.split(r"(?<=[.!?])\s+(?=[-*#>A-Z`\"(\[])", _flat(text))
-
-
-def unconditional_requests(text):
-    """Each sentence that asks for QualCoder, or a project in it, to be
-    closed, of everyone."""
-    found = []
-    for block in _blocks(text):
-        asked_of_users = False
-        for sentence in _sentences(block):
-            if CONDITION.search(sentence):
-                asked_of_users = True
-            if asked_of_users or "QualCoder" not in sentence \
-                    or CONDITION_HERE.search(sentence):
-                continue
-            if REQUEST.search(QUITTING_CLAUDE_DESKTOP.sub("", sentence)) \
-                    and not ABOUT_QUALCODER.search(sentence):
-                found.append(sentence)
-    return found
+# A request to close QualCoder, or a project in it, made of everyone: the
+# check moved to scripts/check_texts.py in v0.15.2, which runs it over
+# every text it reads, with a ledger; here it holds the texts below with
+# none.
+unconditional_requests = _texts_check().unconditional_requests
 
 
 @pytest.fixture(scope="module")

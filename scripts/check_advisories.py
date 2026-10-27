@@ -201,7 +201,9 @@ def locked_releases(lock_path: Path) -> List[Tuple[str, str]]:
 def _npm_releases(lock_path: Path) -> List[Tuple[str, str]]:
     """package-lock.json, of lockfileVersion 3 alone: each entry under
     node_modules/ resolved from npm's registry, named by the part after
-    the last node_modules/, so a scoped name keeps its scope."""
+    the last node_modules/, so a scoped name keeps its scope, or by the
+    name npm writes in the entry for a library installed under another
+    name (an alias, such as string-width-cjs for string-width)."""
     try:
         with open(lock_path, "rb") as handle:
             lock = json.loads(handle.read().decode("utf-8"))
@@ -222,7 +224,10 @@ def _npm_releases(lock_path: Path) -> List[Tuple[str, str]]:
         if not isinstance(version, str) or not version:
             raise CannotCheck(f"the lock {lock_path} gives no release for "
                               f"{path}")
-        pairs.append((path.rsplit("node_modules/", 1)[1], version))
+        name = package.get("name")
+        if not isinstance(name, str) or not name:
+            name = path.rsplit("node_modules/", 1)[1]
+        pairs.append((name, version))
     if not pairs:
         raise CannotCheck(f"the lock {lock_path} has no package from a "
                           f"registry")

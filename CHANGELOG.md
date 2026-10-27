@@ -7,34 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### The documents
-
-- **The facts check reads versions, counts, lists and examples too**
-  (`tests/test_v0151_facts.py`): the libraries' releases a document
-  names against `uv.lock`, and a requirement against `pyproject.toml`;
-  the tools that preview first and the runtime dependencies, counted;
-  the routes with Claude against INSTALL.md's table; README's tools
-  that preview first, TOOLS.md's tools that report signs of a QualCoder
-  window, and the state folder and the reading folder where PRIVACY.md
-  and INSTALL.md say what Exegete keeps; CONTRIBUTING.md's map of the
-  clone against the files git tracks (seven scripts added to it); the
-  reading folder's paths; full example paths, such as
-  `/Users/YOUR_NAME/Exegete projects`, as the folders for projects; and
-  an example in one of QualCoder's own folders only beside "if you use
-  QualCoder" (QUICKSTART.md and PROJECT_SELECTION_GUIDE.md now give
-  Exegete's folders first).
-
-### For contributors
-
-- **A paragraph that several tool descriptions share is written once**,
-  as a constant in `src/exegete/server.py`: the refusal while the
-  project's lock file is active, the two steps of a preview and its
-  token, the full memos on export, and the counts under coder
-  visibility. `_with_paragraphs` puts each back where it stood, so a
-  rewording is made in one place. No description changes:
-  `tests/fixtures/served_descriptions.txt` holds every description of
-  both tool sets, written by `scripts/served_texts.py`, and
-  `tests/test_served_texts.py` compares it with what Exegete serves.
+The changes since the last release are added here when the next
+release is prepared.
 
 ## [0.15.1-alpha.1] - 2026-10-23
 

@@ -67,7 +67,7 @@ e474b802076064e1	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be rea
 d827ac78b62fefc6	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Parity claims cite the pinned QualCoder commit. Any statement that "QualCoder do
 0f6895bc8ad69280	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	QualCoder is licensed under LGPL-3.0-or-later as well, and the rule for its code
 6184a94127c0b44b	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	The QA review checks that each new behaviour has a test that fails without it, t
-1ff76d61ff4108b0	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	The facts the documents repeat are checked too (tests/test_v0151_facts.py): the 
+f246dff9981409c0	CONTRIBUTING.md	document	qualcoder	read 27 October: for contributors; each mention is about QualCoder itself (a QualCoder window as a sign that it is in use, its own folders) or the choice 'if you use QualCoder'	The facts the documents repeat are checked too (tests/test_v0151_facts.py): the 
 350add8e09ffe3e9	CONTRIBUTING.md	document	qualcoder	says what the texts check looks for; proposed by the developer, 27 October	The first names QualCoder other than about QualCoder itself or its format, on a 
 789491632df6d336	CONTRIBUTING.md	document	request	says what the texts check looks for; proposed by the developer, 27 October	The second asks everyone to close QualCoder.
 9a6d827269eb1515	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Two compare the text the import stores with QualCoder's own extraction: one agai

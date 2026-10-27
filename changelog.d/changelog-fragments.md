@@ -8,8 +8,7 @@
   `changelog.d/measured.md`. When a release is prepared,
   `scripts/assemble_changelog.py` writes the entry from these files and
   deletes them (CONTRIBUTING.md, step 6). `tests/test_v0151_facts.py`
-  reads them for wrong values, as it read the `[Unreleased]` part, and
-  the three tests that compare the size of what a host is sent with the
-  current measurement read that measurement from
-  `changelog.d/measured.md` once a change writes it, and from the
-  CHANGELOG's newest Measured section until then.
+  reads them for wrong values, as it read the `[Unreleased]` part. The
+  three tests that compared the size of what a host is sent with the
+  newest measurement now read `docs/snapshot/sizes.json` or the code,
+  and 0.15.1's measured figures stay in its entry as history.

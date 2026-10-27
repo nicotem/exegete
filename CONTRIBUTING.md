@@ -133,10 +133,18 @@ is looked at first.
    named by their titles, never by their place in the list; and every
    name a document calls a tool or an argument is one Exegete has. When
    you change one of them in the code, the check names every sentence
-   that still gives the old one, in the forms it reads. When you remove
-   a tool or an argument, add it, with the release, to the test's
-   `RETIRED` table; when you add a module or a script, add it to the
-   map.
+   that still gives the old one, in the forms it reads. A release to
+   come, named in a document or in a text the code holds (a tool's
+   description, a note, a refusal or a log line, as
+   `scripts/code_texts.py` reads them), is held to the plan in
+   `scripts/release_plan.py`: its sentence names something planned for
+   that release, and README's "What comes next" keeps no release
+   already made. When a decision moves something to another release,
+   change its row in the plan, in the same commit as any text that
+   names its new release; at release preparation the rows of that
+   release leave the plan. When you remove a tool or an argument, add
+   it, with the release, to the test's `RETIRED` table; when you add a
+   module or a script, add it to the map.
 
 ## Review before merge
 

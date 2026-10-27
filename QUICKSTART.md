@@ -74,8 +74,9 @@ pip install -e .
 ### 2. Find your project
 
 Locate your `.qda` project folder (it's a folder with `.qda` extension, not a single file). Common locations:
-- `~/Documents/QualCoder_projects/MyProject/MyProject.qda/`
-- `~/QualCoder/MyProject/MyProject.qda/`
+- `~/Documents/Exegete projects/MyProject.qda/`, where Exegete makes projects unless `EXEGETE_WORKSPACE` names another folder
+- `~/Exegete projects/MyProject.qda/`, where the desktop extension makes them
+- if you use QualCoder, `~/Documents/QualCoder_projects/MyProject/MyProject.qda/` or `~/QualCoder/MyProject/MyProject.qda/`
 
 You can find it by:
 - In QualCoder, if you use it: the recent projects list

@@ -302,6 +302,13 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release
+│   ├── check_links.py          # Checks the links in the documents (other sites once a week)
+│   ├── check_advisories.py     # Asks OSV's database of advisories about every release in the lock
+│   ├── extension_libraries.py  # What the desktop extension installs on each computer, as one table
+│   ├── compare_release_surface.py  # Compares what two releases offer an assistant and a researcher
+│   ├── release_version.py      # What a published release builds, read from its tag
+│   ├── practice_version.py     # A practice version of both packages for a TestPyPI rehearsal
+│   ├── qualcoder_parity.py     # What QualCoder's own import stores from each test document
 │   ├── make_timing_documents.py  # Made-up Word files for timing how long an import's preview reads
 │   └── create_test_project.py  # Test project generator
 ├── pages/                   # The update site: latest.json and the update page

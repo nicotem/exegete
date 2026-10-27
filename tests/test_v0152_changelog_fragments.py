@@ -10,12 +10,15 @@ the released entries, every other byte as it was, and deletes the
 fragments; that a preview and a refusal write nothing; each refusal and
 what it names, and what is no fault; which files are read in a git work
 tree; and where the current measurement is read. On the branch: the
-fragments are well formed, and the [Unreleased] part is the placeholder.
+fragments are well formed, the [Unreleased] part is the placeholder,
+and the tests' own version is older than every release, so that no
+release preparation can write its heading into the CHANGELOG they copy.
 The tests that read a git work tree skip, saying so, without git.
 """
 
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -28,7 +31,9 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import assemble_changelog as assemble  # noqa: E402
 
-VERSION, DATE = "0.15.2-alpha", "2026-11-03"
+# Older than every release: the tests copy this CHANGELOG, where a
+# heading of the version would be refused, and no release can write it
+VERSION, DATE = "0.0.0-test", "2026-11-03"
 
 # Three changes' fragments and the shared measurement, and their entry:
 # the headings in the fixed order, each heading's parts in name order,
@@ -40,7 +45,7 @@ FRAGMENTS = {
     "c.md": "### Added\n\nC's paragraph.\n",
     "measured.md": "### Measured\n\n| | 0.15.2 |\n|---|---|\n| `full` | 1 |\n",
 }
-ENTRY = ("## [0.15.2-alpha] - 2026-11-03\n\n"
+ENTRY = (f"## [{VERSION}] - {DATE}\n\n"
          "### Added\n\n- A's addition.\n- B's addition,\n  over two lines.\n\n"
          "C's paragraph.\n\n"
          "### Changed\n\n- A's change.\n\n"
@@ -145,6 +150,24 @@ def test_a_released_version_is_refused(tmp_path, capsys):
     assert _digests(root) == digests
 
 
+def _numbers(version):
+    """The numbers a version begins with: (0, 15, 1) for 0.15.1-alpha.1."""
+    return tuple(int(part) for part in
+                 re.match(r"\d+(?:\.\d+)*", version).group().split("."))
+
+
+def test_the_tests_version_is_older_than_every_release():
+    """Release preparation writes a newer version's heading than any in
+    the CHANGELOG, so a version older than all of them is never written,
+    and the tests here, which copy this CHANGELOG, never meet its
+    heading there."""
+    text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
+    released = re.findall(r"^## \[([0-9][^\]]*)\]", text, flags=re.MULTILINE)
+    assert len(released) > 1
+    assert [version for version in released
+            if _numbers(version) <= _numbers(VERSION)] == []
+
+
 # Each fault of a fragment's lines: the file, its text, and the line the
 # refusal names (None: the file alone)
 MALFORMED = {
@@ -155,7 +178,7 @@ MALFORMED = {
     "a heading with nothing under it":
         ("a.md", "### Added\n\n\n### Fixed\n\n- B.\n", 1),
     "a release's heading":
-        ("a.md", "### Added\n\n- A.\n\n## [0.15.2-alpha] - 2026-11-03\n", 5),
+        ("a.md", f"### Added\n\n- A.\n\n## [{VERSION}] - {DATE}\n", 5),
     "a first-level heading": ("a.md", "### Added\n\n- A.\n\n# Notes\n", 5),
     "a relative link":
         ("a.md", "### Added\n\n- As [the guide](INSTALL.md) says.\n", 3),
@@ -227,7 +250,7 @@ def test_the_other_refusals_name_their_cause(tmp_path, capsys, case, code,
             b"## [Unreleased]", b"## Unreleased"))
     if case == "no CHANGELOG":
         changelog.unlink()
-    version = "0.15.2-alpha] - x" if case == "a version that is not one" \
+    version = f"{VERSION}] - x" if case == "a version that is not one" \
         else VERSION
     date = {"a date not written YYYY-MM-DD": "3 November 2026",
             "a date that is no date": "2026-11-31"}.get(case, DATE)
@@ -282,7 +305,7 @@ def test_an_untracked_fragment_is_refused_and_an_ignored_file_left_alone(
     assert _run(root, "--write") == 0
     assert sorted(path.name for path in (root / "changelog.d").iterdir()) \
         == [".DS_Store", "notes.md~"]
-    assert ("## [0.15.2-alpha] - 2026-11-03\n\n### Added\n\n- A's addition.\n"
+    assert (f"## [{VERSION}] - {DATE}\n\n### Added\n\n- A's addition.\n"
             in (root / "CHANGELOG.md").read_text(encoding="utf-8"))
 
 

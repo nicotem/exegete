@@ -342,6 +342,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── practice_version.py     # A practice version of both packages for a TestPyPI rehearsal
 │   ├── qualcoder_parity.py     # What QualCoder's own import stores from each test document
 │   ├── make_timing_documents.py  # Made-up Word files for timing how long an import's preview reads
+│   ├── structure_table.py      # The structural table kept per release in docs/structure/
 │   └── create_test_project.py  # Test project generator
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/

@@ -258,3 +258,13 @@ def test_a_table_of_another_commit_is_kept(script, monkeypatch, tmp_path):
     assert script.main(["--out", str(out), "--replace"]) == 0
     assert f"Measured at commit `{A}`" in out.read_text(encoding="utf-8")
 
+
+@pytest.mark.parametrize("version, commit", [
+    ("0.14.3-alpha", "0e8a83e"), ("0.15.0-alpha", "b5897c8"),
+    ("0.15.1-alpha.1", "171610e")])
+def test_the_release_tables_are_kept(script, version, commit):
+    text = (REPO / "docs" / "structure" / f"{version}.md").read_text(
+        encoding="utf-8")
+    measured = re.search(r"Measured at commit `([0-9a-f]{40})`", text)
+    assert measured and measured.group(1).startswith(commit)
+    assert re.findall(r"^## (.+)$", text, re.M) == list(script.HEADINGS)

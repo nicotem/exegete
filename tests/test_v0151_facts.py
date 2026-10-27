@@ -1968,10 +1968,14 @@ def _releases_to_come(document: Document, rows, named, version,
     fact = "the releases to come"
     words, programs = _row_words(rows), _programs(others)
     by_name = {name.lower(): _release(release) for release, name in named}
-    section = (_section(document, NEXT_SECTION[1])
-               if document.name == NEXT_SECTION[0]
-               and not document.code_text else None)
     places: List[Place] = []
+    section = None
+    if document.name == NEXT_SECTION[0] and not document.code_text:
+        section = _section(document, NEXT_SECTION[1])
+        if section is None:
+            places.append(Place(document.name, document.first_line, fact,
+                                "", frozenset(), f'the section '
+                                f'"{NEXT_SECTION[1]}" is no longer found'))
     for paragraph in paragraphs(document):
         text = paragraph.text
         # a paragraph that can name no release is passed over whole
@@ -3320,6 +3324,7 @@ FUTURE_SENTENCES = (
     # README's section on what comes next keeps no release already made
     ("README.md", "## What comes next\n\n- v0.15.1: undo", "wrong"),
     ("README.md", "## What comes next\n\n- v0.15.2: undo", "right"),
+    ("README.md", "## Plans\n\n- v0.15.2: undo", "wrong"),
     ("TOOLS.md", "## What comes next\n\n- v0.15.1: undo", "right"),
 )
 

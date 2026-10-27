@@ -2,14 +2,19 @@
 """v0.15.1, the facts the documents repeat, checked against the code.
 
 The documents repeat values the code holds: the folder for projects,
-the places the project listing searches, the state folder, the time one
-import call may take, the memory a file's reading is given, how many
-tools each set registers, the optional
-part an install needs for PDF and EPUB, the titles of the extension's
-settings, and the names of the tools, prompts and arguments. When the
-code changes one of them, every sentence that still gives the old one
-fails here, named by its file and line, on the push that makes the
-change (the owner's ruling 85).
+the places the project listing searches, the state folder and the
+reading folder, the time one import call may take, the memory a file's
+reading is given, how many tools each set registers and how many
+preview first, the optional part an install needs for PDF and EPUB,
+the titles of the extension's settings, the names of the tools,
+prompts and arguments, the libraries' releases in the lock and the
+requirements, the runtime dependencies, the package's modules and
+scripts, and the tools that report signs of a QualCoder window. An
+example that puts a project in one of QualCoder's folders says that
+it is for those who use QualCoder. When the code changes one of them,
+every sentence that still gives the old one fails here, named by its
+file and line, on the push that makes the change (the owner's ruling
+85).
 
 The values are always read from the code's constants and files
 (`facts_from_the_code`), never from a copy written here, and the
@@ -29,18 +34,22 @@ marks taken off and the lines kept apart by one line break, which the
 patterns read as a space, so a sentence that wraps is still matched;
 code blocks are read too. The newer facts read paragraphs, as
 "Reading paragraphs" below says. Nothing is read but the files named
-here, all of them tracked, and nothing is fetched.
+here, all of them tracked, and git's list of the tracked files; nothing
+is fetched.
 """
 
+import ast
 import bisect
 import functools
 import json
 import re
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass, fields, replace
-from pathlib import Path
+from pathlib import Path, PurePath, PurePosixPath
 from typing import Callable, Dict, FrozenSet, List, Optional, Tuple
+from unittest import mock
 
 import pytest
 
@@ -49,7 +58,8 @@ try:
 except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
     import tomli as tomllib
 
-from exegete import doc_import, import_reading, names, server
+from exegete import (doc_import, env_settings, import_reading, names,
+                     preview_tokens, reading_folder, server)
 
 REPO = Path(__file__).resolve().parents[1]
 GB = 1024 * 1024 * 1024
@@ -59,6 +69,13 @@ CHANGELOG = "CHANGELOG.md"
 PYPROJECT = "pyproject.toml"
 UPDATE_PAGE = "pages/update/index.html"
 HISTORY = "docs/history/"
+LOCK = "uv.lock"
+SERVER_SOURCE = "src/exegete/server.py"
+# The folders whose tracked Python files CONTRIBUTING's map names
+PACKAGE_FOLDER = "src/exegete"
+SCRIPTS_FOLDER = "scripts"
+# The files under the root the facts are read from
+FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE)
 # Every document read. Not read: the CHANGELOG's released entries, the
 # other documents kept as a record of early versions in docs/history/
 # (FEATURE_ANALYSIS.md and the other plans and analyses) and
@@ -113,6 +130,25 @@ class Facts:
     tool_names: FrozenSet[str]
     prompts: FrozenSet[str]
     tool_arguments: Dict[str, FrozenSet[str]]
+    # v0.15.2: each library's releases in the lock (the project itself
+    # left out), and each requirement pyproject.toml gives (its
+    # dependencies and its optional parts), with no white space and no
+    # environment marker; both by the library's normalised name
+    locked_versions: Dict[str, FrozenSet[str]]
+    requirements: Dict[str, FrozenSet[str]]
+    # the libraries pyproject.toml's dependencies name
+    runtime_dependencies: FrozenSet[str]
+    # the tools that preview first (preview_tokens.REGISTRY)
+    preview_tools: FrozenSet[str]
+    # the package's modules and the scripts, by file name, as git tracks
+    # them; None outside a git checkout
+    modules: Optional[FrozenSet[str]]
+    scripts: Optional[FrozenSet[str]]
+    # the tools whose answer carries the key qualcoder_gui_signals
+    signal_tools: FrozenSet[str]
+    # the reading folder on each system, its parts joined by "/", the
+    # home folder as "~"
+    reading_folders: Dict[str, str]
 
 
 def _pdf_epub_extra(project: dict) -> str:
@@ -125,14 +161,169 @@ def _pdf_epub_extra(project: dict) -> str:
     return found[0]
 
 
-def facts_from_the_code(root: Path = REPO) -> Facts:
+def _normalised(name: str) -> str:
+    """A library's name as PyPI compares names (PEP 503)."""
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def _requirement(text: str) -> Optional[Tuple[str, str]]:
+    """A requirement's library, and the requirement with no white space
+    and no environment marker; None when the text is no requirement of
+    a release (a name, then `<`, `>`, `=`, `!` or `~`)."""
+    found = re.fullmatch(r"\s*(?P<name>[A-Za-z0-9][\w.-]*)\s*"
+                         r"(?P<extras>\[[^\]]*\])?\s*"
+                         r"(?P<releases>[<>=!~][^;]*)(?:;.*)?", text, re.S)
+    if found is None:
+        return None
+    name = _normalised(found["name"])
+    return name, name + re.sub(r"\s+", "", (found["extras"] or "")
+                               + found["releases"])
+
+
+def _requirements(project: dict) -> Dict[str, FrozenSet[str]]:
+    """Each requirement pyproject.toml gives, in its dependencies and its
+    optional parts, by library."""
+    given: Dict[str, set] = {}
+    for requirement in project.get("dependencies", []) + [
+            each for extra in project.get("optional-dependencies",
+                                          {}).values() for each in extra]:
+        read = _requirement(requirement)
+        if read is not None:
+            given.setdefault(read[0], set()).add(read[1])
+    return {name: frozenset(each) for name, each in given.items()}
+
+
+def _runtime_dependencies(project: dict) -> FrozenSet[str]:
+    return frozenset(_normalised(re.match(
+        r"\s*([A-Za-z0-9][\w.-]*)", requirement).group(1))
+        for requirement in project.get("dependencies", []))
+
+
+@functools.lru_cache(maxsize=4)
+def _locked(text: str) -> Tuple[Tuple[str, FrozenSet[str]], ...]:
+    """Each library's releases in the lock; the lock's own project (its
+    source editable or virtual) is left out."""
+    releases: Dict[str, set] = {}
+    for package in tomllib.loads(text).get("package", []):
+        if set(package.get("source", {})) & {"editable", "virtual"}:
+            continue
+        releases.setdefault(_normalised(package["name"]), set()).add(
+            package["version"])
+    return tuple(sorted((name, frozenset(each))
+                        for name, each in releases.items()))
+
+
+@functools.lru_cache(maxsize=4)
+def _tracked(root: str) -> Optional[Tuple[str, ...]]:
+    """The files git tracks, when `root` is the top of a git checkout (a
+    scratch copy inside another checkout is not); None otherwise."""
+    try:
+        top = subprocess.run(["git", "rev-parse", "--show-toplevel"],
+                             cwd=root, capture_output=True, check=False)
+        if top.returncode != 0 or Path(top.stdout.decode(
+                "utf-8").strip()).resolve() != Path(root).resolve():
+            return None
+        listed = subprocess.run(
+            ["git", "-c", "core.quotepath=off", "ls-files", "-z"],
+            cwd=root, capture_output=True, check=False)
+    except OSError:
+        return None
+    if listed.returncode != 0:
+        return None
+    return tuple(name for name in listed.stdout.decode("utf-8").split("\0")
+                 if name)
+
+
+def _python_files(tracked: Optional[Tuple[str, ...]],
+                  folder: str) -> Optional[FrozenSet[str]]:
+    """The tracked Python files directly in `folder`, by file name."""
+    if tracked is None:
+        return None
+    return frozenset(PurePosixPath(name).name for name in tracked
+                     if name.endswith(".py")
+                     and str(PurePosixPath(name).parent) == folder)
+
+
+SIGNALS_KEY = "qualcoder_gui_signals"
+
+
+@functools.lru_cache(maxsize=4)
+def _signal_tools(source: str) -> FrozenSet[str]:
+    """The tools server.py registers (`@mcp.tool`) whose own body, or the
+    body of a private function of server.py they call, directly or
+    through others, sets the key qualcoder_gui_signals in an answer."""
+    tree = ast.parse(source)
+    functions = {node.name: node for node in tree.body if isinstance(
+        node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+
+    def sets(function) -> bool:
+        for node in ast.walk(function):
+            if (isinstance(node, ast.Subscript)
+                    and isinstance(node.ctx, ast.Store)
+                    and isinstance(node.slice, ast.Constant)
+                    and node.slice.value == SIGNALS_KEY):
+                return True
+            if isinstance(node, ast.Dict) and any(
+                    isinstance(key, ast.Constant) and key.value == SIGNALS_KEY
+                    for key in node.keys):
+                return True
+        return False
+
+    def is_tool(function) -> bool:
+        for decorator in function.decorator_list:
+            called = decorator.func if isinstance(decorator, ast.Call) \
+                else decorator
+            if (isinstance(called, ast.Attribute) and called.attr == "tool"
+                    and isinstance(called.value, ast.Name)
+                    and called.value.id == "mcp"):
+                return True
+        return False
+
+    setting = {name for name, function in functions.items() if sets(function)}
+    calls = {name: {node.func.id for node in ast.walk(function)
+                    if isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id.startswith("_")
+                    and node.func.id in functions}
+             for name, function in functions.items()}
+
+    def reaches(name: str, seen: set) -> bool:
+        seen.add(name)
+        return name in setting or any(reaches(called, seen)
+                                      for called in calls[name]
+                                      if called not in seen)
+
+    return frozenset(name for name, function in functions.items()
+                     if is_tool(function) and reaches(name, set()))
+
+
+# The systems the reading folder is given for
+SYSTEMS = ("darwin", "win32", "linux")
+
+
+def _reading_folders() -> Dict[str, str]:
+    """The reading folder on each system, as reading_folder.root gives it
+    with the home folder as "~", LOCALAPPDATA as "%LOCALAPPDATA%" and
+    XDG_CACHE_HOME unset: the documents give these, and the suite's
+    sandbox points both settings at itself (tests/conftest.py)."""
+    with mock.patch.object(env_settings, "windows_local_app_data",
+                           lambda: "%LOCALAPPDATA%"), \
+            mock.patch.object(env_settings, "xdg_cache_home", lambda: None):
+        return {system: "/".join(PurePath(reading_folder.root(
+            system, Path("~"))).parts) for system in SYSTEMS}
+
+
+def facts_from_the_code(root: Path = REPO,
+                        tracked: Optional[Tuple[str, ...]] = None) -> Facts:
     """Each value from the constant or the file the code itself uses:
-    the module constants of the installed package, and pyproject.toml
-    and the extension's manifest under `root`."""
+    the module constants of the installed package; pyproject.toml, the
+    lock, server.py's source and the extension's manifest under `root`;
+    and the files git tracks there (or `tracked`, when given)."""
     with open(root / PYPROJECT, "rb") as handle:
         project = tomllib.load(handle)["project"]
     manifest = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
     tools = server.mcp._tool_manager._tools
+    listed = _tracked(str(root)) if tracked is None else tuple(tracked)
     return Facts(
         state_folder=names.STATE_FOLDER,
         old_state_folder=names.OLD_STATE_FOLDER,
@@ -162,7 +353,17 @@ def facts_from_the_code(root: Path = REPO) -> Facts:
         # each tool's input schema, as the registry holds it now (the
         # suite puts the registry back after every test: conftest.py)
         tool_arguments={name: frozenset(tool.parameters.get(
-            "properties", {})) for name, tool in tools.items()})
+            "properties", {})) for name, tool in tools.items()},
+        locked_versions=dict(_locked((root / LOCK).read_text(
+            encoding="utf-8"))),
+        requirements=_requirements(project),
+        runtime_dependencies=_runtime_dependencies(project),
+        preview_tools=frozenset(preview_tokens.REGISTRY),
+        modules=_python_files(listed, PACKAGE_FOLDER),
+        scripts=_python_files(listed, SCRIPTS_FOLDER),
+        signal_tools=_signal_tools((root / SERVER_SOURCE).read_text(
+            encoding="utf-8")),
+        reading_folders=_reading_folders())
 
 
 # The counts the documents give, each with the constants it is held to.
@@ -175,6 +376,9 @@ QUANTITIES: Dict[str, Tuple[Tuple[str, ...], Callable[[Facts], float]]] = {
     "core without the earlier names": (
         ("core_tools", "earlier_names"),
         lambda f: len(f.core_tools - f.earlier_names)),
+    "preview tools": (("preview_tools",), lambda f: len(f.preview_tools)),
+    "runtime dependencies": (("runtime_dependencies",),
+                             lambda f: len(f.runtime_dependencies)),
 }
 for _field in ("extension_call_seconds", "terminal_call_seconds",
                "call_seconds_least", "call_seconds_most",
@@ -206,6 +410,22 @@ TIME_PATTERNS = (
     (r"\bup\s+to\s+(?P<n>\d+)\s+seconds\s+more\s+keeping",
      {"n": ("keep_seconds",)}),
 )
+# A count in digits or in words, one to twenty: the pattern takes any
+# word, and a word that is no number is not read (_count gives None)
+NUMBER_WORDS = ("one", "two", "three", "four", "five", "six", "seven",
+                "eight", "nine", "ten", "eleven", "twelve", "thirteen",
+                "fourteen", "fifteen", "sixteen", "seventeen", "eighteen",
+                "nineteen", "twenty")
+NUMBER = r"(?P<n>\d+|[A-Za-z]+)"
+
+
+def _count(stated: str) -> Optional[int]:
+    if stated.isdigit():
+        return int(stated)
+    return NUMBER_WORDS.index(stated.lower()) + 1 \
+        if stated.lower() in NUMBER_WORDS else None
+
+
 COUNT_PATTERNS = (
     (r"\bregisters\s+(?P<n>\d+)\s+tools\b", {"n": ("full",)}),
     (r"\boffers\s+(?P<n>\d+)\s+tools\s+by\s+default", {"n": ("full",)}),
@@ -222,26 +442,45 @@ COUNT_PATTERNS = (
     # a CHANGELOG's table of measured sizes
     (r"`full`\s+\((?P<n>\d+)\s+tools;", {"n": ("full",)}),
     (r"`core`\s+\((?P<n>\d+)\s+tools;", {"n": ("core",)}),
+    # the tools that preview first, and the runtime dependencies (v0.15.2)
+    (r"\b" + NUMBER + r"\s+preview\s+tools\b", {"n": ("preview tools",)}),
+    (r"\b(?i:the)\s+" + NUMBER + r"\s+tools\s+that\s+preview\b",
+     {"n": ("preview tools",)}),
+    (r"\b" + NUMBER + r"\s+runtime\s+dependenc(?:y|ies)\b",
+     {"n": ("runtime dependencies",)}),
 )
+# "N routes with Claude", held to the table that follows it: the rows
+# whose first cell names Claude or Anthropic
+ROUTES_WITH_CLAUDE = r"\b" + NUMBER + r"\s+routes\s+with\s+Claude\b"
+CLAUDE_ROW = r"(?i:\b(?:Claude|Anthropic)\b)"
 # The memory a file's reading is given, and a PDF's (TOOLS.md's limits)
 MEMORY_PATTERNS = (
     (r"\b(?P<n>\d+)\s+GB\s+of\s+memory\s+to\s+read\s+a\s+file"
      r"\s+\((?P<m>\d+)\s+GB\s+for\s+a\s+PDF\)",
      {"n": ("memory_cap_bytes",), "m": ("pdf_memory_cap_bytes",)}),
 )
-# A folder for projects: `~/`, then `Documents/` or nothing, then one
-# folder whose name ends in "projects", in any letter case, of at most
-# three words. A path whose "projects" is a later part, as Claude Code's
-# `~/.claude/projects/`, is another program's and is not matched; what
-# follows the folder (a project in an example) is not checked.
-PROJECTS_FOLDER = (r"~/(?P<documents>Documents/)?(?=[\w-])"
+# The home folder: `~/`, or in an example a full path with one part for
+# the account (`/Users/YOUR_NAME/`, `/home/you/`, `C:\Users\YOU\`),
+# read as `~/` (v0.15.2); not after a letter, a digit, "/" or "." (each
+# branch begins with its first character, which keeps the search fast)
+HOME = (r"(?:~/|/(?<![\w/.]/)(?:Users|home)/[^/\s`\"']+/|"
+        r"C(?<![\w\\]C):\\+Users\\+[^\\\s`\"']+\\+)")
+# A folder for projects: the home folder, then `Documents/` or nothing,
+# then one folder whose name ends in "projects", in any letter case, of
+# at most three words. A path whose "projects" is a later part, as
+# Claude Code's `~/.claude/projects/`, is another program's and is not
+# matched; what follows the folder (a project in an example) is not
+# checked.
+PROJECTS_FOLDER = (HOME + r"(?P<documents>Documents(?:/|\\+))?(?=[\w-])"
                    r"(?P<name>(?:[\w.-]+[ \n]){0,2}[\w.-]*(?i:projects))"
                    r"(?![\w-])")
 # A folder given as the default: one of these just before it ("default
-# is" also reads "whose default is"), or "by default" just after it.
-DEFAULT_BEFORE = (r"(?i:by\s+default,?|the\s+default,|default\s+is|"
-                  r"unset\s+or\s+blank,\s+it\s+is|otherwise\s+it\s+is)"
-                  r"\s*(?:`|<code>)?$")
+# is" also reads "whose default is"; "by default:" may end the line
+# before a code block), or "by default" just after it.
+DEFAULT_BEFORE = (r"(?i:by\s+default[,:]?|(?:the|extension's)\s+default,|"
+                  r"default\s+folder,|default\s+is|"
+                  r"unset\s+or\s+blank,\s+it\s+is|otherwise(?:\s+it\s+is)?,?)"
+                  r"\s*(?:(?:`{3,}|~{3,})\w*\s*)?(?:`|<code>)?$")
 DEFAULT_AFTER = r"/?(?:`|</code>)?\s+by\s+default\b"
 # The extension's folder named before "in your home folder"
 IN_YOUR_HOME_FOLDER = (r"(?<![\w.-])(?P<name>(?:[\w.-]+[ \n]){0,2}[\w.-]*"
@@ -342,6 +581,51 @@ RETIRED: Dict[str, Tuple[str, str]] = {
     "search_memo": ("argument", "0.15.1"),
 }
 
+# A library's release (v0.15.2): a name, then the release; read when
+# the name, in any letter case, is a library in the lock, so a name
+# after a hyphen is not (`qualcoder-mcp 0.14` is no release of mcp)
+RELEASE = (r"(?<![\w.-])(?P<library>[A-Za-z0-9][\w.-]*)"
+           r"\s+v?(?P<release>\d+(?:\.\d+)+)")
+# A sentence that gives a dated measurement: its releases are the ones
+# it was measured with, held by the size tests
+MEASURED = r"(?i:\bmeasured\b)"
+# A requirement in backticks: a name, then `<`, `>`, `=`, `!` or `~`
+REQUIREMENT = (r"`(?P<requirement>[A-Za-z0-9][\w.-]*\s*(?:\[[^\]`]*\])?\s*"
+               r"[<>=!~][^`]*)`")
+
+# The lists that name what the code holds (v0.15.2). README's section
+# that names every tool that previews first:
+ADVANCED_SECTION = ("README.md", "For advanced users")
+# TOOLS.md's list of the tools that report signs of a QualCoder window,
+# its backticked names up to the next colon:
+SIGNALS_LIST = (r"reported\s+as\s+`qualcoder_gui_signals`\s+by\b"
+                r"(?P<names>[^:]*):")
+SIGNALS_LIST_DOCUMENT = "TOOLS.md"
+# The places that say what Exegete keeps on the computer, a section by
+# its heading or a list item by its words in bold: each names the state
+# folder and the reading folder
+KEPT_LISTS = (
+    ("PRIVACY.md", "section", "Files Exegete keeps on your computer"),
+    ("PRIVACY.md", "item", "What stays on the computer"),
+    ("INSTALL.md", "section", "Uninstalling"))
+STATE_FOLDER_WORDS = r"(?i:\bExegete's\s+own\s+folder|\bstate\s+folder)"
+READING_FOLDER_WORDS = r"(?i:\breading\s+folder)"
+# CONTRIBUTING.md's map of the clone, the code block under this heading
+PROJECT_STRUCTURE = ("CONTRIBUTING.md", "Project structure")
+
+# A path into the reading folder, by the start that names its system:
+# it runs to white space, a backtick, a quote mark, a bracket or a
+# comma, and a final full stop, colon or semicolon is left out
+READING_FOLDER_PATH = (r"(?<![\w%~/.-])(?P<path>(?:"
+                       r"(?P<darwin>~/Library/Caches/Exegete)|"
+                       r"(?P<linux>~/\.cache/exegete)|"
+                       r"(?P<win32>%LOCALAPPDATA%\\+Exegete))"
+                       r"(?![\w-])[^\s`\"'()\[\]{},]*)")
+
+# A paragraph that says an example in QualCoder's folders is for those
+# who use QualCoder
+IF_YOU_USE_QUALCODER = r"(?i:\bif\s+you\s+(?:also\s+)?use\s+QualCoder\b)"
+
 
 @dataclass(frozen=True)
 class Fact:
@@ -352,6 +636,9 @@ class Fact:
     history: bool = False
     # documents not read for this fact (each with its reason, above it)
     left_out: Tuple[str, ...] = ()
+    # the fields of Facts it needs, checked only when none is None (the
+    # tracked files: none outside a git checkout)
+    needs: Tuple[str, ...] = ()
 
 
 FACTS: Dict[str, Fact] = {
@@ -388,10 +675,11 @@ FACTS: Dict[str, Fact] = {
         documents=("INSTALL.md", "TOOLS.md"),
         patterns=tuple(p for p, _ in TIME_PATTERNS),
         history=True),
-    "the tool counts": Fact(
+    "the counts": Fact(
         code="server.py: the tools registered at import (STANDARD_TOOL_"
-             "NAMES), CORE_TOOLSET, RENAMED_TOOLS",
-        documents=("README.md", "INSTALL.md", "TOOLS.md"),
+             "NAMES), CORE_TOOLSET, RENAMED_TOOLS; preview_tokens.py: "
+             "REGISTRY; pyproject.toml: dependencies",
+        documents=("README.md", "INSTALL.md", "TOOLS.md", "CONTRIBUTING.md"),
         patterns=tuple(p for p, _ in COUNT_PATTERNS),
         history=True),
     "the install commands": Fact(
@@ -421,6 +709,36 @@ FACTS: Dict[str, Fact] = {
         code="import_reading.py: MEMORY_CAP_BYTES, PDF_MEMORY_CAP_BYTES",
         documents=("TOOLS.md",),
         patterns=tuple(p for p, _ in MEMORY_PATTERNS)),
+    "the library versions": Fact(
+        code="uv.lock: each library's releases; pyproject.toml: the "
+             "requirements",
+        documents=("INSTALL.md", "TOOLS.md", "CONTRIBUTING.md"),
+        patterns=(RELEASE, MEASURED, REQUIREMENT)),
+    "the routes with Claude": Fact(
+        code="the table that follows the sentence",
+        documents=("INSTALL.md",),
+        patterns=(ROUTES_WITH_CLAUDE, CLAUDE_ROW)),
+    "the lists": Fact(
+        code="preview_tokens.py: REGISTRY; server.py: the tools that set "
+             "qualcoder_gui_signals; names.py: STATE_FOLDER; the reading "
+             "folder",
+        documents=("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md"),
+        patterns=(SIGNALS_LIST, STATE_FOLDER_WORDS, READING_FOLDER_WORDS)),
+    "the project structure": Fact(
+        code="the tracked modules in src/exegete and scripts in scripts/",
+        documents=("CONTRIBUTING.md",),
+        patterns=(),
+        needs=("modules", "scripts")),
+    "the reading folder": Fact(
+        code="reading_folder.py: root, on each system",
+        documents=("INSTALL.md", "PRIVACY.md", "TOOLS.md"),
+        patterns=(READING_FOLDER_PATH,)),
+    "QualCoder's folders": Fact(
+        code="server.py: _USUAL_SEARCH_PLACES named after QualCoder; "
+             "names.py: the folders for projects",
+        documents=("INSTALL.md", "QUICKSTART.md",
+                   "PROJECT_SELECTION_GUIDE.md"),
+        patterns=(IF_YOU_USE_QUALCODER, USUAL_PLACES_LIST)),
 }
 # The version and its date are held already: tests/test_updates.py and
 # tests/test_v0142_pages.py hold pyproject.toml, the CHANGELOG heading,
@@ -714,7 +1032,7 @@ def check_projects_folder(facts: Facts, document: Document) -> List[Place]:
     extension = facts.extension_workspace_folder
     places = []
     for match in re.finditer(PROJECTS_FOLDER, document.text):
-        stated = ("~/" + (match["documents"] or "")
+        stated = ("~/" + ("Documents/" if match["documents"] else "")
                   + " ".join(match["name"].split()))
         reads = folders.get(stated, frozenset())
         places.append(_place(
@@ -830,7 +1148,9 @@ def _check_numbers(fact: str, patterns, facts: Facts,
         for match in re.finditer(pattern, document.text):
             words = " ".join(match.group(0).split())
             for group, quantities in groups.items():
-                stated = int(match[group])
+                stated = _count(match[group])
+                if stated is None:
+                    continue
                 differ = [f"{_number(QUANTITIES[q][1](facts))} ({q})"
                           for q in quantities
                           if QUANTITIES[q][1](facts) != stated]
@@ -1093,19 +1413,349 @@ def check_names(facts: Facts, document: Document) -> List[Place]:
     return list(places.values())
 
 
+def _sentence(text: str, start: int, end: int) -> str:
+    """The sentence around text[start:end]: a sentence ends at ".", "!"
+    or "?" before white space, and at the paragraph's ends."""
+    before = [found.end() for found in re.finditer(r"[.!?](?=\s)",
+                                                   text[:start])]
+    after = re.search(r"[.!?](?=\s|$)", text[end:])
+    return text[before[-1] if before else 0:
+                end + after.end() if after else len(text)]
+
+
+def check_versions(facts: Facts, document: Document) -> List[Place]:
+    """A library's release named in a document is one the lock holds (a
+    sentence that says "measured" aside); a requirement in backticks of
+    a library pyproject.toml requires is one it gives."""
+    fact = "the library versions"
+    places = []
+    for paragraph in paragraphs(document):
+        text = paragraph.text
+        for found in re.finditer(RELEASE, text):
+            name = _normalised(found["library"])
+            if name not in facts.locked_versions or re.search(
+                    MEASURED, _sentence(text, found.start(), found.end())):
+                continue
+            locked = facts.locked_versions[name]
+            stated = f"{name} {found['release']}"
+            right = found["release"] in locked
+            places.append(Place(
+                document.name, paragraph.line(document, found.start()), fact,
+                stated, frozenset({f"locked_versions:{stated}"}) if right
+                else frozenset(),
+                None if right else (
+                    f'"{found["library"]} {found["release"]}" is no release '
+                    f'in the lock, which holds {", ".join(sorted(locked))}')))
+        for found in re.finditer(REQUIREMENT, text):
+            read = _requirement(found["requirement"])
+            if read is None or read[0] not in facts.requirements:
+                continue
+            given = facts.requirements[read[0]]
+            right = read[1] in given
+            places.append(Place(
+                document.name, paragraph.line(document, found.start()), fact,
+                read[1], frozenset({f"requirements:{read[0]}"}) if right
+                else frozenset(),
+                None if right else (
+                    f"`{found['requirement']}` is no requirement "
+                    f"pyproject.toml gives: {', '.join(sorted(given))}")))
+    return places
+
+
+def check_routes(facts: Facts, document: Document) -> List[Place]:
+    """"N routes with Claude" counts the rows of the table that follows
+    (after the paragraph's end) whose first cell names Claude or
+    Anthropic."""
+    fact = "the routes with Claude"
+    places = []
+    for found in re.finditer(ROUTES_WITH_CLAUDE, document.text):
+        stated = _count(found["n"])
+        if stated is None:
+            continue
+        index = document.line_of(found.end()) - document.first_line
+        rest = list(document.lines[index + 1:])
+        while rest and rest[0].strip():
+            rest.pop(0)
+        while rest and not rest[0].strip():
+            rest.pop(0)
+        rows = []
+        for line in rest:
+            if not line.strip().startswith("|"):
+                break
+            rows.append(line.strip())
+        body = [row for row in rows[1:]
+                if not re.fullmatch(r"[|\s:-]*", row)]
+        claude = [row for row in body
+                  if re.search(CLAUDE_ROW, row.split("|")[1])]
+        words = " ".join(found.group(0).split())
+        places.append(Place(
+            document.name, document.line_of(found.start()), fact,
+            str(stated), frozenset(),
+            None if body and len(claude) == stated else (
+                f'"{words}" gives {stated}, where the table that follows '
+                f'has {len(claude)} rows naming Claude or Anthropic'
+                if body else f'"{words}" is followed by no table')))
+    return places
+
+
+def _section(document: Document, title: str) -> Optional[Tuple[int, int]]:
+    """The section under the heading `title` (at any level) to the next
+    heading at its level or above, outside code blocks: its first and
+    last line's indexes in document.lines, or None."""
+    fence, start, level = None, None, 0
+    for index, line in enumerate(document.lines):
+        opened = re.match(r"\s*(`{3,}|~{3,})", line)
+        if fence is not None:
+            if opened and opened.group(1).startswith(fence):
+                fence = None
+            continue
+        if opened:
+            fence = opened.group(1)
+            continue
+        heading = re.match(r"(#{1,6})\s+(.*?)\s*$", line)
+        if heading is None:
+            continue
+        if start is not None and len(heading.group(1)) <= level:
+            return start, index - 1
+        if start is None and heading.group(2) == title:
+            start, level = index, len(heading.group(1))
+    return None if start is None else (start, len(document.lines) - 1)
+
+
+def _items(document: Document, title: str) -> List[Tuple[int, int]]:
+    """Each list item that begins with `title` in bold, to the next line
+    at its indent or less: its first and last line's indexes."""
+    found = []
+    for index, line in enumerate(document.lines):
+        item = re.match(r"(\s*)[-*]\s+\*\*" + re.escape(title), line)
+        if item is None:
+            continue
+        indent, last = len(item.group(1)), index
+        for following in range(index + 1, len(document.lines)):
+            words = document.lines[following]
+            if words.strip():
+                if len(words) - len(words.lstrip()) <= indent:
+                    break
+                last = following
+        found.append((index, last))
+    return found
+
+
+def check_lists(facts: Facts, document: Document) -> List[Place]:
+    """README's section for advanced users names every tool that previews
+    first; TOOLS.md's list of the tools that report signs of a QualCoder
+    window holds exactly those that do; the places that say what Exegete
+    keeps on the computer each name the state folder and the reading
+    folder."""
+    fact = "the lists"
+    places = []
+
+    def place(line: int, stated: str, reads: FrozenSet[str],
+              wrong: Optional[str]) -> None:
+        places.append(Place(document.name, document.first_line + line, fact,
+                            stated, frozenset() if wrong else reads, wrong))
+
+    if document.name == ADVANCED_SECTION[0]:
+        section = _section(document, ADVANCED_SECTION[1])
+        if section is None:
+            place(0, "", frozenset(), f'the section "{ADVANCED_SECTION[1]}" '
+                  f"is no longer found")
+        else:
+            words = "\n".join(document.lines[section[0]:section[1] + 1])
+            missing = sorted(facts.preview_tools
+                             - set(re.findall(r"`(\w+)`", words)))
+            place(section[0], ADVANCED_SECTION[1],
+                  frozenset({"preview_tools"}),
+                  f'"{ADVANCED_SECTION[1]}" does not name '
+                  f'{", ".join(missing)}, which preview first'
+                  if missing else None)
+    if document.name == SIGNALS_LIST_DOCUMENT:
+        found = re.search(SIGNALS_LIST, document.text)
+        if found is None:
+            place(0, "", frozenset(), "the list of the tools reported as "
+                  "`qualcoder_gui_signals` by is no longer found")
+        else:
+            listed = set(re.findall(r"`(\w+)`", found["names"]))
+            place(document.line_of(found.start()) - document.first_line,
+                  ", ".join(sorted(listed)), frozenset({"signal_tools"}),
+                  None if listed == facts.signal_tools else (
+                      f"lists {', '.join(sorted(listed))}, where the tools "
+                      f"that report it are "
+                      f"{', '.join(sorted(facts.signal_tools))}"))
+    state_path = r"(?i:~/" + re.escape(facts.state_folder) + r")(?![\w.-])"
+    for name, kind, title in KEPT_LISTS:
+        if document.name != name:
+            continue
+        spans = (_items(document, title) if kind == "item" else
+                 [span for span in (_section(document, title),) if span])
+        if not spans:
+            place(0, title, frozenset(), f'"{title}" is no longer found')
+        for first, last in spans:
+            words = "\n".join(document.lines[first:last + 1])
+            by_words = re.search(STATE_FOLDER_WORDS, words) is not None
+            state = by_words or re.search(state_path, words) is not None
+            reading = (re.search(READING_FOLDER_WORDS, words) is not None
+                       or re.search(READING_FOLDER_PATH, words) is not None)
+            missing = [what for what, named in (
+                ("the state folder", state), ("the reading folder", reading))
+                if not named]
+            place(first, title, frozenset() if by_words
+                  else frozenset({"state_folder"}),
+                  f'"{title}" does not name {" or ".join(missing)}'
+                  if missing else None)
+    return places
+
+
+def _map(lines: List[str]) -> Dict[str, set]:
+    """The files a map drawn with ├── and └── names, by their folder."""
+    folders: Dict[str, set] = {}
+    path: List[str] = []
+    for line in lines:
+        entry = re.match(r"(?P<lead>[│ ]*)[├└]──\s+(?P<name>\S+)", line)
+        if entry is None:
+            continue
+        depth = len(entry["lead"]) // 4
+        path = path[:depth] + [entry["name"].rstrip("/")]
+        folders.setdefault("/".join(path[:-1]), set()).add(path[-1])
+    return folders
+
+
+def check_project_structure(facts: Facts,
+                            document: Document) -> List[Place]:
+    """CONTRIBUTING's map names exactly the tracked Python files of the
+    package and of scripts/."""
+    if document.name != PROJECT_STRUCTURE[0]:
+        return []
+    fact = "the project structure"
+    section = _section(document, PROJECT_STRUCTURE[1])
+    if section is None:
+        return [Place(document.name, 1, fact, "", frozenset(),
+                      f'the section "{PROJECT_STRUCTURE[1]}" is no longer '
+                      f"found")]
+    lines = list(document.lines[section[0]:section[1] + 1])
+    fences = [index for index, line in enumerate(lines)
+              if re.match(r"\s*(?:`{3,}|~{3,})", line)]
+    folders = _map(lines[fences[0] + 1:fences[1]] if len(fences) > 1 else [])
+    places = []
+    for folder, field_name in ((PACKAGE_FOLDER, "modules"),
+                               (SCRIPTS_FOLDER, "scripts")):
+        tracked = getattr(facts, field_name)
+        named = {name for name in folders.get(folder, set())
+                 if name.endswith(".py")}
+        missing, more = sorted(tracked - named), sorted(named - tracked)
+        wrong = "; ".join(part for part in (
+            f"does not name {', '.join(missing)}" if missing else "",
+            f"names {', '.join(more)}, which git does not track"
+            if more else "") if part)
+        places.append(Place(
+            document.name, document.first_line + section[0], fact,
+            f"{folder}: {len(named)} files",
+            frozenset() if wrong else frozenset({field_name}),
+            f"the map of {folder}/ {wrong}" if wrong else None))
+    return places
+
+
+def check_reading_folder(facts: Facts, document: Document) -> List[Place]:
+    """Every path into the reading folder is the folder reading_folder.root
+    gives on the system its start names, a path under it, or its parent
+    followed by `**`, compared part by part."""
+    fact = "the reading folder"
+    places = []
+    for paragraph in paragraphs(document):
+        for found in re.finditer(READING_FOLDER_PATH, paragraph.text):
+            system = next(name for name in SYSTEMS if found.group(name))
+            stated = found["path"].rstrip(".:;")
+            parts = [part for part in re.split(r"[/\\]+", stated) if part]
+            root = facts.reading_folders[system].split("/")
+            right = parts[:len(root)] == root or parts == root[:-1] + ["**"]
+            places.append(Place(
+                document.name, paragraph.line(document, found.start()), fact,
+                stated, frozenset({f"reading_folders:{system}"}) if right
+                else frozenset(),
+                None if right else (
+                    f"{stated} is not the reading folder on {system} "
+                    f"({facts.reading_folders[system]}), a path under it, or "
+                    f"its parent followed by **")))
+    return places
+
+
+def _qualcoder_folders(facts: Facts) -> Dict[str, Optional[str]]:
+    """The usual places named after QualCoder, each with the constant of
+    names.py that names it as one of Exegete's folders for projects, or
+    None for QualCoder's own folders."""
+    own = {"~/" + facts.extension_workspace_folder:
+           "extension_workspace_folder",
+           "~/" + facts.old_extension_workspace_folder:
+           "old_extension_workspace_folder",
+           "~/Documents/" + facts.workspace_folder: "workspace_folder",
+           "~/Documents/" + facts.old_workspace_folder:
+           "old_workspace_folder"}
+    places = [place.rstrip("/") for place in facts.usual_places]
+    return {place: own.get(place) for place in places
+            if "qualcoder" in place.rsplit("/", 1)[-1].lower()}
+
+
+def check_qualcoder_folders(facts: Facts, document: Document) -> List[Place]:
+    """An example in one of QualCoder's folders (a usual place named
+    after QualCoder that names.py does not name) has "if you use
+    QualCoder" or "if you also use QualCoder" in its paragraph (a code
+    block's paragraph is the block with the paragraphs just before and
+    after it), unless it is in the list of the usual places. A path is
+    in a folder when its parts begin with the folder's parts."""
+    fact = "QualCoder's folders"
+    projects = re.compile(PROJECTS_FOLDER)
+    folders = _qualcoder_folders(facts)
+    read = paragraphs(document)
+    places = []
+    patterns = {folder: re.compile(HOME + r"(?:/|\\+)".join(
+        re.escape(part) for part in folder[2:].split("/"))
+        + r"(?![\w-]|\.\w)", re.I) for folder in folders}
+    for index, paragraph in enumerate(read):
+        text = paragraph.text
+        if "qualcoder" not in text.lower():
+            continue
+        beside = read[max(0, index - 1):index + 2] if paragraph.fenced \
+            else (paragraph,)
+        noted = any(re.search(IF_YOU_USE_QUALCODER, each.text)
+                    for each in beside)
+        for folder, own in folders.items():
+            for found in patterns[folder].finditer(text):
+                longer = projects.match(text, found.start())
+                if longer is not None and longer.end() > found.end():
+                    continue
+                listed = re.search(USUAL_PLACES_LIST, text[:found.start()])
+                right = noted or listed is not None or own is not None
+                places.append(Place(
+                    document.name, paragraph.line(document, found.start()),
+                    fact, folder,
+                    frozenset({own}) if own and not (noted or listed)
+                    else frozenset(),
+                    None if right else (
+                        f"an example in {folder}, one of QualCoder's "
+                        f'folders, without "if you use QualCoder" in its '
+                        f"paragraph")))
+    return places
+
+
 CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the projects folder": check_projects_folder,
     "the usual places": check_usual_places,
     "the state folder": check_state_folder,
     "the time per import call": lambda facts, document: _check_numbers(
         "the time per import call", TIME_PATTERNS, facts, document),
-    "the tool counts": lambda facts, document: _check_numbers(
-        "the tool counts", COUNT_PATTERNS, facts, document),
+    "the counts": lambda facts, document: _check_numbers(
+        "the counts", COUNT_PATTERNS, facts, document),
     "the install commands": check_install_commands,
     "the settings": check_settings,
     "the names": check_names,
     "the memory to read a file": lambda facts, document: _check_numbers(
         "the memory to read a file", MEMORY_PATTERNS, facts, document),
+    "the library versions": check_versions,
+    "the routes with Claude": check_routes,
+    "the lists": check_lists,
+    "the project structure": check_project_structure,
+    "the reading folder": check_reading_folder,
+    "QualCoder's folders": check_qualcoder_folders,
 }
 
 
@@ -1144,6 +1794,8 @@ def check_documents(facts: Facts, documents: List[Document]) -> Outcome:
     places: List[Place] = []
     missing = []
     for name, fact in FACTS.items():
+        if any(getattr(facts, need) is None for need in fact.needs):
+            continue
         stated_in = set()
         for document in documents:
             if not _reads(fact, document):
@@ -1243,7 +1895,31 @@ CHANGES = (
     ("tool_arguments", lambda f: {
         tool: arguments - {"preview_token"}
         for tool, arguments in f.tool_arguments.items()}),
+    # v0.15.2: the lock one release on for every library; every
+    # requirement given another limit
+    ("locked_versions", lambda f: {
+        name: frozenset(_one_on(release) for release in releases)
+        for name, releases in f.locked_versions.items()}),
+    ("requirements", lambda f: {
+        name: frozenset(each + ",!=0.0.1" for each in given)
+        for name, given in f.requirements.items()}),
+    ("runtime_dependencies",
+     lambda f: f.runtime_dependencies | {"one-library-more"}),
+    ("preview_tools", lambda f: f.preview_tools | {"one_tool_more"}),
+    ("modules", lambda f: f.modules | {"one_module_more.py"}),
+    ("scripts", lambda f: f.scripts | {"one_script_more.py"}),
+    ("signal_tools", lambda f: f.signal_tools - {"select_project"}),
+    # the reading folder on macOS moved under another parent
+    ("reading_folders", lambda f: dict(f.reading_folders, darwin=f.
+                                       reading_folders["darwin"].replace(
+                                           "/Exegete/", "/Other/"))),
 )
+
+
+def _one_on(release: str) -> str:
+    """The release after `release`, its last number one more."""
+    numbers = release.split(".")
+    return ".".join(numbers[:-1] + [str(int(numbers[-1]) + 1)])
 
 
 def test_every_constant_is_changed_by_one_test():
@@ -1270,6 +1946,13 @@ def _affected(name: str, before, after) -> set:
         kept = {title.lower() for title in after}
         keys |= {f"{name}:{title.lower()}" for title in before
                  if title.lower() not in kept}
+    elif name == "locked_versions":
+        for library, releases in before.items():
+            keys |= {f"{name}:{library} {release}" for release
+                     in releases - after.get(library, frozenset())}
+    elif isinstance(before, dict):
+        keys |= {f"{name}:{key}" for key in before
+                 if before[key] != after.get(key)}
     elif isinstance(before, frozenset):
         keys |= {f"{name}:{one}" for one in before - after}
     return keys
@@ -1277,6 +1960,14 @@ def _affected(name: str, before, after) -> set:
 
 def _key(place: Place) -> Tuple[str, int, str, str]:
     return place.document, place.line, place.fact, place.stated
+
+
+@functools.lru_cache(maxsize=1)
+def _on_the_branch() -> Tuple[Facts, Tuple[Document, ...], Outcome]:
+    """The facts, the documents and the check as they are on the branch,
+    read once for the tests that change one constant at a time."""
+    facts, documents = facts_from_the_code(), read_documents()
+    return facts, tuple(documents), check_documents(facts, documents)
 
 
 def _unknown(outcome: Outcome) -> List[Place]:
@@ -1292,21 +1983,22 @@ def test_a_changed_constant_reports_exactly_the_places_that_state_it(
     real value: the same files, lines and words, read from the check
     itself, so an edit above them breaks nothing; places already wrong
     (KNOWN) are set aside."""
-    real = facts_from_the_code()
+    real, documents, before = _on_the_branch()
+    if getattr(real, name) is None:
+        pytest.skip("not a git checkout, so no tracked files to read")
     changed = change(real)
     affected = _affected(name, getattr(real, name), changed)
-    documents = read_documents()
-    before = check_documents(real, documents)
     found = {_key(p) for p in before.places if p.reads & affected}
     assert found, f"no document states {name}"
-    outcome = check_documents(replace(real, **{name: changed}), documents)
+    outcome = check_documents(replace(real, **{name: changed}),
+                              list(documents))
     assert {_key(p) for p in outcome.wrong} - {
         _key(p) for p in before.wrong} == found
     assert outcome.missing == ()
 
 
 def _scratch_copy(tmp_path: Path) -> Path:
-    for name in DOCUMENTS + (CHANGELOG, PYPROJECT):
+    for name in DOCUMENTS + (CHANGELOG,) + FILES_READ:
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / name, tmp_path / name)
     return tmp_path
@@ -1334,9 +2026,14 @@ def test_a_reworded_sentence_is_no_longer_found(tmp_path):
     lead = re.search(USUAL_PLACES_LIST, text)
     install.write_text(text[:lead.start()] + "these folders, unless told "
                        "otherwise:" + text[lead.end():], encoding="utf-8")
-    outcome = check_documents(facts_from_the_code(), read_documents(root))
+    facts = facts_from_the_code()
+    outcome = check_documents(facts, read_documents(root))
     assert outcome.missing == (("INSTALL.md", "the usual places"),)
-    assert _unknown(outcome) == []
+    # no longer the list of the usual places, its QualCoder folders are
+    # held to "if you use QualCoder" as any other example is
+    assert {(p.document, p.fact, p.stated) for p in _unknown(outcome)} == {
+        ("INSTALL.md", "QualCoder's folders", folder)
+        for folder, own in _qualcoder_folders(facts).items() if own is None}
 
 
 def _values(facts: Facts) -> Dict[str, object]:
@@ -1347,6 +2044,8 @@ def _values(facts: Facts) -> Dict[str, object]:
             "routes": facts.terminal_call_seconds,
             "ext": facts.extension_workspace_folder,
             "old_ext": facts.old_extension_workspace_folder,
+            "ws": facts.workspace_folder,
+            "old_ws": facts.old_workspace_folder,
             "state": facts.state_folder}
 
 
@@ -1413,6 +2112,31 @@ FOLDER_SENTENCES = (
     ("Exegete's own folder, `~/{state}`, in any letter case: "
      "`~/{state_upper}`", "right"),
     ("Exegete's own folder, `~/{state}-test`", "wrong"),
+    # v0.15.2: a full path with one part for the account reads as ~/
+    ("New projects go to `/Users/YOUR_NAME/Documents/Other projects`.",
+     "wrong"),
+    ('"EXEGETE_PROJECT_PATH": "/Users/YOU/Documents/{ws}/Study.qda"',
+     "right"),
+    ("`/home/you/{ext}/Study.qda`", "right"),
+    ("`C:\\Users\\YOU\\Documents\\{ws}\\Study.qda`", "right"),
+    ('"C:\\\\Users\\\\YOU\\\\Other projects"', "wrong"),
+    ("https://example.org/Users/you/Other projects", "not read"),
+    # the default given in the review's four further phrasings, and "by
+    # default" after the folder: the earlier folder is wrong there
+    ("`~/{ext}/` by default, otherwise\n`~/Documents/{ws}/`", "right"),
+    ("`~/{ext}/` by default, otherwise\n`~/{old_ext}/`", "wrong"),
+    ("with the Claude Desktop extension's default,\n`~/{ext}/Study.qda`",
+     "right"),
+    ("with the Claude Desktop extension's default,\n`~/{old_ext}/Study.qda`",
+     "wrong"),
+    ("here the extension's default folder, `~/{old_ext}/`", "wrong"),
+    ("its \"Folder for projects\", by\ndefault:\n\n```\n~/{ext}/\n```",
+     "right"),
+    ("its \"Folder for projects\", by\ndefault:\n\n```\n~/{old_ext}/\n```",
+     "wrong"),
+    ("by default:\n```\n/Users/YOUR_NAME/{old_ext}/\n```", "wrong"),
+    ("`~/{old_ext}` by default", "wrong"),
+    ("`~/{ext}` by default", "right"),
 )
 
 
@@ -1468,6 +2192,7 @@ SOURCES = {
     "tool_names": (server, "STANDARD_TOOL_NAMES"),
     "prompts": (server.mcp._prompt_manager, "_prompts"),
     "tool_arguments": (server.mcp._tool_manager, "_tools"),
+    "preview_tools": (preview_tokens, "REGISTRY"),
 }
 
 
@@ -1486,20 +2211,65 @@ def _rename_a_title(facts: Facts, text: str) -> Tuple[str, object]:
              for each, kind in facts.setting_titles.items()})
 
 
+def _one_release_on(facts: Facts, text: str) -> Tuple[str, object]:
+    """PyMuPDF's first release in the lock, one release on."""
+    first = sorted(facts.locked_versions["pymupdf"])[0]
+    return (text.replace(f'name = "pymupdf"\nversion = "{first}"',
+                         f'name = "pymupdf"\nversion = "{_one_on(first)}"', 1),
+            dict(facts.locked_versions, pymupdf=facts.locked_versions[
+                "pymupdf"] - {first} | {_one_on(first)}))
+
+
+def _change_a_requirement(facts: Facts, text: str) -> Tuple[str, object]:
+    """The first dependency given one more limit."""
+    project = tomllib.loads(text)["project"]
+    first = project["dependencies"][0]
+    name, given = _requirement(first)
+    return (text.replace(json.dumps(first), json.dumps(first + ",!=0.0.1"),
+                         1),
+            dict(facts.requirements, **{name: facts.requirements[name] - {
+                given} | {given + ",!=0.0.1"}}))
+
+
+def _add_a_dependency(facts: Facts, text: str) -> Tuple[str, object]:
+    return (text.replace("\ndependencies = [\n",
+                         '\ndependencies = [\n    "one-library-more>=1",\n',
+                         1),
+            facts.runtime_dependencies | {"one-library-more"})
+
+
+def _add_a_signal_tool(facts: Facts, text: str) -> Tuple[str, object]:
+    """A tool whose answer carries the key through a private function."""
+    return (text + '\n\ndef _one_answer_more():\n'
+            '    return {"qualcoder_gui_signals": []}\n\n\n'
+            '@mcp.tool()\ndef one_tool_more():\n'
+            '    return _one_answer_more()\n',
+            facts.signal_tools | {"one_tool_more"})
+
+
 # Where each value read from a file comes from: the file under the root
 # given, and an edit of it, which gives the value it should read
 FILE_SOURCES = {
     "pdf_epub_extra": (PYPROJECT, _rename_the_extra),
     "setting_titles": (MANIFEST, _rename_a_title),
+    "locked_versions": (LOCK, _one_release_on),
+    "requirements": (PYPROJECT, _change_a_requirement),
+    "runtime_dependencies": (PYPROJECT, _add_a_dependency),
+    "signal_tools": (SERVER_SOURCE, _add_a_signal_tool),
 }
+# The values read from git's list of the tracked files: the folder each
+# is read from
+TRACKED_SOURCES = {"modules": PACKAGE_FOLDER, "scripts": SCRIPTS_FOLDER}
+# The values a function of the code gives: its module and its name
+FUNCTION_SOURCES = {"reading_folders": (reading_folder, "root")}
 
 
 def test_the_facts_are_read_from_the_code_at_each_check(monkeypatch):
     """Never a copy written here: a constant changed in its module is the
     value the check holds the documents to."""
-    assert set(SOURCES) | set(FILE_SOURCES) == {
-        field.name for field in fields(Facts)}
-    assert not set(SOURCES) & set(FILE_SOURCES)
+    tables = (SOURCES, FILE_SOURCES, TRACKED_SOURCES, FUNCTION_SOURCES)
+    assert set().union(*tables) == {field.name for field in fields(Facts)}
+    assert sum(len(table) for table in tables) == len(fields(Facts))
     for number, (name, (module, constant)) in enumerate(SOURCES.items()):
         value = getattr(module, constant)
         if isinstance(value, (int, float)):
@@ -1741,3 +2511,372 @@ def test_the_tables_kept_by_hand_hold_no_title_and_no_registered_name():
             | facts.prompts, name
         assert not any(name in arguments
                        for arguments in facts.tool_arguments.values()), name
+
+
+# ---------------------------------------------------------------------------
+# v0.15.2: versions, counts, lists, the reading folder and examples
+# ---------------------------------------------------------------------------
+
+def test_the_review_s_further_parts_are_each_read(tmp_path):
+    """The manifest's own default and the README's `core` row, each
+    changed in a scratch copy, are named by their line."""
+    facts = facts_from_the_code()
+    root = _scratch_copy(tmp_path)
+    manifest = root / MANIFEST
+    text = manifest.read_text(encoding="utf-8")
+    default = f'"default": "~/{facts.extension_workspace_folder}"'
+    assert text.count(default) == 1
+    manifest.write_text(text.replace(default, f'"default": '
+                        f'"~/{facts.old_extension_workspace_folder}"'),
+                        encoding="utf-8")
+    readme = root / "README.md"
+    words = readme.read_text(encoding="utf-8")
+    row = f"| `core` | {len(facts.core_tools)}:"
+    assert words.count(row) == 1
+    readme.write_text(words.replace(row, f"| `core` | "
+                      f"{len(facts.core_tools) - 1}:"), encoding="utf-8")
+    outcome = check_documents(facts, read_documents(root))
+    assert sorted((p.document, p.line, p.fact) for p in _unknown(outcome)) \
+        == sorted([(MANIFEST, text.count("\n", 0, text.index(default)) + 1,
+                    "the projects folder"),
+                   ("README.md", words.count("\n", 0, words.index(row)) + 1,
+                    "the counts")])
+
+
+# A text, and what the versions' check makes of it ({first} and
+# {second}: PyMuPDF's two releases in the lock; {requirement}: the first
+# dependency as pyproject.toml gives it)
+VERSION_SENTENCES = (
+    ("PyMuPDF {first} reads the PDF.", "right"),
+    ("PyMuPDF {second} on Windows x64, and PyMuPDF {first} on Macs.",
+     "right"),
+    ("pymupdf 0.0.1 reads the PDF.", "wrong"),
+    ("PyMuPDF v0.0.1", "wrong"),
+    ("EbookLib 0.0.1 reads the EPUB.", "wrong"),
+    # a dated measurement, and names that are no library in the lock
+    ("Measured under Python 3.13.5 with mcp 0.0.1, the definitions run "
+     "to about 200,000 characters.", "not read"),
+    ("Required for local models. Measured with mcp 0.0.1.", "not read"),
+    ("Exegete 0.15.0 is out.", "not read"),
+    ("qualcoder-mcp 0.14.1 is the earlier name.", "not read"),
+    ("on Python 3.13 and 3.10", "not read"),
+    ("`{requirement}`", "right"),
+    ("`{requirement},!=0.0.1`", "wrong"),
+    ("`Name<tab>Date`", "not read"),
+    ("`exegete-0.15.1.mcpb`", "not read"),
+    ('`pip install "<library>==<release>"`', "not read"),
+)
+
+
+@pytest.mark.parametrize("text, verdict", VERSION_SENTENCES)
+def test_versions_in_a_sentence(text, verdict):
+    facts = facts_from_the_code()
+    first, second = sorted(facts.locked_versions["pymupdf"])[:2]
+    with open(REPO / PYPROJECT, "rb") as handle:
+        requirement = tomllib.load(handle)["project"]["dependencies"][0]
+    document = _document("TOOLS.md", text.format(
+        first=first, second=second,
+        requirement=requirement.split(";")[0]).split("\n"))
+    assert _verdict(check_versions(facts, document)) == verdict
+
+
+def test_a_scratch_lock_one_release_on_names_every_sentence(tmp_path):
+    """PyMuPDF's first release in the lock one release on: every sentence
+    that names that release is named, and no other."""
+    real = facts_from_the_code()
+    first = sorted(real.locked_versions["pymupdf"])[0]
+    root = _scratch_copy(tmp_path)
+    text = (root / LOCK).read_text(encoding="utf-8")
+    edited, value = _one_release_on(real, text)
+    assert edited != text
+    (root / LOCK).write_text(edited, encoding="utf-8")
+    facts = facts_from_the_code(root)
+    assert facts.locked_versions == value
+    before = check_documents(real, read_documents(root))
+    stating = {_key(p) for p in before.places
+               if p.stated == f"pymupdf {first}"}
+    assert stating
+    outcome = check_documents(facts, read_documents(root))
+    assert {_key(p) for p in _unknown(outcome)} == stating
+
+
+def _number_word(count: int) -> str:
+    return NUMBER_WORDS[count - 1]
+
+
+# A text, and what the counts' check makes of it ({preview}: the tools
+# that preview first; {dependencies}: the runtime dependencies)
+COUNT_SENTENCES = (
+    ("the {preview} tools that preview first", "right"),
+    ("The {preview_word} tools that preview first", "right"),
+    ("{preview_word} preview tools", "right"),
+    ("{preview_less_word} preview tools", "wrong"),
+    ("the {preview_less} tools that preview first", "wrong"),
+    ("The package has {dependencies_word} runtime\ndependencies", "right"),
+    ("The package has {dependencies_more_word} runtime dependencies",
+     "wrong"),
+    ("the following preview tools", "not read"),
+)
+
+
+@pytest.mark.parametrize("text, verdict", COUNT_SENTENCES)
+def test_counts_in_a_sentence(text, verdict):
+    facts = facts_from_the_code()
+    preview = len(facts.preview_tools)
+    dependencies = len(facts.runtime_dependencies)
+    document = _document("TOOLS.md", text.format(
+        preview=preview, preview_less=preview - 1,
+        preview_word=_number_word(preview),
+        preview_less_word=_number_word(preview - 1),
+        dependencies_word=_number_word(dependencies),
+        dependencies_more_word=_number_word(dependencies + 1)).split("\n"))
+    assert _verdict(_check_numbers("the counts", COUNT_PATTERNS, facts,
+                                   document)) == verdict
+
+
+ROUTES_TABLE = ("| Route | What it means |\n|---|---|\n"
+                "| **Claude consumer plans** | the easiest path |\n"
+                "| **Anthropic commercial terms** (Claude Code) | terms |\n"
+                "| **Fully local models** | Claude is not used |")
+# A text, and what the routes' check makes of it
+ROUTE_SENTENCES = (
+    ("The terms attach to the account. Two routes with Claude,\nfrom "
+     "easiest, and a local one:\n\n" + ROUTES_TABLE, "right"),
+    ("Three routes with Claude, and a local one:\n\n" + ROUTES_TABLE,
+     "wrong"),
+    ("Two routes with Claude.\n\nNo table follows.", "wrong"),
+    ("Two routes with OpenAI:\n\n" + ROUTES_TABLE, "not read"),
+)
+
+
+@pytest.mark.parametrize("text, verdict", ROUTE_SENTENCES)
+def test_routes_in_a_sentence(text, verdict):
+    document = _document("INSTALL.md", text.split("\n"))
+    assert _verdict(check_routes(facts_from_the_code(), document)) == verdict
+
+
+def test_a_fourth_claude_row_names_the_routes_sentence(tmp_path):
+    root = _scratch_copy(tmp_path)
+    install = root / "INSTALL.md"
+    text = install.read_text(encoding="utf-8")
+    sentence = re.search(ROUTES_WITH_CLAUDE, text)
+    separator = text.index("\n|---|", sentence.end())
+    end = text.index("\n", separator + 1)
+    install.write_text(text[:end] + "\n| **Claude for Education** | the "
+                       "same terms | here |" + text[end:], encoding="utf-8")
+    outcome = check_documents(facts_from_the_code(), read_documents(root))
+    assert [(p.document, p.line, p.fact) for p in _unknown(outcome)] == [
+        ("INSTALL.md", text.count("\n", 0, sentence.start()) + 1,
+         "the routes with Claude")]
+
+
+def test_a_preview_tool_more_names_the_readme_section_and_the_count():
+    """One more tool that previews first: README's section for advanced
+    users and every count of those tools are named."""
+    real, documents, before = _on_the_branch()
+    outcome = check_documents(replace(
+        real, preview_tools=real.preview_tools | {"one_tool_more"}),
+        list(documents))
+    named = {(p.document, p.fact) for p in outcome.wrong} - {
+        (p.document, p.fact) for p in before.wrong}
+    assert {("README.md", "the lists"), ("TOOLS.md", "the counts")} <= named
+
+
+SIGNAL_SOURCE = '''
+def _answer():
+    return {"qualcoder_gui_signals": []}
+
+
+def _through():
+    return _answer()
+
+
+def answer_public():
+    result = {}
+    result["qualcoder_gui_signals"] = []
+    return result
+
+
+@mcp.tool(annotations=TOOL_READS)
+def by_a_private_function():
+    return _through()
+
+
+@mcp.tool()
+async def by_itself():
+    result = {}
+    result["qualcoder_gui_signals"] = []
+    return result
+
+
+@mcp.tool()
+def by_a_public_function():
+    return answer_public()
+
+
+@mcp.tool()
+def reads_the_key(result):
+    return result["qualcoder_gui_signals"]
+
+
+def _no_tool():
+    return _answer()
+'''
+
+
+def test_the_tools_that_report_window_signs_are_read_through_their_calls():
+    """A tool counts when its own body, or a private function of server.py
+    it calls, directly or through another, sets the key; a public
+    function's, a read of the key and a function that is no tool do
+    not."""
+    assert _signal_tools(SIGNAL_SOURCE) == {"by_a_private_function",
+                                            "by_itself"}
+
+
+def test_a_kept_list_without_the_reading_folder_is_named(tmp_path):
+    """PRIVACY's item on what stays on the computer, and for how long,
+    with the reading folder taken out of it, is named by its line."""
+    root = _scratch_copy(tmp_path)
+    privacy = root / "PRIVACY.md"
+    lines = privacy.read_text(encoding="utf-8").split("\n")
+    first, last = next(
+        span for span in _items(_document("PRIVACY.md", lines),
+                                "What stays on the computer")
+        if "for how long" in lines[span[0]])
+    for index in range(first, last + 1):
+        lines[index] = re.sub(READING_FOLDER_PATH, "elsewhere", re.sub(
+            r"(?i)reading folder", "page store", lines[index]))
+    privacy.write_text("\n".join(lines), encoding="utf-8")
+    outcome = check_documents(facts_from_the_code(), read_documents(root))
+    assert [(p.document, p.line, p.fact) for p in _unknown(outcome)] == [
+        ("PRIVACY.md", first + 1, "the lists")]
+    assert "the reading folder" in _unknown(outcome)[0].wrong
+
+
+def test_the_tracked_files_are_read_from_the_list_given():
+    facts = facts_from_the_code(REPO, tracked=(
+        "src/exegete/one.py", "src/exegete/data.yaml",
+        "src/exegete/inner/two.py", "scripts/three.py", "tests/four.py"))
+    assert (facts.modules, facts.scripts) == ({"one.py"}, {"three.py"})
+
+
+def test_a_folder_that_is_no_checkout_has_no_tracked_files(tmp_path):
+    """Outside a git checkout the map is not checked, and not reported
+    as no longer found."""
+    root = _scratch_copy(tmp_path)
+    assert _tracked(str(root)) is None
+    facts = facts_from_the_code(root)
+    assert facts.modules is None and facts.scripts is None
+    outcome = check_documents(facts, read_documents(root))
+    assert not [p for p in outcome.places
+                if p.fact == "the project structure"]
+    assert outcome.missing == ()
+
+
+def _tracked_on_the_branch() -> Tuple[str, ...]:
+    tracked = _tracked(str(REPO))
+    if tracked is None:
+        pytest.skip("not a git checkout, so no tracked files to read")
+    return tracked
+
+
+@pytest.mark.parametrize("change", ("a script more", "a module less"))
+def test_the_map_names_exactly_the_tracked_files(change):
+    """A tracked script the map leaves out, or a module the map names
+    that git no longer tracks, names the map's line."""
+    tracked = _tracked_on_the_branch()
+    if change == "a script more":
+        tracked += ("scripts/one_script_more.py",)
+    else:
+        tracked = tuple(name for name in tracked
+                        if name != "src/exegete/cursors.py")
+    outcome = check_documents(facts_from_the_code(REPO, tracked),
+                              read_documents())
+    contributing = (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")
+    heading = contributing.index("### " + PROJECT_STRUCTURE[1])
+    assert [(p.document, p.line, p.fact) for p in _unknown(outcome)] == [
+        ("CONTRIBUTING.md", contributing.count("\n", 0, heading) + 1,
+         "the project structure")]
+    assert ("one_script_more.py" if change == "a script more"
+            else "cursors.py") in _unknown(outcome)[0].wrong
+
+
+def test_the_tracked_files_are_read_from_git_on_the_branch():
+    tracked = _tracked_on_the_branch()
+    facts = facts_from_the_code()
+    assert facts.modules == _python_files(tracked, PACKAGE_FOLDER)
+    assert "server.py" in facts.modules
+    assert "check_links.py" in facts.scripts
+
+
+def test_the_reading_folders_are_read_from_root(monkeypatch):
+    """The value reading_folder.root gives, read at each check."""
+    module, name = FUNCTION_SOURCES["reading_folders"]
+    monkeypatch.setattr(module, name, lambda platform=None, home=None:
+                        Path(home) / "Elsewhere" / platform)
+    assert facts_from_the_code().reading_folders == {
+        system: f"~/Elsewhere/{system}" for system in SYSTEMS}
+
+
+# A text, and what the reading folder's check makes of it
+READING_FOLDER_SENTENCES = (
+    ("`~/Library/Caches/Exegete/Reading.noindex`", "right"),
+    ("`~/Library/Caches/Exegete/Reading.noindex/Study-1a2b/file-3`",
+     "right"),
+    ("`~/Library/Caches/Exegete/Reading`", "wrong"),
+    ("`~/Library/Caches/Exegete`", "wrong"),
+    ('`"deny": ["Read(~/Library/Caches/Exegete/**)"]`', "right"),
+    ("`%LOCALAPPDATA%\\Exegete\\Reading`", "right"),
+    ("`%LOCALAPPDATA%\\Exegete\\Reading.noindex`", "wrong"),
+    ("on Linux, ~/.cache/exegete/reading.", "right"),
+    ("`~/.cache/exegete/Reading`", "wrong"),
+    ("`~/.cache/uv` and `%LOCALAPPDATA%\\uv\\cache`", "not read"),
+    ("`~/Library/Caches/ExegeteOther`", "not read"),
+)
+
+
+@pytest.mark.parametrize("text, verdict", READING_FOLDER_SENTENCES)
+def test_the_reading_folder_in_a_sentence(text, verdict):
+    document = _document("PRIVACY.md", text.split("\n"))
+    assert _verdict(check_reading_folder(facts_from_the_code(),
+                                         document)) == verdict
+
+
+# A text, and what the check of QualCoder's folders makes of it
+# ({old_ext}: the extension's earlier folder, which names.py names)
+QUALCODER_FOLDER_SENTENCES = (
+    ("- `~/Documents/QualCoder/Study.qda/`", "wrong"),
+    ("- if you use QualCoder, `~/Documents/QualCoder/Study.qda/`", "right"),
+    ("If You Also Use QualCoder: `~/QualCoder/Study.qda`", "right"),
+    ('"path": "/Users/you/Documents/QualCoder_projects/Study.qda"', "wrong"),
+    ("Exegete searches these places by default:\n- `~/QualCoder`", "right"),
+    ("Its list:\n\n```\n~/QualCoder/Study.qda\n```\n\nIf you use QualCoder, "
+     "that is its folder.", "right"),
+    ("Its list:\n\n```\n~/QualCoder/Study.qda\n```\n\nThat is all.\n\n"
+     "If you use QualCoder.", "wrong"),
+    ("`~/{old_ext}/Study.qda`", "right"),
+    ("`~/QualCoder_old/Study.qda`", "not read"),
+)
+
+
+@pytest.mark.parametrize("text, verdict", QUALCODER_FOLDER_SENTENCES)
+def test_qualcoder_s_folders_in_a_sentence(text, verdict):
+    facts = facts_from_the_code()
+    document = _document("INSTALL.md", text.format(
+        old_ext=facts.old_extension_workspace_folder).split("\n"))
+    assert _verdict(check_qualcoder_folders(facts, document)) == verdict
+
+
+def test_a_path_is_in_a_folder_by_its_parts():
+    """`~/Documents/QualCoder_projects/x` is in that folder alone, not in
+    `~/Documents/QualCoder`, and `~/Documents/QualCoder_old/x` in
+    neither."""
+    facts = facts_from_the_code()
+    for path, folders in (
+            ("~/Documents/QualCoder_projects/x",
+             ["~/Documents/QualCoder_projects"]),
+            ("~/Documents/QualCoder_old/x", []),
+            ("~/Documents/QualCoder/x", ["~/Documents/QualCoder"])):
+        document = _document("INSTALL.md", [f"`{path}`"])
+        assert [place.stated for place in check_qualcoder_folders(
+            facts, document)] == folders, path

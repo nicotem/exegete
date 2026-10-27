@@ -10,6 +10,7 @@ is written again (`python scripts/served_texts.py write`, on Python
 earlier versions keep, so the comparison is exact on 3.13 and sets
 white space aside on any other version.
 """
+import ast
 import importlib.util
 import shutil
 import sys
@@ -119,3 +120,70 @@ def test_a_place_no_line_starts_with_is_refused(before):
     # "Returns:" is absent; "does," has other words before it on its line
     with pytest.raises(ValueError):
         _held(_form(HEAD + [""] + TAIL, "    "), SHARED, before=before)
+
+
+# The paragraphs written once in server.py, and the one place a held
+# text is also typed: apply_codings gives the lock paragraph's words as
+# one of its safety guarantees, in other line breaks
+HELD = ("LOCK_REFUSED_PARAGRAPH", "TWO_STEP_PARAGRAPH",
+        "EXPORT_FULL_MEMOS_PARAGRAPH", "CODER_VISIBILITY_COUNTS_PARAGRAPH")
+ALSO_TYPED = {"LOCK_REFUSED_PARAGRAPH": {"apply_codings"}}
+
+
+def _flat(text):
+    return " ".join(text.split())
+
+
+@pytest.fixture(scope="module")
+def package():
+    """Each module of the package, parsed: (its file, its tree)."""
+    return [(path, ast.parse(path.read_text(encoding="utf-8")))
+            for path in sorted(Path(server.__file__).parent.rglob("*.py"))]
+
+
+def _typed_in(flat, package):
+    """Where the package's source holds `flat`, white space set aside:
+    the name of the constant, function, class or file a string belongs
+    to, or the file and line of any other string."""
+    places = set()
+    for path, tree in package:
+        names = {}
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and len(node.targets) == 1 \
+                    and isinstance(node.targets[0], ast.Name):
+                names[id(node.value)] = node.targets[0].id
+            if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef,
+                                 ast.AsyncFunctionDef)) \
+                    and node.body and isinstance(node.body[0], ast.Expr):
+                names[id(node.body[0].value)] = getattr(node, "name",
+                                                        path.name)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Constant) \
+                    and isinstance(node.value, str) \
+                    and flat in _flat(node.value):
+                places.add(names.get(id(node),
+                                     f"{path.name} line {node.lineno}"))
+    return places
+
+
+def _given_by_decorator(name, package):
+    """The tools whose _with_paragraphs line names the constant `name`."""
+    tree = next(tree for path, tree in package if path.name == "server.py")
+    return {node.name for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            for deco in node.decorator_list
+            if isinstance(deco, ast.Call)
+            and getattr(deco.func, "id", "") == "_with_paragraphs"
+            and any(getattr(arg, "id", "") == name for arg in deco.args)}
+
+
+@pytest.mark.parametrize("name", HELD)
+def test_each_paragraph_is_typed_once(script, package, name):
+    flat = _flat(getattr(server, name))
+    also = ALSO_TYPED.get(name, set())
+    assert _typed_in(flat, package) == {name} | also
+    given = _given_by_decorator(name, package)
+    assert given
+    served = {tool for tool, text in script.descriptions("full")
+              if flat in _flat(text)}
+    assert served == given | also

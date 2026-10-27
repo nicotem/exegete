@@ -385,6 +385,8 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)
+│   ├── check_texts.py          # Checks the texts for mentions of QualCoder and for the voice
+│   ├── check_texts_ledger.tsv  # The sentences a reader has accepted as they stand
 │   ├── release_plan.py         # What comes in which release: the table the texts are held to
 │   ├── code_texts.py           # The texts the package's code holds, read without running it
 │   ├── check_advisories.py     # Asks OSV's database of advisories about every release in uv.lock and the validator's lock

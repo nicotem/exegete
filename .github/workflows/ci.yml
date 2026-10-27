@@ -568,10 +568,16 @@ jobs:
   # that they work on PyPI and in every installed copy), against the
   # tracked files of this commit. Standard library only, so it runs
   # before anything is installed. The links to other sites are checked
-  # once a week instead (external-links.yml). Then the facts the
-  # documents repeat (tests/test_v0151_facts.py): the folders, the time
-  # per import call and the tool counts, held to the code's constants,
-  # which needs the package; the answer comes in about two minutes.
+  # once a week instead (external-links.yml). v0.15.2: then the texts
+  # (scripts/check_texts.py), also before the install: a mention of
+  # QualCoder outside the allowed cases, a request made of everyone to
+  # close it, or a plain breach of the writing conventions fails unless
+  # a reader has accepted its sentence in scripts/check_texts_ledger.tsv;
+  # the summary adds each document's readability, which never fails.
+  # Then the facts the documents repeat (tests/test_v0151_facts.py): the
+  # folders, the time per import call and the tool counts, held to the
+  # code's constants, which needs the package; the answer comes in about
+  # two minutes.
   documents:
     name: documents
     runs-on: ubuntu-latest
@@ -592,6 +598,9 @@ jobs:
 
       - name: The links inside the repository
         run: python scripts/check_links.py
+
+      - name: Mentions of QualCoder and the voice in the texts
+        run: python scripts/check_texts.py
 
       # From the lock, as the libraries' install does: uv, at the version
       # the extension job uses, in an environment of its own, so it never

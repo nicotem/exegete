@@ -26,8 +26,9 @@ the real names the preview now warns of. Its line is checked against
 3.8.2's source when QUALCODER_382_SOURCE names one (CI's gate fetches
 4.0 alone).
 
-Run in CI's parity job, where QUALCODER_SOURCE names QualCoder's source
-checked out read only; skipped elsewhere. QualCoder is never run: its
+Run in CI's parity job and in the weekly watch on QualCoder's newest code
+(.github/workflows/qualcoder-watch.yml), where QUALCODER_SOURCE names
+QualCoder's source checked out read only; skipped elsewhere. QualCoder is never run: its
 source is read as text, nothing in it is imported or executed.
 """
 

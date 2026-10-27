@@ -1,0 +1,104 @@
+name: Weekly QualCoder watch
+
+# v0.15.2: the text Exegete's import stores, against what QualCoder's
+# newest code stores from the same test documents
+# (scripts/qualcoder_parity.py), once a week, since QualCoder's code can
+# change without any change here. CI's parity job compares with
+# QualCoder 4.0, the release Exegete's readers follow, on every full
+# run; this watch, which ran beside it until v0.15.2, runs here alone. A
+# different text fails the run, which is read that day, Monday; the
+# step summary names the documents whose text changed and QualCoder's
+# commit. QualCoder's source is checked out read only; QualCoder itself
+# is never run. A workflow of its own, since it installs Exegete from
+# the lock and takes several minutes. A schedule runs from main only, so
+# a push that changes this workflow also runs it, on its branch, and it
+# can be started by hand.
+on:
+  schedule:
+    # Mondays at 06:00 UTC
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/qualcoder-watch.yml"
+
+jobs:
+  qualcoder-watch:
+    name: QualCoder's newest code
+    runs-on: ubuntu-latest
+    # As CI's parity job: the install from the lock and three test files
+    # take a few minutes; twenty ends a hang.
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check out QualCoder's newest code, read only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          repository: ccbogel/QualCoder
+          ref: master
+          path: qualcoder-src
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # From the lock, as CI's jobs install (ci.yml, the `test` job, says
+      # why), with the optional part, so PDF and EPUB are compared too.
+      - name: Install the package with the optional part, from the lock
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m venv "$RUNNER_TEMP/uv-env"
+          uvpy="$RUNNER_TEMP/uv-env/bin/python"
+          "$uvpy" -m pip install "uv==0.9.7"
+          "$uvpy" -m uv export --locked --extra dev --extra pdf-epub --no-emit-project --output-file "$RUNNER_TEMP/locked.txt"
+          python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
+          python -m pip install --no-deps -e .
+
+      # The tests CI's parity job runs, against QualCoder's newest code,
+      # without the checks that belong to the 4.0 release (the switch
+      # left empty). A text that changed fails
+      # test_against_a_live_qualcoder_tree. The count and the failures go
+      # to the step summary.
+      - name: Exegete's text against QualCoder's
+        id: tests
+        shell: bash
+        env:
+          QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src
+          EXEGETE_PARITY_GATE: ""
+        run: |
+          set +e
+          python -m pytest -ra tests/test_v0143_import_parity.py tests/test_v0150_private_files_qualcoder.py tests/test_v0150_save_names_list_qualcoder.py 2>&1 | tee "$RUNNER_TEMP/pytest_output.txt"
+          code=${PIPESTATUS[0]}
+          summary=$(grep -E "^[0-9]+ (passed|failed|error)|^(=+ )?[0-9]+ (failed|passed|errors?)[ ,]" "$RUNNER_TEMP/pytest_output.txt" | tail -1)
+          {
+            echo "### pytest against QualCoder's newest code"
+            echo ""
+            echo '```'
+            echo "${summary:-no summary line: the run ended before pytest wrote one}"
+            grep -E "^(FAILED|ERROR) " "$RUNNER_TEMP/pytest_output.txt" | head -60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+
+      # Once the tests have run, passed or failed: a text that changed
+      # fails them first, and this names the documents. A failed install
+      # skips both. A difference here is a notice: the run is red through
+      # the tests alone.
+      - name: What QualCoder's newest code stores differently
+        if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          commit=$(git -C qualcoder-src rev-parse --short HEAD)
+          if ! python scripts/qualcoder_parity.py --qualcoder qualcoder-src --commit "$commit" --check tests/fixtures/import_expected.json; then
+            echo "::notice title=QualCoder parity watch::QualCoder's newest code stores different text for some test documents; the step summary names them"
+          fi

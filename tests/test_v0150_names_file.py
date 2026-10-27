@@ -1474,8 +1474,12 @@ class TestTheDocuments:
         assert "the server" not in part
 
     def test_the_measurement_names_the_tools_entry(self):
-        """The CHANGELOG's "Measured" gives the tool's entry, with its
-        separator, as measured on Python 3.13 and 3.11."""
+        """The CHANGELOG's "Measured" of 0.15.0 gives the tool's entry,
+        with its separator, as measured then on Python 3.13 and 3.11.
+        v0.15.2, the small corrections: that release's figures are
+        history, and the entry as it is now, written from the code, is in
+        docs/snapshot/sizes.json, held by tests/test_served_texts.py, so a
+        change to the description is read there as a diff."""
         log = _flat(_read("CHANGELOG.md"))
         measured = log[log.index("### Measured"):log.index(
             "## [0.14.3-alpha]")]
@@ -1486,14 +1490,3 @@ class TestTheDocuments:
                 "entry and its separator: 899 characters in `full`, 943 on "
                 "3.11, its pointer to `save_names_list` included; `core` "
                 "does not serve it.") in measured
-        server._apply_toolset("full")
-        import asyncio
-        tool = next(t for t in asyncio.run(server.mcp.list_tools())
-                    if t.name == "prepare_names_list")
-        entry = len(json.dumps({"name": tool.name,
-                                "description": tool.description or "",
-                                "inputSchema": tool.inputSchema}))
-        if sys.version_info[:2] == (3, 13):
-            assert entry + len(", ") == 899
-        elif sys.version_info[:2] == (3, 11):
-            assert entry + len(", ") == 943

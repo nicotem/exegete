@@ -2120,6 +2120,10 @@ class TestTheDocuments:
                 "researcher's coder name among") in brief
 
     def test_the_measurement_names_its_entry(self):
+        """The CHANGELOG's "Measured" of 0.15.0 gives the tool's entry as
+        measured then. v0.15.2, the small corrections: those figures are
+        history, and the entry as it is now, written from the code, is in
+        docs/snapshot/sizes.json, held by tests/test_served_texts.py."""
         log = _flat(_read("CHANGELOG.md"))
         # 0.15.0's Measured (v0.15.1 has one of its own, above it)
         release = log[log.index("## [0.15.0-alpha]"):]
@@ -2133,16 +2137,6 @@ class TestTheDocuments:
         assert measured.count("No other tool's entry changed.") == 1
         # nineteen since read_pseudonym_list was removed (piece 5)
         assert "nineteen changes moved them" in measured
-        server._apply_toolset("full")
-        tool = next(t for t in asyncio.run(server.mcp.list_tools())
-                    if t.name == "save_names_list")
-        entry = len(json.dumps({"name": tool.name,
-                                "description": tool.description or "",
-                                "inputSchema": tool.inputSchema}))
-        if sys.version_info[:2] == (3, 13):
-            assert entry + len(", ") == 1294
-        elif sys.version_info[:2] == (3, 11):
-            assert entry + len(", ") == 1358
         # 0.15.0's brief, history since v0.15.1's took out "unless the
         # researcher asks for none" (its own Measured gives 13,211)
         assert "the full brief 13,225." in measured

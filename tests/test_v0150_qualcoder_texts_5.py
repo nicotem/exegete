@@ -152,29 +152,16 @@ REFUSED_LAST = (
     "if it will not open. While it will not open, no tool here can restore "
     "it: " + BY_HAND)
 
-# The 26 descriptions that end with the sentence, and their length
-# before this piece on Python 3.13 (tests/test_v0142_description_cut.py's
-# pins as they stood) and on 3.11 (3.10 to 3.12 keep a docstring's
-# indentation alike): each is shorter now. apply_codings and
-# restore_backup carry their own wordings and are held to theirs too.
-BEFORE = {
-    "add_annotation": (1697, 1781), "add_journal_entry": (1137, 1193),
-    "create_attribute_type": (2121, 2225), "create_case": (1709, 1797),
-    "create_category": (1901, 1997), "create_code": (2945, 3113),
-    "create_proposed_codes": (1929, 2025),
-    "delete_annotation": (1986, 2110), "delete_category": (1740, 1836),
-    "delete_code": (2640, 2784), "delete_coding": (2992, 3164),
-    "import_text_file": (4022, 4230), "link_file_to_case": (1846, 1950),
-    "merge_category": (2544, 2688), "merge_codes": (2869, 3033),
-    "move_category": (1460, 1540), "move_code_to_category": (1797, 1901),
-    "pseudonymise_source": (17910, 19030), "recolor_code": (1355, 1427),
-    "rename_case": (2197, 2309), "rename_category": (1060, 1116),
-    "rename_code": (1030, 1086), "rename_file": (3504, 3696),
-    "set_attribute": (1767, 1863), "set_memo": (2672, 2832),
-    "update_annotation": (2052, 2160),
-    "apply_codings": (2627, 2791), "restore_backup": (2796, 2988),
-}
-CARRIERS = set(BEFORE) - {"apply_codings", "restore_backup"}
+# The descriptions that end with the sentence: those whose
+# _with_paragraphs line in server.py passes the lock paragraph, read as
+# tests/test_served_texts.py reads them, so that a tool added with it is
+# held here too. apply_codings and restore_backup carry their own
+# wordings. (Until v0.15.2 each, those two included, was also held to its
+# length before this piece; docs/snapshot/ holds the descriptions'
+# lengths now, and a change to one is read there as a diff.)
+from test_served_texts import SERVER_TREE, _decorated  # noqa: E402
+CARRIERS = {tool for tool, names in _decorated(SERVER_TREE)
+            if "LOCK_REFUSED_PARAGRAPH" in names}
 # pseudonymise_source's ten rules do not all fit within the cut; the
 # refusal is among those left past it, with its reason, in
 # tests/test_v0142_description_cut.py (LEFT_PAST_THE_CUT)
@@ -262,34 +249,6 @@ class TestTheWriteToolsSentence:
         carriers = {name for name, text in served.items()
                     if _spans(SENTENCE, text)}
         assert carriers == CARRIERS | {"apply_codings"}
-
-    def test_each_description_is_shorter_than_before(self):
-        which = 0 if sys.version_info[:2] >= (3, 13) else 1
-        server._apply_toolset("full")
-        raw = dict(server.mcp.original_descriptions)
-        assert len(BEFORE) == 28 and set(BEFORE) <= set(raw)
-        # The whole-branch review's round 2 then gives import_text_file a
-        # paragraph on what pseudonymisation is for (ruling 74): this
-        # piece's change is still held to its own length, measured with
-        # that paragraph taken out
-        from test_v0150_wb_fix_r2 import without_the_pseudonyms_sentence
-        raw["import_text_file"] = without_the_pseudonyms_sentence(
-            raw["import_text_file"])
-        assert (raw["import_text_file"]
-                != server.mcp.original_descriptions["import_text_file"])
-        # And the files design, piece 2, gives restore_backup a paragraph
-        # on the project's Exegete folder, which a restore keeps: held to
-        # this piece's length likewise, with that paragraph taken out
-        from test_v0150_restore_keeps_folder import \
-            without_the_folder_paragraph
-        raw["restore_backup"] = without_the_folder_paragraph(
-            raw["restore_backup"])
-        assert (raw["restore_backup"]
-                != server.mcp.original_descriptions["restore_backup"])
-        longer = {name: (len(raw[name]), before[which])
-                  for name, before in BEFORE.items()
-                  if len(raw[name]) >= before[which]}
-        assert not longer, longer
 
     def test_apply_codings_says_it_first_among_its_guarantees(self):
         for mode in TOOL_SETS:

@@ -16,7 +16,9 @@ wait a moment, or close the project in QualCoder. These tests hold:
 - the six descriptions that did the same (`get_current_project`,
   `select_project`, `start_coding_session`, `set_project_coder_name`,
   `import_documents`, and the paragraph `rename_case` and `rename_file`
-  share), each no longer than before;
+  share), each no longer than before (held here until v0.15.2, when the
+  snapshot in docs/snapshot/ took over the descriptions' lengths: a
+  change to one is read there as a diff);
 - one spelling, "QualCoder 3.8.2", for the lock file's cause, in what
   Exegete serves and in the documents;
 - the CHANGELOG's sentence on the documents, now true of each of them,
@@ -120,19 +122,6 @@ class TestTheThreeTexts:
 # 2. The six descriptions
 # ---------------------------------------------------------------------------
 
-# Each tool's description on 0.15.0's branch before this change, in
-# characters as Exegete lists it in the full set: on Python 3.13 and
-# newer, and on 3.10 to 3.12 (where docstrings keep their indentation)
-BEFORE = {
-    "get_current_project": (2067, 2207),
-    "select_project": (2415, 2579),
-    "start_coding_session": (6042, 6286),
-    "set_project_coder_name": (1152, 1224),
-    "import_documents": (1976, 2032),
-    "rename_case": (2076, 2196),
-    "rename_file": (3421, 3621),
-}
-
 NEW_WORDS = {
     "get_current_project": (
         "Also reports whether another program may have this project open, "
@@ -227,16 +216,6 @@ class TestTheSixDescriptions:
         for words in OLD_WORDS:
             assert words not in text, (tool, words)
 
-    @pytest.mark.parametrize("tool", sorted(BEFORE))
-    def test_no_description_is_longer_than_before(self, served, tool):
-        # v0.15.1's ignored create_backup lengthens rename_case's and
-        # rename_file's line on it: put back, so that this change's own
-        # words are measured
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        before = BEFORE[tool][0 if sys.version_info >= (3, 13) else 1]
-        text = before_the_ignored_argument(tool, served[tool])
-        assert len(text) <= before, (tool, len(text))
-
     @pytest.mark.parametrize("tool", sorted(set(NEW_WORDS) - {
         "rename_case", "rename_file"}))
     def test_both_causes_where_the_lock_file_is_described(self, served,
@@ -269,10 +248,16 @@ class TestTheSixDescriptions:
             "and when there are some", "and if there are some")
         assert len(new) == len(old)
         descriptions = {name: _flat(text) for name, text in _served().items()}
-        carriers = [name for name, text in descriptions.items() if new in text]
-        # 26 descriptions close with it, and apply_codings' safety
-        # guarantees open with it
-        assert len(carriers) == 27
+        carriers = {name for name, text in descriptions.items() if new in text}
+        # The descriptions whose _with_paragraphs line passes the lock
+        # paragraph close with it, and apply_codings' safety guarantees
+        # open with it: read from server.py's decorator lines, as
+        # tests/test_served_texts.py reads them, so that a tool added with
+        # the paragraph is counted
+        from test_served_texts import ALSO_TYPED, SERVER_TREE, _decorated
+        given = {tool for tool, names in _decorated(SERVER_TREE)
+                 if "LOCK_REFUSED_PARAGRAPH" in names}
+        assert carriers == given | ALSO_TYPED["LOCK_REFUSED_PARAGRAPH"]
         assert not any(old in text for text in descriptions.values())
 
 

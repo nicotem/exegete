@@ -121,6 +121,10 @@ In your `claude_desktop_config.json`:
 }
 ```
 
+Give your own project's path. The example's is in
+`~/Documents/Exegete projects`, where Exegete makes new projects when it
+is set up this way, unless `EXEGETE_WORKSPACE` names another folder.
+
 ### Usage
 
 Claude will automatically connect to your project on startup. No need to select anything - just start asking questions:

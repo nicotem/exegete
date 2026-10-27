@@ -20,6 +20,8 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "src"))
 
+from exegete import server  # noqa: E402
+
 
 @pytest.fixture(scope="module")
 def script():
@@ -66,3 +68,54 @@ def test_the_dump_is_written_on_python_3_13_alone(script):
         assert script.refusal("write", version), version
     assert script.refusal("render", (3, 11, 13)) is None
     assert script.refusal("check", (3, 11, 13)) is None
+
+
+# The decorator that puts shared paragraphs back into docstrings. A
+# docstring as the compiler leaves it: its first line flush, the others
+# indented by four spaces before Python 3.13 and by none on 3.13, which
+# strips the indentation. Both forms are built as strings, so that both
+# are checked on every version.
+FORMS = {"indented": "    ", "flush": ""}
+SHARED = "Words several tools share,\nwritten once."
+OTHER = "A second paragraph\nthey share."
+# "Args:" also stands inside a line before the line it starts, where it
+# does not count
+HEAD = ["Do one thing.", "", "What it does, before the Args: below,",
+        "said here."]
+TAIL = ["Args:", "    x: what it is."]
+
+
+def _form(lines, indent):
+    head, *rest = lines
+    return "\n".join([head] + [indent + line if line else ""
+                               for line in rest] + [indent])
+
+
+def _held(doc, *blocks, **where):
+    def tool():
+        pass
+    tool.__doc__ = doc
+    server._with_paragraphs(*blocks, **where)(tool)
+    return tool.__doc__
+
+
+@pytest.mark.parametrize("indent", list(FORMS.values()), ids=list(FORMS))
+def test_the_decorator_keeps_every_byte(indent):
+    shared, other = SHARED.split("\n"), OTHER.split("\n")
+    without = _form(HEAD + [""] + TAIL, indent)
+    # A paragraph with a blank line after it
+    assert _held(without, SHARED, before="Args:") == _form(
+        HEAD + [""] + shared + [""] + TAIL, indent)
+    # One the next line follows with no blank line
+    assert _held(without, SHARED, before="Args:", gap="\n") == _form(
+        HEAD + [""] + shared + TAIL, indent)
+    # Two in one call, a blank line between them
+    assert _held(without, SHARED, OTHER, before="Args:") == _form(
+        HEAD + [""] + shared + [""] + other + [""] + TAIL, indent)
+
+
+@pytest.mark.parametrize("before", ["Returns:", "does,"])
+def test_a_place_no_line_starts_with_is_refused(before):
+    # "Returns:" is absent; "does," has other words before it on its line
+    with pytest.raises(ValueError):
+        _held(_form(HEAD + [""] + TAIL, "    "), SHARED, before=before)

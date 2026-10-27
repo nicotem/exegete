@@ -803,6 +803,47 @@ def _with_guidance(*blocks: str, before: Optional[str] = None):
     return deco
 
 
+def _with_paragraphs(*blocks: str, before: str, gap: str = "\n\n"):
+    """Put paragraphs that several tools share back where they stood in
+    a tool's docstring, before registration.
+
+    Each such paragraph is written once, as a constant beside
+    GROUNDING_READ (LOCK_REFUSED_PARAGRAPH and the others there), and a
+    rewording is made there. The blocks go, joined by a blank line and
+    followed by `gap` (a blank line unless another is given),
+    immediately before the first line that starts with `before` once
+    its spaces are set aside; a docstring with no such line raises at
+    import. Each of their lines but the empty ones takes that line's
+    indentation: four spaces before Python 3.13, none on 3.13, which
+    strips docstring indentation when it compiles. No other character
+    of the docstring changes, so the description is byte for byte what
+    it was with the paragraphs typed in (tests/test_served_texts.py).
+    _with_guidance indents nothing and rewrites the docstring's end, so
+    this decorator sits innermost, below it, and _with_guidance reads
+    the docstring it read before.
+    """
+    text = "\n\n".join(blocks)
+
+    def deco(fn):
+        doc = fn.__doc__ or ""
+        start = -1
+        while True:
+            start = doc.find(before, start + 1)
+            if start < 0:
+                raise ValueError(
+                    f"{fn.__name__}: no line of its docstring starts with "
+                    f"{before!r}, where the shared paragraphs go")
+            line_start = doc.rfind("\n", 0, start) + 1
+            if not doc[line_start:start].strip(" "):
+                break
+        indent = doc[line_start:start]
+        lines = [indent + line if line else "" for line in text.split("\n")]
+        fn.__doc__ = (doc[:line_start] + "\n".join(lines) + gap
+                      + doc[line_start:])
+        return fn
+    return deco
+
+
 def _with_deprecation(answer: Any, sentence: str,
                       key: str = "deprecated") -> Any:
     """The answer with the deprecation sentence: the `key` of a JSON

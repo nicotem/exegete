@@ -2,19 +2,24 @@
 """How many tools each set registers, in one place for every test that
 pins the count (v0.15.0, the files design, piece 3).
 
-The names list's pieces move `full` one tool at a time: prepare_names_list
-took it from 81 to 82, save_names_list took it to 83, and the removal of
-read_pseudonym_list (piece 5) takes it back to 82; v0.15.1 removes
-three tools, as announced in 0.14 (export_code_report,
-cleanup_old_sessions and merge_proposals), which takes it to 79. Each
-changes this line, not a dozen files. A document's own sentence is still read word for
-word where a test reads it.
+Read from docs/snapshot/sizes.json (v0.15.2, the snapshot), which
+scripts/served_texts.py writes from the code and
+tests/test_served_texts.py holds to it, so that a tool added or removed
+changes the snapshot, written again by the script, and no count typed
+here or in another test. A document's own sentence is still read word
+for word where a test reads it, and the counts the documents give are
+held by tests/test_v0151_facts.py.
 """
+import json
+from pathlib import Path
 
+# Every set's sizes, as the snapshot gives them
+SNAPSHOT_SIZES = json.loads((Path(__file__).resolve().parents[1] / "docs"
+                             / "snapshot" / "sizes.json").read_text(
+                                 encoding="utf-8"))
 # Every tool, `create_project`, the two earlier names,
 # prepare_names_list and save_names_list included
-FULL_TOOLS = 79
+FULL_TOOLS = SNAPSHOT_SIZES["full"]["tool_count"]
 # The supervised coding set for local models, the two earlier names
-# included; restore_backup joined it in v0.15.1 (25 to 26), and
-# search_memos (26 to 27), since search_files no longer searches notes
-CORE_TOOLS = 27
+# included
+CORE_TOOLS = SNAPSHOT_SIZES["core"]["tool_count"]

@@ -19,7 +19,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
-from tool_counts import FULL_TOOLS  # noqa: E402
+from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -109,7 +109,7 @@ class TestSubprocessBehavior:
         through the real transport, not just the unit resolver."""
         names, _, _ = _session_lists(tmp_path, " CoRe ")
         assert names == sorted(server.CORE_TOOLSET)
-        assert len(names) == 27           # with open_file_for_reading (v0.14.3), the two earlier names (0.15.0), restore_backup and search_memos (v0.15.1)
+        assert len(names) == CORE_TOOLS    # tests/tool_counts.py
 
     def test_resources_and_prompts_byte_identical_across_modes(self, tmp_path):
         """The mode must not touch resources or prompts AT ALL — byte-equal
@@ -145,7 +145,7 @@ class TestRegistryIsolation:
         for _ in range(2):
             removed = server._apply_toolset("core")
             try:
-                assert len(server.mcp._tool_manager._tools) == 27
+                assert len(server.mcp._tool_manager._tools) == CORE_TOOLS
                 assert set(server.mcp._tool_manager._tools) \
                     == set(server.CORE_TOOLSET)
             finally:

@@ -25,12 +25,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import build_desktop_extension as build        # noqa: E402
 import exegete.server as server                # noqa: E402
-from tool_counts import FULL_TOOLS  # noqa: E402
+from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 from exegete import env_settings, names        # noqa: E402
 
 from test_toolset_modes import (               # noqa: E402
-    EXPECTED_CORE, EXPECTED_FULL, TestThePublishedSchemaBudget as Budget,
-    _build_project, _server_env, _text_of)
+    EXPECTED_CORE, EXPECTED_FULL, _build_project, _server_env, _text_of)
 
 NEW, OLD = names.SETTINGS["toolset"]
 
@@ -101,7 +100,7 @@ class TestTheSet:
         server._apply_toolset("core")
         registered = set(server.mcp._tool_manager._tools)
         assert registered == set(server.CORE_TOOLSET)
-        assert len(registered) == EXPECTED_CORE == 27   # the two earlier names (0.15.0), restore_backup and search_memos (v0.15.1)
+        assert len(registered) == EXPECTED_CORE == CORE_TOOLS
         assert "create_project" not in registered
 
 
@@ -427,6 +426,13 @@ def _flat(name):
     return " ".join(text.replace("\n>", " ").split())
 
 
+def _with_figures(sentence):
+    """`sentence` as a pattern, each FIGURE in it any figure as the
+    documents write one, such as 200,000 or 51k."""
+    return re.compile(re.escape(sentence).replace("FIGURE",
+                                                  r"\d[\d,]*k?"))
+
+
 def _strings(value):
     if isinstance(value, str):
         yield value
@@ -478,61 +484,17 @@ class TestTheDocuments:
         assert "Or use an existing project (a folder ending in `.qda`," \
             in item
 
-    def test_the_figures_quoted_are_the_pinned_ones(self):
-        rounded = f"{round(Budget.FULL_MEASURED / 1000) * 1000:,}"
-        tokens = f"{round(Budget.FULL_MEASURED / 4000)}k"
-        # v0.15.0, what pseudonymisation is for (not presuming
-        # QualCoder, piece 2): a paragraph in pseudonymise_source's
-        # description took `full` from 204,225 to 204,808 characters,
-        # and with the extension's folder for projects (the renames,
-        # piece 2) to 204,951
-        # and the two tools renamed (the renames, piece 3), their
-        # earlier names listed: 80 tools, 206,194; and the two coder
-        # names as settings (the coder names, piece 1), 206,569; and the
-        # tool that corrects the researcher's own coder name (the coder
-        # names, piece 2): 81 tools, 208,247; and the AI coder name in
-        # the settings given to each new project (the coder names, piece
-        # 3): 208,379; and the write tools' sentence (not presuming
-        # QualCoder, piece 5): 205,077; and the four outcomes without
-        # their attribution (not presuming QualCoder, piece 13): 205,022;
-        # and, after the whole-branch review, get_current_project's
-        # paragraph on the files Exegete keeps for the project (the files
-        # design, piece 1): 205,637; and restore_backup's sentence on the
-        # project's Exegete folder, which a restore keeps (the files
-        # design, piece 2): 205,788; and the descriptions that gave the
-        # lock file's refusal as QualCoder's alone (the fourth reading of
-        # the documents): 205,745, and its fix round 1 (the renames'
-        # "may miss a 4.0 window"): 205,741, about 206,000; and
-        # prepare_names_list (the files design, piece 3): 82 tools,
-        # 206,613, about 207,000; and save_names_list (piece 4): 83
-        # tools, 207,912, and its fix round 1, 207,934, about 208,000;
-        # and read_pseudonym_list removed (piece 5): 82 tools, 206,624,
-        # about 207,000; and v0.15.1's create_backup accepted and
-        # ignored, with the texts that offered to skip a backup: 208,201,
-        # and the REFI-QDA export's sentence on its known faults (the stale
-        # texts): 208,327, and the audio and video folders left out of
-        # backups: 208,427, about 208,000, and its fix round 2: 208,927,
-        # about 209,000; and the ai_data folder named in create_project's
-        # and copy_project_to_workspace's descriptions (the small
-        # corrections): 209,145, about 209,000; and v0.15.1's removals,
-        # three tools and four help topics, as announced in 0.14: 79
-        # tools, 205,044, about 205,000; and restore_backup's paragraph
-        # on its preview and its lock file (the restore): 205,443, still
-        # about 205,000, and its fix round 1 (over a stale lock file none
-        # is held): 205,516, about 206,000; and the arguments removed, as
-        # announced (cascade, owner and search_memo): 204,035, about
-        # 204,000; and attributes on journal entries and the rename back
-        # removed, as announced: 203,352, about 203,000; and the overlap
-        # policy qualcoder_edit_parity removed: 202,652, still about
-        # 203,000; and the encoding choice (character_sets): 202,814,
-        # still about 203,000
-        assert (rounded, tokens) == ("203,000", "51k")
+    def test_the_figures_sit_in_their_sentences(self):
+        # v0.15.2, the snapshot: the figures are held by
+        # tests/test_v0151_facts.py, within five per cent of
+        # docs/snapshot/sizes.json; the sentences around them are held
+        # here, each FIGURE any figure written as the documents write one
         readme = _flat("README.md")
-        assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
-                f"and two renamed tools' earlier names "
-                f"included | about {rounded} characters, "
-                f"{tokens} tokens | hosted models, such as Claude or "
-                f"OpenAI's | every route |") in readme
+        assert _with_figures(
+            f"| `full` | {EXPECTED_FULL}: all, creating a project and two "
+            f"renamed tools' earlier names included | about FIGURE "
+            f"characters, FIGURE tokens | hosted models, such as Claude or "
+            f"OpenAI's | every route |").search(readme)
         # The design's "before 0.15.0" gives way to the README's own rule
         # (tests/test_v0142_readme.py: no release number outside the
         # sections where versions are the point)
@@ -541,17 +503,20 @@ class TestTheDocuments:
                 "in `EXEGETE_TOOLSET` and means `full`.") in readme
         install = _flat("INSTALL.md")
         assert f"`full` (default) registers {EXPECTED_FULL} tools" in install
-        assert (f"Exegete offers {EXPECTED_FULL} tools by default, and the "
-                f"serialised tool definitions alone measure about {rounded} "
-                f"characters, roughly {tokens} tokens") in install
-        assert f"(about {rounded} characters with `full`;" in install
-        # the LM Studio recipe's sentence (the names file's fix round 1)
-        assert (f"or 64k if you must run the full surface (its schema "
-                f"alone is about {tokens} tokens).") in install
+        for sentence in (
+                f"Exegete offers {EXPECTED_FULL} tools by default, and the "
+                f"serialised tool definitions alone measure about FIGURE "
+                f"characters, roughly FIGURE tokens",
+                "(about FIGURE characters with `full`;",
+                # the LM Studio recipe's sentence (the names file's fix
+                # round 1)
+                "or 64k if you must run the full surface (its schema alone "
+                "is about FIGURE tokens)."):
+            assert _with_figures(sentence).search(install), sentence
         tools = _flat("TOOLS.md")
         assert f"registers {EXPECTED_FULL} tools" in tools
-        assert (f"about {rounded} characters for `full`, roughly {tokens} "
-                f"tokens") in tools
+        assert _with_figures("about FIGURE characters for `full`, roughly "
+                             "FIGURE tokens").search(tools)
 
     def test_quickstart_can_be_followed_without_a_project(self):
         """Fix round 1: the checklist offers starting with no project, so

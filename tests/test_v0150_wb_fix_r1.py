@@ -40,6 +40,8 @@ sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server  # noqa: E402
 from tool_counts import FULL_TOOLS  # noqa: E402
+# the documents round a size to two significant figures (v0.15.2)
+from test_v0151_facts import SIZE_TOLERANCE  # noqa: E402
 
 # Every deprecation sentence Exegete serves
 DEPRECATIONS = sorted(name for name in dir(server)
@@ -245,15 +247,25 @@ class TestClaudeCodesLimits:
         over = sorted(((len(d), name) for name, d in served.items()
                        if len(d) > 4096), reverse=True)
         assert len(served) == FULL_TOOLS
-        said = "; ".join(f"`{name}`, {length:,}" for length, name in over)
         install = _flat(_read("INSTALL.md"))
-        assert (f"{len(over)} of `full`'s {len(served)} descriptions are "
-                f"longer than 4,096 characters ({said})") in install
+        found = re.search(rf"{len(over)} of `full`'s {len(served)} "
+                          rf"descriptions are longer than 4,096 characters "
+                          rf"\(([^)]*)\)", install)
+        assert found, install
+        # v0.15.2: each rounded, within five per cent of its length; the
+        # exact lengths are in docs/snapshot/sizes.json
+        said = {name: int(figure.replace(",", "")) for name, figure
+                in re.findall(r"`(\w+)`, about ([\d,]+)", found.group(1))}
+        lengths = {name: length for length, name in over}
+        assert set(said) == set(lengths)
+        for name, stated in said.items():
+            assert abs(stated - lengths[name]) <= SIZE_TOLERANCE * lengths[
+                name], (name, stated, lengths[name])
         longest, name = over[0]
         assert [n for length, n in over if length > 16384] == [name]
-        assert (f"`{name}` is longer than 16,384, so its last "
-                f"{longest - 16384:,} characters are cut even through tool "
-                f"search") in install
+        assert (f"`{name}` is longer than 16,384, so its last part, its "
+                f"sentence on the lock file included, is cut even through "
+                f"tool search") in install
 
     def test_claude_md_and_the_cut_s_comment(self):
         claude = _flat(_read("CLAUDE.md"))

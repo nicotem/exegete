@@ -5,7 +5,8 @@ The documents repeat values the code holds: the folder for projects,
 the places the project listing searches, the state folder and the
 reading folder, the time one import call may take, the memory a file's
 reading is given, how many tools each set registers and how many
-preview first, the optional part an install needs for PDF and EPUB,
+preview first, the size of each set's tool definitions (within five per
+cent, since the documents round it), the optional part an install needs for PDF and EPUB,
 the titles of the extension's settings, the names of the tools,
 prompts and arguments, the libraries' releases in the lock and the
 requirements, the runtime dependencies, the package's modules and
@@ -74,13 +75,16 @@ UPDATE_PAGE = "pages/update/index.html"
 HISTORY = "docs/history/"
 LOCK = "uv.lock"
 SERVER_SOURCE = "src/exegete/server.py"
+# The sizes of what each tool set serves, which scripts/served_texts.py
+# writes from the code and tests/test_served_texts.py holds to it
+SIZES = "docs/snapshot/sizes.json"
 # The folders whose tracked Python files CONTRIBUTING's map names
 PACKAGE_FOLDER = "src/exegete"
 SCRIPTS_FOLDER = "scripts"
 # What comes in which release (v0.15.2): data only, read under the root
 PLAN = "scripts/release_plan.py"
 # The files under the root the facts are read from
-FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN)
+FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN, SIZES)
 # Every document read. Not read: the CHANGELOG's released entries, the
 # other documents kept as a record of early versions in docs/history/
 # (FEATURE_ANALYSIS.md and the other plans and analyses) and
@@ -163,6 +167,10 @@ class Facts:
     version: Tuple[int, ...]
     planned: Dict[str, Tuple[str, Tuple[str, ...]]]
     releases: Dict[str, str]
+    # each set's tool definitions, in characters (v0.15.2, the snapshot):
+    # docs/snapshot/sizes.json's tool_definitions_characters
+    full_characters: int
+    core_characters: int
 
 
 def _pdf_epub_extra(project: dict) -> str:
@@ -346,10 +354,12 @@ def facts_from_the_code(root: Path = REPO,
                         tracked: Optional[Tuple[str, ...]] = None) -> Facts:
     """Each value from the constant or the file the code itself uses:
     the module constants of the installed package; pyproject.toml, the
-    lock, server.py's source and the extension's manifest under `root`;
-    and the files git tracks there (or `tracked`, when given)."""
+    lock, server.py's source, the extension's manifest and the snapshot's
+    sizes under `root`; and the files git tracks there (or `tracked`,
+    when given)."""
     with open(root / PYPROJECT, "rb") as handle:
         project = tomllib.load(handle)["project"]
+    sizes = json.loads((root / SIZES).read_text(encoding="utf-8"))
     manifest = json.loads((root / MANIFEST).read_text(encoding="utf-8"))
     tools = server.mcp._tool_manager._tools
     listed = _tracked(str(root)) if tracked is None else tuple(tracked)
@@ -398,7 +408,9 @@ def facts_from_the_code(root: Path = REPO,
                          .group(0)),
         planned={name: (release, tuple(words)) for name, (
             _, release, words, _) in plan.PLANNED.items()},
-        releases=dict(plan.RELEASES))
+        releases=dict(plan.RELEASES),
+        full_characters=sizes["full"]["tool_definitions_characters"],
+        core_characters=sizes["core"]["tool_definitions_characters"])
 
 
 # The counts the documents give, each with the constants it is held to.
@@ -425,6 +437,16 @@ del _field
 for _field in ("memory_cap_bytes", "pdf_memory_cap_bytes"):
     QUANTITIES[_field] = ((_field,), lambda f, n=_field: getattr(f, n) / GB)
 del _field
+# each set's tool definitions, in characters and in tokens at four
+# characters a token
+for _set in ("full", "core"):
+    QUANTITIES[f"{_set} characters"] = (
+        (f"{_set}_characters",),
+        lambda f, n=f"{_set}_characters": getattr(f, n))
+    QUANTITIES[f"{_set} tokens"] = (
+        (f"{_set}_characters",),
+        lambda f, n=f"{_set}_characters": getattr(f, n) / 4)
+del _set
 
 # Both routes' figure: the extension's and every Terminal route's
 ROUTES = ("extension_call_seconds", "terminal_call_seconds")
@@ -493,6 +515,49 @@ MEMORY_PATTERNS = (
     (r"\b(?P<n>\d+)\s+GB\s+of\s+memory\s+to\s+read\s+a\s+file"
      r"\s+\((?P<m>\d+)\s+GB\s+for\s+a\s+PDF\)",
      {"n": ("memory_cap_bytes",), "m": ("pdf_memory_cap_bytes",)}),
+)
+# The size of each set's tool definitions, as the documents round it
+# (v0.15.2): a figure passes within SIZE_TOLERANCE of the snapshot's,
+# which leaves a figure rounded to two significant figures 2 to 5 per
+# cent of room before a document must change. Each pattern names its
+# set; a size is written "200,000", or "51k" for thousands.
+
+
+def _size(group: str) -> str:
+    return rf"(?P<{group}>\d{{1,3}}(?:,\d{{3}})+|\d+k)"
+
+
+SIZE_TOLERANCE = 0.05
+SIZE_PATTERNS = (
+    # TOOLS.md's paragraph on the tool sets
+    (r"\babout\s+" + _size("n") + r"\s+characters\s+for\s+`full`,\s+"
+     r"roughly\s+" + _size("m") + r"\s+tokens",
+     {"n": ("full characters",), "m": ("full tokens",)}),
+    (r"\babout\s+" + _size("n") + r"\s+characters\s+for\s+`core`,\s+"
+     r"roughly\s+" + _size("m") + r"\s+tokens",
+     {"n": ("core characters",), "m": ("core tokens",)}),
+    # the README's table: a set's row, its size cell
+    (r"\|\s*`full`\s*\|[^|\n]*\|\s*about\s+" + _size("n")
+     + r"\s+characters,\s+" + _size("m") + r"\s+tokens\s*\|",
+     {"n": ("full characters",), "m": ("full tokens",)}),
+    (r"\|\s*`core`\s*\|[^|\n]*\|\s*about\s+" + _size("n")
+     + r"\s+characters,\s+" + _size("m") + r"\s+tokens\s*\|",
+     {"n": ("core characters",), "m": ("core tokens",)}),
+    # INSTALL.md's LM Studio recipe, step 3
+    (r"\bdefinitions\s+alone\s+measure\s+about\s+" + _size("n")
+     + r"\s+characters,\s+roughly\s+" + _size("m") + r"\s+tokens,\s+"
+     r"against\s+about\s+" + _size("c") + r"\s+characters,\s+roughly\s+"
+     + _size("d") + r"\s+tokens,\s+for\s+the\s+\d+\s+tools\s+of\s+`core`",
+     {"n": ("full characters",), "m": ("full tokens",),
+      "c": ("core characters",), "d": ("core tokens",)}),
+    # and step 4
+    (r"\bcore\s+toolset's\s+roughly\s+" + _size("m") + r"\s+tokens",
+     {"m": ("core tokens",)}),
+    (r"\bschema\s+alone\s+is\s+about\s+" + _size("m") + r"\s+tokens",
+     {"m": ("full tokens",)}),
+    # the Codex recipe
+    (r"\babout\s+" + _size("n") + r"\s+characters\s+with\s+`full`",
+     {"n": ("full characters",)}),
 )
 # The home folder: `~/`, or in an example a full path with one part for
 # the account (`/Users/YOUR_NAME/`, `/home/you/`, `C:\Users\YOU\`),
@@ -771,6 +836,11 @@ FACTS: Dict[str, Fact] = {
                    "CONTRIBUTING.md"),
         patterns=(CALL_FORM,) + TOOL_CLAIMS + (TOOL_NAMES_LIST,)
         + ARGUMENT_CLAIMS + (ARGUMENT_NAMES_LIST,)),
+    "the sizes": Fact(
+        code="docs/snapshot/sizes.json: each set's tool definitions, in "
+             "characters (scripts/served_texts.py writes it from the code)",
+        documents=("README.md", "INSTALL.md", "TOOLS.md"),
+        patterns=tuple(p for p, _ in SIZE_PATTERNS)),
     "the memory to read a file": Fact(
         code="import_reading.py: MEMORY_CAP_BYTES, PDF_MEMORY_CAP_BYTES",
         documents=("TOOLS.md",),
@@ -1272,6 +1342,36 @@ def _check_numbers(fact: str, patterns, facts: Facts,
                     None if not differ else (
                         f'"{words}" gives {stated}, where the code gives '
                         f'{" and ".join(differ)}')))
+    return places
+
+
+def _size_value(stated: str) -> int:
+    return int(stated[:-1]) * 1000 if stated.endswith("k") \
+        else int(stated.replace(",", ""))
+
+
+def check_sizes(facts: Facts, document: Document) -> List[Place]:
+    """Each size a pattern finds is within SIZE_TOLERANCE of every
+    quantity its group names: the documents round it."""
+    fact = "the sizes"
+    places = []
+    for pattern, groups in SIZE_PATTERNS:
+        for match in re.finditer(pattern, document.text):
+            words = " ".join(match.group(0).split())
+            for group, quantities in groups.items():
+                stated = _size_value(match[group])
+                off = [f"{QUANTITIES[q][1](facts):,.0f} ({q})"
+                       for q in quantities
+                       if abs(stated - QUANTITIES[q][1](facts))
+                       > SIZE_TOLERANCE * QUANTITIES[q][1](facts)]
+                reads = frozenset(field for q in quantities
+                                  for field in QUANTITIES[q][0])
+                places.append(_place(
+                    document, match.start(group), fact, match[group], reads,
+                    None if not off else (
+                        f'"{words}" gives {match[group]}, more than '
+                        f'{SIZE_TOLERANCE:.0%} from what the snapshot gives: '
+                        f'{" and ".join(off)}')))
     return places
 
 
@@ -2054,6 +2154,7 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the install commands": check_install_commands,
     "the settings": check_settings,
     "the names": check_names,
+    "the sizes": check_sizes,
     "the memory to read a file": lambda facts, document: _check_numbers(
         "the memory to read a file", MEMORY_PATTERNS, facts, document),
     "the library versions": check_versions,
@@ -2228,6 +2329,9 @@ CHANGES = (
     # v0.15.2: the first row of the plan's first release moved one
     # release on (today undo, from 0.15.2 to 0.15.3)
     ("planned", lambda f: _one_row_moved(f)[1]),
+    # v0.15.2: each set's tool definitions a tenth larger
+    ("full_characters", lambda f: round(f.full_characters * 1.1)),
+    ("core_characters", lambda f: round(f.core_characters * 1.1)),
 )
 
 
@@ -2348,6 +2452,28 @@ def test_a_wrong_count_in_a_scratch_copy_names_its_line(tmp_path):
     assert [(p.document, p.line, p.stated) for p in _unknown(outcome)] == [
         ("TOOLS.md", text.count("\n", 0, first) + 1, str(count - 1))]
     assert outcome.missing == ()
+
+
+# A size in a scratch INSTALL.md, against a snapshot that gives `full`
+# 202,814 characters: within five per cent it passes, past it it fails
+SIZE_SENTENCES = (
+    ("(about 195,000 characters with `full`; TOOLS.md says how", False),
+    ("(about 190,000 characters with `full`; TOOLS.md says how", True),
+    ("or 64k if you must run the full surface (its schema alone is about "
+     "49k tokens).", False),
+    ("or 64k if you must run the full surface (its schema alone is about "
+     "47k tokens).", True),
+)
+
+
+@pytest.mark.parametrize("sentence, wrong", SIZE_SENTENCES)
+def test_a_size_is_held_within_its_tolerance(sentence, wrong):
+    facts = replace(facts_from_the_code(), full_characters=202_814)
+    places = check_sizes(facts, _document("INSTALL.md", [sentence]))
+    assert len(places) == 1, places
+    assert places[0].reads == (frozenset() if wrong
+                               else frozenset({"full_characters"}))
+    assert bool(places[0].wrong) == wrong, places[0].wrong
 
 
 def test_a_reworded_sentence_is_no_longer_found(tmp_path):
@@ -2607,6 +2733,17 @@ def _a_release_renamed(facts: Facts, text: str) -> Tuple[str, object]:
             dict(facts.releases, **{version: name + "-test"}))
 
 
+def _grow(name: str) -> Callable[[Facts, str], Tuple[str, object]]:
+    """An edit of sizes.json: the set `name`'s tool definitions 1,000
+    characters larger."""
+    def edit(facts: Facts, text: str) -> Tuple[str, object]:
+        sizes = json.loads(text)
+        sizes[name]["tool_definitions_characters"] += 1000
+        return (json.dumps(sizes, indent=2, sort_keys=True) + "\n",
+                getattr(facts, f"{name}_characters") + 1000)
+    return edit
+
+
 # Where each value read from a file comes from: the file under the root
 # given, and an edit of it, which gives the value it should read
 FILE_SOURCES = {
@@ -2619,6 +2756,8 @@ FILE_SOURCES = {
     "version": (PYPROJECT, _a_version_on),
     "planned": (PLAN, _a_row_moved),
     "releases": (PLAN, _a_release_renamed),
+    "full_characters": (SIZES, _grow("full")),
+    "core_characters": (SIZES, _grow("core")),
 }
 # The values read from git's list of the tracked files: the folder each
 # is read from

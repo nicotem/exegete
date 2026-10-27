@@ -44,6 +44,7 @@ in v0.15.1, with its deprecation sentence, its mark and its metadata.
 import asyncio
 import json
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -326,28 +327,22 @@ class TestNoShippedTextNamesIt:
 
 class TestTheCount:
 
-    def test_full_has_79_tools_and_core_27(self):
-        """82 at this piece; 79 since v0.15.1 removed three tools, as
-        announced in 0.14 (tests/test_v0151_removed_tools.py); core 26
-        since v0.15.1, restore_backup joining it, and 27, search_memos
-        joining it (tests/test_v0151_search_memos_core.py)."""
-        assert (FULL_TOOLS, CORE_TOOLS) == (79, 27)
+    def test_each_set_lists_its_count(self):
+        """The counts are the snapshot's (tests/tool_counts.py)."""
         server._apply_toolset("full")
-        assert len(_listed()) == 79
+        assert len(_listed()) == FULL_TOOLS
         server._apply_toolset("core")
-        assert len(_listed()) == 27
+        assert len(_listed()) == CORE_TOOLS
 
 
 # ---------------------------------------------------------------------------
 # 9. The documents
 # ---------------------------------------------------------------------------
 
-def _rounded_full():
-    """`full`'s measured size as the documents round it, from the pin
-    test_toolset_modes.py holds to the measurement."""
-    sys.path.insert(0, str(Path(__file__).parent))
-    from test_toolset_modes import TestThePublishedSchemaBudget as Budget
-    return f"{round(Budget.FULL_MEASURED / 1000) * 1000:,}"
+# A figure as the documents write one, such as 200,000 or 51k: the
+# figures are held by tests/test_v0151_facts.py, within five per cent of
+# docs/snapshot/sizes.json (v0.15.2, the snapshot)
+FIGURE = r"\d[\d,]*k?"
 
 
 class TestInstall:
@@ -412,20 +407,17 @@ class TestInstall:
     def test_the_counts(self):
         install = _flat(_read("INSTALL.md"))
         # v0.15.1: 79 tools since three were removed, as announced in
-        # 0.14, and the rounded figure held to the measured pin
-        # (test_toolset_modes.py): about 208,000 with create_backup
-        # accepted and ignored, then about 209,000 with audio and video
-        # left out of backups, as the small corrections leave it, then
-        # about 205,000 with the three tools removed, still about
-        # 205,000 with the restore's paragraph on its preview, and about
-        # 206,000 with its sentence on a stale lock file
-        assert "On Python 3.13, 4 of `full`'s 79 descriptions" in install
-        assert "`full` (default) registers 79 tools" in install
-        rounded = _rounded_full()
-        assert ("Exegete offers 79 tools by default, and the serialised "
-                f"tool definitions alone measure about {rounded} characters, "
-                "roughly 51k tokens") in install
-        assert f"(about {rounded} characters with `full`;" in install
+        # 0.14; v0.15.2: the counts are the snapshot's
+        # (tests/tool_counts.py), and the sizes any figure
+        assert (f"On Python 3.13, 4 of `full`'s {FULL_TOOLS} descriptions"
+                ) in install
+        assert f"`full` (default) registers {FULL_TOOLS} tools" in install
+        assert re.search(re.escape(
+            f"Exegete offers {FULL_TOOLS} tools by default, and the "
+            "serialised tool definitions alone measure about ") + FIGURE
+            + " characters, roughly " + FIGURE + " tokens", install)
+        assert re.search(r"\(about " + FIGURE + " characters with `full`;",
+                         install)
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
                 if len(t.description or "") > 4096]
@@ -446,10 +438,11 @@ class TestToolsReadmePrivacy:
 
     def test_readme(self):
         readme = _read("README.md")
-        # (79 and 51k tokens since v0.15.1's removals)
-        assert ("| `full` | 79: all, creating a project and two renamed "
-                "tools' earlier names included | about "
-                f"{_rounded_full()} characters, 51k tokens |") in readme
+        # the count is the snapshot's, and the size any figure
+        assert re.search(re.escape(
+            f"| `full` | {FULL_TOOLS}: all, creating a project and two "
+            "renamed tools' earlier names included | about ") + FIGURE
+            + " characters, " + FIGURE + r" tokens \|", readme)
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "

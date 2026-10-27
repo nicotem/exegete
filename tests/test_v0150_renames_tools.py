@@ -711,11 +711,17 @@ class TestTheDocuments:
     def test_each_document_gives_both_sizes(self):
         # v0.15.2, the snapshot: the figures are held by
         # tests/test_v0151_facts.py, within five per cent of
-        # docs/snapshot/sizes.json
-        readme, install = _read("README.md"), _flat(_read("INSTALL.md"))
-        tools = _flat(_read("TOOLS.md").replace("\n>", " "))
-        for text in (readme, install, tools):
-            assert len(re.findall(r"about \d[\d,]* characters", text)) >= 2
+        # docs/snapshot/sizes.json, in the sentences its patterns read;
+        # here, each document gives both sets' sizes in one of them
+        sys.path.insert(0, str(Path(__file__).parent))
+        from test_v0151_facts import SIZE_PATTERNS
+        for name in ("README.md", "INSTALL.md", "TOOLS.md"):
+            text = _read(name).replace("\n>", " ")
+            given = {quantity for pattern, groups in SIZE_PATTERNS
+                     if re.search(pattern, text)
+                     for quantities in groups.values()
+                     for quantity in quantities}
+            assert {"full characters", "core characters"} <= given, name
 
     def test_contributing_keeps_its_other_examples(self):
         # The examples of names kept as written, neither of them a renamed

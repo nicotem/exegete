@@ -43,7 +43,7 @@ DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
              "CLAUDE.md", "packaging/pypi-old-name/README.md")
 
-# What 0.15.0 served, for the put-back the older tests use
+# What 0.15.0 served
 DEPRECATED_JOURNAL_ATTRIBUTES_0150 = (
     "Deprecated, removed in v0.15.1: attributes on journal entries, which "
     "Exegete can set but never reads back (QualCoder's Journals window, "
@@ -413,62 +413,3 @@ def test_the_check_finds_what_0150_said():
                  "a name the project's backups show is not looked for.",
                  "Define a new attribute for cases or files."):
         assert not _current_claims(said), said
-
-
-# ---------------------------------------------------------------------------
-# The put-back the older tests use
-# ---------------------------------------------------------------------------
-
-def before_the_journal_and_rename_back(name, description):
-    """`name`'s description as served before this part, on any
-    interpreter: for the three tools, the deprecation sentence and the
-    texts that said what went put back."""
-    from test_v0151_ignored_argument import _swap_lines
-    from test_v0151_removed_arguments import _replace_once, _sentence_before
-    if name == "create_attribute_type":
-        description = _replace_once(
-            description, "Define a new attribute for cases or files.",
-            "Define a new attribute for cases, files or journals.")
-        description = _swap_lines(description, (
-            "applies_to: 'case' or 'file' ('journal', QualCoder's third",
-            "domain, is refused: Exegete no longer sets attributes",
-            "on journal entries)"), (
-            "applies_to: 'case', 'file' or 'journal' (QualCoder's real "
-            "domain",
-            "set; there is no 'both')"), name)
-        return _sentence_before(description,
-                                DEPRECATED_JOURNAL_ATTRIBUTES_0150)
-    if name == "set_attribute":
-        description = _replace_once(
-            description,
-            "Set (or clear) an attribute value on a case or a file.",
-            "Set (or clear) an attribute value on a case, file or journal.")
-        description = _swap_lines(description, (
-            "target_type: 'case' or 'file'",
-            "target_id: The case ID or file ID"), (
-            "target_type: 'case', 'file' or 'journal'",
-            "target_id: The case ID, file ID or journal ID"), name)
-        return _sentence_before(description,
-                                DEPRECATED_JOURNAL_ATTRIBUTES_0150)
-    if name == "rename_file":
-        description = _swap_lines(description, (
-            "('Thomas.Jones' to 'P01'). An ending the name of its stored "
-            "file has",
-            "may be put back, except a transcript losing both endings or a "
-            "media",
-            "file its extension; a name the project's backups show is not "
-            "looked",
-            "for."), (
-            "('Thomas.Jones' to 'P01'). A rename back is not refused: an "
-            "ending",
-            "the file had before (its stored file's own name, or a project "
-            "backup",
-            "showing this entry, same id and date) may be restored, except a",
-            "transcript losing both endings or a media file its extension; "
-            "a text",
-            "with no stored file may take back its documents copy under a "
-            "name",
-            "such a backup shows, with the same text."), name)
-        return _sentence_before(description, DEPRECATED_RENAME_BACK_0150,
-                                before="The result carries")
-    return description

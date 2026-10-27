@@ -52,7 +52,7 @@ DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
 # The policy named in any spelling 0.15.0 used
 NAMES_THE_POLICY = re.compile(r"(?i)edit[_ -]parity")
 
-# What 0.15.0 served, for the put-back the older tests use
+# What 0.15.0 served
 DEPRECATED_EDIT_PARITY_0150 = (
     "Deprecated, removed in v0.15.1: overlap_policy qualcoder_edit_parity, "
     "which deletes codings on names and is not exact parity.")
@@ -298,22 +298,3 @@ def test_the_changelog_says_so():
     removed = removed[:removed.index("### ", 5)]
     assert "**`pseudonymise_source`'s overlap policy " \
            "`qualcoder_edit_parity`**" in removed
-
-
-# ---------------------------------------------------------------------------
-# The put-back the older tests use
-# ---------------------------------------------------------------------------
-
-def before_the_one_overlap_policy(name, description):
-    """`name`'s description as served before this part, on any
-    interpreter: for pseudonymise_source, the policy's paragraph among
-    the arguments and its deprecation sentence put back."""
-    if name != "pseudonymise_source":
-        return description
-    from test_v0151_removed_arguments import _lines_after, _sentence_before
-    last = "nothing is ever emptied or deleted."
-    description = _lines_after(
-        description, last,
-        [PARITY_ARGS_0150[0]] + [(0, line) for line in PARITY_ARGS_0150[1:]],
-        indent_of=last)
-    return _sentence_before(description, DEPRECATED_EDIT_PARITY_0150)

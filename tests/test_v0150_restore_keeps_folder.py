@@ -28,7 +28,6 @@ import io
 import json
 import logging
 import os
-import re
 import shutil
 import sqlite3
 import stat
@@ -1227,29 +1226,6 @@ def _description():
 SENTENCE = ("The project's Exegete folder (files the researcher fills in) "
             "is kept as it is, never taken from the backup; the preview says "
             "when either has one.")
-
-
-# v0.15.1, audio and video left out of backups: the paragraph's second
-# sentence, taken out with it below
-MEDIA_SENTENCE = "So are its audio and video folders."
-
-
-def without_the_folder_paragraph(description):
-    """restore_backup's description with this piece's paragraph taken out,
-    as served on any interpreter (on 3.10 to 3.12 it keeps its
-    indentation), so that a test of an earlier piece still compares with
-    what that piece measured; the sentence v0.15.1 added at its end
-    (MEDIA_SENTENCE) goes with it, and so does the paragraph the restore
-    piece of v0.15.1 added after it (tests/test_v0151_restore.py)."""
-    from test_v0151_restore import without_the_preview_paragraph
-    description = without_the_preview_paragraph(description)
-    words = [re.escape(word) for word in SENTENCE.split()]
-    media = [re.escape(word) for word in MEDIA_SENTENCE.split()]
-    pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words)
-                         + r"(?:\s+" + r"\s+".join(media) + r")?")
-    found = pattern.search(description)
-    return (description if found is None
-            else description[:found.start()] + description[found.end():])
 
 
 class TestTheTexts:

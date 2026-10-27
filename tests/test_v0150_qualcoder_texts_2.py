@@ -252,13 +252,6 @@ def _doc(name):
     return (REPO / name).read_text(encoding="utf-8")
 
 
-def without_the_paragraph(description):
-    """The description with this piece's paragraph taken out, exactly as
-    it was before (on 3.10 to 3.12 the paragraph keeps its indentation)."""
-    return re.sub(r"[ ]*What it is for: .*?\"What pseudonymisation is "
-                  r"for\"\)\.\n\n", "", description, count=1, flags=re.S)
-
-
 def served(mode):
     """The tools as a host is given them in a tool set: name to
     description."""

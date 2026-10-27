@@ -627,8 +627,10 @@ jobs:
           python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
           python -m pip install --no-deps -e .
 
-      - name: The facts the documents repeat
-        run: python -m pytest -q tests/test_v0151_facts.py
+      # The documents' facts against the code, and what Exegete sends
+      # the assistant against docs/snapshot/
+      - name: The facts the documents repeat, and the snapshot
+        run: python -m pytest -q tests/test_v0151_facts.py tests/test_served_texts.py
 
   # v0.15.1: the newest library releases. Every other job that runs tests
   # installs from the lock; this one takes the newest release of each

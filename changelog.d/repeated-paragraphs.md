@@ -5,7 +5,5 @@
   project's lock file is active, the two steps of a preview and its
   token, the full memos on export, and the counts under coder
   visibility. `_with_paragraphs` puts each back where it stood, so a
-  rewording is made in one place. No description changes:
-  `tests/fixtures/served_descriptions.txt` holds every description of
-  both tool sets, written by `scripts/served_texts.py`, and
-  `tests/test_served_texts.py` compares it with what Exegete serves.
+  rewording is made in one place. No description changes: the snapshot
+  in `docs/snapshot/` holds every description as it was.

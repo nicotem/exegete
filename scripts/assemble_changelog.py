@@ -25,9 +25,11 @@ left alone. Outside a work tree, the .md files in the folder.
 
 Refused, exit 1, with nothing written: by file and line, text before a
 fragment's first heading, a heading not in HEADINGS, a heading with
-nothing under it, a `#` or `##` heading, a relative link (links read as
-scripts/check_links.py reads them), Measured outside measured.md and
-another heading inside it; by file, a fragment with no heading, and one
+nothing under it, a `#` or `##` heading, a line of `=` or `-` right
+under text (which can make the text such a heading), a code fence never
+closed, a relative link (fences and links read as scripts/check_links.py
+reads them), Measured outside measured.md and another heading inside
+it; by file, a fragment with no heading, and one
 that is not a regular file or not UTF-8; no fragment at all; a DATE that
 is not a date written YYYY-MM-DD; a VERSION that is not one, or that is
 a heading already, by its line. Exit 2 when CHANGELOG.md is missing or
@@ -62,9 +64,13 @@ HEADINGS = ("Added", "Changed", "Deprecated", "Removed", "Fixed", "Security",
 # What the [Unreleased] part says between two releases
 PLACEHOLDER = ("The changes since the last release are added here when the "
                "next release is prepared.")
-VERSION_RE = re.compile(r"^[0-9][0-9A-Za-z.+-]*$")
-DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+# Matched whole (fullmatch): `$` would also match before a line break
+VERSION_RE = re.compile(r"[0-9][0-9A-Za-z.+-]*")
+DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 LIST_ITEM_RE = re.compile(r"^(?:[-*+]|\d+[.)])[ \t]")
+# A line of = or - alone, which under a line of text underlines it into
+# a first- or second-level heading (a setext heading)
+UNDERLINE_RE = re.compile(r"^[ \t]*(?:=+|-+)[ \t]*$")
 
 
 @dataclass(frozen=True)
@@ -171,6 +177,34 @@ def read_fragments(root: Path = REPO) -> List[Fragment]:
     return fragments
 
 
+def _unclosed_fence(lines: Sequence[str]) -> Optional[int]:
+    """The line of a code fence still open at the end, fences opened and
+    closed as check_links.prose_lines reads them; None when there is none.
+    Left open, it could make whatever follows in CHANGELOG.md code."""
+    fence: Optional[str] = None
+    opened: Optional[int] = None
+    for number, line in enumerate(lines, start=1):
+        match = check_links.FENCE_RE.match(line)
+        if fence is None:
+            if match:
+                fence, opened = match.group(1), number
+        elif (match and match.group(1)[0] == fence[0]
+              and len(match.group(1)) >= len(fence)
+              and not line.strip().strip(fence[0])):
+            fence = None
+    return opened if fence is not None else None
+
+
+def _underlines_text(lines: Sequence[str], number: int, prose: set) -> bool:
+    """Whether line `number` is a line of `=` or `-` right under a line
+    of text, both outside code: Markdown can read the two as a first- or
+    second-level heading."""
+    above = lines[number - 2] if number > 1 else ""
+    return bool(number in prose and number - 1 in prose
+                and UNDERLINE_RE.match(lines[number - 1]) and above.strip()
+                and not check_links.HEADING_RE.match(above))
+
+
 def _sections(fragment: Fragment) -> Tuple[List[Section], List[Problem]]:
     """The fragment's sections, and the problems of its lines."""
     text = "\n".join(fragment.lines)
@@ -201,10 +235,20 @@ def _sections(fragment: Fragment) -> Tuple[List[Section], List[Problem]]:
                 refuse(number, "changelog.d/measured.md holds "
                                "`### Measured` alone")
             opened.append((title, number, []))
+        elif _underlines_text(fragment.lines, number, prose):
+            refuse(number, "a line of `=` or `-` right under text, which can "
+                           "make the text a first- or second-level heading: "
+                           "a section is a `###` one, and a line drawn across "
+                           "needs a blank line above it")
         elif opened:
             opened[-1][2].append(line)
         elif line.strip():
             refuse(number, "text before the fragment's first heading")
+    unclosed = _unclosed_fence(fragment.lines)
+    if unclosed:
+        refuse(unclosed, "a code fence never closed, which could make the "
+                         "rest of the CHANGELOG code: close it with the same "
+                         "marks")
     if not opened and not problems:
         problems.append(Problem(fragment.path, None, "holds no heading"))
     sections = []
@@ -309,7 +353,7 @@ def current_measurement(root: Path = REPO) -> str:
 
 def _is_date(text: str) -> bool:
     try:
-        return bool(DATE_RE.match(text)) and bool(
+        return bool(DATE_RE.fullmatch(text)) and bool(
             datetime.date.fromisoformat(text))
     except ValueError:
         return False
@@ -320,12 +364,14 @@ def prepare(root: Path, version: str,
     """(the CHANGELOG's text, the entry, the fragments), or a Refusal
     naming every problem found."""
     problems = []
-    if not VERSION_RE.match(version):
-        problems.append(Problem("VERSION", None, f'"{version}" is not a '
+    if not VERSION_RE.fullmatch(version):
+        # quoted as Python writes it, so that a line break stays visible
+        # and the refusal stays on one line
+        problems.append(Problem("VERSION", None, f"{version!r} is not a "
                                 "version: digits, letters, dots, hyphens and "
                                 "plus signs, from a digit"))
     if not _is_date(date):
-        problems.append(Problem("DATE", None, f'"{date}" is not a date '
+        problems.append(Problem("DATE", None, f"{date!r} is not a date "
                                 "written YYYY-MM-DD"))
     try:
         with open(root / CHANGELOG, encoding="utf-8", newline="") as handle:

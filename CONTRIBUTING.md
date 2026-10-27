@@ -109,8 +109,29 @@ is looked at first.
    credentials; both are pinned, and a workflow added as `.yaml`, or a
    composite action under `.github/actions`, is scanned by the same
    ledger.
-6. **Document the change.** Add an entry under `Unreleased` in
-   `CHANGELOG.md` (Keep a Changelog format). Update the docstring of
+6. **Document the change.** Describe it for the CHANGELOG in a file of
+   its own, `changelog.d/<key>.md`, `<key>` being your branch's name
+   without any prefix before a slash (make the folder when it is
+   absent), and never edit `CHANGELOG.md`: when a release is prepared,
+   `scripts/assemble_changelog.py` writes the release's entry from
+   these files and deletes them, so two changes never edit the same
+   lines. The file holds one or more sections, each under one of these
+   headings, in this order: `### Added`, `### Changed`,
+   `### Deprecated`, `### Removed`, `### Fixed` and `### Security`, as
+   Keep a Changelog names them, then `### Documents` and
+   `### For contributors` (CI, scripts and tests). Under each, write as
+   the CHANGELOG does, and give every link its whole address: a
+   relative link would lead nowhere once the text moves. The
+   measurement of what a host is sent is kept in one file that every
+   change shares, `changelog.d/measured.md`, the only place for
+   `### Measured`, which holds nothing else: the first change that
+   moves a size writes it, each later one amends it, and of two written
+   at once the second to merge measures again. A change may amend or
+   remove an earlier file of the same release that it supersedes,
+   saying so in its pull request; a change made without a branch of its
+   own, such as a dependency update, adds a file named for its subject
+   in the same commit. A test pins facts from the code, never these
+   files' words, which the release deletes. Update the docstring of
    every tool whose arguments or behaviour changed: the docstrings are
    the documentation the AI model reads. A paragraph that several tools
    share, such as the refusal while the project's lock file is active,
@@ -317,6 +338,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
+│   ├── assemble_changelog.py   # Writes a release's CHANGELOG entry from changelog.d/
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)

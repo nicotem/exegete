@@ -73,7 +73,7 @@ is looked at first.
    cannot turn a job red overnight, and a change to the requirements or
    the version in `pyproject.toml` without `uv lock` fails on the push.
    A push to `main` or to an integration branch, `feat/<name>`, a pull
-   request and a run started by hand take the full tier: twenty-two
+   request and a run started by hand take the full tier: twenty-one
    jobs. Eleven run the suite: on Python 3.11, the oldest Exegete
    supports, and 3.13, one job each on Ubuntu and on macOS, and three on
    Windows, where the suite is slowest and runs in three parts made of
@@ -84,10 +84,9 @@ is looked at first.
    extension, one on each system, and install and start it as Claude
    Desktop does (the Linux one also validates it with the official
    MCPB tool and checks that the lock has a wheel for every computer);
-   one checks that the three builds are the same bytes. Two compare the
-   text the import stores with QualCoder's own extraction: one against
-   QualCoder 4.0, and one watching QualCoder's newest code, whose
-   changes are a notice, never a failure. Two try the upgrade from the
+   one checks that the three builds are the same bytes. One compares the
+   text the import stores with the text QualCoder 4.0's own extraction
+   gives. Two try the upgrade from the
    package's earlier name, on Ubuntu and on Windows. One checks the
    documents: their links (`scripts/check_links.py`) and the facts
    they repeat (`tests/test_v0151_facts.py`, below); their links to
@@ -104,16 +103,29 @@ is looked at first.
    `packaging/`, `pyproject.toml`, `uv.lock` or a script those jobs
    run, counted from where the branch left its integration branch
    (`feat/<p>` for a branch `<p>/<key>`), or else from `main`. Every
-   job that runs must be green, the watch and the newest releases
-   apart. A change to a workflow, to `pyproject.toml` or to `uv.lock`
-   also runs once on the full tier on its own branch before it is
-   merged: on GitHub, Actions, then CI, then Run workflow, with the
-   branch chosen. The workflow actions are pinned by commit SHA with a
+   job that runs must be green, the newest releases apart. Two more
+   checks run once a week, on Mondays, each in a workflow of its own,
+   and also on a push that changes that workflow. `advisories.yml` asks
+   OSV's database of advisories about every release in `uv.lock` and in
+   the official validator's lock,
+   `packaging/desktop-extension/validator/package-lock.json` (also on a
+   push that changes its script or either lock): a new advisory fails,
+   and one already accepted, with its date and reason in
+   `scripts/check_advisories.py`, is a notice. `qualcoder-watch.yml`
+   compares the text the import stores with what QualCoder's newest
+   code stores, and is red when that code stores a different text,
+   which the maintainer reads that day. A change to a workflow, to
+   `pyproject.toml` or to `uv.lock` also runs once on the full tier on
+   its own branch before it is merged: on GitHub, Actions, then CI,
+   then Run workflow, with the branch chosen. The workflow actions are pinned by commit SHA with a
    version comment beside each pin; if you add or bump an action, keep that
    shape (Dependabot maintains the pins). A bump also means recording
    the new SHA against the tag it really is, in `VERIFIED_TAGS` in
-   `tests/test_v012_workflow_pins.py`;
-   that module's docstring carries the two API calls that resolve it.
+   `tests/test_v012_workflow_pins.py` (that module's docstring carries
+   the two API calls that resolve it), and naming the action with its
+   new version in the change log's current entry, where step 6 says a
+   change is described: the newest entry that names an action must name
+   the version it is pinned at.
    The tests fail on an unrecorded SHA on purpose: Dependabot has left a
    version comment stale beside a bumped SHA before, and nothing else
    checks the comment against upstream. A new job declares the least
@@ -375,7 +387,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)
 │   ├── release_plan.py         # What comes in which release: the table the texts are held to
 │   ├── code_texts.py           # The texts the package's code holds, read without running it
-│   ├── check_advisories.py     # Asks OSV's database of advisories about every release in the lock
+│   ├── check_advisories.py     # Asks OSV's database of advisories about every release in uv.lock and the validator's lock
 │   ├── served_texts.py         # What Exegete sends the assistant before a project is open, and the brief, written to docs/snapshot/ or compared with it
 │   ├── extension_libraries.py  # What the desktop extension installs on each computer, as one table
 │   ├── compare_release_surface.py  # Compares what two releases offer an assistant and a researcher

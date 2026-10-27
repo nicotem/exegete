@@ -17,8 +17,9 @@ Exegete's is listed below with the departure that makes it, so that
 QualCoder's text with those differences, and only those, is Exegete's.
 
 When QUALCODER_SOURCE names a QualCoder source tree (CI's parity gate,
-and its watch on QualCoder's newest code), the outcomes are also
-computed afresh from that tree and compared.
+and the weekly watch on QualCoder's newest code,
+.github/workflows/qualcoder-watch.yml), the outcomes are also computed
+afresh from that tree and compared.
 """
 
 import json
@@ -475,9 +476,10 @@ def test_a_pdfs_notes_and_markups_as_qualcoder_records_them():
 @pytest.mark.skipif(not os.environ.get("QUALCODER_SOURCE"),
                     reason="QUALCODER_SOURCE names no QualCoder tree")
 def test_against_a_live_qualcoder_tree():
-    """CI's gate (at the pinned commit) and watch (on QualCoder's newest
-    code): QualCoder's own functions run afresh on every fixture, and
-    Exegete's text is theirs with the named differences only."""
+    """CI's gate (at the pinned commit) and the weekly watch (on
+    QualCoder's newest code): QualCoder's own functions run afresh on
+    every fixture, and Exegete's text is theirs with the named
+    differences only."""
     sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
     import qualcoder_parity
     fresh = qualcoder_parity.run(Path(os.environ["QUALCODER_SOURCE"]))

@@ -189,3 +189,129 @@ def test_a_lock_of_another_name_or_form_exits_2(tmp_path, capsys, name,
                            opener=opener, sleep=lambda s: None) == 2
     assert opener.requests == []
     assert str(lock) in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# The watch on QualCoder's newest code
+# ---------------------------------------------------------------------------
+
+def _parity():
+    scripts = str(REPO / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import qualcoder_parity
+    return qualcoder_parity
+
+
+def test_the_watch_writes_its_count_to_the_step_summary(tmp_path,
+                                                        monkeypatch):
+    """`--check`, with a fixed result in place of QualCoder's functions:
+    the step summary holds QualCoder's commit, the count and the names of
+    the documents whose outcome changed; exit 1, then 0 with none."""
+    parity = _parity()
+    files = {"a.txt": {"text": "one"}, "b.pdf": {"text": "two"}}
+    monkeypatch.setattr(parity, "run", lambda tree: {
+        "qualcoder_source": str(tree), "versions": {}, "files": dict(files)})
+    recorded = tmp_path / "expected.json"
+    recorded.write_text(json.dumps(
+        {"files": dict(files, **{"b.pdf": {"text": "2"}})}), encoding="utf-8")
+    summary = tmp_path / "summary.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    args = ["--qualcoder", str(tmp_path), "--commit", "abc1234",
+            "--check", str(recorded)]
+    assert parity.main(args) == 1
+    lines = summary.read_text(encoding="utf-8").splitlines()
+    assert any("abc1234" in line for line in lines)
+    assert "1 of 2 outcomes changed since the recorded run" in lines
+    assert "- b.pdf" in lines and not any("a.txt" in line for line in lines)
+
+    recorded.write_text(json.dumps({"files": files}), encoding="utf-8")
+    assert parity.main(args) == 0
+    assert "0 of 2 outcomes changed since the recorded run" in \
+        summary.read_text(encoding="utf-8").splitlines()
+
+
+WATCH = WORKFLOWS / "qualcoder-watch.yml"
+WATCH_JOB = "qualcoder-watch"
+TESTS_STEP = "Exegete's text against QualCoder's"
+PARITY_STEP = "What QualCoder's newest code stores differently"
+
+
+def _rows(job):
+    """A job's lines, stripped, comments left out."""
+    return [line.strip() for line in job["lines"]
+            if not line.lstrip().startswith("#")]
+
+
+def _parity_job():
+    return next(job for job in _jobs(WORKFLOWS / "ci.yml")
+                if job["name"] == "qualcoder-parity")
+
+
+def test_the_watch_runs_weekly_in_its_own_workflow():
+    """Mondays, by hand, and on a push that changes the workflow alone;
+    QualCoder at its newest code, read only; red when its tests fail and
+    nowhere else; the comparison run once the tests have run."""
+    text = WATCH.read_text(encoding="utf-8")
+    assert '- cron: "0 6 * * 1"' in text
+    assert "\n  workflow_dispatch:\n" in text
+    paths = re.search(r"\n    paths:\n((?:      - .+\n)+)", text).group(1)
+    assert re.findall(r'"([^"]+)"', paths) == [
+        ".github/workflows/qualcoder-watch.yml"]
+    [job] = _jobs(WATCH)
+    assert job["name"] == WATCH_JOB
+    assert "    timeout-minutes: 20" in job["lines"]
+    assert not any("continue-on-error" in row for row in _rows(job))
+    steps = {name: [row.strip() for row in lines.splitlines()]
+             for name, lines in _steps(WATCH.name, WATCH_JOB).items()}
+    source = steps["Check out QualCoder's newest code, read only"]
+    for row in ("repository: ccbogel/QualCoder", "ref: master",
+                "persist-credentials: false"):
+        assert row in source, row
+    tests = steps[TESTS_STEP]
+    for row in ("id: tests", "shell: bash", "set +e",
+                "QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src",
+                'EXEGETE_PARITY_GATE: ""', "code=${PIPESTATUS[0]}",
+                '} >> "$GITHUB_STEP_SUMMARY"'):
+        assert row in tests, row
+    assert tests[-1] == "exit $code"
+    assert any(row.endswith('2>&1 | tee "$RUNNER_TEMP/pytest_output.txt"')
+               for row in tests)
+    parity = steps[PARITY_STEP]
+    assert parity[0] == \
+        "if: ${{ !cancelled() && steps.tests.outcome != 'skipped' }}"
+    assert any("python scripts/qualcoder_parity.py --qualcoder "
+               "qualcoder-src --commit \"$commit\" --check "
+               "tests/fixtures/import_expected.json" in row for row in parity)
+    assert list(steps).index(TESTS_STEP) < list(steps).index(PARITY_STEP)
+
+
+def test_ci_compares_with_qualcoder_4_0_alone():
+    """The parity job in ci.yml, one job at QualCoder 4.0 with the
+    release's own checks switched on; the watch no longer runs there."""
+    rows = _rows(_parity_job())
+    assert "ref: b95e021c93eb29a646ee7a8de196c281b7890ddf" in rows
+    assert 'EXEGETE_PARITY_GATE: "1"' in rows
+    for gone in ("matrix", "continue-on-error", "master", "--check"):
+        assert not any(gone in row for row in rows), gone
+    ci = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
+    assert "ref: master" not in ci and "qualcoder_parity.py --" not in ci
+
+
+def test_the_watch_runs_the_parity_jobs_tests_from_the_lock():
+    """The same pytest command as the parity job, read before the watch's
+    `2>&1 | tee`, so the newest code is checked by every test the 4.0
+    release is; the install from the lock, with the optional part."""
+    def command(rows):
+        [row] = [row for row in rows if "python -m pytest" in row]
+        return row[row.index("python -m pytest"):].split(" 2>&1")[0]
+
+    [job] = _jobs(WATCH)
+    watch = _rows(job)
+    assert command(watch) == command(_rows(_parity_job()))
+    assert EXPORT.format(" --extra pdf-epub") in watch
+    for row in LOCKED_INSTALL:
+        assert row in watch, row
+    text = "\n".join(watch)
+    assert 'pip install -e ".[' not in text
+    assert text.index("--require-hashes") < text.index("python -m pytest")

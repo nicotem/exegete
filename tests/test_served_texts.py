@@ -286,8 +286,10 @@ def test_the_registry_is_as_it_was_after_a_render(script):
 
 NUMBERS = ("one", "two", "three", "four", "five", "six", "seven", "eight",
            "nine", "ten")
-# Where the documents give the per cent the earlier versions add
-PER_CENT = {"README.md": r"about (\w+) per cent more on 3\.10 to 3\.12",
+# Where the documents give the per cent the earlier versions add (3.10
+# to 3.12, or 3.11 and 3.12 once 3.10 is no longer supported)
+PER_CENT = {"README.md": r"about (\w+) per cent more on 3\.1[01] "
+                         r"(?:to|and) 3\.12",
             "TOOLS.md": r"definitions measure about (\w+) per cent more"}
 
 

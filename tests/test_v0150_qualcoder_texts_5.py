@@ -180,67 +180,6 @@ CARRIERS = set(BEFORE) - {"apply_codings", "restore_backup"}
 # tests/test_v0142_description_cut.py (LEFT_PAST_THE_CUT)
 PAST_THE_CUT = {"pseudonymise_source"}
 
-# The paragraph the sentence replaces, as Python 3.13 served it, in the
-# three descriptions that other tests compare with a pin taken before
-# this piece: tests/test_v0150_renames_tools.py (delete_coding and
-# update_annotation, the rename's check) and
-# tests/test_v0150_qualcoder_texts_2.py (pseudonymise_source, its
-# paragraph's guard). Put back, each description is as it was.
-_LOCK_PARAGRAPH_REST = (
-    "get_current_project (qualcoder_open must be false), then retry. The "
-    "lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds "
-    "no longer use a lock file, so 4.0 detection is best-effort heuristics "
-    "(qualcoder_gui_signals in get_current_project); never write while any "
-    "QualCoder window has this project open.")
-_WRAPPED = ("Refused while QualCoder has the project open (heartbeat lock): "
-            "ask\nthe user to close the project in QualCoder, re-check "
-            "with\n" + _LOCK_PARAGRAPH_REST)
-LOCK_PARAGRAPH_BEFORE = {
-    "delete_coding": (
-        "Refused while QualCoder has the project open (its heartbeat "
-        "lock): ask the user to close the project in QualCoder, re-check "
-        "with " + _LOCK_PARAGRAPH_REST),
-    "update_annotation": _WRAPPED,
-    "pseudonymise_source": _WRAPPED,
-}
-
-
-def put_back_the_lock_paragraph(name, text):
-    """`text`, tool `name`'s description, with the sentence taken out and
-    the paragraph it replaced put back."""
-    words = r"\s+".join(map(re.escape, SENTENCE.split()))
-    found = re.search(words, text)
-    assert found, name
-    return (text[:found.start()] + LOCK_PARAGRAPH_BEFORE[name]
-            + text[found.end():])
-
-
-class TestThePutBack:
-
-    def test_the_paragraph_put_back_is_the_description_as_it_was(self):
-        """Each of the three is then as tests/test_v0142_description_cut.py
-        pinned it before this piece: the same words, and on 3.13 the same
-        length."""
-        from test_v0142_description_cut import _fingerprint
-        # the whole-branch review's round 1 moved the removals to v0.15.1:
-        # put back too
-        from test_v0150_wb_fix_r1 import before_the_review
-        # and v0.15.1's ignored create_backup: put back too
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        pinned = {"delete_coding": (2992, 2420, "11210044336ce58c"),
-                  "update_annotation": (2052, 1709, "32e8e8c22ca88105"),
-                  "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f")}
-        server._apply_toolset("full")
-        for name, (length, solid, digest) in pinned.items():
-            text = before_the_review(put_back_the_lock_paragraph(
-                name, before_the_ignored_argument(
-                    name, server.mcp.original_descriptions[name])))
-            got = _fingerprint(text)
-            assert got[1:] == (solid, digest), name
-            if sys.version_info[:2] == (3, 13):
-                assert got[0] == length, name
-
-
 # ---------------------------------------------------------------------------
 # The guard: each old phrase is gone
 # ---------------------------------------------------------------------------

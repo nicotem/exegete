@@ -158,27 +158,6 @@ POINTER = (
     "qualcoder-mcp: explain_ai_coding_tools('moving_from_qualcoder_mcp') "
     "says how to guide them through the transition check.")
 
-# start_coding_session's description before the piece (its line in
-# tests/test_v0142_description_cut.py): 6,096 characters on 3.13, 4,954
-# that are not white space on every interpreter
-BEFORE_LENGTH_313 = 6096
-BEFORE_SOLID = 4954
-BEFORE_DIGEST = "6f9dd3d79152da08"
-
-# The shared text's sentence as it stood, line break included, for the
-# tests that pin a description as it was before this piece
-# (tests/test_v0150_renames_tools.py)
-FOUR_OUTCOMES_NOW = "there. Four outcomes:\n"
-FOUR_OUTCOMES_BEFORE = ("there. Four outcomes, in the vocabulary QualCoder "
-                        "4.0's own assistant\nuses:\n")
-
-
-def put_back_the_four_outcomes(text):
-    """`text`, a description that carries the shared text, with its
-    sentence on the four outcomes as it was before this piece."""
-    assert text.count(FOUR_OUTCOMES_NOW) == 1
-    return text.replace(FOUR_OUTCOMES_NOW, FOUR_OUTCOMES_BEFORE)
-
 
 def _call(tool, **args):
     """A tool's answer through FastMCP's own call path, as a host makes
@@ -478,13 +457,10 @@ class TestThePathOfTheOldFolder:
 class TestStartCodingSessionsDescription:
 
     @pytest.mark.parametrize("mode", TOOL_SETS)
-    def test_it_is_shorter_and_its_rules_stay_within_the_cut(self, mode):
+    def test_its_rules_stay_within_the_cut(self, mode):
         tools, _ = _served(mode)
         description = tools["start_coding_session"]
         assert server.METHODOLOGY_VOCABULARY in description
-        assert len("".join(description.split())) < BEFORE_SOLID
-        if sys.version_info[:2] == (3, 13):
-            assert len(description) < BEFORE_LENGTH_313
         within = [rule for rule, carriers in CARRIERS.items()
                   if "start_coding_session" in carriers
                   and ("start_coding_session", rule) not in LEFT_PAST_THE_CUT]
@@ -493,26 +469,6 @@ class TestStartCodingSessionsDescription:
             spans = _spans(rule, description)
             assert spans, (mode, rule)
             assert all(end <= CUT for _, end in spans), (mode, rule)
-
-
-class TestThePutBack:
-
-    def test_the_sentence_put_back_is_the_description_as_it_was(self):
-        """A guard for the put-back the other tests use: with it,
-        start_coding_session's description is as
-        tests/test_v0142_description_cut.py pinned it before this piece."""
-        from test_v0142_description_cut import _fingerprint
-        # the fourth reading of the documents reworded its paragraph on
-        # the lock file: put back too
-        from test_v0150_lock_wording import put_back_the_lock_wording
-        server._apply_toolset("full")
-        text = put_back_the_four_outcomes(put_back_the_lock_wording(
-            "start_coding_session",
-            server.mcp.original_descriptions["start_coding_session"]))
-        got = _fingerprint(text)
-        assert got[1:] == (BEFORE_SOLID, BEFORE_DIGEST)
-        if sys.version_info[:2] == (3, 13):
-            assert got[0] == BEFORE_LENGTH_313
 
 
 # ---------------------------------------------------------------------------

@@ -1261,25 +1261,6 @@ class TestTheTexts:
         assert description.index("under safety_backup_skipped_symlinks.") \
             < description.index(SENTENCE) < description.index("Args:")
 
-    def test_the_paragraph_is_all_that_changed(self):
-        """Taken out, the description is word for word what the piece
-        before served (tests/test_v0142_description_cut.py's earlier
-        line), its length too on 3.13."""
-        # the fourth reading of the documents gave item 4's lock file one
-        # spelling: put back too (tests/test_v0150_lock_wording.py)
-        from test_v0150_lock_wording import put_back_the_lock_wording
-        server._apply_toolset("full")
-        served = server.mcp.original_descriptions["restore_backup"]
-        before = without_the_folder_paragraph(
-            put_back_the_lock_wording("restore_backup", served))
-        assert before != served
-        words = before.split()
-        assert (len("".join(words)), hashlib.sha256(
-            " ".join(sorted(words)).encode()).hexdigest()[:16]) == (
-                2247, "87717bbc6793a0e9")
-        if sys.version_info[:2] == (3, 13):
-            assert len(before) == 2730
-
     def test_tools(self):
         tools = _flat(_read("TOOLS.md"))
         entry = tools[tools.index("- `restore_backup(backup_path, "

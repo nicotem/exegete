@@ -25,7 +25,7 @@ refusals too, so the question for the coder name carries it) give it as
 `projects_folder`, and create_project, copy_project_to_workspace and
 import_text_file name "the folder set for projects" rather than a
 default, each description no longer than before
-(tests/test_v0142_description_cut.py pins their words).
+(docs/snapshot/ holds their words).
 
 The reviews of those fixes (12 October 2026) found four things more.
 projects_folder is the folder that is set, so a refusal for a project

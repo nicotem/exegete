@@ -472,24 +472,3 @@ def before_the_journal_and_rename_back(name, description):
         return _sentence_before(description, DEPRECATED_RENAME_BACK_0150,
                                 before="The result carries")
     return description
-
-
-def test_the_descriptions_put_back_are_as_served_before():
-    """A guard for the put-back: with it, the three descriptions this
-    part changed are as served before it, on any interpreter
-    (tests/test_v0142_description_cut.py), and each differs from now."""
-    import sys
-    from test_v0142_description_cut import (CHANGED_0151,
-                                            JOURNAL_RENAME_0151,
-                                            _fingerprint)
-    server._apply_toolset("full")
-    assert set(JOURNAL_RENAME_0151) == {"create_attribute_type",
-                                        "set_attribute", "rename_file"}
-    for name in JOURNAL_RENAME_0151:
-        now = server.mcp.original_descriptions[name]
-        then = before_the_journal_and_rename_back(name, now)
-        assert then != now, name
-        got = _fingerprint(then)
-        assert got[1:] == CHANGED_0151[name][1:], name
-        if sys.version_info[:2] == (3, 13):
-            assert got[0] == CHANGED_0151[name][0], name

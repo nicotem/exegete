@@ -637,8 +637,8 @@ class TestThePublishedSchemaBudget:
         alone, and 0.15.0's figure is history (`_v0150_entry`). From
         the release on, the current entry is 0.15.1's, under an
         Unreleased heading that says nothing yet. From v0.15.2 a change
-        writes no longer in the CHANGELOG but in a fragment, and the
-        figure is read where the release being written keeps it:
+        writes a fragment rather than the CHANGELOG, and the figure is
+        read where the release being written keeps it:
         changelog.d/measured.md once a change measures again, else the
         newest Measured section of the CHANGELOG, 0.15.1's until the
         next entry is assembled (scripts/assemble_changelog.py).

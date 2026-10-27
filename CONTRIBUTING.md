@@ -129,12 +129,16 @@ is looked at first.
    share, such as the refusal while the project's lock file is active,
    is written once, as a constant in `src/exegete/server.py` that
    `_with_paragraphs` puts back into each of their docstrings, and is
-   changed there. Every description Exegete serves is also kept in
-   `tests/fixtures/served_descriptions.txt`, and a test fails when the
-   two differ: when you change a description, write that file again
-   with `python scripts/served_texts.py write` on Python 3.13 and read
-   its diff. Update `TOOLS.md` (the tool
-   reference), `README.md`, `INSTALL.md` and `PRIVACY.md` where they
+   changed there. Everything Exegete sends the assistant before a
+   project is open (the opening text, every tool's description and
+   schemas, the prompts, the resources and the brief) is kept in
+   `docs/snapshot/`, with the sizes the documents round in
+   `sizes.json`, and a test fails when the code and the snapshot
+   differ: when you change any of these texts, a tool's arguments or
+   the libraries in `uv.lock`, write the snapshot again with
+   `python scripts/served_texts.py write` on Python 3.13, in the
+   development install, and read its diff whole. Update `TOOLS.md`
+   (the tool reference), `README.md`, `INSTALL.md` and `PRIVACY.md` where they
    describe the behaviour you changed; `PRIVACY.md` is the contract for
    what a tool result may disclose. Links are checked on every push
    (`scripts/check_links.py`): when you rename a heading, it names every
@@ -143,6 +147,8 @@ is looked at first.
    (in full example paths too, such as
    `/Users/YOUR_NAME/Exegete projects`), the reading folder, the time
    per import call and the counts against the code's constants; the
+   sizes of the tool sets, within five per cent, against
+   `docs/snapshot/sizes.json`; the
    libraries' releases against `uv.lock`, and the requirements against
    `pyproject.toml`; the lists of the tools that preview first and of
    those that report signs of a QualCoder window, what PRIVACY.md and
@@ -345,7 +351,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── release_plan.py         # What comes in which release: the table the texts are held to
 │   ├── code_texts.py           # The texts the package's code holds, read without running it
 │   ├── check_advisories.py     # Asks OSV's database of advisories about every release in the lock
-│   ├── served_texts.py         # Every tool description Exegete serves, written to a file or compared with it
+│   ├── served_texts.py         # Everything Exegete sends the assistant, written to docs/snapshot/ or compared with it
 │   ├── extension_libraries.py  # What the desktop extension installs on each computer, as one table
 │   ├── compare_release_surface.py  # Compares what two releases offer an assistant and a researcher
 │   ├── release_version.py      # What a published release builds, read from its tag
@@ -354,6 +360,11 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── make_timing_documents.py  # Made-up Word files for timing how long an import's preview reads
 │   ├── structure_table.py      # The structural table kept per release in docs/structure/
 │   └── create_test_project.py  # Test project generator
+├── docs/
+│   ├── brand/                  # Exegete's mark
+│   ├── history/                # Early plans and analyses, kept as a record
+│   ├── snapshot/               # Everything Exegete sends the assistant, and its sizes, as served
+│   └── update-check/           # The design of the check for new versions, as a record
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/
 │   ├── desktop-extension/      # The extension's manifest template and its validator

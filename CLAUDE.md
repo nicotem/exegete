@@ -91,11 +91,15 @@ of a project from the conversation. It runs as an MCP server.
 - **Never touch a real QualCoder installation, a real project or any AI
   assistant's configuration.** Tests use fixtures and synthetic data
   only.
-- **Tool descriptions are measured.** Tests pin the size sent with every
-  request. Rules a model must not miss sit within a description's first
-  2,048 characters: Claude Code cut there before its version 2.1.296; it
-  now keeps 4,096 (16,384 through tool search), and 2,048 is kept as a
-  margin. The few left past it, each with its reason, are listed in
+- **What the assistant receives is kept in `docs/snapshot/`**, with its
+  sizes: when a description, a tool's arguments or another text sent
+  before a project is open changes, write it again with
+  `python scripts/served_texts.py write` on Python 3.13 and review the
+  diff; a test fails until then. Rules a model must not miss sit within
+  a description's first 2,048 characters: Claude Code cut there before
+  its version 2.1.296; it now keeps 4,096 (16,384 through tool search),
+  and 2,048 is kept as a margin. The few left past it, each with its
+  reason, are listed in
   `LEFT_PAST_THE_CUT` in `tests/test_v0142_description_cut.py`.
 - **Documents:** plain UK English, no em dashes. Many sentences in the
   documents are pinned by tests, so move the pin with its sentence.

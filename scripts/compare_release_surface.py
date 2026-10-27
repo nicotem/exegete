@@ -12,7 +12,7 @@ Two steps, each run in the environment of the tree it describes:
 every tool's name, title, annotations, description (length and digest),
 arguments (name, type, default, required) and declared answer schema;
 the members of each tool set and their measured size (the `tools/list`
-payload, as tests/test_toolset_modes.py measures it); the help topics;
+payload, measured as docs/snapshot/sizes.json gives it); the help topics;
 the environment variables the code names; the extension's settings;
 the keys the code puts in its answers and the values it gives under
 `reason`, `status` and `kind`; and the length of the opening text.

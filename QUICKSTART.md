@@ -94,7 +94,7 @@ in step 5 you can ask the assistant to create one.
 ```bash
 # Get Python path (while virtual environment is active)
 which python
-# Example output: /Users/yourname/Documents/exegete/venv/bin/python
+# Example output: /Users/yourname/Documents/exegete/env/bin/python
 
 # Get your username
 whoami

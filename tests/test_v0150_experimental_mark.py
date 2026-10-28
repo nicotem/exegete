@@ -78,7 +78,7 @@ CHANGES = [
      "**Start a project**, or work on a copy of one you have."),
     ("README.md",
      "Practice\" (Experimental), then bring in your page",
-     "called Practice\", then bring in your page"),
+     "Exegete called Practice\". With the extension"),
     ("README.md",
      "can create a project too (Experimental).",
      "whose default tool set, `full`, can create a project too "
@@ -168,8 +168,8 @@ KEPT = [
      1),
     ("README.md", "| **ChatGPT's desktop app and Codex** (Experimental) |", 1),
     ("README.md", "| **LM Studio**, with a local model (Experimental) |", 1),
-    ("README.md", "Experimental: written from OpenAI's documentation, read "
-                  "on 30 September 2026", 1),
+    ("README.md", "This route is Experimental: we wrote it from OpenAI's "
+                  "documentation, read on 30 September 2026", 1),
     ("README.md", "#choosing-your-ai-host-data-governance-options-"
                   "experimental", 1),
     ("README.md", "#chatgpts-desktop-app-and-codex-experimental", 1),

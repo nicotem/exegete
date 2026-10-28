@@ -109,17 +109,19 @@ class TestTheIntroduction:
         # v0.15.2, the opening texts (ruling 102): where it runs and what
         # it lacks first, then the commitment to QualCoder's format; "in
         # its own right" went with the comparison it implied
+        # v0.15.2, the readability reading: the same facts, one to a
+        # sentence, with the tools named for what they are
         assert ("Exegete (formerly qualcoder-mcp) runs on your computer, with "
-                "no window and no AI of its own: your assistant, such as "
-                "Claude Desktop, starts it, and you work in the "
-                "conversation, from starting a project to exporting your "
-                "codebook and coding. It is built to stay "
-                "interoperable with QualCoder: your project is a folder on "
-                "your computer, kept in QualCoder's format and conventions, "
-                "so you can work on it in either program, one at a time. You "
-                "do not need QualCoder to start, or running while you work, "
-                "though a few things are not in Exegete yet (listed "
-                "below).") in opening
+                "no window and no AI of its own. Your assistant, such as "
+                "Claude Desktop, starts it and uses its tools, the actions "
+                "Exegete offers it. You work in the conversation, from "
+                "starting a project to exporting your codebook and coding. "
+                "Exegete is built to stay interoperable with QualCoder. Your "
+                "project is a folder on your computer, kept in QualCoder's "
+                "format and conventions, so you can work on it in either "
+                "program, one at a time. You do not need QualCoder, either "
+                "to start or while you work, though a few things are not in "
+                "Exegete yet (listed below).") in opening
         assert ("Your project is kept in QualCoder's format, so it can "
                 "also be opened in [QualCoder](") in opening
         assert "**One program at a time.**" in _flat("README.md")
@@ -145,11 +147,12 @@ class TestTheIntroduction:
         can_do = _what_you_can_do()
         # v0.15.2, the opening texts: documents, not transcripts alone,
         # each item led by what you do; one idea to a sentence
+        # (the readability reading: the coding item a sentence of its own)
         for request in ("**Start a project**", "**Bring in documents**",
                         "**Code the documents you choose, with suggestions "
-                        "you approve**", "**Compare two coders**",
-                        "**Replace participants' names** in text already "
-                        "coded", "**Export** the codebook"):
+                        "you approve.**", "**Compare two coders**",
+                        "**Replace participants' names**, even in coded "
+                        "text", "**Export** the codebook"):
             assert request in can_do, request
         assert ("Whether a code fits, and what a coding means, stays your "
                 "judgement.") in can_do
@@ -163,7 +166,7 @@ class TestTheIntroduction:
         # window of its own ("What it is not" was a second saying)
         # v0.14.2 (the owner's ruling of 7 October 2026): "not an add-on
         # or a remote control" is said where the commitments are
-        assert ("You do not need QualCoder to start, or running while you "
+        assert ("You do not need QualCoder, either to start or while you "
                 "work") in opening
         assert "not an add-on or a remote control" not in opening
         assert "**What it is not.**" not in _flat("README.md")
@@ -179,9 +182,9 @@ class TestTheIntroduction:
                 "Colin Curtain and Dr Kai Dröge") in readme
         assert "built by one researcher" in opening
         # The kappa headline: QualCoder's figure is not Cohen's kappa
-        assert ("**Compare two coders**, code by code, with the figure "
-                "QualCoder labels Kappa and Cohen's kappa side by side.") \
-            in readme
+        # (v0.15.2, the readability reading: Cohen's kappa beside it)
+        assert ("**Compare two coders**, code by code, with Cohen's kappa "
+                "beside the figure QualCoder labels Kappa.") in readme
 
     def test_what_it_covers_today_rests_on_the_tools(self):
         opening = _opening()
@@ -198,20 +201,21 @@ class TestTheIntroduction:
             "Sort them into cases with attributes such as age, role or "
             "site.": ["create_case", "create_attribute_type",
                       "set_attribute", "link_file_to_case"],
-            # v0.14.3: as documents from the computer too
-            "**Bring in documents** from your computer": [
-                "import_documents"],
-            "or paste text in.": ["import_text_file"],
+            # v0.14.3: as documents from the computer too (v0.15.2, the
+            # readability reading: the kinds first, then where they are read)
+            "Exegete reads them on your computer, without passing their "
+            "text through the conversation.": ["import_documents"],
+            "You can also paste text in.": ["import_text_file"],
             "**Code the documents you choose, with suggestions you "
-            "approve**": [
+            "approve.**": [
                 "start_coding_session", "record_suggestions",
                 "update_suggestion_status", "apply_codings"],
             # v0.14.2, the README's first round of checks: who proposes
             # the codes, and that they wait for approval
             "**Grow the codebook** with codes the assistant proposes, "
-            "created once you approve them, and rename, recolour, move, "
-            "merge and delete codes, with a preview before merging or "
-            "deleting.": [
+            "which Exegete creates once you approve them. Rename, recolour, "
+            "move, merge and delete codes, with a preview before a merge or "
+            "a deletion.": [
                 "propose_codes", "create_proposed_codes", "create_code",
                 "create_category", "rename_code", "rename_category",
                 "recolor_code", "move_code_to_category", "move_category",
@@ -232,7 +236,7 @@ class TestTheIntroduction:
             "**Write** memos, annotations and a research journal": [
                 "set_memo", "add_annotation", "add_journal_entry"],
             "**Compare two coders**": ["compare_coders"],
-            "**Replace participants' names** in text already coded": [
+            "**Replace participants' names**, even in coded text": [
                 "pseudonymise_source"],
             "**Export** the codebook, a coding report, coding counts and the "
             "case-by-code matrix, as CSV, text or Markdown": [
@@ -261,7 +265,7 @@ class TestTheIntroduction:
         # sits after what you can do, with the download and its date
         # v0.14.2 (the owner's ruling of 7 October 2026): the gap is
         # Exegete's, and QualCoder is for a study that needs it now
-        needs = _between(_what_you_can_do(), "**Not in Exegete yet**",
+        needs = _between(_what_you_can_do(), "**Not in Exegete yet.**",
                          "**The aim**")
         # v0.14.3: documents come in through Exegete, and a
         # whole file opens for reading on the researcher's screen, so
@@ -269,21 +273,24 @@ class TestTheIntroduction:
         # v0.15.2, the opening texts: the list made whole against the
         # tools (below), QualCoder offered as the choice for what Exegete
         # does not do yet (ruling 102)
-        assert ("**Not in Exegete yet**, and done in QualCoder for now: "
-                "bringing in images, audio and video; coding them, or an "
-                "area of a PDF page; coding by selecting text yourself; "
-                "graphs; most reports; importing a REFI-QDA file; nesting an "
-                "existing code under another code; deleting a case, an "
-                "attribute or a journal entry; changing a journal entry, "
-                "setting an attribute on one, or renaming an attribute; "
-                "linking part of a file to a case, or taking a file out of "
-                "one. If your study needs any of these now, you may want "
-                "QualCoder from the start.") in needs
+        # v0.15.2, the readability reading: the same list, a sentence to
+        # each kind of thing, and QualCoder offered once, after it
+        assert ("**Not in Exegete yet.** It cannot bring in or code images, "
+                "audio and video, or code an area of a PDF page or text you "
+                "select yourself. It lacks graphs and most reports. It does "
+                "not import a REFI-QDA file from another program, or nest an "
+                "existing code under another code. It cannot delete a case, "
+                "an attribute or a journal entry, rename an attribute, "
+                "change a journal entry or set an attribute on one. Nor can "
+                "it link part of a file to a case, or take a file out of "
+                "one. QualCoder, if you use it, can do them. If your study "
+                "needs any of these now, you may want QualCoder from the "
+                "start.") in needs
         for gone in ("documents other than text", "Word, PDF",
                      "coding highlighted", "in development"):
             assert gone not in needs, gone
         assert "recommended from the start" not in needs
-        assert "You do not need QualCoder to start" in _opening()
+        assert "You do not need QualCoder, either to start" in _opening()
         assert "lists everything" not in needs
         # Text arrives as content in the call, never as a file path
         import inspect
@@ -315,8 +322,8 @@ class TestTheIntroduction:
         assert aim in opening
         # Stated as an aim, straight after the list of what Exegete does
         # not do yet, so that it reads as a direction, not yet a fact
-        assert opening.index("**Not in Exegete yet**") < opening.index(aim)
-        assert ("your project is a folder on your computer, kept in "
+        assert opening.index("**Not in Exegete yet.**") < opening.index(aim)
+        assert ("Your project is a folder on your computer, kept in "
                 "QualCoder's format and conventions, so you can work on it "
                 "in either program, one at a time") in _opening()
 
@@ -341,9 +348,11 @@ class TestTheReadmesRoute:
         # test_install_says_what_remote_needs_in_openais_words and
         # test_openais_words_for_choosing_codex)
         # v0.15.2, the opening texts: the route named, and what it takes
-        assert ("These can start Exegete too, by the Terminal route (a few "
-                "typed commands; Python 3.11 or newer), though ChatGPT in a "
-                "browser cannot.") in section
+        # (the readability reading: the route said in words, then the
+        # browser, a sentence each)
+        assert ("These can start Exegete too, by the Terminal route: a few "
+                "commands typed in a Terminal window, with Python 3.11 or "
+                "newer. ChatGPT in a browser cannot.") in section
         assert "INSTALL.md#chatgpts-desktop-app-and-codex-experimental" \
             in section
         assert "cannot use such tools at all" not in section
@@ -390,9 +399,9 @@ class TestTheReadmesRoute:
                       "nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-"
                       "app-and-codex-experimental), which make the app ask "
                       "before every change Exegete makes.",
-                      "Experimental: written from OpenAI's documentation, "
-                      "read on 30 September 2026, and not tried by this "
-                      "project."):
+                      "This route is Experimental: we wrote it from "
+                      "OpenAI's documentation, read on 30 September 2026, and "
+                      "have not tried it."):
             assert words in section, words
         # It sits in "Start here", after the one-click route
         start = _between(_flat("README.md"), "## Start here",
@@ -408,7 +417,15 @@ class TestTheReadmesRoute:
     def test_where_your_data_goes_names_openai(self):
         data = _between(_flat("README.md"), "## Where your data goes",
                         "## Start here")
-        assert "OpenAI for ChatGPT's desktop app and Codex" in data
+        # (v0.15.2, the readability reading: "In short" no longer lists
+        # the providers, which the table under it gives for each
+        # assistant; the fact is the table's row)
+        assert ("| **ChatGPT's desktop app and Codex** (Experimental) |"
+                in data)
+        chatgpt_row = data[data.index("| **ChatGPT's desktop app and "
+                                      "Codex**"):]
+        chatgpt_row = chatgpt_row[:chatgpt_row.index(" | **LM Studio**")]
+        assert "| OpenAI |" in chatgpt_row
         # v0.14.2, the README review: the providers' words moved to
         # PRIVACY.md, which quotes them with their addresses; the README
         # keeps why the settings matter, in plain words, before them
@@ -1483,14 +1500,16 @@ class TestAssistantsOwnFileAccess:
         for words in ("1. **Computer use** lets Claude see your screen and "
                       "use other apps. You can keep computer use off, in "
                       "Settings, General.",
+                      # (the readability reading: the aside a sentence
+                      # of its own, and each suggestion one)
                       "2. **Connected folders and extensions.** Claude reads "
                       "a connected folder by itself, and another extension "
                       "that reads files can reach your project too. You "
-                      "could keep the folders that hold your projects or "
-                      "transcripts unconnected (home folder, Documents or a "
-                      "whole drive included; connected folders may be listed "
-                      "under \"Trusted folders\"), and add no other "
-                      "extension that reads files."):
+                      "could leave unconnected any folder that holds your "
+                      "projects or transcripts, your home folder, Documents "
+                      "or a whole drive included. Connected folders may be "
+                      "listed under \"Trusted folders\". You could also add "
+                      "no other extension that reads files."):
             assert words in listed, words
         assert "Do not" not in listed
         assert ("| Codex: yes, well beyond its folder, without asking, "
@@ -1857,7 +1876,7 @@ class TestTheSmallerPoints:
         assert ("Claude reads a connected folder by itself, and another "
                 "extension that reads files can reach your project too.") \
             in _readme_data()
-        assert "and add no other extension that reads files." in \
+        assert "You could also add no other extension that reads files." in \
             _readme_data()
         one_click = _between(_flat("README.md"),
                              "### Claude Desktop, with one click",
@@ -1870,11 +1889,11 @@ class TestTheSmallerPoints:
         # v0.14.2, the README's first round of checks: a link to the five
         # checks, as the last of the checks after installing
         # v0.15.2, the opening texts: the check's paragraph ends with it
-        assert ("Before participants' data, go through [the five checks]"
-                "(https://github.com/nicotem/exegete#where-your-data-goes), "
-                "which keep your files out of Claude's reach and training "
-                "off.") in one_click
-        assert ("connected folders may be listed under \"Trusted "
+        assert ("Before you use participants' data, go through [the five "
+                "checks](https://github.com/nicotem/exegete#where-your-data-"
+                "goes), which keep your files out of Claude's reach and "
+                "training off.") in one_click
+        assert ("Connected folders may be listed under \"Trusted "
                 "folders\"") in _readme_data()
         assert "also check two things" not in one_click
         # "Trusted folders" is Anthropic's word, as PRIVACY.md quotes it

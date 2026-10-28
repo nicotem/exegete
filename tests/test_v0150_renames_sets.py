@@ -607,8 +607,10 @@ class TestTheDocuments:
         # v0.15.1: the switch, by its title, left off as it comes; the
         # smaller set, `core`, cannot create a project
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
-        assert (f"Leave its switch \"{switch}\" off, as it comes: the "
-                f"smaller set, `core`, cannot create a project") in readme
+        # (v0.15.2, the readability reading: the reason a sentence of its
+        # own)
+        assert (f"Leave its switch \"{switch}\" off, as it comes. The "
+                f"small set, `core`, cannot create a project") in readme
         assert ("whose default tool set, `full`, can create a project too "
                 "([INSTALL.md]") in readme
         # (v0.15.2, the opening texts: the comparison table gave way, and

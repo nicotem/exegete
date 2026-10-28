@@ -75,11 +75,12 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     flat = " ".join(readme.split())
     # Since the owner's ruling of 7 October 2026: what is not in Exegete
     # yet, and QualCoder from the start only for a study that needs it
-    assert "You do not need QualCoder to start" in flat
+    assert "You do not need QualCoder, either to start" in flat
     # v0.14.3: documents come in through import_documents,
     # so the list starts with images, audio and video
-    assert ("**Not in Exegete yet**, and done in QualCoder for now: "
-            "bringing in images, audio and video;") in flat
+    # (v0.15.2, the readability reading: the list in sentences)
+    assert ("**Not in Exegete yet.** It cannot bring in or code images, "
+            "audio and video,") in flat
     assert ("If your study needs any of these now, you may want "
             "QualCoder from the start.") in flat
     # v0.14.3: neither document says any longer that only
@@ -91,8 +92,10 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
             " ".join(document.split())
     # (v0.15.2, the opening texts: the comparison table gave way to the
     # list of what Exegete brings in, and of what is not in it yet)
-    assert ("**Bring in documents** from your computer (Word, OpenDocument, "
-            "RTF, text, Markdown, web pages, subtitles;") in flat
+    # (the readability reading: the kinds of document, then where Exegete
+    # reads them)
+    assert ("**Bring in documents**: Word, OpenDocument, RTF, text, "
+            "Markdown, web pages and subtitles, and PDF and EPUB") in flat
     assert "Or you can import a document in QualCoder" not in flat
     one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
                             flat.index("### ChatGPT's desktop app")]

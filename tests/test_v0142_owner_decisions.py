@@ -558,8 +558,10 @@ def test_the_readme_says_what_it_costs():
             "least use.",
             # (the page: "Pro gives you at least 5x more usage per 5-hour
             # session than Free.")
+            # (v0.15.2, the readability reading: Max and the seat plans a
+            # sentence of their own)
             "Pro, at $20 a month ($17 billed yearly), gives at least five "
-            "times as much, Max is from $100, and Team and Enterprise go by "
+            "times as much. Max is from $100, and Team and Enterprise go by "
             "the seat.",
             # claude.com/pricing, 28 October 2026: "Every plan has usage
             # limits that reset on a rolling five-hour session window, and

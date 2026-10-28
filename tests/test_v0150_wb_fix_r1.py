@@ -433,9 +433,11 @@ class TestTheDocumentsOtherPoints:
         stays = stays[:stays.index("## Start here")]
         # (v0.15.2, the opening texts: the list's items end without a
         # semicolon)
+        # (the readability reading: how long, said in words: until the
+        # import, or a while if none follows, PRIVACY.md giving the time)
         assert ("- the texts an import's preview read, kept in Exegete's own "
-                "folder until the import (PRIVACY.md says for how long)"
-                ) in stays
+                "folder until the import, or for a while if none follows "
+                "(PRIVACY.md says how long)") in stays
 
     def test_where_the_settings_are(self):
         # v0.15.1, the small corrections: the restart a change there needs
@@ -443,10 +445,12 @@ class TestTheDocumentsOtherPoints:
         readme = _flat(_read("README.md"))
         # (v0.15.2, the opening texts: the switch by its title, and the
         # restart said between the two places)
+        # (the readability reading: the restart and the other routes a
+        # sentence each)
         assert ("In Claude Desktop, both names and the switch \"I use "
                 "QualCoder on this computer\" are in Settings, Extensions, "
-                "Exegete (after changing one, quit Claude Desktop and open it "
-                "again); elsewhere, see [INSTALL.md](https://github.com/"
+                "Exegete. After changing one, quit Claude Desktop and open it "
+                "again. Elsewhere, see [INSTALL.md](https://github.com/"
                 "nicotem/exegete/blob/main/INSTALL.md#environment-variables-"
                 "the-server-reads)") in readme
 

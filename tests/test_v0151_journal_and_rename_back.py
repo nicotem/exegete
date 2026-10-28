@@ -371,10 +371,11 @@ def test_the_readme_and_the_changelog_say_so():
     readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
     # (v0.15.2, the opening texts: the list of what is not in Exegete yet,
     # which replaced the table)
-    missing = readme[readme.index("**Not in Exegete yet**"):]
+    missing = readme[readme.index("**Not in Exegete yet.**"):]
     missing = missing[:missing.index("**The aim**")]
-    assert ("changing a journal entry, setting an attribute on one, or "
-            "renaming an attribute") in missing
+    # (the readability reading: the list in sentences)
+    assert ("rename an attribute, change a journal entry or set an attribute "
+            "on one") in missing
     log = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
     unreleased = _flat(log[log.index("## [0.15.1-alpha]"):
                            log.index("## [0.15.0-alpha]")])

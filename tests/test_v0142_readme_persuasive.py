@@ -303,8 +303,11 @@ def _tools(mode="full"):
 # limit is raised by that and no more: 41,081.
 # v0.15.2, the opening texts: the README rewritten to the writing
 # checklist within its budget of 500 lines, 32,239 characters, which is
-# the limit now; a sentence added later raises it by its own length
-README_LIMIT = 32_239
+# the limit now; a sentence added later raises it by its own length.
+# The readability reading of 28 October: the same facts one to a sentence,
+# and the tools, a file's location and what the figures do not measure
+# said in words, 378 characters more within the same 500 lines
+README_LIMIT = 32_617
 README_LINES = 500
 
 
@@ -369,11 +372,12 @@ def test_the_architecture_diagram():
     true of the code."""
     readme = _flat(_read("README.md"))
     opening = readme[:readme.index("## What you can do")]
+    # (v0.15.2, the readability reading: a sentence to each fact)
     for words in ("runs on your computer, with no window and no AI of its "
-                  "own: your assistant, such as Claude Desktop, starts it",
-                  "what the assistant reads goes to the AI provider, the "
+                  "own. Your assistant, such as Claude Desktop, starts it",
+                  "What the assistant reads goes to the AI provider, the "
                   "company that runs its AI model, unless that model runs on "
-                  "your own computer, and some assistants open files by "
+                  "your own computer. Some assistants also open files by "
                   "themselves",
                   "Your project is kept in QualCoder's format"):
         assert words in opening, words
@@ -386,8 +390,8 @@ def test_the_architecture_diagram():
     # reads read-only, writes after a backup, one program at a time
     advanced = _flat(_section("For advanced users", "What comes next"))
     assert ("It reads a project's SQLite database read-only. Each tool that "
-            "writes to it opens its own connection, after a backup Exegete "
-            "takes itself") in advanced
+            "writes to the database opens its own connection, after a backup "
+            "Exegete takes itself") in advanced
     assert "**One program at a time.**" in readme
     assert "?mode=ro" in _read("src/exegete/database.py")
 
@@ -396,16 +400,17 @@ def test_the_path_of_a_coding():
     # v0.15.2, the opening texts: the path drawn as a diagram is said in
     # "How it works", each step a behaviour of the server
     section = _flat(_section("How it works", "Where your data goes"))
+    # (v0.15.2, the readability reading: one step to a sentence)
     for words in ("Suggested codings and proposed codes wait in a review "
-                  "list outside the project, and the assistant is told to "
-                  "show you each passage with its reading and its reason.",
-                  "Once you approve them, Exegete checks them again, takes a "
-                  "backup, then writes every approved coding, or none, under "
-                  "the AI coder name you chose.",
+                  "list outside the project. The assistant is told to show "
+                  "you each passage with its label and its reason.",
+                  "Once you approve them, Exegete checks them again and takes "
+                  "a backup. Then it writes every approved coding, or none, "
+                  "under the AI coder name you chose.",
                   "check that the counts (approved, rejected, pending) match "
                   "what you said"):
         assert words in section, words
-    assert "each quoting the text word for word, which Exegete checks" in \
+    assert "quotes the text word for word, which Exegete checks" in \
         _flat(_section("What you can do", "How it works"))
     # each step a behaviour of the server
     status = inspect.signature(server.update_suggestion_status).parameters
@@ -433,8 +438,9 @@ def test_the_documents_are_linked_from_the_page():
             in readme, name
     # QualCoder's figure is not Cohen's kappa (coder_comparison.py says
     # so), so the page does not call both "kappas"
-    assert ("with the figure QualCoder labels Kappa and Cohen's kappa side "
-            "by side") in _flat(readme)
+    # (the readability reading: Cohen's kappa beside QualCoder's figure)
+    assert ("with Cohen's kappa beside the figure QualCoder labels "
+            "Kappa") in _flat(readme)
     assert "is NOT Cohen's kappa" in _read("src/exegete/coder_comparison.py")
 
 
@@ -497,9 +503,11 @@ def test_the_example_shows_the_steps_the_software_takes():
         server.import_text_file)
     # the two labels say what they mean where the reader meets the list
     # of features (the definitions of 27 September, the server's own)
-    assert ("with the assistant's reading: explicit (the passage states what "
-            "the code names) or interpretive (the code rests on what it "
-            "implies).") in _flat(readme)
+    # (v0.15.2, the readability reading: the label in a sentence, in the
+    # server's own words for each)
+    assert ("The assistant labels it explicit, when the passage states what "
+            "the code names, or interpretive, when the code rests on what "
+            "the passage implies.") in _flat(readme)
     grounding = " ".join(inspect.getsource(server).split())
     assert "where the passage states what the code names" in grounding
     assert ("where the code rests on what the passage implies rather than "
@@ -641,10 +649,10 @@ def test_the_assistants_table():
         "A route to consider for particular uses, such as a first pass over "
         "sensitive material, or work an agreement confines to one computer. "
         "We expect a local model to do the analysis less well than the "
-        "hosted models, and do not know by how much: we have evaluated "
-        "neither with Exegete. Use the `core` tool set, since local models "
-        "cope less well with many tools, and no other server or plugin that "
-        "reads files")
+        "hosted models. We do not know by how much, since we have evaluated "
+        "neither with Exegete. Its recipe uses the `core` tool set, since "
+        "local models cope less well with many tools, and adds no other "
+        "server or plugin that reads files")
     assert "**This one too**" not in section
     assert ("LM Studio's chat with Exegete and no other server or plugin "
             "that reads files") in privacy
@@ -693,10 +701,13 @@ def test_the_assistants_table():
     # (ruling 108: the sentence on organisational accounts stays, with
     # its reason; INSTALL.md's table of routes is linked from "What it
     # costs")
+    # (v0.15.2, the readability reading: the same sentence and reason,
+    # each clause a sentence, the owner's words kept)
     assert ("4. **Your account, not Exegete, sets the terms.** An "
             "institution's agreement with the AI provider sets the terms for "
-            "its data, a personal account the consumer terms, so "
-            "institutions should prefer organisational accounts.") in flat
+            "its data, and a personal account comes under the consumer "
+            "terms. So institutions should prefer organisational "
+            "accounts.") in flat
     assert ("[INSTALL.md, \"Choosing your AI host\"](https://github.com/"
             "nicotem/exegete/blob/main/INSTALL.md#choosing-your-ai-host-"
             "data-governance-options-experimental)") in _flat(_read("README.md"))
@@ -760,18 +771,20 @@ def test_the_tool_set_table():
     # facts; v0.15.2: Python 3.11 or newer)
     flat = _flat(section)
     # (v0.15.2, the opening texts: the host the subject)
+    # (the readability reading: what is measured a sentence of its own)
     assert ("A host sends every tool's definition (name, description and "
-            "arguments) with each request, which takes that much of a "
-            "model's context: measured on Python 3.13 with the libraries in "
-            "`uv.lock`, at four characters a token, and about five per cent "
-            "more on 3.11 and 3.12.") in flat
+            "arguments) with each request, using that much of a model's "
+            "context. The figures were measured on Python 3.13 with the "
+            "libraries in `uv.lock`, at four characters a token, and are "
+            "about five per cent more on 3.11 and 3.12.") in flat
     # and where the exact figures are (v0.15.2, the snapshot)
     # (its fix round 1: what the folder holds is bounded, and the
     # answers, which carry the project's texts, are said not to be in it)
     assert ("[docs/snapshot/](https://github.com/nicotem/exegete/tree/main/"
-            "docs/snapshot) gives the exact figures and what Exegete sends "
-            "the assistant before a project is open, with the brief, but not "
-            "the tools' answers, which carry your project's texts.") in flat
+            "docs/snapshot) gives the exact figures, and what Exegete sends "
+            "the assistant before a project is open, the brief included. It "
+            "leaves out the tools' answers, which carry your project's "
+            "texts.") in flat
 
 
 # ---------------------------------------------------------------------------
@@ -809,12 +822,14 @@ def test_the_advanced_section_rests_on_the_code():
                   # v0.15.1: but its audio and video folders
                   "Each backup, kept next to the project, copies its folder "
                   "without the audio and video folders, which a restore "
-                  "leaves as they are; `prune_backups` clears old backups.",
+                  "leaves as they are. `prune_backups` clears old backups.",
                   # (v0.15.1, the backup's moment: Exegete takes the
                   # backup itself, whatever the call asks)
+                  # (v0.15.2, the readability reading: the refusal a
+                  # sentence of its own)
                   "It reads a project's SQLite database read-only. Each tool "
-                  "that writes to it opens its own connection, after a "
-                  "backup Exegete takes itself, and refuses while the "
+                  "that writes to the database opens its own connection, "
+                  "after a backup Exegete takes itself. It refuses while the "
                   "project's lock file is active, as it is while QualCoder "
                   "3.8.2 has the project open or another conversation using "
                   "Exegete is writing to it.",
@@ -851,10 +866,11 @@ def test_the_advanced_section_rests_on_the_code():
     # Claude Code's limits, whose figures are INSTALL.md's (its version
     # 2.1.296 and after; tests/test_v0150_wb_fix_r2.py pins the long
     # description), and what follows from them
-    assert ("The rules that matter come first in each description, within "
-            "2,048 characters, a few named exceptions apart, since a host "
-            "may keep only the start (INSTALL.md gives Claude Code's "
-            "figures).") in beyond
+    # (the readability reading: the reason first, then the rule)
+    assert ("A host may keep only the start of a description, so the rules "
+            "that matter come within its first 2,048 characters, a few named "
+            "exceptions apart (INSTALL.md gives Claude Code's figures).") \
+        in beyond
     install = _flat(_read("INSTALL.md"))
     for figure in ("16,384", "4,096", "2.1.296"):
         assert figure in install, figure

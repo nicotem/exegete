@@ -673,10 +673,13 @@ class TestTheDocuments:
 
     def test_readme_and_the_guides(self):
         # (v0.15.2, the opening texts: the same fact, reworded)
-        assert ("Before its first write, it asks for the AI coder name, kept "
-                "per project, under which Exegete writes what is done "
-                "through the conversation, unless the project was made with "
-                "that name in Exegete's settings.") in _doc("README.md")
+        # (the readability reading: who asks, and when; the exception a
+        # sentence of its own)
+        assert ("Before Exegete first writes to the project, the assistant "
+                "asks for the AI coder name, kept per project, under which "
+                "Exegete writes what is done through the conversation. It "
+                "does not ask if the project was made with that name in "
+                "Exegete's settings.") in _doc("README.md")
         guide = _doc("AI_CODING_GUIDE.md")
         assert ("which you choose: in Exegete's settings (\"AI coder name\" "
                 "in the extension, `EXEGETE_AI_CODER_NAME` on other routes), "

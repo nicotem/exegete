@@ -450,8 +450,10 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
         + install.count("library Exegete installs for PDFs reports its use") \
         == 2
     readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
-    assert ("On Windows x64, a library it installs for PDFs also reports its "
-            "use, with nothing from your projects") in readme
+    # (v0.15.2, the readability reading: Exegete named, after a sentence
+    # whose subject is the check)
+    assert ("On Windows x64, a library Exegete installs for PDFs also reports "
+            "its use, with nothing from your projects") in readme
     assert "\"A library's usage reports\", under \"How your data flows\"" \
         in reading
 

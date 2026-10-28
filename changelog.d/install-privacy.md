@@ -13,8 +13,11 @@
   PyPI and the source, Claude Desktop set up by hand, Claude Code, LM
   Studio, ChatGPT's desktop app and Codex, the environment variables,
   updating, coming from qualcoder-mcp and uninstalling, moved from
-  INSTALL.md whole. INSTALL.md keeps a pointer for each section that
-  moved, so that a link to one of them still arrives.
+  INSTALL.md whole. INSTALL.md keeps a pointer for each moved section
+  that a text in the repository, or in a release since 0.14.1, links to
+  or names, so that those links still arrive. A link to a smaller
+  section of the earlier INSTALL.md, such as "Python Not Found", now
+  arrives at the top of the page.
 - **PRIVACY.md opens with where your data goes, in short**, followed by
   the checklist to read before using real participants' data, which
   moved up

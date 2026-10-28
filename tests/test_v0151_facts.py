@@ -1069,6 +1069,10 @@ def _read(text: str, start: int, end: int, kind: str,
 
 
 FENCE = r"`{3,}|~{3,}"
+# A line that is wholly a mark of scripts/doc_commands.py (v0.15.2), its
+# indentation already taken off: read as if it were not there, so that a
+# block keeps the paragraphs beside it
+DOC_COMMANDS_MARK = r"<!--\s*ci:.*-->"
 # The elements that end a paragraph in HTML
 BLOCK_ELEMENT = (r"<(?P<end>/?)(?P<tag>p|pre|li|h[1-6]|ul|ol|div|main|body|"
                  r"html|head|title|header|footer|section|nav|table|tr|td|th|"
@@ -1091,6 +1095,14 @@ def _text_paragraphs(document: Document) -> List[Paragraph]:
 
     index = 0
     while index < len(flat):
+        if re.fullmatch(DOC_COMMANDS_MARK, flat[index]):
+            # it ends an open paragraph, as a blank line does, and is none
+            if first is not None:
+                found.append(_read(text, starts[first], end_of(index - 1),
+                                   "text"))
+                first = None
+            index += 1
+            continue
         fence = re.match(FENCE, flat[index])
         if fence or not flat[index].strip():
             if first is not None:
@@ -2931,6 +2943,12 @@ COMMAND_SENTENCES = (
      "\n\nPDF and EPUB need the optional part.", "wrong"),
     ("```bash\n# for PDF and EPUB, add the part\nuv tool install exegete"
      "\n```", "right"),
+    # a mark of scripts/doc_commands.py between the paragraph and its
+    # block, at the block's indentation, is read as if it were not there
+    ("PDF and EPUB need the optional part:\n\n<!-- ci: run source -->\n"
+     "```bash\npip install -e .\n```", "right"),
+    ("1. PDF and EPUB need the optional part:\n\n   <!-- ci: run dev -->\n"
+     "   ```bash\n   pip install -e .\n   ```", "right"),
     # a command over two lines
     ('as the steps pin one (`uv tool install\n--force "exegete==1.0"`)',
      "wrong"),

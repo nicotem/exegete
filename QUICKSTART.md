@@ -221,9 +221,9 @@ export EXEGETE_PROJECT_PATH="/path/to/your/project.qda"
 python -m exegete.server
 ```
 
-Exegete should start without errors, then wait for an app to use it.
-To stop it, press Ctrl+C or close the Terminal window. After a Ctrl+C,
-it prints one more line, ending in `Stopped by Ctrl+C`.
+Exegete should start without errors, then wait for an app that is not
+there. To stop it, press Ctrl+C or close the Terminal window. After a
+Ctrl+C, it prints one more line, ending in `Stopped by Ctrl+C`.
 
 ### Common errors
 

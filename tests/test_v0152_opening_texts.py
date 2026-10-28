@@ -8,7 +8,9 @@ readers, 28 October 2026).
   error text. The line QUICKSTART quotes is the one Exegete prints as
   it stops; that is checked once the branch holds the Ctrl+C fix
   (src/exegete/standard_input.py, and `_ExegeteMCP.run` in server.py),
-  which the integration branch has and the merge brings.
+  which the integration branch has and the merge brings. Started that
+  way, it waits for an app that is not there, as the same note says:
+  each app starts a copy of its own.
 - README, reading in the browser: the file's text stays out of the
   conversation, since open_file_for_reading answers with the page's
   place and counts.
@@ -16,10 +18,15 @@ readers, 28 October 2026).
   all of it but its audio and video, so they hold the originals, any
   names list and the text from before the replacement.
 - README, what stays on the computer: a preview's kept texts stay until
-  the import, or until the first start or import after their hour.
+  the import, or until the first start or import after their 65 minutes,
+  the figure given exactly since the reader acts on it (the second fix
+  round).
 - README, what it costs: the section the link names compares the other
   routes, OpenAI's apps and LM Studio among them, and their recipes give
-  OpenAI's plans, dated, and LM Studio's memory.
+  OpenAI's plans, dated, and LM Studio's memory, all in the document the
+  link names. A section moved to another document, with only a pointer
+  left at its old anchor, fails the test until the README names the
+  document that holds it (the second fix round).
 """
 
 import inspect
@@ -79,6 +86,15 @@ def test_quickstart_stops_exegete_with_one_ctrl_c():
         assert second not in stop, (second, stop)
 
 
+def test_quickstart_says_no_app_uses_exegete_started_by_hand():
+    stop = _stop_paragraph()
+    # Started by hand, Exegete reads the Terminal's input, which no app
+    # can reach, since each app starts a copy of its own: the note it
+    # prints there says so
+    assert "host that is not there" in _flat(server.TTY_NOTICE)
+    assert "wait for an app that is not there" in stop, stop
+
+
 def test_quickstart_quotes_the_line_exegete_prints_as_it_stops():
     if not (REPO / "src" / "exegete" / "standard_input.py").exists():
         pytest.skip("the Ctrl+C fix of feat/v0152 (standard_input.py) is "
@@ -125,32 +141,27 @@ def test_readme_names_the_backups_after_names_are_replaced():
 def test_readme_says_how_long_a_previews_texts_stay():
     stays = _between(_flat(_read("README.md")),
                      "**What stays on your computer**", "## Start here")
-    assert ("- the whole texts an import's preview read, before names are "
-            "replaced, kept in Exegete's own folder until the import, or "
-            "else until Exegete starts or imports again after an hour, "
-            "which can be days") in stays
-    # The hour: the preview's own, with its five minutes for a clock
-    # that differs; the sweep runs at a start and at an import
-    assert 60 * 60 <= kept_texts.ENTRY_LIFETIME < 2 * 60 * 60
+    found = re.search(
+        r"- the whole texts an import's preview read, before names are "
+        r"replaced, kept in Exegete's own folder until the import, or else "
+        r"until Exegete starts or imports again after (\d+) minutes, which "
+        r"can be days", stays)
+    assert found, stays
+    # The time, given exactly since the reader acts on it: the preview's
+    # hour and its five minutes for a clock that differs; the sweep runs
+    # at a start and at an import
+    assert int(found.group(1)) * 60 == kept_texts.ENTRY_LIFETIME, (
+        found.group(1), kept_texts.ENTRY_LIFETIME)
     assert _read("src/exegete/server.py").count("kept_texts.sweep()") >= 2
 
 
-def _install_sections() -> dict:
-    """Each "## " section of the installation documents by its anchor. A
-    section in both keeps the longer: a document that moved a section
-    elsewhere keeps only a pointer to it (INSTALL.md and the Terminal
-    guide the next piece makes, docs/installing-from-the-terminal.md)."""
+def _sections(name: str) -> dict:
+    """Each "## " section of one document, by its anchor (the first of
+    two headings alike, as GitHub gives the plain anchor to the first)."""
     found = {}
-    for name in ("INSTALL.md", "docs/installing-from-the-terminal.md"):
-        path = REPO / name
-        if not path.exists():
-            continue
-        text = "\n" + path.read_text(encoding="utf-8")
-        for part in text.split("\n## ")[1:]:
-            heading, _, body = part.partition("\n")
-            body = _flat(body)
-            if len(body) > len(found.get(_slug(heading), "")):
-                found[_slug(heading)] = body
+    for part in ("\n" + _read(name)).split("\n## ")[1:]:
+        heading, _, body = part.partition("\n")
+        found.setdefault(_slug(heading), _flat(body))
     return found
 
 
@@ -158,16 +169,28 @@ def test_readme_points_to_the_routes_and_their_recipes():
     readme = _flat(_read("README.md"))
     found = re.search(
         r"Other routes, such as OpenAI's apps and LM Studio, are compared in "
-        r"\[INSTALL\.md, \"[^\"]+\"\]\(https://github\.com/nicotem/exegete/"
-        r"blob/main/INSTALL\.md#([a-z0-9-]+)\)\. Their recipes there give "
+        r"\[([^\]]+)\]\(https://github\.com/nicotem/exegete/blob/main/"
+        r"([\w./-]+\.md)#([a-z0-9-]+)\)\. Their recipes there give "
         r"OpenAI's plans and what LM Studio needs\.", readme)
     assert found, "the pointer to the routes"
-    sections = _install_sections()
-    # The table the link names compares those routes
-    routes = sections[found.group(1)]
+    label, document, anchor = found.groups()
+    # The link's words name the document it leads to, by its file's
+    # name or its title
+    title = _read(document).split("\n", 1)[0].lstrip("#").strip()
+    assert label.startswith((document, title)), (label, document, title)
+    sections = _sections(document)
+    # The section is in that document itself, not a pointer on to
+    # another: a section moved elsewhere leaves only a row at its old
+    # anchor, and the README then names the document that holds it
+    assert anchor in sections, (
+        f"{document} has no section '{anchor}' of its own: point the "
+        "README's sentence and its link at the document that holds it")
+    # The table there compares those routes
+    routes = sections[anchor]
     assert "| **OpenAI's apps**" in routes
     assert "| **Fully local models** (LM Studio" in routes
-    # and the recipes hold OpenAI's plans, dated, and LM Studio's memory
+    # and the recipes there hold OpenAI's plans, dated, and LM Studio's
+    # memory
     codex = sections["chatgpts-desktop-app-and-codex-experimental"]
     assert re.search(r"\*\*Which plans\.\*\* OpenAI's Codex pricing page "
                      r"\(<[^>]+>, read \d{1,2} \w+ \d{4}\)", codex)

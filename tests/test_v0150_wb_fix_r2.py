@@ -133,8 +133,8 @@ class TestClaudeCodesLimitsOnEveryPython:
 
     def test_a_figure_under_16384_is_warned_of(self):
         long = _long_paragraph()
-        assert ("a figure under 16,384 lowers the limit for tools found "
-                "through tool search, so it cuts more, not less") in long
+        assert (("A figure under 16,384 lowers the limit for tools found "
+                 "through tool search, so it cuts more, not less")) in long
         # v0.15.1: measured again, create_backup's line in 22
         # descriptions and pseudonymise_source's sentence on its backup
         # (v0.15.2: Python 3.11 or newer; rounded, the exact lengths in

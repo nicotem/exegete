@@ -106,9 +106,10 @@ def test_the_download_step_survives_an_early_build():
             "`.mcpb` from the newest release that has one under its "
             "Assets.") in readme
     install = " ".join(_install_part(*EXTENSION).split())
-    assert ("Take the newest release that has such a file under its Assets. "
-            "Every release of this alpha is marked Pre-release. An early "
-            "build marked \"not a release\" has no such file.") in install
+    assert (("Take the newest release that has such a file under its Assets. "
+             "Every release of this alpha is marked Pre-release, since "
+             "Exegete is still in early testing. An early build marked \"not "
+             "a release\" has no such file.")) in install
     for text in (readme, install):
         assert "the release at the top" not in text
         assert "latest release" not in text
@@ -955,13 +956,13 @@ def test_qualcoder_4_0_is_named_as_released():
     install = _flat("INSTALL.md")
     assert ("Projects made in QualCoder 3.8 or 4.0 work (project schemas "
             "v14 to v17;") in install
-    assert ("4.0 is at the top of the page, the release marked \"Latest\" "
-            "when this was checked, on 6 October 2026, and 3.8.2 just below "
-            "it. Exegete works with both, but can tell that QualCoder has a "
-            "project open only with 3.8.2, whose lock file shows it.") \
+    assert (("When this was checked, on 6 October 2026, 4.0 was at the top "
+             "of the page, marked \"Latest\", and 3.8.2 came next. Exegete "
+             "works with both. It can tell that QualCoder has a project open "
+             "only with 3.8.2, whose lock file shows it.")) \
         in install
-    assert ("for Windows, Linux and Macs with Apple Silicon (M1 or later): "
-            "QualCoder offers none for older Intel Macs") in install
+    assert (("for Windows, Linux and Macs with Apple Silicon (M1 or later). "
+             "QualCoder offers none for older Intel Macs")) in install
     tools = _flat("TOOLS.md")
     assert ("verified against QualCoder 4.0, released on 2 October 2026 "
             "(tag `4.0` at `b95e021`,") in tools

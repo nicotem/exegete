@@ -782,11 +782,11 @@ class TestTheDocuments:
         assert ("In Claude, go to Settings, Extensions, Exegete. **Look at "
                 "its settings** before your first conversation.") in install
         assert "Look at its three settings" not in install
-        assert ("- **Your coder name**: empty by default. It is the name "
-                "your own codings carry in a project, kept apart from the "
-                "AI's. Filled in, Exegete gives it to each new project it "
-                "makes, without asking, and says so; left empty, Claude asks "
-                "for it each time.") in install
+        assert (("- **Your coder name**: empty by default. It is the name "
+                 "your own codings carry in a project, kept apart from the "
+                 "AI's. If you fill it in, Exegete gives it to each new "
+                 "project it makes, without asking, and tells you. If you "
+                 "leave it empty, Claude asks for it each time.")) in install
         # the coder names, piece 3: what the AI setting now does
         # (tests/test_v0150_ai_coder_name_setting.py)
         assert ("- **AI coder name**: empty by default. It is the name "
@@ -795,9 +795,10 @@ class TestTheDocuments:
                        install.index("- **AI coder name**: empty")]
         assert ("Projects that already exist keep their coder name, or "
                 "their lack of one.") in step
-        assert ("At most 80 characters; a line break or tab, an invisible "
-                "formatting character (the joiners some scripts need are "
-                "allowed) or `#####` stops the extension from starting.") \
+        assert (("The name can be at most 80 characters long. A line break, "
+                 "a tab, an invisible formatting character or `#####` in it "
+                 "stops the extension from starting. The invisible joining "
+                 "characters that some writing systems need are allowed.")) \
             in step
         assert "already has a coder name keeps it" not in install
 

@@ -482,11 +482,10 @@ class TestTheDocuments:
                 "project: the assistant can start one in the conversation, "
                 "in a new folder, never changing an existing one.") in item
         assert "`EXEGETE_WORKSPACE`" in item
-        assert ("iCloud (Desktop and Documents) or OneDrive may sync "
-                "Documents, and a sync service can copy a project's "
-                "database and its journal separately, so a folder outside "
-                "Documents, such as `~/Exegete projects`, may suit you "
-                "better.") in item
+        assert (("iCloud (Desktop and Documents) or OneDrive may sync "
+                 "Documents. A sync service can copy a project's database "
+                 "and its journal separately, so a folder outside Documents, "
+                 "such as `~/Exegete projects`, may suit you better.")) in item
         assert "A project you have works too: a folder ending in `.qda`," \
             in item
 

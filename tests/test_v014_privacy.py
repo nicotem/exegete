@@ -733,9 +733,11 @@ class TestTheDocumentsSayTheRule:
         install = _flat("INSTALL.md")
         assert "closing that is on the list for v0.14" not in install
         assert "the SQLite error text" not in install
-        assert ("Exegete writes its own lines to the log, at the INFO "
-                "level and above. They hold no memo text and no SQLite "
-                "message") in install
+        assert (("Exegete writes its own lines to the log, at the INFO level "
+                 "and above. They carry ids, counts and the kinds of errors. "
+                 "They name no project, file, code, category, case, journal "
+                 "entry or attribute, and no path. They hold no memo text "
+                 "and no SQLite message")) in install
 
 
 # =============================================================================

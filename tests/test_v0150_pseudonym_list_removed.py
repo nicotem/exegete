@@ -376,15 +376,15 @@ class TestInstall:
         assert ("for the tools that write, answer each time, since a "
                 "remembered answer lets later calls run unasked."
                 ) in _flat(_read(GUIDE))
-        assert ("Two tools also carry `anthropic/requiresUserInteraction`, "
-                "a mark Anthropic documents for Claude Code: "
-                "`import_documents`, and `save_names_list`, which changes "
-                "the names list every later import applies. From version "
-                "2.1.199, Claude Code asks before every call of such a tool "
-                "in every permission mode, auto and `bypassPermissions` "
-                "included, offers no \"don't ask again\", lets no allow rule "
-                "skip it, and in `dontAsk` refuses it. Earlier versions "
-                "ignore the mark.") in install
+        assert (("Two tools also carry `anthropic/requiresUserInteraction`, "
+                 "a mark Anthropic documents for Claude Code: "
+                 "`import_documents`, and `save_names_list`, which changes "
+                 "the names list every later import applies. From version "
+                 "2.1.199, Claude Code asks before every call of such a tool "
+                 "in every permission mode, auto and `bypassPermissions` "
+                 "included. It offers no \"don't ask again\", and lets no "
+                 "allow rule skip it. In `dontAsk` mode, it refuses the "
+                 "call. Earlier versions ignore the mark.")) in install
         assert ("`check_for_updates` is not marked read-only: it records "
                 "each check") in install
         assert ("(here, `import_documents` and `save_names_list`) is asked "

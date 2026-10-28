@@ -386,8 +386,8 @@ class TestTheDocuments:
             encoding="utf-8").split())
         item = flat[flat.index("- **Folder for projects**"):]
         item = item[:item.index("- **Your coder name**")]
-        assert ("The default, `~/Exegete projects` (a folder called "
-                "\"Exegete projects\" in your home folder)") in item
+        assert (("The default is `~/Exegete projects`, a folder called "
+                 "\"Exegete projects\" in your home folder")) in item
         # v0.15.2: the account of the update is told once, in "Updating"
         item = flat[flat.index("- On the maintainer's Mac on 19 October "
                                "2026"):]
@@ -404,7 +404,7 @@ class TestTheDocuments:
         for folder in (names.EXTENSION_WORKSPACE_FOLDER,
                        names.OLD_EXTENSION_WORKSPACE_FOLDER):
             assert "~/" + folder in server._USUAL_SEARCH_PLACES, folder
-        for words in (f"a setting left at the earlier default, {earlier}",
+        for words in (f"had been left at the earlier default, {earlier}",
                       "No project is moved", "both folders are searched",
                       f"set it back to {earlier}"):
             assert words in item, words

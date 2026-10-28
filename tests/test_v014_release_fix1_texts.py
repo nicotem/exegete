@@ -111,9 +111,11 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     one_click = install[install.index("## The settings page"):
                         install.index("## The first start")]
     # after 0.15.1 the switch alone chooses the set in the extension
-    assert ("Off, Exegete offers every tool (the set called `full`), "
-            "creating a new project included; on, the smaller set `core`, "
-            "for local models, which cannot create a project.") in \
+    assert (("With it off, Exegete offers every tool, the set called `full`, "
+             "creating a new project included. With it on, Exegete offers "
+             "the smaller set called `core`, meant for local models, the AI "
+             "models that run on your own computer. The `core` set cannot "
+             "create a project.")) in \
         " ".join(one_click.split())
     assert "`lifecycle`" not in one_click
     install = _doc("INSTALL.md")
@@ -136,10 +138,11 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     # come in through Exegete, so the list starts with images, audio and
     # video
     flat_needs = " ".join(needs.split())
-    assert ("**QualCoder, optional.** Today it does what Exegete does not "
-            "do yet: bringing in images, audio and video") in flat_needs
-    assert ("Since 0.14.3, Exegete brings in documents itself with "
-            "`import_documents`") in flat_needs
+    assert (("**QualCoder, optional.** QualCoder is free software for "
+             "qualitative analysis. Today it does what Exegete does not do "
+             "yet: bringing in images, audio and video")) in flat_needs
+    assert (("Documents need no other program: since 0.14.3, Exegete brings "
+             "in documents itself with `import_documents`")) in flat_needs
     # The facts it rests on: the extension's tool set defaults to full
     # (after 0.15.1 its switch, off by default, and no tool set passed),
     # which has create_project since 0.15.0 on every route (not core), and

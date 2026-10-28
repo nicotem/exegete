@@ -269,9 +269,10 @@ suggestion.
 analysis through the conversation, in the app you use with it: Claude
 Desktop with a Claude account, for example, needs no key. Exegete only
 stores and applies what is marked approved, and cannot see who
-approved it ("How it works", above). INSTALL.md describes the routes
-that use an API key, and a route in which the model runs on your own
-computer, under "Choosing your AI host".
+approved it ("How it works", above). The guide to installing from the
+Terminal, [docs/installing-from-the-terminal.md](docs/installing-from-the-terminal.md),
+describes the routes that use an API key, and a route in which the
+model runs on your own computer, under "Choosing your AI host".
 
 **Can the assistant create new codes?** Yes, with your approval, in
 four steps:

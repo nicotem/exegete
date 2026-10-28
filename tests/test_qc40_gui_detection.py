@@ -660,8 +660,19 @@ class TestProcessScanCallersAreDocumented:
         privacy = (_ROOT / "PRIVACY.md").read_text(encoding="utf-8")
         bullet = " ".join(_paragraph_after(
             privacy, "**Process listing.**").split())
-        assert ("the tools that report a `qualcoder_gui_signals` field "
-                "(TOOLS.md lists them)") in bullet
+        # (the readers, 28 October 2026: create_project reports the
+        # field without the scan, and five tools scan only when they work
+        # out the project's history, so the pointer says which, and that
+        # only a count reaches the conversation)
+        assert ("Most of the tools that report a `qualcoder_gui_signals` "
+                "field look at it, but `create_project` reports the field "
+                "without looking.") in bullet
+        assert ("A few other tools look at it only when they work out the "
+                "project's history with QualCoder.") in bullet
+        assert "TOOLS.md names these tools, and when each one looks." \
+            in bullet
+        assert ("Whichever tool looks, only the number of matches is "
+                "reported into the conversation.") in bullet
         assert "(today:" not in bullet
 
     def test_tools_md_names_every_caller(self):

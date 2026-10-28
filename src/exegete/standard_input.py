@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Standard input, read a line at a time in a daemon thread of Exegete's
-own (0.15.2), so that one Ctrl+C stops Exegete started by hand.
+own (v0.15.2), so that one Ctrl+C stops Exegete started by hand.
 
 The MCP library reads standard input in an AnyIO worker thread, which a
 stop cannot cancel and the interpreter waits for at exit. Started by

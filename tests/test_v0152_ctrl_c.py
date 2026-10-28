@@ -18,8 +18,9 @@ ends an interrupt with one line, `Stopped by Ctrl+C`, and status 130
 - an app's own stops are unchanged: input closed, status 0; SIGTERM,
   its default action;
 - the reader, in this process: lines cut at "\\n" alone and decoded
-  whole, the end of input and a read error; a stop that waits for no
-  line, a line read after it dropped without a report.
+  whole; the end of input, a read error and any other failure; a stop
+  that waits for no line, a line read after it dropped without a
+  report.
 
 Every start runs in a home folder of the test's own, with the check for
 new versions off.

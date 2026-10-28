@@ -1117,7 +1117,7 @@ def current_resource_address(uri: Any) -> Any:
 class _ExegeteMCP(FastMCP):
     """FastMCP, with every tool refusing an argument it does not declare
     (v0.14, server-wide), the resources' earlier addresses answered
-    (v0.14.1), and one Ctrl+C stopping Exegete (0.15.2: `run` and
+    (v0.14.1), and one Ctrl+C stopping Exegete (v0.15.2: `run` and
     `run_stdio_async`).
 
     The check sits on the host's own path: `call_tool` is the method the
@@ -1226,12 +1226,13 @@ class _ExegeteMCP(FastMCP):
         running finishes first, since tools run on the loop. The
         KeyboardInterrupt that asyncio then raises ends Exegete here with
         one line and status 130, the number a shell gives for Ctrl+C,
-        through the interpreter's normal exit. That exit waits for an
-        asked check for new versions, within its deadline, but not for
-        the weekly check, a daemon thread: cut as it writes its record,
-        that check leaves a temporary file of its own in the state
-        folder. No signal handler of Exegete's own, so a second interrupt
-        stays asyncio's: a KeyboardInterrupt wherever the main thread is.
+        through the interpreter's normal exit. That exit waits for the
+        worker of an asked check for new versions, for up to about 18
+        seconds, but not for the weekly check, a daemon thread: cut as it
+        writes its record, that check leaves a temporary file of its own
+        in the state folder. No signal handler of Exegete's own, so a
+        second interrupt stays asyncio's: a KeyboardInterrupt wherever
+        the main thread is.
         """
         try:
             super().run(*args, **kwargs)

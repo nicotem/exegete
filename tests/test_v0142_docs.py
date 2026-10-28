@@ -919,8 +919,8 @@ RELEASE_LABEL = re.compile(r"\(v?\d+\.\d+\.\d+\+\)|\bin v?\d+\.\d+\.\d+\+|"
 def _openings():
     texts = {}
     # each guide's title, its first lines and its overview
-    for name, end in (("AI_CODING_GUIDE.md", "## How It Works"),
-                      ("AI_CODING_WORKFLOW.md", "## Safety First")):
+    for name, end in (("AI_CODING_GUIDE.md", "## How it works"),
+                      ("AI_CODING_WORKFLOW.md", "## Safety first")):
         text = _read(name)
         texts[name] = " ".join(text[:text.index("\n" + end)].split())
     texts["TOOLS.md, the brief"] = _between(

@@ -624,7 +624,7 @@ def _planned_release_of_the_earlier_names():
 PLANNED = _planned_release_of_the_earlier_names()
 
 EARLIER_NAMES_SECTION = (
-    "## Earlier names\n\nTwo tools were renamed in 0.15.0. Their earlier "
+    "## Earlier names\n\nTwo tools have been renamed. Their earlier "
     "names are still listed, and do exactly what the new ones do, until "
     f"a later release (planned as {PLANNED}) removes them: "
     "`analyze_for_coding` is now `start_coding_session`, and "
@@ -668,9 +668,9 @@ class TestTheDocuments:
         assert " ".join(section.split()) == " ".join(
             EARLIER_NAMES_SECTION.split())
         # after "Available Tools", where every other tool has its entry
-        assert tools.index("## Available Tools") < tools.index(
-            "## Earlier names") < tools.index("## Available Prompts")
-        entries = _section(tools, "## Available Tools")
+        assert tools.index("## Available tools") < tools.index(
+            "## Earlier names") < tools.index("## Available prompts")
+        entries = _section(tools, "## Available tools")
         for new in RENAMED.values():
             assert f"- `{new}(" in entries, new
 
@@ -836,14 +836,15 @@ class TestTheDocuments:
         beside its new name, not an "analysis session" (fix round 1)."""
         for name in DOCUMENTS:
             assert "analysis session" not in _read(name).lower(), name
-        assert "- Start a coding session (`start_coding_session`)" in \
+        assert "- Starts a coding session (`start_coding_session`)" in \
             _read("TOOLS.md")
         assert ("| `start_coding_session(file_ids, code_names, "
                 "instruction)` | Start a coding session |") in \
             _read("AI_CODING_GUIDE.md")
         workflow = _read("AI_CODING_WORKFLOW.md")
-        assert "### Step 2: Start a Coding Session" in workflow
-        assert ("2. Starts a new coding session with unique ID "
+        # (v0.15.2: the heading in sentence case)
+        assert "### Step 2: Start a coding session" in workflow
+        assert ("2. Starts a new coding session with its own ID "
                 "(`start_coding_session`),") in workflow
 
 

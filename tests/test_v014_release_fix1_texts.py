@@ -230,9 +230,12 @@ def test_the_guide_reads_every_suggestion():
             "state what a code names and still not be what your study "
             "means by it") in guide
     assert ("**For an interpretive one, read the words its reason "
-            "names**") in guide
-    assert ("the review does not yet show a passage drawn on from "
-            "elsewhere, so open the file the reason names") in guide
+            "points to**") in guide
+    # (v0.15.2: what the review shows, with no "not yet")
+    assert ("The review shows the passage in its own paragraph or speaker "
+            "turn, so to read a passage drawn on from elsewhere, open the "
+            "file the reason gives.") in guide
+    assert "not yet show" not in guide
     assert ("How many readings are interpretive follows from the lens "
             "chosen") in guide
     for gone in ("Spot check the explicit ones", "Read the interpretive "
@@ -248,7 +251,7 @@ def test_the_guide_reads_every_suggestion():
 
 def test_the_workflow_decides_each_item():
     workflow = _doc("AI_CODING_WORKFLOW.md")
-    assert "**you decide each item**" in workflow
+    assert "You decide each item" in workflow
     assert "full control" not in workflow
     assert workflow.count("Decide each suggestion; ask for details on any "
                           "you want to read in context") == 2
@@ -282,5 +285,8 @@ def test_the_workflow_examples_quote_their_words():
     assert "where the codes blur" not in workflow
     assert "# Review every suggestion: do you share each interpretive " \
         "reading?" in workflow
-    assert ("the review does not yet show a passage drawn on from "
-            "elsewhere, so open the file the reason names") in workflow
+    # (v0.15.2: told once, in the coding guide, and pointed to)
+    assert ("[AI_CODING_GUIDE.md](AI_CODING_GUIDE.md), under \"Reviewing "
+            "suggestions\", says what an interpretive reading may draw on "
+            "and how to read one.") in workflow
+    assert "not yet show" not in workflow

@@ -481,7 +481,7 @@ class TestTheTexts:
         tools = _doc("TOOLS.md")
         assert "goes in together or not at all" not in tools
         assert ("a batch the call's time cuts short goes in as far as it "
-                "got, and the answer names the rest") in tools
+                "got, and the answer lists the rest") in tools
         changelog = _doc("CHANGELOG.md")
         changelog = changelog[changelog.index("## [0.14.3-alpha]"):
                               changelog.index("## [0.14.2-alpha]")]
@@ -548,7 +548,7 @@ class TestTheTexts:
         assert "Bring in the interviews in" in examples
         assert "Open P01's interview for me to read" in examples
         guide = (REPO / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")
-        reference = guide.split("## Tool Reference (current)")[1].split(
+        reference = guide.split("## Tool reference")[1].split(
             "\n## ")[0]
         assert "| `import_documents(" in reference
         assert "| `open_file_for_reading(" in reference

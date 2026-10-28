@@ -1109,27 +1109,11 @@ class _Planner:
             if reason is not None:
                 change.refuse(reason)
             else:
-                altered: Dict[str, int] = {}
                 try:
-                    for name, its in by_table.items():
-                        actual, entry = info[name]
-                        wanted = [r for r in its if kind_of(r) != ADDED]
-                        if not wanted:
-                            continue
-                        got = backup.rows(name, entry["key"],
-                                          entry["key_kind"],
-                                          [r["key"] for r in wanted])
-                        for r in wanted:
-                            values = got.get(r["key"])
-                            if values is None or self.digests.row(
-                                    entry["columns"], values) != r["before"]:
-                                altered[actual] = altered.get(actual, 0) + 1
-                            else:
-                                old[(name, r["key"])] = values
+                    old, altered = self._old_rows(backup, by_table, info)
                 except BackupUnreadable:
                     change.refuse(BACKUP_UNREADABLE)
-                    old.clear()
-                    backup = None
+                    backup, altered = None, {}
                 if altered:
                     change.refuse(BACKUP_CHANGED, rows=altered)
 
@@ -1181,6 +1165,32 @@ class _Planner:
                     self.overlay[low].pop(key, None)
                 else:
                     self.overlay[low][key] = value
+
+    def _old_rows(self, backup: Source,
+                  by_table: Dict[str, List[Dict[str, Any]]],
+                  info: Dict[str, Tuple[str, Dict[str, Any]]]
+                  ) -> Tuple[Dict[Tuple[str, Any], Row], Dict[str, int]]:
+        """The rows the change altered or removed, as its backup holds
+        them, each compared with the record's "before": those that match,
+        by table and key, and how many do not, by table. A read of the
+        backup that fails raises BackupUnreadable."""
+        old: Dict[Tuple[str, Any], Row] = {}
+        altered: Dict[str, int] = {}
+        for name, its in by_table.items():
+            actual, entry = info[name]
+            wanted = [r for r in its if kind_of(r) != ADDED]
+            if not wanted:
+                continue
+            got = backup.rows(name, entry["key"], entry["key_kind"],
+                              [r["key"] for r in wanted])
+            for r in wanted:
+                values = got.get(r["key"])
+                if values is None or self.digests.row(
+                        entry["columns"], values) != r["before"]:
+                    altered[actual] = altered.get(actual, 0) + 1
+                else:
+                    old[(name, r["key"])] = values
+        return old, altered
 
     @staticmethod
     def _filled_since(now: Row, entry: Dict[str, Any]) -> bool:

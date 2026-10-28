@@ -6,17 +6,13 @@ make an informed decision about Exegete. It is written for researchers,
 and for the ethics committees and data protection officers who advise
 them. It is not legal advice.
 
-Two tools were renamed in 0.15.0, and their earlier names are still
-listed until a later release (planned as v0.15.4) removes them
-(TOOLS.md, "Earlier names"). What this document says of either tool
-holds under both its names.
-
 ## Where your data goes, in short
 
-- **Exegete runs on your computer.** It adds no telemetry of its own.
-  The one connection it makes itself is its check for new versions,
-  while that is switched on, and the check sends nothing from your
-  projects ("Checking for new versions").
+- **Exegete runs on your computer.** It adds no telemetry of its own,
+  that is, no reports of how it is used. The one connection it makes
+  itself is its check for new versions, while that is switched on, and
+  the check sends nothing from your projects ("Checking for new
+  versions").
 - **What the assistant reads through Exegete goes to your AI
   provider**: to Anthropic with Claude, to OpenAI with its apps, and to
   no provider with a fully local model. Once the assistant has read a
@@ -29,9 +25,9 @@ holds under both its names.
   assistant this project suggests for participants' data.
 - **What stays on your computer**: your project, its backups and
   copies, Exegete's own folder and its reading folder, and the host's
-  own records of the conversation. Anything that reads the disk can
-  read them, a sync service among them ("Files Exegete keeps on your
-  computer").
+  own records of the conversation (the host is the app you talk to the
+  assistant in). Anything that reads the disk can read them, a sync
+  service among them ("Files Exegete keeps on your computer").
 - **The names list**, which pairs real names with their pseudonyms,
   does not pass through the conversation when you fill it in on your
   own computer, in the names file ("What pseudonymisation is for").
@@ -40,16 +36,17 @@ holds under both its names.
   nothing from your documents ("A library's usage reports", under "How
   your data flows").
 
-Before you use real participant data, the checklist below has the
-questions an ethics committee or a data protection officer will ask.
+Before you use real participant data,
+[the checklist below](#before-you-use-real-participant-data-check-these)
+has the questions an ethics committee or a data protection officer will
+ask.
 
 ## What this means for research data
 
-Your participants may have consented to *you* analysing their data;
-that is not the same as consenting to their data being processed by a
-third-party AI provider. Whether this flow is acceptable for a given
-project is **the researcher's responsibility to determine**, and the
-answer belongs in:
+Your participants may have consented to *you* analysing their data.
+That is not the same as consenting to their data being processed by a
+third-party AI provider. Whether this flow is acceptable for your
+project is **yours to decide**, and the answer belongs in:
 
 - your **informed-consent language** (does it cover processing by an
   AI service?)
@@ -58,13 +55,13 @@ answer belongs in:
 - for EU and UK researchers, your **GDPR position** (the checklist
   below).
 
-What Anthropic does with conversation content (retention, processing,
-and how terms differ between consumer plans, the API and enterprise
-offerings) is in Anthropic's own privacy documentation,
-<https://www.anthropic.com/privacy>. Those terms vary by product and
-change over time, so this document quotes them, with the date each was
-read, rather than characterising them ("Your governance options", and
-"OpenAI's apps" for OpenAI's).
+Anthropic's own privacy documentation, <https://www.anthropic.com/privacy>,
+says what Anthropic does with conversation content: how long it keeps
+it, how it processes it, and how the terms differ between consumer
+plans, the API and enterprise offerings. Those terms vary by product and
+change over time. So this document quotes them, with the date each was
+read, rather than describing them in its own words ("Your governance
+options"; "OpenAI's apps" for OpenAI's terms).
 
 ## Before you use real participant data, check these
 
@@ -72,12 +69,12 @@ These are the questions your ethics committee or data protection
 officer will ask, and the summary above depends on them:
 
 - **Your Claude plan's terms differ, and they matter.** For *your*
-  account, verify whether inputs (a) may be used to train or improve
-  models, (b) how long they are retained, and (c) whether people can
-  review them. These differ between consumer plans (Free, Pro and Max)
-  and Team, Enterprise and API terms. Inputs used for model training
-  would almost never be covered by existing participant consent, and an
-  ethics board asks this first.
+  account, check three things: whether your inputs may be used to train
+  or improve models, how long they are kept, and whether people can
+  review them. The answers differ between consumer plans (Free, Pro and
+  Max) and Team, Enterprise and API terms. Existing participant consent
+  would almost never cover inputs used for model training, and an ethics
+  board asks this first.
 - **Training, with either maker.** Switch training off before
   participants' data: while it is on, the maker may use your
   conversations to train its models. With Anthropic it is the Model
@@ -86,19 +83,22 @@ officer will ask, and the summary above depends on them:
   apps"). Rating a reply (thumbs up or down) can still let either maker
   train on that conversation ("Cross-rung cautions"; "OpenAI's apps").
 - **Controller and processor, and a written agreement.** Your
-  institution is normally the data controller and the AI provider a
-  processor. UK and EU GDPR (Art. 28) then requires a written
-  data-processing agreement, and a transfer from the UK or the EU to the
-  US needs a valid safeguard (UK IDTA, SCCs, or an adequacy or
-  data-bridge mechanism). A personal or consumer account almost
+  institution is normally the data controller, which decides how the
+  data is used, and the AI provider a processor, which handles it for
+  the institution. UK and EU GDPR (Art. 28) then requires a written
+  data-processing agreement. A transfer from the UK or the EU to the US
+  also needs a valid safeguard: the UK's international data transfer
+  agreement (IDTA), standard contractual clauses (SCCs), or an adequacy
+  or data-bridge decision. A personal or consumer account almost
   certainly has **no such agreement**, so this is an institution-level
   decision you cannot clear alone.
 - **Special-category data.** Interviews routinely carry health,
   sexuality, religion, ethnicity, political opinion and similar, often
   disclosed incidentally, which has a higher legal bar (GDPR Art. 9).
-- **Consent is not compliance.** Participant consent to AI processing
-  addresses the ethics limb; it does not by itself provide your lawful
-  basis, your transfer safeguard, or the processing agreement.
+- **Consent is not compliance.** Participants' consent to AI processing
+  answers the ethical question. It does not by itself give you a lawful
+  basis for the processing, a safeguard for the transfer, or the
+  processing agreement.
 - **You cannot claw it back.** Content already sent generally cannot be
   retracted, which can make it impossible to honour a participant's
   withdrawal or erasure request, or a retention limit you promised in a
@@ -107,17 +107,18 @@ officer will ask, and the summary above depends on them:
   may go beyond the original consent and ethics approval, and may itself
   need review.
 - **What Exegete itself connects to.** Only its check for new versions,
-  while that is on (on in the Claude Desktop extension unless you switch
-  it off, off on the Terminal routes): at most once a week, and when you
-  ask, a request for a small public file, carrying nothing from your
-  projects. GitHub, which hosts the file, records your computer's
-  internet address ("Checking for new versions"). If your ethics
-  application or data-management plan says what the software you use
-  connects to, it can say this, or you can switch the check off.
+  while that is on. The check is on in the Claude Desktop extension
+  unless you switch it off, and off on the Terminal routes. At most once
+  a week, and when you ask, Exegete requests a small public file, and
+  the request carries nothing from your projects. GitHub, which hosts
+  the file, records your computer's internet address ("Checking for new
+  versions"). If your ethics application or data-management plan says
+  what the software you use connects to, it can say this, or you can
+  switch the check off.
 - **Which assistant, and whether it opens files by itself.** Codex,
   Claude Code and Claude's Cowork can open files on your computer by
   themselves, outside Exegete, and what they read that way goes to
-  their maker whole, the private part of memos included; Exegete cannot
+  their maker whole, the private part of memos included. Exegete cannot
   see such a read or stop it ("Assistants that open files by
   themselves", below). For participants' data this project suggests
   Claude Desktop's chat with the extension, with computer use off, no
@@ -128,58 +129,69 @@ officer will ask, and the summary above depends on them:
   works in; it has not been tested with Exegete. Practising, too, leaves
   a real study on the same computer within reach of Codex and Claude
   Code ("While you practise", below). A local model keeps the data on
-  your computer; we expect it to do the analysis less well than the
+  your computer. We expect it to do the analysis less well than the
   hosted models, and do not know by how much, since we have evaluated
-  neither, so it is a route to consider for particular uses, such as a
+  neither. So it is a route to consider for particular uses, such as a
   first pass over sensitive material, or work an agreement confines to
   one computer ("Rung 4", below).
 - **What stays on the computer, and for how long.** Copies stay on the
-  computer you work on: the project, its backups and your exports; the
-  lists of suggestions waiting for review (`~/.exegete/sessions/`); the
-  texts an import's preview read, until the import or, when none
-  follows, until Exegete's next start, or the next import it prepares,
-  an hour or more later (`~/.exegete/import-texts.noindex`); the
-  reading folder's pages, with a file's whole text and its codings, its
-  read-only copies of originals and an import's pages for checking
-  letters, until Exegete's first tidy once they are a week old (an hour
-  for an import's page), and longer while Exegete is not running (macOS
-  `~/Library/Caches/Exegete/Reading.noindex`, Windows
-  `%LOCALAPPDATA%\Exegete\Reading`, Linux `~/.cache/exegete/reading`,
-  or `exegete/reading` under `$XDG_CACHE_HOME` if it is set); the
-  pseudonymisation run records (`~/.exegete/pseudonymisation/`), until
-  you delete them; Claude Desktop's log of the extension, which keeps
-  every request and answer, names and quoted text included (INSTALL.md,
-  "Reading the server log"); Codex's session files (`~/.codex/sessions`)
-  and Claude Code's transcripts (`~/.claude/projects/`). Say where each
-  is kept, whether a sync or backup service copies it, who else can
-  reach the computer, and when you will delete them.
+  computer you work on:
+  - the project, its backups and your exports;
+  - the lists of suggestions waiting for review (`~/.exegete/sessions/`);
+  - the texts an import's preview read
+    (`~/.exegete/import-texts.noindex`), until the import or, when none
+    follows, until Exegete's next start, or the next import it
+    prepares, an hour or more later;
+  - the reading folder's pages, with a file's whole text and its
+    codings, its read-only copies of originals and an import's pages for
+    checking letters (macOS `~/Library/Caches/Exegete/Reading.noindex`,
+    Windows `%LOCALAPPDATA%\Exegete\Reading`, Linux
+    `~/.cache/exegete/reading`, or `exegete/reading` under
+    `$XDG_CACHE_HOME` if it is set). They stay until Exegete's first
+    tidy once they are a week old (an hour for an import's page), and
+    longer while Exegete is not running;
+  - the pseudonymisation run records (`~/.exegete/pseudonymisation/`),
+    until you delete them;
+  - Claude Desktop's log of the extension, which keeps every request and
+    answer, names and quoted text included (INSTALL.md, "Reading the
+    server log");
+  - Codex's session files (`~/.codex/sessions`) and Claude Code's
+    transcripts (`~/.claude/projects/`).
+
+  Say where each is kept, whether a sync or backup service copies it,
+  who else can reach the computer, and when you will delete them.
+
+The rest of this document gives the detail. Two tools were renamed in
+0.15.0, and their earlier names are still listed until a later release
+(planned as v0.15.4) removes them (TOOLS.md, "Earlier names"). What
+this document says of either tool holds under both its names.
 
 ## How your data flows
 
 **Exegete itself runs entirely on your machine.** It is a local
-process started by your MCP client (Claude Desktop, Claude Code, or any
-other). It adds **no telemetry, no analytics, and no separate cloud
+process, started by the app you use it in (Claude Desktop, Claude Code,
+or another). It adds **no telemetry, no analytics, and no separate cloud
 path** of its own. One library it installs to read PDFs on Windows x64
 and Linux reports on its own use to Microsoft unless it is switched
-off: Exegete switches it off entirely on Linux, but on Windows a few
+off. Exegete switches it off entirely on Linux, but on Windows a few
 reports still go to Windows' diagnostic data each time a PDF is read,
 with nothing from your documents ("A library's usage reports", below,
-says what they hold, and what you can do). It opens your project's
-database read-only
-by default. The one thing it fetches from the internet itself, while
-switched on, is a small public file that says whether a newer version
-of Exegete exists, and it sends nothing from your projects to get it
-("Checking for new versions", below, says exactly what is sent, and
-how to switch it off). Installing Exegete downloads it and the
-libraries it needs from PyPI (a copy of the source comes from GitHub);
-the desktop extension, which carries Exegete itself, downloads the
-libraries through uv when it first starts and after each update, and a
-Python for them where it finds none to use. Nothing from your projects
-is sent with those downloads either.
+says what they hold, and what you can do).
 
-**But the results of tool calls enter the conversation.** That
-is the entire point of an MCP server, and it has a consequence you
-must understand:
+Exegete opens your project's database read-only by default. The one
+thing it fetches from the internet itself, while switched on, is a
+small public file that says whether a newer version of Exegete exists.
+It sends nothing from your projects to get it ("Checking for new
+versions", below, says exactly what is sent, and how to switch it off).
+Installing Exegete downloads it and the libraries it needs from PyPI
+(a copy of the source comes from GitHub). The desktop extension, which
+carries Exegete itself, downloads the libraries through uv when it
+first starts and after each update, and a Python for them where it
+finds none to use. Nothing from your projects is sent with those
+downloads either.
+
+**But the results of tool calls enter the conversation.** That is how
+Exegete works with the assistant, and it has a consequence:
 
 > Whatever a tool returns (coded segments, interview excerpts, file
 > contents, memos, journal entries, code names, frequencies, case and
@@ -193,14 +205,14 @@ must understand:
 > transcript to that provider.
 
 **What the rules here protect.** Your AI provider has whatever you let
-the assistant read: once the assistant has read a text through
+the assistant read. Once the assistant has read a text through
 Exegete, the provider has that text, as it has everything else in the
-conversation, and nothing afterwards, no preview, token or refusal,
-takes it back. So an answer that returns text the assistant has
-already read is not a leak. (Exegete does hold some things back from
-the assistant, such as the private part of a note after `#####`:
-"Keeping notes private from the AI", below.) Beyond that, the rules in
-this document protect three other things, each with its own readers:
+conversation. Nothing afterwards takes it back: no preview, token or
+refusal. So an answer that returns text the assistant has already read
+is not a leak. Exegete does hold some things back from the assistant,
+such as the private part of a note after `#####` ("Keeping notes
+private from the AI", below). Beyond that, the rules in this document
+protect three other things, each with its own readers:
 
 - **The key.** The names list pairs each real name with its pseudonym.
   No tool returns the names on it: you can fill it in on your own
@@ -208,24 +220,24 @@ this document protect three other things, each with its own readers:
   the file is counts and line or entry numbers. A mapping you type into
   the conversation reaches the provider as you type it ("What
   pseudonymisation is for", below).
-- **What stays on the computer, and who else reads it.** The project,
-  its backups and copies, Exegete's own folder (coding sessions, the
-  texts an import's preview read, the pseudonymisation run records),
-  the reading folder, and the host's own records of the conversation
-  (its log, its transcripts) stay on your disk, where anything that
+- **What stays on the computer, and who else reads it.** Several things
+  stay on your disk: the project, its backups and copies, Exegete's own
+  folder (coding sessions, the texts an import's preview read, the
+  pseudonymisation run records), the reading folder, and the host's own
+  records of the conversation (its log, its transcripts). Anything that
   reads the disk can read them: a sync or backup service, a copy you
   give someone, another assistant that opens files by itself, a log or
   a support bundle you send. Exegete's own log lines name no project
   or file and quote no text ("Error answers and Exegete's log", below,
   says what they hold, and what a host's log keeps besides).
 - **How much passes through the conversation.** Every turn can be kept
-  by the host and by the provider, under their own terms, so Exegete
-  passes text through the conversation only when it has to: a file you
+  by the host and by the provider, under their own terms. So Exegete
+  passes text through the conversation only when it has to. A file you
   only want to look at opens on your own screen ("Reading a whole
-  file", below), an import's preview gives names, sizes and counts
+  file", below). An import's preview gives names, sizes and counts
   rather than the documents' text ("Bringing documents in", below, says
-  what else it gives), and a count answers where a count was asked.
-  This keeps fewer copies of the text in fewer places; it is not a
+  what else it gives). And a count answers where a count was asked.
+  This keeps fewer copies of the text in fewer places. It is not a
   claim that the provider has not seen what you let the assistant read.
 
 Where a rule below serves one of these three, it says which.
@@ -251,15 +263,18 @@ committee or a data protection officer may want to know of them:
 - **On Windows**, onnxruntime does not read that setting: it reports
   through Windows' own diagnostic data, and its switch can be reached
   only once it has loaded, by which time it has made a few reports. So
-  **each time a PDF is read** (an import's preview reads each PDF once,
-  in a process of its own, and the import reads it again only when the
-  preview's text cannot be used), a few reports go to Windows'
-  diagnostic data: onnxruntime's release, the processor's model, the
-  number of processors, the memory, whether a debugger is attached, how
-  onnxruntime was built, and the names of any Windows services that
-  process runs; the names and driver versions of the computer's
-  graphics adapters and of any NPU (a processor for AI models); and
-  that onnxruntime registered its processor part, with any error.
+  **each time a PDF is read**, a few reports go to Windows' diagnostic
+  data. An import's preview reads each PDF once, in a process of its
+  own, and the import reads it again only when the preview's text
+  cannot be used. The reports give:
+  - onnxruntime's release, the processor's model, the number of
+    processors, the memory, whether a debugger is attached, how
+    onnxruntime was built, and the names of any Windows services that
+    process runs;
+  - the names and driver versions of the computer's graphics adapters
+    and of any NPU (a processor for AI models);
+  - and that onnxruntime registered its processor part, with any error.
+
   Windows adds its own identifiers to what it sends, and sends the
   reports to Microsoft, or keeps them back, as the computer's
   diagnostic data setting says (in Windows' Settings, under
@@ -289,7 +304,7 @@ the computer's diagnostic data setting lets Windows send.
 **What leaves your computer through Exegete** is only what tools return
 into the conversation and, while checking for new versions is on, one
 request for a public file that carries nothing from your projects
-("Checking for new versions"); on Windows x64, a library Exegete
+("Checking for new versions"). On Windows x64, a library Exegete
 installs for PDFs also reports its use to Windows, with nothing from
 your projects ("A library's usage reports", above). For qualitative
 research, what tools return can be the most sensitive content you hold.
@@ -316,26 +331,27 @@ What stays local, always, unless a sync service copies the folder it is in
   the same content as a backup, so the `ai_data/` and symlink rules below
   apply to it)
 - Exegete's own folder, `~/.exegete` (before 0.14.1,
-  `~/.qualcoder_mcp`), created owner-only on POSIX systems, which holds
-  the texts an import's preview read, the session files, the secret, the
-  pointer and the run manifests below, and `update_check.json` (when
-  Exegete last checked for a new version, what it found, which versions
-  it has told you about, and the newest version that has run here;
-  nothing from your projects; "Checking for new versions" says more). At
-  the first start of 0.14.1 or later an existing `~/.qualcoder_mcp` is
-  renamed to `~/.exegete` whole, in one step on the same disk: the move
-  never copies or duplicates the secret, and the files keep their
-  owner-only modes. A link named `~/.qualcoder_mcp` (on Windows, a
-  junction) is left pointing at it, so an older copy of the server on
-  the same computer keeps using the same folder and secret. When no link
-  can be made, the folder is put back where it was, unless an older copy
-  of the server has already written at the old path in that instant;
-  then both folders are kept. An older copy that makes a folder of its
-  own under the old name (then, or after the link was removed) has a
-  secret of its own there, which Exegete does not use: it takes from
-  that folder only the session files it lacks, says so once in its log,
-  and keeps in `~/.exegete` a one-line note (`old_folder_noted`, a
-  digest that holds no path) so as not to repeat it at every start.
+  `~/.qualcoder_mcp`), created owner-only on POSIX systems (macOS and
+  Linux), which holds the texts an import's preview read, the session
+  files, the secret, the pointer and the run manifests below, and
+  `update_check.json`. That file records when Exegete last checked for
+  a new version, what it found, which versions it has told you about,
+  and the newest version that has run here, and nothing from your
+  projects ("Checking for new versions" says more). At the first start
+  of 0.14.1 or later an existing `~/.qualcoder_mcp` is renamed to
+  `~/.exegete` whole, in one step on the same disk: the move never
+  copies or duplicates the secret, and the files keep their owner-only
+  modes. A link named `~/.qualcoder_mcp` (on Windows, a junction) is
+  left pointing at it, so an older copy of the server on the same
+  computer keeps using the same folder and secret. When no link can be
+  made, the folder is put back where it was, unless an older copy of the
+  server has already written at the old path in that instant; then both
+  folders are kept. An older copy that makes a folder of its own under
+  the old name (then, or after the link was removed) has a secret of its
+  own there, which Exegete does not use. Exegete takes from that folder
+  only the session files it lacks, says so once in its log, and keeps in
+  `~/.exegete` a one-line note (`old_folder_noted`, a digest that holds
+  no path) so as not to repeat it at every start.
   INSTALL.md's troubleshooting says what to do. A link left under the
   old name after `~/.exegete` was removed by hand is left as it is, and
   a fresh `~/.exegete` is made. The export tools, `create_project` and
@@ -364,14 +380,14 @@ What stays local, always, unless a sync service copies the folder it is in
   Time Machine when Exegete could mark it so. The import uses a file for
   up to an hour and five minutes after the preview (the preview's hour,
   and five minutes for a clock that differs) and removes it after the
-  import; a file left by a preview that was not imported goes at
+  import. A file left by a preview that was not imported goes at
   Exegete's next start, or the next time it prepares an import, once
-  that time has passed, so it can stay longer in an app that keeps Exegete running. Deleting the
-  folder changes nothing in any project (the next import reads the
-  documents again), and nothing in it is sent anywhere. Another backup
-  of your home folder can copy it, as it copies the documents
-  themselves: leaving this folder out of that backup keeps these copies
-  out of it
+  that time has passed, so it can stay longer in an app that keeps
+  Exegete running. Deleting the folder changes nothing in any project
+  (the next import reads the documents again), and nothing in it is sent
+  anywhere. Another backup of your home folder can copy it, as it copies
+  the documents themselves: leaving this folder out of that backup keeps
+  these copies out of it
 - AI-coding session files (`~/.exegete/sessions/`), written
   atomically and created owner-only on POSIX systems (mode 0600)
 - the preview-token secret (`~/.exegete/preview_secret`): 64
@@ -380,14 +396,18 @@ What stays local, always, unless a sync service copies the folder it is in
   in the pseudonymisation run manifests, and to name and sign the texts
   an import's preview keeps. It never leaves your machine, never
   appears in a result, a log line or an error, and holds nothing about
-  your project. Deleting it invalidates outstanding preview tokens,
-  which means the next execute asks for a fresh preview; the keyed
-  digests in the run manifests already written can then no longer be
-  checked; and the texts an import's preview kept can no longer be
-  used, so the next preview reads the documents again. Nothing else.
-  Exegete replaces the secret by itself, with the same effects, when it finds the file
-  malformed or, on macOS and Linux, readable by other accounts (after a
-  restore or a sync tool widened its mode), and logs that it did. The
+  your project. Deleting it has three effects, and nothing else:
+  - it invalidates outstanding preview tokens, so the next execute asks
+    for a fresh preview;
+  - the keyed digests in the run manifests already written can then no
+    longer be checked;
+  - the texts an import's preview kept can no longer be used, so the
+    next preview reads the documents again.
+
+  Exegete replaces the secret by itself, with the same effects, when it
+  finds the file malformed or, on macOS and Linux, readable by other
+  accounts (after a restore or a sync tool widened its mode), and logs
+  that it did. The
   export tools refuse paths inside this folder, and inside the project
   folder, by which folder a path really is, not by how it is spelled:
   another spelling of the same folder, such as `~/.EXEGETE` on a Mac or
@@ -396,12 +416,12 @@ What stays local, always, unless a sync service copies the folder it is in
 - the last-used project pointer (`~/.exegete/mru_project.json`:
   the path of the project most recently selected or created under your
   user account, plus a timestamp, written on every successful
-  select_project and create_project). It has one outward flow: when a tool is called, or
-  a resource read, before a project is selected (or after the
-  connection to the selected one was lost and could not be reopened),
-  the error answer names that path as a recovery hint (only while that project still exists on
-  disk; never in a line the server logs), so a
-  project path chosen in one MCP host or session
+  select_project and create_project). It has one outward flow. When a
+  tool is called, or a resource read, before a project is selected (or
+  after the connection to the selected one was lost and could not be
+  reopened), the error answer gives that path as a recovery hint. It
+  does so only while that project still exists on disk, and never in a
+  line Exegete logs. So a project path chosen in one MCP host or session
   can appear in another host's conversation on the same account.
   Nothing is ever selected automatically from it; only a path with the
   shape select_project itself records is ever echoed, and deleting the
@@ -485,45 +505,49 @@ provider like any other result, and Exegete's log lines go to the host,
 which may keep them on disk (INSTALL.md, "Reading the server log").
 Since v0.14 neither carries SQLite's message: an error from the database
 is reported by its kind and SQLite's short name for it (for example
-`IntegrityError SQLITE_CONSTRAINT_TRIGGER`), and a value that is not
-UTF-8 by its kind alone, which Python itself reports. SQLite's message
-can quote a note, private part included: a project built to do it can
-give a trigger's error whatever it reads from a row, and a note or a
-name stored as bytes that are not UTF-8 makes Python's sqlite3 quote the
-whole value in the error it raises. The same rule holds for the
-resources (the `exegete://` addresses), which answer an error as a tool
-does, as their content, so the MCP library, which logs with its
-traceback every error a fixed-address resource raises (one with an id in
-its address, such as `exegete://codes/{code_id}`, it answers without a
-line), has none to log; and for an error of a kind Exegete does not
-expect, which is reported by its kind alone. Exegete's own error texts,
-which it writes, are answered as they are; some repeat what the caller
-supplied, such as a code name that is already taken. The rule closes one
-channel, SQLite's message; it does not make a project built to leak safe
-to open. Python's own messages can quote a stored value (a text stored
+`IntegrityError SQLITE_CONSTRAINT_TRIGGER`). A value that is not UTF-8
+is reported by its kind alone, which Python itself reports. SQLite's
+message can quote a note, private part included. A project built to do
+it can give a trigger's error whatever it reads from a row, and a note
+or a name stored as bytes that are not UTF-8 makes Python's sqlite3
+quote the whole value in the error it raises.
+
+The same rule holds for the resources (the `exegete://` addresses),
+which answer an error as a tool does, as their content. So the MCP
+library, which logs with its traceback every error a fixed-address
+resource raises, has none to log (one with an id in its address, such
+as `exegete://codes/{code_id}`, it answers without a line). The rule
+holds too for an error of a kind Exegete does not expect, which is
+reported by its kind alone. Exegete's own error texts, which it writes,
+are answered as they are, and some repeat what the caller supplied,
+such as a code name that is already taken. The rule closes one channel,
+SQLite's message; it does not make a project built to leak safe to
+open. Python's own messages can quote a stored value (a text stored
 where a number belongs makes the conversion's error quote it, and that
 error is answered), and a trigger can copy a note's private part into a
-field every read returns. Since v0.14 the log also carries no name of a
-project, file, code, category, case, journal entry or attribute, and no
-path: creating a code, a category, a case or a journal entry, or
-importing a file, logs its id, and an attribute type or value is logged
-without its name; the lines that select a project, start Exegete and
-connect to the database give no project folder; and the lines about
-taking, listing, restoring, pruning and copying backups and projects
-give no path (a backup by the part of its name after the project
-folder's). A file-system error in the log is its kind and the system's
-short name for it (for example `PermissionError EACCES`), never the file
-it names, and a project's schema version only when it has QualCoder's
-form (`v` and digits). The results still name what they name, as each
-tool says. The MCP library's own lines beside Exegete's name the kind of
-each request and carry the caller's own text in two cases, which
-INSTALL.md's "Reading the server log" gives. A host may record more in
-the same file: Claude Desktop's server log (the file Settings >
-Developer > Show Logs opens) records every request and every answer as
-well, so there the file also holds everything the tools returned and the
-arguments they were given, names, paths and quoted text included, as the
-conversation does. Read such a file as you would the conversation before
-sharing it. The log's rules protect what stays on the computer (above).
+field every read returns.
+
+Since v0.14 the log also carries no name of a project, file, code,
+category, case, journal entry or attribute, and no path. Creating a
+code, a category, a case or a journal entry, or importing a file, logs
+its id, and an attribute type or value is logged without its name. The
+lines that select a project, start Exegete and connect to the database
+give no project folder. The lines about taking, listing, restoring,
+pruning and copying backups and projects give no path (a backup by the
+part of its name after the project folder's). A file-system error in
+the log is its kind and the system's short name for it (for example
+`PermissionError EACCES`), never the file it names. A project's schema
+version appears only when it has QualCoder's form (`v` and digits). The
+results still name what they name, as each tool says. The MCP library's
+own lines beside Exegete's name the kind of each request, and carry the
+caller's own text in two cases, which INSTALL.md's "Reading the server
+log" gives. A host may record more in the same file: Claude Desktop's
+server log (the file Settings > Developer > Show Logs opens) records
+every request and every answer as well. So there the file also holds
+everything the tools returned and the arguments they were given, names,
+paths and quoted text included, as the conversation does. Read such a
+file as you would the conversation before sharing it. The log's rules
+protect what stays on the computer (above).
 
 **Paging cursors**, the `c1.` tokens the search and segment tools
 return, are stored nowhere and travel only inside the conversation. A
@@ -547,7 +571,7 @@ tools of their own: they can read a project's files directly,
 its database (`data.qda`) included, without going through Exegete. What
 they read that way goes to their AI provider whole, the private part of
 every memo after `#####` included (the database holds each memo in
-full), and none of Exegete's protections applies to it; Exegete cannot
+full), and none of Exegete's protections applies to it. Exegete cannot
 see such a read or stop it. Such an assistant is one of the other
 readers of what stays on the computer ("How your data flows").
 Exegete's own answers tell the assistant
@@ -718,7 +742,7 @@ kept out of those folders, with computer use off and no other extension
 that reads files, stay out of its reach. Claude Code reads the folder
 it starts in without asking: an empty folder of its own keeps your
 projects out of that folder, but does not stop its read-only commands
-reading them, or its file tools in auto mode (above), which is why, for
+reading them, or its file tools in auto mode (above). That is why, for
 participants' data, this project suggests the chat above instead.
 
 ## Files Exegete keeps on your computer
@@ -1065,29 +1089,35 @@ Three cautions:
   opening unasked, in a shared office or a meeting with your screen
   shared, would be a disclosure.
 
-**Where a transcript's text can end up** on your computer: the original
-document where you keep it; the project (its database, and its own
-folder of originals for imported documents); every backup taken after it
-came in (a file brought in by mistake stays in those backups until they
-are pruned); a reading copy or a copy of the original in the reading
-folder, and the page on which an import's preview shows letters that
-look garbled (`show_text`), which goes after the import, or at
-Exegete's first tidy of the folder once it is an hour old (it tidies
-when it starts, and at most every five minutes while it writes there,
-so in an app that keeps Exegete running such a page can stay longer);
-and any backup of the whole disk, such as Time Machine or
-File History, that copies those folders. Exegete tidies
-the reading folder itself: a file's page and copy go whenever Exegete
-changes that file's text or name (renaming, pseudonymising, restoring a
-backup over the project), a page left for a file deleted in QualCoder
-goes when a new file that takes its number comes in through Exegete,
-or when Exegete next writes a page or a copy for that file, and
-anything there goes at Exegete's first tidy once it is a week old. A
-page written
-before you pseudonymised a file would otherwise keep the real names; a
-file deleted or renamed in QualCoder keeps its page until then. A study with
-a date for deleting its data should include the reading folder, which
-can be deleted at any time.
+**Where a transcript's text can end up** on your computer:
+
+- the original document, where you keep it;
+- the project (its database, and its own folder of originals for
+  imported documents);
+- every backup taken after it came in (a file brought in by mistake
+  stays in those backups until they are pruned);
+- a reading copy or a copy of the original in the reading folder, and
+  the page on which an import's preview shows letters that look garbled
+  (`show_text`), which goes after the import, or at Exegete's first tidy
+  of the folder once it is an hour old (it tidies when it starts, and at
+  most every five minutes while it writes there, so in an app that keeps
+  Exegete running such a page can stay longer);
+- any backup of the whole disk, such as Time Machine or File History,
+  that copies those folders.
+
+Exegete tidies the reading folder itself:
+
+- a file's page and copy go whenever Exegete changes that file's text or
+  name (renaming, pseudonymising, restoring a backup over the project);
+- a page left for a file deleted in QualCoder goes when a new file that
+  takes its number comes in through Exegete, or when Exegete next writes
+  a page or a copy for that file;
+- anything there goes at Exegete's first tidy once it is a week old.
+
+A page written before you pseudonymised a file would otherwise keep the
+real names, and a file deleted or renamed in QualCoder keeps its page
+until then. A study with a date for deleting its data should include
+the reading folder, which can be deleted at any time.
 
 ## Attribution: the AI coder name is yours to choose
 
@@ -1469,10 +1499,10 @@ nothing. On Windows, its switch can be reached only once it has loaded:
 by then it has made a few reports to Windows' diagnostic data, about
 the computer (the names and driver versions of its graphics adapters
 and of any NPU among them) and onnxruntime (that it registered its
-processor part, with any error), with nothing from your documents;
+processor part, with any error), with nothing from your documents.
 Windows adds its own identifiers to what it sends, and passes the
 reports to Microsoft or not as the computer's diagnostic data setting
-says; every later report is switched off ("A library's usage reports",
+says. Every later report is switched off ("A library's usage reports",
 under "How your data flows", says what the reports hold, the switch's
 limits, and what you can do). A document converted with
 another tool, such as a pandoc server, should be converted file to
@@ -1555,23 +1585,23 @@ Copy the whole project folder by hand, with no program using the
 project (QualCoder closed, if you use it), before trying any repair,
 and keep that copy.
 
-Besides `restore_backup`, which checks that no journal or WAL file
+No tool reads the backups' contents, apart from `restore_backup` and
+`prune_backups`. `restore_backup` checks that no journal or WAL file
 sits beside the database of the backup you choose, opens it to check
-it, reads its first bytes for the preview and copies it back; whose
+it, reads its first bytes for the preview and copies it back. Its
 preview counts the rows of each kind in that database and in the
 project's (files, codes, codings and the like, every coder's together:
 numbers only, never a row's content or an owner's name), opening the
 backup's read-only and immutable, so that the count writes nothing
-into the backup; and which compares a fingerprint of the bytes of the project's
-`pseudonyms.json` with the backup's in the preview, and before and
-after the restore (once restored, the backup's copy), to say whether
-that file is the same, appears, disappears or changes, reading no name
-in either; and besides
-`prune_backups`, which reads the `pseudonyms.json` of each backup
-beside the project only to compare such fingerprints (no name in it is
-read out or returned; "Practical mitigations", on `pseudonyms.json`,
-says why), no tool reads the backups' contents; in 0.15.0 and earlier,
-`rename_file` read the names in them to recognise a rename back.
+into the backup. It also compares a fingerprint of the bytes of the
+project's `pseudonyms.json` with the backup's in the preview, and
+before and after the restore (once restored, the backup's copy), to say
+whether that file is the same, appears, disappears or changes, reading
+no name in either. `prune_backups` reads the `pseudonyms.json` of each
+backup beside the project only to compare such fingerprints (no name in
+it is read out or returned; "Practical mitigations", on
+`pseudonyms.json`, says why). In 0.15.0 and earlier, `rename_file`
+read the names in the backups to recognise a rename back.
 
 Two further rules touch files on your disk:
 
@@ -1619,21 +1649,26 @@ Two further rules touch files on your disk:
   `ai_data/search.sqlite-wal`, `ai_data/search.sqlite-shm` or
   `ai_data/chat_history.sqlite` exist and how recently they were
   modified; only presence and timestamps are read, never contents. This
-  is a heuristic: it can miss an open window (an idle 4.0 window with no
-  recent AI activity leaves no file trace, so only the process scan can
-  see it; on Windows without psutil, a QualCoder run through
-  `python.exe` is not seen; without psutil, a QualCoder run through
-  Python, or one of QualCoder's Linux downloads, from a folder whose
-  path holds a space is not counted as running; in a Linux sandbox whose
-  process list holds only its own programs, such as a Flatpak app's or a
-  container's, a QualCoder outside it is not seen, and with Exegete
-  inside WSL (Windows Subsystem for Linux), a QualCoder running on
-  Windows is not seen; and a QualCoder open on another computer, on a
-  project in a synced or shared folder, is not seen, and since v0.15.0
-  the chat history's recent change no longer shows it when the scan here
-  finds no QualCoder), and a recently modified chat history file means a
-  first open of the project by either QualCoder build, or its AI chat
-  used; a later open leaves the file as it is. Since v0.15.0 that file's
+  is a heuristic, and it can miss an open window:
+  - an idle 4.0 window with no recent AI activity leaves no file trace,
+    so only the process scan can see it;
+  - on Windows without psutil, a QualCoder run through `python.exe` is
+    not seen;
+  - without psutil, a QualCoder run through Python, or one of
+    QualCoder's Linux downloads, from a folder whose path holds a space
+    is not counted as running;
+  - in a Linux sandbox whose process list holds only its own programs,
+    such as a Flatpak app's or a container's, a QualCoder outside it is
+    not seen, and with Exegete inside WSL (Windows Subsystem for Linux),
+    a QualCoder running on Windows is not seen;
+  - a QualCoder open on another computer, on a project in a synced or
+    shared folder, is not seen, and since v0.15.0 the chat history's
+    recent change no longer shows it when the scan here finds no
+    QualCoder.
+
+  A recently modified chat history file means a first open of the
+  project by either QualCoder build, or its AI chat used; a later open
+  leaves the file as it is. Since v0.15.0 that file's
   recent change is not given as a sign when the process scan could read
   programs' command lines and found no QualCoder (it then says nothing
   about an open window). It is still given when a program may be a
@@ -1650,16 +1685,20 @@ Two further rules touch files on your disk:
   made. `select_project` and `get_current_project` also give the
   project's history with QualCoder (`qualcoder_history`, v0.15.0),
   worked out once when the project is selected and kept in memory for
-  the session, never on disk: whether the project folder holds
-  `ai_data/` with anything in it whose name does not begin with a dot
-  (its listing is read only until one is found, and no name in it is
-  kept; an empty one, as Exegete makes, does not count), and in it
-  `chat_history.sqlite` or `search.sqlite`; whether QualCoder's own
-  `_BKUP_` backups sit beside the project (the names, in the folder that
-  holds it, that begin with the project's name, as `list_backups` reads
-  them); whether its lock file is a leftover; whether QualCoder's
-  settings folder (`~/.qualcoder`) exists; and whether the process scan
-  found QualCoder. The field also gives, as `setting`, the researcher's
+  the session, never on disk. It says:
+  - whether the project folder holds `ai_data/` with anything in it
+    whose name does not begin with a dot (its listing is read only until
+    one is found, and no name in it is kept; an empty one, as Exegete
+    makes, does not count), and in it `chat_history.sqlite` or
+    `search.sqlite`;
+  - whether QualCoder's own `_BKUP_` backups sit beside the project (the
+    names, in the folder that holds it, that begin with the project's
+    name, as `list_backups` reads them);
+  - whether its lock file is a leftover;
+  - whether QualCoder's settings folder (`~/.qualcoder`) exists;
+  - and whether the process scan found QualCoder.
+
+  The field also gives, as `setting`, the researcher's
   answer to "Do you also use QualCoder on this computer?" in Exegete's
   settings (yes, no or not sure; any other word typed there is read as
   not sure and never given), and with a yes or a no it is given even
@@ -1729,11 +1768,12 @@ Two further rules touch files on your disk:
 ## Your governance options, from default to fully local (Experimental)
 
 Which terms govern the AI processing is decided by the host you run and
-the account you sign into, not by Exegete. Four rungs follow, each with
+the account you sign into, not by Exegete. The four options below,
+called rungs here, go from the default to a fully local model. Each says
 what changes and what to check. The official pages are quoted word for
-word with their addresses, never characterised; the terms below were
-quoted on 17 August 2026 and the passages on feedback on 1 October
-2026, and the linked pages govern. On every rung, Claude Code opens
+word with their addresses, never described in our own words. The terms
+below were quoted on 17 August 2026 and the passages on feedback on
+1 October 2026, and the linked pages govern. On every rung, Claude Code opens
 files by itself, outside Exegete, and the terms do not change what it
 reads ("Assistants that open files by themselves").
 
@@ -1779,8 +1819,8 @@ Program." A Data Processing Addendum exists on the commercial side
 date shown: February 24, 2025): it is the instrument an institution's
 data protection officer will ask about.
 
-**The individual-account wrinkle, set out without resolving it.** The
-Consumer Terms' scope clause includes:
+**A question about individual accounts, set out without settling it.**
+The Consumer Terms' scope clause includes:
 
 > "Claude.ai, Claude Pro, and other products and services that we may
 > offer for individuals (including any Anthropic API key and the
@@ -1815,25 +1855,25 @@ set up as "Assistants that open files by themselves" says.
 ### Rung 4: fully local models (Experimental)
 
 The model runs on your computer, so no third-party processor is
-involved: every operation of Exegete happens on your computer too, while
-its check for new versions stays off, as it is on this route unless you
-switch it on ("Checking for new versions", below), though on Windows x64
+involved. Every operation of Exegete happens on your computer too,
+while its check for new versions stays off, as it is on this route
+unless you switch it on ("Checking for new versions", below), though on Windows x64
 a library it installs for PDFs reports its use to Windows, with nothing
 from your projects ("A library's usage reports", under "How your data
 flows"). LM Studio's documentation states (quoted 17 August 2026,
 <https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
 entirely offline" and that "Nothing you enter into LM Studio when
 chatting with LLMs leaves your device". That is the maker's statement,
-not a certification by this project: you can check offline work by
-disconnecting and working, check that the host's entry sets
+not a certification by this project. You can check offline work by
+disconnecting and working, and check that the host's entry sets
 `EXEGETE_UPDATE_CHECK` to `off` (Exegete's log says at each start
-whether checking is on), and record both for a data-management plan.
+whether checking is on). Record both for a data-management plan.
 Disconnecting shows that the work needs no network, not that nothing
 tries to connect, since a check that fails says nothing.
 
-The trade: we expect a local model to do the analysis less well than
-the hosted models, and do not know by how much, since we have evaluated
-neither. A local model is a route to consider for particular uses, such
+There is a trade-off. We expect a local model to do the analysis less
+well than the hosted models, and do not know by how much, since we have
+evaluated neither. A local model is a route to consider for particular uses, such
 as a first pass over sensitive material, or work an agreement confines
 to one computer, rather than a suggestion for participants' data as
 such. It means a narrower workflow with more supervision, and the
@@ -1865,9 +1905,10 @@ recipe "LM Studio (fully local)" gives the steps.
   `/feedback` retention, and local plaintext transcripts under
   `~/.claude/projects/`. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and
   `cleanupPeriodDays` narrow them (<https://code.claude.com/docs/en/data-usage>).
-- **Commercial terms are not GDPR compliance.** The DPA exists; the
-  analysis of controller and processor, and executing or relying on the
-  DPA, remain the institution's work.
+- **Commercial terms are not GDPR compliance.** The Data Processing
+  Addendum (DPA) exists, but deciding who is controller and who is
+  processor, and signing or relying on the DPA, remain the
+  institution's work.
 - The Privacy Center now lives at privacy.claude.com; older
   privacy.anthropic.com links lead there.
 
@@ -1951,8 +1992,8 @@ or updating the extension still downloads what it needs, as INSTALL.md
 says; that is Claude Desktop's work, not Exegete's. Blocking
 nicotem.github.io at your network stops the request reaching GitHub,
 but Exegete still tries, at most once a week, and when you ask, and
-your network still sees the name; switching it off stops the attempts. Blocked, Exegete
-says nothing about new versions.
+your network still sees the name. Switching it off stops the attempts.
+Blocked, Exegete says nothing about new versions.
 
 ## OpenAI's apps: the ChatGPT desktop app and Codex (Experimental)
 
@@ -2039,7 +2080,7 @@ passes on, not the approval before anything is written, not the preview
 or the backup. Codex changes files in the folder it works in without
 asking, so a study's folder, the projects folder or the home folder
 given to it as that folder would be open to its changes as well as its
-reads; The Terminal guide's recipe gives it an empty folder of its own, which
+reads. The Terminal guide's recipe gives it an empty folder of its own, which
 keeps a study's files out of the place Codex works in, so that it does
 not change them without asking, and does not keep Codex from reading
 them, or from searching other folders for them. Practising, too,
@@ -2505,14 +2546,14 @@ way when the provider is OpenAI.
   reads files.
 - **Consult your institution's data protection officer or ethics board**
   if you are unsure, before the analysis, not after.
-- Remember that Exegete's safety features (read-only default, automatic
-  local backups, refusing to write while the project's lock file is
+- Remember what Exegete's safety features protect: your project's
+  **integrity on disk**. They are the read-only default, the automatic
+  local backups, the refusal to write while the project's lock file is
   active (QualCoder 3.8.2 keeps it while it has the project open, and
-  Exegete during each of its own writes), and for QualCoder 4.0 a
+  Exegete during each of its own writes), and, for QualCoder 4.0, a
   best-effort check of this machine's process list that reports only a
-  count, never names or command lines) protect your project's
-  **integrity on disk**; they do not change what leaves the machine
-  through the conversation.
+  count, never names or command lines. They do not change what leaves
+  the machine through the conversation.
 
 ## Questions
 

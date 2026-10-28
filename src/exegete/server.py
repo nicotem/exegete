@@ -3576,10 +3576,12 @@ def _backup_before_change(write_db, fail_message: str, check=None,
 # ---------------------------------------------------------------------------
 
 # What a change's answer says when it carries no receipt: the change
-# stands, and its backup is the way back.
+# stands, and its backup is the way back, which also takes back every
+# change made after it.
 NO_UNDO_RECEIPT = (
     "No undo receipt was kept for this change, so it cannot be undone on "
-    "its own; restore_backup with the backup named here is the way back.")
+    "its own. The way back is restore_backup with the backup named here, "
+    "which also takes back everything done after that backup.")
 
 
 class _ChangeCapture:

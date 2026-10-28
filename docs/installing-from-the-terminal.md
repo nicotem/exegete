@@ -32,7 +32,7 @@ Claude, one fully local route, and OpenAI's apps.
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
 | **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. An institution's agreement sets the terms for its data, and a personal account the consumer terms, which is why organisational accounts suit institutions. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
-| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Requires the reduced core toolset. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
+| **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. Not tried by this project. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
 The multi-host support (the core toolset and the recipes below) is
@@ -84,8 +84,10 @@ The brief is provisional: a later release may change it.
   `~/Documents/Exegete projects` unless `EXEGETE_WORKSPACE` names
   another folder ("Environment variables Exegete reads", below). iCloud
   (Desktop and Documents) or OneDrive may sync Documents. A sync service
-  can copy a project's database and its journal separately, so a folder
-  outside Documents, such as `~/Exegete projects`, may suit you better.
+  copies your projects off this computer, transcripts imported into them
+  included. It can also copy a project's database and its journal
+  separately, which can leave a damaged copy. So a folder outside
+  Documents, such as `~/Exegete projects`, may suit you better.
   A project you have works too: a folder ending in `.qda`, made by
   Exegete or made in QualCoder, with a `data.qda` database file inside.
 
@@ -547,9 +549,9 @@ reports place the practical minimum for work with many tools around
 14B parameters.
 
 **Step 3. Use the small tool set.** Exegete offers 79 tools by default,
-and the serialised tool definitions alone measure about 203,000
-characters, roughly 51k tokens, against about 74,000 characters,
-roughly 18k tokens, for the 27 tools of `core` (measured on Python 3.13
+and the serialised tool definitions alone measure about 200,000
+characters, roughly 50,000 tokens, against about 74,000 characters,
+roughly 18,000 tokens, for the 27 tools of `core` (measured on Python 3.13
 with the libraries in `uv.lock`; TOOLS.md says how, and
 [docs/snapshot/](snapshot/) gives the exact figures). The full set
 fills LM Studio's default context of 8k several times over before you
@@ -558,13 +560,13 @@ this size. `EXEGETE_TOOLSET=core`, in the entry of step 5, gives only
 the smaller set.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-18k tokens of schema exceed the default context of 8k. In the model's
+18,000 tokens of schema exceed the default context of 8k. In the model's
 load settings, or its default settings
 (<https://lmstudio.ai/docs/app/advanced/per-model>), set the context
 length to at least 32k for the core toolset (that leaves about 14k
 tokens for your transcript excerpts and conversation; 16k would not even
 hold the schema and is not workable), or 64k if you must run the full
-surface (its schema alone is about 51k tokens).
+surface (its schema alone is about 50,000 tokens).
 
 **Step 5. Add Exegete.** Open the Program tab in the right sidebar,
 click Install, then Edit mcp.json, and add these lines (LM Studio
@@ -1027,7 +1029,7 @@ the safeguard" says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 203,000 characters with `full`; TOOLS.md says how that
+  (about 200,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

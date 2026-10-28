@@ -643,7 +643,14 @@ def test_the_assistants_table():
             "evaluated neither.") in install
     assert "local models are markedly weaker on many-tool work" not in \
         install
-    assert "Requires the reduced core toolset." in install
+    # (the readers of the routes' move, 28 October 2026: the table says
+    # which set Exegete offers a local host, as the code and the LM
+    # Studio recipe have it, rather than that `core` is required)
+    assert ("Exegete offers its full tool set unless the host's entry asks "
+            "for the smaller one, `core`. The recipe asks for `core`, which "
+            "takes less of a local model's room than the full set.") \
+        in install
+    assert "Requires the reduced core toolset." not in install
     assert cells["Claude Desktop's chat"][VERDICT] == \
         "**This one**, set up as below"
     # (the owner, 1 October 2026: warn, don't prescribe; each verdict

@@ -322,9 +322,10 @@ def _chat_suggestions():
         "PRIVACY, the checklist": _between(
             privacy, "## Before you use real participant data, check "
             "these", "## How your data flows"),
-        "QUICKSTART, what you need": _between(
-            _flat("QUICKSTART.md"), "## Prerequisites Checklist",
-            "## Installation Steps"),
+        "QUICKSTART, Claude Code": _between(
+            _flat("QUICKSTART.md"),
+            "### Claude Code instead of Claude Desktop",
+            "## Installation steps"),
         "PRIVACY, practical mitigations": _between(
             privacy, "- **An assistant that opens files by itself can read "
             "a project whole**", "- **Consult your institution's"),
@@ -757,10 +758,12 @@ def test_the_check_paragraph_says_what_the_check_now_says():
 # ---------------------------------------------------------------------------
 
 def test_quickstart_sends_a_newcomer_to_the_one_click_start():
+    # (v0.15.2, the opening texts: after the paragraph that says what the
+    # guide and Exegete are, before anything to install)
     quickstart = _read("QUICKSTART.md")
-    first = quickstart[:quickstart.index("This guide will get you")]
-    assert ("**New to Exegete?** Start with the README's one-click "
-            "extension for Claude Desktop instead:") in " ".join(first.split())
+    first = quickstart[:quickstart.index("## What you need")]
+    assert ("If you are new to Exegete, the one-click extension for Claude "
+            "Desktop needs no typed commands:") in " ".join(first.split())
     assert "https://github.com/nicotem/exegete#claude-desktop-with-one-click" \
         in first
     assert "\n### Claude Desktop, with one click\n" in _read("README.md")

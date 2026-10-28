@@ -169,7 +169,7 @@ class TestTheRestartIsSaid:
         quick = _flat(_read("QUICKSTART.md"))
         said = quick[quick.index('"Your coder name" in the extension\'s '
                                  'settings'):]
-        said = said[:said.index("Then:")]
+        said = said[:said.index("Then try")]
         assert "Claude Desktop has been quit and opened again" in said
 
 

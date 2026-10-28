@@ -180,18 +180,31 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
     Desktop; both say where what Claude reads goes and give the training
     advice in the README's words (the judge, 6 October 2026: QUICKSTART
     pointed Claude at a real project without either)."""
-    claude_check = _plain(_between(_flat("README.md"),
-                                   "3. **Switch training off**",
-                                   " (PRIVACY.md quotes the terms)"))[3:]
+    # v0.15.2, the opening texts: the README and QUICKSTART say it in the
+    # writing checklist's voice and INSTALL.md, until its own piece, in
+    # its words; the three hold the same facts
+    readme = _plain(_between(_flat("README.md"),
+                             "Before you use participants' data with "
+                             "Claude Desktop's chat",
+                             "**Private notes and names.**"))
     one_click = _plain(_between(
         _flat("INSTALL.md"), "## Installing the extension",
         "### Approving the AI's suggestions"))
     quickstart = _plain(_between(_flat("QUICKSTART.md"),
-                                 "### 5. Test It Out",
-                                 "In Claude Desktop, try these prompts:"))
+                                 "### 5. Try it",
+                                 "If you have no project yet, ask Claude"))
+    for where, text in (("README, the checks", readme),
+                        ("INSTALL, one-click", one_click),
+                        ("QUICKSTART, step 5", quickstart)):
+        for words in ("Anthropic may use your conversations",
+                      "to train its models", "(Free, Pro or Max)",
+                      "Model Improvement",
+                      "https://claude.ai/settings/data-privacy-controls",
+                      "thumbs up or down",
+                      "can still let Anthropic train on that conversation"):
+            assert words in text, (where, words)
     for where, text in (("INSTALL, one-click", one_click),
                         ("QUICKSTART, step 5", quickstart)):
-        assert claude_check in text, where
         assert ("[Where your data goes](https://github.com/nicotem/exegete"
                 "#where-your-data-goes), in the README, says the rest: the "
                 "checks before participants' data, and which assistants open "
@@ -256,9 +269,10 @@ def _warning_places():
         "PRIVACY, assistants that open files": _between(
             _flat("PRIVACY.md"), "## Assistants that open files by "
             "themselves", "## Keeping notes private"),
-        "QUICKSTART, what you need": _between(
-            _flat("QUICKSTART.md"), "## Prerequisites Checklist",
-            "## Installation Steps"),
+        "QUICKSTART, Claude Code": _between(
+            _flat("QUICKSTART.md"),
+            "### Claude Code instead of Claude Desktop",
+            "## Installation steps"),
     }
 
 

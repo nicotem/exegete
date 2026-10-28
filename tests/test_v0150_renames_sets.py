@@ -534,18 +534,18 @@ class TestTheDocuments:
         flat = _flat("QUICKSTART.md")
         step2 = flat[flat.index("### 2. Find your project"):]
         step2 = step2[:step2.index("### 3.")]
-        assert ("**No project yet?** Skip this step: step 3 says what to "
-                "leave out, and in step 5 you can ask the assistant to "
-                "create one.") in step2
+        # (v0.15.2, the opening texts: a statement, not a question)
+        assert ("If you have no project yet, skip this step: step 3 says "
+                "what to leave out, and in step 5 you can ask the assistant "
+                "to create one.") in step2
         step3 = flat[flat.index("### 3. Configure Claude Desktop"):]
         step3 = step3[:step3.index("### 4.")]
         # The whole-branch review of v0.15.0, round 2: only the project's
         # line is left out, so the coder name the page added stays, and
         # the workspace is a line of the same block, never a second one
-        assert ("**No project yet?** Leave out the `EXEGETE_PROJECT_PATH` "
-                "line, as below: Exegete then starts with no project "
-                "selected, and in step 5 you can ask the assistant to "
-                "create one.") in step3
+        assert ("If you have no project yet, leave out the "
+                "`EXEGETE_PROJECT_PATH` line, as below. Exegete then starts "
+                "with no project selected.") in step3
         text = (REPO / "QUICKSTART.md").read_text(encoding="utf-8")
         blocks = re.findall(r"```json\n(.*?)```", text, re.S)
         configs = [json.loads(block) for block in blocks]
@@ -555,14 +555,14 @@ class TestTheDocuments:
             "command": "/Users/yourname/Documents/exegete/venv/bin/python",
             "args": ["-m", "exegete.server"],
             "env": {"EXEGETE_CODER_NAME": "Your name"}}}}]
-        assert ("On this setup a new project goes to `~/Documents/Exegete "
+        assert ("On this route, a new project goes to `~/Documents/Exegete "
                 "projects` unless `EXEGETE_WORKSPACE` names another folder. "
                 "iCloud (Desktop and Documents) or OneDrive may sync "
-                "Documents, and so copy the project, transcripts imported "
-                "into it included, off the computer; a sync service can "
-                "also copy a project's database and its journal separately. "
-                "Consider naming a folder outside Documents, such as "
-                "`~/Exegete projects`:") in step3
+                "Documents, and so copy your projects, with their "
+                "transcripts, off the computer. A sync service can also copy "
+                "a project's database and its journal separately, which can "
+                "leave a damaged copy. You could name a folder outside "
+                "Documents, such as `~/Exegete projects`:") in step3
         assert ("add `\"EXEGETE_WORKSPACE\": \"/Users/yourname/Exegete "
                 "projects\"` as a line of the `env` block, with a comma "
                 "after the line before it") in step3
@@ -570,11 +570,11 @@ class TestTheDocuments:
         # Fix round 2: INSTALL's heading in its own words
         assert ("(INSTALL.md, \"What You'll Need\" and \"Environment "
                 "variables the server reads\")") in step3
-        step5 = flat[flat.index("### 5. Test It Out"):]
-        step5 = step5[:step5.index("## Updating Later")]
-        assert ("In Claude Desktop, try these prompts: the first only if "
-                "you have no project yet. ``` Create a new project in "
-                "Exegete called Practice ```") in step5
+        step5 = flat[flat.index("### 5. Try it"):]
+        step5 = step5[:step5.index("## Updating later")]
+        # (v0.15.2, the opening texts: the request in a sentence)
+        assert ("If you have no project yet, ask Claude to \"Create a new "
+                "project in Exegete called Practice\".") in step5
         assert "Can you give me a summary of my project?" in step5
 
     def test_install_says_exegete_names_it_in_its_log(self):
@@ -715,11 +715,12 @@ class TestTheDocuments:
     def test_quickstart_troubleshooting_without_a_project(self):
         flat = _flat("QUICKSTART.md")
         trouble = flat[flat.index("## Troubleshooting"):]
-        trouble = trouble[:trouble.index("### Common Errors")]
-        assert ("4. **Check .qda project** - make sure the folder exists: "
-                "`ls -ld /path/to/your/project.qda` (skip this if you have "
-                "no project yet)") in trouble
-        manual = trouble[trouble.index("### Test the Server Manually"):]
+        trouble = trouble[:trouble.index("### Common errors")]
+        # (v0.15.2, the opening texts: the checks in sentences)
+        assert ("3. **The project folder.** `ls -ld "
+                "/path/to/your/project.qda` shows whether it exists (skip "
+                "this if you have no project yet).") in trouble
+        manual = trouble[trouble.index("### Start Exegete by hand"):]
         assert manual.index("Leave out the `export` line if you have no "
                             "project yet.") < manual.index("```bash")
         assert "export EXEGETE_PROJECT_PATH=" in manual

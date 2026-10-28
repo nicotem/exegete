@@ -212,19 +212,22 @@ README_SENTENCES = (
     # (v0.15.2, the opening texts: one sentence, in the words of the
     # writing checklist's table)
     "Replacing names reduces the risk, and makes no one anonymous. "
-    "Exegete can replace them, with the project's names list as documents "
-    "come in or with `pseudonymise_source` afterwards. "
+    # (v0.15.2, the readability reading: when Exegete replaces them, in
+    # words, the tool's name left to the section for advanced users)
+    "Exegete can replace them as documents come in, with the project's "
+    "names list, or afterwards. "
     # the files design, piece 5
-    "The list can be one you fill in on your own computer, in a file "
-    "Exegete prepares, so the names do not pass through the conversation. "
+    "You can fill in the list on your own computer, in a file Exegete "
+    "prepares, so the names do not pass through the conversation. "
     # and its fix round 1: the subject named, and the names file among
-    # what an assistant can reach
+    # what an assistant can reach (the readability reading: the documents'
+    # originals, and the warning said as a fact before its reasons)
     "Replacing names helps you "
     "manage what you share with other people, though the project's folder "
-    "still holds the originals and any names list. For what the assistant "
-    "reads, the replacement should not be trusted blindly: Exegete's tools "
-    "return the pseudonyms where names were replaced (PRIVACY.md says what "
-    "is not replaced), but an assistant that opens files by itself can "
+    "still holds the documents' originals and any names list. The "
+    "replacement alone does not keep names from the assistant. Exegete's "
+    "tools return the pseudonyms where names were replaced (PRIVACY.md says "
+    "what is not replaced), but an assistant that opens files by itself can "
     "reach the originals, and the names file, outside Exegete. To keep "
     "real names from the "
     "assistant altogether, a safer way is to replace them before the "
@@ -428,7 +431,7 @@ class TestPrivacy:
         readme = _flat(_doc("README.md"))
         paragraph = readme[readme.index("**Private notes and names.**"):]
         paragraph = paragraph[:paragraph.index("**What stays on your")]
-        assert "trusted blindly" in paragraph
+        assert "does not keep names from the assistant" in paragraph
         changelog = _flat(_doc("CHANGELOG.md"))
         entry = changelog[changelog.index(ENTRY):]
         entry = entry[:entry.index("### ", len(ENTRY))]
@@ -456,12 +459,12 @@ class TestReadme:
         paragraph = readme[readme.index("**Private notes and names.**"):]
         paragraph = paragraph[:paragraph.index("**What stays on your")]
         for phrase in (
-                "Exegete can replace them, with the project's names list "
-                "as documents come in or with `pseudonymise_source` "
-                "afterwards.",
-                "though the project's folder still holds the originals and "
-                "any names list",
-                "the replacement should not be trusted blindly",
+                "Exegete can replace them as documents come in, with the "
+                "project's names list, or afterwards.",
+                "though the project's folder still holds the documents' "
+                "originals and any names list",
+                "The replacement alone does not keep names from the "
+                "assistant.",
                 "Exegete's tools return the pseudonyms where names were "
                 "replaced (PRIVACY.md says what is not replaced)",
                 "before the documents reach the computer where the "

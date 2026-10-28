@@ -341,12 +341,14 @@ class TestWhatWasDecided:
                 "assistant, compatible with QualCoder.") in page
         readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
         assert "**" + TAGLINE + "**" in readme
-        assert ("It is built to stay interoperable with QualCoder: your "
+        # (v0.15.2, the readability reading: the commitment a sentence of
+        # its own; QualCoder offered once, after the list)
+        assert ("Exegete is built to stay interoperable with QualCoder. Your "
                 "project is a folder on your computer, kept in QualCoder's "
                 "format and conventions, so you can work on it in either "
                 "program, one at a time.") in readme
-        assert ("**Not in Exegete yet**, and done in QualCoder for now:"
-                in readme)
+        assert ("**Not in Exegete yet.**" in readme)
+        assert "QualCoder, if you use it, can do them." in readme
         # A suggestion, not an instruction (whole-branch review, round 1)
         assert ("If your study needs any of these now, you may want "
                 "QualCoder from the start.") in readme

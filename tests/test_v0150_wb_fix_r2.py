@@ -388,10 +388,11 @@ class TestTheSmallerPoints:
         # (the staleness audit of 20 October 2026: saving the names list
         # previews first too; both lists follow the token registry)
         # (v0.15.2, the opening texts: the same fact, reworded), pruning backups named beside restoring them
+        # (the readability reading: pruning said as clearing old backups)
         assert ("The larger ones show a preview first: merging or deleting "
-                "codes and categories, replacing names, restoring or pruning "
-                "backups, bringing documents in, correcting your own coder "
-                "name and saving the names list.") in readme
+                "codes and categories, replacing names, restoring a backup or "
+                "clearing old ones, bringing documents in, correcting your own "
+                "coder name and saving the names list.") in readme
         from exegete import preview_tokens
         guarded = readme[readme.index("- **Guarded changes**"):]
         # (v0.15.2, the opening texts: the import among them, every tool
@@ -399,8 +400,10 @@ class TestTheSmallerPoints:
         guarded = guarded[:guarded.index("- **The brief**")]
         for name in set(preview_tokens.REGISTRY):
             assert f"`{name}`" in guarded, name
-        assert "`import_documents` (a preview, then the import on its " \
-               "token" in readme
+        # (the readability reading: the list's lead says that each
+        # previews first, so the import's own words say what it does)
+        assert "`import_documents` (bringing documents in, after a " \
+               "backup)" in readme
         assert ("`set_project_coder_name` (your own coder name, while "
                 "nothing is recorded under it), `save_names_list` (saving "
                 "the names list), and `import_documents`") in readme

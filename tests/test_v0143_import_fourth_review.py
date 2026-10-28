@@ -400,14 +400,16 @@ class TestTheTexts:
         # second time gave way to the list of what is not in Exegete yet)
         assert readme.count("PDF and EPUB with the optional part, which "
                             "the extension has") == 1
-        assert "read by Exegete on your computer" in readme
-        assert "on Windows 11, Copy as path" in readme
+        # (v0.15.2, the readability reading: Exegete the subject, and the
+        # Windows step a sentence of its own)
+        assert "Exegete reads them on your computer" in readme
+        assert "On Windows 11, choose Copy as path." in readme
         assert ("an EPUB opened in Apple Books joins its library, and "
                 "iCloud if Books syncs") in readme
         # v0.15.0, the release review: the stamp named the comparison's
         # column; v0.15.2, the opening texts: the comparison gave way to
         # the list of what is not in Exegete yet, which needs no stamp
-        assert "**Not in Exegete yet**" in readme
+        assert "**Not in Exegete yet.**" in readme
 
     def test_the_small_wording_points(self):
         assert "into the selected project" in _description()

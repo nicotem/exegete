@@ -47,12 +47,13 @@ def test_the_readme_says_what_it_is_not():
             "and have not endorsed it.") in readme
     # The provenance audit's wording (2026-09-23), with NOTICE linked
     # where it is named
+    # (v0.15.2, the readability reading: NOTICE's sentence its own)
     assert ("It contains a small number of routines and values taken from "
-            "QualCoder so that its results match QualCoder's exactly, and "
+            "QualCoder, so that its results match QualCoder's exactly. "
             "[NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE) "
             "lists them") in readme
     assert readme.count("an add-on or a remote control") == 0
-    assert ("You do not need QualCoder to start, or running while you "
+    assert ("You do not need QualCoder, either to start or while you "
             "work") in readme
     # The opening no longer describes a connector
     assert "A Model Context Protocol (MCP) server that connects" \
@@ -117,16 +118,19 @@ def test_the_private_part_is_stated_for_this_server_only():
     # PRIVACY.md names, a project built to leak it; its fix round: the
     # reference is to a heading PRIVACY.md has, which names Exegete)
     # (v0.15.2, the opening texts: the convention named as QualCoder's)
+    # (v0.15.2, the readability reading: a project built on purpose to
+    # leak it, said so)
     assert ("By QualCoder's convention, the part of a memo from a `#####` "
-            "mark onward is a private note: Exegete never passes it to the "
+            "mark onward is a private note. Exegete never passes it to the "
             "assistant, whichever program made the project, unless the "
-            "project was built to leak it (PRIVACY.md, \"") in data
-    cited = data.split("project was built to leak it (PRIVACY.md, \"")[1]
+            "project was built on purpose to leak it (PRIVACY.md, \"") in data
+    cited = data.split("project was built on purpose to leak it (PRIVACY.md, "
+                       "\"")[1]
     cited = cited[:cited.index("\").")]
     assert f"**{cited}.**" in _flat("PRIVACY.md")
     assert "server" not in cited
-    assert ("exported files keep the whole memo, private part "
-            "included") in data
+    assert ("Exported files keep the whole memo, the private part "
+            "included.") in data
     privacy = _flat("PRIVACY.md")
     assert ("QualCoder (3.8.2 and 4.0) uses a marker for memos: everything "
             "from the first `#####` onward is a private note. Exegete "
@@ -216,8 +220,9 @@ def test_the_three_commitments():
                   "**Exchange with other programs.**"):
         assert words in section, words
     # The agreement caveat, the server's own, where the comparison is named
-    assert ("Against the AI coder name, it is not agreement between "
-            "independent coders.") in readme
+    # (v0.15.2, the readability reading: what the figures do not measure)
+    assert ("Against the AI coder name, the figures do not measure agreement "
+            "between independent coders.") in readme
     for claim in ("feature symmetric", "is symmetric with"):
         assert claim not in readme
 
@@ -237,7 +242,8 @@ def test_the_upstream_server_is_stated_as_dated_fact():
     # in it, so the facts were checked again, against the release
     # (v0.15.2, the opening texts: the README dates its sentence and points
     # to TOOLS.md, which gives the facts)
-    assert "as checked on 6 October 2026 (TOOLS.md gives the facts" in readme
+    # (the readability reading: the pointer a sentence of its own)
+    assert "as checked on 6 October 2026. TOOLS.md gives the facts" in readme
     for text in (tools,):
         assert "(checked 6 October 2026)" in text
         assert "[#1571](https://github.com/ccbogel/QualCoder/pull/1571)" \
@@ -265,7 +271,7 @@ def test_the_upstream_server_is_stated_as_dated_fact():
 def _stance(readme):
     """The sentences after the dated facts, up to the next section."""
     facts = readme.index("QualCoder 4.0's own MCP server calls itself")
-    after = readme.index("not Exegete.", facts)
+    after = readme.index("not to Exegete.", facts)
     return readme[after:readme.index("## For advanced users", after)]
 
 
@@ -282,11 +288,12 @@ def test_the_readme_states_the_projects_stance_after_the_facts():
     assert "companion" not in stance
     assert ("**The aim** is that you can run a whole project in Exegete, "
             "from its creation to the finished analysis.") in readme
-    assert ("**Not in Exegete yet**, and done in QualCoder for now: "
-            "bringing in images, audio and video") in readme
-    assert readme.index("**Not in Exegete yet**") < \
+    # (the readability reading: QualCoder offered after the list, once)
+    assert ("QualCoder, if you use it, can do them. If your study needs any "
+            "of these now, you may want QualCoder from the start.") in readme
+    assert readme.index("**Not in Exegete yet.**") < \
         readme.index("QualCoder 4.0's own MCP server")
-    assert ("It is built to stay interoperable with QualCoder: your "
+    assert ("Exegete is built to stay interoperable with QualCoder. Your "
             "project is a folder on your computer, kept in QualCoder's "
             "format and conventions, so you can work on it in either "
             "program, one at a time.") in readme
@@ -312,7 +319,7 @@ def test_a_project_from_the_conversation_stays_in_one_qualcoder():
     # v0.15.2, the opening texts: said under "One program at a time")
     assert ("QualCoder 3.8.2 writes a lock file while it has a project open, "
             "and Exegete refuses changes while the file is active. "
-            "QualCoder 4.0 writes no lock file: Exegete warns when it sees "
+            "QualCoder 4.0 writes no lock file. Exegete warns when it sees "
             "signs of an open 4.0 window") in _flat("README.md")
 
 

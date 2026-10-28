@@ -883,7 +883,7 @@ class TestTheDocuments:
     def test_readme_and_privacy(self):
         # (v0.15.2, the opening texts: the same fact, reworded)
         assert ("the assistant asks for your own coder name, unless you have "
-                "filled it in Exegete's settings,") in _doc("README.md")
+                "filled it in Exegete's settings.") in _doc("README.md")
         privacy = _doc("PRIVACY.md")
         item = privacy[privacy.index("- **Creating a project** "
                                      "(`create_project`"):]

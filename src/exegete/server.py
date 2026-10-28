@@ -3,6 +3,7 @@
 use in conversation with an AI assistant, compatible with QualCoder. It runs
 as a Model Context Protocol server."""
 
+import contextvars
 import errno
 import fnmatch
 import os
@@ -113,7 +114,7 @@ from . import new_project
 from . import names_file, parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
 from .file_kinds import ProjectFileKindError
-from . import doc_import, doc_readers, kept_texts
+from . import change_record, doc_import, doc_readers, kept_texts
 from . import qualcoder_history
 from .cursors import (
     CURSOR_MAX_LENGTH,
@@ -1476,19 +1477,29 @@ def _error_answer(where: str, e: BaseException,
     return json.dumps({"error": unexpected.format(kind=type(e).__name__)})
 
 
+# The tool running, for the record its change leaves (v0.15.2): set by
+# `_tool_guard` for the call's length
+_CURRENT_TOOL: "contextvars.ContextVar[Optional[str]]" = \
+    contextvars.ContextVar("exegete_current_tool", default=None)
+
+
 def _tool_guard(fn):
     """Convert anticipated exceptions into sanitised error JSON.
 
     Applied to every MCP tool so that failures (no project selected, locked
     database, old schema, validation errors, corruption) reach the client as
-    actionable error JSON instead of raw tracebacks (`_error_answer`).
+    actionable error JSON instead of raw tracebacks (`_error_answer`). It
+    keeps the tool's name in `_CURRENT_TOOL` while the tool runs.
     """
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
+        running = _CURRENT_TOOL.set(fn.__name__)
         try:
             return fn(*args, **kwargs)
         except Exception as e:
             return _error_answer(fn.__name__, e)
+        finally:
+            _CURRENT_TOOL.reset(running)
     return wrapper
 
 
@@ -3516,8 +3527,139 @@ def _backup_before_change(write_db, fail_message: str, check=None,
             write_db.abandon_backup_before_write()
 
 
+# ---------------------------------------------------------------------------
+# The record of a change (v0.15.2): change_record.py keeps it, the capture
+# in database.py finds its rows, and these helpers run the capture around
+# each of the four write routes (`_perform_write`, apply_codings,
+# import_text_file and the document import), so that each route grows by
+# a few lines. Each helper catches every error and gives no capture or no
+# record: a change that committed is never answered as an error for its
+# record, and one record is made under one key, read once, with no file
+# read per row under SQLite's lock.
+# ---------------------------------------------------------------------------
+
+# What a change's answer says when it carries no receipt: the change
+# stands, and its backup is the way back.
+NO_UNDO_RECEIPT = (
+    "No undo receipt was kept for this change, so it cannot be undone on "
+    "its own; restore_backup with the backup named here is the way back.")
+
+
+class _ChangeCapture:
+    """One write's capture: what `_capture_start` read, what
+    `_capture_finish` assembled, and the receipt once the record is
+    written."""
+
+    def __init__(self):
+        self.started = False
+        self.project: Optional[str] = None
+        self.key_check: Optional[str] = None
+        self.backup: Optional[str] = None
+        self.tool: Optional[str] = None
+        self.changes_before: Optional[int] = None
+        self.unchanged = False      # no row changed: the answer says nothing
+        self.record: Optional[Dict[str, Any]] = None
+        self.receipt: Optional[str] = None
+
+
+def _capture_start(write_db, backup_path) -> _ChangeCapture:
+    """Once the backup is named, before the change: the secret read once,
+    the project's and the backup's digests and `key_check` taken, then the
+    capture started inside the write's transaction. A secret that cannot
+    be read (PreviewSecretUnavailable) or a path refused stops the capture
+    here, and the write goes ahead unrecorded; nothing after the commit
+    reads the secret or the path."""
+    capture = _ChangeCapture()
+    try:
+        capture.changes_before = write_db.conn.total_changes
+        secret = load_secret()
+        capture.project = change_record.digest(secret, "project",
+                                               _token_project())
+        capture.key_check = change_record.digest(secret, "key check", "")
+        if backup_path:
+            capture.backup = change_record.digest(secret, "backup",
+                                                  Path(backup_path).name)
+        capture.tool = _CURRENT_TOOL.get()
+        capture.started = write_db.start_capture(secret)
+    except Exception as e:
+        logger.warning("This change is not recorded: %s", error_label(e))
+        capture.started = False
+    return capture
+
+
+def _capture_finish(capture: Optional[_ChangeCapture], write_db,
+                    marks: Optional[Dict[str, Any]] = None) -> None:
+    """After the change, before the lock's re-check and the commit: the
+    rows found and the record assembled whole, in memory. A capture that
+    finds no row changed makes no record, and its answer says nothing of
+    one; with no capture, the connection's count of changes tells."""
+    if capture is None:
+        return
+    try:
+        if not capture.started:
+            capture.unchanged = (capture.changes_before is not None
+                                 and write_db.conn.total_changes
+                                 == capture.changes_before)
+            return
+        found = write_db.finish_capture()
+        if found is None:
+            return
+        if not found["rows"]:
+            capture.unchanged = True
+            return
+        capture.record = change_record.new_record(
+            tool=capture.tool, project=capture.project,
+            key_check=capture.key_check, backup=capture.backup,
+            found=found, marks=marks)
+    except Exception as e:
+        logger.warning("This change is not recorded: %s", error_label(e))
+        capture.record = None
+
+
+def _record_after_commit(capture: Optional[_ChangeCapture]) -> None:
+    """After the commit, still inside the project's lock: the record's file
+    written, then the project's folder swept. A record that cannot be
+    written leaves the change as made, with its backup and no receipt."""
+    if capture is None or capture.record is None:
+        return
+    try:
+        change_record.write(capture.project, capture.record)
+        capture.receipt = capture.record["receipt"]
+    except Exception as e:
+        logger.warning("The record of this change could not be kept: %s",
+                       error_label(e))
+        capture.record = None
+        return
+    try:
+        change_record.sweep(capture.project)
+    except Exception as e:
+        logger.warning("Could not tidy the records of changes: %s",
+                       error_label(e))
+
+
+def _receipt_fields(capture: Optional[_ChangeCapture]) -> Dict[str, str]:
+    """What a change's answer carries of its record: its receipt, or the
+    sentence that none was kept; nothing when no capture was asked for or
+    no row changed."""
+    if capture is None or capture.unchanged:
+        return {}
+    if capture.receipt:
+        return {"undo_receipt": capture.receipt}
+    return {"no_undo_receipt": NO_UNDO_RECEIPT}
+
+
+def _receipt_line(capture: Optional[_ChangeCapture]) -> Optional[str]:
+    """The same, as a line of a text answer."""
+    fields = _receipt_fields(capture)
+    if "undo_receipt" in fields:
+        return f"undo_receipt: {fields['undo_receipt']}"
+    return fields.get("no_undo_receipt")
+
+
 def _perform_write(op, *, check=None,
-                   backup_fail_detail: str = "nothing was written"):
+                   backup_fail_detail: str = "nothing was written",
+                   record: bool = True,
+                   marks: Optional[Dict[str, Any]] = None):
     """Run a mutation under the full write-safety discipline.
 
     This is the single, uniform implementation of the write pattern every
@@ -3543,10 +3685,14 @@ def _perform_write(op, *, check=None,
             payload. Either way the write stops with no backup.
         backup_fail_detail: Tail of the "nothing was ..." message on backup
             failure (e.g. "nothing was deleted").
+        record: Keep a record of the change and carry its receipt
+            (v0.15.2); False captures nothing and says nothing.
+        marks: The coding session's id and the random ids of the items
+            the call marks, kept in the record.
 
     Returns:
-        The op's success dict (with backup_path added), or an
-        {"error": ...} dict. Callers json.dumps the result.
+        The op's success dict (with backup_path and the receipt added),
+        or an {"error": ...} dict. Callers json.dumps the result.
 
     Raises:
         DatabaseLockedError: Only from before the backup is taken:
@@ -3564,6 +3710,7 @@ def _perform_write(op, *, check=None,
     project_folder = _current_project_folder()
     write_db = get_db(read_only=False)
     backup_path = None
+    capture = None
     committed = False
     try:
         with hold_project_lock(project_folder) as lock_held:
@@ -3573,8 +3720,11 @@ def _perform_write(op, *, check=None,
                 backup_fail_detail)
             if stopped is not None:
                 return stopped
+            capture = (_capture_start(write_db, backup_path) if record
+                       else None)
             try:
                 result = op(write_db)
+                _capture_finish(capture, write_db, marks)
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
                 committed = True
@@ -3610,6 +3760,8 @@ def _perform_write(op, *, check=None,
                         _rollback_if_open(write_db), backup_fail_detail,
                         e)},
                     backup_path)
+            # Committed: every arm above returns
+            _record_after_commit(capture)
     finally:
         # Unconditional cleanup on EVERY exit path (SEC M-1). The previous
         # shape only rolled back / downgraded for DatabaseLockedError,
@@ -3628,6 +3780,8 @@ def _perform_write(op, *, check=None,
         _attach_skipped_symlinks(
             result, getattr(write_db, "last_backup_report", None),
             prefix="backup_")
+    if isinstance(result, dict):
+        result.update(_receipt_fields(capture))
     schema_warning = write_db.schema_write_warning()
     if schema_warning and isinstance(result, dict) and "error" not in result:
         result["schema_warning"] = schema_warning
@@ -11448,6 +11602,7 @@ def apply_codings(
     # QualCoder's project lock so it cannot open the project mid-write
     results = []
     backup_path = None
+    capture = None
 
     try:
         with hold_project_lock(project_folder) as lock_held:
@@ -11478,6 +11633,7 @@ def apply_codings(
             to_write = under_lock.to_write
             already_existing = under_lock.already_existing
             file_cache = under_lock.file_cache
+            capture = _capture_start(write_db, backup_path)
             try:
                 for sugg in to_write:
                     memo = under_lock.memos[sugg.guid]
@@ -11506,6 +11662,11 @@ def apply_codings(
                         "guid": sugg.guid
                     })
 
+                # The record keeps the suggestions whose codings this
+                # call wrote, not those already in the project
+                _capture_finish(capture, write_db, {
+                    "session": session_id,
+                    "items": [r["guid"] for r in results]})
                 # Close the TOCTOU window, then commit all at once
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
@@ -11546,6 +11707,9 @@ def apply_codings(
                     "applied_before_failure": len(results),
                     "total_approved": len(approved)
                 }, backup_path))
+            # Committed (every arm above returns): the record, outside the
+            # `try` whose `except Exception` answers "rolled back"
+            _record_after_commit(capture)
     except DatabaseLockedError:
         # QualCoder grabbed the project between our check and the write
         _downgrade_to_readonly()
@@ -11623,6 +11787,9 @@ def apply_codings(
     output.append(f"If one of these turns out to be wrong, `delete_coding(ctid)` "
                   f"removes it and marks its suggestion removed in this "
                   f"session.")
+    receipt_line = _receipt_line(capture)
+    if receipt_line:
+        output.append(receipt_line)
 
     return "\n".join(output)
 
@@ -11849,6 +12016,7 @@ def import_text_file(
     # the global connection read-write with a pending transaction (the M-1
     # class). The finally (with the committed-flag guard) closes that.
     backup_path = None
+    capture = None
     committed = False
     result = None
     case_link = None
@@ -11862,6 +12030,7 @@ def import_text_file(
                 backup_fail_detail="the file was not imported")
             if stopped is not None:
                 return json.dumps(stopped)
+            capture = _capture_start(write_db, backup_path)
 
             # Perform the import (the database layer re-validates: defense
             # in depth); commit only after re-checking the QualCoder lock
@@ -11880,6 +12049,7 @@ def import_text_file(
                         owner=owner,
                         auto_commit=False
                     )
+                _capture_finish(capture, write_db)
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
                 committed = True
@@ -11910,6 +12080,8 @@ def import_text_file(
                         _rollback_if_open(write_db),
                         "the file was not imported", e)},
                     backup_path))
+            # Committed: every arm above returns
+            _record_after_commit(capture)
     finally:
         # Unconditional cleanup on EVERY exit path (SEC M-1 / C-1): roll back
         # anything still in flight (skipped after a successful commit by the
@@ -11939,6 +12111,7 @@ def import_text_file(
         _attach_skipped_symlinks(
             output, getattr(write_db, "last_backup_report", None),
             prefix="backup_")
+    output.update(_receipt_fields(capture))
 
     return json.dumps(output, indent=2)
 
@@ -12508,6 +12681,7 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
         return json.dumps(lock_error)
     write_db = get_db(read_only=False)
     backup_path = None
+    capture = None
     committed = False
     written = doc_import.Written()
     taken: List[Any] = []
@@ -12531,6 +12705,7 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                 backup_fail_detail="no file was imported")
             if stopped is not None:
                 return json.dumps(stopped)
+            capture = _capture_start(write_db, backup_path)
             try:
                 taken = doc_import.write_batch(
                     write_db.insert_imported_document, result, ctx, owner,
@@ -12549,6 +12724,7 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                         "error": "No file was imported: every file was held "
                                  "back or refused when read again.",
                         "nothing_changed": True}, backup_path), indent=2)
+                _capture_finish(capture, write_db)
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
                 committed = True
@@ -12591,14 +12767,17 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                     {"error": _write_failed_text(
                         _rollback_if_open(write_db),
                         "no file was imported", e)}, backup_path))
+            # Committed: every arm above returns
+            _record_after_commit(capture)
     finally:
         if not committed:
             _rollback_if_open(write_db)
             written.remove_all()
         _downgrade_to_readonly()
-    return json.dumps(_import_done_answer(result, taken, ctx, owner,
-                                          backup_path, written),
-                      indent=2, ensure_ascii=False)
+    answer = _import_done_answer(result, taken, ctx, owner, backup_path,
+                                 written)
+    answer.update(_receipt_fields(capture))
+    return json.dumps(answer, indent=2, ensure_ascii=False)
 
 
 def _pymupdf_version() -> Optional[str]:
@@ -16150,7 +16329,9 @@ def create_proposed_codes(coding_session_id: str,
                 "created_codes": created}
 
     result = _perform_write(_op, check=_check,
-                            backup_fail_detail="no codes were created")
+                            backup_fail_detail="no codes were created",
+                            marks={"session": session_id,
+                                   "items": [p.guid for p in approved]})
 
     if "error" not in result:
         for p in approved:
@@ -23747,6 +23928,12 @@ def main(argv: Optional[List[str]] = None, *,
     except Exception as e:
         logger.warning("Could not tidy the texts kept by earlier "
                        "previews: %s", error_label(e))
+    # v0.15.2: and the records of changes, once a day old
+    try:
+        change_record.sweep()
+    except Exception as e:
+        logger.warning("Could not tidy the records of changes: %s",
+                       error_label(e))
 
     # The check for new versions (the owner's ruling of 5 October 2026):
     # after the state folder is settled, since it keeps its record there,

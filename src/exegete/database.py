@@ -27,7 +27,7 @@ import shutil
 from datetime import datetime
 from contextlib import closing, contextmanager
 
-from . import doc_readers, env_settings, names
+from . import change_record, doc_readers, env_settings, names
 from .file_kinds import (
     ProjectFileKindError,
     is_kind,
@@ -4277,6 +4277,390 @@ def escape_like_pattern(pattern: str) -> str:
     pattern = pattern.replace('%', '\\%')
     pattern = pattern.replace('_', '\\_')
     return pattern
+
+
+# ======================================================================
+# The record of a change (v0.15.2): the capture's SQL
+# ======================================================================
+# The rows a write touches are found by TEMP triggers on the write
+# connection, inside the write's own transaction, and nothing is stored
+# in the project's file: QualcoderDatabase.start_capture and
+# finish_capture below, change_record.py for the record itself. The
+# project's names are data: each table's and column's name is read with
+# its name bound as a parameter and enters the capture's SQL only through
+# `_quoted`; a table is logged by its number in the capture's own list,
+# never by its name.
+
+CAPTURE_PREFIX = "exegete_capture_"
+CAPTURE_LOG = CAPTURE_PREFIX + "log"
+CAPTURE_FUNCTION = "exegete_row_digest"
+CAPTURE_SAVEPOINT = "exegete_capture"
+# The format's tables whose rows hold positions in a file's text, by the
+# file's id in `fid`: the record keeps a digest of each such file's text
+POSITIONED_TABLES = frozenset({"code_text", "annotation", "case_text"})
+# The format's one-row table, and its column digested apart from the rest
+# of the row (QualCoder 4.0 writes it at every open; undo sets it aside)
+ONE_ROW_TABLE = "project"
+ONE_ROW_APART = "codername"
+
+
+class _NotRecorded(Exception):
+    """A capture that cannot give a record (a value it could not digest,
+    a row without a key, trusted_schema left on); the write goes ahead
+    unrecorded. Made by `_not_recorded`, which logs the reason."""
+
+
+def _not_recorded(reason: str) -> _NotRecorded:
+    logger.info("This change is not recorded: %s", reason)
+    return _NotRecorded()
+
+
+class CaptureTable(NamedTuple):
+    """One table of a capture, as `_capture_tables` reads it."""
+    number: int                  # the table's number in the capture's list
+    name: str
+    columns: Tuple[str, ...]     # digested, in order (`apart` left out)
+    key: Optional[str]           # the key's column
+    key_kind: str                # "integer", "digest", "one_row" or "none"
+    apart: Optional[str]         # the column digested apart
+    fid: Optional[str]           # the column holding the file's id
+
+
+def _quoted(name: str) -> str:
+    """A name read from the project as SQL takes it: in double quotes,
+    each double quote doubled. The only way a project's name enters the
+    capture's SQL."""
+    return '"' + str(name).replace('"', '""') + '"'
+
+
+def _capture_refusal(conn) -> Optional[str]:
+    """Why the project's file keeps the capture out, or None.
+
+    A trigger of the project's own: recursive_triggers could let it fire
+    itself to SQLite's depth limit and fail the write, or write rows it
+    does not write today (neither QualCoder 3.8.2 nor 4.0 makes one, nor
+    does Exegete). An object of the project's whose SQL names the
+    capture's function: trusted_schema keeps a view or a DEFAULT from
+    calling it, but SQLite checks a generated column or a CHECK
+    constraint when it reads the schema, which the write connection has
+    read before the capture sets trusted_schema off, so the setting
+    alone does not keep them from calling it."""
+    if conn.execute("SELECT count(*) FROM main.sqlite_master "
+                    "WHERE type = 'trigger'").fetchone()[0]:
+        return "the project holds triggers of its own"
+    if conn.execute("SELECT count(*) FROM main.sqlite_master "
+                    "WHERE instr(lower(sql), ?) > 0",
+                    (CAPTURE_FUNCTION,)).fetchone()[0]:
+        return "the project's schema names the capture's function"
+    return None
+
+
+def _pragma_value(conn, pragma: str) -> Optional[int]:
+    """A setting's value, None where this SQLite does not know it."""
+    row = conn.execute(f"PRAGMA {pragma}").fetchone()
+    return None if row is None else row[0]
+
+
+def _trusted_schema(conn) -> Optional[int]:
+    """trusted_schema read back; SQLite before 3.31 ignores the setting
+    and gives nothing."""
+    return _pragma_value(conn, "trusted_schema")
+
+
+def _unique_columns(conn, table: str) -> List[str]:
+    """The columns that hold a unique value each, alone: the primary
+    key's index first, then a UNIQUE constraint's, then a unique index's
+    (partial ones left out), each family by its index's name."""
+    rank = {"pk": 0, "u": 1, "c": 2}
+    indexes = sorted(
+        (row for row in conn.execute(
+            'SELECT name, "unique", origin, partial '
+            "FROM pragma_index_list(?, 'main')", (table,)).fetchall()
+         if row[1] and not row[3]),
+        key=lambda row: (rank.get(row[2], 3), str(row[0])))
+    found = []
+    for index in indexes:
+        columns = conn.execute("SELECT name FROM pragma_index_info(?, 'main')",
+                               (index[0],)).fetchall()
+        if len(columns) == 1 and columns[0][0] is not None:
+            found.append(columns[0][0])
+    return found
+
+
+def _capture_table(conn, number: int, name: str) -> CaptureTable:
+    info = conn.execute("SELECT name, type, pk FROM pragma_table_info"
+                        "(?, 'main') ORDER BY cid", (name,)).fetchall()
+    columns = [row[0] for row in info]
+    lowered = {str(column).lower(): column for column in columns}
+    apart = fid = key = None
+    if str(name).lower() == ONE_ROW_TABLE:
+        key_kind = "one_row"
+        apart = lowered.get(ONE_ROW_APART)
+    else:
+        primary = [row for row in info if row[2]]
+        if len(primary) == 1 and \
+                str(primary[0][1] or "").strip().upper() == "INTEGER":
+            key, key_kind = primary[0][0], "integer"
+        else:
+            unique = _unique_columns(conn, name)
+            key, key_kind = (unique[0], "digest") if unique else (None, "none")
+        if str(name).lower() in POSITIONED_TABLES and key_kind == "integer":
+            fid = lowered.get("fid")
+    return CaptureTable(number, name,
+                        tuple(c for c in columns if c != apart), key,
+                        key_kind, apart, fid)
+
+
+def _capture_tables(conn) -> List[CaptureTable]:
+    """Every table of the project but SQLite's own, numbered in name
+    order."""
+    names = [row[0] for row in conn.execute(
+        "SELECT name FROM main.sqlite_master WHERE type = 'table' "
+        "ORDER BY name").fetchall()
+        if not str(row[0]).lower().startswith("sqlite_")]
+    return [_capture_table(conn, number, name)
+            for number, name in enumerate(names, start=1)]
+
+
+def _digest_sql(label: str, columns: Sequence[str], prefix: str) -> str:
+    """The SQL function over columns, each as its type and its bytes:
+    `CAST(... AS BLOB)` so nothing is decoded on the way."""
+    parts = "".join(f", typeof({prefix}{_quoted(column)}), "
+                    f"CAST({prefix}{_quoted(column)} AS BLOB)"
+                    for column in columns)
+    return f"{CAPTURE_FUNCTION}('{label}'{parts})"
+
+
+def _key_sql(table: CaptureTable, prefix: str) -> str:
+    """A row's key in the log: the integer key as it is; a unique name
+    digested (NULL when the value is NULL, which no record can hold); the
+    one-row table's, and a table without a key, 0."""
+    if table.key_kind == "integer":
+        return f"{prefix}{_quoted(table.key)}"
+    if table.key_kind == "digest":
+        column = f"{prefix}{_quoted(table.key)}"
+        return (f"(CASE WHEN {column} IS NULL THEN NULL ELSE "
+                f"{_digest_sql('key', [table.key], prefix)} END)")
+    return "0"
+
+
+def _apart_sql(table: CaptureTable, prefix: str) -> str:
+    return ("NULL" if table.apart is None
+            else _digest_sql("apart", [table.apart], prefix))
+
+
+def _fid_sql(table: CaptureTable, prefix: str) -> str:
+    return "NULL" if table.fid is None else f"{prefix}{_quoted(table.fid)}"
+
+
+def _log_insert(number: int, key: str, kind: str, old: str, apart: str,
+                fid: str, condition: str = "") -> str:
+    """One row into the log, unless the row's key is logged already, so
+    each row's first firing is kept. The log, an INSERT's target inside a
+    trigger, is named unqualified, as SQLite requires there; a TEMP
+    trigger finds it in temp first."""
+    return (f'INSERT INTO "{CAPTURE_LOG}" (t, k, kind, old, apart, fid) '
+            f"SELECT {number}, {key}, {kind}, {old}, {apart}, {fid} "
+            f"WHERE {condition}NOT EXISTS (SELECT 1 FROM "
+            f'temp."{CAPTURE_LOG}" WHERE t = {number} AND k = {key});')
+
+
+def _trigger_statements(table: CaptureTable) -> List[str]:
+    """The three TEMP triggers on one table. An update that changes a key
+    logs the old key as removed and the new one as added; an update or a
+    deletion logs the old row's digest, made inside the trigger, so no
+    old value is stored, even in SQLite's temporary storage. A temporary
+    trigger's own name cannot be qualified (SQLite refuses it): TEMP
+    names its schema."""
+    n, on = table.number, f"main.{_quoted(table.name)}"
+    old_key, new_key = _key_sql(table, "OLD."), _key_sql(table, "NEW.")
+    old_row = _digest_sql("row", table.columns, "OLD.")
+    old_apart, old_fid = _apart_sql(table, "OLD."), _fid_sql(table, "OLD.")
+    added = _log_insert(n, new_key, "'i'", "NULL", "NULL",
+                        _fid_sql(table, "NEW."))
+    head = f'CREATE TEMP TRIGGER "{CAPTURE_PREFIX}{n}_'
+    return [
+        f"{head}i\" AFTER INSERT ON {on} BEGIN {added} END",
+        f"{head}u\" AFTER UPDATE ON {on} BEGIN "
+        + _log_insert(n, old_key, f"CASE WHEN {old_key} IS {new_key} THEN "
+                      f"'u' ELSE 'd' END", old_row, old_apart, old_fid)
+        + " " + _log_insert(n, new_key, "'i'", "NULL", "NULL",
+                            _fid_sql(table, "NEW."),
+                            f"{old_key} IS NOT {new_key} AND ")
+        + " END",
+        f"{head}d\" AFTER DELETE ON {on} BEGIN "
+        + _log_insert(n, old_key, "'d'", old_row, old_apart, old_fid)
+        + " END"]
+
+
+def _standing_triggers(conn) -> List[str]:
+    """The capture's TEMP triggers that stand on the connection."""
+    return [row[0] for row in conn.execute(
+        "SELECT name FROM temp.sqlite_master WHERE type = 'trigger' "
+        "AND substr(name, 1, ?) = ?",
+        (len(CAPTURE_PREFIX), CAPTURE_PREFIX)).fetchall()]
+
+
+def _drop_capture_objects(conn) -> None:
+    """Drop the capture's TEMP triggers, then its log (its index goes
+    with it)."""
+    for name in _standing_triggers(conn):
+        conn.execute(f"DROP TRIGGER IF EXISTS temp.{_quoted(name)}")
+    conn.execute(f'DROP TABLE IF EXISTS temp."{CAPTURE_LOG}"')
+
+
+def _end_capture(conn, before: Tuple[Optional[int], Optional[int]],
+                 drop: bool = True, registered: bool = True) -> None:
+    """Take the capture away: its TEMP objects when `drop` (a capture
+    half made is taken back by its savepoint instead), then its function,
+    when `registered`, once no trigger of it stands (a trigger calling a
+    function gone fails its write), then the two settings as they were,
+    which a savepoint does not hold. Python's sqlite3 has no call that
+    unregisters a function: registered as None it refuses every call,
+    which is what its removal is for."""
+    if conn is None:
+        return
+    try:
+        if drop:
+            _drop_capture_objects(conn)
+        standing = bool(_standing_triggers(conn))
+    except sqlite3.Error:
+        standing = True
+    if registered and not standing:
+        try:
+            conn.create_function(CAPTURE_FUNCTION, -1, None)
+        except sqlite3.Error:
+            pass
+    trusted, recursive = before
+    for pragma, value in (("recursive_triggers", recursive),
+                          ("trusted_schema", trusted)):
+        if isinstance(value, int):
+            try:
+                conn.execute(f"PRAGMA {pragma} = {1 if value else 0}")
+            except sqlite3.Error:
+                pass
+
+
+def _rows_now(conn, table: CaptureTable) -> Dict[Any, Tuple]:
+    """Each logged row of a table read again by its key, the same way the
+    triggers read it: key -> (row digest, apart digest, file id)."""
+    row_sql = _digest_sql("row", table.columns, "r.")
+    if table.key_kind == "integer":
+        key = f"r.{_quoted(table.key)}"
+        return {row[0]: tuple(row[1:]) for row in conn.execute(
+            f"SELECT {key}, {row_sql}, NULL, {_fid_sql(table, 'r.')} "
+            f"FROM main.{_quoted(table.name)} AS r WHERE {key} IN "
+            f'(SELECT k FROM temp."{CAPTURE_LOG}" WHERE t = ?)',
+            (table.number,)).fetchall()}
+    if table.key_kind == "digest":
+        return {row[0]: tuple(row[1:]) for row in conn.execute(
+            f"SELECT {_key_sql(table, 'r.')}, {row_sql}, NULL, NULL "
+            f"FROM main.{_quoted(table.name)} AS r").fetchall()
+            if row[0] is not None}
+    if table.key_kind == "one_row":
+        rows = conn.execute(
+            f"SELECT {row_sql}, {_apart_sql(table, 'r.')}, NULL "
+            f"FROM main.{_quoted(table.name)} AS r").fetchall()
+        if len(rows) > 1:
+            raise _not_recorded("the one-row table holds more than one "
+                                "row")
+        return {0: tuple(rows[0])} if rows else {}
+    return {}
+
+
+def _text_digests(conn, files: Sequence[int]) -> List[Dict[str, Any]]:
+    """Each file's text, by its id, as a digest of its bytes; None for a
+    file that is not there."""
+    texts = []
+    for fid in files:
+        row = conn.execute(
+            f"SELECT {_digest_sql('text', ['fulltext'], '')} "
+            f'FROM main."source" WHERE "id" = ?', (fid,)).fetchone()
+        value = None if row is None else row[0]
+        if value == change_record.UNREADABLE:
+            raise _not_recorded("a file's text could not be digested")
+        texts.append({"file": fid, "digest": value})
+    return texts
+
+
+def _checked_key(table: CaptureTable, key: Any) -> Any:
+    """A logged key as a record may keep it: an integer, or a digest."""
+    if table.key_kind == "one_row":
+        return None
+    if table.key_kind == "integer" and isinstance(key, int) \
+            and not isinstance(key, bool):
+        return key
+    if table.key_kind == "digest" and isinstance(key, str) \
+            and change_record.HEX_32.fullmatch(key):
+        return key
+    raise _not_recorded("a row without a key a record can keep")
+
+
+def _captured(conn, tables: Sequence[CaptureTable]) -> Dict[str, Any]:
+    """What the log holds, as the record keeps it: each touched row by
+    table and key, its digest before and after (None for absent), a row
+    with equal digests dropped; the touched tables' keys and columns; the
+    digests of the files' texts under rows with positions."""
+    by_number = {table.number: table for table in tables}
+    logged = conn.execute(
+        f'SELECT t, k, kind, old, apart, fid FROM temp."{CAPTURE_LOG}" '
+        "ORDER BY rowid").fetchall()
+    now = {number: _rows_now(conn, by_number[number])
+           for number in sorted({row[0] for row in logged})}
+    rows, touched, files = [], {}, set()
+    for number, key, kind, old, apart, fid in logged:
+        table = by_number[number]
+        kept_key = _checked_key(table, key)
+        after = now[number].get(0 if table.key_kind == "one_row" else key)
+        entry = {"table": table.name, "key": kept_key,
+                 "before": None if kind == "i" else old,
+                 "after": None if after is None else after[0]}
+        if table.apart is not None:
+            entry["apart_before"] = None if kind == "i" else apart
+            entry["apart_after"] = None if after is None else after[1]
+        digests = [value for field, value in entry.items()
+                   if field not in ("table", "key")]
+        if change_record.UNREADABLE in digests:
+            raise _not_recorded("a value could not be digested")
+        if entry["before"] == entry["after"] and \
+                entry.get("apart_before") == entry.get("apart_after"):
+            continue
+        rows.append(entry)
+        touched[table.name] = table
+        if table.fid is not None:
+            for value in (fid, None if after is None else after[2]):
+                if value is None:
+                    continue
+                if not isinstance(value, int) or isinstance(value, bool):
+                    raise _not_recorded("a file id a record cannot keep")
+                files.add(value)
+    return {"tables": {name: _table_entry(table)
+                       for name, table in touched.items()},
+            "rows": rows, "texts": _text_digests(conn, sorted(files))}
+
+
+def _table_entry(table: CaptureTable) -> Dict[str, Any]:
+    entry = {"key": table.key, "key_kind": table.key_kind,
+             "columns": list(table.columns)}
+    if table.apart is not None:
+        entry["apart"] = table.apart
+    return entry
+
+
+def _register_capture_function(conn, function) -> None:
+    """Registered as qc_text_contains is: deterministic where this Python
+    and SQLite allow it. A generated column could then call it, which
+    `_capture_refusal` and trusted_schema prevent."""
+    try:
+        conn.create_function(CAPTURE_FUNCTION, -1, function,
+                             deterministic=True)
+    except (TypeError, sqlite3.NotSupportedError):
+        conn.create_function(CAPTURE_FUNCTION, -1, function)
+
+
+class _Capture(NamedTuple):
+    tables: List[CaptureTable]
+    before: Tuple[Optional[int], Optional[int]]
 
 
 class QualcoderDatabase:
@@ -12379,6 +12763,104 @@ class QualcoderDatabase:
             return self.last_backup_path
         self.last_backup_path = started.finish(copy_as_file=False)
         return self.last_backup_path
+
+    # ======================================================================
+    # THE RECORD OF A CHANGE (v0.15.2): the capture around a write
+    # ======================================================================
+
+    def start_capture(self, secret: str) -> bool:
+        """Start finding the rows this write touches, keyed with `secret`:
+        on the write connection, inside the transaction the backup's
+        moment opened (BEGIN IMMEDIATE), before the change.
+
+        No capture, and nothing changed on the connection, when the
+        project's file holds a trigger of its own or an object whose SQL
+        names the capture's function (`_capture_refusal`). Otherwise,
+        inside a savepoint rolled back to on any failure, so that a
+        capture half made is taken back whole: trusted_schema off and
+        read back, so that a view or a DEFAULT of the project's cannot
+        call the function (any value but 0, as on a SQLite before 3.31,
+        means no capture); the function; recursive_triggers on, so that
+        a row a REPLACE removes is seen; the TEMP log, with no
+        constraint, since a conflict clause on the statement that fires a
+        trigger overrides the trigger's own; the TEMP triggers on every
+        table. True when the capture runs; False when the write goes
+        ahead unrecorded. Raises nothing.
+        """
+        self._capture = None
+        conn = self.conn
+        try:
+            if conn is None or not conn.in_transaction:
+                return False
+            refusal = _capture_refusal(conn)
+            if refusal is not None:
+                logger.info("This change is not recorded: %s", refusal)
+                return False
+            before = (_pragma_value(conn, "trusted_schema"),
+                      _pragma_value(conn, "recursive_triggers"))
+            conn.execute(f"SAVEPOINT {CAPTURE_SAVEPOINT}")
+        except sqlite3.Error as e:
+            logger.warning("This change is not recorded: %s", error_label(e))
+            return False
+        registered = False
+        try:
+            conn.execute("PRAGMA trusted_schema = OFF")
+            if _trusted_schema(conn) != 0:
+                raise _not_recorded("trusted_schema did not go off")
+            _register_capture_function(conn,
+                                       change_record.row_function(secret))
+            registered = True
+            conn.execute("PRAGMA recursive_triggers = ON")
+            tables = _capture_tables(conn)
+            conn.execute(f'CREATE TEMP TABLE temp."{CAPTURE_LOG}" '
+                         "(t INTEGER, k, kind TEXT, old TEXT, apart TEXT, "
+                         "fid)")
+            conn.execute(f'CREATE INDEX temp."{CAPTURE_LOG}_key" '
+                         f'ON "{CAPTURE_LOG}" (t, k)')
+            for table in tables:
+                for statement in _trigger_statements(table):
+                    conn.execute(statement)
+            conn.execute(f"RELEASE {CAPTURE_SAVEPOINT}")
+        except Exception as e:
+            try:
+                conn.execute(f"ROLLBACK TO {CAPTURE_SAVEPOINT}")
+                conn.execute(f"RELEASE {CAPTURE_SAVEPOINT}")
+            except sqlite3.Error:
+                pass
+            _end_capture(conn, before, drop=False, registered=registered)
+            if not isinstance(e, _NotRecorded):
+                logger.warning("This change is not recorded: %s",
+                               error_label(e))
+            return False
+        self._capture = _Capture(tables, before)
+        return True
+
+    def finish_capture(self) -> Optional[Dict[str, Any]]:
+        """What the capture found, then the capture taken away: after the
+        change, before the lock's re-check and the commit.
+
+        Each touched row is read again by its key, the same way the
+        triggers read it, its digest or None when it is gone; a row
+        whose digests are equal (an update to the same value) is dropped;
+        for a row with positions, a digest of its file's text, read as
+        bytes too. {"tables", "rows", "texts"}, "rows" empty when nothing
+        changed; None when no capture ran or it cannot give a record, and
+        the write goes ahead unrecorded. Raises nothing.
+        """
+        capture = getattr(self, "_capture", None)
+        self._capture = None
+        if capture is None:
+            return None
+        conn = self.conn
+        try:
+            return _captured(conn, capture.tables)
+        except _NotRecorded:
+            return None
+        except Exception as e:
+            logger.warning("This change is not recorded: %s", error_label(e))
+            return None
+        finally:
+            _end_capture(conn, capture.before)
 
     # ======================================================================
     # PSEUDONYMISATION (v0.12 flagship, D1): plan, preview, residue, write

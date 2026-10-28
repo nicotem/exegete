@@ -448,6 +448,9 @@ NOT_TOOLS = {
                              "create_backup, which Exegete ignores",
     "search_memo": "search_files' argument removed in 0.15.1, which the "
                    "refusal of a call passing it names (REMOVED_ARGUMENTS)",
+    "undo_receipt": "the key of a change's answer, and a line of "
+                    "apply_codings' answer, that names the change's record "
+                    "(v0.15.2)",
 }
 
 

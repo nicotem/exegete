@@ -5,9 +5,12 @@ Every change Exegete makes to a project through its write routes leaves
 one record: the rows the change touched, by table and key, each with a
 digest of the row before the change and after it, keyed with Exegete's
 secret. A record holds ids and digests, never a name, a text, a note or
-a path, and is kept for a day. Undo reads it later, to judge whether the
-change can still be taken back and to find the old rows in the change's
-own backup; the change's answer carries its receipt.
+a path. A sweep removes it once it is a day old: when Exegete starts, or
+after the next record of a change to the same project, so the record of
+a project that is not changed again stays until Exegete next starts.
+Undo reads it later, to judge whether the change can still be taken back
+and to find the old rows in the change's own backup; the change's answer
+carries its receipt.
 
 Where: `state_home() / "changes" / <project>`, `<project>` a keyed
 digest of the project's path, so that no path is kept. Each record is a

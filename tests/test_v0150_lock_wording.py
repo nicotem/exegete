@@ -439,7 +439,8 @@ class TestTheChangelog:
         # five per cent of the length here (the exact lengths are in
         # docs/snapshot/sizes.json)
         from test_v0151_facts import SIZE_TOLERANCE
-        install = _flat(_read("INSTALL.md"))
+        # (v0.15.2: the Terminal guide's paragraph on Claude Code's limits)
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
 
         def near(stated, name):
             length = len(served[name])

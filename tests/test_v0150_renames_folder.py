@@ -351,8 +351,8 @@ class TestTheDocuments:
 
     def test_installs_list_of_usual_places_is_the_codes(self):
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-        start = text.index("### \"No projects found in the usual places\"")
-        section = text[start:text.index("\n### ", start + 4)]
+        start = text.index("#### \"No projects found in the usual places\"")
+        section = text[start:text.index("\n#### ", start + 4)]
         items = [b for b in _blocks(section) if b.startswith("- ")]
         assert "at its top level only, unless it is one of the places " \
                "below" in items[0]
@@ -371,23 +371,27 @@ class TestTheDocuments:
         workspace is one of the usual places, as the extension's default
         folder is; a folder chosen elsewhere keeps the top-level rule
         (fix round 1)."""
-        flat = " ".join((REPO / "INSTALL.md").read_text(
-            encoding="utf-8").split())
+        # (v0.15.2: the variables are the Terminal guide's)
+        flat = " ".join((REPO / "docs/installing-from-the-terminal.md"
+                         ).read_text(encoding="utf-8").split())
         item = flat[flat.index("- `EXEGETE_WORKSPACE` (v0.14):"):]
         item = item[:item.index(" - `", 4)]
         assert ("`list_available_projects` also searches its top level, or "
                 "three levels deep when it is one of the usual places, as "
-                "the extension's default folder is (the usual places are "
-                "listed under \"No projects found in the usual places\", "
-                "below).") in item
+                "the extension's default folder is (INSTALL.md's "
+                "troubleshooting lists the usual places).") in item
 
     def test_the_extension_step_in_install(self):
         flat = " ".join((REPO / "INSTALL.md").read_text(
             encoding="utf-8").split())
         item = flat[flat.index("- **Folder for projects**"):]
-        item = item[:item.index("- **Tell me when a new version is out**")]
+        item = item[:item.index("- **Your coder name**")]
         assert ("The default, `~/Exegete projects` (a folder called "
                 "\"Exegete projects\" in your home folder)") in item
+        # v0.15.2: the account of the update is told once, in "Updating"
+        item = flat[flat.index("- On the maintainer's Mac on 19 October "
+                               "2026"):]
+        item = item[:item.index("- Up to 0.15.1")]
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
         # folder chosen by hand not yet checked (the staleness audit of 20
@@ -408,7 +412,8 @@ class TestTheDocuments:
         assert "it keeps working" not in item
 
     def test_the_codex_recipe_names_the_new_folder(self):
-        install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        install = (REPO / "docs/installing-from-the-terminal.md").read_text(
+            encoding="utf-8")
         assert 'EXEGETE_WORKSPACE = "~/Exegete projects"' in install
         assert '--env "EXEGETE_WORKSPACE=~/Exegete projects"' in install
         assert "QualCoder projects\"" not in install

@@ -414,6 +414,9 @@ class TestTheStandInAndCi:
 # =============================================================================
 
 INSTALL = " ".join((REPO / "INSTALL.md").read_text(encoding="utf-8").split())
+# (v0.15.2: the variables are the Terminal guide's)
+GUIDE = " ".join((REPO / "docs/installing-from-the-terminal.md").read_text(
+    encoding="utf-8").split())
 
 
 def _between(text: str, start: str, end: str) -> str:
@@ -432,7 +435,7 @@ class TestTheWordsSayWhatTheSwitchesDo:
         # the two words it wins over, and never "whatever" (after 0.15.1
         # the text setting and its bullet are gone; the variable remains)
         sentence = _sentence_with(
-            _between(INSTALL, f"- `{SMALL}` (0.15.1)",
+            _between(GUIDE, f"- `{SMALL}` (0.15.1)",
                      "- `EXEGETE_WORKSPACE`"),
             "gives `core`")
         for word in names.TOOLSETS:

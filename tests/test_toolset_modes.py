@@ -551,7 +551,8 @@ class TestThePublishedSchemaBudget:
         round back to 16.2k). 32k leaves 32k less the schema, which
         INSTALL gives to the nearest thousand (v0.15.2: `core`'s figure
         read from docs/snapshot/sizes.json)."""
-        install = self._read("INSTALL.md")
+        # (v0.15.2: the LM Studio recipe is the Terminal guide's)
+        install = self._read("docs/installing-from-the-terminal.md")
         assert "at least 32k for the core toolset" in install
         assert "16k would not even hold the schema and is not workable" \
             in install

@@ -112,20 +112,24 @@ def test_a_renamed_heading_names_every_link_to_it(tmp_path):
     read = set(markdown) | set(own_only)
     files = {name: ((REPO / name).read_text(encoding="utf-8")
                     if name in read else "") for name in tracked}
-    assert "## Updating the MCP Server\n" in files["INSTALL.md"]
+    # v0.15.2: INSTALL.md's "Updating the MCP Server" is an explicit
+    # anchor now, kept for the links into it; the update page links this
+    # heading too
+    heading = "## PDF and EPUB: the optional part\n"
+    assert files["INSTALL.md"].count(heading) == 1
     files["INSTALL.md"] = files["INSTALL.md"].replace(
-        "## Updating the MCP Server\n", "## Updating Exegete\n")
+        heading, "## Reading PDF and EPUB\n")
     report = links.check_repository(_tree(tmp_path / "copy", files))
     page = [p for p in report.failures
             if p.file == "pages/update/index.html"]
     line = next(number for number, text in enumerate(
         files["pages/update/index.html"].splitlines(), start=1)
-        if "INSTALL.md#updating-the-mcp-server" in text)
+        if "INSTALL.md#pdf-and-epub-the-optional-part" in text)
     assert _where(page) == [(
         "pages/update/index.html", line,
         "https://github.com/nicotem/exegete/blob/main/INSTALL.md"
-        "#updating-the-mcp-server")]
-    assert all(p.target.endswith("#updating-the-mcp-server")
+        "#pdf-and-epub-the-optional-part")]
+    assert all(p.target.endswith("#pdf-and-epub-the-optional-part")
                for p in report.failures)
 
 

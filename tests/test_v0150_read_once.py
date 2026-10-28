@@ -1153,10 +1153,10 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
 
 
 def test_install_lists_them_in_exegete_s_own_folder():
+    # (v0.15.2: INSTALL.md's "Uninstalling", what stays)
     install = _flat("INSTALL.md")
-    step = install[install.index("**Optionally remove Exegete's own "
-                                 "state**"):]
-    step = step[:step.index("Nothing else is stored there")]
+    step = install[install.index("**Exegete's own folder**, `~/.exegete`"):]
+    step = step[:step.index("**The reading folder**")]
     assert "the texts an import's preview read" in step
     assert "(`import-texts.noindex/`" in step
 

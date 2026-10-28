@@ -211,7 +211,8 @@ class TestTheNamesListsDeprecation:
 class TestClaudeCodesLimits:
 
     def test_install_says_them(self):
-        install = _flat(_read("INSTALL.md"))
+        # (v0.15.2: the Terminal guide's)
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
         assert ("Claude Code shows it (and keeps the first 4,096 characters "
                 "of a server's opening text, 2,048 before its version "
                 f"2.1.296; this one is {len(server.BRIEF_SHORT):,})"
@@ -237,7 +238,7 @@ class TestClaudeCodesLimits:
         over = sorted(((len(d), name) for name, d in served.items()
                        if len(d) > 4096), reverse=True)
         assert len(served) == FULL_TOOLS
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
         found = re.search(rf"{len(over)} of `full`'s {len(served)} "
                           rf"descriptions are longer than 4,096 characters "
                           rf"\(([^)]*)\)", install)

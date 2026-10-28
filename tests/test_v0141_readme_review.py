@@ -457,6 +457,10 @@ def _anchors(name):
         count = seen.get(slug, 0)
         seen[slug] = count + 1
         found.add(slug if count == 0 else f"{slug}-{count}")
+    # an explicit anchor, as scripts/check_links.py reads one (v0.15.2:
+    # INSTALL.md keeps the old anchors of the sections that moved to the
+    # Terminal guide, each on a row that links there)
+    found |= set(re.findall(r'<a id="([^"]+)"></a>', _read(name)))
     return found
 
 

@@ -71,8 +71,13 @@ def _served(mode):
         server._apply_toolset("full")
 
 
+# v0.15.2: INSTALL.md is the desktop extension's; the Terminal routes and
+# the variables moved, whole, to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _long_paragraph():
-    install = _flat(_read("INSTALL.md"))
+    install = _flat(_read(GUIDE))
     long = install[install.index(
         "**Long tool descriptions in Claude Code.**"):]
     return long[:long.index("**", 45)]
@@ -137,7 +142,8 @@ class TestClaudeCodesLimitsOnEveryPython:
         assert ("The descriptions are longer on Python 3.11 and 3.12 than "
                 "on 3.13, which strips the indentation they are written "
                 "with.") in long
-        assert ("[docs/snapshot/sizes.json](docs/snapshot/sizes.json) gives "
+        # (v0.15.2: the link as the Terminal guide, in docs/, writes it)
+        assert ("[docs/snapshot/sizes.json](snapshot/sizes.json) gives "
                 "each description's exact length on Python 3.13.") in long
 
     @pytest.mark.skipif(not (3, 11) <= sys.version_info[:2] < (3, 13),
@@ -201,8 +207,11 @@ class TestClaudeCodesLimitsOnEveryPython:
         assert ("[INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
                 "INSTALL.md#alternative-claude-code-and-other-mcp-clients) "
                 "says how to let it through whole.") in readme
-        assert ("\n## Alternative: Claude Code and other MCP clients\n"
-                in _read("INSTALL.md"))
+        # (the anchor stays in INSTALL.md, a pointer to the Terminal
+        # guide's section, which carries it too)
+        for name in ("INSTALL.md", GUIDE):
+            assert ('<a id="alternative-claude-code-and-other-mcp-clients">'
+                    in _read(name)), name
 
 
 # ===========================================================================
@@ -364,7 +373,7 @@ class TestTheSmallerPoints:
                 "Exegete finds decides") in upgrading
 
     def test_the_coder_name_reads_the_right_way_round(self):
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read("INSTALL.md")) + " " + _flat(_read(GUIDE))
         manifest = _manifest_setting("coder_name")
         assert install.count(CURRENT_CODER) == 2
         # after 0.15.1 the page's description says only what the name is
@@ -393,7 +402,7 @@ class TestTheSmallerPoints:
                 "the names list).") in readme
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read(GUIDE))
         # v0.15.1: the switch's sentence now comes between "whose
         # default is `full`." and "Any other value"; after 0.15.1 the
         # extension sets the switch's variable instead
@@ -409,9 +418,11 @@ class TestTheSmallerPoints:
         tools = _flat(_read("TOOLS.md"))
         assert "when you configure Exegete yourself" in tools
         assert "configure the server yourself" not in tools
-        # the anchor many links use stays
-        assert "\n## Environment variables the server reads\n" in _read(
-            "INSTALL.md")
+        # the anchor many links use stays, in INSTALL.md as a pointer and
+        # in the Terminal guide on its section
+        for name in ("INSTALL.md", GUIDE):
+            assert ('<a id="environment-variables-the-server-reads">'
+                    in _read(name)), name
 
     def test_the_setting_names_the_creation_line(self):
         # after 0.15.1 the text setting left the page, and with it step
@@ -419,7 +430,7 @@ class TestTheSmallerPoints:
         assert "uses_qualcoder" not in \
             json.loads(_read("packaging/desktop-extension/manifest.in.json"))[
                 "user_config"]
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read(GUIDE))
         assert install.count(CREATION_LINE) == 1
         assert CREATION_LINE in _flat(_unreleased())
         # and what it names is what create_project gives

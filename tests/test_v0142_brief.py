@@ -469,7 +469,9 @@ class TestProvisionalAndHeldBack:
 
     def test_the_documents_say_it_is_provisional(self):
         tools = _flat((REPO / "TOOLS.md").read_text(encoding="utf-8"))
-        install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        # (v0.15.2: the routes are the Terminal guide's)
+        install = (REPO / "docs/installing-from-the-terminal.md").read_text(
+            encoding="utf-8")
         hosts = install[install.index("## Choosing your AI host"):]
         hosts = _flat(hosts[:hosts.index("\n## ", 5)])
         changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

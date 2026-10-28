@@ -615,6 +615,68 @@ jobs:
       - name: The facts the documents repeat, and the snapshot
         run: python -m pytest -q tests/test_v0151_facts.py tests/test_served_texts.py
 
+  # v0.15.2: the commands the documents give a reader, run as written
+  # (scripts/doc_commands.py). An author marks a command with an HTML
+  # comment beside it; each set of marked commands runs in a new, empty
+  # home of its own, installing this commit, and what each command prints
+  # is compared with what its document says. The sessions install the
+  # newest library releases from PyPI, as the documents tell readers to,
+  # so a new release can turn this job red with no change of ours: it may
+  # fail and only reports (continue-on-error, and no job needs it), as the
+  # newest-libraries job does, and its summary is read before a release.
+  # The full tier only, since its installs take several minutes.
+  doc-commands:
+    name: the documents' commands (reports only)
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
+    runs-on: ubuntu-latest
+    # Thirty minutes for its first run, before anything was measured; then
+    # its measured time with a margin, as the newest-libraries job's limit
+    # was set.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    continue-on-error: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # On the path, where a reader's uv is: one session installs Exegete
+      # with `uv tool install`. Another uses pipx, the runner image's own.
+      - name: Install uv 0.9.7
+        run: python -m pip install uv==0.9.7
+
+      # Each session has a home of its own under the runner's temporary
+      # folder, and the script itself runs with HOME there too, so nothing
+      # it starts can reach the runner's own home.
+      - name: The commands the documents mark, each set in a new home
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/dc-home"
+          HOME="$RUNNER_TEMP/dc-home" USERPROFILE="$RUNNER_TEMP/dc-home" \
+            python scripts/doc_commands.py --run --scratch "$RUNNER_TEMP/doc-commands"
+
+      # Exegete keeps its folders in the home it is started with; none of
+      # them may appear in the runner's own.
+      - name: Nothing of Exegete's in the runner's own home
+        if: always()
+        shell: bash
+        run: |
+          for folder in .exegete .qualcoder_mcp; do
+            if [ -e "$HOME/$folder" ]; then
+              echo "::error title=the documents' commands::$HOME/$folder exists"
+              exit 1
+            fi
+          done
+
   # v0.15.1: the newest library releases. Every other job that runs tests
   # installs from the lock; this one takes the newest release of each
   # library pyproject.toml allows, what an install from PyPI takes today

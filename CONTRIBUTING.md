@@ -74,7 +74,7 @@ is looked at first.
    cannot turn a job red overnight, and a change to the requirements or
    the version in `pyproject.toml` without `uv lock` fails on the push.
    A push to `main` or to an integration branch, `feat/<name>`, a pull
-   request and a run started by hand take the full tier: twenty-one
+   request and a run started by hand take the full tier: twenty-two
    jobs. Eleven run the suite: on Python 3.11, the oldest Exegete
    supports, and 3.13, one job each on Ubuntu and on macOS, and three on
    Windows, where the suite is slowest and runs in three parts made of
@@ -94,6 +94,11 @@ is looked at first.
    other sites are checked once a week instead, by a workflow of its
    own (`external-links.yml`), where a page that is gone fails and a
    site that turns robots away or answers slowly is a notice. One runs
+   the commands the documents mark, each set in a new, empty home
+   folder, and compares what they print with what the documents say.
+   `scripts/doc_commands.py` says how to mark a command. It installs the
+   newest releases from PyPI, as the documents tell readers to, so it
+   may fail and only reports. One runs
    the suite on Ubuntu with Python 3.13 on the newest release of each
    library `pyproject.toml` allows, what an install from PyPI takes
    today; it may fail and only reports, and its summary gives the
@@ -104,9 +109,10 @@ is looked at first.
    `packaging/`, `pyproject.toml`, `uv.lock` or a script those jobs
    run, counted from where the branch left its integration branch
    (`feat/<p>` for a branch `<p>/<key>`), or else from `main`. Every
-   job that runs must be green, the newest releases apart. Two more
-   checks run once a week, on Mondays, each in a workflow of its own,
-   and also on a push that changes that workflow. `advisories.yml` asks
+   job that runs must be green, apart from the two that only report.
+   Two more checks run once a week, on Mondays, each in a workflow of
+   its own, and also on a push that changes that workflow.
+   `advisories.yml` asks
    OSV's database of advisories about every release in `uv.lock` and in
    the official validator's lock,
    `packaging/desktop-extension/validator/package-lock.json` (also on a

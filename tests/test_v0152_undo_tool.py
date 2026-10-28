@@ -152,6 +152,579 @@ class TestTheThreeCalls:
 
 
 # ---------------------------------------------------------------------------
+# QualCoder 4.0's five faults (the undo study, part 1.7)
+# ---------------------------------------------------------------------------
+
+def unchanged_by(folder, refused_call):
+    """The call refused, the project's rows and its backups unchanged."""
+    before, made = rows(folder), backups(folder)
+    refused = refused_call()
+    assert "error" in refused and refused.get("nothing_changed"), refused
+    assert rows(folder) == before
+    assert backups(folder) == made
+    return refused
+
+
+class TestQualCoder40sFaults:
+
+    def test_1_a_receipt_of_another_project_is_refused(self, project):
+        _, receipt = new_code("Belonging")
+        copy = answer(server.copy_project_to_workspace(
+            source_path=str(project), new_name="Study copy"))
+        other = Path(copy["workspace_copy"])
+        assert "error" not in answer(server.select_project(
+            project_path=str(other)))
+        refused = unchanged_by(other, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.ANOTHER_PROJECT}
+        assert code_id(other, "Belonging") is not None
+        # the record copied into the other project's folder: still its own
+        # project's, by the record's own field
+        secret = preview_tokens.load_secret()
+        theirs = change_record.digest(secret, "project",
+                                      server._token_project())
+        folder = change_record.folder(theirs)
+        folder.mkdir(parents=True, exist_ok=True)
+        source = next(change_record.root().glob(f"*/{receipt}.json"))
+        (folder / source.name).write_bytes(source.read_bytes())
+        refused = unchanged_by(other, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.ANOTHER_PROJECT}
+        assert code_id(other, "Belonging") is not None
+        (folder / source.name).unlink()
+        assert "error" not in answer(server.select_project(
+            project_path=str(project)))
+        assert undo_run(receipt)["success"] is True
+        assert code_id(project, "Belonging") is None
+
+    def test_2_a_code_the_researcher_has_used_since_is_refused(self, project):
+        _, receipt = new_code("Belonging")
+        cid = code_id(project, "Belonging")
+        execute(project, "insert into code_text (cid, fid, seltext, pos0, "
+                "pos1, owner, date) values (?, 1, 'Maria', 0, 5, "
+                "'Researcher', '2026-10-28 10:00:00')", (cid,))
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.DEPENDED_ON}
+        found = refusal(refused, undo.DEPENDED_ON)
+        assert found["rows"] == {"code_text": 1}
+        assert found["by_coder"] == {"Researcher": 1}
+
+    def test_3_a_case_linked_and_given_a_value_since_is_refused(self, project):
+        answer(server.create_attribute_type(name="Age", applies_to="case",
+                                            value_type="numeric"))
+        _, receipt = call(server.create_case, name="P1", memo="First")
+        server.link_file_to_case(file_id=1, case_name="P1")
+        caseid = ids(project, "cases", "caseid")[0]
+        server.set_attribute(target_type="case", target_id=caseid,
+                             attribute_name="Age", value="30")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert undo.DEPENDED_ON in reasons(refused)
+        assert refusal(refused, undo.DEPENDED_ON)["rows"] == {"case_text": 1}
+        assert ids(project, "cases", "caseid") == [caseid]
+
+    def test_4_a_name_taken_since_is_refused_until_it_is_free(self, project):
+        before = rows(project)
+        deleted = answer(two_step(server.delete_code, code_id=1))
+        receipt = deleted["undo_receipt"]
+        preview = undo_preview(receipt)
+        assert "preview_token" in preview, preview
+        # the name taken between the preview and the run
+        _, made = new_code("Trust")
+        locked = unchanged_by(project, lambda: answer(server.undo_changes(
+            receipts=[receipt], preview_token=preview["preview_token"])))
+        assert reasons(locked) == {undo.VALUE_TAKEN}
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.VALUE_TAKEN}
+        assert refusal(refused, undo.VALUE_TAKEN)["later_changes"] == [made]
+        server.rename_code(code_id=code_id(project, "Trust"),
+                           new_name="Trust 2")
+        assert undo_run(receipt)["success"] is True
+        assert code_id(project, "Trust") == 1
+        assert {r for r in rows(project)["code_name"]
+                if r[0] == 1} == {r for r in before["code_name"] if r[0] == 1}
+
+    def test_5_a_note_and_a_colour_given_since_are_refused(self, project):
+        _, receipt = new_code("Belonging")
+        cid = code_id(project, "Belonging")
+        server.set_memo(target_type="code", target_id=cid, memo="A note")
+        server.recolor_code(code_id=cid, color="#0D47A1")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.CHANGED_SINCE}
+        assert refusal(refused, undo.CHANGED_SINCE)["rows"] == {
+            "code_name": 1}
+
+    def test_5_a_cases_note_undone_brings_back_every_column(self, project):
+        caseid = a_case("P1")
+        execute(project, "update cases set date = '2020-01-01 00:00:00' "
+                "where caseid = ?", (caseid,))
+        before = rows(project)
+        _, receipt = call(server.set_memo, target_type="case",
+                          target_id=caseid, memo="A new note")
+        assert undo_run(receipt)["success"] is True
+        assert rows(project)["cases"] == before["cases"]
+
+    def test_5_a_date_changed_since_is_a_change(self, project):
+        caseid = a_case("P1")
+        _, receipt = call(server.set_memo, target_type="case",
+                          target_id=caseid, memo="A new note")
+        execute(project, "update cases set date = '2020-01-01 00:00:00' "
+                "where caseid = ?", (caseid,))
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.CHANGED_SINCE}
+
+
+# ---------------------------------------------------------------------------
+# Part one: each refusal of the record and of the backup
+# ---------------------------------------------------------------------------
+
+def record_path(receipt):
+    return next(change_record.root().glob(f"*/{receipt}.json"))
+
+
+def backup_of(receipt):
+    """The backup the change's record names, found as undo finds it."""
+    record = json.loads(record_path(receipt).read_text(encoding="ascii"))
+    secret = preview_tokens.load_secret()
+    folder = Path(server.current_project_path)
+    for entry in folder.parent.iterdir():
+        if change_record.digest(secret, "backup", entry.name) == \
+                record["backup"]:
+            return entry
+    raise AssertionError("no backup")
+
+
+def renamed_code(project):
+    _, receipt = call(server.rename_code, code_id=1, new_name="Trusting")
+    assert receipt
+    return receipt
+
+
+class TestTheRecordsRefusals:
+
+    def test_an_unknown_receipt_names_no_file(self, project, monkeypatch):
+        opened = []
+        real = change_record._load
+        monkeypatch.setattr(change_record, "_load",
+                            lambda path: opened.append(path) or real(path))
+        refused = unchanged_by(project, lambda: undo_preview("0" * 32))
+        assert reasons(refused) == {undo.RECEIPT_UNKNOWN}
+        opened.clear()
+        refused = answer(server.undo_changes(receipts=["../" + "0" * 29]))
+        assert refused["nothing_changed"] is True and not opened
+
+    def test_a_change_a_day_old_is_refused(self, project, monkeypatch):
+        _, receipt = new_code("Belonging")
+        clock = change_record.now()
+        monkeypatch.setattr(change_record, "now",
+                            lambda: clock + change_record.KEEP_SECONDS + 1)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.TOO_OLD}
+        monkeypatch.setattr(change_record, "now",
+                            lambda: clock + change_record.KEEP_SECONDS - 60)
+        assert "preview_token" in undo_preview(receipt)
+
+    def test_a_replaced_secret_is_refused(self, project):
+        _, receipt = new_code("Belonging")
+        os.unlink(preview_tokens._secret_path())
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.SECRET_REPLACED}
+
+    def test_a_record_of_a_newer_format_is_refused(self, project):
+        _, receipt = new_code("Belonging")
+        path = record_path(receipt)
+        data = json.loads(path.read_text(encoding="ascii"))
+        data["format"] = change_record.FORMAT + 1
+        path.write_text(json.dumps(data), encoding="ascii")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.NEWER_FORMAT}
+
+    def test_a_record_cut_short_is_refused(self, project):
+        _, receipt = new_code("Belonging")
+        path = record_path(receipt)
+        data = json.loads(path.read_text(encoding="ascii"))
+        data["rows"][0]["table"] = "no_such_table"
+        path.write_text(json.dumps(data), encoding="ascii")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.RECORD_UNREADABLE}
+
+    def test_a_later_change_is_named_and_another_runs_counted(
+            self, project, monkeypatch):
+        _, receipt = new_code("Belonging")
+        cid = code_id(project, "Belonging")
+        _, later = call(server.rename_code, code_id=cid, new_name="Belong")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        found = refusal(refused, undo.CHANGED_SINCE)
+        assert found["later_changes"] == [later]
+        assert "later_changes_elsewhere" not in found
+        # the same change and a later one made by another run
+        _, second = new_code("Distance")
+        monkeypatch.setattr(change_record, "RUN", "f" * 16)
+        call(server.rename_code, code_id=code_id(project, "Distance"),
+             new_name="Distant")
+        monkeypatch.undo()
+        found = refusal(undo_preview(second), undo.CHANGED_SINCE)
+        assert found.get("later_changes_elsewhere") == 1
+        assert "later_changes" not in found
+        # undone together, newest first, the later one goes first
+        assert undo_run(receipt, later)["success"] is True
+        assert code_id(project, "Belonging") is None
+        assert code_id(project, "Belong") is None
+
+    def test_a_restore_in_between_both_ways(self, project):
+        receipt = renamed_code(project)
+        older = backup_of(receipt)
+        _, after = new_code("Belonging")
+        newer = backup_of(after)
+        # a backup taken after the change keeps it: the undo goes ahead
+        restored = answer(two_step(server.restore_backup,
+                                   backup_path=str(newer)))
+        assert restored.get("success"), restored
+        assert "preview_token" in undo_preview(receipt)
+        # one taken before it: the rows differ from the change's
+        restored = answer(two_step(server.restore_backup,
+                                   backup_path=str(older)))
+        assert restored.get("success"), restored
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.CHANGED_SINCE}
+
+    def test_a_column_or_a_table_gone_since_is_a_refusal(self, project):
+        execute(project, "alter table project rename column "
+                "avbookmarktextpos to avbookmarktext")
+        _, receipt = call(server.set_memo, target_type="project",
+                          target_id=None, memo="The study")
+        # QualCoder 4.0's every open renames the misspelt column
+        execute(project, "alter table project rename column "
+                "avbookmarktext to avbookmarktextpos")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.SCHEMA_CHANGED}
+        assert refusal(refused, undo.SCHEMA_CHANGED)["rows"] == {
+            "project": 1}
+        _, noted = call(server.add_annotation, file_id=1, start_pos=0,
+                        end_pos=5, memo="Opening")
+        execute(project, "drop view if exists annotation_visible")
+        execute(project, "drop table annotation")
+        refused = unchanged_by(project, lambda: undo_preview(noted))
+        assert reasons(refused) == {undo.SCHEMA_CHANGED}
+
+    def test_the_project_row_after_a_first_open_that_upgrades_it(
+            self, project):
+        _, receipt = call(server.set_memo, target_type="project",
+                          target_id=None, memo="The study")
+        execute(project, "update project set databaseversion = 'v17', "
+                "about = 'QualCoder 4.0.1'")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.PROJECT_ROW_CHANGED}
+        assert "set_memo" in refusal(refused,
+                                     undo.PROJECT_ROW_CHANGED)["message"]
+
+    def test_the_coder_name_qualcoder_writes_is_set_aside(self, project):
+        _, receipt = call(server.set_memo, target_type="project",
+                          target_id=None, memo="The study")
+        execute(project, "update project set codername = 'Someone'")
+        assert undo_run(receipt)["success"] is True
+        with database(project) as conn:
+            memo, coder = conn.execute(
+                "select memo, codername from project").fetchone()
+        assert coder == "Someone" and memo != "The study"
+
+
+class TestTheBackupsRefusals:
+    """A change that altered or removed rows needs its own backup: found
+    by its name's digest, that folder alone checked in the restore's
+    order, then read immutable and compared with the record's before."""
+
+    def test_a_backup_pruned_or_renamed_is_refused(self, project):
+        receipt = renamed_code(project)
+        backup = backup_of(receipt)
+        moved = backup.with_name(backup.name.replace("_backup_", "_kept_"))
+        backup.rename(moved)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.BACKUP_GONE}
+        moved.rename(backup)
+        assert "preview_token" in undo_preview(receipt)
+        import shutil
+        shutil.rmtree(backup)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.BACKUP_GONE}
+
+    def test_a_change_that_only_added_rows_needs_no_backup(self, project):
+        _, receipt = new_code("Belonging")
+        import shutil
+        shutil.rmtree(backup_of(receipt))
+        assert undo_run(receipt)["success"] is True
+
+    def test_an_unclean_backup_is_refused(self, project):
+        receipt = renamed_code(project)
+        journal = backup_of(receipt) / "data.qda-journal"
+        journal.write_bytes(b"\0" * 512)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.BACKUP_UNCLEAN}
+
+    def test_an_edited_backup_is_refused(self, project):
+        receipt = renamed_code(project)
+        with closing(sqlite3.connect(str(backup_of(receipt) / "data.qda"))
+                     ) as conn, conn:
+            conn.execute("update code_name set memo = 'edited' "
+                         "where cid = 1")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.BACKUP_CHANGED}
+        assert refusal(refused, undo.BACKUP_CHANGED)["rows"] == {
+            "code_name": 1}
+
+    def test_a_backup_with_no_database_is_refused(self, project):
+        receipt = renamed_code(project)
+        (backup_of(receipt) / "data.qda").unlink()
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.BACKUP_UNREADABLE}
+
+    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes")
+    def test_a_named_pipe_for_a_database_is_refused_without_waiting(
+            self, project):
+        receipt = renamed_code(project)
+        data = backup_of(receipt) / "data.qda"
+        data.unlink()
+        os.mkfifo(str(data))
+        started = time.monotonic()
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert time.monotonic() - started < 5
+        assert reasons(refused) == {undo.BACKUP_UNREADABLE}
+
+
+class TestTheProjectsOwnState:
+
+    def test_a_codings_file_text_changed_since_is_refused(self, project):
+        sid, _ = a_session((("Trust", "Maria Lopez runs the garden."),))
+        receipt = receipt_of(server.apply_codings(coding_session_id=sid))
+        assert receipt
+        done = answer(two_step(
+            server.pseudonymise_source,
+            mapping=[{"original": "Tuesdays", "pseudonym": "Mondays"}],
+            file_id=1, researcher_keeps_mapping=True))
+        assert done.get("success"), done
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.TEXT_CHANGED}
+
+    def test_a_project_holding_triggers_of_its_own_is_refused(self, project):
+        _, receipt = new_code("Belonging")
+        execute(project, "create trigger mine after insert on cases begin "
+                "select 1; end")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.OWN_TRIGGERS}
+
+    def test_a_hidden_coders_coding_is_counted_never_named(self, project):
+        _, receipt = new_code("Belonging")
+        cid = code_id(project, "Belonging")
+        execute(project, "insert into coder_names (name, visibility) "
+                "values ('Ghost Writer', 0)")
+        execute(project, "insert into code_text (cid, fid, seltext, pos0, "
+                "pos1, owner, date) values (?, 1, 'Maria', 0, 5, "
+                "'Ghost Writer', '2026-10-28 10:00:00')", (cid,))
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        found = refusal(refused, undo.DEPENDED_ON)
+        assert found["hidden_coder_rows"] == 1 and found["by_coder"] == {}
+        assert "Ghost" not in json.dumps(refused)
+
+    def test_a_hidden_coders_coding_deleted_is_undone_with_no_override(
+            self, project):
+        execute(project, "insert into coder_names (name, visibility) "
+                "values ('Ghost Writer', 0)")
+        execute(project, "insert into code_text (cid, fid, seltext, pos0, "
+                "pos1, owner, date) values (1, 1, 'Maria', 0, 5, "
+                "'Ghost Writer', '2026-10-28 10:00:00')")
+        ctid = ids(project, "code_text", "ctid")[-1]
+        before = rows(project)
+        deleted = answer(server.delete_coding(coding_id=ctid,
+                                              allow_hidden_coder=True))
+        receipt = deleted["undo_receipt"]
+        preview = undo_preview(receipt)
+        assert preview["preview"]["hidden_coder_rows"] == 1
+        assert preview["preview"]["by_coder"] == {}
+        assert "Ghost" not in json.dumps(preview)
+        assert "allow_hidden_coder" not in preview["execute_with"][
+            "arguments"]
+        done = answer(server.undo_changes(
+            receipts=[receipt], preview_token=preview["preview_token"]))
+        assert done["success"] is True and "Ghost" not in json.dumps(done)
+        assert rows(project) == before
+
+
+# ---------------------------------------------------------------------------
+# Part one: later work in a coding session
+# ---------------------------------------------------------------------------
+
+def a_session_with(code_name, approve=True, reject=False):
+    sid, guids = a_session(((code_name, QUOTE),), approve=approve)
+    if reject:
+        server.update_suggestion_status(coding_session_id=sid, reject=guids)
+    return sid, guids
+
+
+class TestLaterWorkInACodingSession:
+
+    def test_an_approved_suggestion_using_the_code_refuses(self, project):
+        _, receipt = new_code("Belonging")
+        a_session_with("Belonging")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.SUGGESTIONS_DEPEND}
+        assert refusal(refused, undo.SUGGESTIONS_DEPEND)["suggestions"] == 1
+
+    def test_a_rejected_suggestion_refuses_too(self, project):
+        _, receipt = new_code("Belonging")
+        a_session_with("Belonging", reject=True)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.SUGGESTIONS_DEPEND}
+
+    def test_a_proposed_codes_suggestion_in_another_session_refuses(
+            self, project):
+        sid = answer(server.start_coding_session(
+            file_ids=[1], instruction="test"))["coding_session_id"]
+        proposed = answer(server.propose_codes(
+            coding_session_id=sid, proposals=[{
+                "name": "Reliance", "memo": "Leaning on others",
+                "rationale": "stated", "example_segments": [
+                    {"file_id": 1, "segment_text": QUOTE}]}]))
+        server.update_proposal_status(
+            coding_session_id=sid,
+            approve=[p["guid"] for p in proposed["recorded"]])
+        created = answer(server.create_proposed_codes(coding_session_id=sid))
+        receipt = created["undo_receipt"]
+        a_session_with("Reliance", approve=False)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.SUGGESTIONS_DEPEND}
+
+    def test_an_applied_suggestion_counts_as_its_coding(self, project):
+        _, receipt = new_code("Belonging")
+        sid, _ = a_session_with("Belonging")
+        applied = receipt_of(server.apply_codings(coding_session_id=sid))
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.DEPENDED_ON}
+        assert refusal(refused, undo.DEPENDED_ON)["rows"] == {"code_text": 1}
+        # with the apply undone in the same call, the suggestion returns
+        # to approved and names a code the undo removes
+        refused = unchanged_by(project,
+                               lambda: undo_preview(receipt, applied))
+        assert reasons(refused) == {undo.SUGGESTIONS_DEPEND}
+
+    def test_a_suggestion_recorded_after_the_preview_refuses_under_the_lock(
+            self, project):
+        _, receipt = new_code("Belonging")
+        preview = undo_preview(receipt)
+        a_session_with("Belonging")
+        refused = unchanged_by(project, lambda: answer(server.undo_changes(
+            receipts=[receipt], preview_token=preview["preview_token"])))
+        assert reasons(refused) == {undo.SUGGESTIONS_DEPEND}
+
+
+# ---------------------------------------------------------------------------
+# Part one: a row put back or set back that has lost its place
+# ---------------------------------------------------------------------------
+
+class TestARowThatHasLostItsPlace:
+
+    def test_a_code_moved_out_of_a_category_deleted_since(self, project):
+        a_category("First")
+        a_category("Second")
+        server.move_code_to_category(code_id=1, category="First")
+        _, moved = call(server.move_code_to_category, code_id=1,
+                        category="Second")
+        first = ids(project, "code_cat", "catid", "name = 'First'")[0]
+        deleted = answer(two_step(server.delete_category,
+                                  category_id=first))["undo_receipt"]
+        refused = unchanged_by(project, lambda: undo_preview(moved))
+        assert reasons(refused) == {undo.PARENT_GONE}
+        assert refusal(refused, undo.PARENT_GONE)["rows"] == {"code_name": 1}
+        assert undo_run(moved, deleted)["success"] is True
+        with database(project) as conn:
+            assert conn.execute("select c.name from code_name n join code_cat"
+                                " c on c.catid = n.catid where n.cid = 1"
+                                ).fetchone() == ("First",)
+
+    def test_a_category_whose_old_parent_was_moved_under_it(self, project):
+        parent = a_category("Parent")
+        child = a_category("Child")
+        server.move_category(category_id=child, parent_category="Parent")
+        _, out = call(server.move_category, category_id=child,
+                      parent_category=None)
+        _, under = call(server.move_category, category_id=parent,
+                        parent_category="Child")
+        refused = unchanged_by(project, lambda: undo_preview(out))
+        assert reasons(refused) == {undo.LOOP}
+        assert undo_run(out, under)["success"] is True
+
+    def test_a_sub_code_whose_old_parent_would_close_a_loop(self, project):
+        top = code_id(project, "Trust")
+        made = answer(server.create_code(name="Middle",
+                                         parent_code_id=top))
+        middle = code_id(project, "Middle")
+        answer(server.create_code(name="Leaf", parent_code_id=middle))
+        leaf = code_id(project, "Leaf")
+        merged = answer(two_step(server.merge_codes, from_code_id=middle,
+                                 into_code_id=code_id(project, "Doubt")))
+        receipt = merged["undo_receipt"]
+        # QualCoder 4.0 sets a parent directly: the top code under the leaf
+        execute(project, "update code_name set supercid = ? where cid = ?",
+                (leaf, top))
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.LOOP}
+        assert made
+
+    def test_a_name_taken_by_a_code_made_since(self, project):
+        renamed = renamed_code(project)
+        _, made = new_code("Trust")
+        refused = unchanged_by(project, lambda: undo_preview(renamed))
+        assert reasons(refused) == {undo.VALUE_TAKEN}
+        assert undo_run(renamed, made)["success"] is True
+        assert code_id(project, "Trust") == 1
+
+    def test_a_files_old_name_taken_in_the_documents_folder(self, project):
+        _, renamed = call(server.rename_file, file_id=1,
+                          new_name="int1b.txt")
+        documents = project / "documents"
+        documents.mkdir(exist_ok=True)
+        (documents / "int1.txt").write_text("another", encoding="utf-8")
+        refused = unchanged_by(project, lambda: undo_preview(renamed))
+        assert reasons(refused) == {undo.DOCUMENTS_CLASH}
+        (documents / "int1.txt").unlink()
+        assert undo_run(renamed)["success"] is True
+
+
+# ---------------------------------------------------------------------------
+# Part one: two changes by different tools, the second depending on the first
+# ---------------------------------------------------------------------------
+
+class TestTwoChangesByDifferentTools:
+
+    def test_an_attribute_type_then_a_case(self, project):
+        _, made = call(server.create_attribute_type, name="Age",
+                       applies_to="case", value_type="numeric")
+        a_case("P1")
+        refused = unchanged_by(project, lambda: undo_preview(made))
+        assert reasons(refused) == {undo.DEPENDED_ON}
+        assert refusal(refused, undo.DEPENDED_ON)["rows"] == {"attribute": 1}
+
+    def test_a_file_attribute_type_then_an_import(self, project):
+        _, made = call(server.create_attribute_type, name="Site",
+                       applies_to="file")
+        server.import_text_file(filename="int2.txt", content=TEXT_2)
+        refused = unchanged_by(project, lambda: undo_preview(made))
+        assert reasons(refused) == {undo.DEPENDED_ON}
+        assert refusal(refused, undo.DEPENDED_ON)["rows"] == {"attribute": 1}
+
+    def test_a_journal_entry_then_a_journal_attribute_value(self, project):
+        _, added = call(server.add_journal_entry, name="Week one",
+                        entry="First reading done.")
+        jid = ids(project, "journal", "jid")[0]
+        # set as QualCoder 4.0's Journals window sets it
+        execute(project, "insert into attribute_type (name, date, owner, "
+                "memo, caseOrFile, valuetype) values ('Mood', '', "
+                "'Researcher', '', 'journal', 'character')")
+        execute(project, "insert into attribute (name, attr_type, value, "
+                "id, date, owner) values ('Mood', 'journal', 'calm', ?, '', "
+                "'Researcher')", (jid,))
+        refused = unchanged_by(project, lambda: undo_preview(added))
+        assert reasons(refused) == {undo.DEPENDED_ON}
+        assert refusal(refused, undo.DEPENDED_ON)["rows"] == {"attribute": 1}
+
+
+# ---------------------------------------------------------------------------
 # Part two: every tool that writes a project, undone (UNDO_CASES)
 # ---------------------------------------------------------------------------
 
@@ -515,6 +1088,218 @@ def test_every_tool_that_writes_a_project_has_a_case():
     from test_v0151_one_backup import PROJECT_WRITES
     assert set(UNDO_CASES) == PROJECT_WRITES - {"restore_backup",
                                                 "undo_changes"}
+
+
+# ---------------------------------------------------------------------------
+# Part two: the write, its values, the token, the marks and the copies
+# ---------------------------------------------------------------------------
+
+def stored(folder, table, column, key, value):
+    with database(folder) as conn:
+        return conn.execute(f"select typeof({column}), hex({column}) from "
+                            f"{table} where {key} = ?", (value,)).fetchone()
+
+
+def session_file(sid):
+    return server.session_manager.load_session(sid)
+
+
+class TestTheWrite:
+
+    def test_several_changes_in_one_call(self, project):
+        before = rows(project)
+        _, first = new_code("Belonging")
+        _, second = call(server.create_category, name="Feelings")
+        third = renamed_code(project)
+        done = undo_run(second, third, first)
+        assert done["success"] is True
+        assert [c["undo_receipt"] for c in done["undone"]] == [
+            third, second, first]
+        assert rows(project) == before
+
+    def test_an_undo_writes_no_journal_entry(self, project):
+        _, receipt = new_code("Belonging")
+        undo_run(receipt)
+        assert ids(project, "journal", "jid") == []
+
+    def test_values_cross_byte_for_byte_with_their_storage_class(
+            self, project):
+        """A note that is not UTF-8 and a BLOB note, put back and set
+        back: the same storage class and the same bytes. Listing codes
+        reads every code's note, so the code whose note is not UTF-8 is
+        deleted before the rename."""
+        caseid = a_case("P1")
+        execute(project, "update code_name set memo = x'00ff10' "
+                "where cid = 1")
+        execute(project, "update code_name set memo = "
+                "cast(x'4d61ff20c3a9' as text) where cid = 3")
+        execute(project, "update cases set memo = cast(x'43c328ff' as text) "
+                "where caseid = ?", (caseid,))
+        notes = [stored(project, "code_name", "memo", "cid", 1),
+                 stored(project, "code_name", "memo", "cid", 3),
+                 stored(project, "cases", "memo", "caseid", caseid)]
+        assert [kind for kind, _ in notes] == ["blob", "text", "text"]
+        deleted = answer(two_step(server.delete_code,
+                                  code_id=3))["undo_receipt"]
+        renamed = renamed_code(project)
+        _, case_renamed = call(server.rename_case, case_id=caseid,
+                               new_name="P01")
+        assert case_renamed
+        assert undo_run(case_renamed, renamed, deleted)["success"] is True
+        assert [stored(project, "code_name", "memo", "cid", 1),
+                stored(project, "code_name", "memo", "cid", 3),
+                stored(project, "cases", "memo", "caseid", caseid)] == notes
+        assert code_id(project, "Trust") == 1
+
+    def test_a_write_back_that_reads_back_wrong_is_rolled_back(
+            self, project, monkeypatch):
+        receipt = renamed_code(project)
+        before, made = rows(project), backups(project)
+        real = undo.bind
+
+        def wrong(value):
+            if value.kind == "text" and value.raw == b"Trust":
+                return 1, b"Trust!"
+            return real(value)
+        monkeypatch.setattr(undo, "bind", wrong)
+        done = undo_run(receipt)
+        assert "error" in done and "rolled back" in done["error"]
+        assert Path(done["backup_path"]).name in backups(project)
+        assert len(backups(project) - made) == 1
+        assert rows(project) == before
+        monkeypatch.undo()
+        assert undo_run(receipt)["success"] is True
+
+    def test_the_token_is_bound_to_its_receipts_and_the_rows(self, project):
+        _, first = new_code("Belonging")
+        _, second = new_code("Distance")
+        preview = undo_preview(first)
+        other = answer(server.undo_changes(
+            receipts=[second], preview_token=preview["preview_token"]))
+        assert other["reason"] == "token_other_operation"
+        context = server._undo_context()
+        plan = server._undo_plan(server.get_db(), [first], context)
+        execute(project, "update code_name set memo = 'x' where name = "
+                "'Belonging'")
+        again = server._undo_plan(server.get_db(), [first], context)
+        assert plan.fingerprint() != again.fingerprint()
+
+
+class TestTheCodingSessionsMarks:
+
+    def test_an_undone_apply_returns_its_suggestions_to_approved(
+            self, project):
+        sid, guids = a_session()
+        receipt = receipt_of(server.apply_codings(coding_session_id=sid))
+        assert session_file(sid).suggestions[0].applied_ctid is not None
+        preview = undo_preview(receipt)
+        assert preview["preview"]["suggestions_approved_again"] == 1
+        assert any("apply_codings" in w for w in preview["warnings"])
+        done = answer(server.undo_changes(
+            receipts=[receipt], preview_token=preview["preview_token"]))
+        assert "apply_codings" in done["sessions_note"]
+        suggestion = session_file(sid).suggestions[0]
+        assert suggestion.status == "approved"
+        assert suggestion.applied_ctid is None
+
+    def test_undone_proposals_return_to_approved_and_leave_the_scope(
+            self, project):
+        sid = answer(server.start_coding_session(
+            file_ids=[1], code_names=["Trust"],
+            instruction="test"))["coding_session_id"]
+        proposed = answer(server.propose_codes(
+            coding_session_id=sid, proposals=[{
+                "name": "Reliance", "memo": "Leaning on others",
+                "rationale": "stated", "example_segments": [
+                    {"file_id": 1, "segment_text": QUOTE}]}]))
+        server.update_proposal_status(
+            coding_session_id=sid,
+            approve=[p["guid"] for p in proposed["recorded"]])
+        created = answer(server.create_proposed_codes(coding_session_id=sid))
+        new = created["created_codes"][0]["code_id"]
+        assert new in session_file(sid).scope["code_ids"]
+        assert undo_run(created["undo_receipt"])["success"] is True
+        session = session_file(sid)
+        assert session.proposed_codes[0].status == "approved"
+        assert session.proposed_codes[0].created_code_id is None
+        assert new not in session.scope["code_ids"]
+
+    def test_an_undone_delete_coding_returns_its_suggestion_to_applied(
+            self, project):
+        sid, _ = a_session()
+        server.apply_codings(coding_session_id=sid)
+        ctid = session_file(sid).suggestions[0].applied_ctid
+        deleted = answer(server.delete_coding(coding_id=ctid))
+        assert session_file(sid).suggestions[0].status == "removed"
+        assert undo_run(deleted["undo_receipt"])["success"] is True
+        suggestion = session_file(sid).suggestions[0]
+        assert suggestion.status == "applied"
+        assert suggestion.applied_ctid == ctid
+
+    def test_removed_codes_and_files_leave_every_scope(self, project):
+        _, made = new_code("Belonging")
+        cid = code_id(project, "Belonging")
+        imported = answer(server.import_text_file(filename="int2.txt",
+                                                  content=TEXT_2))
+        fid = imported["file_id"]
+        sid = answer(server.start_coding_session(
+            file_ids=[1, fid], code_names=["Trust", "Belonging"],
+            instruction="test"))["coding_session_id"]
+        assert undo_run(imported["undo_receipt"], made)["success"] is True
+        scope = session_file(sid).scope
+        assert cid not in scope["code_ids"] and fid not in scope["file_ids"]
+        assert scope["file_ids"] == [1]
+
+    def test_a_session_saved_meanwhile_by_another_writer_is_kept(
+            self, project, monkeypatch):
+        sid, _ = a_session()
+        receipt = receipt_of(server.apply_codings(coding_session_id=sid))
+        manager = server.session_manager
+        real = manager.save_session_if_unchanged
+        writes = []
+
+        def another_writer_first(session, raw):
+            if not writes:
+                other = manager.load_session(sid)
+                other.description = "edited elsewhere"
+                manager.save_session(other)
+                writes.append(1)
+            return real(session, raw)
+        monkeypatch.setattr(manager, "save_session_if_unchanged",
+                            another_writer_first)
+        done = undo_run(receipt)
+        assert done["sessions_updated"][0]["status"] == "set back"
+        session = session_file(sid)
+        assert session.description == "edited elsewhere"
+        assert session.suggestions[0].status == "approved"
+
+
+class TestTheReadingCopies:
+
+    def copy_of(self, project, fid):
+        from exegete import reading_folder
+        server.open_file_for_reading(file_id=fid)
+        return reading_folder.file_folder(project, fid)
+
+    @pytest.mark.parametrize("change", ["rename", "coding", "import"])
+    def test_a_reading_copy_is_forgotten_after_an_undo(self, project,
+                                                       change):
+        if change == "rename":
+            _, receipt = call(server.rename_file, file_id=1,
+                              new_name="int1b.txt")
+            fid = 1
+        elif change == "coding":
+            sid, _ = a_session()
+            receipt = receipt_of(server.apply_codings(coding_session_id=sid))
+            fid = 1
+        else:
+            body, receipt = call(server.import_text_file, filename="int2.txt",
+                                 content=TEXT_2)
+            fid = body["file_id"]
+        folder = self.copy_of(project, fid)
+        assert folder.is_dir() and any(folder.iterdir())
+        assert undo_run(receipt)["success"] is True
+        assert not folder.exists()
 
 
 @pytest.fixture

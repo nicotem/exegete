@@ -982,6 +982,7 @@ class _Planner:
         changed: Dict[str, int] = {}
         in_use: Dict[str, int] = {}
         blocking: List[Tuple[str, Any]] = []
+        taken: Set[Tuple[str, Any]] = set()
         project_row = False
         for row in rows:
             actual, entry = info[row["table"]]
@@ -994,6 +995,7 @@ class _Planner:
                 if now is not None:
                     in_use[actual] = in_use.get(actual, 0) + 1
                     blocking.append((actual, key))
+                    taken.add((actual, key))
                 continue
             if now is None or self.digests.row(columns, now) != row["after"] \
                     or self._filled_since(now, entry):
@@ -1028,10 +1030,10 @@ class _Planner:
                           **self.later(change, blocking))
         if text_changed:
             change.refuse(TEXT_CHANGED, files=text_changed)
-        if change.refusals:
-            return
 
-        # The old rows, from the change's own backup, each against "before"
+        # The old rows, from the change's own backup, each against
+        # "before". Every kind of refusal is counted: a change refused
+        # here is still judged for later work that depends on it.
         old: Dict[Tuple[str, Any], Row] = {}
         backup: Optional[Source] = None
         if needs_backup:
@@ -1039,25 +1041,24 @@ class _Planner:
             change.fingerprint["backup_found"] = backup is not None
             if reason is not None:
                 change.refuse(reason)
-                return
-            altered: Dict[str, int] = {}
-            for name, its in by_table.items():
-                actual, entry = info[name]
-                wanted = [r for r in its if kind_of(r) != ADDED]
-                if not wanted:
-                    continue
-                got = backup.rows(name, entry["key"], entry["key_kind"],
-                                  [r["key"] for r in wanted])
-                for r in wanted:
-                    values = got.get(r["key"])
-                    if values is None or self.digests.row(
-                            entry["columns"], values) != r["before"]:
-                        altered[actual] = altered.get(actual, 0) + 1
-                    else:
-                        old[(name, r["key"])] = values
-            if altered:
-                change.refuse(BACKUP_CHANGED, rows=altered)
-                return
+            else:
+                altered: Dict[str, int] = {}
+                for name, its in by_table.items():
+                    actual, entry = info[name]
+                    wanted = [r for r in its if kind_of(r) != ADDED]
+                    if not wanted:
+                        continue
+                    got = backup.rows(name, entry["key"], entry["key_kind"],
+                                      [r["key"] for r in wanted])
+                    for r in wanted:
+                        values = got.get(r["key"])
+                        if values is None or self.digests.row(
+                                entry["columns"], values) != r["before"]:
+                            altered[actual] = altered.get(actual, 0) + 1
+                        else:
+                            old[(name, r["key"])] = values
+                if altered:
+                    change.refuse(BACKUP_CHANGED, rows=altered)
 
         # What the undo writes, held over the state until the checks pass
         effects: Dict[Tuple[str, Any], Optional[Row]] = {}
@@ -1072,6 +1073,8 @@ class _Planner:
                             columns, None, now)
                 change.removed.append(step)
                 effects[(actual.lower(), key)] = None
+                continue
+            if (name, key) not in old or (actual, key) in taken:
                 continue
             values = {c: old[(name, key)][c] for c in columns}
             if kind == REMOVED:

@@ -177,6 +177,13 @@ REFERENCES: Tuple[Reference, ...] = (
     _ref("gr_av_item", "avid", "code_av", "avid"),
 )
 
+# The references from each table, by the table's name in lower case
+REFERENCES_FROM: Dict[str, Tuple[Reference, ...]] = {}
+for _reference in REFERENCES:
+    REFERENCES_FROM[_reference.table] = REFERENCES_FROM.get(
+        _reference.table, ()) + (_reference,)
+del _reference
+
 # The order rows are put back in, parents first; rows are removed in the
 # opposite order, children first. A table not named here comes last.
 TABLE_ORDER = (
@@ -383,13 +390,17 @@ class Source:
         return ", ".join(_read_sql(column, "r.") for column in columns)
 
     def rows(self, name: str, key: Optional[str], key_kind: str,
-             keys: Iterable[Any]) -> Dict[Any, Row]:
-        """The rows of these keys that are there, every column read."""
+             keys: Iterable[Any],
+             only: Optional[Sequence[str]] = None) -> Dict[Any, Row]:
+        """The rows of these keys that are there, every column read, or
+        with `only` those columns of a table keyed by an integer."""
         actual = self.table(name)
         wanted = list(dict.fromkeys(keys))
         if actual is None or not wanted:
             return {}
         columns = self.columns(actual)
+        if only is not None and key_kind == "integer":
+            columns = tuple(c for c in only if c in columns)
         if key_kind == "integer":
             found: Dict[Any, Row] = {}
             select = self._select(actual, columns)
@@ -840,8 +851,10 @@ class _Planner:
 
     def db_row(self, actual: str, key: Any, key_column: Optional[str],
                key_kind: str) -> Optional[Row]:
-        self.prefetch(actual, key_column, key_kind, [key])
-        return self._db_rows[(actual.lower(), key)]
+        mark = (actual.lower(), key)
+        if mark not in self._db_rows:
+            self.prefetch(actual, key_column, key_kind, [key])
+        return self._db_rows[mark]
 
     def state(self, actual: str, key: Any, key_column: Optional[str],
               key_kind: str) -> Optional[Row]:
@@ -994,8 +1007,9 @@ class _Planner:
             actual, entry = info[row["table"]]
             key, columns = row["key"], entry["columns"]
             db_now = self.db_row(actual, key, entry["key"], entry["key_kind"])
-            signed.append([actual, key, None if db_now is None
-                           else self.digests.row(columns, db_now)])
+            db_digest = None if db_now is None else self.digests.row(
+                columns, db_now)
+            signed.append([actual, key, db_digest])
             now = self.state(actual, key, entry["key"], entry["key_kind"])
             if kind_of(row) == REMOVED:
                 if now is not None:
@@ -1003,7 +1017,9 @@ class _Planner:
                     blocking.append((actual, key))
                     taken.add((actual, key))
                 continue
-            if now is None or self.digests.row(columns, now) != row["after"] \
+            digest = db_digest if now is db_now else (
+                None if now is None else self.digests.row(columns, now))
+            if now is None or digest != row["after"] \
                     or self._filled_since(now, entry):
                 changed[actual] = changed.get(actual, 0) + 1
                 blocking.append((actual, key))
@@ -1283,10 +1299,9 @@ class _Planner:
             post = self.overlay.get(step.table.lower(), {}).get(step.key)
             if post is None:
                 continue
-            for ref in REFERENCES:
-                if ref.table.lower() != step.table.lower() or (
-                        ref.when is not None and text_of(
-                            post.get(ref.when[0])) != ref.when[1]):
+            for ref in REFERENCES_FROM.get(step.table.lower(), ()):
+                if ref.when is not None and text_of(
+                        post.get(ref.when[0])) != ref.when[1]:
                     continue
                 values = tuple(post.get(c, NULL) for c in ref.columns)
                 if any(v.kind == "null" for v in values) or (
@@ -1532,12 +1547,18 @@ def _where(step: Step, start: int) -> Tuple[str, List[Any]]:
     return "", []
 
 
-def _settings(step: Step) -> Tuple[str, List[Any]]:
-    parts, params = [], []
+def _settings(columns: Sequence[str]) -> str:
+    """`column = <value>, ...` for an UPDATE, two parameters a value."""
+    return ", ".join(f"{_quoted(column)} = {_write_sql(2 * i + 1)}"
+                     for i, column in enumerate(columns))
+
+
+def _bound(step: Step) -> List[Any]:
+    """A step's values as `_write_sql`'s parameters, in its columns' order."""
+    params: List[Any] = []
     for column in step.columns:
-        parts.append(f"{_quoted(column)} = {_write_sql(len(params) + 1)}")
         params.extend(bind(step.values[column]))
-    return ", ".join(parts), params
+    return params
 
 
 def _grouped(steps: Iterable[Step]) -> Dict[Tuple[str, Tuple[str, ...]],
@@ -1566,12 +1587,12 @@ def write(conn: sqlite3.Connection, plan_: Plan, secret: str) -> None:
                     [_where(step, 1)[1] for step in kind_steps])
         for (table, columns), steps in _grouped(change.set_back).items():
             for kind_steps in _by_key_kind(steps):
-                settings, _ = _settings(kind_steps[0])
-                where, _ = _where(kind_steps[0], 2 * len(columns) + 1)
+                start = 2 * len(columns) + 1
+                where, _ = _where(kind_steps[0], start)
                 conn.executemany(
-                    f"UPDATE main.{_quoted(table)} SET {settings}{where}",
-                    [_settings(step)[1]
-                     + _where(step, 2 * len(columns) + 1)[1]
+                    f"UPDATE main.{_quoted(table)} SET {_settings(columns)}"
+                    f"{where}",
+                    [_bound(step) + _where(step, start)[1]
                      for step in kind_steps])
         put_back = _grouped(change.put_back)
         for (table, columns), steps in sorted(put_back.items(),
@@ -1581,9 +1602,7 @@ def write(conn: sqlite3.Connection, plan_: Plan, secret: str) -> None:
                               for i in range(len(columns)))
             conn.executemany(
                 f"INSERT INTO main.{_quoted(table)} ({names}) "
-                f"VALUES ({marks})",
-                [[p for column in columns for p in bind(step.values[column])]
-                 for step in steps])
+                f"VALUES ({marks})", [_bound(step) for step in steps])
     _check_written(conn, plan_, secret)
 
 
@@ -1613,8 +1632,9 @@ def _check_written(conn: sqlite3.Connection, plan_: Plan, secret: str) -> None:
     wrong = 0
     for actual, entries in wanted.items():
         key_column, key_kind = kinds[actual.lower()]
+        columns_read = sorted({c for _, columns in entries for c in columns})
         got = source.rows(actual, key_column, key_kind,
-                          [key for key, _ in entries])
+                          [key for key, _ in entries], only=columns_read)
         for key, columns in entries:
             expected = plan_.overlay.get(actual.lower(), {}).get(key)
             row = got.get(key)

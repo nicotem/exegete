@@ -1380,6 +1380,61 @@ def test_the_table_name_alone_runs_nothing(project):
     assert database_value(project, "SELECT count(*) FROM code_text") == [(1,)]
 
 
+# 14. The capture's work grows with the rows, not with their square ---------------
+
+# SQLite calls a progress handler every so many of its steps: counted, the
+# steps measure the capture's work without a clock
+STEP_GRAIN = 100
+
+
+def add_codings(folder, count):
+    """`count` codings of the first code in the first file, as another
+    program would add them, then the project selected again."""
+    with closing(sqlite3.connect(str(Path(folder) / "data.qda"))) as conn:
+        with conn:
+            conn.executemany(
+                "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, "
+                "owner, date) VALUES (1, 1, 'a', ?, ?, 'Researcher', "
+                "'2026-10-28 10:00:00')",
+                [(i, i + 1) for i in range(count)])
+    assert "error" not in answer(server.select_project(
+        project_path=str(folder)))
+
+
+def steps_of_deleting(folder, count, record):
+    """SQLite's steps from a write that deletes `count` codings until its
+    commit, the capture's finish included: with the capture (`record`)
+    or without it."""
+    add_codings(folder, count)
+    counted = [0]
+
+    def step():
+        counted[0] += 1
+        return 0
+
+    def delete(write_db):
+        write_db.conn.set_progress_handler(step, STEP_GRAIN)
+        write_db.conn.execute("DELETE FROM code_text WHERE cid = 1")
+        return {"success": True}
+    done = server._perform_write(delete, record=record)
+    assert done.get("success") and \
+        bool(done.get("undo_receipt")) == record, done
+    return counted[0] * STEP_GRAIN
+
+
+def test_the_capture_adds_the_same_work_for_each_row(project):
+    """Each firing finds its row's key in the log through the log's
+    index, so the capture adds as much work for each of 1,600 rows as for
+    each of 400. Had SQLite applied the key column's integer affinity to
+    the log's key, which has no declared type, the index would serve the
+    table's number alone and every firing would read that table's whole
+    log: over 20,000 codings, SQLite's write lock was held 4 s longer."""
+    added = {count: (steps_of_deleting(project, count, True)
+                     - steps_of_deleting(project, count, False)) / count
+             for count in (400, 1600)}
+    assert added[1600] < 1.5 * added[400], added
+
+
 # The marks a record keeps ------------------------------------------------------
 
 def test_apply_codings_keeps_the_suggestions_whose_codings_it_wrote(project):

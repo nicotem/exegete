@@ -318,7 +318,16 @@ def _tools(mode="full"):
 # given exactly, "after 65 minutes" for "after an hour"
 # (kept_texts.ENTRY_LIFETIME), since the reader acts on that time.
 # That takes 3 characters more within the same 500 lines: 32,785.
-README_LIMIT = 32_785
+# The merge onto the integration branch (28 October): the Terminal
+# routes moved from INSTALL.md to their own guide,
+# docs/installing-from-the-terminal.md, so each pointer to what moved
+# names that guide and links to its own section: the table of routes,
+# OpenAI's steps, LM Studio's recipe and its first project, the
+# environment variables, updating and the earlier name on the Terminal
+# route, keeping QualCoder 4.0's server apart, and Claude Code's figures.
+# The guide's longer path and name take 311 characters more within the
+# same 500 lines: 33,096.
+README_LIMIT = 33_096
 README_LINES = 500
 
 
@@ -727,8 +736,12 @@ def test_the_assistants_table():
             "its data, and a personal account comes under the consumer "
             "terms. So institutions should prefer organisational "
             "accounts.") in flat
-    assert ("[INSTALL.md, \"Choosing your AI host\"](https://github.com/"
-            "nicotem/exegete/blob/main/INSTALL.md#choosing-your-ai-host-"
+    # (v0.15.2, the merge onto the integration branch: the table of
+    # routes moved to the Terminal guide, which the link names by its
+    # title)
+    assert ("[Installing Exegete from the Terminal, \"Choosing your AI "
+            "host\"](https://github.com/nicotem/exegete/blob/main/docs/"
+            "installing-from-the-terminal.md#choosing-your-ai-host-"
             "data-governance-options-experimental)") in _flat(_read("README.md"))
     # (v0.15.2, the Terminal guide's table: the sentence on organisational
     # accounts gives its reason, as ruling 108 has the README's do)
@@ -887,17 +900,26 @@ def test_the_advanced_section_rests_on_the_code():
     for lead in ("**Guarded changes**", "**The brief**"):
         assert lead in beyond, lead
     assert f"`{names.RESOURCE_SCHEME}://" in _read("TOOLS.md")
-    # Claude Code's limits, whose figures are INSTALL.md's (its version
-    # 2.1.296 and after; tests/test_v0150_wb_fix_r2.py pins the long
-    # description), and what follows from them
+    # Claude Code's limits, whose figures are the Terminal guide's (its
+    # version 2.1.296 and after; tests/test_v0150_wb_fix_r2.py pins the
+    # long description), and what follows from them
     # (the readability reading: the reason first, then the rule)
+    # (v0.15.2, the merge onto the integration branch: Claude Code's
+    # section moved from INSTALL.md to the Terminal guide, which the
+    # sentence names and the bullet links to)
     assert ("A host may keep only the start of a description, so the rules "
             "that matter come within its first 2,048 characters, a few named "
-            "exceptions apart (INSTALL.md gives Claude Code's figures).") \
-        in beyond
-    install = _flat(_read("INSTALL.md"))
-    for figure in ("16,384", "4,096", "2.1.296"):
-        assert figure in install, figure
+            "exceptions apart (the Terminal guide gives Claude Code's "
+            "figures).") in beyond
+    assert ("[the guide's section on Claude Code](https://github.com/nicotem/"
+            "exegete/blob/main/docs/installing-from-the-terminal.md"
+            "#claude-code) says how to let it through whole.") in beyond
+    guide = _read("docs/installing-from-the-terminal.md")
+    start = guide.index("\n## Claude Code\n")
+    claude_code = _flat(guide[start:guide.index("\n## ", start + 1)])
+    for figure in ("16,384", "4,096", "2.1.296",
+                   "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH"):
+        assert figure in claude_code, figure
     # (the staleness audit of 20 October 2026: the exceptions are named,
     # tests/test_v0142_description_cut.py, LEFT_PAST_THE_CUT)
     import test_v0142_description_cut as cut

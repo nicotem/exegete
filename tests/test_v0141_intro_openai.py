@@ -366,8 +366,10 @@ class TestTheReadmesRoute:
         assert ("These can start Exegete too, by the Terminal route: a few "
                 "commands typed in a Terminal window, with Python 3.11 or "
                 "newer. ChatGPT in a browser cannot.") in section
-        assert "INSTALL.md#chatgpts-desktop-app-and-codex-experimental" \
-            in section
+        # (v0.15.2, the merge onto the integration branch: the recipe is
+        # the Terminal guide's, and the README links to it there)
+        assert ("installing-from-the-terminal.md#chatgpts-desktop-app-and-"
+                "codex-experimental") in section
         assert "cannot use such tools at all" not in section
         install = _install_openai_flat()
         assert "**ChatGPT on a phone**: it cannot start Exegete, but it can " \
@@ -408,10 +410,13 @@ class TestTheReadmesRoute:
                       "**Training.** While training is on, OpenAI may use "
                       "your conversations, with the participants' data in "
                       "them, to train its models.",
-                      "Then follow [INSTALL.md's steps](https://github.com/"
-                      "nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-"
-                      "app-and-codex-experimental), which make the app ask "
-                      "before every change Exegete makes.",
+                      # (v0.15.2, the merge onto the integration branch:
+                      # the steps are the Terminal guide's)
+                      "Then follow [the Terminal guide's steps](https://"
+                      "github.com/nicotem/exegete/blob/main/docs/installing-"
+                      "from-the-terminal.md#chatgpts-desktop-app-and-codex-"
+                      "experimental), which make the app ask before every "
+                      "change Exegete makes.",
                       "This route is Experimental: we wrote it from "
                       "OpenAI's documentation, read on 30 September 2026, and "
                       "have not tried it."):
@@ -905,8 +910,10 @@ class TestCodexWorksInAFolderOfItsOwn:
         # INSTALL.md's steps, whose third gives Codex its folder (the next
         # test), and says once, where practising is, what a folder of its
         # own does not do
-        assert "INSTALL.md#chatgpts-desktop-app-and-codex-experimental" \
-            in section
+        # (v0.15.2, the merge onto the integration branch: the Terminal
+        # guide's steps)
+        assert ("installing-from-the-terminal.md#chatgpts-desktop-app-and-"
+                "codex-experimental") in section
         assert "Codex reads files by itself" in section
         first = _between(_flat("README.md"), "### A first session",
                          "**Two coder names.**")
@@ -1190,11 +1197,13 @@ class TestTheStepsANewcomerCanGetWrong:
         # route says it is the Terminal route. The check for new versions
         # (pull request #11): the Terminal route's check is off unless
         # switched on, and INSTALL.md has its steps, uvx's included
+        # (v0.15.2, the merge onto the integration branch: the Terminal
+        # route's steps are the Terminal guide's "Updating")
         assert ("On the Terminal route the check is off unless you set "
-                "`EXEGETE_UPDATE_CHECK=on` ([INSTALL.md has the steps]"
-                "(https://github.com/nicotem/exegete/blob/main/INSTALL.md"
-                "#updating-the-mcp-server)") in readme
-        assert ("Then follow [INSTALL.md's steps]" in readme
+                "`EXEGETE_UPDATE_CHECK=on` ([the Terminal guide has the "
+                "steps](https://github.com/nicotem/exegete/blob/main/docs/"
+                "installing-from-the-terminal.md#updating)") in readme
+        assert ("Then follow [the Terminal guide's steps]" in readme
                 and "by the Terminal route" in _readme_openai())
         # (v0.15.2: the Terminal guide's "Updating", which names the
         # optional part for PDF and EPUB)
@@ -1269,10 +1278,15 @@ class TestTheOtherFirstImpressions:
         # (the readability reading: the project, if the reader has one,
         # then what happens without one, a sentence each; the default set
         # is what lets the assistant create it on this route)
+        # (v0.15.2, the merge onto the integration branch: QUICKSTART's
+        # own step 3 says where a new project goes on this route)
         assert ("- A project, if you have one: a folder whose name ends in "
                 "`.qda`, kept in QualCoder's file format. If you have none, "
-                "the assistant can create one in the conversation (INSTALL.md "
+                "the assistant can create one in the conversation (step 3 "
                 "says where it goes).") in _flat("QUICKSTART.md")
+        assert ("On this route, a new project goes to `~/Documents/Exegete "
+                "projects` unless `EXEGETE_WORKSPACE` names another "
+                "folder.") in _flat("QUICKSTART.md")
 
     def test_the_texts_the_first_pass_did_not_read(self):
         """v0.14.2 (the owner's ruling of 7 October 2026): the opening

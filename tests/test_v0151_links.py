@@ -94,7 +94,9 @@ def test_the_repository_has_no_failing_link():
     assert report.failures == [], "\n".join(
         p.text() for p in report.failures)
     # Read, not skipped: the README's links to the front page's
-    # headings and the update page's links to INSTALL.md are among them
+    # headings and the update page's links to the Terminal guide (to
+    # INSTALL.md before v0.15.2's merge onto the integration branch) are
+    # among them
     assert report.counts["relative"] > 0 and report.counts["anchored"] > 0
     assert report.counts["own"] > 0
 
@@ -102,8 +104,10 @@ def test_the_repository_has_no_failing_link():
 @needs_git
 def test_a_renamed_heading_names_every_link_to_it(tmp_path):
     """In a scratch copy of the tracked files (the documents the check
-    reads, the others as empty files), INSTALL.md's heading the update
-    page links is renamed: the update page's link fails, by its line."""
+    reads, the others as empty files), a heading the update page links
+    is renamed (the Terminal guide's since v0.15.2's merge onto the
+    integration branch, INSTALL.md's before): the update page's link
+    fails, by its line."""
     try:
         tracked = links.tracked_files(REPO)
     except links.NoGit as error:
@@ -114,20 +118,22 @@ def test_a_renamed_heading_names_every_link_to_it(tmp_path):
                     if name in read else "") for name in tracked}
     # v0.15.2: INSTALL.md's "Updating the MCP Server" is an explicit
     # anchor now, kept for the links into it; the update page links this
-    # heading too
-    heading = "## PDF and EPUB: the optional part\n"
-    assert files["INSTALL.md"].count(heading) == 1
-    files["INSTALL.md"] = files["INSTALL.md"].replace(
-        heading, "## Reading PDF and EPUB\n")
+    # heading too, in the Terminal guide since the merge onto the
+    # integration branch, where the page's routes are
+    guide = "docs/installing-from-the-terminal.md"
+    heading = "### PDF and EPUB: the optional part\n"
+    assert files[guide].count(heading) == 1
+    files[guide] = files[guide].replace(heading,
+                                        "### Reading PDF and EPUB\n")
     report = links.check_repository(_tree(tmp_path / "copy", files))
     page = [p for p in report.failures
             if p.file == "pages/update/index.html"]
     line = next(number for number, text in enumerate(
         files["pages/update/index.html"].splitlines(), start=1)
-        if "INSTALL.md#pdf-and-epub-the-optional-part" in text)
+        if f"{guide}#pdf-and-epub-the-optional-part" in text)
     assert _where(page) == [(
         "pages/update/index.html", line,
-        "https://github.com/nicotem/exegete/blob/main/INSTALL.md"
+        f"https://github.com/nicotem/exegete/blob/main/{guide}"
         "#pdf-and-epub-the-optional-part")]
     assert all(p.target.endswith("#pdf-and-epub-the-optional-part")
                for p in report.failures)

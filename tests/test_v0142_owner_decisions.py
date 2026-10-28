@@ -98,9 +98,11 @@ def test_the_readme_gives_both_makers_the_same_advice():
     claude = _plain(_between(readme, "3. **Training.**",
                              "4. **Your account"))
     # (the paragraph's last sentence sends the reader on to INSTALL.md's
-    # steps, which come after training)
+    # steps, which come after training; v0.15.2, the merge onto the
+    # integration branch: the Terminal guide's steps, where they moved)
     openai = _plain(_between(readme, "**Training.** While training is on, "
-                             "OpenAI", " Then follow [INSTALL.md's steps]"))
+                             "OpenAI", " Then follow [the Terminal guide's "
+                             "steps]"))
     for maker, text in (("Anthropic", claude), ("OpenAI", openai)):
         assert README_ADVICE.format(maker=maker) in text, maker
         assert README_RATED.format(maker=maker) in text, maker
@@ -582,8 +584,11 @@ def test_the_readme_says_what_it_costs():
             # (the fix round: the table of routes compares them, and
             # their recipes give OpenAI's plans and LM Studio's needs:
             # tests/test_v0152_opening_texts.py)
+            # (the merge onto the integration branch: the table moved to
+            # the Terminal guide, named by its title)
             "Other routes, such as OpenAI's apps and LM Studio, are "
-            "compared in [INSTALL.md, \"Choosing your AI host\"]",
+            "compared in [Installing Exegete from the Terminal, \"Choosing "
+            "your AI host\"]",
             "Their recipes there give OpenAI's plans and what LM Studio "
             "needs."):
         assert words in cost, words

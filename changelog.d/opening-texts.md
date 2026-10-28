@@ -24,10 +24,10 @@
   Claude's pricing page listed it on 28 October 2026, and presents a
   local model as a route to consider for particular uses. The diagrams
   and the map of the repository give way to prose and links. The lists
-  of tools are left to TOOLS.md, and Claude Code's figures to INSTALL.md.
-  Before INSTALL.md's steps for OpenAI's apps it gives the training
-  switch, and where it sends Claude Code's users it says that Claude
-  Code opens files by itself.
+  of tools are left to TOOLS.md, and Claude Code's figures to the guide
+  to installing from the Terminal. Before that guide's steps for
+  OpenAI's apps it gives the training switch, and where it sends Claude
+  Code's users it says that Claude Code opens files by itself.
 - **QUICKSTART.md** is rewritten in the same voice, within 250 lines.
 - **The update page** is rewritten in the same voice, and says that on
   Python 3.10 the steps cannot install a version after 0.15.1-alpha.1.

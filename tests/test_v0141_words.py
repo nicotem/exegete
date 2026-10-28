@@ -260,7 +260,11 @@ class TestInstallSaysHowToMove:
         assert install.index("(#coming-from-qualcoder-mcp)") < \
             install.index("## Installing the extension")
         readme = _flat("README.md")
-        assert "INSTALL.md#coming-from-qualcoder-mcp" in readme
+        # (v0.15.2, the merge onto the integration branch: the README's
+        # two links are about the Terminal route and QualCoder's own
+        # server, so they go to the Terminal guide's section)
+        assert "installing-from-the-terminal.md#coming-from-qualcoder-mcp" \
+            in readme
 
     def test_keep_your_entry(self):
         section = self._coming_from(GUIDE)

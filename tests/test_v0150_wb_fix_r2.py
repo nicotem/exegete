@@ -204,9 +204,13 @@ class TestClaudeCodesLimitsOnEveryPython:
                 "passes 16,384") in measured
         assert ("One description is longer than 16,384 characters, "
                 "`pseudonymise_source`'s") in readme
-        assert ("[INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
-                "INSTALL.md#alternative-claude-code-and-other-mcp-clients) "
-                "says how to let it through whole.") in readme
+        # (v0.15.2, the merge onto the integration branch: Claude Code's
+        # section is the Terminal guide's, which the README links to by its
+        # own anchor)
+        assert ("[the guide's section on Claude Code](https://github.com/"
+                "nicotem/exegete/blob/main/docs/installing-from-the-terminal"
+                ".md#claude-code) says how to let it through whole.") in readme
+        assert "\n## Claude Code\n" in _read(GUIDE)
         # (the anchor stays in INSTALL.md, a pointer to the Terminal
         # guide's section, which carries it too)
         for name in ("INSTALL.md", GUIDE):

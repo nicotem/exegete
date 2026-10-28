@@ -33,6 +33,8 @@ REPO = Path(__file__).resolve().parent.parent
 HEADING = "## LM Studio (fully local) (Experimental)"
 ANCHOR = "lm-studio-fully-local-experimental"
 INSTALL_ON_MAIN = "https://github.com/nicotem/exegete/blob/main/INSTALL.md"
+GUIDE_ON_MAIN = ("https://github.com/nicotem/exegete/blob/main/"
+                 "docs/installing-from-the-terminal.md")
 
 
 def _read(name):
@@ -73,8 +75,12 @@ def test_the_readme_links_straight_to_the_recipe():
                      "**Updating.**")
     # quoted as INSTALL's heading reads, so a search for it finds it
     # (test_v0150_renames_sets.py)
-    assert (f"[INSTALL.md, \"LM Studio (fully local) (Experimental)\"]"
-            f"({INSTALL_ON_MAIN}#{ANCHOR})") in other
+    # (v0.15.2, the merge onto the integration branch: the recipe is the
+    # Terminal guide's, linked by its own anchor, and quoted as the
+    # guide's heading reads)
+    assert (f"[the Terminal guide, \"LM Studio (fully local) "
+            f"(Experimental)\"]({GUIDE_ON_MAIN}#{ANCHOR})") in other
+    assert f"{INSTALL_ON_MAIN}#{ANCHOR}" not in other
     assert "has a recipe of its own in seven steps, with the `core` tool " \
            "set" in other
     # the paragraph still opens as it did (test_v0142_owner_decisions.py)

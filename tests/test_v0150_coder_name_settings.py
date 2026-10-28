@@ -667,8 +667,9 @@ def _notes_of_both(path):
 
 # v0.15.0, the coder names, piece 2: the first two end with what
 # set_project_coder_name does (tests/test_v0150_coder_name_correction.py)
+# (v0.15.2, the readability reading: each fact a sentence of its own)
 DIFFERS = (
-    "This project's own coder name is \"Bea Kim\"; the researcher's own "
+    "This project's own coder name is \"Bea Kim\". The researcher's own "
     "coder name in Exegete's settings is \"Ann Lee\", which Exegete gives "
     "only to the projects it creates from now on. A project's own coder "
     "name is never changed without the researcher's word. "
@@ -676,16 +677,16 @@ DIFFERS = (
     "it.")
 NONE_RECORDED = (
     "This project records no coder name for the researcher, so the check "
-    "of the AI coder name against the project's own coder name is off; the "
+    "of the AI coder name against the project's own coder name is off. The "
     "researcher's own coder name in Exegete's settings, \"Ann Lee\", is "
-    "still refused as the AI coder name, and Exegete gives it only to the "
+    "still refused as the AI coder name. Exegete gives it only to the "
     "projects it creates from now on. set_project_coder_name can give this "
     "project one.")
 AI_IS_SETTING = (
     "This project's AI coder name is \"Ann Lee\", which is also the "
     "researcher's own coder name in Exegete's settings, so AI codings "
     "stored under it could not be told apart from theirs. Ask the "
-    "researcher whether to change it with set_project_ai_coder_name; it "
+    "researcher whether to change it with set_project_ai_coder_name. It "
     "is never changed without their word.")
 
 
@@ -727,7 +728,7 @@ class TestTheSelectionNotes:
         monkeypatch.setenv(CODER, "Ann Lee")
         monkeypatch.setenv(AI, "Ann Lee")
         equal = ("The researcher's own coder name and the AI coder name in "
-                 "Exegete's settings are both \"Ann Lee\"; they must differ, "
+                 "Exegete's settings are both \"Ann Lee\". They must differ, "
                  "so a new project is refused until one is changed "
                  f"({places['both']}).")
         assert _notes_of_both(path) == ([DIFFERS, equal], [DIFFERS, equal])

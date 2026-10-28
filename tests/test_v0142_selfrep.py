@@ -696,8 +696,8 @@ class TestQualCoderIsOptional:
         quick = _flat((REPO / "QUICKSTART.md").read_text(encoding="utf-8"))
         # (v0.15.2, the opening texts: the project kept in QualCoder's file
         # format; QualCoder is no step of the guide)
-        assert ("- A project, which is a folder whose name ends in `.qda`, "
-                "kept in QualCoder's file format, or none") in quick
+        assert ("- A project, if you have one: a folder whose name ends in "
+                "`.qda`, kept in QualCoder's file format.") in quick
         # the name glossed where it is first used, without the comparison
         # with NVivo, ATLAS.ti and MAXQDA (the owner's word of 23 October
         # 2026: QualCoder is not the frame), and no promise of how long

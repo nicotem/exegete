@@ -213,6 +213,9 @@ WORKFLOW_JOBS = {
                "qualcoder-parity",
                # v0.15.1: the links in the documents, on every push.
                "documents",
+               # v0.15.2: the documents' commands, reporting only
+               # (tests/test_v0152_doc_commands.py).
+               "doc-commands",
                # v0.15.1: the suite on the newest library releases,
                # reporting only.
                "newest-libraries",

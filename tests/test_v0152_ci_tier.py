@@ -55,7 +55,8 @@ needs_git = pytest.mark.skipif(
 # on the fast tier when the branch changed what they build. A job added
 # to ci.yml fails test_ci_wires_the_tiers until it is placed here.
 FAST = {"tier", "test", "documents"}
-FULL_ONLY = {"qualcoder-parity", "rename-upgrade", "newest-libraries"}
+FULL_ONLY = {"qualcoder-parity", "rename-upgrade", "newest-libraries",
+             "doc-commands"}
 EXTENSION = {"desktop-extension", "desktop-extension-same"}
 
 
@@ -314,16 +315,16 @@ def test_ci_wires_the_tiers():
         "fast: ${{ steps.choose.outputs.fast }}",
         "skip_extension: ${{ steps.choose.outputs.skip_extension }}"]
 
-    # needs: tier on exactly the five that read its answers; the
+    # needs: tier on exactly the six that read its answers; the
     # extension's comparison follows its build; the documents start at once
     needing = {name for name in names if "needs: tier" in own[name]}
     assert needing == {"test", "desktop-extension", "qualcoder-parity",
-                       "rename-upgrade", "newest-libraries"}
+                       "rename-upgrade", "newest-libraries", "doc-commands"}
     assert "needs: desktop-extension" in own["desktop-extension-same"]
     assert not any(line.startswith("needs:") for line in own["documents"])
     assert not any(line.startswith("needs:") for line in own["tier"])
 
-    # the conditions: the full tier's three and the extension's, each
+    # the conditions: the full tier's four and the extension's, each
     # running the job unless the answer is an explicit `true`
     conditions = {name: [line for line in own[name]
                          if line.startswith("if:")] for name in names}

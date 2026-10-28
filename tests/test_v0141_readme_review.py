@@ -352,10 +352,11 @@ def test_the_three_questions_are_what_the_assistant_is_told():
     # (v0.15.2: the assistant, not Claude for every assistant)
     step = tools[tools.index("**Step 2: Analyse files**"):
                  tools.index("**Step 3: Review in the conversation**")]
+    # (v0.15.2: the two things the assistant is told, one to an item)
     assert ("The assistant is told to: - Ask you three things before it "
             "starts: "
             "what to look for, how long a coded passage should be, and "
-            "whether a passage may carry more than one code; and pass your "
+            "whether a passage may carry more than one code - Pass your "
             "answers as the session's `instruction`, which is required. "
             "Exegete cannot tell whether the instruction holds your answers, "
             "so check the one the session records (`get_coding_session_info`"

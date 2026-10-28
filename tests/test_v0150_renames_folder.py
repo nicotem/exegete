@@ -442,14 +442,16 @@ class TestTheDocuments:
                 "earlier default)") in items
 
     def test_the_ai_coding_guide_names_the_new_folder_only(self):
-        """Its nine mentions of the extension's folder, in the two forms
+        """Its seven mentions of the extension's folder, in the two forms
         they take (`~/Exegete projects/` and the full path under
         `/Users/YOUR_NAME/`), not counting the Terminal routes' folder
-        in Documents (fix round 1: that one was counted too)."""
+        in Documents (fix round 1: that one was counted too). Nine until
+        v0.15.2, when the workflow told the folders once, in "The
+        workspace", and pointed there."""
         guide = (REPO / "AI_CODING_WORKFLOW.md").read_text(encoding="utf-8")
         home_level = re.findall(r"(?:~|/Users/YOUR_NAME)/Exegete projects/",
                                 guide)
-        assert len(home_level) == 9
+        assert len(home_level) == 7
         assert "QualCoder projects" not in guide
 
     def test_the_readmes_first_session_says_by_default(self):

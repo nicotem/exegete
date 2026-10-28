@@ -4,7 +4,7 @@ A guide to coding with Exegete in a conversation with your assistant,
 step by step: the assistant suggests, you decide on each suggestion, and
 Exegete writes only what you approved.
 
-## Table of Contents
+## Contents
 
 1. [Overview](#overview)
 2. [Safety first](#safety-first)
@@ -15,11 +15,11 @@ Exegete writes only what you approved.
 
 ## Overview
 
-The AI coding workflow is a **conversational approval process**:
+In outline, you approve each suggestion in a conversation:
 
-1. The assistant is told to ask what to look for, how long a passage
-   should be and whether one passage may carry more than one code; it
-   then reads your files and records suggestions
+1. The assistant is told to ask you three things first: what to look
+   for, how long a passage should be, and whether one passage may carry
+   more than one code. It then reads your files and records suggestions
 2. You review the suggestions in the conversation
 3. You approve or reject each suggestion
 4. Exegete writes only the approved suggestions to the project's
@@ -31,15 +31,17 @@ with no import or export step.
 
 ## Safety first
 
-Approved codings are written straight into the project's database. A
-project made in another program, such as QualCoder, or one you want
-kept as it is, is safest worked on as a copy in the workspace. A
-project made with Exegete is already in the workspace, and Exegete
-takes a backup before each change to it. Your project is kept in
-QualCoder's format, so it can also be opened in QualCoder. QualCoder is
-free software for qualitative analysis.
+Approved codings are written straight into the project's database.
+Your project is kept in QualCoder's format, so it can also be opened in
+QualCoder. QualCoder is free software for qualitative analysis.
 
-### Workspace setup
+A project made with Exegete is already in the workspace, and Exegete
+takes a backup, a copy of the project kept beside it, before each
+change to it. A project made in another program, such as QualCoder, or
+one you want to keep as it is, is safest worked on as a copy in the
+workspace.
+
+### The workspace
 
 Exegete keeps new projects, and copies of projects, in its workspace
 folder. With the Claude Desktop extension it is the extension's "Folder
@@ -49,12 +51,12 @@ for projects", by default:
 ~/Exegete projects/
 ```
 
-Otherwise it is `~/Documents/Exegete projects/`, unless Exegete's
-settings name another folder in `EXEGETE_WORKSPACE`. Either way, the
-answer to `copy_project_to_workspace` (and to `create_project`) gives
-the full path: use that one.
+Otherwise it is `~/Documents/Exegete projects/`, unless the setting
+`EXEGETE_WORKSPACE` gives another folder. `~` stands for your home
+folder. Either way, the answer to `copy_project_to_workspace`, and to
+`create_project`, gives the full path: use that one.
 
-**For a project made elsewhere, or one you want kept as it is:**
+**For a project made elsewhere, or one you want to keep as it is:**
 1. Copy the project to the workspace
 2. Work on the workspace copy
 3. Check the results, in the conversation, or in QualCoder if you use
@@ -62,42 +64,43 @@ the full path: use that one.
 
 ### One program at a time
 
-A project's lock file, `project_in_use.lock`, is active while another
-conversation using Exegete is writing to the project (Exegete writes
-the file during each of its own writes) or while QualCoder 3.8.2 has
-the project open (it keeps the file as a heartbeat), and **every write
-operation is refused while the project's lock file is active**. The
-refusal gives both causes and the way through for each: "This project
-is in use by another program: its lock file is active (user ...), so
-QualCoder 3.8.2 has it open, or another conversation using Exegete is
-writing to it. Ask the researcher to close it in QualCoder, or wait a
-moment; once get_current_project shows qualcoder_open false, retry."
-Reads still work, with a warning that data may change underneath.
+A project's lock file, `project_in_use.lock`, shows that the project
+is in use. It is active while another conversation using Exegete is
+writing to the project, since Exegete writes the file during each of
+its own writes. It is also active while QualCoder 3.8.2 has the project
+open, since QualCoder keeps the file as a heartbeat, a sign that it
+still has the project open. **Every write operation is refused while
+the project's lock file is active.** The refusal gives both causes and
+the way through for each: "This project is in use by another program:
+its lock file is active (user ...), so QualCoder 3.8.2 has it open, or
+another conversation using Exegete is writing to it. Ask the researcher
+to close it in QualCoder, or wait a moment; once get_current_project
+shows qualcoder_open false, retry." Reads still work, with a warning
+that data may change underneath.
 
-QualCoder 4.0 writes no lock file. For it Exegete can only report
-signs that the project may be open (`qualcoder_gui_signals`; TOOLS.md,
-"Supported QualCoder versions", lists the answers that report them),
-and those signs can miss an idle window. So if you also use QualCoder,
-make sure yourself that no window has the project open before Exegete
-writes. An open 4.0 window will not show changes written by Exegete
-until the project is closed and reopened there.
+QualCoder 4.0 writes no lock file. With 4.0, Exegete can only report
+signs that the project may be open (`qualcoder_gui_signals`), and those
+signs can miss an idle window. "Supported QualCoder versions" in
+TOOLS.md lists the answers that report them. So if you also use
+QualCoder, make sure yourself that no window has the project open
+before Exegete writes. An open 4.0 window will not show changes written
+by Exegete until the project is closed and reopened there.
 
 ### Backups
 
-Exegete takes a timestamped backup before every change
-(`create_backup`, which some tools still accept, no longer does
-anything):
+Exegete takes a timestamped backup before every change:
 
 ```
 your_project_backup_20251029_143045.qda
 ```
 
-Use `list_backups` to see them (QualCoder's own `_BKUP_` backups are
-listed too) and `restore_backup` to roll the project back; it previews
-first and executes only when called again with the `preview_token` that
-preview returned, and it saves a safety backup of the current state so
-even a restore can be undone. A single wrong coding can
-be removed with `delete_coding(coding_id)` instead.
+Some tools still accept `create_backup`, which no longer does anything.
+`list_backups` shows the backups, QualCoder's own `_BKUP_` backups
+included. `restore_backup` returns the project to one of them in two
+calls. The first gives a preview. The second, with the `preview_token`
+that preview returned, restores. Before it restores, Exegete backs up
+the project as it is, so even a restore can be undone. A single wrong
+coding can be removed with `delete_coding(coding_id)` instead.
 
 ## Workflow steps
 
@@ -112,10 +115,8 @@ Copy my project "Interview Study.qda" to the workspace for AI coding
 ```
 
 Exegete then:
-- Copies the project folder to the workspace (with the Claude
-  Desktop extension `~/Exegete projects/` by default, otherwise
-  `~/Documents/Exegete projects/`, unless Exegete's settings name
-  another folder in `EXEGETE_WORKSPACE`)
+- Copies the project folder to the workspace ("The workspace", above,
+  says where it is)
 - Adds the date and time to the copy's name if that name is taken
 - Gives the copy's full path, which the assistant reports to you
 
@@ -146,29 +147,33 @@ Only suggest a code where the participant says it in so many words
 ```
 
 **What the assistant does:**
-1. Asks you three things first, as Exegete tells it to: what to
-   look for (your own codes, topics, people's own words, actions,
-   feelings or values, or other, and whether to point out passages no
-   code fits), how long a coded passage should be (a phrase, whole
-   sentences by default, or a whole answer) and whether a passage may
-   carry more than one code. Your answers become the session's
-   instruction; there is no default instruction. Exegete refuses a
-   session without an instruction but cannot tell whether it holds your
-   answers: check the instruction the session records
-   (`get_coding_session_info` shows it)
+1. Asks you three things first, as Exegete tells it to:
+   - what to look for: your own codes, topics, people's own words,
+     actions, feelings or values, or other, and whether to point out
+     passages no code fits;
+   - how long a coded passage should be: a phrase, whole sentences (the
+     default) or a whole answer;
+   - whether a passage may carry more than one code.
+
+   Your answers become the session's instruction, and there is no
+   default instruction. Exegete refuses a session without an
+   instruction but cannot tell whether it holds your answers, so check
+   the instruction the session records (`get_coding_session_info` shows
+   it)
 2. Starts a new coding session with its own ID (`start_coding_session`),
    which gives the assistant the public part of your project memo, the
    study in your own words
 3. Reads the specified files
 4. Looks for passages that match the codes
-5. Gives each suggestion a reading: explicit (the passage states what
-   the code names) or interpretive (the code rests on what the passage
-   implies rather than on what it says); there is no numeric score
+5. Gives each suggestion a reading, with no numeric score: explicit
+   (the passage states what the code names) or interpretive (the code
+   rests on what the passage implies rather than on what it says)
 6. Writes a reason for each suggestion
-7. Records the suggestions into the session with `record_suggestions`;
-   Exegete checks every suggestion against the file text before it is
-   stored (positions are corrected automatically when the excerpt is
-   unique in the file; mismatches are rejected with an explanation)
+7. Records the suggestions in the session with `record_suggestions`.
+   Exegete checks every suggestion against the file's text before it
+   is stored. When the excerpt occurs only once in the file, Exegete
+   corrects its position automatically. A suggestion that does not
+   match the file is rejected, with an explanation
 
 **What you'll see:**
 ```
@@ -216,9 +221,9 @@ so instead of rejecting it:
 ```
 Make suggestion 3 longer
 ```
-`edit_suggestion` applies a shorter or longer span that Exegete works
-out (or an exact new span, or a new code) to the pending suggestion;
-nothing touches the database until you apply.
+`edit_suggestion` changes the pending suggestion. It can apply the
+shorter or longer passage that Exegete works out, an exact new passage,
+or a new code. Nothing touches the database until you apply.
 
 **What you'll see:**
 ```
@@ -243,18 +248,21 @@ interruptions", "impossible to focus" and "exhausted" are read as
 workplace stress.
 ```
 
-The earlier turn (the nearest by another speaker, found by speaker
-labels: a name of a few words and a colon at the start of a paragraph,
-compared by name so "Respondent [00:01:09]:" and "RESPONDENT:" are one
-speaker, and counted only when that name opens more than one paragraph;
-an unbracketed time after the name, as in Otter's "Name  0:03", is not
-read; nothing is shown in a file without such labels; a turn of three
-words or fewer with no question mark is shown with the one before it,
-and the turns and paragraphs left out in between are counted), the text
-around the passage and the text of any shorter or longer span offered
-are read from the file each time you review; the session file keeps
-none of it. While another project is open, the review shows the passage
-alone and says why.
+The earlier turn is the nearest turn by another speaker. Exegete finds
+speakers by their labels: a name of a few words and a colon, at the
+start of a paragraph. It compares labels by name, so
+"Respondent [00:01:09]:" and "RESPONDENT:" are one speaker, and it
+counts a name only when that name opens more than one paragraph. It
+does not read a time written after the name without brackets, as in
+Otter's "Name  0:03", and in a file without such labels it shows no
+earlier turn. When the earlier turn has three words or fewer and no
+question mark, the review shows the turn before it too, and counts the
+turns and paragraphs it leaves out in between.
+
+Exegete reads the earlier turn, the text around the passage and the
+text of any shorter or longer passage it offers from the file each time
+you review. The session file keeps none of it. While another project is
+open, the review shows the passage alone and says why.
 
 ### Step 4: Approve or reject suggestions
 
@@ -270,7 +278,7 @@ Approve suggestions 1, 2, 3, and 5
 Approve 1, 2, 4, 6, 7, and 8. Reject 3 and 5.
 ```
 
-**Using GUIDs (more precise):**
+**Using GUIDs, each suggestion's unique ID (more precise):**
 ```
 Approve guid-001, guid-002, guid-004
 Reject guid-003, guid-005
@@ -287,13 +295,13 @@ Session saved. Ready to apply approved codings when you're ready.
 ```
 
 **Who approves.** The assistant records your decisions with
-`update_suggestion_status`. Exegete writes what is marked approved
-and cannot tell whether you gave the approval: check that the approved
-count is the number you said yes to, and keep the app you use with the
-assistant (its host) asking before each tool call ("allow once" for the
-tools that decide and write). To change a decision, ask the assistant
-to reopen the suggestion: it goes back to pending, can be edited, and
-waits for your decision again.
+`update_suggestion_status`. Exegete writes what is marked approved,
+and cannot tell whether you gave the approval. So check that the
+approved count is the number you said yes to. You can also keep the
+app you use with the assistant, called its host, asking you before each
+tool call: choose "allow once" for the tools that decide and write. To
+change a decision, ask the assistant to reopen the suggestion. It goes
+back to pending, can be edited, and waits for your decision again.
 
 ### Step 5: Apply approved codings
 
@@ -309,12 +317,13 @@ Apply the approved codings to the project
 3. Writes each as a coding to the database
 4. Writes each coding's reading (explicit or interpretive) first in its
    memo, then the reasoning
-5. Records the project's AI coder name as owner, which the researcher
-   chooses in Exegete's settings, for the projects Exegete creates, or
-   the first time a write needs it (`set_project_ai_coder_name`; see
-   "Choosing the AI coder name" in TOOLS.md). Before that choice is
-   made the write stops and asks rather than guessing.
-6. Reports the new codings' IDs (ctids)
+5. Records the project's AI coder name as each coding's owner. You
+   choose that name in Exegete's settings, for the projects Exegete
+   creates, or the first time a write needs it
+   (`set_project_ai_coder_name`; see "Choosing the AI coder name" in
+   TOOLS.md). Until you have chosen it, the write stops and asks rather
+   than guessing.
+6. Reports the new codings' IDs, called ctids
 
 **What you'll see:**
 ```
@@ -352,16 +361,14 @@ Show me the codings just applied in Interview Study
 
 In QualCoder, if you use it:
 
-1. Open QualCoder (a QualCoder 4.0 window that already had the project
-   open must close and reopen it to show the new codings)
-2. Open the workspace project, at the path the copy's answer gave (with
-   the Claude Desktop extension's default,
-   `~/Exegete projects/Interview Study.qda`; otherwise
-   `~/Documents/Exegete projects/Interview Study.qda`, unless
-   Exegete's settings name another folder in `EXEGETE_WORKSPACE`)
+1. Open QualCoder. A QualCoder 4.0 window that already had the project
+   open must close and reopen it to show the new codings
+2. Open the workspace project, at the path the copy's answer gave,
+   such as `~/Exegete projects/Interview Study.qda` with the Claude
+   Desktop extension's default ("The workspace", above)
 3. Go to **Coding > Code text**
 4. Select the files you analysed
-5. You should see the AI-generated codings with:
+5. You should see the codings from the assistant, with:
    - Owner: the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
    - Memo beginning "Reading: explicit" or "Reading: interpretive",
      then the reasoning
@@ -587,14 +594,9 @@ Applied 12 codings (ctid 445-456)
 
 **1. A specific instruction**
 
-Before starting a session the assistant is told to ask you three
-things, and your answers become the session's instruction (there is no
-default one): what to look for (your own codes, topics, people's own
-words, actions, feelings or values, or other, and whether to point out
-passages no code fits); how long a coded passage should be (a phrase,
-whole sentences by default, or a whole answer); and whether a passage
-may carry more than one code. If you are unsure, ask for a short pilot
-on a few passages first.
+Your answers to the three questions of Step 2 become the session's
+instruction, and there is no default one. If you are unsure, ask for a
+short pilot on a few passages first.
 
 Too vague for the assistant to work from:
 ```
@@ -620,7 +622,7 @@ instruction, and widen the session step by step.
 
 **3. Review before applying**
 
-Decide each suggestion; ask for details on any you want to read in
+Decide on each suggestion. Ask for details on any you want to read in
 context:
 ```
 Show me details for suggestions 1, 5, and 10
@@ -643,16 +645,15 @@ Load session abc123 and show me the suggestions
 ```
 
 Exegete keeps the session in a file of its own
-(`~/.exegete/sessions/`), not in the chat:
-- All suggestions
-- Your approvals and rejections
-- Session details
-- Ready to apply when you are, from a later conversation too
+(`~/.exegete/sessions/`), not in the chat. The file holds all the
+suggestions, your approvals and rejections, and the session's details,
+so you can apply the approved suggestions when you are ready, from a
+later conversation too.
 
 **5. Explicit or interpretive, not a score**
 
 Each suggestion is marked explicit or interpretive, never given a
-confidence number: a model's rating of its own confidence is not a
+confidence number. An AI's rating of its own confidence is not a
 measurement, and an interpretive reading can be exactly the one your
 analysis needs. If you want only what participants state outright, say
 so in the instruction. [AI_CODING_GUIDE.md](AI_CODING_GUIDE.md), under
@@ -687,9 +688,9 @@ Delete session abc123
 
 ### Backup management
 
-Exegete takes a backup before every change; there is no tool that
-takes one on request. To keep a separate copy of a project, copy
-it to the workspace:
+Exegete takes a backup before every change, and no tool takes one on
+request. To keep a separate copy of a project, copy it to the
+workspace:
 
 **Copy a project to the workspace:**
 ```
@@ -698,11 +699,9 @@ Copy the project at <path> to the workspace   (copy_project_to_workspace;
 ```
 
 **Find backups:**
-Backups sit beside the project, in the folder that holds it: for a
-project in the workspace, the workspace (with the Claude Desktop
-extension `~/Exegete projects/` by default, otherwise
-`~/Documents/Exegete projects/`, unless Exegete's settings name
-another folder in `EXEGETE_WORKSPACE`):
+Backups sit beside the project, in the folder that holds it. For a
+project in the workspace, that is the workspace ("The workspace",
+above), as with the Claude Desktop extension's default:
 ```
 ~/Exegete projects/ProjectName_backup_TIMESTAMP.qda
 ```
@@ -714,29 +713,31 @@ Restore the project from <backup name>      (restore_backup; previews
                                              first, then again with the
                                              preview_token it returns)
 ```
-The restore keeps a safety backup of the pre-restore state, so it can
-itself be undone.
+Before it restores, Exegete backs up the project as it is, so a
+restore can itself be undone.
 
 ## Troubleshooting
 
 ### "No approved suggestions to apply: N suggestion(s) in this session were already applied"
 
-**Problem:** Re-running apply_codings on a session that was already
-written. Applied suggestions are marked and never double-applied.
+**Problem:** the assistant ran apply_codings again on a session that
+was already written. Exegete marks applied suggestions and never
+applies one twice.
 
 **Solutions:**
-- This is the expected protection; nothing to fix
-- To code more segments, record new suggestions or start a new session
+- Nothing to fix: this is the protection working
+- To code more passages, record new suggestions or start a new session
 
 ### "already_existing_count" in the apply result
 
-**What it means:** an approved suggestion's identical coding (same
-code, file, span and coder) was already in the project, for example
-written in QualCoder or by an earlier apply. This is not an error and
-does not roll the batch back: that suggestion is left as it is, marked
-applied in the session, and listed in the result with the existing
-coding's ctid; the rest are written as one batch. When every approved
-suggestion already exists nothing is written and no backup is made.
+**What it means:** the project already held a coding identical to an
+approved suggestion, with the same code, file, passage and coder. It
+may have been written in QualCoder or by an earlier apply, for
+example. This is not an error, and it does not undo the rest of the
+batch. Exegete leaves that coding as it is, marks the suggestion
+applied in the session, and lists it in the result with the existing
+coding's ctid. The rest are written as one batch. When every approved
+suggestion already exists, nothing is written and no backup is made.
 
 **What to do:**
 - Nothing, usually; the project already holds that coding
@@ -744,11 +745,11 @@ suggestion already exists nothing is written and no backup is made.
 
 ### "File ID X does not exist"
 
-**Problem:** File was deleted or project structure changed.
+**Problem:** the file was deleted, or the project has changed.
 
 **Solution:**
-- List available files: `Show me all files in the project`
-- Use correct file IDs for current project
+- Ask for the project's files: `Show me all files in the project`
+- Use the file IDs that answer gives
 
 ### Suggestions seem off-target
 
@@ -779,20 +780,21 @@ good ones.
 
 ### Finding the workspace project in QualCoder
 
-**Problem:** If you use QualCoder, it may open the project from
-another folder than the workspace.
+**Problem:** If you use QualCoder, it may open the project from a
+folder other than the workspace.
 
 **Solution:**
-The workspace is the folder the answer to `copy_project_to_workspace`
-named. With the Claude Desktop extension it is the extension's "Folder
-for projects" (Settings, Extensions, Exegete), by default:
+The workspace is the folder that the answer to
+`copy_project_to_workspace` gave. With the Claude Desktop extension it
+is the extension's "Folder for projects" (Settings, Extensions,
+Exegete), by default:
 ```
 /Users/YOUR_NAME/Exegete projects/
 ```
 Otherwise it is `/Users/YOUR_NAME/Documents/Exegete projects/`,
-unless Exegete's settings name another folder in `EXEGETE_WORKSPACE`. A
-project of the same name in the other folder is an older copy (from an
-earlier install, say): open the one in the workspace.
+unless the setting `EXEGETE_WORKSPACE` gives another folder. A project
+of the same name in the other folder is an older copy, from an earlier
+install, for example: open the one in the workspace.
 
 In QualCoder:
 - Project > Open Project
@@ -805,10 +807,10 @@ In QualCoder:
 the assistant's answers.
 
 **Solution:**
-Exegete reads the project database live, so anything QualCoder has
-saved is visible on the next tool call; if the assistant is repeating
-an earlier answer, ask it to read the project again. The reverse
-direction is the limitation: a QualCoder 4.0 window does not display
+Exegete reads the project's database itself, not a copy of it, so
+anything QualCoder has saved is visible on the next tool call. If the
+assistant repeats an earlier answer, ask it to read the project again.
+The limit is in the other direction: a QualCoder 4.0 window does not display
 changes written by Exegete until the project is closed and reopened
 there.
 
@@ -817,13 +819,15 @@ there.
 **Problem:** You applied codings and want to take them back.
 
 **Solution:**
-- One wrong coding: `Delete coding 42` (`delete_coding`; the ctid is in
-  the apply output and in get_coded_segments; on projects with the
-  coder-visibility capability, QualCoder 3.8.2 and 4.0, schema v14 and
-  later, a hidden coder's row, or a row whose memo carries a `#####`
-  private note, is refused unless you pass the override)
-- Whole batch: `restore_backup` with the backup created by the apply
-  (see `list_backups`); it previews first and keeps a safety backup
+- One wrong coding: `Delete coding 42` (`delete_coding`). The coding's
+  ctid is in the apply output and in get_coded_segments. Unless you
+  pass the matching override, Exegete refuses to delete a coding whose
+  memo carries a `#####` private note. On a project that can hide
+  coders (QualCoder 3.8.2 and 4.0, schema v14 and later), it also
+  refuses a hidden coder's coding without its override
+- The whole batch: `restore_backup`, with the backup the apply took
+  (`list_backups` lists it). It shows a preview first, and backs up the
+  project as it is before restoring
 
 Or by hand, if you use QualCoder:
 - Open the project there
@@ -902,18 +906,17 @@ not [what it should not]
 
 ### Checking the AI's codings
 
-In the conversation, ask for a sample of the AI coder name's codings
-and read them against your own coding. A count of codings is not a
-count of participants: one participant can carry many codings of the
-same code. Or, if you use QualCoder, there:
+In the conversation, ask for a sample of the codings under the
+project's AI coder name, and read them against your own coding. A count
+of codings is not a count of participants: one participant can carry
+many codings of the same code. If you use QualCoder, you can check
+there too:
 
-```
 1. Open the Code text view
 2. Filter by the project's AI coder name (`AI Coding Assistant` if you took the default quick pick)
 3. Review a random sample
 4. Compare with your own coding
 5. Adjust your instruction as needed
-```
 
 ## Summary checklist
 
@@ -925,11 +928,11 @@ Before starting AI coding:
 - [ ] Your answers to the three questions ready
 
 During coding:
-- [ ] Decide each suggestion; ask for details on any you want to read
-      in context
+- [ ] Decide on each suggestion, and ask for details on any you want
+      to read in context
 - [ ] Check what is marked explicit is stated, and what is
       interpretive is a reading you share
-- [ ] Reasoning fits your coding scheme
+- [ ] The reasoning fits your coding scheme
 - [ ] Approve or reject each one
 
 After applying:

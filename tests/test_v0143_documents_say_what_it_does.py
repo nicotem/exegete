@@ -78,11 +78,12 @@ def test_tools_md_names_both_ways_in_and_the_reading_page():
 def test_the_coding_guide_offers_the_reading_page():
     guide = _read("AI_CODING_GUIDE.md")
     # (v0.15.2: the assistant, and QualCoder only for those who use it)
-    assert ("**You** read the coded passages back in the conversation, or "
-            "ask the assistant to open the file for reading (a page in "
+    assert ("**You** read the coded passages back in the conversation. Or "
+            "you ask the assistant to open the file for reading: a page in "
             "your browser shows them highlighted in the text, and the text "
-            "stays off the conversation). If you use QualCoder, opening the "
-            "project there shows them too") in " ".join(guide.split())
+            "does not pass through the conversation. If you use QualCoder, "
+            "opening the project there shows them too") in " ".join(
+                guide.split())
 
 
 def test_the_extension_says_documents_come_in():

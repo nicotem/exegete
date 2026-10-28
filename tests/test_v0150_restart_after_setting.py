@@ -73,5 +73,5 @@ def test_tools_says_it_beside_the_coder_names():
     assert ("In the extension, after changing a setting, quit Claude "
             "Desktop and open it again: a change reaches Exegete only at "
             "its next start.") in tools
-    assert ("in the extension, a changed setting reaches Exegete once "
+    assert ("In the extension, a changed setting reaches Exegete once "
             "Claude Desktop has been quit and opened again") in tools

@@ -1,12 +1,15 @@
 ### Added
 
-- **Undoing a change Exegete made: `undo_changes`.** Each change
-  Exegete makes to a project answers with a receipt, `undo_receipt`.
-  For a day after the change, the assistant can take it back with that
-  receipt, on the project it was made in, whole or not at all. Called
-  with no receipts, `undo_changes` lists the changes Exegete has made
-  to the project since it last started, so that a receipt the
-  assistant no longer has can be found again.
+- **Undoing a change Exegete made: `undo_changes`.** Most changes
+  Exegete makes to a project answer with a receipt, `undo_receipt`. The
+  exceptions are `restore_backup`, `undo_changes` itself and
+  `save_names_list`, which answer none, and a change whose record could
+  not be kept, whose answer says so. For a day after a change, the
+  assistant can take it back with its receipt, on the project it was
+  made in, whole or not at all. Called with no receipts, `undo_changes`
+  lists the changes Exegete has made to the project since it last
+  started, so that a receipt the assistant no longer has can be found
+  again.
 - **The preview comes first.** Called with receipts, `undo_changes`
   shows what undoing them would remove, put back or set back, by table
   and by coder, and changes nothing. The assistant shows you that
@@ -19,12 +22,13 @@
   change touched has been changed since, by anyone, or when later work
   depends on it, such as a coding, or a coding suggestion in a session,
   that uses a code the change made. It also refuses when a row it would
-  put back no longer fits, as when another code has taken its name or
-  the category it was in has been deleted, and when the change's backup
-  has gone, unless the change only added rows. Each refusal gives its
-  reason and what to do. Changes made by `pseudonymise_source`,
-  `import_documents`, `set_project_coder_name` and `save_names_list`
-  cannot be undone yet.
+  put back no longer fits: another code has taken its name, or the
+  category it was in has been deleted, even when a category made since
+  has taken that category's number. It refuses when the change's backup
+  has gone, unless the change only added rows, and when that backup
+  cannot be read. Each refusal gives its reason and what to do. Changes
+  made by `pseudonymise_source`, `import_documents`,
+  `set_project_coder_name` and `save_names_list` cannot be undone yet.
 - **Coding sessions follow the undo.** Undoing `apply_codings` returns
   its suggestions to approved, so the next `apply_codings` on that
   session writes them again unless you reject them first. Undoing

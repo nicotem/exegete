@@ -1155,7 +1155,7 @@ Experimental.
 
 **Step 3. Use the core toolset.** Exegete offers 80 tools by
 default, and the serialised tool definitions alone measure about
-203,000 characters, roughly 51k tokens, against about 74,000
+203,000 characters, roughly 51k tokens, against about 76,000
 characters, roughly 19k tokens, for the 28 tools of `core` (measured
 on Python 3.13 with the libraries in `uv.lock`; TOOLS.md says how, and
 [docs/snapshot/](docs/snapshot/) gives the exact figures). The full set

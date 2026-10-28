@@ -17806,10 +17806,10 @@ UNDO_REFUSAL_TEXTS = {
     undo.PROJECT_ROW_CHANGED: (
         "The project's own row, which holds the project memo, has changed "
         "since this change, so the change cannot be undone. A later "
-        "set_memo on the project changes that row. QualCoder 4.0 changes "
-        "it too: when it first opens a project made by an older version, "
-        "and in its coding windows, where it keeps the codes used recently "
-        "and bookmarks. To bring the earlier memo back, set_memo can write "
+        "set_memo on the project changes that row. QualCoder 4.0 writes it "
+        "too: when it first opens a project made by an older version, and "
+        "in its coding windows, where it keeps the codes used recently and "
+        "bookmarks. To bring the earlier memo back, set_memo can write "
         "it again, if the researcher has its words." + _THE_WAY_BACK),
     undo.SCHEMA_CHANGED: (
         "A table or a column this change wrote is no longer in the project, "

@@ -236,8 +236,9 @@ def test_the_backup_before_a_database_change_is_never_copied_as_a_file():
     readme = _flat("README.md")
     # (the ignored argument, merged first: "every change", whatever
     # create_backup says)
-    assert ("a backup before every change to the project's database, taken "
-            "by Exegete itself") in readme
+    # (v0.15.2, the opening texts: the same fact, reworded)
+    assert ("before every change to the project's database, Exegete takes "
+            "a backup") in readme
 
 
 def test_the_answers_that_name_a_backup_are_said():

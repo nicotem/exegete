@@ -377,20 +377,23 @@ class TestTheSmallerPoints:
         readme = _flat(_read("README.md"))
         # (the staleness audit of 20 October 2026: saving the names list
         # previews first too; both lists follow the token registry)
-        assert ("the larger ones (merging or deleting codes and categories, "
-                "replacing names, restoring backups, bringing documents in, "
-                "correcting your own coder name, saving the names list) show "
-                "a preview first") in readme
+        # (v0.15.2, the opening texts: the same fact, reworded), pruning backups named beside restoring them
+        assert ("The larger ones show a preview first: merging or deleting "
+                "codes and categories, replacing names, restoring or pruning "
+                "backups, bringing documents in, correcting your own coder "
+                "name and saving the names list.") in readme
         from exegete import preview_tokens
         guarded = readme[readme.index("- **Guarded changes**"):]
-        guarded = guarded[:guarded.index("- **Documents in")]
-        for name in set(preview_tokens.REGISTRY) - {"import_documents"}:
+        # (v0.15.2, the opening texts: the import among them, every tool
+        # that previews first in the one list)
+        guarded = guarded[:guarded.index("- **The brief**")]
+        for name in set(preview_tokens.REGISTRY):
             assert f"`{name}`" in guarded, name
         assert "`import_documents` (a preview, then the import on its " \
                "token" in readme
         assert ("`set_project_coder_name` (your own coder name, while "
                 "nothing is recorded under it), `save_names_list` (saving "
-                "the names list).") in readme
+                "the names list), and `import_documents`") in readme
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
         install = _flat(_read("INSTALL.md"))

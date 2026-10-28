@@ -672,10 +672,11 @@ class TestTheDocuments:
         assert "setting declares a name" not in text
 
     def test_readme_and_the_guides(self):
+        # (v0.15.2, the opening texts: the same fact, reworded)
         assert ("Before its first write, it asks for the AI coder name, kept "
                 "per project, under which Exegete writes what is done "
-                "through the conversation, unless the project was made while "
-                "it was filled in Exegete's settings.") in _doc("README.md")
+                "through the conversation, unless the project was made with "
+                "that name in Exegete's settings.") in _doc("README.md")
         guide = _doc("AI_CODING_GUIDE.md")
         assert ("which you choose: in Exegete's settings (\"AI coder name\" "
                 "in the extension, `EXEGETE_AI_CODER_NAME` on other routes), "

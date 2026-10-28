@@ -31,22 +31,25 @@ def _between(text: str, start: str, end: str) -> str:
 def test_the_readmes_features_name_importing_and_reading():
     features = _between(_flat("README.md"), "## What you can do",
                         "## How it works")
-    assert "**Bring in transcripts** as documents from your computer" \
-        in features
-    assert "or by you on a page in your browser." in features
+    # (v0.15.2, the opening texts: documents, transcripts among them)
+    assert "**Bring in documents** from your computer" in features
+    assert "in the conversation or in your browser." in features
 
 
 def test_start_here_names_importing_a_file_and_reading_it():
     start = _between(_flat("README.md"), "## Start here",
-                     "## Three commitments")
+                     "## Exegete and QualCoder")
+    # (v0.15.2, the opening texts: "out of the conversation")
     assert ("then bring in your page: paste it, as in the example, or save "
             "it as a Word or text file and give the assistant its place, "
-            "which keeps its text off the conversation (on a Mac, hold "
+            "which keeps its text out of the conversation (on a Mac, hold "
             "Option, right-click it and choose Copy as Pathname; on "
             "Windows 11, Copy as path).") in start
     assert "ask to open a file for reading" in start
-    assert "Exegete opens a file for you to read with its coding " \
-        "highlighted" in start
+    features = _between(_flat("README.md"), "## What you can do",
+                        "## How it works")
+    assert "read a transcript with its codings, in the conversation or in " \
+        "your browser" in features
 
 
 def test_install_says_which_formats_need_the_optional_part():

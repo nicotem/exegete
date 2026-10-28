@@ -89,8 +89,10 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
         assert "imports only text" not in " ".join(document.split())
         assert "documents (Word, PDF, images, audio, video)" not in \
             " ".join(document.split())
-    assert "| Import sources | Text, documents, PDFs, images, audio, " \
-        "video | Documents from your computer" in flat
+    # (v0.15.2, the opening texts: the comparison table gave way to the
+    # list of what Exegete brings in, and of what is not in it yet)
+    assert ("**Bring in documents** from your computer (Word, OpenDocument, "
+            "RTF, text, Markdown, web pages, subtitles;") in flat
     assert "Or you can import a document in QualCoder" not in flat
     one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
                             flat.index("### ChatGPT's desktop app")]
@@ -104,8 +106,8 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "`core`, cannot create a project" in one_click_readme
     assert "whose standard tool set cannot create a project unless switched " \
         "on" not in flat
-    assert ("whose default tool set, `full`, can create a project "
-            "too.") in flat
+    assert ("whose default tool set, `full`, can create a project too "
+            "([INSTALL.md]") in flat
     assert "`lifecycle`" not in one_click_readme
     one_click = install[install.index("## Claude Desktop: the one-click "
                                       "extension"):

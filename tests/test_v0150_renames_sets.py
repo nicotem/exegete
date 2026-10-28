@@ -492,8 +492,8 @@ class TestTheDocuments:
         # here, each FIGURE any figure written as the documents write one
         readme = _flat("README.md")
         assert _with_figures(
-            f"| `full` | {EXPECTED_FULL}: all, creating a project and two "
-            f"renamed tools' earlier names included | about FIGURE "
+            f"| `full` | {EXPECTED_FULL}: every tool, creating a project and "
+            f"the earlier names of two renamed tools included | about FIGURE "
             f"characters, FIGURE tokens | hosted models, such as Claude or "
             f"OpenAI's | every route |").search(readme)
         # The design's "before 0.15.0" gives way to the README's own rule
@@ -609,10 +609,12 @@ class TestTheDocuments:
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
         assert (f"Leave its switch \"{switch}\" off, as it comes: the "
                 f"smaller set, `core`, cannot create a project") in readme
-        assert ("whose default tool set, `full`, can create a project "
-                "too.") in readme
-        assert "| Create a project | Yes | Yes |" in readme
-        assert "two tool sets, every tool" in readme
+        assert ("whose default tool set, `full`, can create a project too "
+                "([INSTALL.md]") in readme
+        # (v0.15.2, the opening texts: the comparison table gave way, and
+        # the two sets are the table's rows)
+        assert "| `full` | 79: every tool, creating a project" in readme
+        assert "| `core` | 27:" in readme
 
     # Fix round 2
 

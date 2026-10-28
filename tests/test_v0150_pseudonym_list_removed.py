@@ -440,17 +440,19 @@ class TestToolsReadmePrivacy:
         readme = _read("README.md")
         # the count is the snapshot's, and the size any figure
         assert re.search(re.escape(
-            f"| `full` | {FULL_TOOLS}: all, creating a project and two "
-            "renamed tools' earlier names included | about ") + FIGURE
+            f"| `full` | {FULL_TOOLS}: every tool, creating a project and the "
+            "earlier names of two renamed tools included | about ") + FIGURE
             + " characters, " + FIGURE + r" tokens \|", readme)
         assert ("with `pseudonymise_source` afterwards. The list can be one "
                 "you fill in on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "
                 "conversation. Replacing names helps you manage what you "
                 "share with other people,") in readme
+        # (v0.15.2, the opening texts: the list's items end without a
+        # semicolon)
         assert ("- the files you fill in for a project, such as the names "
                 "file (`Names to replace.txt`, in the project's `Exegete` "
-                "folder), which Exegete never shows to the assistant;"
+                "folder), which Exegete never shows to the assistant"
                 ) in readme
 
     def test_privacy(self):

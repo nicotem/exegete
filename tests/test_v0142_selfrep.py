@@ -346,11 +346,13 @@ class TestWhatWasDecided:
         # A suggestion, not an instruction (whole-branch review, round 1)
         assert ("If your study needs any of these now, you may want "
                 "QualCoder from the start.") in readme
-        assert ("It is not QualCoder, nor an add-on or a remote control for "
-                "it, and it is not made or endorsed by QualCoder's "
-                "developers") in readme
-        assert ("with QualCoder able to open the same project at any stage, "
-                "one program at a time.") in readme
+        # v0.15.2, the opening texts: said as what it is (the writing
+        # checklist's rewrite), and the aim without QualCoder as its frame
+        assert "QualCoder's developers did not make it and have not " \
+               "endorsed it." in readme
+        assert ("**The aim** is that you can run a whole project in Exegete, "
+                "from its creation to the finished analysis.") in readme
+        assert "every project stays one that QualCoder opens" not in readme
 
 
 # ---------------------------------------------------------------------------

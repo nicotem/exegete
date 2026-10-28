@@ -38,8 +38,12 @@ PLANNED = {
     "coding sessions kept with their project": ("feature", "0.15.3", (
         r"\bsessions\s+(?:are\s+)?kept\s+with\s+(?:their|the|its)\s+"
         r"project",), "85, 105"),
+    # README says it in a researcher's words: stricter checks on the
+    # names of codes, categories and cases (the batch's look-alike names),
+    # with other small corrections
     "the housekeeping that touches data": ("feature", "0.15.3", (
-        r"\bhousekeeping\b",), "85, 105"),
+        r"\bhousekeeping\b", r"\bstricter\s+checks\s+on\s+the\s+names\b"),
+        "85, 105"),
     "the review of method": ("feature", "0.15.4", (
         r"\bsupports\s+a\s+study's\s+method\b", r"\breview\s+of\s+method\b"),
         "85, 105"),

@@ -369,11 +369,12 @@ def test_the_readme_and_the_changelog_say_so():
     among what Exegete does not do; the CHANGELOG records both removals
     and says what to do instead."""
     readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
-    row = [line for line in readme.split("| Cases, attributes, memos, "
-                                         "annotations, journal | ")[1:]]
-    assert len(row) == 1
-    assert "setting an attribute on a journal entry" in \
-        row[0][:row[0].index("|", row[0].index("|") + 1)]
+    # (v0.15.2, the opening texts: the list of what is not in Exegete yet,
+    # which replaced the table)
+    missing = readme[readme.index("**Not in Exegete yet**"):]
+    missing = missing[:missing.index("**The aim**")]
+    assert ("changing a journal entry, setting an attribute on one, or "
+            "renaming an attribute") in missing
     log = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
     unreleased = _flat(log[log.index("## [0.15.1-alpha]"):
                            log.index("## [0.15.0-alpha]")])

@@ -29,10 +29,12 @@ from typing import (Optional, List, Dict, Any, NamedTuple, Sequence, Tuple,
 import anyio
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp import Context
+from mcp.server.stdio import stdio_server
 from mcp.types import ToolAnnotations
 from pydantic import Field
 
 from . import env_settings, names, state_folder, updates
+from .standard_input import StandardInputLines
 from . import database as _database_module
 from .database import (
     QualcoderDatabase,
@@ -1114,8 +1116,9 @@ def current_resource_address(uri: Any) -> Any:
 
 class _ExegeteMCP(FastMCP):
     """FastMCP, with every tool refusing an argument it does not declare
-    (v0.14, server-wide), and the resources' earlier addresses answered
-    (v0.14.1).
+    (v0.14, server-wide), the resources' earlier addresses answered
+    (v0.14.1), and one Ctrl+C stopping Exegete (0.15.2: `run` and
+    `run_stdio_async`).
 
     The check sits on the host's own path: `call_tool` is the method the
     MCP request handler calls, and the one this suite's host-path tests
@@ -1214,6 +1217,37 @@ class _ExegeteMCP(FastMCP):
             if extra:
                 tool.meta = {**(tool.meta or {}), **extra}
         return tools
+
+    def run(self, *args, **kwargs):
+        """The library's run, ended by an interrupt with one line.
+
+        An interrupt, such as one Ctrl+C in the terminal Exegete was
+        started in, makes asyncio cancel the running loop; a call that is
+        running finishes first, since tools run on the loop. The
+        KeyboardInterrupt that asyncio then raises ends Exegete here with
+        one line and status 130, the number a shell gives for Ctrl+C,
+        through the interpreter's normal exit. That exit waits for an
+        asked check for new versions, within its deadline, but not for
+        the weekly check, a daemon thread: cut as it writes its record,
+        that check leaves a temporary file of its own in the state
+        folder. No signal handler of Exegete's own, so a second interrupt
+        stays asyncio's: a KeyboardInterrupt wherever the main thread is.
+        """
+        try:
+            super().run(*args, **kwargs)
+        except KeyboardInterrupt:
+            logger.info("Stopped by Ctrl+C")
+            sys.exit(130)
+
+    async def run_stdio_async(self) -> None:
+        """The library's own (mcp 1.30.0, `FastMCP.run_stdio_async`), with
+        standard input read in a daemon thread of Exegete's own
+        (standard_input.py), so that a stop waits for no line."""
+        async with stdio_server(stdin=StandardInputLines()) as (
+                read_stream, write_stream):
+            await self._mcp_server.run(
+                read_stream, write_stream,
+                self._mcp_server.create_initialization_options())
 
 
 # Initialize MCP server

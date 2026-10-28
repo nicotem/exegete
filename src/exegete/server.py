@@ -17857,13 +17857,14 @@ UNDO_REFUSAL_TEXTS = {
         "same call." + _THE_WAY_BACK),
     undo.PARENT_REPLACED: (
         "A row this undo would put back or set back would point at a row "
-        "that is not the one it pointed at before the change, such as a "
-        "code or a category (counted by table in rows): that row has been "
-        "deleted since, and a row made later has taken its number. Exegete "
-        "tells the two apart by the changes it recorded and by the date "
-        "each row was made. later_changes gives the receipts of the later "
-        "changes this conversation's Exegete made to that row: undo them "
-        "first, or in the same call." + _THE_WAY_BACK),
+        "that may not be the one it pointed at before the change, such as "
+        "a code or a category (counted by table in rows): that row seems "
+        "to have been deleted since, and a row made later to have taken "
+        "its number. Exegete tells two rows apart by the changes it "
+        "recorded and by the date each row was made, which some programs "
+        "also write when they edit a row. later_changes gives the receipts "
+        "of the later changes this conversation's Exegete made to that "
+        "row: undo them first, or in the same call." + _THE_WAY_BACK),
     undo.DOCUMENTS_CLASH: (
         "The name this undo would give a file back is taken by a file in "
         "the project's documents folder, which would then stand for this "

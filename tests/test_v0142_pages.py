@@ -294,8 +294,10 @@ def _words(text):
 def test_the_page_gives_the_checks_whole_rule():
     # The port's privacy check, round 1: "at most once a week" left out
     # the check made when the researcher asks
-    assert ("Exegete checks whether a newer version exists at most once a "
-            "week, and when you ask,") in _words(_page())
+    # (v0.15.2, the readability reading: the same rule, the note a
+    # sentence of its own)
+    assert ("Exegete checks for a newer version at most once a week, and "
+            "when you ask.") in _words(_page())
 
 
 def _blocks():

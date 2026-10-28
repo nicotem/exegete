@@ -319,7 +319,7 @@ folder there once, from `~/.qualcoder_mcp`.
 
 After updating, look at the settings, since an update can change them:
 
-- Installing an older extension over a newer one cleared every setting
+- Installing an older extension over a newer one cleared the settings
   on the computer of Exegete's maintainer. A cleared setting goes back
   to its default, so "Tell me when a new version is out" is on again,
   even if you had switched it off. "Going back to an earlier version",
@@ -452,9 +452,9 @@ GitHub Issues ("Getting help", below).
      - The texts an import's preview read are each document's whole
        text, before any names are replaced. Exegete removes them after
        the import. When no import follows, they stay until the first
-       time Exegete starts or prepares an import after an hour has
-       passed. After an uninstall neither happens, so they stay until you
-       delete the folder.
+       time Exegete starts, or prepares an import, at least an hour and
+       five minutes after the preview. After an uninstall neither
+       happens, so they stay until you delete the folder.
      - If you delete the folder, you lose the coding sessions waiting
        for review and the pseudonymisation run records, and a change
        previewed but not yet made, such as an import, needs a new

@@ -408,10 +408,15 @@ class _Raw:
         return head[:size]
 
 
+async def _collect(reader) -> list:
+    return [line async for line in reader]
+
+
 def _lines(raw) -> list:
-    async def collect():
-        return [line async for line in StandardInputLines(raw)]
-    return asyncio.run(collect())
+    """The lines read from `raw`; a TimeoutError rather than a wait for
+    ever, should an ask go unanswered."""
+    return asyncio.run(asyncio.wait_for(
+        _collect(StandardInputLines(raw)), 5))
 
 
 def test_lines_are_cut_at_newlines_and_decoded_whole():
@@ -442,20 +447,21 @@ def test_the_end_of_input_and_a_read_error_end_the_lines(monkeypatch):
 
     async def after_the_end(raw):
         reader = StandardInputLines(raw)
-        lines = [line async for line in reader]
+        lines = await asyncio.wait_for(_collect(reader), 5)
         asked = raw.asked
         with pytest.raises(StopAsyncIteration):
-            await reader.__anext__()
+            await asyncio.wait_for(reader.__anext__(), 5)
         return lines, raw.asked - asked
 
     async def read_error():
         with pytest.raises(OSError):
-            await StandardInputLines(
-                Broken(OSError(errno.EIO, "input/output error"))).__anext__()
+            await asyncio.wait_for(StandardInputLines(
+                Broken(OSError(errno.EIO, "input/output error"))
+            ).__anext__(), 5)
 
     async def lines_after_another_failure():
-        return [line async for line in StandardInputLines(
-            Broken(RuntimeError("a failure of another kind")))]
+        return await asyncio.wait_for(_collect(StandardInputLines(
+            Broken(RuntimeError("a failure of another kind")))), 5)
 
     # Once ended, the lines stay ended without another read, so a terminal
     # is not read again after its end of input

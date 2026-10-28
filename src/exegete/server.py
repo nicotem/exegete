@@ -17750,20 +17750,29 @@ UNDO_REFUSAL_TEXTS = {
         "undo_changes lists the changes Exegete has made to this project "
         "since it last started." + _THE_WAY_BACK),
     undo.ANOTHER_PROJECT: (
-        "This receipt belongs to a change made in another project. Select "
-        "that project with select_project, then undo the change there."),
+        "This receipt belongs to a change made in another project, or in "
+        "this one before its folder was renamed or moved. Exegete knows a "
+        "project by where it is on the computer. If that project is still "
+        "where it was, select it with select_project, then undo the change "
+        "there. A change made before a project's folder was renamed or "
+        "moved cannot be undone with its receipt."),
     undo.SECRET_REPLACED: (
         "This change was recorded under a preview secret that has since "
         "been replaced, so Exegete can no longer check it." + _THE_WAY_BACK),
     undo.NEWER_FORMAT: (
-        "This change was recorded by a newer version of Exegete, which can "
-        "undo it; this version cannot read its record."),
+        "This change was recorded by a newer version of Exegete, and this "
+        "version cannot read its record. That newer version can undo it."
+        + _THE_WAY_BACK),
     undo.RECORD_UNREADABLE: (
         "The record of this change cannot be read, so the change cannot be "
         "undone." + _THE_WAY_BACK),
     undo.TOO_OLD: (
         "This change is more than a day old, and Exegete keeps the record "
         "of a change for a day." + _THE_WAY_BACK),
+    undo.DATED_AHEAD: (
+        "The record of this change is dated ahead of this computer's clock, "
+        "as when the clock has been set back since, so Exegete cannot tell "
+        "how old the change is." + _THE_WAY_BACK),
     undo.NOT_YET_UNDOABLE: (
         "Changes made by {tool} cannot be undone with undo_changes yet."
         + _THE_WAY_BACK),
@@ -17797,9 +17806,11 @@ UNDO_REFUSAL_TEXTS = {
     undo.PROJECT_ROW_CHANGED: (
         "The project's own row, which holds the project memo, has changed "
         "since this change, so the change cannot be undone. A later "
-        "set_memo on the project changes that row, and QualCoder 4.0 "
-        "writes it again when it first opens a project made by an older "
-        "version. set_memo can write the earlier memo again."),
+        "set_memo on the project changes that row. QualCoder 4.0 changes "
+        "it too: when it first opens a project made by an older version, "
+        "and in its coding windows, where it keeps the codes used recently "
+        "and bookmarks. To bring the earlier memo back, set_memo can write "
+        "it again, if the researcher has its words." + _THE_WAY_BACK),
     undo.SCHEMA_CHANGED: (
         "A table or a column this change wrote is no longer in the project, "
         "as when a program has renamed it, so its rows cannot be compared "
@@ -17807,15 +17818,17 @@ UNDO_REFUSAL_TEXTS = {
     undo.TEXT_CHANGED: (
         "The text of a file this change coded has changed since, as when "
         "names were replaced in it, so the places the change recorded no "
-        "longer hold."),
+        "longer hold and the change cannot be undone." + _THE_WAY_BACK),
     undo.DEPENDED_ON: (
         "Later work depends on this change: rows made since point at rows "
         "the undo would remove (counted by table in rows, and by coder). "
-        "To undo it, remove that work first: delete_code or "
-        "delete_category, whose previews say whose work would go, or "
-        "delete_coding for a coding. later_changes gives the receipts of "
-        "later changes this conversation's Exegete made, which can be "
-        "undone in the same call."),
+        "later_changes gives the receipts of later changes this "
+        "conversation's Exegete made, which can be undone first, or in the "
+        "same call. Other work can be removed first where a tool removes "
+        "it: delete_code or delete_category, whose previews say whose work "
+        "would go, delete_coding for a coding and delete_annotation for a "
+        "note. No tool removes a case's link to a file or an attribute "
+        "value." + _THE_WAY_BACK),
     undo.SUGGESTIONS_DEPEND: (
         "Coding suggestions in this project's coding sessions use a code "
         "this undo would remove (counted in suggestions). The next code "
@@ -17838,12 +17851,28 @@ UNDO_REFUSAL_TEXTS = {
     undo.PARENT_GONE: (
         "A row this undo would put back or set back would point at a row "
         "deleted since, such as a category or a file (counted by table in "
-        "rows), so it cannot be put back as it was."),
+        "rows), so it cannot be put back as it was. later_changes gives "
+        "the receipt of the change that deleted that row when this "
+        "conversation's Exegete made it: undo that change first, or in the "
+        "same call." + _THE_WAY_BACK),
+    undo.PARENT_REPLACED: (
+        "A row this undo would put back or set back would point at a row "
+        "that is not the one it pointed at before the change, such as a "
+        "code or a category (counted by table in rows): that row has been "
+        "deleted since, and a row made later has taken its number. Exegete "
+        "tells the two apart by the changes it recorded and by the date "
+        "each row was made. later_changes gives the receipts of the later "
+        "changes this conversation's Exegete made to that row: undo them "
+        "first, or in the same call." + _THE_WAY_BACK),
     undo.DOCUMENTS_CLASH: (
         "The name this undo would give a file back is taken by a file in "
         "the project's documents folder, which would then stand for this "
         "entry. rename_file can give the entry another name, or that file "
-        "can be moved out of the documents folder first."),
+        "can be moved out of the documents folder first. If that file is "
+        "this entry's own copy under the name it had before, moving it "
+        "would part the entry from its copy: restore_backup with a backup "
+        "taken before the rename can put that name back, and it also takes "
+        "back everything done after that backup."),
     undo.LOOP: (
         "Setting a category's or a code's parent back would make it its own "
         "ancestor, since its old parent has been moved under it since. Move "
@@ -17855,8 +17884,9 @@ UNDO_REFUSED = (
     "be undone now, each with its reason below. Each change is undone "
     "whole or not at all, and nothing was changed.")
 UNDO_NOT_A_RECEIPT = (
-    "These are not undo receipts: a receipt is the 32 letters and digits "
-    "of undo_receipt in a change's answer. Nothing was changed.")
+    "These are not undo receipts: a receipt is the 32 characters of "
+    "undo_receipt in a change's answer, digits and the lower-case letters "
+    "a to f. Nothing was changed.")
 # What a preview and an undo say of the changes they cover
 UNDO_WAY_BACK = (
     "An undo cannot itself be undone: restore_backup with the backup it "

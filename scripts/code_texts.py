@@ -160,8 +160,10 @@ def code_texts(root: Path) -> List[CodeText]:
     pass with no texts read."""
     package = Path(root) / PACKAGE
     if not package.is_dir():
+        # the package's folder as written, the same on every platform
         raise FileNotFoundError(
-            f"{package}: no such folder; give the repository's root")
+            f"{Path(root)}: no {PACKAGE} folder there; give the "
+            f"repository's root")
     names: Tuple[Tuple[str, str], ...] = ()
     if (package / NAMES_MODULE).is_file():
         names = tuple(sorted(

@@ -405,6 +405,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── refi_export.py       # REFI-QDA XML export
 │   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
 │   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once
+│   │   ├── standard_input.py    # Standard input, read a line at a time in a daemon thread, so that one Ctrl+C stops Exegete
 │   │   └── release.py           # This release's version, date and summary, for the note after an update
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/

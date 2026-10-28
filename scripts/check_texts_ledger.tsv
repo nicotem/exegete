@@ -545,11 +545,7 @@ ab7d8a481d2c4237	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October
 69a80d522ac6b43e	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Why: a file name QualCoder 4.0 treats as invalid (empty, spaces only or dots onl
 c143f37f7035cb38	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Why: named parity cases, computed with QualCoder's function.
 14a6c93024631cb7	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Why: parity tests run QualCoder's own harvest.
-10004410dd007c9f	pages/update/index.html	document	qualcoder	seeded 27 October, to be read	"Tool set" and "Do you also use QualCoder on this computer?" are gone: the switc
-bb7dc47e2c76896e	pages/update/index.html	document	voice	seeded 27 October, to be read	Not sure which version you have?
-88fb62b746b88571	pages/update/index.html	document	voice	seeded 27 October, to be read	Not sure which way you installed it, or none of these fits?
-72702e0caea300b6	pages/update/index.html	document	voice	seeded 27 October, to be read	Something went wrong?
-df4666275e316912	pages/update/index.html	document	voice	seeded 27 October, to be read	Use Exegete on more than one computer?
+0046066f16248112	pages/update/index.html	document	qualcoder	names the removed text box by its title, so that a researcher who updates finds it	The switches "Limit Exegete to its small tool set" and "I use QualCoder on this 
 39445733730d8321	src/exegete/coder_comparison.py	path	qualcoder	seeded 27 October, to be read	QualCoder's Coder comparison report counts a character once per segment, so over
 8e86fd29dc331428	src/exegete/coder_comparison.py	path	qualcoder	seeded 27 October, to be read	kappa_cohen undefined: both coders coded every character in scope (no variance);
 3cbb8770af5acca8	src/exegete/database.py	path	qualcoder	seeded 27 October, to be read	'{}' is reserved for QualCoder's reference importer (Ref_ attributes are created

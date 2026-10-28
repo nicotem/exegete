@@ -95,6 +95,8 @@ def test_no_count_only_the_branch_had():
 
 def test_the_update_page_keeps_the_terminal_folder_as_before():
     page = _flat(_read("pages/update/index.html"))
-    assert ("now includes creating a project; new projects go, as before, "
-            "to <code>~/Documents/Exegete projects</code>") in page
+    # (v0.15.2, the opening texts: two sentences, the same fact)
+    assert "now includes creating a project." in page
+    assert ("New projects go, as before, to <code>~/Documents/Exegete "
+            "projects</code>") in page
     assert "and new projects go to" not in page

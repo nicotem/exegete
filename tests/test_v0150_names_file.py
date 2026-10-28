@@ -1273,7 +1273,7 @@ class TestWhatItSays:
 
 # Fix round 2: a names file already there is kept
 TOOLS_ENTRY = (
-    "- `prepare_names_list()` - **WRITES A FILE ON YOUR COMPUTER** - Makes "
+    "- `prepare_names_list()` - **Writes a file on your computer** - Makes "
     "`Names to replace.txt` in the project's `Exegete` folder for you to "
     "fill in, with the project's names list in it when there is one, or "
     "keeps the one already there as it is, and shows and opens it; never "
@@ -1296,7 +1296,7 @@ class TestTheDocuments:
         # the files design, piece 4: the save comes next
         assert lines[at + 1].startswith("- `save_names_list(")
         assert lines[at + 2].startswith("- `create_project(")
-        assert tools.index("**Project Management:**") < tools.index(
+        assert tools.index("**Project management:**") < tools.index(
             TOOLS_ENTRY) < tools.index("**Keeping Exegete up to date:**")
         # 83 since save_names_list (the files design, piece 4), 82 since
         # read_pseudonym_list was removed (piece 5), 79 since v0.15.1

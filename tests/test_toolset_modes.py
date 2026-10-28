@@ -341,7 +341,7 @@ class TestTheReadmeToolList:
 
     def test_every_tool_has_an_entry(self):
         readme = (REPO / "TOOLS.md").read_text(encoding="utf-8")
-        section = readme[readme.index("## Available Tools"):]
+        section = readme[readme.index("## Available tools"):]
         section = section[:section.index("\n## ", 5)]
         server._apply_toolset("full")
         names = [t.name for t in asyncio.run(server.mcp.list_tools())]

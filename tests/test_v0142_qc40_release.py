@@ -71,9 +71,11 @@ def test_the_documents_name_the_release_as_verified():
             "verified against QualCoder 4.0, released on 2 October 2026 "
             "(tag `4.0` at `b95e021`, version string \"QualCoder 4.0\"), "
             "whose projects use schema v17.") in tools
-    assert ("Parity claims were verified against QualCoder 4.0, and cite "
-            "its code at commit `9bddf17` (see \"Supported QualCoder "
-            "versions\").") in tools
+    # (v0.15.2: what was checked, without the word "parity")
+    assert ("Where a paragraph says that Exegete does as QualCoder does, it "
+            "was checked against QualCoder 4.0, and cites its code at "
+            "commit `9bddf17` (see \"Supported QualCoder versions\").") \
+        in tools
     install = _flat("INSTALL.md")
     # (the staleness audit of 20 October 2026: a missing or unreadable
     # value is refused too, database.py, write_support)
@@ -173,13 +175,17 @@ def test_tools_says_what_the_full_re_check_found():
             "upgrade or repair",
             "it says \"The project database could not be opened.\" and "
             "changes nothing, and trying again works",
-            # what was not re-read, said rather than left out
-            "Not yet re-read: the line citations into QualCoder's own MCP "
-            "server",
-            # and why the documents still cite 9bddf17
-            "the line numbers this document and Exegete's code cite from "
-            "QualCoder are still those of that commit"):
+            # (v0.15.2: the commit the citations give, as it stands
+            # today, with no promise of a re-reading)
+            "A line number cited from QualCoder, in this document or in "
+            "Exegete's code, is that commit's unless a release is given "
+            "beside it"):
         assert words in versions, words
+    assert "not yet" not in versions.lower()
+    # the document's one citation into QualCoder's own MCP server gives
+    # the release's line beside the development commit's
+    assert ("(`ai_mcp_server.py:5228` at `9bddf17`, line 6161 in the 4.0 "
+            "release)") in _flat("TOOLS.md")
 
 
 def test_the_readme_table_is_checked_against_the_release():
@@ -281,8 +287,9 @@ def test_tools_gives_both_new_facts():
     tools = _flat("TOOLS.md")
     assert "Four facts about how the tools relate (checked 6 October " \
         "2026)." in tools
-    assert ("That server calls itself `qualcoder-mcp`, Exegete's name until "
-            "0.14.0, and the Claude Desktop extension QualCoder's source can "
+    # (v0.15.2: the earlier name, without its last release)
+    assert ("That server calls itself `qualcoder-mcp`, Exegete's earlier "
+            "name, and the Claude Desktop extension QualCoder's source can "
             "build (`tools/mcpb/build_mcpb.py` at the tag) is named "
             "`qualcoder`, a name an earlier Exegete setup may also use for "
             "its own entry:") in tools

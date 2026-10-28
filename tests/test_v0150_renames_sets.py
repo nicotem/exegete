@@ -482,10 +482,15 @@ class TestTheDocuments:
                 "project: the assistant can start one in the conversation, "
                 "in a new folder, never changing an existing one.") in item
         assert "`EXEGETE_WORKSPACE`" in item
+        # (the privacy reader, 28 October 2026: both risks, as INSTALL.md
+        # gives them, the copies off the computer first)
         assert (("iCloud (Desktop and Documents) or OneDrive may sync "
-                 "Documents. A sync service can copy a project's database "
-                 "and its journal separately, so a folder outside Documents, "
-                 "such as `~/Exegete projects`, may suit you better.")) in item
+                 "Documents. A sync service copies your projects off this "
+                 "computer, transcripts imported into them included. It can "
+                 "also copy a project's database and its journal "
+                 "separately, which can leave a damaged copy. So a folder "
+                 "outside Documents, such as `~/Exegete projects`, may suit "
+                 "you better.")) in item
         assert "A project you have works too: a folder ending in `.qda`," \
             in item
 

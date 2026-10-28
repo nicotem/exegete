@@ -140,7 +140,8 @@ class TestTheOpeningText:
                 "Excerpts you record are checked against the file",
                 "which you do only on the researcher's word: Exegete "
                 "cannot tell who approved",
-                "their answers are the session's instruction, without "
+                # (v0.15.2, the readability reading: a sentence of its own)
+                "Their answers are the session's instruction, without "
                 "which no session starts",
                 "Never give a score",
                 "Coding frequencies count codings, not participants or "
@@ -195,9 +196,10 @@ class TestItSaysWhatTheToolsDo:
         assert ("Exegete writes a suggested coding or a proposed code "
                 "only when each item has been marked approved, which you do "
                 "only on the researcher's word." in full)
+        # (v0.15.2, the readability reading: a sentence each)
         assert ("Suggested codings and proposed codes wait in a session "
                 "until each item is marked approved, on the researcher's "
-                "word; only then can apply_codings or create_proposed_codes "
+                "word. Only then can apply_codings or create_proposed_codes "
                 "write them." in full)
         assert "only when the researcher approves it" not in full
         assert "until the researcher approves each item" not in full

@@ -287,7 +287,7 @@ class TestWhatWasDecided:
         assert full.startswith("# Working with a researcher in Exegete " +
                                BRIEF_FIRST_PARAGRAPH + " This is Exegete's "
                                "own account of how it expects that work to "
-                               "go:")
+                               "go.")
         assert BRIEF_SECTION_4 in full
         # The section's other points stay, with Exegete for "the server"
         # The whole-branch review of v0.15.0, round 1: the lock file is
@@ -295,7 +295,7 @@ class TestWhatWasDecided:
         assert ("- Only one program should change a project at a time. "
                 "Exegete refuses to write while the project's lock file is "
                 "active (QualCoder 3.8.2 has the project open, or another "
-                "conversation is writing to it);") in full
+                "conversation is writing to it).") in full
         assert ("- For how to do something in QualCoder itself, point the "
                 "researcher to QualCoder's own manual rather than guess at "
                 "its menus.") in full
@@ -307,7 +307,8 @@ class TestWhatWasDecided:
             r".{40}\b[Tt]h(?:e|is) server\b.{40}", full)
         for words in ("Exegete writes a suggested coding or a proposed code "
                       "only when each item has been marked approved",
-                      "relay Exegete's question; never choose it yourself",
+                      "Relay Exegete's question, and never choose the name "
+                      "yourself",
                       "Exegete records whatever approval you report and "
                       "cannot tell who gave it",
                       "Exegete never shows it to you",

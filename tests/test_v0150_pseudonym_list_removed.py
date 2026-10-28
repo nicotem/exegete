@@ -99,7 +99,7 @@ IMPORT_NOTE = (
 BRIEF_SENTENCE = (
     "The tools keep the private part of memos out of the conversation, and "
     "the project's list of the real names behind its pseudonyms "
-    "(pseudonyms.json, in the project folder) too; they back the project "
+    "(pseudonyms.json, in the project folder) too. They back the project "
     "up, hold suggestions for approval and check whether QualCoder has the "
     "project open.")
 

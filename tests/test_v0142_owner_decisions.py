@@ -645,7 +645,7 @@ def test_the_fresh_reading_line_waits_for_its_option_and_honesty_kept():
         flat = " ".join(served[where].split())
         assert ("Do not agree to please. When you read a passage "
                 "differently from the researcher, say so plainly, show the "
-                "passage and say what in it your reading rests on; which "
+                "passage and say what in it your reading rests on. Which "
                 "reading to adopt is theirs.") in flat, where
     # what section 10 keeps
     assert ("When the task concerns the researcher's existing codes, start "

@@ -5,8 +5,8 @@
   about forty-five words, and refers to any other setting by its title.
 - **What the assistant is told first says what QualCoder is.** The
   opening text and the brief describe the project as kept in the format
-  of QualCoder, "a free qualitative analysis program", and the opening
-  text names documents rather than documents and transcripts. The
+  of QualCoder, "a free qualitative analysis program". The opening text
+  now says documents, where it said documents and transcripts. The
   opening text is 2,046 characters, within the 2,048 that Claude Code
   kept before its version 2.1.296, and the full brief about 13,400. The
   brief now says that the backup comes before every change to the
@@ -23,8 +23,8 @@
   do. It says that the desktop extension works on Claude's Free plan, as
   Claude's pricing page listed it on 28 October 2026, and presents a
   local model as a route to consider for particular uses. The diagrams
-  and the map of the repository give way to prose and links; the lists
-  of tools and Claude Code's figures are TOOLS.md's and INSTALL.md's.
+  and the map of the repository give way to prose and links. The lists
+  of tools are left to TOOLS.md, and Claude Code's figures to INSTALL.md.
   Before INSTALL.md's steps for OpenAI's apps it gives the training
   switch, and where it sends Claude Code's users it says that Claude
   Code opens files by itself.

@@ -202,7 +202,8 @@ class TestTheSettings:
         and blank used to mean ~/Documents. The manifest's marker makes a
         blank folder stop the server, and the setting says so."""
         option = TEMPLATE["user_config"]["projects_folder"]
-        assert "Leaving it empty stops the extension from starting" in \
+        # (v0.15.2, the opening texts: in the writing checklist's voice)
+        assert "With this empty, Exegete does not start" in \
             option["description"]
         for name, value in TEMPLATE["server"]["mcp_config"]["env"].items():
             if "${" not in value:
@@ -216,9 +217,10 @@ class TestTheSettings:
         option = TEMPLATE["user_config"]["update_check"]
         assert option["type"] == "boolean" and option["default"] is True
         assert option["title"] == "Tell me when a new version is out"
-        for words in ("which GitHub hosts", "once a week at most",
+        # (v0.15.2, the opening texts: the same facts, reworded)
+        for words in ("which hosts the website", "once a week at most",
                       "Nothing from your projects is sent",
-                      "GitHub records your computer's internet address",
+                      "records your computer's internet address",
                       "Exegete itself makes no connection"):
             assert words in option["description"], words
         assert TEMPLATE["privacy_policies"] == [

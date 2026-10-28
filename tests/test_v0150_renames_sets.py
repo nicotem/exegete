@@ -45,8 +45,9 @@ NOTE = ("{setting} is set to lifecycle, the earlier name of the full tool "
         "instead.")
 
 
-SETTINGS_CLAUSE = ("The settings choose the tool set (every tool, or a "
-                   "smaller set for local models)")
+# v0.15.2, the opening texts: the long description names the tool set's
+# switch by its title
+SETTINGS_CLAUSE = '"Limit Exegete to its small tool set"'
 
 MANIFEST = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))

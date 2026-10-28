@@ -119,6 +119,8 @@ def test_the_manifest_says_every_change_takes_a_backup():
     # v0.15.1's release preparation: two writes outside the database
     # (the AI coder name's file, the names file) take none, so the
     # sentence names the database
-    assert ("Exegete takes a backup of the project before every change to "
-            "its database.") in manifest["long_description"]
+    # (v0.15.2, the opening texts: with what a backup is)
+    assert ("Before every change to a project's database, Exegete takes a "
+            "backup, a copy of the project kept beside it.") in \
+        manifest["long_description"]
     assert "asks for none" not in manifest["long_description"]

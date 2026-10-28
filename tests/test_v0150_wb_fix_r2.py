@@ -164,8 +164,9 @@ class TestClaudeCodesLimitsOnEveryPython:
         # no longer passes 4,096 on 3.10 to 3.12, so the same four are all
         # (tests/test_v0151_removed_arguments.py)
         assert others == [], others
-        # v0.15.2: each rounded, within five per cent of the length here
-        then = re.search(r"on 3\.11 and 3\.12, the same four are, at about "
+        # v0.15.2: each rounded, within five per cent of the length here;
+        # a sentence of its own in the Terminal guide, so "On" or "on"
+        then = re.search(r"[Oo]n 3\.11 and 3\.12, the same four are, at about "
                          r"([\d,]+), ([\d,]+), ([\d,]+) and ([\d,]+)\.",
                          long)
         assert then, long

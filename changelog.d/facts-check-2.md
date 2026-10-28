@@ -5,7 +5,7 @@
   that a document gives with `uv.lock`, and a requirement with
   `pyproject.toml`. It checks the counts a document gives of the tools
   that preview first and of the libraries Exegete needs to run. It
-  checks the number of routes with Claude against INSTALL.md's table.
+  checks the number of routes with Claude against the table of routes.
   It checks README's list of the tools that preview first, and
   TOOLS.md's list of the tools that report whether QualCoder may have
   the project open, against the code. Where PRIVACY.md and INSTALL.md

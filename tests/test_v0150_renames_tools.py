@@ -826,8 +826,8 @@ class TestTheDocuments:
         # v0.15.2: PRIVACY.md points to TOOLS.md's list of the tools that
         # report the signs, which tests/test_qc40_gui_detection.py holds
         listing = flat[flat.index("**Process listing.**"):]
-        assert ("the tools that report a `qualcoder_gui_signals` field "
-                "(TOOLS.md lists them)") in listing[:400]
+        assert "TOOLS.md names these tools, and when each one looks." \
+            in listing[:700]
 
     def test_a_coding_session_by_one_name(self):
         """The tool starts a coding session: the documents call it that,

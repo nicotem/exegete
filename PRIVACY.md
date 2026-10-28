@@ -843,11 +843,17 @@ above). Filling a file in while no such assistant is working protects
 that moment only: afterwards the file stays in the project's folder,
 as `pseudonyms.json` and the originals do, and in every backup and copy
 of the project, where such an assistant can read it at any time. A
-backup or copy that fails part-way is removed, but a backup cut short
-(Exegete's process ended during the copy) stays
-beside the project under a hidden name, with whatever it had copied,
-the names file and `pseudonyms.json` among them, until the next backup
-of the project removes it once it is an hour old.
+backup that fails part-way is removed. A backup cut short, because
+Exegete's process ended during the copy (when the app quit, for
+example), stays beside the project under a hidden name, with whatever
+it had copied, the names file and `pseudonyms.json` among them. The
+next backup of the project removes it once it is an hour old. A copy
+made with `copy_project_to_workspace` that fails part-way is removed
+too, unless that removal fails. A copy cut short, or one whose removal
+failed, stays in the folder for projects under its own name, with
+whatever it had copied, which can include the names file and
+`pseudonyms.json`. Nothing removes such a copy: it stays until you
+delete it.
 
 Some ways narrow that reach, though none closes it. You could keep the
 project in a folder no assistant with its own file access is given. How
@@ -1628,10 +1634,15 @@ Two further rules touch files on your disk:
   hosts keep Exegete's log on disk. The withheld name protects the key,
   the log line what stays on the computer ("How your data flows").
 - **Process listing.** To warn when a QualCoder 4.0 window appears to
-  have a project open (4.0 writes no lock file), the tools that report a
-  `qualcoder_gui_signals` field (TOOLS.md lists them) also look at the
+  have a project open (4.0 writes no lock file), some tools look at the
   list of processes running on this machine (`ps` or `tasklist`, or
-  psutil when installed). The listing is filtered in memory for
+  psutil when installed). Most of the tools that report a
+  `qualcoder_gui_signals` field look at it, but `create_project`
+  reports the field without looking. A few other tools look at it only
+  when they work out the project's history with QualCoder. TOOLS.md
+  names these tools, and when each one looks. Whichever tool looks, only
+  the number of matches is reported into the conversation. The listing
+  is filtered in memory for
   processes that are QualCoder itself: a program whose own name holds
   "qualcoder" once Exegete's names (`exegete`, `qualcoder-mcp`,
   `qualcoder_mcp`) are taken out, which covers QualCoder's installers,
@@ -1639,10 +1650,9 @@ Two further rules touch files on your disk:
   running QualCoder's package (`-m qualcoder`, its `__main__.py`, its
   `qualcoder` script). Since v0.14 a command line that merely mentions
   QualCoder in its arguments no longer counts, and Exegete's own process
-  is left out. Only the number of matches is reported into the
-  conversation; process names, command lines and other users' processes
-  never leave Exegete, the filtered matches are held in memory for at
-  most five seconds so that back-to-back calls do not rescan, and
+  is left out. Process names, command lines and other users' processes
+  never leave Exegete. The filtered matches are held in memory for at
+  most five seconds, so that back-to-back calls do not rescan, and
   nothing from the list is stored on disk. The other signals in that
   field come from the project folder alone: whether `data.qda` has a
   write sidecar (`-journal`, `-wal` or `-shm`), and whether
@@ -1876,9 +1886,11 @@ well than the hosted models, and do not know by how much, since we have
 evaluated neither. A local model is a route to consider for particular uses, such
 as a first pass over sensitive material, or work an agreement confines
 to one computer, rather than a suggestion for participants' data as
-such. It means a narrower workflow with more supervision, and the
-smaller tool set, `core` (`EXEGETE_TOOLSET=core`). The Terminal guide's
-recipe "LM Studio (fully local)" gives the steps.
+such. It means a narrower workflow with more supervision. Exegete
+offers its full tool set unless the host's entry asks for the smaller
+one, `core` (`EXEGETE_TOOLSET=core`). The Terminal guide's recipe "LM
+Studio (fully local)" asks for `core`, which takes less of a local
+model's room than the full set, and gives the steps.
 
 ### Cross-rung cautions
 
@@ -2234,9 +2246,11 @@ In the page, "this article" links to
 
 OpenAI's privacy policy for the EEA and the UK is a separate page,
 <https://openai.com/policies/eu-privacy-policy/>, which this project has
-not been able to read. What the next two sections say about consent,
-controllers and processors, and special-category data holds in the same
-way when the provider is OpenAI.
+not been able to read. The questions of consent, of controllers and
+processors, and of special-category data are the same when the
+provider is OpenAI. "What this means for research data" and
+[the checklist](#before-you-use-real-participant-data-check-these),
+near the top of this document, set them out.
 
 ## Practical mitigations
 

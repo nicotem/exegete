@@ -230,9 +230,12 @@ class TestTheIntroduction:
             # v0.14.2, the README's first round of checks: what the
             # assistant can already read; v0.14.3: and the researcher, on
             # a page in the browser
-            "and read a transcript with its codings, in the conversation": [
+            # (v0.15.2, the opening texts' fix round: in the browser, its
+            # text stays out of the conversation)
+            "and read a transcript with its codings in the conversation": [
                 "read_file_with_codings"],
-            "or in your browser.": ["open_file_for_reading"],
+            "keeping its text out of it, in your browser.": [
+                "open_file_for_reading"],
             "**Write** memos, annotations and a research journal": [
                 "set_memo", "add_annotation", "add_journal_entry"],
             "**Compare two coders**": ["compare_coders"],

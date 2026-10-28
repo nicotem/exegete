@@ -307,7 +307,14 @@ def _tools(mode="full"):
 # The readability reading of 28 October: the same facts one to a sentence,
 # and the tools, a file's location and what the figures do not measure
 # said in words, 378 characters more within the same 500 lines
-README_LIMIT = 32_617
+# The fix round after the fact and privacy readers (28 October): the
+# backups beside a project keep the text from before names were replaced;
+# how long a preview's texts stay; reading in the browser keeps a file's
+# text out of the conversation; what INSTALL.md's table of routes and
+# its recipes hold; the REFI-QDA fix without media; the untrue clause on
+# QualCoder's coder name gone. That takes 165 characters more within
+# the same 500 lines: 32,782.
+README_LIMIT = 32_782
 README_LINES = 500
 
 

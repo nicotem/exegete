@@ -40,7 +40,7 @@ connect no folder that holds your projects or transcripts, and add no
 other extension that reads files. A folder of their own keeps practice
 projects apart but does not put the study out of Claude Code's reach,
 and what it opens goes to the AI provider, which may train on it while
-training is on. For Claude Code, that is Anthropic
+training is on. For Claude Code, that is Anthropic, which runs its model
 ([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
 
 ## Installation steps
@@ -221,9 +221,9 @@ export EXEGETE_PROJECT_PATH="/path/to/your/project.qda"
 python -m exegete.server
 ```
 
-Exegete should start without errors. To stop it, press Ctrl+C and then
-Enter, or close the Terminal window. Ctrl+C alone leaves it running. It
-prints some error text as it stops.
+Exegete should start without errors, then wait for an app to use it.
+To stop it, press Ctrl+C or close the Terminal window. After a Ctrl+C,
+it prints one more line, ending in `Stopped by Ctrl+C`.
 
 ### Common errors
 

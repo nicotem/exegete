@@ -93,7 +93,7 @@ SECTION_4_BULLET = (
     "ask about it, when qualcoder_history's setting is yes, or when a "
     "tool's answer brings it up (signs_on_this_project in "
     "qualcoder_history, a lock file the answer ascribes to QualCoder, "
-    "signs of a window); QualCoder merely installed is not a sign once the "
+    "signs of a window). QualCoder merely installed is not a sign once the "
     "setting is no. Otherwise say what Exegete does and what it does not "
     "do yet.")
 # The bullet as built, before fix round 1: "a sign in qualcoder_history"

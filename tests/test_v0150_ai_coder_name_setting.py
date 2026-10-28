@@ -251,10 +251,12 @@ class TestTheWords:
     def test_the_briefs_two_lines(self):
         for brief in (server.BRIEF_FULL, server.read_brief()):
             flat = _flat(brief)
+            # (v0.15.2, the readability reading: the instruction a
+            # sentence of its own)
             assert ("- Rows you write carry the project's AI coder name, "
                     "which the researcher chooses, in Exegete's settings or "
-                    "when Exegete asks: relay Exegete's question; never "
-                    "choose it yourself.") in flat
+                    "when Exegete asks. Relay Exegete's question, and never "
+                    "choose the name yourself.") in flat
             assert "; and when Exegete asks for the AI coder name." in flat
             assert "when the AI coder name is needed" not in flat
 

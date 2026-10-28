@@ -301,11 +301,17 @@ def _tools(mode="full"):
 # is open, with the brief, and that the tools' answers, which carry the
 # project's texts, are not in it. That takes 104 characters, and the
 # limit is raised by that and no more: 41,081.
-README_LIMIT = 41_081
+# v0.15.2, the opening texts: the README rewritten to the writing
+# checklist within its budget of 500 lines, 32,239 characters, which is
+# the limit now; a sentence added later raises it by its own length
+README_LIMIT = 32_239
+README_LINES = 500
 
 
 def test_the_readme_stays_short():
-    assert len(_read("README.md")) <= README_LIMIT
+    readme = _read("README.md")
+    assert len(readme) <= README_LIMIT
+    assert readme.count("\n") <= README_LINES
 
 
 # ---------------------------------------------------------------------------

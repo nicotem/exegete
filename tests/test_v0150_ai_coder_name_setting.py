@@ -137,10 +137,11 @@ STORED_STEP = (
 
 # What the extension's description says, as facts (after 0.15.1 the page's
 # descriptions were cut to plain statements: tests/test_v0151_settings_page.py)
+# (v0.15.2, the readability reading: the same facts in one sentence)
 AI_DESCRIPTION_SAYS = ("kept apart from yours",
                        "Each project Exegete creates gets it",
-                       "Claude asks when a project first needs a name",
-                       "Empty is the default")
+                       "Claude asks for it when a project first needs one",
+                       "If it is empty, the default,")
 
 ASK_WITH_SETTING = (
     "No AI coder name is set for this project yet, so nothing was written. "

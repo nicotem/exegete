@@ -6,8 +6,9 @@
 
 The one reader of these texts: the facts check (tests/test_v0151_facts.py)
 holds the releases they name to the plan (scripts/release_plan.py), and
-the texts check reads them through this module too, with filters of its
-own. Every module under src/exegete is read by Python's parser and never
+the texts check (scripts/check_texts.py) reads them through this module
+for mentions of QualCoder and for the voice, with filters of its own.
+Every module under src/exegete is read by Python's parser and never
 imported, so reading runs none of the package's code.
 
 What is read:

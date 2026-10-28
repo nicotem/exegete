@@ -559,6 +559,70 @@ class TestTheProjectsOwnState:
 
 
 # ---------------------------------------------------------------------------
+# A plain open in QualCoder 4.0 between the change and its undo
+# ---------------------------------------------------------------------------
+
+def qualcoder_40_opens(folder, coder="Researcher R."):
+    """What QualCoder 4.0's open writes to a project of the current
+    format, as its own SQL runs it (src/qualcoder/__main__.py 2795 to 2871
+    and app.py 1584 to 1622, at b95e021): the repairs, which change rows
+    only in a project already faulty, VACUUM, the coder list, and the
+    project's coder name. The run of QualCoder itself is the kit's
+    (archive/v0150/acceptance-v0150), not repeated here."""
+    with database(folder) as conn, conn:
+        for table, column in (("code_text", "fid"), ("code_image", "id"),
+                              ("code_av", "id")):
+            conn.execute(f"delete from {table} where {column} not in "
+                         f"(select source.id from source)")
+        conn.execute("update code_cat set supercatid=null where supercatid "
+                     "is not null and supercatid not in (select catid from "
+                     "code_cat)")
+        conn.execute("update code_name set supercid=null where supercid is "
+                     "not null and supercid not in (select cid from "
+                     "code_name)")
+        conn.execute("update code_name set catid=null where supercid is not "
+                     "null and catid is not null")
+    with database(folder) as conn:
+        conn.isolation_level = None
+        conn.execute("vacuum")
+    with database(folder) as conn, conn:
+        conn.execute(
+            "insert or ignore into coder_names (name) select owner from "
+            "code_image where owner is not null union select owner from "
+            "code_text where owner is not null union select owner from "
+            "code_name where owner is not null union select owner from "
+            "cases where owner is not null union select owner from source "
+            "where owner is not null")
+        conn.execute("insert into coder_names (name, visibility) values (?, "
+                     "1) on conflict(name) do update set visibility = 1 "
+                     "where coder_names.visibility <> 1", (coder,))
+        conn.execute("insert or ignore into coder_names (name) values "
+                     "('Speaker')")
+        conn.execute("update project set codername=?", (coder,))
+
+
+class TestAPlainOpenInQualCoder40:
+
+    def test_a_plain_open_does_not_stop_an_undo(self, project):
+        ctid = a_coding("Trust", QUOTE)
+        before = rows(project)
+        renamed = renamed_code(project)
+        deleted = answer(server.delete_coding(coding_id=ctid))[
+            "undo_receipt"]
+        _, noted = call(server.set_memo, target_type="project",
+                        target_id=None, memo="The study")
+        qualcoder_40_opens(project)
+        done = undo_run(noted, deleted, renamed)
+        assert done["success"] is True, done
+        after = rows(project)
+        for table in ("code_name", "code_text", "source", "code_cat"):
+            assert after[table] == before[table], table
+        with database(project) as conn:
+            assert conn.execute("select codername from project"
+                                ).fetchone() == ("Researcher R.",)
+
+
+# ---------------------------------------------------------------------------
 # Part one: later work in a coding session
 # ---------------------------------------------------------------------------
 

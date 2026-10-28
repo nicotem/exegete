@@ -105,7 +105,7 @@ coder who made it.
 | you; the researcher | the person whose study it is. Documents for researchers say "you"; texts the assistant receives say "the researcher". | the user |
 | the assistant; the AI provider | the AI the researcher talks to through an app such as Claude Desktop or LM Studio, and the company that runs the model, when it does not run on the researcher's own computer | Claude for every assistant; the model or the LLM in the documents |
 | your project | what Exegete creates, reads and changes. It is kept in the file format of QualCoder, a free qualitative analysis program. "Study" means the research itself. | |
-| the names list; the names file | the real names with the pseudonyms that replace them, and `Names to replace.txt`, which the researcher fills in outside the conversation so that the real names never reach the AI provider | the mapping, the key |
+| the names list; the names file | the real names with the pseudonyms that replace them, and `Names to replace.txt`, which the researcher fills in outside the conversation so that the list never passes through the conversation | the mapping, the key |
 | replacing names; pseudonymisation | what Exegete does with the names list. It reduces risk; it makes no one anonymous. | anonymisation |
 | backup | the copy Exegete takes before it changes a project's database, kept beside the project | safety net |
 | your coder name; the AI coder name | the two names that keep the researcher's own codings apart from those approved from the assistant's suggestions, so that their origin stays visible | |

@@ -13,9 +13,9 @@ A change is refused, whole, when a row it touched has been changed since
 (judged by the rows' content), when later work depends on a row it would
 remove, in the project or in a coding session, or when a row it would put
 back or set back would no longer fit: its key or a unique value taken, a
-row it points at gone, a loop in the tree of categories or of codes. Each
-value crosses from the backup with its storage class and its bytes,
-nothing decoded.
+row it points at gone, or another row in its place under the same id, a
+loop in the tree of categories or of codes. Each value crosses from the
+backup with its storage class and its bytes, nothing decoded.
 
 A refusal here is a reason and its counts, never a value, a name or a
 path; the words are server.py's (UNDO_REFUSAL_TEXTS).
@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 from . import change_record
-from .database import (_quoted, _sqlite_ro_immutable_uri,
+from .database import (POSITIONED_TABLES, _quoted, _sqlite_ro_immutable_uri,
                        backup_database_is_link, is_this_servers_backup_name,
                        unclean_backup_side_files, validate_qda_path)
 from .sessions import SessionManager
@@ -42,6 +42,7 @@ SECRET_REPLACED = "secret_replaced"
 NEWER_FORMAT = "newer_format"
 RECORD_UNREADABLE = "unreadable_record"
 TOO_OLD = "too_old"
+DATED_AHEAD = "dated_ahead"
 NOT_YET_UNDOABLE = "not_yet_undoable"
 OWN_TRIGGERS = "own_triggers"
 BACKUP_GONE = "backup_gone"
@@ -57,6 +58,7 @@ SUGGESTIONS_DEPEND = "suggestions_depend"
 KEY_IN_USE = "key_in_use"
 VALUE_TAKEN = "value_taken"
 PARENT_GONE = "parent_gone"
+PARENT_REPLACED = "parent_replaced"
 DOCUMENTS_CLASH = "documents_clash"
 LOOP = "loop"
 
@@ -333,6 +335,13 @@ class Digests:
 Row = Dict[str, Value]
 
 
+class BackupUnreadable(Exception):
+    """A backup's database failed part way through a read, as when a page
+    of one of its tables is damaged while its schema reads: the change is
+    refused, its backup unreadable, rather than answered as an error of
+    the project."""
+
+
 def _equal_sql(column: str, value: Value, number: int) -> Tuple[str, Any]:
     """`column = <value>` with the value bound as it is stored, and its
     parameter."""
@@ -347,11 +356,14 @@ class Source:
     """One database's rows, read by key: the project, on the connection
     the plan runs on, or a backup, on its own connection. A table's
     columns are read from the database itself; its rows are read with
-    every column as Values. Nothing is written."""
+    every column as Values. Nothing is written. A backup's read that
+    fails raises BackupUnreadable; the project's raises SQLite's error."""
 
-    def __init__(self, conn: sqlite3.Connection, digests: Digests):
+    def __init__(self, conn: sqlite3.Connection, digests: Digests,
+                 backup: bool = False):
         self.conn = conn
         self.digests = digests
+        self.backup = backup
         self._names: Optional[Dict[str, str]] = None
         self._columns: Dict[str, Tuple[str, ...]] = {}
         self._by_digest: Dict[str, Dict[str, Row]] = {}
@@ -362,6 +374,10 @@ class Source:
         try:
             cur.row_factory = None
             return [tuple(row) for row in cur.execute(sql, params)]
+        except sqlite3.Error:
+            if self.backup:
+                raise BackupUnreadable() from None
+            raise
         finally:
             cur.close()
 
@@ -648,8 +664,9 @@ class Located(NamedTuple):
 def locate(project: str, receipt: str, key_check: str,
            clock: Optional[float] = None) -> Located:
     """The record a receipt names, judged: known, of this project, made
-    under this secret, of a known format, readable, under a day old, of a
-    tool whose changes this route takes back; or the reason it is not.
+    under this secret, of a known format, readable, not dated ahead of
+    the clock, under a day old, of a tool whose changes this route takes
+    back; or the reason it is not.
     The receipt was checked as 32 lowercase hex characters before any
     path was made."""
     try:
@@ -670,7 +687,9 @@ def locate(project: str, receipt: str, key_check: str,
     if record.get("route") != "rows" or not well_formed(record):
         return Located(None, RECORD_UNREADABLE)
     age = (change_record.now() if clock is None else clock) - record["time"]
-    if age > change_record.KEEP_SECONDS or age < -CLOCK_SLACK_SECONDS:
+    if age < -CLOCK_SLACK_SECONDS:
+        return Located(None, DATED_AHEAD)
+    if age > change_record.KEEP_SECONDS:
         return Located(None, TOO_OLD)
     if record.get("tool") in NOT_YET_UNDOABLE_TOOLS:
         return Located(record, NOT_YET_UNDOABLE)
@@ -787,6 +806,21 @@ def _owner_of(row: Optional[Row]) -> Optional[str]:
     return text_of(row.get("owner")) if row else None
 
 
+def _alike(then: Row, now: Row) -> bool:
+    """Whether two rows hold the same values, kind and bytes, in every
+    column both have."""
+    return all((then[c].kind, then[c].raw) == (now[c].kind, now[c].raw)
+               for c in then if c in now)
+
+
+def _made_together(then: Row, now: Row) -> bool:
+    """Whether two rows carry the same date of making, a text that is not
+    empty."""
+    a, b = then.get("date"), now.get("date")
+    return a is not None and b is not None and a.kind == "text" and \
+        bool(a.raw) and (a.kind, a.raw) == (b.kind, b.raw)
+
+
 _MISSING = object()
 
 
@@ -871,30 +905,10 @@ class _Planner:
               rows: Iterable[Tuple[str, Any]]) -> Dict[str, Any]:
         """The later changes, not in this undo, that touched these rows:
         this run's by their receipts, another run's counted."""
-        if self._index is None:
-            self._index = {}
-            if self._records is None:
-                self._records = change_record.records(self.project_key)
-            for record in self._records:
-                for row in record.get("rows") or []:
-                    if isinstance(row, dict) and isinstance(row.get("table"),
-                                                            str):
-                        try:
-                            self._index.setdefault(
-                                (row["table"].lower(), row.get("key")),
-                                []).append((record.get("time"),
-                                            record.get("receipt"),
-                                            record.get("run")))
-                        except TypeError:
-                            continue
         receipts: Dict[str, float] = {}
         others: Set[str] = set()
         for actual, key in rows:
-            try:
-                entries = self._index.get((actual.lower(), key), ())
-            except TypeError:
-                continue
-            for when, receipt, run in entries:
+            for when, receipt, run, _whole in self.recorded(actual, key):
                 if not _number(when) or change.time is None or \
                         when <= change.time or receipt in self.receipts:
                     continue
@@ -908,6 +922,33 @@ class _Planner:
         if others:
             out["other_runs"] = len(others)
         return out
+
+    def recorded(self, actual: str, key: Any) -> List[Tuple[Any, ...]]:
+        """The changes Exegete recorded to one row, from every record of
+        the project, of any run, read once: (time, receipt, run, whether
+        the change added or removed the row)."""
+        if self._index is None:
+            if self._records is None:
+                self._records = change_record.records(self.project_key)
+            self._index = {}
+            for record in self._records:
+                for row in record.get("rows") or []:
+                    if isinstance(row, dict) and isinstance(row.get("table"),
+                                                            str):
+                        try:
+                            self._index.setdefault(
+                                (row["table"].lower(), row.get("key")),
+                                []).append((
+                                    record.get("time"), record.get("receipt"),
+                                    record.get("run"),
+                                    row.get("before") is None
+                                    or row.get("after") is None))
+                        except TypeError:
+                            continue
+        try:
+            return self._index.get((actual.lower(), key), [])
+        except TypeError:
+            return []
 
     # -- the change's backup ------------------------------------------------
 
@@ -961,7 +1002,7 @@ class _Planner:
             conn.execute("SELECT count(*) FROM sqlite_master").fetchone()
         except sqlite3.Error:
             return None, BACKUP_UNREADABLE
-        return Source(conn, self.digests), None
+        return Source(conn, self.digests, backup=True), None
 
     # -- one change ----------------------------------------------------------
 
@@ -1069,20 +1110,26 @@ class _Planner:
                 change.refuse(reason)
             else:
                 altered: Dict[str, int] = {}
-                for name, its in by_table.items():
-                    actual, entry = info[name]
-                    wanted = [r for r in its if kind_of(r) != ADDED]
-                    if not wanted:
-                        continue
-                    got = backup.rows(name, entry["key"], entry["key_kind"],
-                                      [r["key"] for r in wanted])
-                    for r in wanted:
-                        values = got.get(r["key"])
-                        if values is None or self.digests.row(
-                                entry["columns"], values) != r["before"]:
-                            altered[actual] = altered.get(actual, 0) + 1
-                        else:
-                            old[(name, r["key"])] = values
+                try:
+                    for name, its in by_table.items():
+                        actual, entry = info[name]
+                        wanted = [r for r in its if kind_of(r) != ADDED]
+                        if not wanted:
+                            continue
+                        got = backup.rows(name, entry["key"],
+                                          entry["key_kind"],
+                                          [r["key"] for r in wanted])
+                        for r in wanted:
+                            values = got.get(r["key"])
+                            if values is None or self.digests.row(
+                                    entry["columns"], values) != r["before"]:
+                                altered[actual] = altered.get(actual, 0) + 1
+                            else:
+                                old[(name, r["key"])] = values
+                except BackupUnreadable:
+                    change.refuse(BACKUP_UNREADABLE)
+                    old.clear()
+                    backup = None
                 if altered:
                     change.refuse(BACKUP_CHANGED, rows=altered)
 
@@ -1121,7 +1168,10 @@ class _Planner:
             self.overlay.setdefault(low, {})[key] = values
         self.check_dependents(change)
         self.check_unique(change)
-        self.check_parents(change, backup)
+        try:
+            self.check_parents(change, backup)
+        except BackupUnreadable:
+            change.refuse(BACKUP_UNREADABLE)
         self.check_documents(change)
         self.check_loops(change)
         self.check_sessions(change)
@@ -1291,14 +1341,70 @@ class _Planner:
         cache[mark] = result
         return result
 
+    def _numbered(self, ref: Reference, values: Tuple[Value, ...]
+                  ) -> Optional[Tuple[str, str, int]]:
+        """(the table, its key's column, the id) when `ref` points by the
+        integer key of a table keyed by one, else None. SQLite gives such
+        an id out again once its row is gone, if it was the highest."""
+        info = self.table_info(ref.target)
+        if info is None or info[2] != "integer" or \
+                ref.target_columns != (info[1],) or \
+                values[0].kind != "integer":
+            return None
+        return info[0], info[1], int(values[0].number)
+
+    def _same_row(self, change: ChangePlan, target: Tuple[str, str, int],
+                  backup: Source, cache: Dict[Any, bool]) -> bool:
+        """Whether the row under this id, as the undo leaves the project,
+        is the row the change's backup holds under it.
+
+        It is not when a later change Exegete recorded, other than one
+        this undo takes back, removed or added a row under that id.
+        Otherwise it is when the two rows hold the same values in every
+        column both have, or the same date of making: a row made since
+        carries the date it was made, and neither QualCoder 4.0
+        (`code_tree.py`, at b95e021) nor Exegete changes that date when
+        it renames, moves or recolours a code or a category or writes
+        its memo. A row with no date must hold the same values."""
+        actual, key_column, number = target
+        mark = (actual.lower(), number)
+        if mark not in cache:
+            now = self.state(actual, number, key_column, "integer")
+            then = backup.rows(actual, key_column, "integer",
+                               [number]).get(number)
+            cache[mark] = (now is not None and then is not None
+                           and not self._made_again(change, actual, number)
+                           and (_alike(then, now)
+                                or _made_together(then, now)))
+        return cache[mark]
+
+    def _made_again(self, change: ChangePlan, actual: str,
+                    number: int) -> bool:
+        """Whether a change Exegete recorded after this one, not taken back
+        by this undo, removed or added a row under this id."""
+        return any(
+            whole and _number(when) and change.time is not None
+            and when > change.time and receipt not in self.receipts
+            for when, receipt, _run, whole in self.recorded(actual, number))
+
     def check_parents(self, change: ChangePlan,
                       backup: Optional[Source]) -> None:
         """A row put back, or a reference a row set back changes, that
-        would point at a row gone since: one the change's backup holds
-        and the project, as the undo leaves it, does not. A reference
-        that pointed at nothing before the change goes back as it was."""
+        would point at a row gone since, or at another row than before.
+        Gone: the change's backup holds the row it pointed at, and the
+        project, as the undo leaves it, does not. Another: the project
+        holds a row under that id that is not the backup's (`_same_row`),
+        since SQLite gives a deleted row's id to the next row made when
+        it was the highest. A row placed in a file's text points at its
+        file by `fid`, which the digest of the file's text guards
+        (TEXT_CHANGED). A reference that pointed at nothing before the
+        change goes back as it was."""
         lost: Dict[str, int] = {}
+        replaced: Dict[str, int] = {}
+        targets: Dict[str, List[Tuple[str, Any]]] = {PARENT_GONE: [],
+                                                     PARENT_REPLACED: []}
         cache: Dict[Any, bool] = {}
+        same: Dict[Any, bool] = {}
         for step in change.put_back + change.set_back:
             post = self.overlay.get(step.table.lower(), {}).get(step.key)
             if post is None:
@@ -1315,14 +1421,29 @@ class _Planner:
                         _norm(step.now.get(c, NULL)) == _norm(v)
                         for c, v in zip(ref.columns, values)):
                     continue            # a reference the undo keeps
-                if self._exists(ref, values, cache):
+                if backup is None:
                     continue
-                if backup is not None and backup.holds(
-                        ref.target, list(zip(ref.target_columns, values))):
-                    lost[step.table] = lost.get(step.table, 0) + 1
+                target = self._numbered(ref, values)
+                if not self._exists(ref, values, cache):
+                    if backup.holds(ref.target, list(zip(
+                            ref.target_columns, values))):
+                        lost[step.table] = lost.get(step.table, 0) + 1
+                        if target is not None:
+                            targets[PARENT_GONE].append(target[::2])
+                        break
+                    continue
+                if target is None or (ref.table in POSITIONED_TABLES
+                                      and ref.columns == ("fid",)):
+                    continue
+                if not self._same_row(change, target, backup, same):
+                    replaced[step.table] = replaced.get(step.table, 0) + 1
+                    targets[PARENT_REPLACED].append(target[::2])
                     break
-        if lost:
-            change.refuse(PARENT_GONE, rows=lost)
+        for reason, counts in ((PARENT_GONE, lost),
+                               (PARENT_REPLACED, replaced)):
+            if counts:
+                change.refuse(reason, rows=counts,
+                              **self.later(change, targets[reason]))
 
     def check_documents(self, change: ChangePlan) -> None:
         """A text's name set back that a file in the project's documents

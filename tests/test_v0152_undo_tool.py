@@ -72,6 +72,15 @@ def code_id(folder, name):
     return None if found is None else found[0]
 
 
+def category_of(folder, cid):
+    """The name of the category a code is in, None for none."""
+    with database(folder) as conn:
+        found = conn.execute(
+            "select c.name from code_name n join code_cat c "
+            "on c.catid = n.catid where n.cid = ?", (cid,)).fetchone()
+    return None if found is None else found[0]
+
+
 def call(fn, **kwargs):
     """A tool's answer, parsed, with the receipt it carries."""
     text = fn(**kwargs)
@@ -161,6 +170,14 @@ class TestTheThreeCalls:
         found = answer(server.undo_changes(receipts=["../../etc/passwd"]))
         assert found["nothing_changed"] is True
         assert "undo_receipt" in found["error"]
+
+    def test_every_reason_has_its_words(self):
+        """Each reason undo.py gives has its refusal in server.py, so that
+        no refusal is answered as an error of the tool."""
+        reasons_given = {value for name, value in vars(undo).items()
+                         if name.isupper() and isinstance(value, str)
+                         and name not in ("ADDED", "CHANGED", "REMOVED")}
+        assert reasons_given == set(server.UNDO_REFUSAL_TEXTS)
 
 
 # ---------------------------------------------------------------------------
@@ -333,6 +350,18 @@ class TestTheRecordsRefusals:
                             lambda: clock + change_record.KEEP_SECONDS - 60)
         assert "preview_token" in undo_preview(receipt)
 
+    def test_a_record_dated_ahead_of_the_clock_is_refused_as_such(
+            self, project, monkeypatch):
+        """The clock set back since the change: a record dated more than a
+        few minutes ahead is refused as dated ahead, not as a day old."""
+        _, receipt = new_code("Belonging")
+        clock = change_record.now()
+        monkeypatch.setattr(change_record, "now", lambda: clock - 3600)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.DATED_AHEAD}
+        monkeypatch.setattr(change_record, "now", lambda: clock - 60)
+        assert "preview_token" in undo_preview(receipt)
+
     def test_a_replaced_secret_is_refused(self, project):
         _, receipt = new_code("Belonging")
         os.unlink(preview_tokens._secret_path())
@@ -394,6 +423,20 @@ class TestTheRecordsRefusals:
         restored = answer(two_step(server.restore_backup,
                                    backup_path=str(older)))
         assert restored.get("success"), restored
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.CHANGED_SINCE}
+
+    def test_a_column_added_since_counts_once_it_holds_a_value(
+            self, project):
+        """A column added since and still empty, as QualCoder 4.0's first
+        open adds to an older project, leaves the row unchanged; once it
+        holds a value, the row has changed since, and removing it would
+        remove that value."""
+        _, receipt = new_code("Belonging")
+        execute(project, "alter table code_name add column added_since text")
+        assert "preview_token" in undo_preview(receipt)
+        execute(project, "update code_name set added_since = 'a value' "
+                "where name = 'Belonging'")
         refused = unchanged_by(project, lambda: undo_preview(receipt))
         assert reasons(refused) == {undo.CHANGED_SINCE}
 
@@ -488,6 +531,30 @@ class TestTheBackupsRefusals:
         assert reasons(refused) == {undo.BACKUP_UNREADABLE}
 
     @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes")
+    def test_a_backup_damaged_inside_one_table_is_refused_as_unreadable(
+            self, project):
+        """A backup whose schema reads but one of whose tables does not, as
+        when a page of it is overwritten: the change is refused as its
+        backup unreadable, not answered as an error of the project, and
+        the list still gives every change."""
+        _, made = new_code("Belonging")
+        _, renamed = call(server.rename_code, code_id=1, new_name="Faith")
+        data = backup_of(renamed) / "data.qda"
+        with closing(sqlite3.connect(str(data))) as conn:
+            size = conn.execute("pragma page_size").fetchone()[0]
+            root = conn.execute("select rootpage from sqlite_master "
+                                "where name = 'code_name'").fetchone()[0]
+        raw = bytearray(data.read_bytes())
+        raw[(root - 1) * size:root * size] = b"\xab" * size
+        data.write_bytes(bytes(raw))
+        listed = answer(server.undo_changes())
+        by_receipt = {c["undo_receipt"]: c for c in listed["changes"]}
+        assert by_receipt[made]["can_be_undone"] is True
+        assert [w["reason"] for w in by_receipt[renamed]["why_not"]] == [
+            undo.BACKUP_UNREADABLE]
+        refused = unchanged_by(project, lambda: undo_preview(renamed))
+        assert reasons(refused) == {undo.BACKUP_UNREADABLE}
+
     def test_a_named_pipe_for_a_database_is_refused_without_waiting(
             self, project):
         receipt = renamed_code(project)
@@ -712,6 +779,108 @@ class TestARowThatHasLostItsPlace:
             assert conn.execute("select c.name from code_name n join code_cat"
                                 " c on c.catid = n.catid where n.cid = 1"
                                 ).fetchone() == ("First",)
+
+    def test_a_category_whose_number_a_category_made_since_has_taken(
+            self, project):
+        """SQLite gives the highest id out again once its row is gone: the
+        code's old category, the newest, deleted and another made, which
+        takes its number. Setting the code back would put it in the new
+        category: refused, then undone with the two later changes."""
+        a_category("First")
+        second = a_category("Second")
+        server.move_code_to_category(code_id=1, category="Second")
+        _, moved = call(server.move_code_to_category, code_id=1,
+                        category="First")
+        deleted = answer(two_step(server.delete_category,
+                                  category_id=second))["undo_receipt"]
+        _, made = call(server.create_category, name="Unrelated")
+        assert ids(project, "code_cat", "catid",
+                   "name = 'Unrelated'") == [second]
+        refused = unchanged_by(project, lambda: undo_preview(moved))
+        assert reasons(refused) == {undo.PARENT_REPLACED}
+        found = refusal(refused, undo.PARENT_REPLACED)
+        assert found["rows"] == {"code_name": 1}
+        assert found["later_changes"] == [deleted, made]
+        assert undo_run(moved, made, deleted)["success"] is True
+        assert category_of(project, 1) == "Second"
+
+    def test_a_coding_whose_codes_number_a_code_made_since_has_taken(
+            self, project):
+        """A coding deleted, then its code, the newest, deleted and another
+        made, which takes its number. Putting the coding back would file
+        it under the new code, and mark its session's suggestion, made for
+        the old one, applied again: refused, nothing written."""
+        new_code("Belonging")
+        cid = code_id(project, "Belonging")
+        ctid = a_coding("Belonging")
+        deleted = answer(server.delete_coding(
+            coding_id=ctid))["undo_receipt"]
+        assert "error" not in answer(two_step(server.delete_code,
+                                              code_id=cid))
+        new_code("Other")
+        assert code_id(project, "Other") == cid
+        refused = unchanged_by(project, lambda: undo_preview(deleted))
+        assert reasons(refused) == {undo.PARENT_REPLACED}
+        assert refusal(refused, undo.PARENT_REPLACED)["rows"] == {
+            "code_text": 1}
+
+    def test_a_number_taken_within_the_same_second_is_found_by_the_records(
+            self, project):
+        """The new category made in the same second as the old one, so that
+        both carry one date: the records of the deletion and the making
+        find it."""
+        a_category("First")
+        second = a_category("Second")
+        with database(project) as conn:
+            made_at = conn.execute("select date from code_cat where "
+                                   "catid = ?", (second,)).fetchone()[0]
+        server.move_code_to_category(code_id=1, category="Second")
+        _, moved = call(server.move_code_to_category, code_id=1,
+                        category="First")
+        answer(two_step(server.delete_category, category_id=second))
+        call(server.create_category, name="Unrelated")
+        execute(project, "update code_cat set date = ? where catid = ?",
+                (made_at, second))
+        refused = unchanged_by(project, lambda: undo_preview(moved))
+        assert reasons(refused) == {undo.PARENT_REPLACED}
+
+    def test_a_code_another_program_made_in_its_place_is_found_by_its_date(
+            self, project):
+        """A coding deleted, then its code, the newest, deleted and another
+        made in its place by another program, of which Exegete keeps no
+        record: told apart by the date each was made. Refused."""
+        new_code("Belonging")
+        cid = code_id(project, "Belonging")
+        ctid = a_coding("Belonging")
+        deleted = answer(server.delete_coding(
+            coding_id=ctid))["undo_receipt"]
+        execute(project, "delete from code_name where cid = ?", (cid,))
+        execute(project, "insert into code_name (name, owner, date, color) "
+                "values ('Other', 'Researcher', '2000-01-01 00:00:00', "
+                "'#777777')")
+        assert code_id(project, "Other") == cid
+        refused = unchanged_by(project, lambda: undo_preview(deleted))
+        assert reasons(refused) == {undo.PARENT_REPLACED}
+
+    def test_a_code_changed_since_is_still_its_code(self, project):
+        """A row pointed at that has only been changed since is the same
+        row: a coding deleted, its code renamed and recoloured through
+        Exegete and moved by another program, then the coding put back
+        under it."""
+        ctid = a_coding("Trust")
+        deleted = answer(server.delete_coding(
+            coding_id=ctid))["undo_receipt"]
+        assert "error" not in answer(server.rename_code(
+            code_id=1, new_name="Trust in others"))
+        assert "error" not in answer(server.recolor_code(code_id=1,
+                                                         color="#0D47A1"))
+        a_category("Relations")
+        execute(project, "update code_name set catid = (select catid from "
+                "code_cat where name = 'Relations') where cid = 1")
+        assert undo_run(deleted)["success"] is True
+        with database(project) as conn:
+            assert conn.execute("select cid from code_text where ctid = ?",
+                                (ctid,)).fetchone() == (1,)
 
     def test_a_category_whose_old_parent_was_moved_under_it(self, project):
         parent = a_category("Parent")

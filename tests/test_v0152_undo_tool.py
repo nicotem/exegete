@@ -532,7 +532,6 @@ class TestTheBackupsRefusals:
         refused = unchanged_by(project, lambda: undo_preview(receipt))
         assert reasons(refused) == {undo.BACKUP_UNREADABLE}
 
-    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes")
     def test_a_backup_damaged_inside_one_table_is_refused_as_unreadable(
             self, project):
         """A backup whose schema reads but one of whose tables does not, as
@@ -557,6 +556,7 @@ class TestTheBackupsRefusals:
         refused = unchanged_by(project, lambda: undo_preview(renamed))
         assert reasons(refused) == {undo.BACKUP_UNREADABLE}
 
+    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="no named pipes")
     def test_a_named_pipe_for_a_database_is_refused_without_waiting(
             self, project):
         receipt = renamed_code(project)

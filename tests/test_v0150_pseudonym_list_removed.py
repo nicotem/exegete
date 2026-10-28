@@ -448,8 +448,9 @@ class TestToolsReadmePrivacy:
             f"| `full` | {FULL_TOOLS}: every tool, creating a project and the "
             "earlier names of two renamed tools included | about ") + FIGURE
             + " characters, " + FIGURE + r" tokens \|", readme)
-        assert ("with `pseudonymise_source` afterwards. The list can be one "
-                "you fill in on your own computer, in a file Exegete "
+        # (the readability reading: the list filled in by you, said so)
+        assert ("with the project's names list, or afterwards. You can fill "
+                "in the list on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "
                 "conversation. Replacing names helps you manage what you "
                 "share with other people,") in readme

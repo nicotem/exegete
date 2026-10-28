@@ -32,7 +32,10 @@ def test_the_readmes_features_name_importing_and_reading():
     features = _between(_flat("README.md"), "## What you can do",
                         "## How it works")
     # (v0.15.2, the opening texts: documents, transcripts among them)
-    assert "**Bring in documents** from your computer" in features
+    # (the readability reading: the kinds of document, then where they
+    # are read)
+    assert "**Bring in documents**: Word, OpenDocument" in features
+    assert "Exegete reads them on your computer" in features
     assert "in the conversation or in your browser." in features
 
 
@@ -40,11 +43,13 @@ def test_start_here_names_importing_a_file_and_reading_it():
     start = _between(_flat("README.md"), "## Start here",
                      "## Exegete and QualCoder")
     # (v0.15.2, the opening texts: "out of the conversation")
-    assert ("then bring in your page: paste it, as in the example, or save "
-            "it as a Word or text file and give the assistant its place, "
-            "which keeps its text out of the conversation (on a Mac, hold "
-            "Option, right-click it and choose Copy as Pathname; on "
-            "Windows 11, Copy as path).") in start
+    # (the readability reading: the file's location, and how to copy it
+    # on each system, a sentence each)
+    assert ("Then bring in your page: paste it, or save it as a Word or text "
+            "file and give the assistant its location, which keeps its text "
+            "out of the conversation. On a Mac, hold Option, right-click the "
+            "file and choose Copy as Pathname. On Windows 11, choose Copy as "
+            "path.") in start
     assert "ask to open a file for reading" in start
     features = _between(_flat("README.md"), "## What you can do",
                         "## How it works")

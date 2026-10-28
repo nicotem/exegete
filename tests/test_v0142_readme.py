@@ -88,12 +88,13 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
             # the example, labelled for what it is
             "*An illustration, shortened, with made-up practice text; your "
             "assistant's words will differ.*",
-            # the honest flags, once
-            "Before you use participants' data, read [Where your data goes]"
-            "(https://github.com/nicotem/exegete#where-your-data-goes): what "
-            "the assistant reads goes to the AI provider, the company that "
-            "runs its AI model, unless that model runs on your own "
-            "computer, and some assistants open files by themselves.",
+            # the honest flags, once (v0.15.2, the readability reading:
+            # the two facts first, a sentence each, then where to read)
+            "What the assistant reads goes to the AI provider, the company "
+            "that runs its AI model, unless that model runs on your own "
+            "computer. Some assistants also open files by themselves. Before "
+            "you use participants' data, read [Where your data goes]"
+            "(https://github.com/nicotem/exegete#where-your-data-goes).",
             # (the owner, 1 October 2026: free, open-source software, the
             # licence named, and what it costs, in "Start here")
             "Exegete is free, open-source software (LGPL-3.0-or-later) and "
@@ -132,16 +133,18 @@ def test_how_it_works_explains_before_it_instructs():
     assert ("Exegete (formerly qualcoder-mcp) runs on your computer, with no "
             "window and no AI of its own") in _readme()
     # what Exegete checks: the quoted words, not whether the code fits
-    assert "each quoting the text word for word, which Exegete checks" in \
+    assert "quotes the text word for word, which Exegete checks" in \
         _readme()
     for words in (
             # when anything is written, and not more than that: approving
             # marks, and the assistant writes in a step of its own
+            # (the readability reading: one idea to a sentence; the
+            # label is the one What you can do defines)
             "Suggested codings and proposed codes wait in a review list "
-            "outside the project, and the assistant is told to show you "
-            "each passage with its reading and its reason.",
+            "outside the project. The assistant is told to show you each "
+            "passage with its label and its reason.",
             "Other changes, such as making a code or writing a memo, are "
-            "made when the tool runs.",
+            "made at once.",
             # the approval, with its reason and its limit
             "Exegete hears only from the assistant, so it records the "
             "approval the assistant reports and cannot tell whether you "
@@ -251,11 +254,13 @@ def test_it_has_no_ai_of_its_own():
     # requests in four days, asked on four days running).
     in_short = " ".join(_between(_readme(), "**In short.**",
                                  "What the assistant reads").split())
+    # (v0.15.2, the readability reading: the extension's default a
+    # sentence of its own, the rule unchanged)
     assert ("The one request it sends itself asks for a small file that says "
             "whether a newer version exists, and carries nothing from your "
             "projects. It is sent at most once a week, and when you ask, "
-            "while checking is on, as it is in the Claude Desktop extension "
-            "unless you switch it off") in in_short
+            "while checking is on. Checking is on in the Claude Desktop "
+            "extension unless you switch it off") in in_short
     assert "once a week while switched on" not in in_short
 
 
@@ -286,17 +291,17 @@ def test_start_here_says_which_way():
     # writing checklist leaves out; the reader who came straight here is
     # sent to the checks by the one-click steps' link, below, as the
     # rhetorical question "Came straight here?" gave way)
-    assert ("Claude Desktop with the extension needs no typed commands, and "
-            "is the route this project suggests for participants' data.") \
-        in first
+    assert ("Claude Desktop with Exegete's extension needs no typed "
+            "commands. It is the route this project suggests for "
+            "participants' data.") in first
     assert "Came straight here?" not in first
     # and the one-click steps send the reader to the checks before
     # participants' data, which live where data is discussed
     one_click = _between(_readme(), "### Claude Desktop, with one click",
                          "### ChatGPT's desktop app and Codex")
-    assert ("Before participants' data, go through [the five checks]"
-            "(https://github.com/nicotem/exegete#where-your-data-goes)") \
-        in one_click
+    assert ("Before you use participants' data, go through [the five "
+            "checks](https://github.com/nicotem/exegete#where-your-data-"
+            "goes)") in one_click
 
 
 def test_a_first_session_names_both_coder_names():
@@ -318,15 +323,18 @@ def test_a_first_session_names_both_coder_names():
     # likewise, for a project the assistant made (the coder names, piece
     # 3, tests/test_v0150_ai_coder_name_setting.py)
     # (v0.15.2, the opening texts: statements for the two questions)
+    # (the readability reading: who asks, and when, named; the exception
+    # a sentence of its own)
     assert ("When it makes the project, the assistant asks for your own "
-            "coder name, unless you have filled it in Exegete's settings, "
-            "and the project keeps it so that your work and the AI's stay "
-            "apart (QualCoder, if you use it, records your coding under "
-            "it). Any name you choose will do, and if you do not know "
-            "yours, say so. Before its first write, it asks for the AI coder "
-            "name, kept per project, under which Exegete writes what is "
-            "done through the conversation, unless the project was made "
-            "with that name in Exegete's settings.") in names
+            "coder name, unless you have filled it in Exegete's settings. "
+            "The project keeps it so that your work and the AI's stay "
+            "apart, and QualCoder, if you use it, records your coding under "
+            "it. Any name you choose will do, and if you do not know yours, "
+            "say so. Before Exegete first writes to the project, the "
+            "assistant asks for the AI coder name, kept per project, under "
+            "which Exegete writes what is done through the conversation. It "
+            "does not ask if the project was made with that name in "
+            "Exegete's settings.") in names
     assert "Not using QualCoder, or no coder name?" not in names
     assert "no QualCoder yet" not in names
     # the example on the first screen shows the second ask, before the
@@ -365,7 +373,10 @@ def test_the_approval_steps_are_named_where_the_readme_points():
             "decisions and write them",
             "INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-"
             "are-the-safeguard",
-            "\"Allow once\" in Claude, each prompt answered in Codex.",
+            # (the readability reading: what to do in each app, a
+            # sentence each)
+            "In Claude, choose \"Allow once\" each time it asks. In Codex, "
+            "answer each prompt.",
             "Before any coding is applied, check that the counts (approved, "
             "rejected, pending) match what you said, and say so if they do "
             "not."):
@@ -376,7 +387,7 @@ def test_the_approval_steps_are_named_where_the_readme_points():
         "they said" in status
     # what the assistant is told to bring, said as an instruction (the
     # diagram of a coding's path)
-    assert "the assistant is told to show you each passage with" in readme
+    assert "The assistant is told to show you each passage with" in readme
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "
                        "suggestions: your host's settings are the safeguard",
                        "## PDF and EPUB: the optional part")

@@ -263,15 +263,18 @@ def test_the_readme_gives_both_new_facts():
     # TOOLS.md's (test_tools_gives_both_new_facts, below)
     facts = _between(readme, "QualCoder 4.0's own MCP server",
                      "This project welcomes QualCoder's own server")
+    # (v0.15.2, the readability reading: the date ends the sentence, the
+    # pointers are one of their own, and the setting applies to the server)
     assert ("calls itself \"qualcoder-mcp\", Exegete's former name, as "
-            "checked on 6 October 2026 (TOOLS.md gives the facts, and "
+            "checked on 6 October 2026. TOOLS.md gives the facts, and "
             "[INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
-            "INSTALL.md#coming-from-qualcoder-mcp) how to keep the two "
-            "apart)") in facts
-    assert ("QualCoder's AI permission setting, such as Read-only, governs "
-            "it and QualCoder's own assistant, not Exegete.") in facts
+            "INSTALL.md#coming-from-qualcoder-mcp) says how to keep the two "
+            "apart.") in facts
+    assert ("QualCoder's AI permission setting, such as Read-only, applies "
+            "to that server and to QualCoder's own assistant, not to "
+            "Exegete.") in facts
     # the facts come before the stance, which keeps its decided words
-    assert readme.index("not Exegete.") < readme.index(
+    assert readme.index("not to Exegete.") < readme.index(
         "This project welcomes QualCoder's own server")
 
 

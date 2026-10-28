@@ -226,8 +226,8 @@ def test_the_old_venv_block_names_the_clone_as_the_entry_above_does():
 
 def test_readme_s_link_names_privacy_s_heading_for_exegete():
     readme = _flat("README.md")
-    cited = readme.split("project was built to leak it (PRIVACY.md, \"",
-                         1)[1]
+    cited = readme.split("project was built on purpose to leak it "
+                         "(PRIVACY.md, \"", 1)[1]
     cited = cited[:cited.index("\")")]
     assert f"**{cited}.**" in _flat("PRIVACY.md")
     assert "server" not in cited

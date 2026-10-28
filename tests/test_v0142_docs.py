@@ -433,12 +433,15 @@ def test_the_check_after_installing_is_a_short_list():
                             "then Connectors: Exegete is listed. When Claude "
                             "asks to use a tool, \"Allow once\" keeps it "
                             "asking. "), check
-    assert ("its permission setting comes as Manual, and on Auto, Claude "
-            "does not ask.") in check
-    assert check.endswith("Before participants' data, go through [the five "
-                          "checks](https://github.com/nicotem/exegete"
-                          "#where-your-data-goes), which keep your files out "
-                          "of Claude's reach and training off."), check
+    # (v0.15.2, the readability reading: the setting and Auto a sentence
+    # each, and the step before participants' data with its verb)
+    assert ("That conversation's permission setting comes as Manual. On "
+            "Auto, Claude does not ask.") in check
+    assert check.endswith("Before you use participants' data, go through "
+                          "[the five checks](https://github.com/nicotem/"
+                          "exegete#where-your-data-goes), which keep your "
+                          "files out of Claude's reach and training off."), \
+        check
     assert not re.findall(r"(?<![\w.])(\d)\. ", check)
     data = _between(_flat("README.md"), "Before you use participants' data "
                     "with Claude Desktop's chat", "**Private notes and "
@@ -460,26 +463,29 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     # v0.14.2, the README's first round of checks: a bullet of its own
     # v0.15.2, the opening texts: a sentence of the check's paragraph,
     # which says what the setting comes as and what Auto does
+    # (the readability reading: the plans, the page's date and the
+    # setting a sentence each)
     assert ("If your message box offers no choice between \"Chat\" and "
-            "\"Cowork\", the two are one conversation (Pro and Max plans; "
+            "\"Cowork\", the two are one conversation, on Pro and Max plans. "
             "Anthropic's page, read on 1 October 2026, says this is reaching "
-            "accounts gradually); its permission setting comes as Manual, "
-            "and on Auto, Claude does not ask.") in one_click
+            "accounts gradually. That conversation's permission setting "
+            "comes as Manual. On Auto, Claude does not ask.") in one_click
     # explained once
     assert readme.count("no choice between \"Chat\" and \"Cowork\"") == 1
     assert readme.count("1 October 2026, says this is reaching accounts") \
         == 1
     data = _between(readme, "## Where your data goes", "## Start here")
-    assert ("Before you use participants' data with Claude Desktop's chat "
-            "(also where chat and Cowork are one conversation, below), go "
-            "through five checks:") in data
-    assert "connected folders may be listed under \"Trusted folders\"" \
+    # (the readability reading: the aside said in the sentence)
+    assert ("Before you use participants' data with Claude Desktop's chat, "
+            "also where chat and Cowork are one conversation, go through "
+            "five checks:") in data
+    assert "Connected folders may be listed under \"Trusted folders\"" \
         in data
     # v0.14.2, the README's first round of checks: the Manual setting is
     # explained once, after installing; the approval paragraph names the
     # choice in each app
-    assert ("\"Allow once\" in Claude, each prompt answered in Codex.") \
-        in readme
+    assert ("In Claude, choose \"Allow once\" each time it asks. In Codex, "
+            "answer each prompt.") in readme
     assert readme.count("permission setting comes as Manual") == 1
     approvals = _between(_flat("INSTALL.md"),
                          "**Claude's questions before a tool runs.**",
@@ -817,16 +823,19 @@ def test_a_first_session_says_what_to_do_next():
     # and the answer gives the full path (tests/test_v0150_renames_folder.py)
     # v0.15.2, the opening texts: QualCoder as a choice, for a researcher
     # who uses it (ruling 102)
-    assert ("then bring in your page: paste it, as in the example, or save "
-            "it as a Word or text file and give the assistant its place, "
-            "which keeps its text out of the conversation (on a Mac, hold "
-            "Option, right-click it and choose Copy as Pathname; on "
-            "Windows 11, Copy as path). With the extension "
-            "or OpenAI's steps, the project is made, by default, in "
-            "\"Exegete projects\", in your home folder (the answer gives "
-            "the full path). To see your coding in the text, ask to open a "
-            "file for reading, or open the project in QualCoder, if you use "
-            "it (Project, Open Project).") in first
+    # v0.15.2, the readability reading: where the project is made comes
+    # first, then the page, its location and how to copy it, a step to
+    # each sentence
+    assert ("With the extension or OpenAI's steps, the project is made, by "
+            "default, in \"Exegete projects\", in your home folder (the "
+            "answer gives the full path). Then bring in your page: paste "
+            "it, or save it as a Word or text file and give the assistant "
+            "its location, which keeps its text out of the conversation. On "
+            "a Mac, hold Option, right-click the file and choose Copy as "
+            "Pathname. On Windows 11, choose Copy as path. To see your "
+            "coding in the text, ask to open a file for reading, or open the "
+            "project in QualCoder, if you use it (Project, Open Project).") \
+        in first
     # (the staleness audit of 20 October 2026: on `core`, as LM Studio's
     # recipe sets it, neither step works, CORE_TOOLSET; INSTALL's recipe
     # says how to make the project once)
@@ -979,11 +988,13 @@ def test_qualcoder_4_0_is_named_as_released():
     # create_lock_file; 4.0's, as released, writes none)
     assert ("QualCoder 3.8.2 writes a lock file while it has a project "
             "open, and Exegete refuses changes while the file is active. "
-            "QualCoder 4.0 writes no lock file: Exegete warns when it sees "
+            "QualCoder 4.0 writes no lock file. Exegete warns when it sees "
             "signs of an open 4.0 window, but only you can make sure") in one
-    assert ("It reads and writes the formats of QualCoder 3.8.2 to 4.0, and "
-            "does not write to a project in a newer format until it has "
-            "been checked against it.") in readme
+    # (the readability reading: the newer format a sentence of its own,
+    # its subject named)
+    assert ("It reads and writes the formats of QualCoder 3.8.2 to 4.0. It "
+            "does not write to a project in a newer format until Exegete "
+            "has been checked against that format.") in readme
     install = _flat("INSTALL.md")
     assert ("Projects made in QualCoder 3.8 or 4.0 work (project schemas "
             "v14 to v17;") in install

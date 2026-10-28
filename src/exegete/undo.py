@@ -1358,24 +1358,26 @@ class _Planner:
         """Whether the row under this id, as the undo leaves the project,
         is the row the change's backup holds under it.
 
-        It is not when a later change Exegete recorded, other than one
-        this undo takes back, removed or added a row under that id.
-        Otherwise it is when the two rows hold the same values in every
-        column both have, or the same date of making: a row made since
+        It is when the two rows hold the same values in every column both
+        have. Otherwise it is when they carry the same date of making and
+        no later change Exegete recorded, other than one this undo takes
+        back, removed or added a row under that id: a row made since
         carries the date it was made, and neither QualCoder 4.0
         (`code_tree.py`, at b95e021) nor Exegete changes that date when
         it renames, moves or recolours a code or a category or writes
-        its memo. A row with no date must hold the same values."""
+        its memo, while two rows made in one second carry one date. A
+        row with no date must hold the same values. The records are read
+        only for a row changed since that carries its old date."""
         actual, key_column, number = target
         mark = (actual.lower(), number)
         if mark not in cache:
             now = self.state(actual, number, key_column, "integer")
             then = backup.rows(actual, key_column, "integer",
                                [number]).get(number)
-            cache[mark] = (now is not None and then is not None
-                           and not self._made_again(change, actual, number)
-                           and (_alike(then, now)
-                                or _made_together(then, now)))
+            cache[mark] = now is not None and then is not None and (
+                _alike(then, now)
+                or (_made_together(then, now)
+                    and not self._made_again(change, actual, number)))
         return cache[mark]
 
     def _made_again(self, change: ChangePlan, actual: str,

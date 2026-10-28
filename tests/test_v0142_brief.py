@@ -509,6 +509,7 @@ class TestProvisionalAndHeldBack:
             assert said in text, where
             assert "the lines that would take a position on method" \
                 in text, where
+        assert "until this project's statement on method" not in tools
 
 
 # ---------------------------------------------------------------------------

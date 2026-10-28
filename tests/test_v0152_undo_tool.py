@@ -884,6 +884,19 @@ class TestARowThatHasLostItsPlace:
             assert conn.execute("select cid from code_text where ctid = ?",
                                 (ctid,)).fetchone() == (1,)
 
+    def test_a_coded_files_row_changed_since_is_judged_by_its_text(
+            self, project):
+        """A coding's file is the same file while its text is: its note and
+        date written since by another program, as QualCoder 4.0's MCP
+        server writes a file's memo, the coding is put back on it."""
+        ctid = a_coding("Trust")
+        deleted = answer(server.delete_coding(
+            coding_id=ctid))["undo_receipt"]
+        execute(project, "update source set memo = 'Read twice', "
+                "date = '2000-01-01 00:00:00' where id = 1")
+        assert undo_run(deleted)["success"] is True
+        assert ids(project, "code_text", "ctid") == [ctid]
+
     def test_a_category_whose_old_parent_was_moved_under_it(self, project):
         parent = a_category("Parent")
         child = a_category("Child")

@@ -97,7 +97,8 @@ INSTALL = re.compile(r"(?P<lead>\b(?:pipx|uv\s+tool|pip)\s+install"
                      r"(?P<extras>\[[\w,-]+\])?(?P=quote)(?=\s|$)")
 PROJECT_LINE = re.compile(r"^\s*export\s+EXEGETE_PROJECT_PATH=")
 # A version as `exegete --version` prints it: Python's normal form
-VERSION = r"\d+(?:\.\d+)*(?:(?:a|b|rc)\d+)?(?:\.post\d+)?(?:\.dev\d+)?(?!\w)"
+VERSION = (r"\d+(?:\.\d+)*(?:(?:a|b|rc)\d+)?(?:\.post\d+)?(?:\.dev\d+)?"
+           r"(?![\w.])")
 
 
 class BadMark(Exception):
@@ -163,12 +164,12 @@ def _block_steps(file: str, lines: List[str], index: int, indent: str,
     part: List[Tuple[int, str]] = []
 
     def close():
+        # the lines since the last cut, blank lines at either end left out
         if any(_is_command(line) for _, line in part):
-            kept = [index for index, (_, line) in enumerate(part)
-                    if line.strip()]
-            lines = part[kept[0]:kept[-1] + 1]
-            steps.append(Step(file, lines[0][0],
-                              "\n".join(line for _, line in lines)))
+            filled = [at for at, (_, line) in enumerate(part) if line.strip()]
+            kept = part[filled[0]:filled[-1] + 1]
+            steps.append(Step(file, kept[0][0],
+                              "\n".join(line for _, line in kept)))
         part.clear()
 
     for offset, line in enumerate(body):
@@ -534,11 +535,11 @@ def watch(command: str, result: Path, cut: str,
                         else "a kill")
             problems.append(f"it did not stop within {stop:g} seconds of one "
                             f"Ctrl+C; {ended_by} ended it")
-    try:
+    # killed only while it still runs: once it has been waited for, its
+    # process group's number may already belong to another program
+    if program.poll() is None:
         os.killpg(program.pid, signal.SIGKILL)
-    except (ProcessLookupError, PermissionError):
-        pass
-    program.wait()
+        program.wait()
     if master >= 0:
         os.close(master)
     written = log.read_bytes()

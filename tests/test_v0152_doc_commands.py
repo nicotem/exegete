@@ -213,6 +213,19 @@ def test_only_the_listed_substitutions_apply():
     ] + lines[7:]
 
 
+def test_an_expectation_reads_its_placeholders():
+    pattern = doc_commands.expectation("exegete <version>", "/h", "me")
+    for printed in ("exegete 0.15.1a1\n", "exegete 1.0",
+                    "exegete 0.15.2rc1.post2.dev3"):
+        assert pattern.search(printed), printed
+    for printed in ("exegete (pyproject.toml)", "exegete 0.15.1abc",
+                    "exegete 0.15.", "exegete version"):
+        assert not pattern.search(printed), printed
+    assert doc_commands.expectation(
+        "~/x and /Users/yourname/y, yourname", "/h", "me").fullmatch(
+        "/h/x and /h/y, me")
+
+
 def test_the_scratch_folder_is_new_or_empty_and_never_the_home(
         tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path / "home"))

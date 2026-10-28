@@ -572,9 +572,10 @@ class TestFormatCharactersAreRefusedAsAClass:
         root = Path(__file__).resolve().parents[1]
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         paragraphs = [" ".join(p.split()) for p in readme.split("\n\n")]
-        # v0.15.0 (the coder names, piece 3): "Exegete", not "the server"
+        # v0.15.0 (the coder names, piece 3): "Exegete", not "the server";
+        # v0.15.2: the paragraph read plainly, with Exegete its subject
         sentence = [p for p in paragraphs
-                    if "stop Exegete at startup" in p]
+                    if "Exegete stops at startup" in p]
         assert len(sentence) == 1, sentence
         assert "Unicode category Cf" in sentence[0]
         assert "ZWNJ and ZWJ" in sentence[0]

@@ -102,10 +102,13 @@ class TestTheRefusalNamesBothCauses:
     def test_the_coding_guide_s_prerequisite(self):
         guide = _flat(_section(_read("AI_CODING_GUIDE.md"),
                                "## Prerequisites", "\n## "))
-        assert ("- **If you also use QualCoder**, the project closed there "
-                "before any write. Writes are refused while the project's "
-                "lock file is active (" + self.BOTH + ").") in guide
-        assert ("QualCoder 4.0 writes no lock file, so for it Exegete can "
+        # (v0.15.2: the request in a sentence, and the 4.0 caveat in
+        # three)
+        assert ("- **If you also use QualCoder**, the project needs to be "
+                "closed there before Exegete writes to it. Writes are "
+                "refused while the project's lock file is active ("
+                + self.BOTH + ").") in guide
+        assert ("QualCoder 4.0 writes no lock file. With 4.0, Exegete can "
                 "only report signs that the project may be open "
                 "(`qualcoder_gui_signals`), and those signs can miss an idle "
                 "window") in guide
@@ -115,13 +118,13 @@ class TestTheRefusalNamesBothCauses:
         step = guide[guide.index("4. **Exegete** writes"):
                      guide.index("5. **You** read")]
         assert "when the assistant calls `apply_codings`" in step
-        assert "checking the project's lock file" in step
+        assert "checks the project's lock file" in step
         assert "\"Safety model\", below, says when a write is refused" in step
 
     def test_the_coding_guide_s_safety_list(self):
         guide = _flat(_read("AI_CODING_GUIDE.md"))
         assert ("- Writes are refused while the project's lock file is "
-                "active: " + self.BOTH + ", since Exegete holds the project "
+                "active: " + self.BOTH + ". Exegete holds the project "
                 "lock itself during its own writes.") in guide
         assert ("For QualCoder 4.0, which writes no lock file, see the "
                 "prerequisites above") in guide
@@ -167,7 +170,7 @@ class TestTheRefusalNamesBothCauses:
                 "open, or another conversation using Exegete writing to "
                 "it). QualCoder 4.0 writes no lock file, so for it Exegete "
                 "reports signs of an open window (`qualcoder_gui_signals`), "
-                "re-verifies the file text inside the write transaction, "
+                "checks the file's text again within the write itself, "
                 "and relies on you, if you use QualCoder, to make sure no "
                 "window has the project open") in tools
 
@@ -233,8 +236,8 @@ class TestTheChangelogHoldsWhatItSays:
         assert "If you also use QualCoder, close the project there" \
             in support
         guide = _flat(_read("AI_CODING_GUIDE.md"))
-        assert "**If you also use QualCoder**, the project closed there" \
-            in guide
+        assert ("**If you also use QualCoder**, the project needs to be "
+                "closed there") in guide
         tools = _flat(_read("TOOLS.md"))
         assert ("if you also use QualCoder, make sure no window has the "
                 "project open before a write") in tools

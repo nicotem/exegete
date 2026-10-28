@@ -66,8 +66,11 @@ def test_the_documents_name_the_release_as_verified():
         for words in COMMIT_AS_VERIFIED:
             assert words not in text, (name, words)
     tools = _flat("TOOLS.md")
-    assert ("Exegete is ground-truthed against QualCoder 3.8.2, the latest "
-            "stable release until 2 October 2026 (project schema v14), and "
+    # (v0.15.2: the reference release and the verified one, each in a
+    # sentence of its own)
+    assert ("Exegete takes as its reference QualCoder 3.8.2, the latest "
+            "stable release until 2 October 2026, whose projects use schema "
+            "v14 (the version of the project database's layout). It is "
             "verified against QualCoder 4.0, released on 2 October 2026 "
             "(tag `4.0` at `b95e021`, version string \"QualCoder 4.0\"), "
             "whose projects use schema v17.") in tools
@@ -165,16 +168,16 @@ def test_tools_says_what_the_full_re_check_found():
     versions = _between(_flat("TOOLS.md"), "## Supported QualCoder versions",
                         "A project from a QualCoder older than 3.8")
     for words in (
-            "A full re-check against the release (6 October 2026) found "
+            "A full check against the release, on 6 October 2026, found "
             "the same project schema (v17) and the same format for a new "
-            "project (the format tests now compare every project Exegete "
-            "creates with one made by 4.0's own New Project)",
+            "project. The format tests now compare every project Exegete "
+            "creates with one made by 4.0's own New Project",
             "the same backups, private memo sections, coder visibility, "
             "\"AI Agent\" coder name, reports, merges and deletes, and the "
             "same fix for the 3.8.2 edit-mode caution (below)",
             "4.0 opened Exegete's new and edited projects with no message, "
             "upgrade or repair",
-            "it says \"The project database could not be opened.\" and "
+            "4.0 says \"The project database could not be opened.\" and "
             "changes nothing, and trying again works",
             # (v0.15.2: the commit the citations give, as it stands
             # today, with no promise of a re-reading)
@@ -295,16 +298,18 @@ def test_tools_gives_both_new_facts():
     assert "Four facts about how the tools relate (checked 6 October " \
         "2026)." in tools
     # (v0.15.2: the earlier name, without its last release)
+    # (v0.15.2: each fact in a sentence of its own)
     assert ("That server calls itself `qualcoder-mcp`, Exegete's earlier "
-            "name, and the Claude Desktop extension QualCoder's source can "
-            "build (`tools/mcpb/build_mcpb.py` at the tag) is named "
-            "`qualcoder`, a name an earlier Exegete setup may also use for "
-            "its own entry:") in tools
-    assert ("QualCoder's AI permission setting (Read-only, Sandboxed, the "
-            "default, or Full access, stored in `~/.qualcoder/config.ini`, "
-            "not in the project) governs QualCoder's own assistant and that "
-            "server, not Exegete: Exegete does not read it, so Read-only in "
-            "QualCoder does not stop Exegete's writes.") in tools
+            "name. QualCoder's source can also build a Claude Desktop "
+            "extension (`tools/mcpb/build_mcpb.py` at the tag), named "
+            "`qualcoder`, a name that an earlier Exegete setup may also use "
+            "for its own entry.") in tools
+    assert ("QualCoder's AI permission setting governs QualCoder's own "
+            "assistant and that server, not Exegete. Its choices are "
+            "Read-only, Sandboxed (the default) and Full access, and it is "
+            "stored in `~/.qualcoder/config.ini`, not in the project. "
+            "Exegete does not read it, so Read-only in QualCoder does not "
+            "stop Exegete's writes.") in tools
     assert "Two facts about how the tools relate" not in tools
 
 

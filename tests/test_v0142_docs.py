@@ -1014,11 +1014,11 @@ def test_qualcoder_4_0_is_named_as_released():
     tools = _flat("TOOLS.md")
     assert ("verified against QualCoder 4.0, released on 2 October 2026 "
             "(tag `4.0` at `b95e021`,") in tools
-    assert ("A full re-check against the release (6 October 2026) found "
+    assert ("A full check against the release, on 6 October 2026, found "
             "the same project schema (v17) and the same format for a new "
             "project") in tools
     assert ("QualCoder 3.8.2 signals \"project open\" through a lock file, "
-            "which Exegete honours; QualCoder 4.0 uses no lock file") \
+            "which Exegete honours. QualCoder 4.0 uses no lock file") \
         in tools
     assert "Analysis > Code retrieval in 4.0" in tools
     for name in QC_DOCUMENTS:

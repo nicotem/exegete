@@ -5,10 +5,10 @@ how the tools keep a project safe. Exegete keeps a project in
 QualCoder's format and follows its conventions, so the project can also
 be opened in QualCoder. QualCoder is free software for qualitative
 analysis. The [README](https://github.com/nicotem/exegete/blob/main/README.md)
-says what Exegete is and how to start; [INSTALL.md](INSTALL.md)
-covers installing and setting up; [AI_CODING_GUIDE.md](AI_CODING_GUIDE.md)
-and [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md) walk through the
-coding loop with example conversations.
+says what Exegete is and how to start. [INSTALL.md](INSTALL.md)
+covers installing and setting up. [AI_CODING_GUIDE.md](AI_CODING_GUIDE.md)
+and [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md) walk through coding
+with the assistant, with example conversations.
 
 - [What the tools do, in brief](#what-the-tools-do-in-brief)
 - [Supported QualCoder versions](#supported-qualcoder-versions)
@@ -41,123 +41,140 @@ Through these tools an AI assistant can:
 - Compare codes and cases
 - **Query by demographics/attributes** (age, gender, etc.)
 - **Create case-code matrices for comparative analysis**
-- Search every memo and note but those on the project's saved graphs: memos, coding memos, annotations, journal entries and the project memo
-- **AI-assisted coding**: suggest → review → approve → apply: nothing is written until an item is marked approved. Exegete records the approval the assistant reports and cannot tell whether you gave it. The safeguard is the app you use with the assistant (its host) asking before each decision or write ("allow once"), and your own reading of the counts (see "Who approves" below)
+- Search every memo and note, apart from those on the project's saved graphs: memos, coding memos, annotations, journal entries and the project memo
+- **AI-assisted coding**: the assistant suggests, you review and approve, and Exegete applies what you approved. Nothing is written until an item is marked approved. Exegete records the approval the assistant reports and cannot tell whether you gave it. The safeguards are the app you use with the assistant, called its host, asking you before each decision or write ("allow once"), and your own reading of the counts ("Who approves", below)
 - **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
 - **Undo & restore**: delete a coding, list backups, and restore a whole project to an earlier state
 - **Bring in documents** from the computer (Word, OpenDocument, RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part) and **transcripts** through the conversation, link files to cases, and **rename cases and files** (`rename_case`, `rename_file`)
 - **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti and MAXQDA, with known faults (a later release is meant to fix them). It files every coding under the AI coder name, yours and a hidden coder's included, it leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions, unmarked. Exegete has no other REFI-QDA export yet. If you use QualCoder, its own export (Project, Export, REFI-QDA Project export) keeps each coder, the cases, the notes and the media
 - **Report exports**: codebook, coded segments, code frequencies and case-code matrix as CSV, txt or Markdown files
-- **Pseudonymisation that keeps the coding** (`pseudonymise_source`): replace the names you list, or a list you fill in on your own computer (`prepare_names_list`, `save_names_list`), as whole words, in the stored text of one text source per call. Every coding, annotation and case link moves with the text. A preview and a residue report come first, and a mandatory backup is taken. What the tool does not rewrite is counted rather than left to be discovered, and so are the names left in every file's text, in both readings. With `rewrite_memos`, the public part of every note and journal entry is rewritten too. A mapping you type must be saved into the project's own `pseudonyms.json`, or attested as kept by you, before a run goes ahead
+- **Pseudonymisation that keeps the coding** (`pseudonymise_source`): replace the names you list, or a list you fill in on your own computer (`prepare_names_list`, `save_names_list`), as whole words, in the stored text of one text source per call. Every coding, annotation and case link moves with the text. A preview and a report of the names left (the residue report) come first, and a backup is always taken. What the tool does not rewrite is counted rather than left to be discovered, and so are the names left in every file's text. Each count is given two ways: wide, as a person would see the names, and by whole words, as the run's own rule matches them. With `rewrite_memos`, the public part of every note and journal entry is rewritten too. Before a run goes ahead, a list of names you type must be saved into the project's own `pseudonyms.json`, or you must state that you keep it yourself
 - **Coder comparison** (`compare_coders`): per-code agreement between two coders, with QualCoder's own coefficient and Cohen's kappa side by side
-- **QualCoder's conventions**: `#####` private memo sections never reach the assistant through Exegete (an assistant that opens a project's files by itself reads every memo whole: [PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)), reads follow the project's per-coder visibility setting (on projects with that capability: QualCoder 3.8.2 and 4.0, schema v14 and later), and AI work is written under one coder name that you choose per project (see "QualCoder's conventions in the project" below)
+- **QualCoder's conventions**: a memo's private section, after `#####`, never reaches the assistant through Exegete. An assistant that opens a project's files by itself reads every memo whole ([PRIVACY.md, "Assistants that open files by themselves"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#assistants-that-open-files-by-themselves)). Reads follow the project's visibility setting for each coder, on projects that have one (QualCoder 3.8.2 and 4.0, schema v14 and later). AI work is written under one coder name that you choose for each project ("QualCoder's conventions in the project", below)
 
-You can work with the reading tools alone, or with the tools that write as well. The database is opened read-only by default. Every change to the project's database is preceded by a backup, which Exegete takes itself, and is refused while the project's lock file is active (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). Two writes outside the database are made without either: the AI coder name, into `exegete.json` in the project folder (`set_project_ai_coder_name`), and the names file, into the project's `Exegete` folder (`prepare_names_list`). QualCoder 4.0 writes no lock file, so for it Exegete can only report signs of an open window; if you also use QualCoder, make sure no window has the project open before a write (see "Supported QualCoder versions" below).
+You can work with the reading tools alone, or with the tools that write as well. The database is opened read-only by default. Every change to the project's database is preceded by a backup, which Exegete takes itself, and is refused while the project's lock file is active (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). Two writes outside the database have neither the backup nor that refusal: the AI coder name, into `exegete.json` in the project folder (`set_project_ai_coder_name`), and the names file, into the project's `Exegete` folder (`prepare_names_list`). QualCoder 4.0 writes no lock file, so for it Exegete can only report signs of an open window; if you also use QualCoder, make sure no window has the project open before a write (see "Supported QualCoder versions" below).
 
 ## Supported QualCoder versions
 
-> Exegete is ground-truthed against QualCoder 3.8.2, the latest stable
-> release until 2 October 2026 (project schema v14), and verified against
+> Exegete takes as its reference QualCoder 3.8.2, the latest stable
+> release until 2 October 2026, whose projects use schema v14 (the
+> version of the project database's layout). It is verified against
 > QualCoder 4.0, released on 2 October 2026 (tag `4.0` at `b95e021`,
-> version string "QualCoder 4.0"), whose projects use schema v17. Project schemas v14 through v17 are
-> supported for reading and writing. Support is determined by inspecting the
-> project database itself (capability probes), not by version numbers, so
-> projects migrated by either QualCoder version work interchangeably.
+> version string "QualCoder 4.0"), whose projects use schema v17. Project
+> schemas v14 through v17 are supported for reading and writing. Exegete
+> tells what a project supports by inspecting the project database
+> itself, not by version numbers, so a project brought up to date by
+> either QualCoder version works the same way.
 >
-> Before its release, 4.0 was checked in its development tree, at commit
+> Before its release, 4.0 was checked in its development code, at commit
 > `9bddf17` (25 August 2026). A line number cited from QualCoder, in this
 > document or in Exegete's code, is that commit's unless a release is
 > given beside it. That holds for QualCoder's own MCP server too, a file
 > much changed in the release: this document's one citation into it,
 > under "The novelty filter and coder visibility", gives the release's
-> line as well. A full re-check against the release (6 October 2026) found the same
-> project schema (v17) and the same format for a new project (the format
-> tests now compare every project Exegete creates with one made by 4.0's
-> own New Project); and the same backups, private memo sections, coder
-> visibility, "AI Agent" coder name, reports, merges and deletes, and the
-> same fix for the 3.8.2 edit-mode caution (below). Exegete's tools wrote to a project 4.0
+> line as well. A full check against the release, on 6 October 2026,
+> found the same project schema (v17) and the same format for a new
+> project. The format tests now compare every project Exegete creates
+> with one made by 4.0's own New Project. The check also found the same
+> backups, private memo sections, coder visibility, "AI Agent" coder
+> name, reports, merges and deletes, and the same fix for the 3.8.2
+> edit-mode caution (below). Exegete's tools wrote to a project 4.0
 > made, and 4.0 opened Exegete's new and edited projects with no message,
-> upgrade or repair. One change: 4.0 now checks that it can write to a
-> project before opening it, so if Exegete is writing it waits up to five
-> seconds for the write to end (Exegete's writes usually take well under
-> a second); after that it says "The project database could not be
-> opened." and changes nothing, and trying again works. One known
-> limitation: QualCoder 3.8.2 signals "project open" through a lock file,
-> which Exegete honours; QualCoder 4.0 uses no lock file, so Exegete
-> falls back to best-effort heuristics there (reported as
-> `qualcoder_gui_signals` by `select_project`, `get_current_project`,
-> `start_coding_session`, `create_project` (without the process scan)
-> and the `restore_backup`, `import_documents` and `save_names_list`
-> previews:
-> database write sidecars, recent activity on the 4.0 AI search index, a
-> chat-history file changed recently (QualCoder 3.8.2 and 4.0 both create
-> it on a project's first open and change it when the chat is used; not
-> counted when the process scan could read programs' command lines and
-> found no QualCoder and nothing that may be one),
-> and a best-effort process scan that reports only how many running processes
-> look like QualCoder, never their names or command lines). The scan also
-> runs when `set_project_coder_name` (after a change), `list_backups`,
-> `pseudonymise_source` (after a run), `rename_case` or `rename_file`
-> reads the project's history with QualCoder and nothing has worked it
-> out since the project was selected. The file-based signals are traces of recent
-> activity, never proof of an open window (an idle 4.0 window with no recent AI
-> activity leaves no file trace at all), so heuristics can miss an open window.
-> If you use QualCoder, closing the project there before Exegete writes to
-> it keeps the two programs from changing it at once.
+> upgrade or repair.
+>
+> One thing changed: 4.0 now checks that it can write to a project
+> before it opens it. If Exegete is writing at that moment, 4.0 waits up
+> to five seconds for the write to end, and Exegete's writes usually take
+> well under a second. After that, 4.0 says "The project database could
+> not be opened." and changes nothing, and trying again works.
+>
+> One limitation is known. QualCoder 3.8.2 signals "project open"
+> through a lock file, which Exegete honours. QualCoder 4.0 uses no lock
+> file, so there Exegete falls back on signs that may show an open
+> window, reported as `qualcoder_gui_signals` by `select_project`,
+> `get_current_project`, `start_coding_session`, `create_project`
+> (without the process scan) and the `restore_backup`,
+> `import_documents` and `save_names_list` previews:
+>
+> - the database's write sidecars (`data.qda-journal`, `data.qda-wal`,
+>   `data.qda-shm`), files that sit beside it while it is being written;
+> - recent activity on 4.0's AI search index;
+> - a chat-history file changed recently. QualCoder 3.8.2 and 4.0 both
+>   create it on a project's first open, and change it when the chat is
+>   used. It is not counted when the process scan could read programs'
+>   command lines and found no QualCoder and nothing that may be one;
+> - a process scan, when it can run, which reports only how many running
+>   processes look like QualCoder, never their names or command lines.
+>
+> The scan also runs when `set_project_coder_name` (after a change),
+> `list_backups`, `pseudonymise_source` (after a run), `rename_case` or
+> `rename_file` reads the project's history with QualCoder and nothing
+> has worked it out since the project was selected. The signs found in
+> files are traces of recent activity, never proof of an open window: an
+> idle 4.0 window with no recent AI activity leaves no trace in the files
+> at all. So these signs can miss an open window. If you use QualCoder,
+> closing the project there before Exegete writes to it keeps the two
+> programs from changing it at once.
 >
 > Four facts about how the tools relate (checked 6 October 2026).
 > QualCoder 4.0 ships its own embedded AI assistant, built on an MCP
-> server inside QualCoder. In the 4.0-Beta pre-release (3 September 2026,
-> tag `4.0-Beta` at `2c3ef57`), as in the development tree before it,
-> that server answered only QualCoder's own window. QualCoder's pull request
+> server inside QualCoder. MCP is the protocol through which an
+> assistant's app uses tools, Exegete's among them. In the 4.0-Beta
+> pre-release (3 September 2026, tag `4.0-Beta` at `2c3ef57`), as in the
+> development code before it, that server answered only QualCoder's own
+> window. QualCoder's pull request
 > [#1571](https://github.com/ccbogel/QualCoder/pull/1571) ("External MCP
 > server access", by kaixxx), merged on 10 September 2026 as commit
-> `0160ece`, added a setting in QualCoder, off by default, that opens that
-> server to MCP hosts on the same computer (a listener on `127.0.0.1`)
-> while QualCoder runs, for the project open in QualCoder. It is in
+> `0160ece`, added a setting in QualCoder, off by default. While
+> QualCoder runs, the setting opens that server, for the project open in
+> QualCoder, to the apps on the same computer that use MCP tools, called
+> MCP hosts. QualCoder then listens for them on `127.0.0.1`. It is in
 > QualCoder 4.0, released on 2 October 2026 (tag `4.0` at `b95e021`): the
 > setting is "allow external MCP access", under AI Integration in
 > QualCoder's settings, off by default and called experimental there.
-> That server calls itself `qualcoder-mcp`, Exegete's earlier name,
-> and the Claude Desktop extension QualCoder's source can build
-> (`tools/mcpb/build_mcpb.py` at the tag) is named `qualcoder`, a name an
-> earlier Exegete setup may also use for its own entry:
+> That server calls itself `qualcoder-mcp`, Exegete's earlier name.
+> QualCoder's source can also build a Claude Desktop extension
+> (`tools/mcpb/build_mcpb.py` at the tag), named `qualcoder`, a name
+> that an earlier Exegete setup may also use for its own entry.
 > [INSTALL.md, "Coming from qualcoder-mcp"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp)
-> says how to keep the two apart. QualCoder's AI permission setting (Read-only, Sandboxed, the
-> default, or Full access, stored in `~/.qualcoder/config.ini`, not in
-> the project) governs QualCoder's own assistant and that server, not
-> Exegete: Exegete does not read it, so Read-only in QualCoder does not
-> stop Exegete's writes. And an open
-> QualCoder 4.0 window will not display changes Exegete writes (its
-> views refresh through an internal event bus only), so they appear after
-> the project is closed and reopened in QualCoder.
+> says how to keep the two apart. QualCoder's AI permission setting
+> governs QualCoder's own assistant and that server, not Exegete. Its
+> choices are Read-only, Sandboxed (the default) and Full access, and it
+> is stored in `~/.qualcoder/config.ini`, not in the project. Exegete
+> does not read it, so Read-only in QualCoder does not stop Exegete's
+> writes. And an open QualCoder 4.0 window will not display changes
+> Exegete writes, because its views refresh only on QualCoder's own
+> internal signals. The changes appear after the project is closed and
+> reopened in QualCoder.
 
 A project from a QualCoder older than 3.8 is refused until QualCoder
 3.8 or newer has opened it once, which brings it up to date with no
-need to save, and it is selected again in Exegete; Exegete cannot bring
-it up to date itself (it cannot read the oldest formats at all, and
-reads the others without writing to them). Whoever opens it closes it
+need to save, and it is selected again in Exegete. Exegete cannot bring
+it up to date itself: it cannot read the oldest formats at all, and
+reads the others without writing to them. Whoever opens it closes it
 again before Exegete changes it. Without QualCoder, someone who has it
 and is allowed to see the project's data can do this and send you the
 updated copy. QualCoder writes the coder name set in it into every
-project it opens, as the current coder and in the list of coders, so
-that person's name is added to the project unless they first set their
-coder name in QualCoder to yours (and back afterwards). Once you have
+project it opens, as the current coder and in the list of coders. So
+that person's name is added to the project, unless they first set their
+coder name in QualCoder to yours, and back afterwards. Once you have
 the copy, `set_project_coder_name` (not in `core`) can put your name in
 place of theirs while nothing is recorded under their name. Without
 QualCoder at all, a new project made in Exegete from the original
 documents is a way on, without the old project's coding.
 
-Sub-codes (a code nested under another code, schema v16 and newer) are
-supported: creating them, moving a code with its sub-codes, merging
-(the source's sub-codes move under the target), branch-aware deletion,
-and nesting-aware listings, reports, codebook and REFI-QDA exports.
+Sub-codes, codes nested under another code (schema v16 and newer), are
+supported. Exegete can create them, move a code with its sub-codes, and
+merge codes (the source's sub-codes move under the target). Deleting a
+code deletes its sub-codes with it, and listings, reports, the codebook
+and REFI-QDA exports show the nesting.
 Exegete does not yet nest an existing code under another code
-(QualCoder, if you use it, can), and moving a sub-code, into a category or to none, detaches it from its
-parent code, as in QualCoder; the result says which parent it left.
-Projects newer than schema v17 refuse writes until Exegete has been
-verified against them. Setting `EXEGETE_ALLOW_UNKNOWN_SCHEMA=1` in
+(QualCoder, if you use it, can). Moving a sub-code into a category, or
+out of every category, detaches it from its parent code, as in
+QualCoder, and the result says which parent it left.
+Exegete refuses to write to a project newer than schema v17 until it
+has been verified against that schema. Setting `EXEGETE_ALLOW_UNKNOWN_SCHEMA=1` in
 Exegete's environment lets writes go ahead at your own risk, and every
 write's answer then carries a warning.
 
@@ -167,9 +184,9 @@ Every row Exegete writes (codings, annotations, journal entries,
 imports, cases, codes, categories, attributes) is attributed to one
 coder name, so AI work stays distinguishable from yours, in Exegete's
 reads, and in QualCoder if you use it.
-An attribute value it sets takes that name and the date on a file as on
-a case; QualCoder's own file edits change the value alone and keep the
-row's earlier owner.
+An attribute value that Exegete sets, on a file as on a case, takes
+that name and the date. When QualCoder edits a file's attribute value,
+it changes the value alone and keeps the row's earlier owner.
 That name belongs to the project, and it is yours to choose.
 The first write that needs it stops and asks: the assistant puts the
 question to you, you answer, and it calls
@@ -178,28 +195,27 @@ question to you, you answer, and it calls
 set_project_ai_coder_name("Qwen 3.8 6bit", note="LM Studio 0.4.22")
 ```
 
-The answer is stored in `exegete.json` in the project folder,
-beside `data.qda` (under Exegete's earlier name, `qualcoder_mcp.json`: it is still read
-in a project that has only that file, and the first change of name
-carries it into `exegete.json` and marks it as moved; a marked file on
-its own is not used for the name, so if `exegete.json` goes missing the
-next write asks again), so it travels with backups, copies and a synced
-folder, and two hosts working on one project agree on it. Reads never
-ask. You can change the name at any time with the same tool; earlier
-rows keep the name they were written under, and the project remembers
-the names it has used, which is what makes a later comparison between
-two models possible. A model name is a good answer for exactly that
+The answer is stored in `exegete.json` in the project folder, beside
+`data.qda`, so it travels with backups, copies and a synced folder, and
+two hosts working on one project agree on it. Under Exegete's earlier
+name the file was `qualcoder_mcp.json`. It is still read in a project
+that has only that file, and the first change of name carries it into
+`exegete.json` and marks it as moved. A marked file on its own is not
+used for the name, so if `exegete.json` goes missing, the next write
+asks again. Reads never ask. You can change the name at any time with
+the same tool. Earlier rows keep the name they were written under, and
+the project remembers the names it has used, which is what makes a
+later comparison between two models possible. A model name is a good answer for exactly that
 reason.
 
 Quick picks if you have no preference: `AI Coding Assistant`
 (Exegete's built-in default, and the name already on AI codings made
 before each project had a name of its own for them), or a name of your
-own. When the project shows
-that QualCoder's AI may have been used (it already holds rows under
-`AI Agent`, or has an `ai_data` folder with something in it), the
-picks also include
-`AI Agent`, the exact name QualCoder 4.0's built-in assistant writes
-under, which groups Exegete's work and the built-in assistant's under
+own. When the project shows that QualCoder's AI may have been used,
+the picks also include `AI Agent`. The signs are rows already held
+under `AI Agent`, or an `ai_data` folder with something in it.
+`AI Agent` is the exact name QualCoder 4.0's built-in assistant writes
+under, so it groups Exegete's work and the built-in assistant's under
 one coder in QualCoder's per-coder visibility toggle, undo and reports.
 
 You can also choose it in advance, in Exegete's settings: the desktop
@@ -212,35 +228,39 @@ extension's "AI coder name", or `EXEGETE_AI_CODER_NAME` in Exegete's
 }
 ```
 
-Filled in, Exegete gives it to each project it creates, without
-asking, and `create_project`'s answer says so (`ai_coder_name`, with
-the source `settings`); it is stored in `exegete.json` as an answer to
-the question would be, with the note "Taken from Exegete's settings
-when the project was created." A project made another way (by
-QualCoder, if you use it, or by an earlier Exegete) that has no AI
-coder name is asked at its first write that needs one, with the
-setting offered first. A project that already has an AI coder name
-keeps it: if it differs from the setting, the next write asks once
-which of the two to use rather than re-attributing anything, and
-answering either way settles it for that project while the setting
-stays the same. Left empty, each project is asked. Invalid values (longer
-than 80 characters, containing control or line-separator
-characters, containing any invisible formatting character (Unicode
-category Cf: every bidirectional control, every zero-width character;
-the two exceptions are ZWNJ and ZWJ, which spell words in Persian and
-Indic scripts), or containing the `#####` memo-privacy marker) stop
-Exegete at startup, with a message saying why. The invisible ones are
-refused because a name you cannot see is a name you cannot check: it
-looks the same as yours wherever coder names are listed, Exegete's
-answers and QualCoder's coder list, visibility toggle and reports among
-them, and telling AI rows from yours is what the setting is for. In the extension, after changing a setting, quit Claude Desktop and
+When the setting is filled in, Exegete gives it to each project it
+creates, without asking, and `create_project`'s answer says so
+(`ai_coder_name`, with the source `settings`). It is stored in
+`exegete.json` as an answer to the question would be, with the note
+"Taken from Exegete's settings when the project was created." A project
+made another way (by QualCoder, if you use it, or by an earlier
+Exegete) that has no AI coder name is asked at its first write that
+needs one, with the setting offered first. A project that already has
+an AI coder name keeps it. If that name differs from the setting, the
+next write asks once which of the two to use, rather than
+re-attributing anything. Answering either way settles it for that
+project, as long as the setting stays the same. When the setting is
+left empty, each project is asked.
+
+Exegete stops at startup, with a message saying why, when the setting
+holds a value that is not valid: one longer than 80 characters, one
+containing control or line-separator characters, one containing the
+`#####` memo-privacy marker, or one containing any invisible formatting
+character. Those are the characters of Unicode category Cf: every
+bidirectional control and every zero-width character, with two
+exceptions, ZWNJ and ZWJ, which spell words in Persian and Indic
+scripts. The invisible ones are refused because a name you cannot see
+is a name you cannot check. It looks the same as yours wherever coder
+names are listed, Exegete's answers and QualCoder's coder list,
+visibility toggle and reports among them, and telling AI rows from
+yours is what the setting is for. In the extension, after changing a setting, quit Claude Desktop and
 open it again: a change reaches Exegete only at its next start.
 
 When it is set, the name cannot be your own coder name (the project's
 codername, which QualCoder also uses, or the one in Exegete's settings)
-or QualCoder's literal `default`: AI rows would then be
+or QualCoder's literal `default`. With any of these, AI rows would be
 indistinguishable from a person's in every list of coders and every
-report, QualCoder's included, and mixed rows cannot be told apart again
+report, QualCoder's included, and mixed rows could not be told apart again
 later. All three are refused, and so is QualCoder's speaker
 coder ("📌 Speaker coding"), under which QualCoder stores its speaker
 codings. A name the project's visibility setting hides is refused too,
@@ -251,12 +271,12 @@ Exegete's settings keeps it, since it is never changed silently, and
 selecting the project says so (`coder_name_notes`).
 
 Coder names are compared exactly, after trimming spaces, and never
-case-insensitively: QualCoder stores them in a column with a binary
-unique index, so `AI Agent` and `AI agent` really are two coders
-there. Code, category and case names follow the opposite rule:
-Exegete compares them ignoring letter case, spacing and Unicode form.
-QualCoder 4.0 also ignores spacing and letter case there, but folds only
-the letters A to Z.
+case-insensitively. QualCoder's database keeps coder names apart letter
+for letter, capitals included, so `AI Agent` and `AI agent` really are
+two coders there. Code, category and case names follow the opposite
+rule: Exegete compares them ignoring letter case, spacing and Unicode
+form. QualCoder 4.0 also ignores spacing and letter case there, but only
+for the letters A to Z.
 
 The setting travels with the project folder: Exegete's backups and
 workspace copies carry it, so do QualCoder's own `_BKUP_` backups, and
@@ -277,37 +297,40 @@ program to import it, such as QualCoder if you use it.
 ## Starting a project from the conversation
 
 Exegete can create a new, empty project, in QualCoder's format, so a
-study can begin in the conversation. It is in the full tool set, the
-default on every route; the `core` set for local models leaves it out.
+study can begin in the conversation. The tool that does it is in the
+full tool set, the default on every route. The `core` set for local
+models leaves it out.
 
 - **The format.** The project is made in QualCoder 4.0's format, exactly
-  as 4.0's own New Project makes it (the folder `<name>.qda` with its
-  four subfolders, and the database at schema v17), in one step: if
-  anything fails, nothing committed is left, and what this call made is
-  removed; if the process is killed part way, the folder it leaves (empty
-  subfolders, an empty database and its journal) is recognised as such
-  next time, and the name refused. One departure, named: Exegete also
-  makes an empty `ai_data` folder. QualCoder's New
-  Project makes only `images`, `audio`, `video` and `documents`, and
-  QualCoder makes `ai_data` when it first opens a project; QualCoder
-  4.0 makes it twice at once there, and on a project with no `ai_data`
-  yet the two can collide, so that the first open stops with an error
-  about the folder (opening again works). Made at creation, the folder
-  is there when QualCoder 4.0 first opens the project. Exegete never
-  writes in it, and an empty `ai_data` is not taken as a sign that
-  QualCoder has opened the project; one with something in it is. Its "about" line reads
+  as 4.0's own New Project makes it: the folder `<name>.qda` with its
+  four subfolders, and the database at schema v17. It is made in one
+  step. If anything fails, the database keeps nothing of it, and what
+  this call made is removed. If the process is killed part way, the
+  folder it leaves (empty subfolders, an empty database and its journal)
+  is recognised as such next time, and the name refused. Exegete departs
+  from QualCoder in one way here: it also makes an empty `ai_data`
+  folder. QualCoder's New Project makes only `images`, `audio`, `video`
+  and `documents`, and QualCoder makes `ai_data` when it first opens a
+  project. QualCoder 4.0 makes it twice at once there, and on a project
+  with no `ai_data` yet the two can collide, so that the first open
+  stops with an error about the folder (opening again works). Made at
+  creation, the folder is there when QualCoder 4.0 first opens the
+  project. Exegete never writes in it. An empty `ai_data` is not taken
+  as a sign that QualCoder has opened the project; one with something in
+  it is. The project's "about" line reads
   `Exegete <version> (QualCoder schema v17)`. A project created under
   Exegete's earlier name keeps `qualcoder-mcp <version> ...`, since
   nothing rewrites it.
-- **Where.** In Exegete's workspace, unless you name an existing
-  folder (give its full path, or one starting with `~`). With the Claude
-  Desktop extension the workspace is its "Folder for projects", by
-  default `~/Exegete projects` (or `~/QualCoder projects`, the earlier
-  default, in an install that kept it), outside Documents; otherwise it is
-  `~/Documents/Exegete projects`, unless Exegete's settings name
-  another folder in `EXEGETE_WORKSPACE` (projects made there under
-  Exegete's earlier name stay in `~/Documents/Qualcoder MCP Projects`,
-  where the listing still finds them). The answer gives the full path. So that the assistant
+- **Where.** In Exegete's workspace, unless you give an existing
+  folder, by its full path or by one starting with `~`, which stands for
+  your home folder. With the Claude Desktop extension the workspace is
+  its "Folder for projects", by default `~/Exegete projects` (or
+  `~/QualCoder projects`, the earlier default, in an install that kept
+  it), outside Documents. Otherwise it is
+  `~/Documents/Exegete projects`, unless the setting `EXEGETE_WORKSPACE`
+  gives another folder. Projects made there under Exegete's earlier name
+  stay in `~/Documents/Qualcoder MCP Projects`, where the listing still
+  finds them. The answer gives the full path. So that the assistant
   can say where a project will go before it is made,
   `list_available_projects`, `get_current_project` and `create_project`
   give the folder that is set as `projects_folder`, and when
@@ -316,90 +339,95 @@ default on every route; the `core` set for local models leaves it out.
   A sync service (iCloud, OneDrive, Dropbox) can copy the database and
   its journal separately and leave a damaged copy, so a local folder
   that is not synced is the safer place for a project. On a Mac with
-  iCloud's "Desktop & Documents Folders" switched on, `~/Documents`, and
-  so the standard workspace there, is synced; a folder outside it, or
-  the extension's default, avoids that. On Windows where Documents has
-  been moved (to OneDrive, say), the workspace may not be where you
-  expect, nor, if you use QualCoder, where its Open dialog starts; the
-  answer gives the full path.
+  iCloud's "Desktop & Documents Folders" switched on, `~/Documents` is
+  synced, and so is the standard workspace inside it. A folder outside
+  it, such as the extension's default, avoids that. On Windows where
+  Documents has been moved (to OneDrive, say), the workspace may not be
+  where you expect, nor, if you use QualCoder, where its Open dialog
+  starts. The answer gives the full path.
 - **Your coder name.** Exegete takes it from its settings when you
   have filled it in there ("Your coder name" in the extension,
-  `EXEGETE_CODER_NAME` otherwise; in the extension, a changed setting
-  reaches Exegete once Claude Desktop has been quit and opened again),
-  and the answer says so; otherwise the assistant asks what name your
-  own codings should carry: if you use QualCoder, the name in its settings, exactly
-  as there (Project menu, Settings, "Current coder"; on a Mac it may be
-  under the QualCoder menu instead); if not, any name you choose.
+  `EXEGETE_CODER_NAME` otherwise), and the answer says so. In the
+  extension, a changed setting reaches Exegete once Claude Desktop has
+  been quit and opened again. Otherwise the assistant asks what name
+  your own codings should carry. If you use QualCoder, that is the name
+  in its settings, exactly as there (Project menu, Settings, "Current
+  coder"; on a Mac it may be under the QualCoder menu instead). If not,
+  it is any name you choose.
   The name can be corrected later with `set_project_coder_name` only
   while nothing is recorded under it, so give it as you want it to stay. The
   question comes after every other check, so you are asked once. If you
   do not know it, or would rather not give one, say so: the project is
-  created, and the check that
-  keeps the AI's codings apart from yours stays off until a name is
-  recorded: `set_project_coder_name` gives it one, and QualCoder, if you
-  use it, records it when it first opens the project. Exegete never
+  created, and the check that keeps the AI's codings apart from yours
+  stays off until a name is recorded. `set_project_coder_name` gives it
+  one, and QualCoder, if you use it, records it when it first opens the
+  project. Exegete never
   reads QualCoder's settings file, which holds API keys.
 - **Names.** A name already used in that folder is refused, never given
-  a "_1", and so is one that differs from it only in letter case or
-  accents (a project copied to macOS or Windows would otherwise merge
-  with it). Names QualCoder cannot open (with `|`), names Windows cannot
+  a "_1". So is one that differs from it only in letter case or accents,
+  since a project copied to macOS or Windows would otherwise merge with
+  it. Names QualCoder cannot open (with `|`), names Windows cannot
   store, names holding `_backup_` or `_BKUP_`, and a name whose older
   backup folders sit in that folder are refused too, each with the
   reason. Short names, in folders near the top of the disk, travel
   better.
 - **Opening it in QualCoder.** QualCoder 4.0 opens it without changing
-  its format (Project, Open Project, then the folder; on a Mac, Finder's
-  Go menu, Home, opens your home folder), and without a
-  message when you open it under the coder name you gave (under another
-  name, it asks whether to keep yours or switch). QualCoder 3.8.2 opens it without any warning and keeps
+  its format: Project, Open Project, then the folder. On a Mac, Finder's
+  Go menu, Home, opens your home folder. QualCoder 4.0 shows no message
+  when you open the project under the coder name you gave; under another
+  name, it asks whether to keep yours or switch. QualCoder 3.8.2 opens it without any warning and keeps
   everything in it, but cannot show what 4.0 added: sub-codes appear
   there as ordinary codes, and the labels, arrows and memo notes on
   graphs do not appear. If the project is edited in 3.8.2, three things
-  change without a message the next time 4.0 opens it: a sub-code moved
-  into a category goes back under its parent code; the sub-codes of a
-  code deleted in 3.8.2 become ordinary codes with no category; and a
-  graph saved after another was deleted can show the deleted graph's
-  memo notes. Moving such a project between 3.8.2 and 4.0 is what
+  change without a message the next time 4.0 opens it:
+  - a sub-code moved into a category goes back under its parent code;
+  - the sub-codes of a code deleted in 3.8.2 become ordinary codes with
+    no category;
+  - a graph saved after another was deleted can show the deleted graph's
+    memo notes.
+
+  Moving such a project between 3.8.2 and 4.0 is what
   changes it, so keeping it in one version of QualCoder avoids this. Opening a new project was checked
   with QualCoder 4.0 and 3.8.2 run from their published source on a Mac,
-  not from their installers or on Windows or Linux; if you use QualCoder
+  not from their installers or on Windows or Linux. If you use QualCoder
   in one of those ways, letting it open a new project once, before much
   work goes into it, is a quick check.
-- **The project memo** starts empty, as QualCoder leaves it;
-  `set_memo` with the target `project` writes it (research questions,
-  methodology, participants), and QualCoder 4.0's own assistant reads it
-  as the study's context. Text after a `#####` line stays private.
+- **The project memo** starts empty, as QualCoder leaves it. `set_memo`
+  with the target `project` writes it, with your research questions,
+  methodology and participants, for example. QualCoder 4.0's own
+  assistant reads it as the study's context. Text after a `#####` line
+  stays private.
 
 ## QualCoder's conventions in the project
 
 QualCoder 4.0's AI features keep conventions in the project itself, and
 Exegete follows them, so that a project worked on in both programs stays
-consistent. Each feature below is detected by probing the project
-database (tables, columns, views), never by a version string, so
-projects from before 4.0 behave as they did. Where a paragraph says that
+consistent. Exegete detects each feature below by looking in the
+project database for its tables, columns and views, never by a version
+string, so projects from before 4.0 behave as they did. Where a paragraph says that
 Exegete does as QualCoder does, it was checked against QualCoder 4.0,
 and cites its code at commit `9bddf17` (see "Supported QualCoder
 versions").
 
 **Private memo sections (`#####`).** Memo text from the first `#####`
-marker onward is the researcher's private zone. Every tool and resource
-that returns memo content (codes, categories, files, cases, codings,
+marker onward is your private part. Every tool and resource that
+returns memo content (codes, categories, files, cases, codings,
 annotations, journal entries, the project memo, attribute types, search
-results) returns only the text before the marker, silently, and
+results) returns only the text before the marker, without saying so.
 `search_memos` and `search_files` match the public part only. Memo
-writes (`set_memo`, `update_annotation`, the provenance notes that
-merges add) replace only the public text and keep an existing private
-section verbatim. Text the assistant supplies for a memo, a
+writes (`set_memo`, `update_annotation`, and the notes a merge adds to
+say where things came from) replace only the public text, and keep an
+existing private section word for word. Text the assistant supplies for a memo, a
 note, a journal entry, a code's definition, a proposed code's rationale
 or a suggestion's reasoning is refused if it contains
 `#####`, before anything is written or backed up. QualCoder's own AI
 server silently drops the marker and what follows it, which emptied
-notes that began with it ("make this note private"), so the private part
-stays the researcher's to write, outside the conversation (in QualCoder,
-for example).
+notes that began with it ("make this note private"). So the private
+part stays yours to write, outside the conversation (in QualCoder, for
+example).
 Deleting a coding or annotation whose memo carries a private note is
-refused unless `confirm_private_note_deletion=true`; with it the row is
-deleted after a backup, as every change is. The refusal
+refused unless `confirm_private_note_deletion=true`. With it, the row
+is deleted after a backup, as every change is. The refusal
 says only that a private note exists, never its content. One exception,
 as in QualCoder's own exports: exported files
 (`export_refi_qda`, `export_codebook`, `export_coded_segments_report`)
@@ -407,102 +435,102 @@ carry full memos, marker and private section included, and those tools
 say so.
 
 **The novelty filter and coder visibility.** `exclude_code_ids` on
-`search_files` and `search_coded_text` drops candidates that overlap a
-coding of one of those codes in the same file, which is how you ask what
-is not yet coded. The spans it excludes are the ones the caller can see:
-on a project that hides coders, a hidden coder's codings do not suppress
-a passage, so the filter cannot be used to find out that hidden work
-exists. QualCoder's own search reads the full table there
+`search_files` and `search_coded_text` leaves out candidates that
+overlap a coding of one of those codes in the same file, which is how
+you ask what is not yet coded. Only the codings that Exegete's reads can
+see count for it. On a project that hides coders, a hidden coder's
+codings do not remove a passage, so the filter cannot be used to find
+out that hidden work exists. QualCoder's own search reads every coding
+there, whoever made it
 (`ai_mcp_server.py:5228` at `9bddf17`, line 6161 in the 4.0 release);
 this is a deliberate difference.
 
-**Coder visibility.** When a project with the coder-visibility
-capability (QualCoder 3.8.2 and 4.0, schema v14 and later) hides some
-coders' work, a setting stored in the project database, coded-segment
-reads and
-analytics (`get_coded_segments`, `search_coded_text`,
-`get_coding_frequencies`, `find_cooccurring_codes`,
-`get_case_code_matrix`, `get_codes_by_case`, `get_cases_by_code`, the
-codings and annotations in `read_file_with_codings`, and the
-coding-memo and annotation matches of `search_memos`) read by default
-only what the visibility setting shows, as QualCoder does, and disclose
-how many coders are hidden, never
-their names (with one stated exception, a project that gained the
-capability after Exegete connected to it; PRIVACY.md's "Coder
-visibility" section says what is and is not re-read). Passing an
-explicit `coder` argument reads that coder's rows from the full data
-instead. File exports keep reading the full data, as QualCoder's own
-reports do: QualCoder's own coding report does the same in both
-versions checked (Reports > Coding reports in 3.8.2, Analysis > Code retrieval in
-4.0) and lists a hidden coder's segments, because it reads the base
-`code_text` table (`report_codes.py:1712-1724` at `9bddf17`,
-`:1504-1515` at the 3.8.2 tag); only the coding screen reads through
-the visibility view.
+**Coder visibility.** A project in the format of QualCoder 3.8.2 or
+4.0 (schema v14 and later) can hide some coders' work, by a setting
+stored in its database. When it does, the reads and analyses of coded
+passages read by default only what the visibility setting shows, as
+QualCoder does. They say how many coders are hidden, never their names,
+with one stated exception: a project that gained coder visibility after
+Exegete connected to it (PRIVACY.md's "Coder visibility" section says
+what is and is not re-read). These reads are `get_coded_segments`,
+`search_coded_text`, `get_coding_frequencies`,
+`find_cooccurring_codes`, `get_case_code_matrix`, `get_codes_by_case`,
+`get_cases_by_code`, the codings and annotations in
+`read_file_with_codings`, and the coding-memo and annotation matches of
+`search_memos`. Passing an explicit `coder` argument reads that coder's
+rows from the full data instead. File exports keep reading the full
+data, as QualCoder's own reports do. QualCoder's own coding report does
+the same in both versions checked (Reports > Coding reports in 3.8.2,
+Analysis > Code retrieval in 4.0): it lists a hidden coder's segments,
+because it reads the base `code_text` table (`report_codes.py:1712-1724`
+at `9bddf17`, `:1504-1515` at the 3.8.2 tag). Only QualCoder's coding
+screen reads through the visibility view.
 
 Writes that target an existing row
 by id (`delete_coding`, `update_annotation`, `delete_annotation`,
 `set_memo` on a coding) refuse a hidden coder's row unless
-`allow_hidden_coder=true`; with the override the result carries ids
-only. The refusal confirms that the row belongs to a hidden coder
-(never who, never how many), a trade PRIVACY.md states.
+`allow_hidden_coder=true`. With the override, the result carries ids
+only. The refusal says that the row belongs to a hidden coder, but not
+which coder, or how many coders are hidden, a trade PRIVACY.md states.
 
 **Backups, workspace copies and `ai_data/`.** Backups and
 `copy_project_to_workspace` copy the whole project tree including
-`ai_data/` (QualCoder 4.0 keeps its prompt library and chat history
-there, which are the researcher's),
-minus QualCoder's own backup ignore set (`search.sqlite`,
-`search.sqlite-*`, `*.sqlite-shm`, `*.sqlite-wal`, `*.sqlite-journal`)
-and lock files. Backups also leave out the project's
-`audio/` and `video/` folders, whatever is at those names, and
-`restore_backup` keeps the project's own, never taking a backup's (an
-older backup's copies stay in it); a workspace copy keeps them. An
-older backup may so hold the only copy of a recording the project no
-longer has: `list_backups` marks the backups that hold the folders, and
-the preview of `prune_backups` counts such files by backup. This
-departs from QualCoder, whose backups keep audio and video unless its
-setting for them is off: no Exegete tool changes those files. A
-workspace copy of a project with no `ai_data/` gets
-an empty one, as a new project does. `search.sqlite` is the regenerable AI search index and
-holds a plaintext copy of every text source; QualCoder rebuilds it on
-project open, so a restored project without one is normal. The project
-database itself is copied with SQLite's own online backup (QualCoder
-copies it as a file), so a backup or copy taken while
-QualCoder is writing holds what was last committed, and the database's
-journal and WAL files are never copied: QualCoder's ignore set does
-not match them, and a backup that carried a journal read differently on
-different platforms. `list_backups` marks a backup that holds them
-`unclean` and `restore_backup` refuses it. If QualCoder keeps the
-database locked for more than about 15 seconds, no backup is taken and
-the write is refused, as a locked database. The copy holds SQLite's
-read lock while it runs (about 1.2 seconds per gigabyte of database on
-a Mac's SSD, measured), so QualCoder's own saves wait for it; QualCoder
-waits five seconds, so on a database of about 4 GB or more (less on a
-slow, network or USB disk) a save in an open QualCoder window can fail
-while a backup or workspace copy runs. A `data.qda` that is a link to a
-file inside the project (QualCoder never makes one) is copied the same
-way, and the backup's `data.qda` is then a plain file; one that points
+`ai_data/`, where QualCoder 4.0 keeps its prompt library and chat
+history, which are yours. They leave out QualCoder's own backup ignore
+set (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`,
+`*.sqlite-wal`, `*.sqlite-journal`) and lock files. Backups also leave
+out the project's `audio/` and `video/` folders, whatever is at those
+names. `restore_backup` keeps the project's own, never taking a
+backup's, and an older backup's copies stay in it. A workspace copy
+keeps them. So an older backup may hold the only copy of a recording
+the project no longer has: `list_backups` marks the backups that hold
+the folders, and the preview of `prune_backups` counts such files by
+backup. This departs from QualCoder, whose backups keep audio and video
+unless its setting for them is off. Exegete leaves them out because no
+Exegete tool changes those files. A workspace copy of a project with no
+`ai_data/` gets an empty one, as a new project does. `search.sqlite` is
+the AI search index, which QualCoder can rebuild, and it holds a plain
+text copy of every text source. QualCoder rebuilds it on project open,
+so a restored project without one is normal. The project database
+itself is copied with SQLite's own online backup, where QualCoder
+copies it as a file. So a backup or copy taken while QualCoder is
+writing holds what was last committed, and the database's journal and
+WAL files are never copied. QualCoder's ignore set does not match them,
+and a backup that carried a journal read differently on different
+platforms. `list_backups` marks a backup that holds them `unclean`, and
+`restore_backup` refuses it. If QualCoder keeps the database locked for
+more than about 15 seconds, no backup is taken and the write is
+refused, as a locked database. The copy holds SQLite's read lock while
+it runs, about 1.2 seconds per gigabyte of database on a Mac's SSD, as
+measured, so QualCoder's own saves wait for it. QualCoder waits five
+seconds, so on a database of about 4 GB or more (less on a slow,
+network or USB disk), a save in an open QualCoder window can fail while
+a backup or workspace copy runs. A `data.qda` that is a link to a file
+inside the project (QualCoder never makes one) is copied the same way,
+and the backup's `data.qda` is then a plain file. One that points
 outside the project is refused: no backup could hold the database, so
-nothing is written. Unlike
-QualCoder's backups, symlinks that point outside the project folder,
-that dangle, or that loop back into a folder already being copied are
-not followed; skipped entries are reported (`backup_skipped_symlinks`
-on write results, `skipped_symlinks` on workspace copies,
+nothing is written. Unlike QualCoder's, Exegete's backups and copies do
+not follow symbolic links that point outside the project folder, that
+point to nothing, or that loop back into a folder already being copied.
+They report the entries they skipped (`backup_skipped_symlinks` on
+write results, `skipped_symlinks` on workspace copies,
 `safety_backup_skipped_symlinks` on restores). A link skipped in a
 project's `Exegete` folder is counted there, and apart in
 `skipped_symlinks_in_exegete_folder` under the same prefix, never
 named, since a name the researcher gives one may hold a participant's
 name.
 
-**Detecting an open 4.0 window.** 4.0 writes no lock file, so detection
-is heuristic (see "Supported QualCoder versions" above), and an open
-4.0 window will not display Exegete's writes until the project is
-reopened there.
+**Detecting an open 4.0 window.** QualCoder 4.0 writes no lock file,
+so Exegete can only look for signs of an open window ("Supported
+QualCoder versions", above). An open 4.0 window will not display
+Exegete's writes until the project is reopened there.
 
 **Recovery hint.** If a host restarts Exegete in the middle of a
 conversation (seen with LM Studio in September 2026), every "no project
 selected" error gives the name of the last project used on this
-computer, when it still exists, so one `select_project` call recovers. The selection is never restored
-automatically. The pointer lives in `~/.exegete/mru_project.json`.
+computer, when it still exists. One `select_project` call then
+recovers. The selection is never restored automatically. Exegete keeps
+the last project's path in `~/.exegete/mru_project.json`.
 
 [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)
 describes these conventions in full, including what they disclose.
@@ -512,19 +540,21 @@ describes these conventions in full, including what they disclose.
 > **QualCoder 3.8.2 and edit mode: a caution about QualCoder, not about Exegete.**
 > On the 3.8.2 line, leaving the coding view's edit mode after any change to
 > the text deletes every coding that the edit leaves touching the new end of
-> the file, and the undo cannot bring it back. `ed_update_codings` deletes any
-> row whose new end is `>= len(text)`, evaluated against the text *after* the
-> edit, so this is wider than it sounds: **trimming the tail of a transcript
+> the file, and the undo cannot bring it back. QualCoder's
+> `ed_update_codings` deletes any coding whose new end is at or past the
+> end of the text as it is *after* the edit (`>= len(text)`). So this is
+> wider than it sounds: **trimming the tail of a transcript
 > destroys whichever coding is left nearest the cut, even one that was
 > nowhere near the end before.** In a test on 3.8.2, deleting the last 193
 > characters of a 614-character file destroyed a coding at 400-421, which
-> had sat 193 characters clear of the end; the 4.0 line kept it.
+> had sat 193 characters clear of the end. The 4.0 line kept it.
 > Annotations and case links are unaffected, and leaving edit mode without
 > changing anything is harmless. This happens whether or not a project has
 > ever been through Exegete: the same test reproduced it on a project
 > Exegete had never touched, which is why it is put down to QualCoder. The QualCoder 4.0
-> line has fixed it, clamping such a coding instead of deleting it. If you use
-> edit mode on 3.8.2, know this regardless of `pseudonymise_source`.
+> line has fixed it: it shortens such a coding to the new end of the text
+> instead of deleting it. If you use edit mode on 3.8.2, this applies
+> whether or not you use `pseudonymise_source`.
 
 ## AI-assisted coding
 
@@ -532,7 +562,7 @@ The assistant suggests codings and you decide on each one in the conversation; E
 
 ### The conversational workflow
 
-**Important**: approved codings are written straight into the project's database. A project made in another program, such as QualCoder, or one you want kept as it is, is safest worked on as a copy in the workspace folder (`copy_project_to_workspace`, whose answer gives the path; "Where", under "Starting a project from the conversation", says which folder that is). A project made with Exegete is already in the workspace. Exegete takes a backup itself before every change to the project's database, and **writes are refused while the project's lock file is active** (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). If you also use QualCoder, close the project there first: QualCoder 4.0 writes no lock file, so for it Exegete can only warn on signs of an open window.
+**Important**: approved codings are written straight into the project's database. A project made in another program, such as QualCoder, or one you want kept as it is, is safest worked on as a copy in the workspace folder. `copy_project_to_workspace` makes the copy, and its answer gives the path. "Where", under "Starting a project from the conversation", says which folder that is. A project made with Exegete is already in the workspace. Exegete takes a backup itself before every change to the project's database, and **writes are refused while the project's lock file is active** (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it). If you also use QualCoder, close the project there first: QualCoder 4.0 writes no lock file, so for it Exegete can only warn on signs of an open window.
 
 ### A quick start
 
@@ -541,7 +571,7 @@ The assistant suggests codings and you decide on each one in the conversation; E
 Copy my project "Interview Study" to the workspace for AI coding
 ```
 
-(the `copy_project_to_workspace` tool does this, for a project made in another program or one you want kept as it is; then open the copy with `select_project`. A project made with Exegete is already in the workspace: select it and go on to Step 2.)
+The `copy_project_to_workspace` tool does this, for a project made in another program or one you want kept as it is. Then open the copy with `select_project`. A project made with Exegete is already in the workspace: select it and go on to Step 2.
 
 **Step 2: Analyse files**
 ```
@@ -551,16 +581,18 @@ Analyse files 1-3 for the codes "workplace stress" and "coping strategies"
 The assistant is told to:
 - Ask you three things before it starts: what to look for, how long a
   coded passage should be, and whether a passage may carry more than one
-  code; and pass your answers as the session's `instruction`, which is
-  required. Exegete cannot tell whether the instruction holds your
-  answers, so check the one the session records
-  (`get_coding_session_info` shows it)
+  code
+- Pass your answers as the session's `instruction`, which is required.
+  Exegete cannot tell whether the instruction holds your answers, so
+  check the one the session records (`get_coding_session_info` shows
+  it)
 
 The assistant then:
 - Starts a coding session (`start_coding_session`)
 - Reads the files
-- Records its suggestions into the session (`record_suggestions`; every
-  suggestion is verified against the file text before it is stored)
+- Records its suggestions in the session (`record_suggestions`).
+  Exegete verifies every suggestion against the file's text before it is
+  stored
 - Presents the suggestions with their reasoning, each with its reading:
   explicit (the passage states what the code names) or interpretive (the
   code rests on what the passage implies rather than on what it says)
@@ -571,13 +603,14 @@ Show me details about suggestion 1
 ```
 
 The assistant shows you, as Exegete's review gives it:
-- In a transcript, the earlier turn by another speaker, found by speaker
-  labels ("Interviewer:", "Siân [00:01:09]:" starting a paragraph, a name
-  counted only when it opens more than one; Otter's unbracketed
-  "Name  0:03" is not read); a turn of three words or fewer with no
-  question mark ("Mm-hmm.", "Describe your manager.") is shown with the
-  one before it, and what lies between is counted, never skipped
-  silently
+- In a transcript, the nearest earlier turn by another speaker. Exegete
+  finds speakers by the labels that start their paragraphs, such as
+  "Interviewer:" or "Siân [00:01:09]:", and counts a name only when it
+  opens more than one paragraph. It does not read Otter's labels, a name
+  followed by a time without brackets, as in "Name  0:03". A turn of
+  three words or fewer with no question mark ("Mm-hmm.", "Describe your
+  manager.") is shown with the one before it, and what lies between is
+  counted, never skipped silently
 - The passage, in its paragraph or speaker turn
 - Which code and file
 - Whether the passage states what the code names (explicit) or the code
@@ -590,18 +623,18 @@ The assistant shows you, as Exegete's review gives it:
 Approve suggestions 1, 2, and 5. Reject 3 and 4.
 ```
 
-**Who approves.** Exegete writes only suggestions marked approved, and
-the mark is set by a tool call the assistant makes
-(`update_suggestion_status`, and `update_proposal_status` for new
-codes) when it relays your decision. Exegete cannot tell whether you
-gave it: it records the approval the assistant reports. Two things stand
-behind it: the host asking you before each call that decides or writes
-(keep it in its asking mode, and choose "allow once" for
-`update_suggestion_status`, `update_proposal_status`, `apply_codings`
-and `create_proposed_codes` rather than allowing them always), and your
-own reading of what the approval step reports: how many suggestions are
-now approved, rejected and pending. If the approved number is not the
-number you said yes to, stop before anything is applied.
+**Who approves.** Exegete writes only suggestions marked approved. The
+mark is set by a tool call the assistant makes when it relays your
+decision: `update_suggestion_status`, and `update_proposal_status` for
+new codes. Exegete cannot tell whether you gave it: it records the
+approval the assistant reports. Two things stand behind it. One is the
+host asking you before each call that decides or writes: keep it in its
+asking mode, and choose "allow once" for `update_suggestion_status`,
+`update_proposal_status`, `apply_codings` and `create_proposed_codes`
+rather than allowing them always. The other is your own reading of what
+the approval step reports: how many suggestions are now approved,
+rejected and pending. If the approved number is not the number you said
+yes to, stop before anything is applied.
 
 To change your mind about a decided suggestion, ask for it to be
 reopened (`update_suggestion_status` with `reopen`): it goes back to
@@ -619,11 +652,11 @@ When the assistant calls `apply_codings`, Exegete:
 - Writes the approved codings to the database (all or nothing)
 - Reports the new codings' ids, and the backup it took
 
-Check the results in the conversation, or on your own screen: read them back here, or ask for the file to be opened for reading (`open_file_for_reading`: a page in your browser shows them in the text). If you use QualCoder, opening the project there shows them in the text too (a QualCoder 4.0 window that was already open shows them only once the project is reopened).
+Check the results in the conversation, or on your own screen: read them back here, or ask for the file to be opened for reading (`open_file_for_reading`: a page in your browser shows them in the text). If you use QualCoder, opening the project there shows them in the text too. A QualCoder 4.0 window that was already open shows them only once the project is reopened.
 
 **If something went wrong**: `delete_coding(coding_id)` removes a single coding
-and marks its suggestion removed in the session (which then allows it to be
-approved again, reopened and edited, or the passage recorded again);
+and marks its suggestion removed in the session. That suggestion can then be
+approved again, reopened and edited, or its passage recorded again.
 `list_backups` and `restore_backup` roll the project back to a backup,
 all but its `Exegete`, `audio` and `video` folders, which a restore
 keeps.
@@ -631,20 +664,21 @@ keeps.
 ### Key features
 
 - **Review in the conversation**: discuss suggestions with the assistant before applying them
-- **Explicit or interpretive**: Each suggestion carries a reading:
+- **Explicit or interpretive**: each suggestion carries a reading,
   explicit (the passage states what the code names) or interpretive (the
   code rests on what the passage implies rather than on what it says, and
-  the reason names the words it rests on), shown with the passage and
-  before the reason, and yours to change at review. There is no numeric
-  score: a model's rating of its own confidence is not a measurement.
+  the reason points to the words it rests on). The reading is shown with
+  the passage and before the reason, and is yours to change at review.
+  There is no numeric score: an AI's rating of its own confidence is not
+  a measurement.
   Nothing sorts or totals by the reading. An applied coding's memo says
   which, in words
 - **Sessions kept**: each session is saved in a file of its own, so the work can go on in a later conversation
-- **Backups**: Exegete itself takes a timestamped backup before every change to the project's database; `create_backup` no longer does anything (it is still accepted until the release on method, and a call that gives it is told so)
+- **Backups**: Exegete itself takes a timestamped backup before every change to the project's database. `create_backup` no longer does anything: it is still accepted until the release on method, and a call that gives it is told so
 - **The workspace**: new projects and copies of projects are kept in the workspace folder
-- **Written straight to the project**: no import or export step; the next read shows the codings, and QualCoder, if you use it, shows them when it next opens the project (an open QualCoder 4.0 window shows Exegete's changes only once the project is reopened)
-- **One suggestion at a time**: approve, reject or reopen each suggestion by its GUID; a GUID the session does not hold is listed, not passed over
-- **A session's scope holds**: the files, and the codes if you name them, that a session is started with are the only ones it accepts suggestions for; a name or id that matches nothing is listed
+- **Written straight to the project**: there is no import or export step. The next read shows the codings, and QualCoder, if you use it, shows them when it next opens the project. An open QualCoder 4.0 window shows Exegete's changes only once the project is reopened
+- **One suggestion at a time**: approve, reject or reopen each suggestion by its GUID, its unique ID. A GUID the session does not hold is listed, not passed over
+- **A session keeps to its scope**: a session accepts suggestions only for the files it was started with, and for its codes if you named them. A name or id that matches nothing is listed
 - **The text around it**: see the file's own text around each suggestion, read from the file (the assistant cannot supply it)
 - **Checked writes**: suggestions are checked against the file text when
   recorded and again before writing; sessions apply only to the project
@@ -654,8 +688,8 @@ keeps.
   heartbeat while it has the project open, or another conversation
   using Exegete writing to it). QualCoder 4.0 writes no lock file, so
   for it Exegete reports signs of an open window
-  (`qualcoder_gui_signals`), re-verifies the file text inside the write
-  transaction, and relies on you, if you use QualCoder, to make sure no
+  (`qualcoder_gui_signals`), checks the file's text again within the
+  write itself, and relies on you, if you use QualCoder, to make sure no
   window has the project open
 - **Recovery tools**: `delete_coding`, `list_backups`, `restore_backup`
 
@@ -667,10 +701,10 @@ Exegete keeps new projects, and copies of projects, in its workspace folder:
 ~/Documents/Exegete projects/
 ```
 
-Exegete's settings can name another folder in `EXEGETE_WORKSPACE`; the
-Claude Desktop extension does, from its "Folder for projects" setting
-(by default `~/Exegete projects/`, outside Documents, which iCloud or
-OneDrive may sync).
+The setting `EXEGETE_WORKSPACE` can give another folder. The Claude
+Desktop extension sets it from its "Folder for projects" setting: by
+default `~/Exegete projects/`, outside Documents, which iCloud or
+OneDrive may sync.
 
 A project made in another program, such as QualCoder, or one you want
 kept as it is, is safest worked on as a copy:
@@ -682,7 +716,7 @@ kept as it is, is safest worked on as a copy:
 A project made with Exegete is already in the workspace, and Exegete
 takes a backup before each change to it.
 
-For comprehensive workflow documentation, see [AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md).
+[AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md) walks through the whole workflow, with example conversations.
 
 ## Reading a whole file
 
@@ -693,7 +727,8 @@ text does not pass through the conversation: the assistant is told
 only where the page or copy is, and how many codings, codes and notes
 it shows.
 
-Native first, as on any computer:
+Exegete can open a file in three ways. The first two use your
+computer's own apps:
 
 1. **In its folder** (`show="in_folder"`): Finder or File Explorer
    opens with a read-only copy of the original selected. On a Mac,
@@ -708,16 +743,22 @@ Native first, as on any computer:
    Word still opens a stranger's attachment in Protected View. It has
    no codings, and it is not pseudonymised.
 3. **A reading copy in your browser** (`show="reading_copy"`, the
-   default, and the only one that shows the codings): a web page with
-   the whole text laid out as stored, each coded passage in its code's
-   colour, followed by a tag with the code's name (a small label of its
-   own, edged in the code's colour, cut short with an ellipsis when long,
-   the whole name on hover, to screen readers and in print, and left out
-   when text is copied, so that a code named after its passage (an
-   in-vivo code) never reads as the passage again), every
-   overlapping coding shown, a list of the codes with a tick box that
-   hides each one, a "text only" switch, and the annotations and the
-   public part of memos as numbered notes at the end. The private part of memos (from `#####`) is left
+   default, and the only one that shows the codings). It is a web page
+   with:
+   - the whole text, laid out as stored;
+   - each coded passage in its code's colour, followed by a tag with the
+     code's name. The tag is a small label of its own, edged in the
+     code's colour. A long name is cut short with an ellipsis, with the
+     whole name on hover, to screen readers and in print. The tag is left
+     out when text is copied, so that a code named after its passage (an
+     in-vivo code) never reads as the passage again;
+   - every overlapping coding;
+   - a list of the codes, with a tick box that hides each one, and a
+     "text only" switch;
+   - the annotations and the public part of memos, as numbered notes at
+     the end.
+
+   The private part of memos (from `#####`) is left
    out, and the page says so. Its layout follows QualCoder's own HTML
    export of a coded file. Converted with pandoc (from a pandoc server,
    if you use one, file to file) it becomes a Word file with one comment
@@ -725,16 +766,17 @@ Native first, as on any computer:
 
 **Codings made in QualCoder** are drawn where QualCoder draws them.
 QualCoder's text coder counts positions its own way: an emoji as two
-characters, a Windows line break as one, and a byte-order mark at the
-start of the text as none. Exegete's own import stores neither of the
-last two, but QualCoder 3.8.2 kept Windows line breaks in the plain
-text files it imported (a transcript saved on Windows usually has
-them), and one byte-order mark of a file that began with several, and
-both stay when QualCoder 4.0 opens the project. Each
-coding is drawn where its stored passage matches the text, counted as
-characters or, failing that, as QualCoder counts; the page says how
-many were placed the second way, and draws with a dotted underline any
-whose passage neither count finds. Windows and old Mac line breaks show
+characters, a Windows line break as one, and a byte-order mark (an
+invisible mark some programs put at the start of a text file) as none.
+Exegete's own import stores no Windows line break and no byte-order
+mark. But QualCoder 3.8.2 kept Windows line breaks in the plain text
+files it imported, and a transcript saved on Windows usually has them.
+It also kept one byte-order mark of a file that began with several.
+Both stay when QualCoder 4.0 opens the project. Each coding is drawn
+where its stored passage matches the text, counted as characters or,
+failing that, as QualCoder counts. The page says how many were placed
+the second way, and draws with a dotted underline any whose passage
+neither count finds. Windows and old Mac line breaks show
 as line breaks, as in QualCoder. The whole-file read
 (`read_file_with_codings`) uses the same count, and gives such a
 coding's place in the text beside its stored positions, so the
@@ -743,7 +785,7 @@ assistant quotes the words you coded.
 **Reading without codes.** For a fresh reading, with nothing of the
 coding already done in view, ask for a file without its codes
 (`without_codes=true`). The page then shows the text alone: no
-codings, no list of codes, no annotations and no switches; the file's
+codings, no list of codes, no annotations and no switches. The file's
 memo stays, as it describes the file, with its private part left out
 as above. The assistant can read a file the same way: the whole-file
 read with `without_codes=true` gives the text and the file's details,
@@ -756,40 +798,40 @@ them.
 
 Linked originals (QualCoder's `docs:` paths, which point outside the
 project) are not opened: QualCoder's Manage files, if you use it, opens
-them, and the reading copy shows their text. Only an
-original of a type QualCoder imports (documents, pictures, audio and
-video) is copied, opened or shown, and a web page only shown; any other
-type, such as a program or a shortcut in a project from someone else,
-is neither copied nor shown, since a read-only copy of it could still
-act when opened. A long name is shortened before its ending, never
-through it, so the copy is always of the original's type. Where the
-project records no original for a file (its text may have been typed
-or pasted in; a text file an older QualCoder imported can also have no
-recorded place, though its original may sit in the folder of
-originals), the reading copy opens instead. With no screen (an SSH session, Linux without a desktop),
+them, and the reading copy shows their text. Only an original of a
+type QualCoder imports (documents, pictures, audio and video) is
+copied, opened or shown, and a web page is only shown. Any other type,
+such as a program or a shortcut in a project from someone else, is
+neither copied nor shown, since a read-only copy of it could still act
+when opened. A long name is shortened before its ending, never through
+it, so the copy is always of the original's type. Where the project
+records no original for a file, the reading copy opens instead. Its
+text may have been typed or pasted in, and a text file an older
+QualCoder imported can also have no recorded place, though its
+original may sit in the folder of originals. With no screen (an SSH session, Linux without a desktop),
 nothing opens and the answer gives the place only.
 
 **Where the pages go.** Into a private folder of Exegete's own, outside
 the project, not synced and not indexed by the computer's search: on a
 Mac `~/Library/Caches/Exegete/Reading.noindex`, on Windows
 `%LOCALAPPDATA%\Exegete\Reading` (marked not to be indexed), on Linux
-`~/.cache/exegete/reading`. Readable by your account only. Exegete
+`~/.cache/exegete/reading`. Only your account can read it. Exegete
 deletes a file's page and copy whenever it changes that file's text or
 name (renaming, pseudonymising, restoring a backup), and anything there
 at Exegete's first tidy once it is a week old. A file deleted in
-QualCoder can leave its page behind; when a new file takes its number, the old page goes when
-Exegete brings that file in, or when it next writes a page or a copy
-for it. The page an import's preview opens to check letters that look
-garbled (`show_text`) goes there too, and goes after the import, or at
-the first tidy once it is an hour old: Exegete tidies the folder
-when it starts, and at most every five minutes while it writes there,
-so in an app that keeps Exegete running a page left without an import
+QualCoder can leave its page behind. When a new file takes its number,
+the old page goes when Exegete brings that file in, or when it next
+writes a page or a copy for it. The page an import's preview opens to
+check letters that look garbled (`show_text`) goes there too. It goes
+after the import, or at the first tidy once it is an hour old: Exegete tidies the folder
+when it starts, and at most every five minutes while it writes there.
+So in an app that keeps Exegete running, a page left without an import
 can stay longer. To keep a page, save it
 elsewhere from the browser or print it to PDF. PRIVACY.md lists every
 place a transcript's text can end up.
 
 **Talking about a passage.** Copy a few words of it into the
-conversation; those words go to the AI provider. The page says it is
+conversation. Those words go to the AI provider. The page says it is
 not meant to be read by an AI assistant, but nothing enforces that: an
 assistant with file tools of its own (Claude Code, Cowork, Codex), or
 one that can see your browser, could read it. The assistant's brief and
@@ -798,13 +840,18 @@ the tool's description ask it not to.
 ## What the assistant is told: the brief (provisional)
 
 Exegete gives the assistant one brief: how it expects the assistant
-to work with you. The brief says what no single tool
-says (work on the project only through these tools, how the project,
-Exegete and QualCoder relate, how changes and approval happen, privacy, when to ask
-and when to act, how to report to you), and carries the two rules that
-hold across the tools, the grounding rules and the judgement of
-requests, in the very words the tools use. Each tool's description
-still gives that tool's own rules.
+to work with you. The brief says what no single tool says:
+
+- to work on the project only through these tools;
+- how the project, Exegete and QualCoder relate;
+- how changes and approval happen;
+- privacy;
+- when to ask and when to act;
+- how to report to you.
+
+It also carries the two rules that hold across the tools, the grounding
+rules and the judgement of requests, in the very words the tools use.
+Each tool's description still gives that tool's own rules.
 
 Hosts differ in what they pass on to the assistant, so the brief
 reaches it four ways:
@@ -824,7 +871,7 @@ reaches it four ways:
 
 The brief is **provisional**: it carries the tools' own rules, adds how
 to work with the researcher where no single tool says, and leaves out
-the lines that would take a position on method; a later release may
+the lines that would take a position on method. A later release may
 change it.
 Once read, the full brief stays in that conversation and is sent again
 with every later request, until the host shortens the conversation.
@@ -837,14 +884,15 @@ it, and names the departure, in the ways listed first below and only
 those. A PDF's text is QualCoder's to the character, since
 QualCoder 4.0 re-reads a PDF and compares. `scripts/qualcoder_parity.py`
 runs QualCoder's own extraction functions on the test documents, and
-the tests check two things against them: with none of these departures,
-Exegete's readers give QualCoder's text to the character; and every
-difference between QualCoder's text and Exegete's, on every test
-document, is one of the lines below. So within one project both
-programs read the text Exegete stores (after an emoji, QualCoder's text
-coder shows codings shifted, as in any file holding one); a file
-imported separately by each program can come in with different text,
-and codings made on one copy do not then line up on the other. The
+the tests check two things against them. With none of these
+departures, Exegete's readers give QualCoder's text to the character.
+And every difference between QualCoder's text and Exegete's, on every
+test document, is one of the lines below. So within one project both
+programs read the text Exegete stores, though after an emoji
+QualCoder's text coder shows codings shifted, as in any file holding
+one. A file imported separately by each program can come in with
+different text, and codings made on one copy do not then line up on
+the other. The
 preview says, file by file, which of these lines apply.
 
 **Where QualCoder's readers lose or garble content, Exegete keeps it,
@@ -971,15 +1019,15 @@ own words, never a library's message.
 
 Exegete offers these resources (read-only data). Under Exegete's
 earlier name their addresses began `qualcoder://`, the scheme
-QualCoder's own MCP server uses too; the earlier addresses are still
-answered, no longer listed, until v1.0.
+QualCoder's own MCP server uses too. The earlier addresses are still
+answered, though no longer listed, until v1.0.
 
 - `exegete://project/info` - Project metadata
 - `exegete://codes/list` - All codes
 - `exegete://categories/list` - Code categories
 - `exegete://codes/{code_id}` - Specific code details
 - `exegete://files/list` - All source files
-- `exegete://files/{file_id}` - File content; a long file's first part, whose `part` names the address of the next
+- `exegete://files/{file_id}` - File content; a long file's first part, whose `part` gives the address of the next
 - `exegete://files/{file_id}/from/{start}` - A long file's content from character `start`
 - `exegete://cases/list` - All cases
 - `exegete://cases/{case_id}` - Case details; excerpts past one answer's size are cut, each saying where its text continues
@@ -993,7 +1041,7 @@ The assistant uses these tools on your project. The full toolset
 (`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
 extension and when you configure Exegete yourself) registers 79
 tools, two of them the earlier names of two renamed tools (see "Earlier
-names" below); the argument lists below name every argument each tool
+names" below). The argument lists below give every argument each tool
 declares, and each tool's own description says what each one does.
 
 > **Creating projects:** `create_project` makes a new, empty project
@@ -1016,7 +1064,7 @@ declares, and each tool's own description says what each one does.
 > set_project_ai_coder_name,
 > copy_project_to_workspace, delete_coding, list_backups,
 > restore_backup, and the two earlier names below.
-> Meant for local models, and optional elsewhere; an unknown value
+> Meant for local models, and optional elsewhere. An unknown value
 > stops Exegete at startup, with a message giving the valid values. Measured on Python 3.13 with the libraries in
 > `uv.lock` (the serialised tool definitions: name, description and
 > input schema), the definitions run to about 203,000 characters for
@@ -1027,7 +1075,7 @@ declares, and each tool's own description says what each one does.
 > [docs/snapshot/](docs/snapshot/) gives the exact figures, in
 > `sizes.json`, and what Exegete sends the assistant before a project
 > is open, with the brief, written again by `scripts/served_texts.py`
-> whenever one of these texts changes; the tools' answers, which carry
+> whenever one of these texts changes. The tools' answers, which carry
 > the project's texts, are not in it. See the LM Studio recipe in
 > INSTALL.md for what that means for context length.
 
@@ -1060,15 +1108,20 @@ the full data when `coder` is given (see "QualCoder's conventions in
 the project").
 
 A read given an id, a name or a coder that is not in the project
-refuses it, rather than answering "nothing": a code, case or file id
-that does not exist; an attribute name that is not one of that kind
-(names are exact, and the refusal gives one that differs only by letter
-case, or says it is the other kind); a code name that matches no code (a
-code name is found as the codebook tools find it: the same name, then
-one differing only by letter case); and a coder with no codings anywhere
-in the project (the refusal gives one that differs only by letter case,
-never a hidden coder). A known value with nothing in scope
-still answers empty, and that answer is a finding.
+refuses it, rather than answering "nothing". It refuses:
+
+- a code, case or file id that does not exist;
+- an attribute name that is not one of that kind. Names are exact, and
+  the refusal gives one that differs only by letter case, or says it is
+  the other kind;
+- a code name that matches no code. A code name is found as the
+  codebook tools find it: the same name, then one differing only by
+  letter case;
+- a coder with no codings anywhere in the project. The refusal gives
+  one that differs only by letter case, never a hidden coder.
+
+A known value with nothing in scope still answers empty, and that
+answer is a finding.
 
 **Rich transcript analysis:**
 - `read_file_with_codings(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and gives the name of a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts: about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's limit of 25,000 tokens (as recorded on 12 October 2026) with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
@@ -1078,7 +1131,7 @@ still answers empty, and that answer is a finding.
 - `list_attribute_types()` - List all available attributes (age, gender, etc.)
 - `get_file_attributes(file_id)` - Get attributes for a specific file
 - `get_case_attributes(case_id)` - Get attributes for a specific case
-- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte`, and `equals` on a numeric attribute, compare only values that are finite numbers once space around them is stripped, on a character attribute too, and count the rest in `values_left_out` (so "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would; that report reads "34 years" as 34, which this tool leaves out and counts); a probe that is not such a number is refused
+- `query_by_attribute(attr_name, attr_value, attr_type, operator)` - Find cases/files by attribute values. `gt`, `gte`, `lt` and `lte`, and `equals` on a numeric attribute, compare only values that are finite numbers once space around them is stripped, on a character attribute too. They count the rest in `values_left_out`. So "under 18" does not find "unknown", as QualCoder's attribute report, which reads it as 0, would; that report reads "34 years" as 34, which this tool leaves out and counts. A value to compare with that is not such a number is refused
 
 **Co-occurrence analysis:**
 - `find_cooccurring_codes(code_id, window_size, coder)` - Discover which codes appear together: at `window_size` 0, codings that share at least one character; at N, codings whose gap (from the end of one to the start of the other) is at most N characters. Window 0 counts the overlap QualCoder's co-occurrence report uses, and at N the gap is the distance QualCoder's Code relations report gives, but the counts differ from the co-occurrence report's
@@ -1093,7 +1146,7 @@ still answers empty, and that answer is a finding.
 - `start_coding_session(file_ids, code_names, instruction)` - Start a coding session for the files, and the codes if named (matched exactly, else ignoring letter case, spacing and Unicode form, the rule for code names throughout; a name matching two codes that way is listed in `ambiguous_code_names` and used for neither), that suggestions may then be recorded for; `instruction` is required (there is no default): the researcher's answers to what to look for, how long a coded passage should be and whether a passage may carry more than one code; it reads no file and makes no suggestion, returns the `coding_session_id` the other session tools take, and lists in `not_found` any id or name that matched nothing; a PDF with no usable text is refused by name (`files_refused`), with the way forward: OCR outside Exegete, which bundles none, then import the result, and for a PDF 3.8.2 stored as the file itself, QualCoder 4.0's Restructure first
 - `record_suggestions(coding_session_id, suggestions, replace)` - Record the assistant's suggestions into the session (each verified against the file text; positions auto-corrected when the excerpt is unique; a PDF with no usable text is refused, as it is by `edit_suggestion`, `apply_codings`, proposal evidence and `add_annotation`)
 - `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show each suggestion in the order a researcher reads it: the nearest earlier turn by another speaker, found by speaker labels (a name of a few words and a colon starting a paragraph, compared by name, and counted only when that name opens more than one paragraph; an unbracketed time after the name, as in Otter's "Name  0:03", is not read; nothing is shown otherwise), whatever it says; a turn of three words or fewer with no question mark is shown with the one before it, and the turns and paragraphs left out between are counted, then the passage in its paragraph or speaker turn, then the code, the reading and the reason; the surrounding text, and that of any shorter or longer span offered, is read from the file each time and never stored
-- `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` - Adjust a pending suggestion's span, code or reading before approval (session-only; shorter and longer alternatives that Exegete works out); moving it to another code without a new `reading` clears it, which was given for the old code
+- `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` - Adjust a pending suggestion's span, code or reading before approval (session-only; shorter and longer alternatives that Exegete works out). Moving it to another code without a new `reading` clears the reading, which was given for the old code
 - `update_suggestion_status(coding_session_id, approve, reject, reopen)` - Approve, reject or reopen (back to pending) suggestions by GUID; GUIDs not in the session are listed, and a GUID in two lists is refused
 - `apply_codings(coding_session_id, create_backup)` - **Writes to the database** - Apply approved suggestions (bound to the session's project, validated before backup, all-or-nothing; a suggestion whose identical coding is already in the project is reported as already existing and skipped, not written twice)
 - `get_coding_session_info(coding_session_id)` - View all details of a coding session
@@ -1161,9 +1214,9 @@ These four tools, and `pseudonymise_source`, `restore_backup` and
 `prune_backups`, are two-step: call without `preview_token` for a preview of exactly what
 would change, then call again with the token the preview returned. The
 token is bound to that operation, those arguments, that project and the
-rows the preview covered, so a preview the researcher approved cannot
-authorise something else, and a project that changed in between is
-refused rather than acted on. A call that still passes `confirm`, the
+rows the preview covered. So a preview you approved cannot authorise
+something else, and a project that changed in between is refused rather
+than acted on. A call that still passes `confirm`, the
 argument these tools took before tokens, is refused with nothing done,
 as is any argument a tool does not have.
 
@@ -1177,7 +1230,7 @@ rows carry a `#####` private note. Of these, `merge_codes` and
 coders' codings are affected. `restore_backup` rolls the project
 back (all but its `Exegete`, `audio` and `video` folders, which a
 restore keeps): its preview counts each kind of row, every coder's
-together, never by owner, and it has no such gate;
+together, never by owner, and it has no such gate.
 `pseudonymise_source` reports hidden coders' rows as counts and gates a
 narrower set (see its own entry).
 
@@ -1208,18 +1261,15 @@ Built-in prompt templates for common analysis tasks:
 Exegete's tools work in **two modes**, with no setting to switch between them: the reading tools use the first, and each tool marked as writing to the database opens a write connection for its own call.
 
 ### Read-only mode (the reading tools)
-For every analysis tool:
-- nothing is written to the project's database
-- the project is not changed
-- every operation is a read
-- this holds for any project, whichever program made it
+For every analysis tool, every operation is a read: nothing is written
+to the project's database, whichever program made the project.
 
 ### Write-enabled mode (the tools marked as writing to the database)
 For AI-assisted coding, which writes to the database:
 - **Writes to the database**: these tools change the project
 - **Backups**, taken by Exegete itself, before every change to the project's database
 - **Workspace**: new projects and copies are kept in the workspace folder; a project made in another program can be worked on as a copy
-- **Conversational approval**: nothing is written until an item is marked approved; Exegete cannot tell who approved, so the host asking you before each decision is the safeguard (see "Who approves")
+- **Conversational approval**: nothing is written until an item is marked approved. Exegete cannot tell who approved, so the host asking you before each decision is the safeguard ("Who approves", above)
 - **Session files**: AI coding sessions (suggestions, proposals and their statuses) are saved in `~/.exegete/sessions/`
 - **Restoring**: a backup can return the project to an earlier state (`restore_backup`)
 
@@ -1231,27 +1281,26 @@ For AI-assisted coding, which writes to the database:
 5. **The results checked**: read the applied codings back, in the conversation, or in QualCoder if you use it
 
 **General safety:**
-- Exegete runs locally and adds no cloud path of its own (its
-  one connection, while switched on, is a check for new versions that
-  carries nothing from your projects: PRIVACY.md, "Checking for new
-  versions"). But tool results enter the conversation, and they go to
-  the AI provider, the company that runs the assistant's model (none,
-  when that model runs on your own computer). **See
+- Exegete runs on your computer. Its one connection beyond it, while
+  switched on, is a check for new versions, which carries nothing from
+  your projects (PRIVACY.md, "Checking for new versions"). But tool
+  results enter the conversation, and they go to the AI provider, the
+  company that runs the assistant's model. There is none when that model
+  runs on your own computer. **See
   [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)** for what this means for research data.
-- Backups of your projects of your own, beyond Exegete's, are worth keeping
+- Backups of your own, beyond Exegete's, are worth keeping
 - Exegete's backups: `<project>_backup_<timestamp>.qda` folders next to
-  the project, one per change to the project's database (the project
-  tree but its audio and video folders, `ai_data/` included, minus
-  QualCoder's backup ignore set and lock files, with the database copied
-  by SQLite's own online backup and its journal or WAL file never copied;
-  prune them with `prune_backups`)
+  the project, one per change to the project's database. Each holds the
+  project tree but its audio and video folders; "Backups, workspace
+  copies and `ai_data/`", above, says what else it leaves out.
+  `prune_backups` removes old ones
 - The workspace folder: `~/Documents/Exegete projects/`, or the
-  folder `EXEGETE_WORKSPACE` names (the desktop extension's default
+  folder `EXEGETE_WORKSPACE` gives (the desktop extension's default
   is `~/Exegete projects/`)
 - Session files: `~/.exegete/sessions/`
 - Last-used project pointer: `~/.exegete/mru_project.json` (one
-  project path and a timestamp, echoed only into the "no project selected"
-  error as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md))
+  project path and a timestamp, given only in the "no project selected"
+  error, as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md))
 - Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the ten tools that preview first; never shown in a result, an error or the log)
 
 ## Example requests

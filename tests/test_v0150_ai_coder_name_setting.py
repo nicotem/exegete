@@ -634,13 +634,15 @@ class TestTheDocuments:
                 "the desktop extension's \"AI coder name\", or "
                 "`EXEGETE_AI_CODER_NAME` in Exegete's `env` block on any "
                 "other route:") in text
-        assert ("Filled in, Exegete gives it to each project it creates, "
-                "without asking, and `create_project`'s answer says so "
-                "(`ai_coder_name`, with the source `settings`)") in text
-        assert ("A project that already has an AI coder name keeps it: if "
-                "it differs from the setting, the next write asks once which "
-                "of the two to use rather than re-attributing anything") \
-            in text
+        # (v0.15.2: the setting's two states, each said in full)
+        assert ("When the setting is filled in, Exegete gives it to each "
+                "project it creates, without asking, and `create_project`'s "
+                "answer says so (`ai_coder_name`, with the source "
+                "`settings`)") in text
+        assert ("A project that already has an AI coder name keeps it. If "
+                "that name differs from the setting, the next write asks "
+                "once which of the two to use, rather than re-attributing "
+                "anything") in text
         assert ("stores the AI coder name in Exegete's settings with the "
                 "new project when it is filled in, without asking, and says "
                 "so (`ai_coder_name`, and the first of the next steps), so "
@@ -649,7 +651,8 @@ class TestTheDocuments:
                 "as moved so that copies of Exegete from before its rename "
                 "refuse to write the project; QualCoder reads neither;") \
             in text
-        assert "Left empty, each project is asked." in text
+        assert "When the setting is left empty, each project is asked." \
+            in text
         assert ("with the note \"Taken from Exegete's settings when the "
                 "project was created.\" A project made another way") in text
         assert "DECLARATION by this host" not in text
@@ -688,14 +691,16 @@ class TestTheDocuments:
                 "does not ask if the project was made with that name in "
                 "Exegete's settings.") in _doc("README.md")
         guide = _doc("AI_CODING_GUIDE.md")
-        assert ("which you choose: in Exegete's settings (\"AI coder name\" "
-                "in the extension, `EXEGETE_AI_CODER_NAME` on other routes), "
-                "which give it to each project Exegete creates, without "
-                "asking, and say so;") in guide
+        # (v0.15.2: the two ways of choosing it, one to an item)
+        assert ("which you choose in one of two ways: - in Exegete's "
+                "settings: \"AI coder name\" in the extension, or "
+                "`EXEGETE_AI_CODER_NAME` on other routes. Exegete gives that "
+                "name to each project it creates, without asking, and says "
+                "so;") in guide
         assert "only declares a name to offer first" not in guide
-        assert ("which the researcher chooses in Exegete's settings, for "
-                "the projects Exegete creates, or the first time a write "
-                "needs it") in _doc("AI_CODING_WORKFLOW.md")
+        assert ("You choose that name in Exegete's settings, for the "
+                "projects Exegete creates, or the first time a write needs "
+                "it") in _doc("AI_CODING_WORKFLOW.md")
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

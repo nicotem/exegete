@@ -226,7 +226,7 @@ def test_the_changelog_on_ci_and_cowork():
 def test_the_guide_reads_every_suggestion():
     guide = _doc("AI_CODING_GUIDE.md")
     assert "**Read every suggestion, whatever its reading**" in guide
-    assert ("check that the code is right for the study: a passage can "
+    assert ("check that the code is right for the study. A passage can "
             "state what a code names and still not be what your study "
             "means by it") in guide
     assert ("**For an interpretive one, read the words its reason "
@@ -253,8 +253,11 @@ def test_the_workflow_decides_each_item():
     workflow = _doc("AI_CODING_WORKFLOW.md")
     assert "You decide each item" in workflow
     assert "full control" not in workflow
-    assert workflow.count("Decide each suggestion; ask for details on any "
-                          "you want to read in context") == 2
+    # (v0.15.2: in the opening, the tips and the checklist, read plainly)
+    lowered = workflow.lower()
+    assert lowered.count("decide on each suggestion") == 3
+    assert lowered.count("ask for details on any you want to read in "
+                         "context") == 2
     for gone in ("at least a few suggestions", "at least some suggestions",
                  "The first 4 look good", "Claude remembers"):
         assert gone not in workflow, gone

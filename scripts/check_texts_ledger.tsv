@@ -13,26 +13,29 @@ ba439373518884db	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded
 67746e6bc574473b	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded 27 October, to be read	Writes are refused while the project's lock file is active (QualCoder 3.8.2 has 
 029f9a2dcbd37605	.github/ISSUE_TEMPLATE/feature_request.yml	document	voice	seeded 27 October, to be read	The research task or workflow, not just the feature.
 c5cf3518abeab52f	AI_CODING_GUIDE.md	document	qualcoder	the title of a section about QualCoder's versions or its import	"Supported QualCoder versions" in TOOLS.md says what can be done with either
+5c1c4a46d0617ec4	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A memo's text from the first ##### marker onward is private, in QualCoder 4.0's 
 66f8c7c69533985c	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	A project in the format of QualCoder 3.8.2 to 4.0 (schema v14 to v17).
 9946e6fefd203e7e	AI_CODING_GUIDE.md	document	qualcoder	the title of a section about QualCoder's versions or its import	An older project is refused; "Supported QualCoder versions" in TOOLS.md says how
 f458718ebd263d8a	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete takes a timestamped backup before every change (list_backups shows them,
 5cbd2da8996cc3c7	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	For QualCoder 4.0, which writes no lock file, see the prerequisites above
-f44a51af6c57e83c	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Memo text from the first ##### marker onward (QualCoder 4.0's private-note conve
+e24c5e621b067c12	AI_CODING_GUIDE.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	So it is for you to make sure that no QualCoder 4.0 window has the project open
+cbe4d2362378d85b	AI_CODING_GUIDE.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	Without the matching override, it refuses a coding whose memo carries a ##### pr
 005b22fc5dcb86d5	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Write: add a new transcript, optionally linked to a case; apply_project_pseudony
-3d2863d3476e6e4a	AI_CODING_GUIDE.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	Write: remove one coded segment (on projects with the coder-visibility capabilit
 1e8a46c3fd801a6f	AI_CODING_GUIDE.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Writes are refused while the project's lock file is active (QualCoder 3.8.2 has 
-11396771bac05d62	AI_CODING_GUIDE.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Writes are refused while the project's lock file is active: QualCoder 3.8.2 has 
-c27106338c729200	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Writes need a project schema from v14 to v17, the formats of QualCoder 3.8.2 to 
+d022c7d89745ffe6	AI_CODING_GUIDE.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Writes are refused while the project's lock file is active: QualCoder 3.8.2 has 
+24e48c6ccfb6b4f0	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Writes need a project schema from v14 to v17, the formats of QualCoder 3.8.2 to 
+fa5b04b7fae1684c	AI_CODING_WORKFLOW.md	document	qualcoder	the title of a section about QualCoder's versions or its import	"Supported QualCoder versions" in TOOLS.md lists the answers that report them.
+3da8a03d8731cc45	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	A QualCoder 4.0 window that already had the project open must close and reopen i
+4b5d69d64e50e231	AI_CODING_WORKFLOW.md	document	qualcoder	Exegete's own refusal, quoted word for word	Every write operation is refused while the project's lock file is active. The re
 c2a4068441af4d51	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	Finding the workspace project in QualCoder
-c83a8cb2ccb4ccda	AI_CODING_WORKFLOW.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	For it Exegete can only report signs that the project may be open (qualcoder_gui
 fb8b7a24e517328b	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	In QualCoder:
-a6ebcc60cf587d04	AI_CODING_WORKFLOW.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	One wrong coding: Delete coding 42 (delete_coding; the ctid is in the apply outp
-af3a77d99452adf5	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	Open QualCoder (a QualCoder 4.0 window that already had the project open must cl
-346355aa7c73773b	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Solution: Exegete reads the project database live, so anything QualCoder has sav
-5ecd5b42cad97458	AI_CODING_WORKFLOW.md	document	voice	a speaker label quoted in capitals, the example of letter case ignored	The earlier turn (the nearest by another speaker, found by speaker labels: a nam
-de9cc646f0b5121e	AI_CODING_WORKFLOW.md	document	qualcoder	Exegete's own refusal, quoted word for word	The refusal gives both causes and the way through for each: "This project is in 
-fd5c260febbb39e6	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The reverse direction is the limitation: a QualCoder 4.0 window does not display
-8b0c68ebf967a734	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Use list_backups to see them (QualCoder's own _BKUP_ backups are listed too) and
+b67651b464eb2742	AI_CODING_WORKFLOW.md	document	voice	a speaker label quoted in capitals, the example of letter case ignored	It compares labels by name, so "Respondent [00:01:09]:" and "RESPONDENT:" are on
+d70609fdfcb6a2e4	AI_CODING_WORKFLOW.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	It is also active while QualCoder 3.8.2 has the project open, since QualCoder ke
+fb4c8042398acfca	AI_CODING_WORKFLOW.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	On a project that can hide coders (QualCoder 3.8.2 and 4.0, schema v14 and later
+d35763ee5b19e971	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	Open QualCoder.
+d979461109f4b7fc	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Solution: Exegete reads the project's database itself, not a copy of it, so anyt
+e2adb8f67467a1e0	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The limit is in the other direction: a QualCoder 4.0 window does not display cha
+9bf088acdb0fc0be	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	list_backups shows the backups, QualCoder's own _BKUP_ backups included.
 6b05c26424fd156b	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	A feature is justified on general grounds: the whole life of a project from the 
 066269f0e2a78803	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	A test that carries QualCoder's code as its oracle is listed there too, and test
 c2b99d04e18b33f8	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Capability probes, never version strings. Behaviour keys on the existence of tab
@@ -211,44 +214,52 @@ b038017a43714f0a	README.md	document	qualcoder	about QualCoder itself: the projec
 eca70320a98236b2	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	"Recorded under it" means the name is the owner of any row in the tables QualCod
 6932840b59654c00	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A PDF with no usable text (no text layer, or a PDF QualCoder 3.8.2 stored as the
 2ebb8042ce3141ab	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A PDF's text is QualCoder's to the character, since QualCoder 4.0 re-reads a PDF
+f6d22090e99b3d4c	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A QualCoder 4.0 window that was already open shows them only once the project is
 563698c80a4f266f	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A coding made in QualCoder is found where QualCoder draws it: QualCoder's text c
-6c3631ea58c66e4e	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A data.qda that is a link to a file inside the project (QualCoder never makes on
-e0e34befb67303aa	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A file deleted in QualCoder can leave its page behind; when a new file takes its
+6b6ee360d0720257	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A data.qda that is a link to a file inside the project (QualCoder never makes on
+fe1d1dd5e6c22ad2	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A file deleted in QualCoder can leave its page behind.
 101928624dfe922e	TOOLS.md	document	qualcoder	a citation of QualCoder's code, by its commit	A line number cited from QualCoder, in this document or in Exegete's code, is th
 e1c63570941bd6cb	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A name the project's visibility setting hides is refused too, unless you pass al
-a131590a35c05c79	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	A project from a QualCoder older than 3.8 is refused until QualCoder 3.8 or newe
+dd3f95d26ecd1261	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	A project from a QualCoder older than 3.8 is refused until QualCoder 3.8 or newe
+a78c7554451854f2	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	AI Agent is the exact name QualCoder 4.0's built-in assistant writes under, so i
 9a63fa40aaa3f276	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	All three are refused, and so is QualCoder's speaker coder ("📌 Speaker coding"),
 9a63fa40aaa3f276	TOOLS.md	document	voice	QualCoder's own name for its speaker coder, emoji included	All three are refused, and so is QualCoder's speaker coder ("📌 Speaker coding"),
-3e3d2b844f21b3b7	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	An attribute value it sets takes that name and the date on a file as on a case; 
-afeb27a63a7cf401	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	And an open QualCoder 4.0 window will not display changes Exegete writes (its vi
-b91c9cf249b03d07	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Backups, workspace copies and ai_data/. Backups and copy_project_to_workspace co
+fd956ac81ca11113	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	An empty ai_data is not taken as a sign that QualCoder has opened the project; o
+e8b2c0944c2343ee	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	An open QualCoder 4.0 window shows Exegete's changes only once the project is re
+5a49bced14d2b9b8	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	And an open QualCoder 4.0 window will not display changes Exegete writes, becaus
+8377f72b6531a0a7	TOOLS.md	document	qualcoder	says what was checked against QualCoder's own code and releases	And every difference between QualCoder's text and Exegete's, on every test docum
+4aa27044ca695a28	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Both stay when QualCoder 4.0 opens the project.
+29448e37fbd53ab6	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	But QualCoder 3.8.2 kept Windows line breaks in the plain text files it imported
 19f49ea8cceaa9d5	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Coder comparison (compare_coders): per-code agreement between two coders, with Q
-0e15194d37a5b606	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Coder names are compared exactly, after trimming spaces, and never case-insensit
-4f04fe4288321b09	TOOLS.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	Coder visibility. When a project with the coder-visibility capability (QualCoder
+5ac8010120ea3ae1	TOOLS.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	Coder visibility. A project in the format of QualCoder 3.8.2 or 4.0 (schema v14 
 f217aebb6e6563bc	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Codings made in QualCoder are drawn where QualCoder draws them.
-296ed2c28192194c	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Detecting an open 4.0 window. 4.0 writes no lock file, so detection is heuristic
+227ac2b62102c2cc	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Detecting an open 4.0 window. QualCoder 4.0 writes no lock file, so Exegete can 
 c0c6f7e03056ebd0	TOOLS.md	document	qualcoder	the title of a section about QualCoder's versions or its import	Document import: where it departs from QualCoder
-ade79931ea978c36	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Each coding is drawn where its stored passage matches the text, counted as chara
+55920be4cd15219e	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Each coding is drawn where its stored passage matches the text, counted as chara
 f2f0096dbcbcf59d	TOOLS.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Every change to the project's database is preceded by a backup, which Exegete ta
+02a3b3950080cb94	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Exegete departs from QualCoder in one way here: it also makes an empty ai_data f
 3f160cc7f5ef8b53	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	Exegete does not import media yet; the preview says such a document cannot later
-459430a644a94994	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Exegete does not yet nest an existing code under another code (QualCoder, if you
-c28d888532b8b34e	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Exegete is ground-truthed against QualCoder 3.8.2, the latest stable release unt
+8edc7c6791f4519d	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete does not read it, so Read-only in QualCoder does not stop Exegete's writ
 9505e7afb9d0a23e	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete never reads QualCoder's settings file, which holds API keys.
-8146635d01117873	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Exegete never writes in it, and an empty ai_data is not taken as a sign that Qua
 3c7f458a6220918e	TOOLS.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Exegete takes a backup itself before every change to the project's database, and
-e37c2b567dc22970	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Exegete's backups: <project>_backup_<timestamp>.qda folders next to the project,
-c251d4f0037444fb	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete's own import stores neither of the last two, but QualCoder 3.8.2 kept Wi
-ea1f90efdd358529	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	File exports keep reading the full data, as QualCoder's own reports do: QualCode
+0e865d9fc79c8804	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Exegete takes as its reference QualCoder 3.8.2, the latest stable release until 
+d1873b64c4dbec2a	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Exegete tells what a project supports by inspecting the project database itself,
+fb31f9fdab654907	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	File exports keep reading the full data, as QualCoder's own reports do.
 df566c2f825fb985	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	If QualCoder keeps the database locked for more than about 15 seconds, no backup
-6604f91ec0ff2e70	TOOLS.md	document	qualcoder	QualCoder offered on the condition that the researcher uses it	If you use QualCoder, opening the project there shows them in the text too (a Qu
+969e34b99aed1297	TOOLS.md	document	qualcoder	QualCoder offered on the condition that the researcher uses it	If you use QualCoder, that is the name in its settings, exactly as there (Projec
 4ff543efb1039935	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	In a project QualCoder 3.8.2 made (schema v14, no sub-codes column), more differ
-be8d77b6b8f504c1	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	In the 4.0-Beta pre-release (3 September 2026, tag 4.0-Beta at 2c3ef57), as in t
+5fcb4dfbd00e76df	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	In the 4.0-Beta pre-release (3 September 2026, tag 4.0-Beta at 2c3ef57), as in t
 2398fea67d9d208e	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	It is in QualCoder 4.0, released on 2 October 2026 (tag 4.0 at b95e021): the set
+edb7316e4de48940	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	It is not counted when the process scan could read programs' command lines and f
+fbb8f35c8c6b8568	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	It is verified against QualCoder 4.0, released on 2 October 2026 (tag 4.0 at b95
+f9b0eb71a83ef37d	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	It looks the same as yours wherever coder names are listed, Exegete's answers an
 515feaf29ca47b15	TOOLS.md	document	qualcoder	the title of a section about QualCoder's versions or its import	Its departures from QualCoder are listed under "Document import: where it depart
 6aa2b4d97bda7e89	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Its layout follows QualCoder's own HTML export of a coded file.
+422a672978a69042	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Its text may have been typed or pasted in, and a text file an older QualCoder im
 b0eb458b5f247808	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Linked originals (QualCoder's docs: paths, which point outside the project) are 
 40218a0f0dcabef8	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Made at creation, the folder is there when QualCoder 4.0 first opens the project
 ed37ccf8cd926ee6	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	Markup in OpenDocument that QualCoder's recipe leaves
+9fedcff8b67a9249	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Moving a sub-code into a category, or out of every category, detaches it from it
 99cdc81a5b4acca3	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Moving such a project between 3.8.2 and 4.0 is what changes it, so keeping it in
 304dd852080fb3bc	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Names QualCoder cannot open (with |), names Windows cannot store, names holding 
 5c1be80efa368f59	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	On a mapping you type, the execute is refused unless save_mapping_to_project (gi
@@ -256,71 +267,86 @@ ed37ccf8cd926ee6	TOOLS.md	document	qualcoder	a cell of the table comparing QualC
 5583b497afe9309a	TOOLS.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	On projects with the coder-visibility capability (QualCoder 3.8.2 and 4.0, schem
 979338dc5e5fa9d5	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	One case does not travel: after merging another project into this one in QualCod
 1d93eeb2df29ff00	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	One exception, as in QualCoder's own exports: exported files (export_refi_qda, e
-b965a059a2c386be	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	One known limitation: QualCoder 3.8.2 signals "project open" through a lock file
 0d9695ef8f105f0b	TOOLS.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	One program at a time: writes are refused while the project's lock file is activ
-2c308a90183a9da4	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Only an original of a type QualCoder imports (documents, pictures, audio and vid
-f2b4d0578644c31a	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Opening a new project was checked with QualCoder 4.0 and 3.8.2 run from their pu
-2834c05469fcd9aa	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Opening it in QualCoder. QualCoder 4.0 opens it without changing its format (Pro
+70be650a676f4363	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Only QualCoder's coding screen reads through the visibility view.
+532f913ff939b562	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Only an original of a type QualCoder imports (documents, pictures, audio and vid
+0d744f6037634e89	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Opening a new project was checked with QualCoder 4.0 and 3.8.2 run from their pu
+8b579bf696a5f034	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Opening it in QualCoder. QualCoder 4.0 opens it without changing its format: Pro
+9ed412bf44358e9c	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	QualCoder 3.8.2 and 4.0 both create it on a project's first open, and change it 
 b8ffaf6dae8a784c	TOOLS.md	document	qualcoder	the title of a section about QualCoder's versions or its import	QualCoder 3.8.2 and edit mode: a caution
 7d370a6235eb13f5	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder 3.8.2 and edit mode: a caution about QualCoder, not about Exegete. On 
 ceae5729b5ba77cc	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder 3.8.2 opens it without any warning and keeps everything in it, but can
+8b4b02bb391f6567	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	QualCoder 3.8.2 signals "project open" through a lock file, which Exegete honour
 f25bc59e880a24ed	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	QualCoder 4.0
-7e92c1d4d3b896da	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	QualCoder 4.0 also ignores spacing and letter case there, but folds only the let
+25f17541e3a5148d	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	QualCoder 4.0 also ignores spacing and letter case there, but only for the lette
 4acefc7f6734da82	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder 4.0 ships its own embedded AI assistant, built on an MCP server inside
 544149947090dbbb	TOOLS.md	document	qualcoder	QualCoder offered on the condition that the researcher uses it	QualCoder 4.0 writes no lock file, so for it Exegete can only report signs of an
 ad6945049ca79c4c	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	QualCoder 4.0's AI features keep conventions in the project itself, and Exegete 
+ffd74995cc9bbdf4	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder 4.0's own assistant reads it as the study's context.
 18e90a0e2a81aaa4	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	QualCoder rebuilds both itself
-df830b2b2a594b35	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder writes the coder name set in it into every project it opens, as the cu
-e7ef868d25b6aeb8	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's AI permission setting (Read-only, Sandboxed, the default, or Full ac
-be7781d73dc27d22	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's New Project makes only images, audio, video and documents, and QualC
-c08a385631a43e22	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	QualCoder's conventions: ##### private memo sections never reach the assistant t
-892b3b760c85841f	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's own AI server silently drops the marker and what follows it, which e
-ce4b2041f5808aa5	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	QualCoder's own search reads the full table there (ai_mcp_server.py:5228 at 9bdd
-5ad2bbd0e23b3371	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's pull request #1571 ("External MCP server access", by kaixxx), merged
+667c9f6454baa02f	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder rebuilds it on project open, so a restored project without one is norm
+5fd357f4e5f1ebe3	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder then listens for them on 127.0.0.1.
+98f3e280031315e6	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder waits five seconds, so on a database of about 4 GB or more (less on a 
+935b97cca17fbc96	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder writes the coder name set in it into every project it opens, as the cu
+838f0f0873fb843d	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's AI permission setting governs QualCoder's own assistant and that ser
+0e2de66090e5a431	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's New Project makes only images, audio, video and documents, and QualC
+41e7797a233719c8	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's ed_update_codings deletes any coding whose new end is at or past the
+ba37193a66fb6526	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	QualCoder's ignore set does not match them, and a backup that carried a journal 
+379620f39d2b6c4f	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's own AI server silently drops the marker and what follows it, which e
+d87918f6a3f2a30c	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's own coding report does the same in both versions checked (Reports > 
+a618cff7952f5f73	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	QualCoder's own search reads every coding there, whoever made it (ai_mcp_server.
+a493c7605df3d9b4	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's pull request #1571 ("External MCP server access", by kaixxx), merged
 f82205a4633492b5	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	QualCoder's search and AI indexes
-e8d1ee109bda8f35	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's text coder counts positions its own way: an emoji as two characters,
+8f58225f7617a306	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's source can also build a Claude Desktop extension (tools/mcpb/build_m
+6a9b80d4a4eecf1b	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's text coder counts positions its own way: an emoji as two characters,
 cb87781016fec992	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Read as QualCoder reads them, in both programs: tables (in Word each cell a para
 6871392d1112d910	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Read on the computer following QualCoder 4.0's own import; where QualCoder's rea
 6871392d1112d910	TOOLS.md	document	voice	the words of the ruling of 9 October 2026 on how Exegete's import is described	Read on the computer following QualCoder 4.0's own import; where QualCoder's rea
+f741be22ece6942f	TOOLS.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	Reads follow the project's visibility setting for each coder, on projects that h
 4161b2689ba22c83	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Refuses path characters, names Windows cannot store, names over 200 bytes in UTF
 32c85f5f9298a5bf	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Saved graphs as for delete_category: only the merged category's own node and lin
-9fdfa7e01955d6e6	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	So within one project both programs read the text Exegete stores (after an emoji
-321314abc006fc9a	TOOLS.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Support is determined by inspecting the project database itself (capability prob
+893811938f1af9cc	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	So "under 18" does not find "unknown", as QualCoder's attribute report, which re
+46ef3e49582eba5b	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	So a backup or copy taken while QualCoder is writing holds what was last committ
+d7e8aee0dcb0b95c	TOOLS.md	document	qualcoder	the ways on without QualCoder, for a project from an older QualCoder	So that person's name is added to the project, unless they first set their coder
+49762ec5ca918021	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	So the private part stays yours to write, outside the conversation (in QualCoder
+8b49c2e1db533174	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	So within one project both programs read the text Exegete stores, though after a
 a3d7960947a3ce90	TOOLS.md	document	qualcoder	the title of a section about QualCoder's versions or its import	Supported QualCoder versions
 2c8b8a8fc574244a	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Takes the researcher's own coder name from Exegete's settings when it is filled 
 2ede2f97d5540272	TOOLS.md	document	qualcoder	a citation of QualCoder's code, by its commit	That holds for QualCoder's own MCP server too, a file much changed in the releas
-039a21844fce276d	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	That server calls itself qualcoder-mcp, Exegete's earlier name, and the Claude D
-f9999d271c3ddb00	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The QualCoder 4.0 line has fixed it, clamping such a coding instead of deleting 
-21f8c0f242daa6df	TOOLS.md	document	qualcoder	the brief's section on the project, Exegete and QualCoder, named	The brief says what no single tool says (work on the project only through these 
+dcf4e1601843c0e7	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The QualCoder 4.0 line has fixed it: it shortens such a coding to the new end of
+2b8b6afb23efdc1b	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The changes appear after the project is closed and reopened in QualCoder.
 fdcb148b1a2235f4	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	The codebook changes too, as in QualCoder, and the preview lists each change: on
-8e022eb1d4a3b282	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The copy holds SQLite's read lock while it runs (about 1.2 seconds per gigabyte 
-f0a95e066885bfcf	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The invisible ones are refused because a name you cannot see is a name you canno
-81cad6e1f8d9f1bd	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	The project database itself is copied with SQLite's own online backup (QualCoder
-b504cb8e3fce4c07	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	The project memo starts empty, as QualCoder leaves it; set_memo with the target 
+da11604363086f1e	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The copy holds SQLite's read lock while it runs, about 1.2 seconds per gigabyte 
+f9fa17622b5e41c4	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	The project database itself is copied with SQLite's own online backup, where Qua
+0ed2c911ba1b4687	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	The project memo starts empty, as QualCoder leaves it.
 5e00af202ab29313	TOOLS.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	The project's lock file is held, kept fresh, from the checks to the end of the c
 d649da25545b4845	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	The scan also runs when set_project_coder_name (after a change), list_backups, p
 368daf64aa3de9d1	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The setting travels with the project folder: Exegete's backups and workspace cop
 1d94e2cc0a3aac45	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	The signs that QualCoder 4.0 may have the project open (it writes no lock file) 
+c30f2a913d922d0f	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	They leave out QualCoder's own backup ignore set (search.sqlite, search.sqlite-,
 2b4129d741747414	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	This departs from QualCoder, whose Rename, and whose opening of a project, make 
-246d0e8c64c4cd2a	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	This departs from QualCoder, whose backups keep audio and video unless its setti
+8028b26969499f62	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	This departs from QualCoder, whose backups keep audio and video unless its setti
 f8f79ff812ea1e81	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	This happens whether or not a project has ever been through Exegete: the same te
-64f0ebe0f6ce4b85	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Under Exegete's earlier name their addresses began qualcoder://, the scheme Qual
-41f338f10d5d3c9d	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Unlike QualCoder's backups, symlinks that point outside the project folder, that
-62aad9f4b7ffefc4	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	When it is set, the name cannot be your own coder name (the project's codername,
-ec6bea7e2b6ed80c	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	When the project shows that QualCoder's AI may have been used (it already holds 
+af7fe8be070a37c5	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Under Exegete's earlier name their addresses began qualcoder://, the scheme Qual
+775f20542de3ea2e	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Unlike QualCoder's, Exegete's backups and copies do not follow symbolic links th
+9771dceb6c2bf89c	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	When QualCoder edits a file's attribute value, it changes the value alone and ke
+df41e5f5221c46b5	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	When it does, the reads and analyses of coded passages read by default only what
+c1c4651b0f64ec04	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	When it is set, the name cannot be your own coder name (the project's codername,
+f87ad7b6c27eff5a	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	When the project shows that QualCoder's AI may have been used, the picks also in
 594296361ec5161b	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Where QualCoder's "View original text file" opens the project's own copy, Exeget
 1029de03c86d7f5a	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Where QualCoder's readers lose or garble content, Exegete keeps it, and names th
 1029de03c86d7f5a	TOOLS.md	document	voice	the words of the ruling of 9 October 2026 on how Exegete's import is described	Where QualCoder's readers lose or garble content, Exegete keeps it, and names th
 cbf2ccbe8a82e2f6	TOOLS.md	document	qualcoder	a citation of QualCoder's code, by its commit	Where a paragraph says that Exegete does as QualCoder does, it was checked again
-fcb33e5c609842ba	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Where the project records no original for a file (its text may have been typed o
+bc19e0d5f1b66065	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	While QualCoder runs, the setting opens that server, for the project open in Qua
 2ccad2e5f9ace197	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Window 0 counts the overlap QualCoder's co-occurrence report uses, and at N the 
 e1dbbe69dcee07a5	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Windows and old Mac line breaks show as line breaks, as in QualCoder.
+3d00b18a6b07a6e8	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	With any of these, AI rows would be indistinguishable from a person's in every l
 b528bce8fe0a8482	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	With apply_project_pseudonyms=true the project's own pseudonyms.json is applied 
+011b177608c6e64a	TOOLS.md	document	qualcoder	says what was checked against QualCoder's own code and releases	With none of these departures, Exegete's readers give QualCoder's text to the ch
 fa7d591020060ac9	TOOLS.md	document	qualcoder	the ways on without QualCoder, for a project from an older QualCoder	Without QualCoder at all, a new project made in Exegete from the original docume
 d72df62c962aafee	TOOLS.md	document	qualcoder	the ways on without QualCoder, for a project from an older QualCoder	Without QualCoder, someone who has it and is allowed to see the project's data c
-690e18a43661be95	TOOLS.md	document	qualcoder	QualCoder offered on the condition that the researcher uses it	Written straight to the project: no import or export step; the next read shows t
-45236870af6315f6	TOOLS.md	document	qualcoder	QualCoder offered on the condition that the researcher uses it	Your coder name. Exegete takes it from its settings when you have filled it in t
 df322afdad54a5eb	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	a guessed character set can read accented letters as others (a Polish or Turkish
+10523d72e84717ad	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	a process scan, when it can run, which reports only how many running processes l
 baaa6baac85d0c56	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	also memo, before the PDF notes; the PDF notes' heading is always "PDF annotatio
 c1de539dbf7a5c1c	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	applied in one pass, longest first, each pseudonym written literally, and counts
 916d3fc46f41dad4	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes,
@@ -333,8 +359,8 @@ c4fd27c7cbb27f87	TOOLS.md	document	qualcoder	about QualCoder's format or convent
 6c3b08594f05350f	TOOLS.md	document	qualcoder	QualCoder named among the programs that read REFI-QDA files	export_refi_qda(output_path, coding_session_id, overwrite) - Export codings (or 
 373e4e8f1f3f5a1f	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	get_coding_frequencies(coder) - Coding statistics: text codings per code, with c
 14a7c7d8fe26eceb	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	get_current_project() - Show which project is open, whether the project's lock f
-1c40d2bb5f5dc234	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	gt, gte, lt and lte, and equals on a numeric attribute, compare only values that
 6a3ad431aec466b8	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	hostile and huge files; Exegete may refuse a file QualCoder would import, and sa
+da8827a062edd968	TOOLS.md	document	qualcoder	the brief's section on the project, Exegete and QualCoder, named	how the project, Exegete and QualCoder relate;
 2d0db6a5703c328f	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	import_documents reads each document following QualCoder 4.0's own import; where
 2d0db6a5703c328f	TOOLS.md	document	voice	the words of the ruling of 9 October 2026 on how Exegete's import is described	import_documents reads each document following QualCoder 4.0's own import; where
 d3dbb31c3cbb37bd	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	it needs a reader of its own, and QualCoder keeps no copy in the project for Exe
@@ -350,8 +376,8 @@ a567cf50f55fcc31	TOOLS.md	document	qualcoder	about QualCoder's format or convent
 ba0c8acfd75dccfc	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	refused before reading, with the reason, when the file's place on the computer p
 d3dd2983b3f3fb29	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	rename_case(case_id, new_name, create_backup) - Writes to the database - Rename 
 b0175bf93fc66967	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	rename_file(file_id, new_name, create_backup) - Writes to the database - Rename 
-ca4e217a033f28de	TOOLS.md	document	qualcoder	says what was checked against QualCoder's own code and releases	scripts/qualcoder_parity.py runs QualCoder's own extraction functions on the tes
-7da6a4ee169e46be	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	search.sqlite is the regenerable AI search index and holds a plaintext copy of e
+5e7ec73fd74a6e9b	TOOLS.md	document	qualcoder	says what was checked against QualCoder's own code and releases	scripts/qualcoder_parity.py runs QualCoder's own extraction functions on the tes
+c172eda2f0149005	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	search.sqlite is the AI search index, which QualCoder can rebuild, and it holds 
 b1786f8d3cce1e03	TOOLS.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	select_project(project_path) - Open/switch to a different project (reports qualc
 d40e0f1caa3814a1	TOOLS.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	set_attribute(target_type, target_id, attribute_name, value, create_backup) - Wr
 657b2ec98ce736f6	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	set_memo(target_type, target_id, memo, create_backup, allow_hidden_coder) - Writ

@@ -95,12 +95,16 @@ class TestTheThreeTexts:
         assert "\n### One program at a time\n" in workflow
         assert "Close QualCoder First" not in workflow
         flat = _flat(workflow)
-        assert ("A project's lock file, `project_in_use.lock`, is active "
-                "while another conversation using Exegete is writing to the "
-                "project (Exegete writes the file during each of its own "
-                "writes) or while QualCoder 3.8.2 has the project open (it "
-                "keeps the file as a heartbeat), and **every write operation "
-                "is refused while the project's lock file is active**. The "
+        # (v0.15.2: the lock file, each cause and the rule, one sentence
+        # each)
+        assert ("A project's lock file, `project_in_use.lock`, shows that "
+                "the project is in use. It is active while another "
+                "conversation using Exegete is writing to the project, since "
+                "Exegete writes the file during each of its own writes. It "
+                "is also active while QualCoder 3.8.2 has the project open, "
+                "since QualCoder keeps the file as a heartbeat, a sign that "
+                "it still has the project open. **Every write operation is "
+                "refused while the project's lock file is active.** The "
                 "refusal gives both causes and the way through for each") \
             in flat
         assert ("if you also use QualCoder, make sure yourself that no "

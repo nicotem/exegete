@@ -24,8 +24,8 @@ import inspect
 import unicodedata
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import (Optional, List, Dict, Any, NamedTuple, Sequence, Tuple,
-                    Callable)
+from typing import (Optional, List, Dict, Any, NamedTuple, Sequence, Set,
+                    Tuple, Callable)
 
 import anyio
 from mcp.server.fastmcp import FastMCP
@@ -117,6 +117,7 @@ from . import names_file, parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
 from .file_kinds import ProjectFileKindError
 from . import change_record, doc_import, doc_readers, kept_texts
+from . import undo
 from . import qualcoder_history
 from .cursors import (
     CURSOR_MAX_LENGTH,
@@ -14935,6 +14936,448 @@ def restore_backup(backup_path: str,
     return json.dumps(result, indent=2)
 
 
+# ============================================================================
+# UNDO (v0.15.2): changes Exegete made, taken back whole or not at all
+# ============================================================================
+# undo.py builds the plan and writes it back; this is the tool around it:
+# the list of this run's changes, the refusals in words, the preview and
+# its token through `_guarded_destructive` (its own override rule, since
+# an undo only returns a hidden coder's rows to what they were just before
+# a change Exegete made), the backup of every write and no record, then
+# the coding sessions' marks and scopes and the reading copies.
+
+def _undo_context() -> Tuple[str, str, str, Path]:
+    """(the secret, the project's digest and the key check as the records
+    keep them, the project's data.qda), read once for a call."""
+    secret = load_secret()
+    project_db = validate_qda_path(current_project_path)
+    return (secret, change_record.digest(secret, "project", _token_project()),
+            change_record.digest(secret, "key check", ""), project_db)
+
+
+def _undo_plan(db_, receipts: Sequence[str], context,
+               sessions=None, clock: Optional[float] = None) -> undo.Plan:
+    secret, project, key_check, project_db = context
+    if sessions is None:
+        sessions = undo.project_sessions(session_manager, project_db)
+    return undo.plan(db_, receipts, secret=secret, project=project,
+                     key_check=key_check, project_db=project_db,
+                     sessions=sessions, clock=clock)
+
+
+def _undo_coders(owners: Sequence[Optional[str]], db_) -> Dict[str, Any]:
+    """Rows by coder, as reads name coders: the AI coder name and visible
+    coders by their names, a hidden coder's rows counted, never named;
+    when the project's visibility cannot be read, no coder is named."""
+    named = [owner for owner in owners if owner is not None]
+    out: Dict[str, Any] = {"by_coder": {}, "hidden_coder_rows": 0}
+    if not named:
+        return out
+    visibility = _visibility_map(db_)
+    if visibility is _VISIBILITY_UNREADABLE:
+        out["rows_of_coders_not_named"] = len(named)
+        return out
+    for owner in named:
+        if coder_is_hidden(visibility, owner):
+            out["hidden_coder_rows"] += 1
+        else:
+            out["by_coder"][owner] = out["by_coder"].get(owner, 0) + 1
+    return out
+
+
+def _undo_owners(plan: undo.Plan) -> List[Optional[str]]:
+    """Whose rows the undo returns to their earlier state: a row removed
+    or set back by its owner now, a row put back by its owner then."""
+    owners: List[Optional[str]] = []
+    for change in plan.changes:
+        owners += [undo.text_of((s.now or {}).get("owner"))
+                   for s in change.removed + change.set_back]
+        owners += [undo.text_of((s.values or {}).get("owner"))
+                   for s in change.put_back]
+    return owners
+
+
+def _undo_rows(counts: Sequence[Dict[str, Dict[str, int]]]
+               ) -> Dict[str, Dict[str, int]]:
+    total: Dict[str, Dict[str, int]] = {}
+    for one in counts:
+        for what, tables in one.items():
+            for table, n in tables.items():
+                total.setdefault(what, {}).setdefault(table, 0)
+                total[what][table] += n
+    return total
+
+
+def _undo_refused(plan: Optional[undo.Plan], db_) -> Dict[str, Any]:
+    """The answer to a plan that cannot run: each refusal with its reason,
+    what to do and its counts, and nothing changed."""
+    if plan is None:
+        return {"error": UNDO_REFUSED.format(refused=1, total=1),
+                "refusals": [], "nothing_changed": True}
+    tools = {change.receipt: change.tool for change in plan.changes}
+    refusals = []
+    for refusal in plan.refusals:
+        reason = refusal["reason"]
+        tool = tools.get(refusal["receipt"])
+        entry: Dict[str, Any] = {"undo_receipt": refusal["receipt"]}
+        if tool:
+            entry["tool"] = tool
+        entry["reason"] = reason
+        entry["message"] = _mark_unregistered(
+            UNDO_REFUSAL_TEXTS[reason].format(tool=tool or "that tool"))
+        for field, name in (("rows", "rows"), ("files", "files"),
+                            ("suggestions", "suggestions"),
+                            ("later_changes", "later_changes"),
+                            ("other_runs", "later_changes_elsewhere")):
+            if field in refusal:
+                entry[name] = refusal[field]
+        if "owners" in refusal:
+            entry.update(_undo_coders(refusal["owners"], db_))
+        refusals.append(entry)
+    receipts = {r["receipt"] for r in plan.refusals}
+    total = len({c.receipt for c in plan.changes} | receipts)
+    return {"error": UNDO_REFUSED.format(refused=len(receipts),
+                                         total=max(total, 1)),
+            "refusals": refusals, "nothing_changed": True}
+
+
+def _undo_preview(plan: undo.Plan, db_, readable: bool) -> Dict[str, Any]:
+    """What the undo would do: by change, by table and kind (removed, put
+    back, set back) and by coder, and what it sets back in the coding
+    sessions. `readable` adds what moves between two calls a minute
+    apart (each change's age, the signs of a QualCoder window), which the
+    token does not sign (`_undo_signed`)."""
+    clock = change_record.now()
+    changes = []
+    for change in plan.changes:
+        entry: Dict[str, Any] = {"undo_receipt": change.receipt,
+                                 "tool": change.tool,
+                                 "rows": change.counts()}
+        if readable:
+            entry["minutes_ago"] = max(0, int((clock - change.time) // 60))
+        changes.append(entry)
+    preview: Dict[str, Any] = {
+        "changes": changes,
+        "rows": _undo_rows([change.counts() for change in plan.changes]),
+        **_undo_coders(_undo_owners(plan), db_)}
+    again = sum(len(m[2]) for m in plan.marks if m[0] == "approved")
+    if again:
+        preview["suggestions_approved_again"] = again
+    proposals = sum(len(m[2]) for m in plan.marks if m[0] == "proposals")
+    if proposals:
+        preview["proposals_approved_again"] = proposals
+    if plan.suggestions_on_removed_files:
+        preview["suggestions_naming_removed_files"] = \
+            plan.suggestions_on_removed_files
+    if readable:
+        preview["note"] = _mark_unregistered(UNDO_WAY_BACK)
+        signals = qualcoder_gui_signals(_current_project_folder())
+        preview["qualcoder_gui_signals"] = signals
+        if signals:
+            preview["qualcoder_gui_hint"] = UNDO_QUALCODER_HINT.format(
+                signals="; ".join(signals))
+    return preview
+
+
+_UNDO_UNSIGNED = ("note", "qualcoder_gui_signals", "qualcoder_gui_hint")
+
+
+def _undo_signed(preview: Dict[str, Any]) -> Dict[str, Any]:
+    """The part of an undo's preview the token signs: all of it but each
+    change's age and the signs of a QualCoder window."""
+    signed = {k: v for k, v in preview.items() if k not in _UNDO_UNSIGNED}
+    signed["changes"] = [{k: v for k, v in change.items()
+                          if k != "minutes_ago"}
+                         for change in preview.get("changes", [])]
+    return signed
+
+
+def _undo_warnings(preview: Dict[str, Any]) -> List[str]:
+    """The preview's warnings: whose rows return to their earlier state,
+    and what the coding sessions get back."""
+    warnings = []
+    ai_names = set(_ai_names_for_project())
+    by_coder = preview.get("by_coder") or {}
+    other = sum(n for name, n in by_coder.items() if name not in ai_names)
+    if other:
+        names = ", ".join(sorted(n for n in by_coder if n in ai_names)) \
+            or ", ".join(sorted(ai_names)) or "none recorded"
+        warnings.append(UNDO_OTHER_CODERS.format(other=other, names=names))
+    if preview.get("hidden_coder_rows"):
+        warnings.append(UNDO_HIDDEN_ROWS.format(
+            count=preview["hidden_coder_rows"]))
+    for key, text in (("suggestions_approved_again", UNDO_SUGGESTIONS_AGAIN),
+                      ("proposals_approved_again", UNDO_PROPOSALS_AGAIN),
+                      ("suggestions_naming_removed_files",
+                       UNDO_SUGGESTIONS_ON_FILES)):
+        if preview.get(key):
+            warnings.append(_mark_unregistered(text.format(
+                count=preview[key])))
+    return warnings
+
+
+def _undo_list(context) -> Dict[str, Any]:
+    """The changes this run of Exegete made to this project, newest first,
+    each with its receipt, tool, age, rows by what an undo would do, and
+    whether it can be undone now, or why not."""
+    project_db = context[3]
+    records = change_record.this_run(context[1])
+    if not records:
+        return {"changes": [], "note": _mark_unregistered(UNDO_LIST_EMPTY)}
+    ro = get_db()
+    sessions = undo.project_sessions(session_manager, project_db)
+    clock = change_record.now()
+    changes = []
+    for record in records:
+        plan = _undo_plan(ro, [record["receipt"]], context, sessions, clock)
+        entry: Dict[str, Any] = {
+            "undo_receipt": record["receipt"], "tool": record.get("tool"),
+            "minutes_ago": max(0, int((clock - record.get("time", clock))
+                                      // 60)),
+            "rows": undo.record_counts(record),
+            "can_be_undone": plan.can_run}
+        if not plan.can_run:
+            entry["why_not"] = [
+                {k: v for k, v in refusal.items() if k != "undo_receipt"}
+                for refusal in _undo_refused(plan, ro)["refusals"]]
+        changes.append(entry)
+    return {"changes": changes, "count": len(changes),
+            "note": _mark_unregistered(UNDO_LIST_NOTE)}
+
+
+def _undo_session_marks(session, sid: str, plan: undo.Plan,
+                        ai_names: Set[str]) -> Dict[str, int]:
+    """Set back what the undone changes marked in one session, in the
+    plan's order, newest change first, and take the removed codes and
+    files out of its scope. The counts of what moved."""
+    counts: Dict[str, int] = {}
+
+    def count(key):
+        counts[key] = counts.get(key, 0) + 1
+
+    for mark in plan.marks:
+        if mark[0] == "approved" and mark[1] == sid:
+            for suggestion in session.suggestions:
+                if suggestion.guid in mark[2] and \
+                        suggestion.status == "applied":
+                    suggestion.status = "approved"
+                    suggestion.applied_ctid = None
+                    count("suggestions_approved_again")
+        elif mark[0] == "proposals" and mark[1] == sid:
+            for proposal in session.proposed_codes:
+                if proposal.guid in mark[2] and proposal.status == "created":
+                    proposal.status = "approved"
+                    proposal.created_code_id = None
+                    count("proposals_approved_again")
+        elif mark[0] == "applied":
+            _, fid, cid, pos0, pos1, ctid, owner = mark
+            for suggestion in session.suggestions:
+                if (suggestion.status == "removed"
+                        and suggestion.file_id == fid
+                        and suggestion.code_id == cid
+                        and suggestion.start_pos == pos0
+                        and suggestion.end_pos == pos1
+                        and (suggestion.applied_ctid == ctid
+                             or (suggestion.applied_ctid is None
+                                 and owner in ai_names))):
+                    suggestion.status = "applied"
+                    suggestion.applied_ctid = ctid
+                    count("suggestions_applied_again")
+    scope = session.scope
+    if scope is not None:
+        for key, gone in (("code_ids", plan.removed_codes),
+                          ("file_ids", plan.removed_files)):
+            ids = scope.get(key)
+            if isinstance(ids, list) and gone.intersection(ids):
+                kept = [i for i in ids if i not in gone]
+                counts["ids_taken_out_of_scope"] = counts.get(
+                    "ids_taken_out_of_scope", 0) + len(ids) - len(kept)
+                scope[key] = kept
+    if counts:
+        session.last_modified = datetime.now().isoformat()
+    return counts
+
+
+def _undo_sessions(plan: undo.Plan, project_db: Path) -> List[Dict[str, Any]]:
+    """After the commit: each session of this project set back as the undo
+    says, saved only if no other writer saved it since it was read, read
+    again and retried otherwise, as delete_coding's marks are. Each entry
+    says what was set back, or that a session could not be saved or is
+    gone."""
+    if not plan.marks and not plan.removed_codes and not plan.removed_files:
+        return []
+    ai_names = set(_ai_names_for_project())
+    wanted = {m[1] for m in plan.marks if m[0] in ("approved", "proposals")}
+    seen: Set[str] = set()
+    updates: List[Dict[str, Any]] = []
+    for path in sorted(session_manager.storage_dir.glob("session_*.json")):
+        sid = path.stem[len("session_"):]
+        entry: Optional[Dict[str, Any]] = None
+        for _attempt in range(5):
+            entry = None
+            try:
+                session, raw = session_manager.load_session_and_bytes(sid)
+                if not SessionManager.same_project(session.project_path,
+                                                   project_db):
+                    break
+            except Exception:
+                break
+            seen.add(sid)
+            moved = _undo_session_marks(session, sid, plan, ai_names)
+            if not moved:
+                break
+            entry = {"coding_session_id": sid, "status": "set back", **moved}
+            try:
+                if session_manager.save_session_if_unchanged(session, raw):
+                    break
+            except Exception as e:
+                logger.error("Could not save a session after an undo: %s",
+                             error_label(e))
+                entry["status"] = UNDO_SESSIONS_NOT_SAVED
+                break
+        else:
+            if entry is not None:
+                entry["status"] = UNDO_SESSIONS_NOT_SAVED
+        if entry is not None:
+            updates.append(entry)
+    for sid in sorted(wanted - seen):
+        updates.append({"coding_session_id": sid,
+                        "status": UNDO_SESSION_GONE})
+    return updates
+
+
+def _undo_after(result: Dict[str, Any], plan: undo.Plan, context) -> None:
+    """After the commit: the changes' records removed, the coding
+    sessions set back, the reading copies of the files the undo touched
+    forgotten, and what the answer says of them."""
+    project = context[1]
+    for change in plan.changes:
+        try:
+            change_record.remove(project, change.receipt)
+        except Exception as e:
+            logger.warning("Could not remove the record of an undone "
+                           "change: %s", error_label(e))
+    updates = _undo_sessions(plan, context[3])
+    if updates:
+        result["sessions_updated"] = updates
+    again = sum(u.get("suggestions_approved_again", 0) for u in updates)
+    if again:
+        result["sessions_note"] = _mark_unregistered(
+            UNDO_SUGGESTIONS_AGAIN.format(count=again))
+    if plan.files_touched:
+        _forget_reading_copies(sorted(plan.files_touched))
+    result["way_back"] = _mark_unregistered(UNDO_WAY_BACK)
+    totals = result.get("rows") or {}
+    logger.info("Undid %d change(s): %d row(s) removed, %d put back, %d set "
+                "back", len(plan.changes),
+                *(sum((totals.get(what) or {}).values())
+                  for what in ("removed", "put_back", "set_back")))
+
+
+@mcp.tool(annotations=TOOL_CHANGES)
+@_tool_guard
+@_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
+def undo_changes(receipts: Optional[List[str]] = None,
+                 preview_token: Optional[str] = None) -> str:
+    """Take back changes Exegete made to this project, each whole or not at all.
+
+    A change's answer carries its undo_receipt when one was kept. Called
+    with no receipts, undo_changes lists the changes Exegete has made to
+    this project since it last started, those of every conversation the
+    same Exegete serves included. Called with receipts, it previews what
+    would be removed, put back or set back, and anything that blocks it.
+    Show the researcher the preview, and only if they agree, call again
+    with the same receipts and the preview_token. A change can be undone
+    for a day, on the project it was made in, while its backup is kept. A
+    change that only added rows needs no backup. Exegete refuses to undo a
+    change whose rows have been changed since, or that later work depends
+    on, such as a coding or a coding suggestion using a code the change
+    made. The preview gives the reason for each refusal. A backup is made
+    first. An undo cannot itself be undone: restoring that backup is the
+    way back.
+
+    Args:
+        receipts: the undo_receipt of each change to take back, from the
+                  changes' answers; omit them for the list of changes
+        preview_token: the token from this undo's preview; omit it to get
+                       the preview
+    """
+    _adopt_configured_project()
+    if current_project_path is None:
+        return json.dumps({"error": _no_project_message()})
+    try:
+        context = _undo_context()
+    except PreviewSecretUnavailable:
+        return json.dumps(_token_error("preview_secret_unavailable",
+                                       "undo_changes"))
+    if not receipts:
+        return json.dumps(_undo_list(context), indent=2)
+    receipts = list(dict.fromkeys(receipts))
+    if not all(isinstance(r, str) and change_record.HEX_32.fullmatch(r)
+               for r in receipts):
+        return json.dumps({"error": UNDO_NOT_A_RECEIPT,
+                           "nothing_changed": True})
+    ro = get_db()
+    first = _undo_plan(ro, receipts, context)
+    if not first.can_run:
+        return json.dumps(_undo_refused(first, ro), indent=2)
+    held: Dict[str, Optional[undo.Plan]] = {"plan": first, "locked": None}
+
+    def _state_of(wdb) -> str:
+        # The plan built once more, on the write connection under SQLite's
+        # write lock, for the signed state, the checks and the write
+        locked = _undo_plan(wdb, receipts, context)
+        held["locked"] = locked
+        return fingerprint_rows(_undo_signed(_undo_preview(locked, wdb,
+                                                           False)),
+                                locked.fingerprint())
+
+    def _check(wdb) -> Optional[Dict[str, Any]]:
+        locked = held["locked"]
+        if locked is None or not locked.can_run:
+            return _undo_refused(locked, wdb)
+        return None
+
+    def _op(wdb) -> Dict[str, Any]:
+        locked = held["locked"]
+        try:
+            undo.write(wdb.conn, locked, context[0])
+        except undo.WriteCheckFailed as e:
+            logger.error("An undo was rolled back: %s row(s) did not read "
+                         "back as planned", e.args[0] if e.args else "some")
+            raise RuntimeError(UNDO_CHECK_FAILED) from None
+        rows = _undo_rows([change.counts() for change in locked.changes])
+        total = {what: sum(tables.values()) for what, tables in rows.items()}
+        return {"success": True,
+                "message": (f"Undid {len(locked.changes)} change(s): "
+                            f"{total.get('removed', 0)} row(s) removed, "
+                            f"{total.get('put_back', 0)} put back, "
+                            f"{total.get('set_back', 0)} set back."),
+                "undone": [{"undo_receipt": c.receipt, "tool": c.tool}
+                           for c in locked.changes],
+                "rows": rows}
+
+    result = _guarded_destructive(
+        preview_fn=lambda db_: _undo_preview(held["plan"], db_, True),
+        op_fn=_op,
+        fingerprint_fn=lambda db_: held["plan"].fingerprint(),
+        tool="undo_changes",
+        token_args=canonical_args("undo_changes", receipts=receipts),
+        preview_token=preview_token,
+        backup_fail_detail="nothing was undone",
+        confirm_hint=_mark_unregistered(UNDO_CONFIRM_HINT),
+        execute_arguments={"receipts": receipts},
+        state_preview_fn=_undo_signed,
+        override_required_fn=lambda preview: False,
+        warnings_fn=_undo_warnings,
+        state_of_fn=_state_of,
+        check_fn=_check,
+        record=False)
+    if result.get("success") and "error" not in result:
+        _undo_after(result, held["locked"], context)
+    return json.dumps(result, indent=2)
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def get_coding_session_info(coding_session_id: str) -> str:
@@ -17314,6 +17757,179 @@ TOKEN_ERROR_TEXTS_BY_TOOL = {
 }
 
 
+# Why a change cannot be undone (v0.15.2), by undo.py's reasons, each with
+# what to do. None holds a path, a name or a note: the counts go beside
+# the text in the answer. {tool} is the tool that made the change.
+_THE_WAY_BACK = (
+    " restore_backup with a backup taken before the change is the way "
+    "back; it also takes back everything done after that backup.")
+UNDO_REFUSAL_TEXTS = {
+    undo.RECEIPT_UNKNOWN: (
+        "Exegete keeps no change under this receipt for this project: the "
+        "change is more than a day old, it has been undone already, or the "
+        "receipt is not one Exegete gave. Called with no receipts, "
+        "undo_changes lists the changes Exegete has made to this project "
+        "since it last started." + _THE_WAY_BACK),
+    undo.ANOTHER_PROJECT: (
+        "This receipt belongs to a change made in another project. Select "
+        "that project with select_project, then undo the change there."),
+    undo.SECRET_REPLACED: (
+        "This change was recorded under a preview secret that has since "
+        "been replaced, so Exegete can no longer check it." + _THE_WAY_BACK),
+    undo.NEWER_FORMAT: (
+        "This change was recorded by a newer version of Exegete, which can "
+        "undo it; this version cannot read its record."),
+    undo.RECORD_UNREADABLE: (
+        "The record of this change cannot be read, so the change cannot be "
+        "undone." + _THE_WAY_BACK),
+    undo.TOO_OLD: (
+        "This change is more than a day old, and Exegete keeps the record "
+        "of a change for a day." + _THE_WAY_BACK),
+    undo.NOT_YET_UNDOABLE: (
+        "Changes made by {tool} cannot be undone with undo_changes yet."
+        + _THE_WAY_BACK),
+    undo.OWN_TRIGGERS: (
+        "This project holds triggers of its own, which would run during an "
+        "undo and change rows Exegete cannot check, so Exegete does not "
+        "undo changes in it." + _THE_WAY_BACK),
+    undo.BACKUP_GONE: (
+        "The backup Exegete took before this change is no longer beside the "
+        "project, as when it has been pruned or renamed, and the rows the "
+        "change altered or removed come from it." + _THE_WAY_BACK),
+    undo.BACKUP_UNCLEAN: (
+        "The backup Exegete took before this change has a journal file "
+        "beside its database, or a link in place of its database or its "
+        "folder, so Exegete does not read it; list_backups marks such a "
+        "backup unclean." + _THE_WAY_BACK),
+    undo.BACKUP_UNREADABLE: (
+        "The backup Exegete took before this change has no database Exegete "
+        "can read, so the rows the change altered or removed cannot be put "
+        "back." + _THE_WAY_BACK),
+    undo.BACKUP_CHANGED: (
+        "The backup Exegete took before this change no longer holds those "
+        "rows as they were before the change, so they cannot be put back."
+        + _THE_WAY_BACK),
+    undo.CHANGED_SINCE: (
+        "Rows this change touched have been changed since (counted by table "
+        "in rows), so undoing it would also take back that later work. To "
+        "keep the later work, leave this change as it is. To undo both, "
+        "undo the later changes first, or in the same call: later_changes "
+        "gives the receipts of those this conversation's Exegete made."),
+    undo.PROJECT_ROW_CHANGED: (
+        "The project's own row, which holds the project memo, has changed "
+        "since this change, so the change cannot be undone. A later "
+        "set_memo on the project changes that row, and QualCoder 4.0 "
+        "writes it again when it first opens a project made by an older "
+        "version. set_memo can write the earlier memo again."),
+    undo.SCHEMA_CHANGED: (
+        "A table or a column this change wrote is no longer in the project, "
+        "as when a program has renamed it, so its rows cannot be compared "
+        "or put back." + _THE_WAY_BACK),
+    undo.TEXT_CHANGED: (
+        "The text of a file this change coded has changed since, as when "
+        "names were replaced in it, so the places the change recorded no "
+        "longer hold."),
+    undo.DEPENDED_ON: (
+        "Later work depends on this change: rows made since point at rows "
+        "the undo would remove (counted by table in rows, and by coder). "
+        "To undo it, remove that work first: delete_code or "
+        "delete_category, whose previews say whose work would go, or "
+        "delete_coding for a coding. later_changes gives the receipts of "
+        "later changes this conversation's Exegete made, which can be "
+        "undone in the same call."),
+    undo.SUGGESTIONS_DEPEND: (
+        "Coding suggestions in this project's coding sessions use a code "
+        "this undo would remove (counted in suggestions). The next code "
+        "made can take a removed code's number, and apply_codings would "
+        "then write those suggestions under that code. Move them to another "
+        "code first (reopen them with update_suggestion_status, then "
+        "edit_suggestion), or delete their session with "
+        "delete_coding_session."),
+    undo.KEY_IN_USE: (
+        "A row this undo would put back has its number taken by a row made "
+        "since (counted by table in rows), so it cannot be put back. "
+        "later_changes gives the receipt of a later change this "
+        "conversation's Exegete made, which can be undone first."),
+    undo.VALUE_TAKEN: (
+        "A row this undo would put back or set back holds a name, or "
+        "another value that must be unique, that another row has taken "
+        "since (counted by table in rows). Rename that row first, or undo "
+        "the change that made it: later_changes gives its receipt when "
+        "this conversation's Exegete made it."),
+    undo.PARENT_GONE: (
+        "A row this undo would put back or set back would point at a row "
+        "deleted since, such as a category or a file (counted by table in "
+        "rows), so it cannot be put back as it was."),
+    undo.DOCUMENTS_CLASH: (
+        "The name this undo would give a file back is taken by a file in "
+        "the project's documents folder, which would then stand for this "
+        "entry. rename_file can give the entry another name, or that file "
+        "can be moved out of the documents folder first."),
+    undo.LOOP: (
+        "Setting a category's or a code's parent back would make it its own "
+        "ancestor, since its old parent has been moved under it since. Move "
+        "that branch back first."),
+}
+# The answer to a call whose plan has refusals
+UNDO_REFUSED = (
+    "The undo cannot go ahead: {refused} of the {total} change(s) cannot "
+    "be undone now, each with its reason below. Each change is undone "
+    "whole or not at all, and nothing was changed.")
+UNDO_NOT_A_RECEIPT = (
+    "These are not undo receipts: a receipt is the 32 letters and digits "
+    "of undo_receipt in a change's answer. Nothing was changed.")
+# What a preview and an undo say of the changes they cover
+UNDO_WAY_BACK = (
+    "An undo cannot itself be undone: restore_backup with the backup it "
+    "takes first is the way back.")
+UNDO_SUGGESTIONS_AGAIN = (
+    "{count} coding suggestion(s) return to approved in their session: the "
+    "next apply_codings on that session writes them again unless they are "
+    "rejected first.")
+UNDO_PROPOSALS_AGAIN = (
+    "{count} code proposal(s) return to approved in their session: the "
+    "next create_proposed_codes on that session makes their codes again "
+    "unless they are rejected first.")
+UNDO_SUGGESTIONS_ON_FILES = (
+    "{count} coding suggestion(s) name a file this undo removes; "
+    "apply_codings writes none of them unless a file added later holds "
+    "the same text at the same place.")
+UNDO_HIDDEN_ROWS = (
+    "{count} row(s) this undo returns to their earlier state belong to "
+    "coders the project hides; their names are not shown, and the undo "
+    "needs no other step for them.")
+UNDO_OTHER_CODERS = (
+    "{other} of the rows this undo returns to their earlier state are not "
+    "under Exegete's AI coder name ({names}): show the researcher by_coder "
+    "and ask before undoing.")
+UNDO_CHECK_FAILED = (
+    "The undo was stopped before it was saved: a row it wrote did not read "
+    "back as planned, so every change it made was rolled back and the "
+    "project is as it was. The backup named here was taken first.")
+UNDO_LIST_NOTE = (
+    "These are the changes Exegete has made to this project since it last "
+    "started, newest first, each with its receipt. Called with receipts, "
+    "undo_changes previews what undoing them would remove, put back or "
+    "set back. A receipt from a change's answer works for a day, also "
+    "after Exegete restarts.")
+UNDO_LIST_EMPTY = (
+    "Exegete has made no change to this project since it last started. A "
+    "receipt from an earlier change's answer still works for a day.")
+UNDO_CONFIRM_HINT = (
+    "Show the researcher what the undo would remove, put back or set back, "
+    "and every warning, and ask whether to proceed; only if they agree, "
+    "call undo_changes again with the same receipts and the "
+    "preview_token. A backup is made first.")
+UNDO_QUALCODER_HINT = (
+    "Exegete found signs of QualCoder having this project open ({signals}). "
+    "They are a heuristic, since QualCoder 4.0 writes no lock file, so ask "
+    "the researcher whether QualCoder has the project open before undoing. "
+    "A window open there keeps showing the project as it was until the "
+    "project is opened again.")
+UNDO_SESSIONS_NOT_SAVED = "not saved: the session still shows the change"
+UNDO_SESSION_GONE = "gone: the session could not be read"
+
+
 def _qda_file_stamp(path) -> List[Any]:
     """Size, mtime and two header words of a data.qda, for a fingerprint.
 
@@ -17546,7 +18162,8 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
                          warnings_fn=None,
                          execute_guard_fn=None,
                          state_of_fn=None,
-                         check_fn=None) -> Dict[str, Any]:
+                         check_fn=None,
+                         record: bool = True) -> Dict[str, Any]:
     """Preview -> token -> safety-backup gate for destructive operations.
 
     Without a token this returns a preview (read-only, no backup, no
@@ -17589,6 +18206,9 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
       write lock after the state is compared, before the backup's
       database (v0.15.1): None goes on, a dict is the answer, and either
       way a refusal there leaves no backup.
+
+    `record` is passed on to `_perform_write` (v0.15.2): False keeps no
+    record of the change and gives no receipt, for undo's own write.
     """
     def state_of(db_) -> str:
         """The signed state: what the preview says AND which rows it covers.
@@ -17651,7 +18271,8 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
     result = _perform_write(op_fn,
                             check=_state_check(state_of, state, tool,
                                                check_fn),
-                            backup_fail_detail=backup_fail_detail)
+                            backup_fail_detail=backup_fail_detail,
+                            record=record)
     if isinstance(result, dict) and "error" not in result \
             and "collateral" in preview:
         # What the user approved travels with what was done, so the

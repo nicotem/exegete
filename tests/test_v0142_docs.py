@@ -791,6 +791,13 @@ def test_quickstart_sends_a_newcomer_to_the_one_click_start():
     assert "\n### Claude Desktop, with one click\n" in _read("README.md")
 
 
+def test_quickstart_stays_within_its_budget():
+    """v0.15.2, the opening texts: QUICKSTART rewritten to the writing
+    checklist within 250 lines, the documents' commands marks included
+    (the README's budget is tests/test_v0142_readme_persuasive.py's)."""
+    assert _read("QUICKSTART.md").count("\n") <= 250
+
+
 def test_a_first_session_says_what_to_do_next():
     """The step after the practice project brings text in, as the example
     on the first screen does, which asks for the AI coder name first

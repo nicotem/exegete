@@ -178,7 +178,7 @@ KEPT = [
     ("INSTALL.md", "## LM Studio (fully local) (Experimental)", 1),
     ("INSTALL.md", "## ChatGPT's desktop app and Codex (Experimental)", 1),
     ("INSTALL.md", "> **Status: Experimental.**", 3),
-    ("QUICKSTART.md", "(the API-key and LM Studio routes are Experimental).",
+    ("QUICKSTART.md", "The API-key and LM Studio routes are Experimental.",
      1),
     ("TOOLS.md", "**Reduced toolset for local models (Experimental):**", 1),
     ("TOOLS.md", "called experimental there", 1),

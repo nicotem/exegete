@@ -333,15 +333,7 @@ ff3d84d4f818c5fd	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to
 73dce042c4605cd2	PROJECT_SELECTION_GUIDE.md	document	qualcoder	seeded 27 October, to be read	You'll get a list like this one, where the first project is in the desktop exten
 22ccc94b3581ca91	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime
 bc6c47e09c41b5b8	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime too (select_project works; the variable only sets the start-up 
-14261c13ce4f6fd4	QUICKSTART.md	document	qualcoder	seeded 27 October, to be read	Check QualCoder documentation
-a7e72762fd3e62a4	QUICKSTART.md	document	voice	seeded 27 October, to be read	Choosing between Claude plans, an API key, or a fully local model?
-85259382445fabf1	QUICKSTART.md	document	voice	seeded 27 October, to be read	Consider naming a folder outside Documents, such as ~/Exegete projects: add "EXE
-df855685f04b4322	QUICKSTART.md	document	voice	seeded 27 October, to be read	Happy analysing! 🎉
-0fac5e76db0b5b66	QUICKSTART.md	document	voice	seeded 27 October, to be read	Test the Server Manually
-b56498e9e2c53101	QUICKSTART.md	document	voice	seeded 27 October, to be read	Updates never touch your projects or backups (the server is code-only).
-d9cbf79d081576fe	QUICKSTART.md	document	voice	seeded 27 October, to be read	When a new version is released: first fully quit your Claude client, so that no 
-519c9a7113e4cb7a	QUICKSTART.md	document	voice	seeded 27 October, to be read	With the fixed-project config above, make sure the env section has EXEGETE_PROJE
-7357e2d92ac59324	QUICKSTART.md	document	voice	seeded 27 October, to be read	[ ] Claude Desktop installed, or any other MCP client: Claude Code users can ski
+d56a3d46348b2fb2	QUICKSTART.md	document	voice	quotes INSTALL.md's heading by its own words, so a reader can search for it; there "the server" is how an app starts Exegete, the sense the conventions allow	You could name a folder outside Documents, such as ~/Exegete projects: add "EXEG
 92b4189f07d86e87	README.md	document	qualcoder	seeded 27 October, to be read	A project from before QualCoder 3.8 must first be opened once in 3.8 or newer; w
 cbb926ba9bca2b29	README.md	document	qualcoder	seeded 27 October, to be read	Before you edit transcripts in QualCoder 3.8.2's coding view, read its edit-mode
 e901d005421b3943	README.md	document	qualcoder	seeded 27 October, to be read	Both names, and whether you also use QualCoder on this computer, are set in Clau

@@ -1161,8 +1161,8 @@ class TestTheOtherFirstImpressions:
             "extension description": manifest["description"],
             "extension long description": manifest["long_description"],
             "citation abstract": citation,
-            "QUICKSTART": _between(_flat("QUICKSTART.md"), "# Quick Start",
-                                   "## Prerequisites"),
+            "QUICKSTART": _between(_flat("QUICKSTART.md"), "# Quick start",
+                                   "## What you need"),
         }
         for where, text in texts.items():
             assert re.search(r"qualitative (data )?analysis application",
@@ -1182,10 +1182,12 @@ class TestTheOtherFirstImpressions:
                         "projects"):
                 assert old not in text, (where, old)
         # v0.15.0: the default set creates a project on every route
-        assert ("- [ ] A project to work on (a `.qda` folder, in "
-                "QualCoder's format), or none: the default tool set, `full`, "
-                "can create one in the conversation (INSTALL.md says where "
-                "it goes)") in _flat("QUICKSTART.md")
+        # (v0.15.2, the opening texts: the same fact, the project kept in
+        # QualCoder's file format)
+        assert ("- A project, which is a folder whose name ends in `.qda`, "
+                "kept in QualCoder's file format, or none: the default tool "
+                "set, `full`, can create one in the conversation (INSTALL.md "
+                "says where it goes).") in _flat("QUICKSTART.md")
 
     def test_the_texts_the_first_pass_did_not_read(self):
         """v0.14.2 (the owner's ruling of 7 October 2026): the opening
@@ -1627,9 +1629,10 @@ def _claude_code_routes():
         "INSTALL, the API-key recipe": " ".join(_api_key_recipe().split()),
         "README, other assistants": _between(
             _flat("README.md"), "**Other assistants.**", "**Updating.**"),
-        "QUICKSTART, what you need": _between(
-            _flat("QUICKSTART.md"), "## Prerequisites Checklist",
-            "## Installation Steps"),
+        "QUICKSTART, Claude Code": _between(
+            _flat("QUICKSTART.md"),
+            "### Claude Code instead of Claude Desktop",
+            "## Installation steps"),
     }
 
 

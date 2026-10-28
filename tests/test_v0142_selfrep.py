@@ -686,13 +686,16 @@ class TestQualCoderIsOptional:
         # v0.15.0: the default set creates a project on every route
         assert "- ✅ **A project, or a new one.**" in install
         quick = _flat((REPO / "QUICKSTART.md").read_text(encoding="utf-8"))
-        assert "- [ ] A project to work on (a `.qda` folder, in QualCoder's " \
-               "format)" in quick
+        # (v0.15.2, the opening texts: the project kept in QualCoder's file
+        # format; QualCoder is no step of the guide)
+        assert ("- A project, which is a folder whose name ends in `.qda`, "
+                "kept in QualCoder's file format, or none") in quick
         # the name glossed where it is first used, without the comparison
         # with NVivo, ATLAS.ti and MAXQDA (the owner's word of 23 October
-        # 2026: QualCoder is not the frame)
-        assert ("compatible with QualCoder, in 10 minutes. QualCoder is "
-                "free software for qualitative analysis. This guide") in quick
+        # 2026: QualCoder is not the frame), and no promise of how long
+        assert ("compatible with QualCoder. QualCoder is free software for "
+                "qualitative analysis.") in quick
+        assert "10 minutes" not in quick
 
     def test_the_rule_for_coding_agents(self):
         claude = _flat((REPO / "CLAUDE.md").read_text(encoding="utf-8"))

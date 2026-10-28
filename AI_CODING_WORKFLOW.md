@@ -56,6 +56,11 @@ Otherwise it is `~/Documents/Exegete projects/`, unless the setting
 folder. Either way, the answer to `copy_project_to_workspace`, and to
 `create_project`, gives the full path: use that one.
 
+If a sync service such as iCloud or OneDrive keeps your Documents
+folder, it keeps that workspace too. It then copies your projects off
+this computer, and can leave a damaged copy of one. A folder no sync
+service keeps, such as the extension's default, avoids that.
+
 **For a project made elsewhere, or one you want to keep as it is:**
 1. Copy the project to the workspace
 2. Work on the workspace copy
@@ -312,9 +317,14 @@ Apply the approved codings to the project
 ```
 
 **What Exegete does when the assistant calls `apply_codings`:**
-1. Takes a backup first, as before every change
-2. Goes through every approved suggestion
-3. Writes each as a coding to the database
+1. Checks every approved suggestion against the project: its file is
+   still there, with text, its code still exists, and its passage still
+   matches the text at its place. If one fails, nothing is written and
+   no backup is taken, and the answer lists what failed. A suggestion
+   already in the project as the same coding is left out, and if every
+   one is, nothing is written either
+2. Takes a backup, as before every change
+3. Writes the rest as codings, all of them or none
 4. Writes each coding's reading (explicit or interpretive) first in its
    memo, then the reasoning
 5. Records the project's AI coder name as each coding's owner. You
@@ -645,10 +655,12 @@ Load session abc123 and show me the suggestions
 ```
 
 Exegete keeps the session in a file of its own
-(`~/.exegete/sessions/`), not in the chat. The file holds all the
-suggestions, your approvals and rejections, and the session's details,
-so you can apply the approved suggestions when you are ready, from a
-later conversation too.
+(`~/.exegete/sessions/`), not in the chat. The file holds every
+suggestion, with its passage word for word and its reason, your
+approvals and rejections, and the session's details, so you can apply
+the approved suggestions when you are ready, from a later conversation
+too. It stays, outside the project, until `delete_coding_session`
+removes it.
 
 **5. Explicit or interpretive, not a score**
 

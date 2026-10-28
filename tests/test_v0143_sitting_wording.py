@@ -297,8 +297,10 @@ class TestTheReviewsOfTheSittingWording:
             self):
         readme = _flat(_repo_text("README.md"))
         assert "Not using QualCoder, or no coder name? Say so." not in readme
-        assert ("Not using QualCoder? Any name you choose will do. Do not "
-                "know yours? Say so.") in readme
+        # (v0.15.2, the opening texts: statements, not questions)
+        assert ("Any name you choose will do, and if you do not know yours, "
+                "say so.") in readme
+        assert "Not using QualCoder?" not in readme
 
     def test_tools_md_says_the_same(self):
         tools = _flat(_repo_text("TOOLS.md"))

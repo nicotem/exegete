@@ -468,9 +468,10 @@ class TestTheDocuments:
             encoding="utf-8").split())
         first = flat[flat.index("### A first session"):
                      flat.index("### Other assistants, and updates")]
+        # (v0.15.2, the opening texts: the same fact, reworded)
         assert ("With the extension or OpenAI's steps, the project is made, "
                 "by default, in \"Exegete projects\", in your home folder "
-                "(the assistant's answer gives the full path):") in first
+                "(the answer gives the full path).") in first
 
     def test_the_changelog_says_it(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

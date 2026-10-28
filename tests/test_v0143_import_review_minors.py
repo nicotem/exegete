@@ -243,9 +243,9 @@ def test_the_documents_name_what_differs():
         assert said in flat, said
     readme = " ".join((ROOT / "README.md").read_text(
         encoding="utf-8").split())
-    assert ("Exegete's preview of an import gives the assistant the "
-            "documents' names, sizes, lengths and warnings, never their "
-            "text") in readme
+    # (v0.15.2, the opening texts: the writing checklist's rewrite)
+    assert ("Before an import, Exegete shows the assistant each document's "
+            "name, size, length and any warnings, but no text.") in readme
     assert "PRIVACY.md#bringing-documents-in-0143" in readme
 
 

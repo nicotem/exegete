@@ -185,13 +185,11 @@ def test_tools_says_what_the_full_re_check_found():
 
 def test_the_readme_table_is_checked_against_the_release():
     readme = _flat("README.md")
-    # checked again for 0.14.3, whose import row the table carries
-    # v0.15.0, the release review: the Exegete column is 0.15.0's
-    assert ("QualCoder 3.8.2 and 4.0 as checked on 10 October 2026, beside "
-            "Exegete 0.15.1:") in readme
-    assert ("3.8.2: an AI search finds passages, which you code; 4.0: its "
-            "assistant codes as it works, within the AI permission you set "
-            "(read only stops it), with undo") in readme
+    # v0.15.2, the opening texts: the comparison table gave way to the list
+    # of what is not in Exegete yet; QualCoder's releases are TOOLS.md's,
+    # which the README points to
+    assert "QualCoder 3.8.2 to 4.0" in readme
+    assert "TOOLS.md#supported-qualcoder-versions" in readme
     # the README no longer names the beta or the August commit at all
     for words in ("4.0-Beta", "4.0 beta", "9bddf17"):
         assert words not in readme, words
@@ -261,18 +259,17 @@ def test_the_verified_check_would_notice():
 
 def test_the_readme_gives_both_new_facts():
     readme = _flat("README.md")
-    facts = _between(readme, "**QualCoder's own MCP server** (checked 6 "
-                     "October 2026).", "gives the commits these facts were "
-                     "read at.")
-    assert ("The server calls itself \"qualcoder-mcp\", Exegete's former "
-            "name, and the extension QualCoder's source can build is named "
-            "\"qualcoder\", a name an earlier Exegete setup may also use "
-            "([INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
-            "INSTALL.md#coming-from-qualcoder-mcp) says how to keep the two "
-            "apart).") in facts
-    assert ("QualCoder's AI permission setting (Read-only, for example) "
-            "governs its own assistant and that server, not Exegete.") \
-        in facts
+    # v0.15.2, the opening texts: the two facts in one sentence, the rest
+    # TOOLS.md's (test_tools_gives_both_new_facts, below)
+    facts = _between(readme, "QualCoder 4.0's own MCP server",
+                     "This project welcomes QualCoder's own server")
+    assert ("calls itself \"qualcoder-mcp\", Exegete's former name, as "
+            "checked on 6 October 2026 (TOOLS.md gives the facts, and "
+            "[INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
+            "INSTALL.md#coming-from-qualcoder-mcp) how to keep the two "
+            "apart)") in facts
+    assert ("QualCoder's AI permission setting, such as Read-only, governs "
+            "it and QualCoder's own assistant, not Exegete.") in facts
     # the facts come before the stance, which keeps its decided words
     assert readme.index("not Exegete.") < readme.index(
         "This project welcomes QualCoder's own server")

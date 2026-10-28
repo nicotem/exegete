@@ -402,9 +402,10 @@ class TestTheDocumentsOtherPoints:
         readme = _flat(_read("README.md"))
         assert ("**One program at a time.** If you also use QualCoder, close "
                 "the project there before the assistant changes it.") in readme
-        assert ("refuses while the project's lock file is active (QualCoder "
-                "3.8.2 has the project open, or another conversation using "
-                "Exegete is writing to it)") in readme
+        # (v0.15.2, the opening texts: the same two holders, reworded)
+        assert ("refuses while the project's lock file is active, as it is "
+                "while QualCoder 3.8.2 has the project open or another "
+                "conversation using Exegete is writing to it") in readme
         tools = _flat(_read("TOOLS.md"))
         assert ("**writes are refused while the project's lock file is "
                 "active** (QualCoder 3.8.2 has the project open, or another "
@@ -429,19 +430,24 @@ class TestTheDocumentsOtherPoints:
         readme = _flat(_read("README.md"))
         stays = readme[readme.index("**What stays on your computer**"):]
         stays = stays[:stays.index("## Start here")]
+        # (v0.15.2, the opening texts: the list's items end without a
+        # semicolon)
         assert ("- the texts an import's preview read, kept in Exegete's own "
-                "folder until the import (PRIVACY.md says for how long);"
+                "folder until the import (PRIVACY.md says for how long)"
                 ) in stays
 
     def test_where_the_settings_are(self):
         # v0.15.1, the small corrections: the restart a change there needs
         # sits between the two places (tests/test_v0151_small_corrections.py)
         readme = _flat(_read("README.md"))
-        assert ("Both names, and whether you also use QualCoder on this "
-                "computer, are set in Claude Desktop's Settings, Extensions, "
-                "Exegete (") in readme
-        assert ("or elsewhere as INSTALL.md's [Environment variables the "
-                "server reads]") in readme
+        # (v0.15.2, the opening texts: the switch by its title, and the
+        # restart said between the two places)
+        assert ("In Claude Desktop, both names and the switch \"I use "
+                "QualCoder on this computer\" are in Settings, Extensions, "
+                "Exegete (after changing one, quit Claude Desktop and open it "
+                "again); elsewhere, see [INSTALL.md](https://github.com/"
+                "nicotem/exegete/blob/main/INSTALL.md#environment-variables-"
+                "the-server-reads)") in readme
 
     def test_the_hidden_name_s_departure_is_named(self):
         tools = _flat(_read("TOOLS.md"))

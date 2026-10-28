@@ -66,62 +66,58 @@ ANCHOR = "https://github.com/nicotem/exegete#"
 # ---------------------------------------------------------------------------
 
 HEADINGS = ("What you can do", "How it works", "Where your data goes",
-            "Start here", "Three commitments", "For advanced users",
+            "Start here", "Exegete and QualCoder", "For advanced users",
             "What comes next", "Disclaimer", "Licence", "Acknowledgements")
 
 
 def test_the_first_screen_says_what_it_does_and_where_to_go():
     opening = _between(_readme(), "# Exegete", "## What you can do")
+    # v0.15.2, the opening texts: the same facts in the writing checklist's
+    # voice; "the AI provider" said once, where it is first used; the
+    # pointers to "Start here" and "For advanced users" gave way to the
+    # 500-line budget, the one before participants' data kept
     for words in (
             # the benefit, in the reader's terms, before any feature name
             # (the owner's word of 23 October 2026: what Exegete is, with
             # no kind of data presumed and QualCoder not the frame)
             "Exegete is a qualitative analysis application you use in "
-            "conversation with an AI assistant. You ask in your own words; "
-            "the assistant reads, searches and suggests; you decide. Every "
-            "suggested coding quotes the text word for word and is written "
-            "only when you approve it.",
+            "conversation with an AI assistant. You ask in your own words. "
+            "The assistant reads, searches and suggests, and you decide. "
+            "Every suggested coding quotes the text word for word, and "
+            "Exegete writes it into your project only when you approve it.",
             # the example, labelled for what it is
             "*An illustration, shortened, with made-up practice text; your "
             "assistant's words will differ.*",
-            # the honest flags, once (v0.14.2, the README's first round of
-            # checks: where the data goes is back on the first screen, and
-            # the evidence stands beside the caveats)
-            "- **Interviews or other participants' data?** First read "
-            "[Where your data goes](https://github.com/nicotem/exegete"
-            "#where-your-data-goes): the AI behind your assistant runs on "
-            "its maker's computers, and what it reads goes there; some "
-            "assistants also open files by themselves.",
+            # the honest flags, once
+            "Before you use participants' data, read [Where your data goes]"
+            "(https://github.com/nicotem/exegete#where-your-data-goes): what "
+            "the assistant reads goes to the AI provider, the company that "
+            "runs its AI model, unless that model runs on your own "
+            "computer, and some assistants open files by themselves.",
             # (the owner, 1 October 2026: free, open-source software, the
             # licence named, and what it costs, in "Start here")
-            "Exegete is free, open-source software, under QualCoder's own "
-            "licence (LGPL-3.0-or-later), and costs nothing (your assistant "
-            "may: see \"Start here\"). It is tested on Windows, macOS and "
-            # (v0.15.2, the two tiers of CI: the full matrix runs on the
-            # integration branch and main, which every change reaches
-            # before a release)
-            "Linux with every change before it is released.",
-            "an early version (an alpha) built by one researcher, "
-            "independently of QualCoder's developers",
-            "parts marked Experimental have had little or no use yet",
-            "not email; never put participant data in an issue."):
+            "Exegete is free, open-source software (LGPL-3.0-or-later) and "
+            "costs nothing, though your assistant may (see \"Start here\").",
+            "It is an early version, an alpha, built by one researcher and "
+            "tested on Windows, macOS and Linux.",
+            "Parts marked Experimental have had little or no use yet.",
+            "not email, takes questions and ideas, in public, so leave out "
+            "participants' data."):
         assert words in opening, words
     # no tool, protocol or feature name before the benefit sentence
     lede = opening[:opening.index("Exegete is a qualitative analysis "
                                   "application you use")]
     for word in ("MCP", "tool", "server", "`"):
         assert word not in lede.replace("shields.io", ""), word
-    # the example comes before the next steps, and they are three, one for
-    # each reader, in that order
+    # the example comes before the next steps
     # (v0.14.2, the README's first round of checks: the example is text
     # that wraps on a phone, in a block quote, not a code block)
     assert opening.index("**You:** Bring this into") < \
-        opening.index("**New here?**")
+        opening.index("Before you use participants' data")
     assert "\n> **You:** Bring this into" in _read("README.md")
     assert "```" not in opening
     links = re.findall(r"\]\((" + re.escape(ANCHOR) + r"[^)]+)\)", opening)
-    assert links == [ANCHOR + "start-here", ANCHOR + "where-your-data-goes",
-                     ANCHOR + "for-advanced-users"]
+    assert links == [ANCHOR + "where-your-data-goes"]
     readme = _read("README.md")
     order = [readme.index(f"\n## {h}\n") for h in HEADINGS]
     assert order == sorted(order)
@@ -131,46 +127,39 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
 
 def test_how_it_works_explains_before_it_instructs():
     section = _between(_readme(), "## How it works", "## Where your data goes")
+    # v0.15.2, the opening texts: where Exegete runs and that it has no AI
+    # of its own are the opening's; the path of a coding is said in words
+    assert ("Exegete (formerly qualcoder-mcp) runs on your computer, with no "
+            "window and no AI of its own") in _readme()
+    # what Exegete checks: the quoted words, not whether the code fits
+    assert "each quoting the text word for word, which Exegete checks" in \
+        _readme()
     for words in (
-            "Exegete runs on your computer. It has no AI of its own. The AI "
-            "model behind your assistant, which reads and suggests, runs on "
-            "its maker's computers unless it is a local one.",
-            # what Exegete checks: the quoted words, not whether the code
-            # fits (record_suggestions' verbatim check); the diagram says it
-            "Exegete checks each quote is the file's own words",
             # when anything is written, and not more than that: approving
             # marks, and the assistant writes in a step of its own
-            # (apply_codings, create_proposed_codes)
             "Suggested codings and proposed codes wait in a review list "
-            "outside the project until you approve them and the assistant "
-            "writes them. Other changes, such as making a code or writing "
-            "a memo, are made when the tool runs;",
+            "outside the project, and the assistant is told to show you "
+            "each passage with its reading and its reason.",
+            "Other changes, such as making a code or writing a memo, are "
+            "made when the tool runs.",
             # the approval, with its reason and its limit
-            # v0.14.2, the README's first round of checks: one sentence
             "Exegete hears only from the assistant, so it records the "
-            "approval the assistant reports: it cannot tell whether you "
+            "approval the assistant reports and cannot tell whether you "
             "gave it."):
         assert words in section, words
     assert "nothing is written" not in section.lower()
     # the two ways a text comes in, and what each sends, where data is
-    # discussed
+    # discussed (v0.15.2, the opening texts: the import's preview in the
+    # writing checklist's own rewrite)
     data = _between(_readme(), "## Where your data goes", "## Start here")
-    # v0.14.3: a document brought in through Exegete too, and what the
-    # import's preview sends
-    # (the whole-branch review, round 1: Exegete's route first)
-    assert ("Text you paste or attach goes in full; a document in the "
-            "project, brought in through Exegete or imported in QualCoder, "
-            "only as far as the "
-            "assistant reads it: Exegete's preview of an import gives the "
-            "assistant the documents' names, sizes, lengths and "
-            "warnings, never their "
-            # v0.15.1, the encoding choice: but one line of a file not
-            # saved as UTF-8 (tests/test_v0151_encoding_readings.py)
-            "text, but for one line of a file not saved as UTF-8, as each "
-            "character set reads it ([PRIVACY.md, \"Bringing documents "
-            "in\"]"
-            "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
-            "#bringing-documents-in-0143)).") in data
+    for words in ("Text you paste or attach goes in full, and a document in "
+                  "the project only as far as the assistant reads it.",
+                  "Before an import, Exegete shows the assistant each "
+                  "document's name, size, length and any warnings, but no "
+                  "text. The exception is a file not saved as UTF-8",
+                  "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
+                  "#bringing-documents-in-0143)"):
+        assert words in data, words
 
 
 # Modules that would give Exegete an AI, or a way onto the network, of its
@@ -251,7 +240,8 @@ def test_it_has_no_ai_of_its_own():
     assert network and all(
         any(name == m or name.startswith(m + ".") for m in NETWORK_ONLY)
         for name in network), network
-    assert "It has no AI of its own." in _readme()
+    # (v0.15.2, the opening texts: said in the opening's sentence)
+    assert "with no window and no AI of its own" in _readme()
     # "In short" is the sentence a data-management plan quotes, so it
     # gives the check's whole rule: once a week on its own, and when the
     # researcher asks (up to once a day, updates.ASKED_REUSE), and that
@@ -261,11 +251,11 @@ def test_it_has_no_ai_of_its_own():
     # requests in four days, asked on four days running).
     in_short = " ".join(_between(_readme(), "**In short.**",
                                  "What the assistant reads").split())
-    assert ("All it sends itself is a request for a file that says whether "
-            "a newer version exists, with nothing from your projects: at "
-            "most once a week, and when you ask, while checking is on, as "
-            "it is in the Claude Desktop extension unless you switch it "
-            "off") in in_short
+    assert ("The one request it sends itself asks for a small file that says "
+            "whether a newer version exists, and carries nothing from your "
+            "projects. It is sent at most once a week, and when you ask, "
+            "while checking is on, as it is in the Claude Desktop extension "
+            "unless you switch it off") in in_short
     assert "once a week while switched on" not in in_short
 
 
@@ -292,13 +282,14 @@ def test_the_no_ai_check_would_notice():
 def test_start_here_says_which_way():
     first = _between(_readme(), "## Start here",
                      "### Claude Desktop, with one click")
-    assert ("Claude Desktop, with one click, is the easiest start, and the "
-            "one this project suggests for participants' data.") in first
-    # v0.14.2, the README's first round of checks: a reader who came
-    # straight here is sent to where the data goes first, by a link
-    assert ("Came straight here? First read [Where your data goes]"
-            "(https://github.com/nicotem/exegete#where-your-data-goes).") \
+    # (v0.15.2, the opening texts: "easiest" is a word of praise the
+    # writing checklist leaves out; the reader who came straight here is
+    # sent to the checks by the one-click steps' link, below, as the
+    # rhetorical question "Came straight here?" gave way)
+    assert ("Claude Desktop with the extension needs no typed commands, and "
+            "is the route this project suggests for participants' data.") \
         in first
+    assert "Came straight here?" not in first
     # and the one-click steps send the reader to the checks before
     # participants' data, which live where data is discussed
     one_click = _between(_readme(), "### Claude Desktop, with one click",
@@ -326,16 +317,16 @@ def test_a_first_session_names_both_coder_names():
     # (tests/test_v0150_coder_name_settings.py); and the AI coder name
     # likewise, for a project the assistant made (the coder names, piece
     # 3, tests/test_v0150_ai_coder_name_setting.py)
+    # (v0.15.2, the opening texts: statements for the two questions)
     assert ("When it makes the project, the assistant asks for your own "
-            "coder name, unless you have filled it in Exegete's settings; "
-            "the project keeps it so that your work and the "
-            "AI's stay apart (QualCoder, if you use it, records your coding "
-            "under it). Not using QualCoder? Any name you choose will do. "
-            "Do not know yours? Say so. Before "
-            "its first write, it asks for the AI coder name, kept per "
-            "project, under which Exegete writes what is done through the "
-            "conversation, unless the project was made while it was filled "
-            "in Exegete's settings.") in names
+            "coder name, unless you have filled it in Exegete's settings, "
+            "and the project keeps it so that your work and the AI's stay "
+            "apart (QualCoder, if you use it, records your coding under "
+            "it). Any name you choose will do, and if you do not know "
+            "yours, say so. Before its first write, it asks for the AI coder "
+            "name, kept per project, under which Exegete writes what is "
+            "done through the conversation, unless the project was made "
+            "with that name in Exegete's settings.") in names
     assert "Not using QualCoder, or no coder name?" not in names
     assert "no QualCoder yet" not in names
     # the example on the first screen shows the second ask, before the
@@ -363,19 +354,21 @@ def test_the_approval_steps_are_named_where_the_readme_points():
     # followed, is said in the opening, so the section's end bounds it)
     approval = _between(readme, "**Your approval, and its limit.**",
                         "## Where your data goes")
+    # (v0.15.2, the opening texts: the same steps, reworded)
     for words in (
-            "so it records the approval the assistant reports: it cannot "
+            "so it records the approval the assistant reports and cannot "
             "tell whether you gave it.",
             # v0.14.2, the README's first round of checks: shorter, and
             # what to check the counts against (the counts
             # update_suggestion_status returns, below)
-            "Keep the assistant asking for the steps that record your "
+            "Keep the assistant asking before the steps that record your "
             "decisions and write them",
             "INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-"
             "are-the-safeguard",
             "\"Allow once\" in Claude, each prompt answered in Codex.",
             "Before any coding is applied, check that the counts (approved, "
-            "rejected, pending) match what you said; if not, say so."):
+            "rejected, pending) match what you said, and say so if they do "
+            "not."):
         assert words in approval, words
     status = " ".join(inspect.getsource(server.update_suggestion_status)
                       .split())
@@ -383,7 +376,7 @@ def test_the_approval_steps_are_named_where_the_readme_points():
         "they said" in status
     # what the assistant is told to bring, said as an instruction (the
     # diagram of a coding's path)
-    assert "the assistant is told to show each passage with" in readme
+    assert "the assistant is told to show you each passage with" in readme
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "
                        "suggestions: your host's settings are the safeguard",
                        "## PDF and EPUB: the optional part")
@@ -397,47 +390,42 @@ def test_the_approval_steps_are_named_where_the_readme_points():
         assert f"`{name}`" in install, name
         assert name in tools, name
         assert name not in newcomer, name
+    # (v0.15.2, the opening texts: TOOLS.md lists the coding loop's tools,
+    # the advanced section pointing to it)
+    tools_md = _flat("TOOLS.md")
     for name in ("update_suggestion_status", "apply_codings",
                  "create_proposed_codes"):
-        assert f"`{name}`" in advanced, name
+        assert f"`{name}" in tools_md, name
+    assert "TOOLS.md#available-tools" in advanced
 
 
 def test_the_commitments_open_with_what_they_promise():
-    section = _between(_readme(), "## Three commitments",
+    # v0.15.2, the opening texts: the three commitments became the section
+    # "Exegete and QualCoder", which opens with what Exegete is, in the
+    # writing checklist's rewrite; symmetry as an aim gave way to the aim
+    # without QualCoder as its frame, and to the list of what is not in
+    # Exegete yet
+    section = _between(_readme(), "## Exegete and QualCoder",
                        "## For advanced users")
-    # v0.14.2, the README's first round of checks: the heading counts
-    # them, and the paragraph that restated them is gone ("There are
-    # three: ..." under "Three commitments"); the first opens the section,
-    # and symmetry says, where it is stated, that it is an aim
-    assert section.startswith("## Three commitments **Compatibility with "
-                              "QualCoder.**")
-    for label in ("**Compatibility with QualCoder.**", "**Symmetry:",
-                  "**Interoperability.**"):
-        assert label in section, label
-    assert ("The aim is that the analytic work you can do in QualCoder, you "
-            "can do from the conversation. It is not yet a fact: today the "
-            "two differ in both directions.") in section
+    assert section.startswith("## Exegete and QualCoder Exegete is a "
+                              "separate program that reads and writes "
+                              "projects in QualCoder's format.")
+    assert "**Exchange with other programs.**" in section
     for words in ("keep your project yours", "whatever you do",
-                  "There are three:"):
+                  "There are three:", "Symmetry"):
         assert words not in section, words
 
 
 def test_latest_carries_the_date_it_was_checked():
-    """The README is frozen into each extension and PyPI upload, so the
-    "Latest" badge it names carries the day it was checked, and the table
-    of the two programs carries its own date. (QualCoder 4.0 came out on
-    2 October 2026: the download step and the table were both checked
-    again on 6 October.)"""
+    """The README is frozen into each extension and PyPI upload, so a
+    claim about another program's release carries the day it was checked.
+    (v0.15.2, the opening texts: the download step and the comparison
+    table gave way; the README dates its sentence on QualCoder's own
+    server and points to TOOLS.md, which names the releases.)"""
     readme = _readme()
-    dated = re.findall(r"\"Latest\" when this was checked, on (\d{1,2} \w+ "
-                       r"\d{4})\.", readme)
-    assert len(dated) == 1 and readme.count("\"Latest\"") == 1
-    assert ("3.8.2 is listed just below 4.0, the release marked \"Latest\" "
-            f"when this was checked, on {dated[0]}.") in readme
-    # v0.15.0, the release review: QualCoder's side as checked, beside
-    # the Exegete the table's column describes
-    assert re.search(r"QualCoder 3\.8\.2 and 4\.0 as checked on \d{1,2} "
-                     r"\w+ \d{4}, beside Exegete 0\.\d+\.\d+:", readme)
+    assert "\"Latest\"" not in readme
+    assert "QualCoder 4.0's own MCP server calls itself \"qualcoder-mcp\", " \
+        "Exegete's former name, as checked on 6 October 2026" in readme
 
 
 # ---------------------------------------------------------------------------

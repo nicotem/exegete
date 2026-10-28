@@ -565,12 +565,13 @@ class TestTheDocuments:
         """QualCoder is not the only way through (gate review, documents,
         round 1)."""
         readme = _flat("README.md")
-        assert ("A project from before QualCoder 3.8 must first be opened "
-                "once in 3.8 or newer; without QualCoder, someone who has "
-                "it and may see the project's data can do this and send "
-                "you the updated copy. Without QualCoder at all, a new "
-                "project made in Exegete from the original documents is a "
-                "way on, without the old project's coding.") in readme
+        # (v0.15.2, the opening texts: the same two ways, reworded)
+        assert ("A project made in QualCoder before 3.8 must first be opened "
+                "in QualCoder 3.8 or newer, once: someone who has QualCoder, "
+                "and may see the project's data, can do this and send you the "
+                "updated copy. Otherwise, a new project made in Exegete from "
+                "the original documents is a way on, without the old "
+                "coding.") in readme
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

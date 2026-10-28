@@ -209,7 +209,9 @@ MITIGATION = (
     "The section \"What pseudonymisation is for\", above, says what it is "
     "for and suggests a safer way to keep names from the assistant.")
 README_SENTENCES = (
-    "Replacing names reduces the risk; it does not make anyone anonymous. "
+    # (v0.15.2, the opening texts: one sentence, in the words of the
+    # writing checklist's table)
+    "Replacing names reduces the risk, and makes no one anonymous. "
     "Exegete can replace them, with the project's names list as documents "
     "come in or with `pseudonymise_source` afterwards. "
     # the files design, piece 5

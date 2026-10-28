@@ -463,9 +463,12 @@ class TestTheDocuments:
         assert "never other text" in flat
 
     def test_readme_tools_and_privacy(self):
-        assert ("never their text, but for one line of a file not saved as "
-                "UTF-8, as each character set reads it") in _flat(
+        # v0.15.2, the opening texts: the same fact, reworded: the writing checklist's own rewrite
+        assert ("each document's name, size, length and any warnings, but no "
+                "text. The exception is a file not saved as UTF-8") in _flat(
                     "README.md")
+        assert "the preview shows one line, read in several other ways" in \
+            _flat("README.md")
         tools = _flat("TOOLS.md")
         assert ("the text never passes through the conversation, but for "
                 "one line of a file not saved as UTF-8, as each character "

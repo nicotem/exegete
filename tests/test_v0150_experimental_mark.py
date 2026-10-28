@@ -72,25 +72,28 @@ def _server_comments():
 
 # 1. What changes: (document, old words, new words)
 CHANGES = [
+    # (v0.15.2, the opening texts: the new words of each sentence)
     ("README.md",
      "**Start a project** in QualCoder's format (Experimental)",
-     "**Start a project** in QualCoder's format, or work on a copy of "
-     "yours."),
+     "**Start a project**, or work on a copy of one you have."),
     ("README.md",
      "Practice\" (Experimental), then bring in your page",
      "called Practice\", then bring in your page"),
     ("README.md",
      "can create a project too (Experimental).",
-     "whose default tool set, `full`, can create a project too."),
+     "whose default tool set, `full`, can create a project too "
+     "([INSTALL.md]"),
+    # (the comparison table, and its row, gave way to the list of what is
+    # not in Exegete yet)
     ("README.md",
      "| Create a project | Yes | Yes (Experimental) |",
-     "| Create a project | Yes | Yes |"),
+     "79: every tool, creating a project"),
     # without the count, which the names-list piece moves
     ("README.md",
      "creating a project (Experimental) and two renamed tools' earlier "
      "names included",
-     "all, creating a project and two renamed tools' earlier names "
-     "included"),
+     "every tool, creating a project and the earlier names of two renamed "
+     "tools included"),
     # v0.15.2: the Terminal routes moved to the Terminal guide
     ("docs/installing-from-the-terminal.md",
      "includes creating a project (Experimental): the assistant",
@@ -162,7 +165,7 @@ class TestTheMarkLeavesCreatingAProject:
 
 # 2. What must not change: (document, words, times)
 KEPT = [
-    ("README.md", "parts marked Experimental have had little or no use yet",
+    ("README.md", "Parts marked Experimental have had little or no use yet",
      1),
     ("README.md", "| **ChatGPT's desktop app and Codex** (Experimental) |", 1),
     ("README.md", "| **LM Studio**, with a local model (Experimental) |", 1),
@@ -171,7 +174,8 @@ KEPT = [
     ("README.md", "#choosing-your-ai-host-data-governance-options-"
                   "experimental", 1),
     ("README.md", "#chatgpts-desktop-app-and-codex-experimental", 1),
-    ("README.md", "called experimental there", 1),
+    # (v0.15.2, the opening texts: QualCoder's own server is TOOLS.md's,
+    # below, the README pointing to it)
     # v0.15.2: the routes, with their marks, moved to the Terminal guide
     ("docs/installing-from-the-terminal.md",
      "## Choosing your AI host: data-governance options (Experimental)", 1),

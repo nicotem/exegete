@@ -45,7 +45,17 @@ CODEX_SETTING = ("OpenAI documents a setting, marked Beta, that can keep "
                  "works in; it has not been tested with Exegete")
 
 
+# v0.15.2: INSTALL.md is the desktop extension's; its Terminal routes,
+# OpenAI's among them, and the routes table moved, whole, to the Terminal
+# guide. What these tests read of "INSTALL" is the two together, the guide
+# first, where a section that moved is found.
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _read(name):
+    if name == "INSTALL.md":
+        return ((REPO / GUIDE).read_text(encoding="utf-8") + "\n\n"
+                + (REPO / name).read_text(encoding="utf-8"))
     return (REPO / name).read_text(encoding="utf-8")
 
 
@@ -596,7 +606,7 @@ class TestPrivacyQuotesOpenAI:
     def _section(self):
         return _between(_flat("PRIVACY.md"), "## OpenAI's apps: the ChatGPT "
                         "desktop app and Codex (Experimental)",
-                        "## What this means for research data")
+                        "## Practical mitigations")
 
     def test_each_quote_with_its_address_and_date(self):
         section = self._section()
@@ -723,7 +733,7 @@ ON_REQUEST_READS = ("\"With `on-request`, commands allowed by the sandbox "
 def _privacy_openai():
     return _between(_flat("PRIVACY.md"), "## OpenAI's apps: the ChatGPT "
                     "desktop app and Codex (Experimental)",
-                    "## What this means for research data")
+                    "## Practical mitigations")
 
 
 def _install_openai_flat():
@@ -1116,10 +1126,12 @@ class TestTheStepsANewcomerCanGetWrong:
                 "#updating-the-mcp-server)") in readme
         assert ("2. **Then follow [INSTALL.md's steps]" in readme
                 and "by the Terminal route" in _readme_openai())
-        updating = _between(_read("INSTALL.md"), "## Updating the MCP Server",
-                            "**Git (contributor) install**")
-        assert "$HOME\\exegete-venv\\Scripts\\pip install --upgrade exegete" \
-            in _blocks(updating, "powershell")[0]
+        # (v0.15.2: the Terminal guide's "Updating", which names the
+        # optional part for PDF and EPUB)
+        updating = _between(_read("INSTALL.md"), "## Updating\n",
+                            "**A copy of the source**")
+        assert ("`$HOME\\exegete-venv\\Scripts\\pip install --upgrade "
+                "\"exegete[pdf-epub]\"`") in updating
         assert ("the ChatGPT desktop app: quit it; Codex on the command "
                 "line: end the session") in " ".join(updating.split())
 
@@ -1440,13 +1452,20 @@ class TestAssistantsOwnFileAccess:
         # chat is suggested (test_v0142_docs.py)
         # (the owner, 1 October 2026: after the warning about practising,
         # under a lead of its own)
+        # (ruling 108, 27 October 2026: a local model is a route to
+        # consider for particular uses, never a blanket suggestion for
+        # participants' data)
         assert ("**For participants' data**, this project suggests an "
                 "assistant with no file access of its own: Claude Desktop's "
                 "chat with the extension, with computer use off, no folder "
                 "that holds your projects or transcripts connected to it, "
-                "and no other extension that reads files, or LM Studio's "
-                "chat with Exegete and no other server or plugin that reads "
-                "files.") in _privacy_hosts()
+                "and no other extension that reads files, on whichever plan "
+                "or terms you use. LM Studio's chat, with Exegete and no "
+                "other server or plugin that reads files, opens no file by "
+                "itself either, and a local model is a route to consider "
+                "for particular uses") in _privacy_hosts()
+        assert ("or LM Studio's chat with Exegete and no other server or "
+                "plugin that reads files.") not in _privacy_hosts()
         # The older condition, which left out the folders that hold a study
         for name in ("README.md", "PRIVACY.md", "INSTALL.md"):
             assert "none of your study's folders connected" not in \
@@ -1564,8 +1583,8 @@ class TestAssistantsOwnFileAccess:
         assert "or on another computer paired with it" in _privacy_openai()
         # INSTALL quotes some of OpenAI's words and paraphrases others
         assert "in OpenAI's words" not in _flat("PRIVACY.md")
-        assert ("INSTALL.md lists what Remote needs, from OpenAI's pages"
-                in _privacy_openai())
+        assert ("the Terminal guide lists what Remote needs, from OpenAI's "
+                "pages" in _privacy_openai())
 
 
 # ---------------------------------------------------------------------------
@@ -1605,9 +1624,8 @@ def _unwarned_claude_code_routes(text):
 
 
 def _claude_code_section():
-    return _between(_read("INSTALL.md"),
-                    "## Alternative: Claude Code and other MCP clients",
-                    "## Environment variables the server reads")
+    return _between(_read("INSTALL.md"), "\n## Claude Code\n",
+                    "## Claude Code with an Anthropic API key (Experimental)")
 
 
 def _api_key_recipe():
@@ -1681,7 +1699,9 @@ class TestClaudeCodesRoutes:
     def test_the_steps_start_claude_code_in_a_folder_of_its_own(self):
         folder = "mkdir -p ~/claude-exegete && cd ~/claude-exegete"
         section = _claude_code_section()
-        assert folder in [b.strip() for b in _blocks(section, "bash")]
+        # (v0.15.2: one block makes the folder and adds Exegete there)
+        assert folder in [b.strip().splitlines()[0]
+                          for b in _blocks(section, "bash")]
         # made before Exegete is registered in it
         assert section.index(folder) < \
             section.index("claude mcp add exegete -- exegete")
@@ -1728,19 +1748,19 @@ class TestClaudeCodesRoutes:
 
     def test_privacy_says_the_terms_do_not_change_what_it_reads(self):
         privacy = _flat("PRIVACY.md")
+        # v0.15.2: told once, for every rung, at the top of the governance
+        # options, and pointed to from the rungs that suggest the chat
+        intro = _between(privacy, "## Your governance options",
+                         "### Rung 1:")
+        assert ("On every rung, Claude Code opens files by itself, outside "
+                "Exegete, and the terms do not change what it reads "
+                "(\"Assistants that open files by themselves\").") in intro
         rung_two = _between(privacy, "### Rung 2:", "### Rung 3:")
-        for words in ("The terms change what Anthropic may do with what it "
-                      "receives, not what Claude Code reads: Claude Code "
-                      "opens files by itself, outside Exegete",
-                      "Claude Desktop's chat with Exegete on a Team or "
-                      "Enterprise account (rung 3)"):
-            assert words in rung_two, words
-        assert CLAUDE_CODE_READS in _between(privacy, "### Rung 1:",
-                                             "### Rung 2:")
-        cautions = _between(privacy, "### Cross-rung cautions",
-                            "## OpenAI's apps")
-        assert "Claude Code opens files by itself, outside Exegete, on " \
-               "every rung" in cautions
+        assert ("for participants' data under commercial terms, rung 3 says "
+                "what this project suggests.") in rung_two
+        rung_three = _between(privacy, "### Rung 3:", "### Rung 4:")
+        assert ("Claude Desktop's chat with Exegete under that account"
+                in rung_three)
         hosts = _privacy_hosts()
         assert "With Claude Code or Cowork, keep your projects out of " \
                "their folders, as above." not in hosts

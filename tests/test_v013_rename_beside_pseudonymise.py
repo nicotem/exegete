@@ -169,8 +169,10 @@ def test_the_documents_count_the_tools_the_server_registers():
     assert f"(`EXEGETE_TOOLSET=full`, the default everywhere: in the " \
            f"Claude Desktop extension and when you configure Exegete " \
            f"yourself) registers {count} tools" in _flat("TOOLS.md")
-    install = _flat("INSTALL.md")
-    assert f"`full` (default) registers {count} tools, every tool" in install
+    # v0.15.2: the variables and recipes are the Terminal guide's
+    install = _flat("docs/installing-from-the-terminal.md")
+    assert f"`full` (default) registers {count} tools, every tool" in \
+        install
     assert f"registers all {count} tools" not in install
     assert f"Exegete offers {count} tools by default" in install
 
@@ -239,7 +241,7 @@ def test_privacy_says_rename_file_reads_the_backups():
     # v0.14 (existing projects, part 6): restore checks for a journal or
     # WAL file beside the backup's database before it opens it
     paragraph = flat[flat.index("Besides `restore_backup`, which checks"):]
-    paragraph = paragraph[:paragraph.index("Two further rules")]
+    paragraph = paragraph[:paragraph.index("**Symlinks.**")]
     assert "which checks that no journal or WAL file sits beside the " \
            "database of the backup you choose, opens it to check it, reads " \
            "its first bytes for the preview and copies it back" in paragraph
@@ -299,7 +301,9 @@ def test_the_rename_notes_say_what_a_notes_run_leaves():
     file_note = " ".join(server._rename_file_note(
         {}, server._RenameSigns()).split())
     assert tail.format("rewrite_memos") in file_note
-    assert tail.format("`rewrite_memos`") in _flat("PRIVACY.md")
+    # (v0.15.2: in PRIVACY.md an item of the list of what keeps the
+    # names, which ends with a semicolon)
+    assert tail.format("`rewrite_memos`")[:-1] in _flat("PRIVACY.md")
 
 
 def test_the_readme_keeps_no_completed_lists():

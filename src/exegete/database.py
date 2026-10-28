@@ -4458,11 +4458,19 @@ def _log_insert(number: int, key: str, kind: str, old: str, apart: str,
     """One row into the log, unless the row's key is logged already, so
     each row's first firing is kept. The log, an INSERT's target inside a
     trigger, is named unqualified, as SQLite requires there; a TEMP
-    trigger finds it in temp first."""
+    trigger finds it in temp first.
+
+    The key is looked up with a unary plus, which takes away a column's
+    affinity and leaves its value as it is. Compared with a key column of
+    integer affinity, the log's `k`, which has no declared type, would be
+    given numeric affinity, and the log's index would then serve `t`
+    alone: every firing would read the table's whole log, and the
+    capture's time would grow with the square of the rows a change
+    touches."""
     return (f'INSERT INTO "{CAPTURE_LOG}" (t, k, kind, old, apart, fid) '
             f"SELECT {number}, {key}, {kind}, {old}, {apart}, {fid} "
             f"WHERE {condition}NOT EXISTS (SELECT 1 FROM "
-            f'temp."{CAPTURE_LOG}" WHERE t = {number} AND k = {key});')
+            f'temp."{CAPTURE_LOG}" WHERE t = {number} AND k = +{key});')
 
 
 def _trigger_statements(table: CaptureTable) -> List[str]:

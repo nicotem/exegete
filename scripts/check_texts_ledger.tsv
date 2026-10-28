@@ -209,7 +209,7 @@ ff3d84d4f818c5fd	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to
 73dce042c4605cd2	PROJECT_SELECTION_GUIDE.md	document	qualcoder	seeded 27 October, to be read	You'll get a list like this one, where the first project is in the desktop exten
 22ccc94b3581ca91	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime
 bc6c47e09c41b5b8	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime too (select_project works; the variable only sets the start-up 
-d56a3d46348b2fb2	QUICKSTART.md	document	voice	quotes INSTALL.md's heading by its own words, so a reader can search for it; there "the server" is how an app starts Exegete, the sense the conventions allow	You could name a folder outside Documents, such as ~/Exegete projects: add "EXEG
+4487a80bc8d3ae8a	QUICKSTART.md	document	voice	quotes INSTALL.md's heading by its own words, so a reader can search for it; there "the server" is how an app starts Exegete, the sense the conventions allow	To do so, add "EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects" as a line 
 4c4ebbab01b016d7	README.md	document	qualcoder	about QualCoder itself: only QualCoder 3.8 or newer updates a project made before 3.8	A project made in QualCoder before 3.8 must first be opened once in QualCoder 3.
 60caa96d5daca940	README.md	document	qualcoder	about QualCoder itself: the figure is QualCoder's own, reproduced so that results match	Compare two coders, code by code, with Cohen's kappa beside the figure QualCoder
 5de1493ad56524c0	README.md	document	qualcoder	the heading of the section on how the two programs relate, each of its sentences about QualCoder itself or its format	Exegete and QualCoder

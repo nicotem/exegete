@@ -1263,9 +1263,12 @@ class TestTheOtherFirstImpressions:
         # v0.15.0: the default set creates a project on every route
         # (v0.15.2, the opening texts: the same fact, the project kept in
         # QualCoder's file format)
-        assert ("- A project, which is a folder whose name ends in `.qda`, "
-                "kept in QualCoder's file format, or none: the default tool "
-                "set, `full`, can create one in the conversation (INSTALL.md "
+        # (the readability reading: the project, if the reader has one,
+        # then what happens without one, a sentence each; the default set
+        # is what lets the assistant create it on this route)
+        assert ("- A project, if you have one: a folder whose name ends in "
+                "`.qda`, kept in QualCoder's file format. If you have none, "
+                "the assistant can create one in the conversation (INSTALL.md "
                 "says where it goes).") in _flat("QUICKSTART.md")
 
     def test_the_texts_the_first_pass_did_not_read(self):

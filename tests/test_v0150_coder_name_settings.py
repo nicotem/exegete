@@ -919,9 +919,12 @@ class TestTheDocuments:
         # said after it (tests/test_v0151_small_corrections.py)
         # (v0.15.2, the opening texts: the same facts, in sentences)
         quick = _doc("QUICKSTART.md")
-        assert ("Exegete asks the assistant to check your coder name with "
-                "you first, which is the name your own codings will carry, "
-                "and to say where the project will be made.") in quick
+        # (the readability reading: the coder name explained in step 3,
+        # where the reader first types it)
+        assert ("`Your name` with your own coder name, the name your codings "
+                "will carry.") in quick
+        assert ("Exegete first asks the assistant to check your coder name "
+                "with you and to say where the project will be made.") in quick
         assert ("If your coder name is already set, the project is made "
                 "with that name at once, and the answer says where. You set "
                 "it with `EXEGETE_CODER_NAME` in the `env` section above, or "

@@ -221,9 +221,11 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
                 "#where-your-data-goes), in the README, says the rest: the "
                 "checks before participants' data, and which assistants open "
                 "files by themselves.") in text, where
+    # (v0.15.2, the readability reading: Anthropic named as the AI
+    # provider, the one term the documents use)
     assert ("What Claude reads through Exegete (passages, codes, memos, "
-            "names) goes to Anthropic, whose computers run the AI behind "
-            "Claude Desktop.") in quickstart
+            "names) goes to Anthropic, the AI provider that runs Claude's AI "
+            "model.") in quickstart
     # before the first prompt about the reader's own project
     flat = _flat("QUICKSTART.md")
     assert flat.index("goes to Anthropic") < \

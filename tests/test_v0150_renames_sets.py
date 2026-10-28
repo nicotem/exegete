@@ -565,12 +565,16 @@ class TestTheDocuments:
                 "iCloud (Desktop and Documents) or OneDrive may sync "
                 "Documents, and so copy your projects, with their "
                 "transcripts, off the computer. A sync service can also copy "
-                "a project's database and its journal separately, which can "
-                "leave a damaged copy. You could name a folder outside "
-                "Documents, such as `~/Exegete projects`:") in step3
-        assert ("add `\"EXEGETE_WORKSPACE\": \"/Users/yourname/Exegete "
-                "projects\"` as a line of the `env` block, with a comma "
-                "after the line before it") in step3
+                "a project's database and the working file beside it, the "
+                "database's journal, at different moments, which can leave a "
+                "damaged copy. You could name a folder outside Documents, "
+                "such as `~/Exegete projects`.") in step3
+        # (v0.15.2, the readability reading: the database's journal said
+        # as its working file, not the research journal; the step a
+        # sentence of its own)
+        assert ("To do so, add `\"EXEGETE_WORKSPACE\": \"/Users/yourname/"
+                "Exegete projects\"` as a line of the `env` block, with a "
+                "comma after the line before it") in step3
         assert '`"env": {"EXEGETE_WORKSPACE"' not in step3
         # Fix round 2: INSTALL's heading in its own words
         assert ("(INSTALL.md, \"What You'll Need\" and \"Environment "

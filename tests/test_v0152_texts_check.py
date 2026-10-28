@@ -523,7 +523,7 @@ def test_the_repository_passes():
         finding.text() for finding in report.failures[:20])
     for name in ("README.md", "QUICKSTART.md", "NOTICE", ".zenodo.json",
                  "pyproject.toml", texts.OLD_NAME_README, texts.MANIFEST,
-                 *texts.PAGES, *texts.TOML_DESCRIPTIONS,
+                 *texts.PAGES, *texts.TOML_DESCRIPTIONS, *texts.GUIDES,
                  ".github/ISSUE_TEMPLATE/bug_report.yml",
                  "src/exegete/server.py"):
         assert name in report.files, name

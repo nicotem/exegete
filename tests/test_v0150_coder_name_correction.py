@@ -916,9 +916,10 @@ class TestTheNotesAfterTheChange:
     def test_the_answers_fields(self, tmp_path):
         _make(tmp_path)
         answer = _change(NEW)
+        # undo_receipt, beside the backup's name, since v0.15.2
         assert list(answer) == ["success", "coder_name",
                                 "previous_coder_name", "coder_list",
-                                "backup_path", "notes"]
+                                "backup_path", "undo_receipt", "notes"]
 
     def test_a_setting_that_differs_is_named_and_not_changed(
             self, tmp_path, monkeypatch):

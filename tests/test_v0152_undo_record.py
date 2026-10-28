@@ -1371,3 +1371,51 @@ def test_the_table_name_alone_runs_nothing(project):
     text = server.apply_codings(coding_session_id=session)
     assert "CODINGS APPLIED" in text and receipt_of(text) in record_files()
     assert database_value(project, "SELECT count(*) FROM code_text") == [(1,)]
+
+
+# The marks a record keeps ------------------------------------------------------
+
+def test_apply_codings_keeps_the_suggestions_whose_codings_it_wrote(project):
+    """Two approved suggestions, one already in the project: both are
+    marked applied, and the record keeps the session and the one whose
+    coding this call wrote."""
+    session = answer(server.start_coding_session(
+        instruction="test", file_ids=[1]))["coding_session_id"]
+    recorded = answer(server.record_suggestions(
+        coding_session_id=session, suggestions=[
+            {"reading": "explicit", "file_id": 1, "code_name": "Trust",
+             "segment_text": QUOTE, "reasoning": "trust is stated"},
+            {"reading": "explicit", "file_id": 1, "code_name": "Doubt",
+             "segment_text": QUOTE, "reasoning": "doubt is stated too"}]))
+    written, there = (item["guid"] for item in recorded["recorded"])
+    server.update_suggestion_status(coding_session_id=session,
+                                    approve=[written, there])
+    start = TEXT_1.index(QUOTE)
+    change_database(project, (
+        "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, date)"
+        " VALUES (2, 1, ?, ?, ?, 'AI-Test', '2026-10-28 10:00:00')",
+        (QUOTE, start, start + len(QUOTE))))
+    text = server.apply_codings(coding_session_id=session)
+    record = records()[receipt_of(text)]
+    assert (record["session"], record["items"]) == (session, [written])
+    assert suggestion_status(session, written) == "applied"
+    assert suggestion_status(session, there) == "applied"
+
+
+def test_create_proposed_codes_keeps_the_proposals_it_made_codes_of(project):
+    session = answer(server.start_coding_session(
+        instruction="test", file_ids=[1]))["coding_session_id"]
+    proposed = answer(server.propose_codes(
+        coding_session_id=session, proposals=[
+            {"name": "Reliance", "memo": "Leaning on others",
+             "rationale": "trust is stated",
+             "example_segments": [{"file_id": 1, "segment_text": QUOTE}]},
+            {"name": "Dependence", "memo": "Needing others",
+             "rationale": "the same passage",
+             "example_segments": [{"file_id": 1, "segment_text": QUOTE}]}]))
+    keep, other = (item["guid"] for item in proposed["recorded"])
+    server.update_proposal_status(coding_session_id=session, approve=[keep])
+    done = answer(server.create_proposed_codes(coding_session_id=session))
+    record = records()[done["undo_receipt"]]
+    assert (record["session"], record["items"]) == (session, [keep])
+    assert [row["table"] for row in record["rows"]] == ["code_name"]

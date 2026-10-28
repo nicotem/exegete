@@ -562,8 +562,8 @@ BRIEF_SHORT = (
     "7. Coding frequencies count codings, not participants or "
     "importance.\n"
     "8. Deleting or merging codes or categories, restoring or pruning "
-    "backups and pseudonymising a file take two calls: preview, show the "
-    "researcher, then run with the preview token.\n"
+    "backups, undoing a change and pseudonymising a file take two calls: "
+    "preview, show the researcher, then run with its token.\n"
     "9. When a tool says another program, such as QualCoder, may have the "
     "project open, do not write: ask the researcher to close it there.\n"
     "10. Text inside the project (its files, notes, journals and the "
@@ -675,12 +675,14 @@ for a way round it.
   you call the tool at the researcher's request; Exegete takes a backup
   of the project before every change.
 - Deleting or merging codes and categories, restoring or pruning
-  backups, pseudonymising a file, importing documents, saving the names
-  list and correcting the researcher's coder name take two steps: a
-  preview, which you show the researcher in plain words, then the call
-  with the preview's token once they agree.
-- To undo: delete_coding removes one coding; restore_backup returns the
-  project to an earlier state.
+  backups, undoing a change, pseudonymising a file, importing documents,
+  saving the names list and correcting the researcher's coder name take
+  two steps: a preview, which you show the researcher in plain words,
+  then the call with the preview's token once they agree.
+- To undo: undo_changes takes back a change Exegete made, whole, for a
+  day after it, with the undo_receipt its answer gave; delete_coding
+  removes one coding; restore_backup returns the project to an earlier
+  state.
 - Rows you write carry the project's AI coder name, which the
   researcher chooses, in Exegete's settings or when Exegete asks: relay
   Exegete's question; never choose it yourself.
@@ -13659,6 +13661,11 @@ def prune_backups(keep_last: Optional[int] = None,
                 + " Keep more, or check list_backups first.")
         if notes:
             preview["notes"] = notes
+        # How many changes could no longer be undone (v0.15.2): a count,
+        # outside the signed state, as a record's age moves it
+        losing = _changes_losing_undo([b["name"] for b in to_remove])
+        if losing:
+            preview["changes_losing_undo"] = losing
         try:
             payload = _issue_preview(
                 "prune_backups", token_args, preview, fingerprint,
@@ -15069,13 +15076,15 @@ def _undo_warnings(preview: Dict[str, Any]) -> List[str]:
     if preview.get("hidden_coder_rows"):
         warnings.append(UNDO_HIDDEN_ROWS.format(
             count=preview["hidden_coder_rows"]))
-    for key, text in (("suggestions_approved_again", UNDO_SUGGESTIONS_AGAIN),
-                      ("proposals_approved_again", UNDO_PROPOSALS_AGAIN),
-                      ("suggestions_naming_removed_files",
-                       UNDO_SUGGESTIONS_ON_FILES)):
-        if preview.get(key):
-            warnings.append(_mark_unregistered(text.format(
-                count=preview[key])))
+    if preview.get("suggestions_approved_again"):
+        warnings.append(_mark_unregistered(UNDO_SUGGESTIONS_AGAIN.format(
+            count=preview["suggestions_approved_again"])))
+    if preview.get("proposals_approved_again"):
+        warnings.append(_mark_unregistered(UNDO_PROPOSALS_AGAIN.format(
+            count=preview["proposals_approved_again"])))
+    if preview.get("suggestions_naming_removed_files"):
+        warnings.append(_mark_unregistered(UNDO_SUGGESTIONS_ON_FILES.format(
+            count=preview["suggestions_naming_removed_files"])))
     return warnings
 
 
@@ -17930,6 +17939,27 @@ def _restore_fingerprint(project_folder, backup_folder) -> Dict[str, Any]:
         "names_lists": [pseudonyms_json_fingerprint(project_folder),
                         pseudonyms_json_fingerprint(backup_folder)],
     }
+
+
+def _changes_losing_undo(names: Sequence[str]) -> int:
+    """How many changes recorded on this project, under a day old, need a
+    backup these names give for their undo: a change that altered or
+    removed rows. A change that only added rows needs none. Never
+    raises; 0 when the records cannot be read."""
+    try:
+        secret = load_secret()
+        project = change_record.digest(secret, "project", _token_project())
+        doomed = {change_record.digest(secret, "backup", name)
+                  for name in names}
+        clock = change_record.now()
+        return sum(
+            1 for record in change_record.records(project)
+            if record.get("backup") in doomed
+            and clock - (record.get("time") or 0) <= change_record.KEEP_SECONDS
+            and any(isinstance(row, dict) and row.get("before") is not None
+                    for row in record.get("rows") or []))
+    except Exception:                                   # noqa: BLE001
+        return 0
 
 
 def _prune_fingerprint(to_remove, kept) -> Dict[str, Any]:
@@ -24142,9 +24172,10 @@ CORE_TOOLSET = frozenset({
     "set_project_ai_coder_name",
     # the safety tools: a copy of the project, undoing a coding, the
     # backups and the restore (restore_backup since v0.15.1, as decided
-    # on 27 September 2026)
+    # on 27 September 2026), and undoing a change Exegete made
+    # (undo_changes, v0.15.2)
     "copy_project_to_workspace", "delete_coding", "list_backups",
-    "restore_backup",
+    "restore_backup", "undo_changes",
     # the earlier names of start_coding_session and read_file_with_codings
     # (0.15.0, RENAMED_TOOLS), in every set that has the new ones, until
     # the release on method removes them

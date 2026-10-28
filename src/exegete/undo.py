@@ -40,7 +40,7 @@ RECEIPT_UNKNOWN = "receipt_unknown"
 ANOTHER_PROJECT = "another_project"
 SECRET_REPLACED = "secret_replaced"
 NEWER_FORMAT = "newer_format"
-RECORD_UNREADABLE = "record_unreadable"
+RECORD_UNREADABLE = "unreadable_record"
 TOO_OLD = "too_old"
 NOT_YET_UNDOABLE = "not_yet_undoable"
 OWN_TRIGGERS = "own_triggers"
@@ -65,6 +65,12 @@ LOOP = "loop"
 NOT_YET_UNDOABLE_TOOLS = frozenset({
     "pseudonymise_source", "import_documents", "set_project_coder_name",
     "save_names_list"})
+# The tools whose marks in a coding session an undo sets back, each with
+# the kind of mark: an apply's suggestions to approved, a creation's
+# proposals to approved, a deleted coding's suggestion to applied
+SESSION_MARKS = {"apply_codings": "approved",
+                 "create_proposed_codes": "proposals",
+                 "delete_coding": "applied"}
 # How far ahead of the clock a record may be dated and still be judged
 CLOCK_SLACK_SECONDS = 300
 # How many values one statement binds when rows are read by key
@@ -1485,11 +1491,10 @@ def _gather(result: Plan) -> None:
         result.suggestions_on_removed_files += \
             change.suggestions_on_removed_files
         session, items = _marks_of(change.record)
-        if change.tool == "apply_codings" and session:
-            result.marks.append(("approved", session, tuple(items)))
-        elif change.tool == "create_proposed_codes" and session:
-            result.marks.append(("proposals", session, tuple(items)))
-        elif change.tool == "delete_coding":
+        mark = SESSION_MARKS.get(change.tool)
+        if mark in ("approved", "proposals") and session:
+            result.marks.append((mark, session, tuple(items)))
+        elif mark == "applied":
             for step in change.put_back:
                 if step.table.lower() != "code_text" or not step.values:
                     continue

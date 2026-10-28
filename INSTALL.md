@@ -203,7 +203,7 @@ assistant a brief: how it expects the assistant to work with you
 pass on, so the brief reaches the assistant four ways. A short version
 is Exegete's opening text: Claude Code shows it (and keeps the first
 4,096 characters of a server's opening text, 2,048 before its version
-2.1.296; this one is 2,034); Claude Desktop does not pass it on, in its chat or in Cowork
+2.1.296; this one is 2,044); Claude Desktop does not pass it on, in its chat or in Cowork
 (checked on 9 October 2026); and LM Studio does not support it. The
 tool `read_brief`, in every tool set, has a description that asks the
 assistant to call it at the start of every conversation about a
@@ -713,7 +713,7 @@ within each description's first 2,048 characters, a few named
 exceptions apart, which reach the model through `read_brief` or the
 tools' answers. The descriptions are longer on Python 3.11 and 3.12
 than on 3.13, which strips the indentation they are written with. On
-Python 3.13, 4 of `full`'s 79 descriptions are longer than 4,096
+Python 3.13, 4 of `full`'s 80 descriptions are longer than 4,096
 characters (`pseudonymise_source`, about 17,000;
 `start_coding_session`, about 6,000; `search_files`, about 4,500;
 `record_suggestions`, about 4,500); on 3.11 and 3.12, the same four are,
@@ -775,11 +775,11 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools
   (Option A).
-- `EXEGETE_TOOLSET`: `full` (default) registers 79 tools, every tool,
+- `EXEGETE_TOOLSET`: `full` (default) registers 80 tools, every tool,
   creating a project included, so that a study can be started from the
   conversation (TOOLS.md, "Starting a project from the conversation");
   two of them are the earlier names of two renamed tools (TOOLS.md,
-  "Earlier names"). `core` registers the 27-tool supervised coding set
+  "Earlier names"). `core` registers the 28-tool supervised coding set
   for local models (see the LM Studio recipe), which cannot create a
   project. `lifecycle`, the earlier name of `full` (the desktop
   extension's default before 0.15.0), is read as `full` until v1.0, and
@@ -1153,20 +1153,20 @@ parameters. We have not evaluated specific models with Exegete;
 that evaluation is planned, which is one reason this recipe is marked
 Experimental.
 
-**Step 3. Use the core toolset.** Exegete offers 79 tools by
+**Step 3. Use the core toolset.** Exegete offers 80 tools by
 default, and the serialised tool definitions alone measure about
 203,000 characters, roughly 51k tokens, against about 74,000
-characters, roughly 18k tokens, for the 27 tools of `core` (measured
+characters, roughly 19k tokens, for the 28 tools of `core` (measured
 on Python 3.13 with the libraries in `uv.lock`; TOOLS.md says how, and
 [docs/snapshot/](docs/snapshot/) gives the exact figures). The full set
 exceeds LM Studio's 8k default context several times over before you
 type a word, and tool counts this size are far past where small-model
 tool selection degrades. Set
 `EXEGETE_TOOLSET=core` (in the config of Step 5) to register only the
-27-tool supervised coding set.
+28-tool supervised coding set.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-18k tokens of schema exceed the 8k default context. When loading the
+19k tokens of schema exceed the 8k default context. When loading the
 model, set the context length to at least 32k for the core toolset
 (that leaves about 14k tokens for your transcript excerpts and
 conversation; 16k would not even hold the schema and is not workable),

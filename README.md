@@ -561,8 +561,8 @@ every tool.
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 79: all, creating a project and two renamed tools' earlier names included | about 203,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
-| `core` | 27: the coding loop and its safety tools | about 74,000 characters, 18k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
+| `full` | 80: all, creating a project and two renamed tools' earlier names included | about 203,000 characters, 51k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `core` | 28: the coding loop and its safety tools | about 74,000 characters, 19k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
 
 That is how much of a model's context a host uses when it sends every
 tool's definition (name, description and arguments) with each request:
@@ -597,7 +597,8 @@ project's texts, are not in it. `lifecycle`, the earlier name of
   `delete_category`, `pseudonymise_source` (these five also say whose
   work is affected), `restore_backup`, `prune_backups`,
   `set_project_coder_name` (your own coder name, while nothing is
-  recorded under it), `save_names_list` (saving the names list).
+  recorded under it), `save_names_list` (saving the names list),
+  `undo_changes` (a change Exegete made, taken back for a day).
 - **Documents in, whole files read**: `import_documents`
   (a preview, then the import on its token, after a backup; PDF and
   EPUB need `exegete[pdf-epub]`) and `open_file_for_reading` (on the

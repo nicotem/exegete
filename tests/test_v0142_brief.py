@@ -142,7 +142,9 @@ class TestTheOpeningText:
                 "Never give a score",
                 "Coding frequencies count codings, not participants or "
                 "importance",
-                "then run with the preview token",
+                # v0.15.2: rule 8 names undoing a change, and its last
+                # words are shorter so that the text stays within the cut
+                "then run with its token",
                 # v0.15.0 (not presuming QualCoder, piece 5): rule 9
                 # follows what a tool says
                 "When a tool says another program, such as QualCoder, may "
@@ -623,8 +625,14 @@ def test_the_lengths_the_documents_give_are_the_briefs():
     assert [int(s.replace(",", "")) for s in stated] == [1988]
     unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                            changelog.index("## [0.14.3-alpha]")]
+    # and 0.15.0's is history since v0.15.2's rule 8 named undoing a
+    # change, which INSTALL.md's figure follows (the facts check holds
+    # the documents' counts; no test reads a CHANGELOG fragment)
     assert re.findall(r"Exegete's opening text is now ([\d,]+) characters",
-                      unreleased) == [f"{short:,}"]
+                      unreleased) == ["2,034"]
+    install = " ".join(REPO.joinpath("INSTALL.md").read_text(
+        encoding="utf-8").split())
+    assert re.findall(r"this one is ([\d,]+)\)", install) == [f"{short:,}"]
     # 0.14.2's figure for the full brief is history: v0.14.3 added a line
     # (provisional) on reading a whole file, served the line on a fresh
     # reading 0.14.2 held back, and shortened section 4's list

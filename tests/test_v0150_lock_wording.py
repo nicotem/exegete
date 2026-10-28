@@ -305,10 +305,16 @@ class TestTheSixDescriptions:
             "and when there are some", "and if there are some")
         assert len(new) == len(old)
         descriptions = {name: _flat(text) for name, text in _served().items()}
-        carriers = [name for name, text in descriptions.items() if new in text]
-        # 26 descriptions close with it, and apply_codings' safety
-        # guarantees open with it
-        assert len(carriers) == 27
+        carriers = {name for name, text in descriptions.items() if new in text}
+        # The descriptions whose _with_paragraphs line passes the lock
+        # paragraph close with it, and apply_codings' safety guarantees
+        # open with it: read from server.py's decorator lines, as
+        # tests/test_served_texts.py reads them, so that a tool added with
+        # the paragraph is counted
+        from test_served_texts import ALSO_TYPED, SERVER_TREE, _decorated
+        given = {tool for tool, names in _decorated(SERVER_TREE)
+                 if "LOCK_REFUSED_PARAGRAPH" in names}
+        assert carriers == given | ALSO_TYPED["LOCK_REFUSED_PARAGRAPH"]
         assert not any(old in text for text in descriptions.values())
 
 

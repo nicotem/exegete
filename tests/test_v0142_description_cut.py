@@ -189,7 +189,8 @@ CARRIERS = {
         "link_file_to_case", "merge_category", "merge_codes",
         "move_category", "move_code_to_category", "pseudonymise_source",
         "recolor_code", "rename_case", "rename_category", "rename_code",
-        "rename_file", "set_attribute", "set_memo", "update_annotation"},
+        "rename_file", "set_attribute", "set_memo", "undo_changes",
+        "update_annotation"},
     "private_note_marker": {
         "add_annotation", "add_journal_entry", "apply_codings",
         "create_attribute_type", "create_case", "create_category",

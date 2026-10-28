@@ -1,9 +1,9 @@
 {
   "core": {
-    "brief_characters": 1915,
-    "opening_text_characters": 2034,
-    "tool_count": 27,
-    "tool_definitions_characters": 73968,
+    "brief_characters": 1925,
+    "opening_text_characters": 2044,
+    "tool_count": 28,
+    "tool_definitions_characters": 75947,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -109,6 +109,10 @@
         "definition_characters": 6718,
         "description_characters": 6071
       },
+      "undo_changes": {
+        "definition_characters": 1977,
+        "description_characters": 1550
+      },
       "update_suggestion_status": {
         "definition_characters": 2241,
         "description_characters": 1537
@@ -117,10 +121,10 @@
   },
   "counted": "Characters, as Python counts them. tool_definitions_characters: json.dumps, with Python's defaults, of the list of every tool's name, description and input schema, in the order tools/list gives (TOOLS.md, the tool sets); definition_characters: one tool's entry in that list, alone.",
   "full": {
-    "brief_characters": 13211,
-    "opening_text_characters": 2034,
-    "tool_count": 79,
-    "tool_definitions_characters": 202814,
+    "brief_characters": 13346,
+    "opening_text_characters": 2044,
+    "tool_count": 80,
+    "tool_definitions_characters": 204793,
     "tools": {
       "add_annotation": {
         "definition_characters": 2205,
@@ -421,6 +425,10 @@
       "start_coding_session": {
         "definition_characters": 6685,
         "description_characters": 6038
+      },
+      "undo_changes": {
+        "definition_characters": 1977,
+        "description_characters": 1550
       },
       "update_annotation": {
         "definition_characters": 2551,

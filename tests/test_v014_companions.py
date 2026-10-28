@@ -320,7 +320,8 @@ class TestTheDocumentsInFixRound1:
         readme = _read_flat("TOOLS.md")
         for name in ("README.md", "TOOLS.md"):
             assert "nothing half-made is left" not in _read_flat(name)
-        assert "nothing committed is left" in readme
+        # (v0.15.2: what a failure leaves in the database, in plain words)
+        assert "the database keeps nothing of it" in readme
         assert "is recognised as such next time" in readme
         assert "iCloud's \"Desktop & Documents Folders\" switched on" in \
             readme

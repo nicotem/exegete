@@ -273,9 +273,11 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
         # v0.15.2: the three faults the served text gives, told once in
         # the guide, and QualCoder's own export on its condition)
         for fault in ("yours and a hidden coder's included",
-                      "it leaves out cases, annotations, journals and media",
-                      "a session's export includes rejected suggestions, "
-                      "unmarked"):
+                      "leaves out cases, annotations, journals and media",
+                      # (v0.15.2: the third fault read plainly)
+                      "includes the suggestions you rejected, without "
+                      "marking them, when it exports a single coding "
+                      "session"):
             assert fault in guide, fault
         assert ("If you use QualCoder, its own export (Project, Export, "
                 "REFI-QDA Project export) keeps each coder, the cases, the "

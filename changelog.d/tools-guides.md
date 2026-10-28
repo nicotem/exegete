@@ -23,6 +23,15 @@
   not a count of participants. Explicit and interpretive readings are
   explained once, in AI_CODING_GUIDE.md. The guides call the assistant
   the assistant, wherever a sentence is not about Claude itself.
+- **The three documents read as a newcomer reads them.** Long sentences
+  are split, one idea to a sentence, and lists that were joined by
+  semicolons are set out as lists. Words such as backup, lock file,
+  workspace and host are explained where a guide first uses them. The
+  coding guides give the three questions, the folders and the backups
+  once each, and point to them elsewhere. Each refusal of
+  `delete_coding` now comes with its own condition: a coding with a
+  private note is refused on any project, and a hidden coder's coding on
+  a project that can hide coders.
 
 ### For contributors
 

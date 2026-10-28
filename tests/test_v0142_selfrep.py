@@ -567,9 +567,10 @@ class TestTheMethodLiteratureSaysWhatItIs:
                 "project") in entry
         guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
             encoding="utf-8"))
+        # (v0.15.2: the reason for reading it first, then the resource)
+        assert "If you want to bring a method into a session" in guide
         assert ("read the `exegete://guidance/methods` resource, which also "
-                "lists some published approaches to prompting, if you want "
-                "to bring a method into a session.") in guide
+                "lists some published approaches to prompting.") in guide
         for text in (tools, guide):
             assert self.OLD not in text
             assert "literature the notes rest on" not in text
@@ -587,8 +588,8 @@ class TestTheDocumentsSayExegete:
     SAY_EXEGETE = {
         # (v0.15.2: the guide's answer not tied to Claude)
         "AI_CODING_GUIDE.md": (
-            "and Exegete only stores and applies what is marked approved "
-            "(it cannot see who approved it; see above).",),
+            "Exegete only stores and applies what is marked approved, and "
+            "cannot see who approved it (\"How it works\", above).",),
         "INSTALL.md": (
             "Exegete records the approval the assistant reports: it cannot "
             "tell whether you gave it.",

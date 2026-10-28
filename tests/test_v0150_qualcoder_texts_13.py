@@ -516,7 +516,10 @@ class TestTheDocuments:
         guide = (REPO / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")
         start = guide.index("Exegete's analysis tools tell the assistant "
                             "how to treat evidence")
-        paragraph = guide[start:guide.index("\n\n", start)]
-        assert paragraph.endswith(
+        # (v0.15.2: the rules as a list, then the methods notes; the
+        # passage ends where it did)
+        end = guide.index("None of this replaces", start)
+        passage = guide[start:guide.index("\n\n", end)]
+        assert " ".join(passage.split()).endswith(
             "None of this replaces your approval of each suggestion.")
-        assert max(len(line) for line in paragraph.splitlines()) <= 72
+        assert max(len(line) for line in passage.splitlines()) <= 72

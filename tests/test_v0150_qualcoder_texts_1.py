@@ -489,8 +489,8 @@ def test_the_workflow_guides_rule_is_the_lock_file():
     called "One program at a time" (tests/test_v0150_lock_wording.py)."""
     guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
         encoding="utf-8"))
-    assert ("**every write operation is refused while the project's lock "
-            "file is active**. The refusal gives both causes and the way "
+    assert ("**Every write operation is refused while the project's lock "
+            "file is active.** The refusal gives both causes and the way "
             "through for each") in guide
 
 

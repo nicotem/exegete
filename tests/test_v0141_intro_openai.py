@@ -1841,10 +1841,13 @@ class TestTheSmallerPoints:
         for name in ("TOOLS.md", "AI_CODING_GUIDE.md"):
             text = _flat(name)
             # (v0.15.2: the private part "never reaches the assistant",
-            # in each document's own grammar)
-            assert ("the assistant through Exegete (an assistant that "
-                    "opens a project's files by itself reads every memo "
-                    "whole:") in text, name
+            # in each document's own grammar; then, in a sentence of its
+            # own, what an assistant that opens the files itself reads)
+            assert "never reaches the assistant through Exegete" in text, \
+                name
+            assert ("assistant that opens a project's files by itself"
+                    in text), name
+            assert "reads every memo whole" in text, name
             assert HOSTS_SECTION in text, name
 
     def test_the_private_part_check_would_notice(self):

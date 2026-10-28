@@ -610,9 +610,9 @@ class TestTheDocuments:
 
     def test_the_ai_coding_guide_on_every_route(self):
         flat = _flat("AI_CODING_GUIDE.md")
-        assert ("A project: a new one the assistant creates (in the "
-                "default tool set, `full`, on every route), or one you "
-                "have") in flat
+        # (v0.15.2: the sentence read plainly, its fact unchanged)
+        assert ("The assistant can create a new one, with a tool in the "
+                "default tool set, `full`, on every route") in flat
         assert "(the extension's default tool set)" not in flat
 
     def test_the_readme_sentences(self):

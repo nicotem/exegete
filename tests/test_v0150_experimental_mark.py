@@ -118,8 +118,9 @@ CHANGES = [
      "**Creating projects:** `create_project` makes a new, empty project"),
     ("AI_CODING_GUIDE.md",
      "(Experimental; in the default tool set, `full`, on every route)",
-     "A project: a new one the assistant creates (in the default tool "
-     "set, `full`, on every route), or one you have"),
+     # (v0.15.2: the sentence read plainly, its fact unchanged)
+     "The assistant can create a new one, with a tool in the default "
+     "tool set, `full`, on every route"),
 ]
 
 UNRELEASED_CHANGES = [
@@ -366,6 +367,6 @@ def test_tools_says_how_opening_in_qualcoder_was_checked():
                     tools.index("**The project memo**")]
     assert ("Opening a new project was checked with QualCoder 4.0 and "
             "3.8.2 run from their published source on a Mac, not from their "
-            "installers or on Windows or Linux; if you use QualCoder in one "
+            "installers or on Windows or Linux. If you use QualCoder in one "
             "of those ways, letting it open a new project once, before much "
             "work goes into it, is a quick check.") in opening

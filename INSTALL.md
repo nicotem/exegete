@@ -319,9 +319,11 @@ folder there once, from `~/.qualcoder_mcp`.
 
 After updating, look at the settings, since an update can change them:
 
-- Installing an older extension over a newer one cleared the settings
-  on the computer of Exegete's maintainer ("Going back to an earlier
-  version", below).
+- Installing an older extension over a newer one cleared every setting
+  on the computer of Exegete's maintainer. A cleared setting goes back
+  to its default, so "Tell me when a new version is out" is on again,
+  even if you had switched it off. "Going back to an earlier version",
+  below, names each setting to look at.
 - On the maintainer's Mac on 19 October 2026, the update to 0.15.0
   changed "Folder for projects". The setting had been left at the
   earlier default, `~/QualCoder projects`, and the update set it to
@@ -386,10 +388,16 @@ What changed for everyone:
   `exegete://...`, and the old `qualcoder://...` ones are still answered
   until v1.0.
 
-With the extension, the change of name can leave two things behind:
-the link under the old name, and one old log file. Both are harmless
-and can stay. A check typed in the Terminal lists what the change left
-behind: the Terminal guide's "Coming from qualcoder-mcp" describes it.
+With the extension, the change of name can leave two things behind.
+One is the link under the old name, which holds nothing of its own
+("Exegete's own folder", above, says what it is for). The other is the
+old log file, `mcp-server-qualcoder-mcp.log`, beside Claude Desktop's
+log of the extension ("Reading the server log", below). It keeps every
+request and every answer from before 0.14.1 in full, names and quoted
+text included. You could delete it once you no longer need it to report
+a problem from that time. A check typed in the Terminal lists what the
+change left behind: the Terminal guide's "Coming from qualcoder-mcp"
+describes it.
 
 ## Going back to an earlier version
 
@@ -397,8 +405,24 @@ If a new version causes a problem, you can install an earlier release's
 `.mcpb`, from https://github.com/nicotem/exegete/releases, the same way.
 On the maintainer's computer, installing an older extension over a
 newer one cleared its settings: 0.15.0 over a newer test build, on
-23 October 2026. Both coder names were then asked for again. After going
-back, look at the settings and fill them in again.
+23 October 2026. A cleared setting goes back to its default. So after
+going back, look at each setting, and set again any you had changed.
+The settings this guide describes go back to these defaults:
+
+- "Limit Exegete to its small tool set" is off, so Exegete offers every
+  tool.
+- "Folder for projects" is `~/Exegete projects`, so new projects and
+  copies go there. No project is moved.
+- "Your coder name" and "AI coder name" are empty, so Claude asks for
+  them again.
+- "I use QualCoder on this computer" is off.
+- "Tell me when a new version is out" is on, even if you had switched
+  it off. If Exegete told you about this check before, it does not tell
+  you again, so it may check at its next start without a new notice.
+
+An older release may have other settings, with defaults of its own, as
+its settings page shows. Every release with the check for new versions,
+from 0.14.2 on, has it on by default.
 
 If you go back as far as 0.14.0, you meet one refusal. In a project
 where a later release has stored the AI coder name, 0.14.0 refuses the
@@ -421,12 +445,23 @@ GitHub Issues ("Getting help", below).
    - **Exegete's own folder**, `~/.exegete`, with the link to it under
      its earlier name, `~/.qualcoder_mcp`. It holds the coding sessions
      waiting for review, the texts an import's preview read
-     (`import-texts.noindex/`, until the import), the last project used,
-     the record of the check for new versions, the pseudonymisation run
-     records and the secret that signs Exegete's previews. If you delete
-     it, you lose the sessions waiting for review, and the run records'
-     digests can no longer be checked. PRIVACY.md, "Files Exegete keeps
-     on your computer", says what each file holds.
+     (`import-texts.noindex/`), the last project used, the record of the
+     check for new versions, the pseudonymisation run records and the
+     secret that signs Exegete's previews. PRIVACY.md, "Files Exegete
+     keeps on your computer", says what each file holds.
+     - The texts an import's preview read are each document's whole
+       text, before any names are replaced. Exegete removes them after
+       the import. When no import follows, they stay until the first
+       time Exegete starts or prepares an import after an hour has
+       passed. After an uninstall neither happens, so they stay until you
+       delete the folder.
+     - If you delete the folder, you lose the coding sessions waiting
+       for review and the pseudonymisation run records, and a change
+       previewed but not yet made, such as an import, needs a new
+       preview.
+     - If you delete only the secret, `preview_secret`, the run records
+       stay, but their digests can no longer be checked, and a change
+       previewed but not yet made needs a new preview.
    - **The reading folder**, where Exegete writes the pages you read on
      your own computer, with a file's whole text and its codings, and
      read-only copies of originals:
@@ -546,9 +581,10 @@ error (with a database trigger), or a damaged one (with a note that is
 not UTF-8), does not make a tool log that note, private part included.
 A project's schema version, the version of its database layout, appears
 only in QualCoder's format (`v` and digits). A file refused as damaged
-leaves one line with the kind of error and the release of the library
-Exegete reads that kind of file with, never the file. That line helps
-when you report a problem.
+leaves one line with the kind of error, never the file. For a PDF,
+EPUB, RTF or Word file, the line also gives the release of the library
+Exegete reads that kind of file with. That line helps when you report
+a problem.
 
 The MCP library, the code Exegete uses to talk to the app, writes lines
 of its own beside them, giving the kind of each request. They carry

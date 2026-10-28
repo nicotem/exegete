@@ -101,10 +101,10 @@ class TestTheThreeTexts:
                 "writes) or while QualCoder 3.8.2 has the project open (it "
                 "keeps the file as a heartbeat), and **every write operation "
                 "is refused while the project's lock file is active**. The "
-                "refusal names both causes and the way through for each") \
+                "refusal gives both causes and the way through for each") \
             in flat
-        assert ("so if you also use QualCoder, make sure yourself that no "
-                "window has the project open before writing.") in flat
+        assert ("if you also use QualCoder, make sure yourself that no "
+                "window has the project open before Exegete writes.") in flat
         assert "make sure yourself that no QualCoder window" not in flat
 
     def test_the_workflow_quotes_the_refusal_as_exegete_gives_it(self):

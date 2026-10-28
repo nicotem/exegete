@@ -514,8 +514,8 @@ class TestTheDocuments:
     def test_the_guides_paragraph_on_the_methods_notes_is_wrapped(self):
         """The paragraph the piece reworded keeps the file's width."""
         guide = (REPO / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")
-        start = guide.index("Exegete's analysis tools carry an evidence "
-                            "discipline")
+        start = guide.index("Exegete's analysis tools tell the assistant "
+                            "how to treat evidence")
         paragraph = guide[start:guide.index("\n\n", start)]
         assert paragraph.endswith(
             "None of this replaces your approval of each suggestion.")

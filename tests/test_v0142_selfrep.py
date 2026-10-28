@@ -585,10 +585,10 @@ class TestTheDocumentsSayExegete:
     the pass was complete; they are pinned here word for word."""
 
     SAY_EXEGETE = {
+        # (v0.15.2: the guide's answer not tied to Claude)
         "AI_CODING_GUIDE.md": (
-            "Claude itself does the analysis through the conversation, and "
-            "Exegete only stores and applies what is marked approved (it "
-            "cannot see who approved it; see above).",),
+            "and Exegete only stores and applies what is marked approved "
+            "(it cannot see who approved it; see above).",),
         "INSTALL.md": (
             "Exegete records the approval the assistant reports: it cannot "
             "tell whether you gave it.",
@@ -598,8 +598,10 @@ class TestTheDocumentsSayExegete:
             "check whether the change was made (ask for the project summary, "
             "or the list of backups): Exegete may have finished it."),
         "TOOLS.md": (
-            "`AI Coding Assistant` (Exegete's built-in default, and what "
-            "every project coded with v0.11 and earlier already holds)",),
+            # (v0.15.2: without the release numbers)
+            "`AI Coding Assistant` (Exegete's built-in default, and the "
+            "name already on AI codings made before each project had a "
+            "name of its own for them)",),
     }
     SAID_THE_SERVER = (
         "the server only stores and applies what is marked approved",

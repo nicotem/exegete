@@ -93,38 +93,38 @@ class TestTheRefusalNamesBothCauses:
                 "miss an open window; a write into a project open in any "
                 "QualCoder window can lose work.") in support
 
+    # v0.15.2, the tools and guides piece: each place that gives the
+    # refusal still gives both causes; the guide tells the 4.0 caveat once,
+    # in its prerequisites, and its step 4 points to its safety model
+    BOTH = ("QualCoder 3.8.2 has the project open, or another conversation "
+            "using Exegete is writing to it")
+
     def test_the_coding_guide_s_prerequisite(self):
         guide = _flat(_section(_read("AI_CODING_GUIDE.md"),
                                "## Prerequisites", "\n## "))
         assert ("- **If you also use QualCoder**, the project closed there "
                 "before any write. Writes are refused while the project's "
-                "lock file is active (QualCoder 3.8.2 has the project open, "
-                "or another conversation using Exegete is writing to it); "
-                "QualCoder 4.0 writes no lock file, so there Exegete can "
-                "only report that the project appears to be open "
-                "(`qualcoder_gui_signals`, signs that can miss an idle "
-                "window), and you make sure no 4.0 window has it open") \
-            in guide
+                "lock file is active (" + self.BOTH + ").") in guide
+        assert ("QualCoder 4.0 writes no lock file, so for it Exegete can "
+                "only report signs that the project may be open "
+                "(`qualcoder_gui_signals`), and those signs can miss an idle "
+                "window") in guide
 
     def test_the_coding_guide_s_step_4(self):
         guide = _flat(_read("AI_CODING_GUIDE.md"))
-        assert ("(`apply_codings`), after re-validating each one, creating a "
-                "backup, and checking the project's lock file (refused while "
-                "QualCoder 3.8.2 has the project open or another "
-                "conversation using Exegete is writing to it; a QualCoder "
-                "4.0 window writes no lock file and is seen only by its "
-                "signs, so if you use QualCoder, confirm yourself that none "
-                "has the project open)") in guide
+        step = guide[guide.index("4. **Exegete** writes"):
+                     guide.index("5. **You** read")]
+        assert "when the assistant calls `apply_codings`" in step
+        assert "checking the project's lock file" in step
+        assert "\"Safety model\", below, says when a write is refused" in step
 
     def test_the_coding_guide_s_safety_list(self):
         guide = _flat(_read("AI_CODING_GUIDE.md"))
         assert ("- Writes are refused while the project's lock file is "
-                "active (QualCoder 3.8.2 has the project open, or another "
-                "conversation using Exegete is writing to it, since Exegete "
-                "holds the project lock itself during its own writes); "
-                "QualCoder 4.0 writes no lock file, so for it Exegete only "
-                "warns on signs of an open window (`qualcoder_gui_signals`)") \
-            in guide
+                "active: " + self.BOTH + ", since Exegete holds the project "
+                "lock itself during its own writes.") in guide
+        assert ("For QualCoder 4.0, which writes no lock file, see the "
+                "prerequisites above") in guide
 
     def test_the_bug_form(self):
         form = _read(".github/ISSUE_TEMPLATE/bug_report.yml")
@@ -145,11 +145,14 @@ class TestTheRefusalNamesBothCauses:
     def test_tools_summary(self):
         tools = _flat(_read("TOOLS.md"))
         # (the staleness audit of 20 October 2026: every change to the
-        # database, with the backup Exegete takes itself)
-        assert ("verified against QualCoder's format, and is refused while "
-                "the project's lock file is active (QualCoder 3.8.2 has the "
-                "project open, or another conversation using Exegete is "
-                "writing to it).") in tools
+        # database, with the backup Exegete takes itself; v0.15.2: no
+        # backup is checked against QualCoder's format, so none is said
+        # to be)
+        assert ("Every change to the project's database is preceded by a "
+                "backup, which Exegete takes itself, and is refused while "
+                "the project's lock file is active (" + self.BOTH + ").") \
+            in tools
+        assert "verified against QualCoder's format" not in tools
         assert ("QualCoder 4.0 writes no lock file, so for "
                 "it Exegete can only report signs of an open window; if you "
                 "also use QualCoder, make sure no window has the project "

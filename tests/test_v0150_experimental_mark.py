@@ -118,7 +118,7 @@ CHANGES = [
     ("AI_CODING_GUIDE.md",
      "(Experimental; in the default tool set, `full`, on every route)",
      "A project: a new one the assistant creates (in the default tool "
-     "set, `full`, on every route), or a copy of one you have"),
+     "set, `full`, on every route), or one you have"),
 ]
 
 UNRELEASED_CHANGES = [

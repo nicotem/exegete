@@ -579,8 +579,13 @@ def test_the_readme_says_what_it_costs():
             "At a limit you wait, move up a plan or, on a paid plan, pay for "
             "extra use.",
             "coding many transcripts uses far more than practice",
-            "OpenAI's plans and what LM Studio needs, read on 6 October "
-            "2026, are in [INSTALL.md, \"Choosing your AI host\"]"):
+            # (the fix round: the table of routes compares them, and
+            # their recipes give OpenAI's plans and LM Studio's needs:
+            # tests/test_v0152_opening_texts.py)
+            "Other routes, such as OpenAI's apps and LM Studio, are "
+            "compared in [INSTALL.md, \"Choosing your AI host\"]",
+            "Their recipes there give OpenAI's plans and what LM Studio "
+            "needs."):
         assert words in cost, words
     for gone in ("(Claude's reset every five hours)",
                  "you wait or move up a plan", "from Plus ($20 a month)."):

@@ -79,8 +79,8 @@ takes questions and ideas, in public, so leave out participants' data.
   and delete codes, with a preview before a merge or a deletion.
 - **Explore**: search documents, codings and memos, count codings, find
   codes that occur together, see a case-by-code matrix, list cases and
-  files by attribute, and read a transcript with its codings, in the
-  conversation or in your browser.
+  files by attribute, and read a transcript with its codings in the
+  conversation or, keeping its text out of it, in your browser.
 - **Write** memos, annotations and a research journal.
 - **Compare two coders**, code by code, with Cohen's kappa beside the
   figure QualCoder labels Kappa. Against the AI coder name, the figures
@@ -202,13 +202,14 @@ with the project's names list, or afterwards. You can fill in the list
 on your own computer, in a file Exegete prepares, so the names do not
 pass through the conversation. Replacing names helps you manage what you
 share with other people, though the project's folder still holds the
-documents' originals and any names list. The replacement alone does not
-keep names from the assistant. Exegete's tools return the pseudonyms
-where names were replaced (PRIVACY.md says what is not replaced), but an
-assistant that opens files by itself can reach the originals, and the
-names file, outside Exegete. To keep real names from the assistant
-altogether, a safer way is to replace them before the documents reach
-the computer where the assistant works
+documents' originals and any names list. Its backups, beside it, hold
+the same, with the text from before the replacement. The replacement
+alone does not keep names from the assistant. Exegete's tools return the
+pseudonyms where names were replaced (PRIVACY.md says what is not
+replaced), but an assistant that opens files by itself can reach the
+originals, and the names file, outside Exegete. To keep real names from
+the assistant altogether, a safer way is to replace them before the
+documents reach the computer where the assistant works
 ([PRIVACY.md, "What pseudonymisation is for"](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#what-pseudonymisation-is-for)).
 
 **What stays on your computer**, unless a sync service such as iCloud
@@ -217,8 +218,9 @@ copies its folder (PRIVACY.md says where):
 - your project, backups, exports and pending suggestions
 - the pages and copies Exegete opens for you to read a file (an EPUB
   opened in Apple Books joins its library, and iCloud if Books syncs)
-- the texts an import's preview read, kept in Exegete's own folder until
-  the import, or for a while if none follows (PRIVACY.md says how long)
+- the whole texts an import's preview read, before names are replaced,
+  kept in Exegete's own folder until the import, or else until Exegete
+  starts or imports again after an hour, which can be days
 - the files you fill in for a project, such as the names file
   (`Names to replace.txt`, in the project's `Exegete` folder), which
   Exegete never shows to the assistant
@@ -239,8 +241,9 @@ Enterprise go by the seat. Usage limits reset every five hours, and paid
 plans add weekly limits. At a limit you wait, move up a plan or, on a
 paid plan, pay for extra use. Longer conversations and more tool use
 count for more, so coding many transcripts uses far more than practice.
-OpenAI's plans and what LM Studio needs, read on 6 October 2026, are in
+Other routes, such as OpenAI's apps and LM Studio, are compared in
 [INSTALL.md, "Choosing your AI host"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#choosing-your-ai-host-data-governance-options-experimental).
+Their recipes there give OpenAI's plans and what LM Studio needs.
 
 ### Claude Desktop, with one click
 
@@ -314,9 +317,8 @@ in: "A first project", in INSTALL.md's recipe, says how to do both once.
 
 **Two coder names.** When it makes the project, the assistant asks for
 your own coder name, unless you have filled it in Exegete's settings.
-The project keeps it so that your work and the AI's stay apart, and
-QualCoder, if you use it, records your coding under it. Any name you
-choose will do, and if you do not know yours, say so. Before Exegete
+The project keeps it so that your work and the AI's stay apart. Any name
+you choose will do, and if you do not know yours, say so. Before Exegete
 first writes to the project, the assistant asks for the AI coder name,
 kept per project, under which Exegete writes what is done through the
 conversation. It does not ask if the project was made with that name in
@@ -452,8 +454,7 @@ which carry your project's texts. `lifecycle`, the earlier name of
   named exceptions apart (INSTALL.md gives Claude Code's figures). One
   description is longer than 16,384 characters, `pseudonymise_source`'s
   (about 17,000 on Python 3.13, about 18,000 on 3.11 and 3.12):
-  [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients)
-  says how to let it through whole.
+  [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients) says how to let it through whole.
 
 **Tested.** More than 8,000 automated tests run on Windows, macOS and
 Linux, with Python 3.11 and 3.13 (and 3.14 on Linux), on every change
@@ -463,11 +464,10 @@ before it is released. They test Exegete, not a researcher's use of it
 ## What comes next
 
 Plans, not promises: the order may change with what testers report.
-[CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md)
-says what each release changed.
+[CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md) says what each release changed.
 
 - v0.15.2: undo a session's changes; when replacing names, choose which
-  mentions to keep; fixes to the REFI-QDA export's known faults; PyMuPDF
+  mentions to keep; the REFI-QDA export fixed, except for media; PyMuPDF
   2.0, the newer library that reads PDFs, on Apple silicon Macs
 - v0.15.3: coding sessions kept with their project; stricter checks on
   the names of codes, categories and cases; other small corrections

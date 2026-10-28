@@ -224,7 +224,12 @@ README_SENTENCES = (
     # originals, and the warning said as a fact before its reasons)
     "Replacing names helps you "
     "manage what you share with other people, though the project's folder "
-    "still holds the documents' originals and any names list. The "
+    "still holds the documents' originals and any names list. "
+    # (the opening texts' fix round: the backups beside the project, which
+    # copy all of it but its audio and video, the database from before the
+    # replacement included)
+    "Its backups, beside it, hold the same, with the text from before the "
+    "replacement. The "
     "replacement alone does not keep names from the assistant. Exegete's "
     "tools return the pseudonyms where names were replaced (PRIVACY.md says "
     "what is not replaced), but an assistant that opens files by itself can "

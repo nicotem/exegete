@@ -4289,7 +4289,8 @@ def escape_like_pattern(pattern: str) -> str:
 # project's names are data: each table's and column's name is read with
 # its name bound as a parameter and enters the capture's SQL only through
 # `_quoted`; a table is logged by its number in the capture's own list,
-# never by its name.
+# never by its name. The SQL fragments that start with no statement word
+# are raw strings, which the texts check reads as code, not as prose.
 
 CAPTURE_PREFIX = "exegete_capture_"
 CAPTURE_LOG = CAPTURE_PREFIX + "log"
@@ -4425,8 +4426,8 @@ def _capture_tables(conn) -> List[CaptureTable]:
 def _digest_sql(label: str, columns: Sequence[str], prefix: str) -> str:
     """The SQL function over columns, each as its type and its bytes:
     `CAST(... AS BLOB)` so nothing is decoded on the way."""
-    parts = "".join(f", typeof({prefix}{_quoted(column)}), "
-                    f"CAST({prefix}{_quoted(column)} AS BLOB)"
+    parts = "".join(rf", typeof({prefix}{_quoted(column)}), "
+                    rf"CAST({prefix}{_quoted(column)} AS BLOB)"
                     for column in columns)
     return f"{CAPTURE_FUNCTION}('{label}'{parts})"
 
@@ -4439,8 +4440,8 @@ def _key_sql(table: CaptureTable, prefix: str) -> str:
         return f"{prefix}{_quoted(table.key)}"
     if table.key_kind == "digest":
         column = f"{prefix}{_quoted(table.key)}"
-        return (f"(CASE WHEN {column} IS NULL THEN NULL ELSE "
-                f"{_digest_sql('key', [table.key], prefix)} END)")
+        return (rf"(CASE WHEN {column} IS NULL THEN NULL ELSE "
+                rf"{_digest_sql('key', [table.key], prefix)} END)")
     return "0"
 
 
@@ -4488,15 +4489,15 @@ def _trigger_statements(table: CaptureTable) -> List[str]:
                         _fid_sql(table, "NEW."))
     head = f'CREATE TEMP TRIGGER "{CAPTURE_PREFIX}{n}_'
     return [
-        f"{head}i\" AFTER INSERT ON {on} BEGIN {added} END",
-        f"{head}u\" AFTER UPDATE ON {on} BEGIN "
-        + _log_insert(n, old_key, f"CASE WHEN {old_key} IS {new_key} THEN "
-                      f"'u' ELSE 'd' END", old_row, old_apart, old_fid)
+        rf'{head}i" AFTER INSERT ON {on} BEGIN {added} END',
+        rf'{head}u" AFTER UPDATE ON {on} BEGIN '
+        + _log_insert(n, old_key, rf"CASE WHEN {old_key} IS {new_key} THEN "
+                      rf"'u' ELSE 'd' END", old_row, old_apart, old_fid)
         + " " + _log_insert(n, new_key, "'i'", "NULL", "NULL",
                             _fid_sql(table, "NEW."),
                             f"{old_key} IS NOT {new_key} AND ")
         + " END",
-        f"{head}d\" AFTER DELETE ON {on} BEGIN "
+        rf'{head}d" AFTER DELETE ON {on} BEGIN '
         + _log_insert(n, old_key, "'d'", old_row, old_apart, old_fid)
         + " END"]
 

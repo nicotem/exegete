@@ -240,26 +240,30 @@ def test_privacy_says_rename_file_reads_the_backups():
     # Fix round 3, B-5, F2A-2, F2A-6, F2A-7, P-5.
     # v0.14 (existing projects, part 6): restore checks for a journal or
     # WAL file beside the backup's database before it opens it
-    paragraph = flat[flat.index("Besides `restore_backup`, which checks"):]
+    # (v0.15.2: the paragraph opens with its main clause)
+    paragraph = flat[flat.index("No tool reads the backups' contents, "
+                                "apart from"):]
     paragraph = paragraph[:paragraph.index("**Symlinks.**")]
-    assert "which checks that no journal or WAL file sits beside the " \
-           "database of the backup you choose, opens it to check it, reads " \
-           "its first bytes for the preview and copies it back" in paragraph
+    assert "`restore_backup` checks that no journal or WAL file sits " \
+           "beside the database of the backup you choose, opens it to " \
+           "check it, reads its first bytes for the preview and copies it " \
+           "back" in paragraph
     # (the staleness audit of 20 October 2026: prune_backups and
     # restore_backup read each backup's pseudonyms.json too, as a
     # fingerprint of its bytes, never its names; database.py,
     # pseudonyms_json_fingerprint)
     assert "a fingerprint of the bytes of the project's `pseudonyms.json`" \
         in paragraph
-    assert "`prune_backups`, which reads the `pseudonyms.json` of each " \
-           "backup beside the project only to compare such fingerprints" \
+    assert "`prune_backups` reads the `pseudonyms.json` of each backup " \
+           "beside the project only to compare such fingerprints" \
         in paragraph
     assert "no name in it is read out or returned" in paragraph
     # v0.15.1: rename_file no longer reads the backups, as announced
     # (tests/test_v0151_journal_and_rename_back.py)
-    assert "says why), no tool reads the backups' contents; in 0.15.0 and " \
-           "earlier, `rename_file` read the names in them to recognise a " \
-           "rename back." in paragraph
+    assert ("No tool reads the backups' contents, apart from "
+            "`restore_backup` and `prune_backups`.") in paragraph
+    assert "In 0.15.0 and earlier, `rename_file` read the names in the " \
+           "backups to recognise a rename back." in paragraph
     assert "one tool reads the backups' contents" not in flat
     assert "To recognise a rename back, `rename_file` reads" not in flat
 

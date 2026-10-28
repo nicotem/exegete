@@ -107,9 +107,9 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert ("whose default tool set, `full`, can create a project "
             "too.") in flat
     assert "`lifecycle`" not in one_click_readme
-    one_click = install[install.index("## Claude Desktop: the one-click "
-                                      "extension"):
-                        install.index("## Choosing your AI host")]
+    # (v0.15.2: INSTALL.md's own section on the extension's settings)
+    one_click = install[install.index("## The settings page"):
+                        install.index("## The first start")]
     # after 0.15.1 the switch alone chooses the set in the extension
     assert ("Off, Exegete offers every tool (the set called `full`), "
             "creating a new project included; on, the smaller set `core`, "
@@ -119,8 +119,14 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     install = _doc("INSTALL.md")
     assert "**Qualcoder installed** with at least one project created" \
         not in install
-    needs = install[install.index("## What You'll Need"):
-                    install.index("## Recommended: Install from PyPI")]
+    # (v0.15.2: what you need, in INSTALL.md for the extension and in
+    # the Terminal guide for the other routes)
+    guide = (REPO / "docs/installing-from-the-terminal.md").read_text(
+        encoding="utf-8")
+    needs = (install[install.index("## What you need"):
+                     install.index("## Installing the extension")]
+             + guide[guide.index("## What you need"):
+                     guide.index("## Installing from PyPI")])
     flat_needs = " ".join(needs.split())
     assert ("The default tool set, `full`, includes creating a project: "
             "the assistant") in flat_needs

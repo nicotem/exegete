@@ -386,7 +386,7 @@ def test_the_approval_steps_are_named_where_the_readme_points():
     assert "the assistant is told to show each passage with" in readme
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "
                        "suggestions: your host's settings are the safeguard",
-                       "### Try some richer queries")
+                       "## PDF and EPUB: the optional part")
     server._apply_toolset("full")
     tools = {t.name for t in asyncio.run(server.mcp.list_tools())}
     newcomer = _read("README.md")[:_read("README.md").index(

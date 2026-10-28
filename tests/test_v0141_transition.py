@@ -1362,6 +1362,11 @@ def test_ci_follows_the_steps_with_the_real_installers():
     assert '"pip>=26.1"' in download
 
 
+# v0.15.2: INSTALL.md is the desktop extension's; the Terminal routes,
+# with their part of "Coming from qualcoder-mcp", are the Terminal guide's
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def section(text, start, end):
     text = " ".join(text.split())
     part = text[text.index(start):]
@@ -1371,8 +1376,9 @@ def section(text, start, end):
 def test_the_documents_point_to_the_check():
     def flat(name):
         return " ".join((REPO / name).read_text(encoding="utf-8").split())
-    install = section(flat("INSTALL.md"), "## Coming from qualcoder-mcp",
-                      "## Upgrading from an earlier")
+    # (v0.15.2: the Terminal routes' part is the Terminal guide's)
+    install = section(flat(GUIDE), "## Coming from qualcoder-mcp",
+                      "## A copy of the source made before")
     assert "`exegete --check-transition`" in install
     assert "last release will say plainly that it is the last" in install
     unreleased = flat("CHANGELOG.md").split("## [0.14.0")[0]
@@ -1384,9 +1390,9 @@ def test_the_documents_point_to_the_check():
 
 
 def test_the_documents_give_the_order_and_the_extensions_way():
-    install = section((REPO / "INSTALL.md").read_text(encoding="utf-8"),
+    install = section((REPO / GUIDE).read_text(encoding="utf-8"),
                       "## Coming from qualcoder-mcp",
-                      "## Upgrading from an earlier")
+                      "## A copy of the source made before")
     old = " ".join((REPO / "packaging" / "pypi-old-name" / "README.md")
                    .read_text(encoding="utf-8").split())
     for text in (install, old):
@@ -1405,9 +1411,9 @@ def test_the_documents_give_the_order_and_the_extensions_way():
 
 def test_the_documents_say_what_holds_the_link():
     install = " ".join(section(
-        (REPO / "INSTALL.md").read_text(encoding="utf-8"),
+        (REPO / GUIDE).read_text(encoding="utf-8"),
         "**Afterwards, the transition check.**",
-        "## Upgrading from an earlier").split())
+        "## A copy of the source made before").split())
     unreleased = " ".join((REPO / "CHANGELOG.md").read_text(
         encoding="utf-8").split("## [0.14.0")[0].split())
     old = " ".join((REPO / "packaging" / "pypi-old-name" / "README.md")
@@ -1415,8 +1421,10 @@ def test_the_documents_say_what_holds_the_link():
     for text in (install, unreleased, old):
         assert "desktop extension older than Exegete" in text
         assert "own `.mcp.json` file" in text
-    for text in (install, unreleased):
-        assert "names the folder and says to quit" in text
+    # v0.15.2: the Terminal guide says it in plain words; the published
+    # entry stays as it is
+    assert "names the folder and says to quit" in unreleased
+    assert "says which folder holds the copy, and to quit" in install
 
 
 # ---------------------------------------------------------------------------

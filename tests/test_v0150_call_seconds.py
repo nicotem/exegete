@@ -357,7 +357,8 @@ def test_tools_says_the_figures():
 
 def test_install_says_the_figures():
     e, t, least, most = _figures()
-    install = _flat("INSTALL.md")
+    # (v0.15.2: the variables are the Terminal guide's)
+    install = _flat("docs/installing-from-the-terminal.md")
     assert (f"- `{SETTING}` (0.15.0): how many seconds one call of "
             f"`import_documents` may take, counted from its start, before "
             f"it stops between files and leaves the rest for the next "

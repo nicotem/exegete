@@ -91,11 +91,12 @@ CHANGES = [
      "names included",
      "all, creating a project and two renamed tools' earlier names "
      "included"),
-    ("INSTALL.md",
+    # v0.15.2: the Terminal routes moved to the Terminal guide
+    ("docs/installing-from-the-terminal.md",
      "includes creating a project (Experimental): the assistant",
      "The default tool set, `full`, includes creating a project: the "
      "assistant can start one in the conversation"),
-    ("INSTALL.md",
+    ("docs/installing-from-the-terminal.md",
      "creating a project (Experimental) included, so that a study",
      "every tool, creating a project included, so that a study can be "
      "started from the conversation"),
@@ -171,13 +172,17 @@ KEPT = [
                   "experimental", 1),
     ("README.md", "#chatgpts-desktop-app-and-codex-experimental", 1),
     ("README.md", "called experimental there", 1),
-    ("INSTALL.md", "## Choosing your AI host: data-governance options "
-                   "(Experimental)", 1),
-    ("INSTALL.md", "## Claude Code with an Anthropic API key (Experimental)",
-     1),
-    ("INSTALL.md", "## LM Studio (fully local) (Experimental)", 1),
-    ("INSTALL.md", "## ChatGPT's desktop app and Codex (Experimental)", 1),
-    ("INSTALL.md", "> **Status: Experimental.**", 3),
+    # v0.15.2: the routes, with their marks, moved to the Terminal guide
+    ("docs/installing-from-the-terminal.md",
+     "## Choosing your AI host: data-governance options (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md",
+     "## Claude Code with an Anthropic API key (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md",
+     "## LM Studio (fully local) (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md",
+     "## ChatGPT's desktop app and Codex (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md", "> **Status: Experimental.**",
+     3),
     ("QUICKSTART.md", "(the API-key and LM Studio routes are Experimental).",
      1),
     ("TOOLS.md", "**Reduced toolset for local models (Experimental):**", 1),

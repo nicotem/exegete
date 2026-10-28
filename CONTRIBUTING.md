@@ -182,7 +182,8 @@ is looked at first.
    step 3 may take newer ones;
    `uv sync --frozen --extra dev --extra pdf-epub` installs the
    lock's), and read its diff whole. Update `TOOLS.md`
-   (the tool reference), `README.md`, `INSTALL.md` and `PRIVACY.md` where they
+   (the tool reference), `README.md`, `INSTALL.md`, the Terminal guide
+   (`docs/installing-from-the-terminal.md`) and `PRIVACY.md` where they
    describe the behaviour you changed; `PRIVACY.md` is the contract for
    what a tool result may disclose. Links are checked on every push
    (`scripts/check_links.py`): when you rename a heading, it names every
@@ -195,8 +196,9 @@ is looked at first.
    `docs/snapshot/sizes.json`; the
    libraries' releases against `uv.lock`, and the requirements against
    `pyproject.toml`; the lists of the tools that preview first and of
-   those that report signs of a QualCoder window, what PRIVACY.md and
-   INSTALL.md say Exegete keeps on the computer, and the map of the
+   those that report signs of a QualCoder window, what PRIVACY.md,
+   INSTALL.md and the Terminal guide say Exegete keeps on the computer,
+   and the map of the
    clone below against the files git tracks; every install command of
    Exegete names the optional part for PDF and EPUB, in its brackets or
    its paragraph; an example in one of QualCoder's own folders has "if
@@ -432,6 +434,7 @@ exegete/                     # the clone (its folder's name does not matter)
 ├── docs/
 │   ├── brand/                  # Exegete's mark
 │   ├── history/                # Early plans and analyses, kept as a record
+│   ├── installing-from-the-terminal.md  # Installing from the Terminal: every route but the desktop extension
 │   ├── snapshot/               # What Exegete sends the assistant before a project is open, and the brief, with their sizes
 │   ├── structure/              # The structural table of each release (scripts/structure_table.py)
 │   └── update-check/           # The design of the check for new versions, as a record
@@ -445,7 +448,7 @@ exegete/                     # the clone (its folder's name does not matter)
 ├── README.md               # What it is, where data goes, how to start
 ├── TOOLS.md                # Every tool, what it reads and writes
 ├── CHANGELOG.md            # Version history
-├── INSTALL.md              # Detailed installation guide
+├── INSTALL.md              # Installing the desktop extension for Claude Desktop
 ├── PRIVACY.md              # Data-flow disclosure
 ├── CONTRIBUTING.md         # How to report, propose and review changes
 ├── CITATION.cff            # Citation metadata

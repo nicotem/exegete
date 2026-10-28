@@ -592,9 +592,11 @@ class TestTheDocumentsSayExegete:
         "INSTALL.md": (
             "Exegete records the approval the assistant reports: it cannot "
             "tell whether you gave it.",
+            "Exegete searches these places by default:"),
+        # v0.15.2: the Terminal routes moved to the Terminal guide
+        "docs/installing-from-the-terminal.md": (
             "which groups Exegete's work with the assistant's under one "
             "coder",
-            "Exegete searches these locations by default:",
             "check whether the change was made (ask for the project summary, "
             "or the list of backups): Exegete may have finished it."),
         "TOOLS.md": (
@@ -684,7 +686,11 @@ class TestQualCoderIsOptional:
         assert "- **QualCoder, optional.** Today it does what Exegete does " \
                "not do yet:" in install
         # v0.15.0: the default set creates a project on every route
-        assert "- ✅ **A project, or a new one.**" in install
+        # (v0.15.2: INSTALL.md's list, and the Terminal guide's)
+        assert "- **A project, or none yet.**" in install
+        assert "- **A project, or none yet.**" in _flat(
+            (REPO / "docs/installing-from-the-terminal.md").read_text(
+                encoding="utf-8"))
         quick = _flat((REPO / "QUICKSTART.md").read_text(encoding="utf-8"))
         assert "- [ ] A project to work on (a `.qda` folder, in QualCoder's " \
                "format)" in quick

@@ -387,8 +387,10 @@ def test_install_names_the_libraries_with_a_limit_and_those_without():
     import exegete.server  # noqa: F401  (the MCP library loads Starlette)
     assert "starlette" in sys.modules
 
-    text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-    section = text[text.index("## Recommended: Install from PyPI"):
+    # (v0.15.2: the Terminal guide's install from PyPI)
+    text = (REPO / "docs/installing-from-the-terminal.md").read_text(
+        encoding="utf-8")
+    section = text[text.index("## Installing from PyPI"):
                    text.index("### PDF and EPUB: the optional part")]
     said = [s for s in _sentences(section) if "upper limit" in s]
     with_limit = [s for s in said if "no upper limit" not in s]

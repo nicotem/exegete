@@ -778,8 +778,9 @@ class TestTheDocuments:
 
     def test_install_the_extensions_settings(self):
         install = _doc("INSTALL.md")
-        assert "4. **Look at its settings** (Settings, Extensions, " \
-               "Exegete)." in install
+        # (v0.15.2: a section of its own, "The settings page")
+        assert ("In Claude, go to Settings, Extensions, Exegete. **Look at "
+                "its settings** before your first conversation.") in install
         assert "Look at its three settings" not in install
         assert ("- **Your coder name**: empty by default. It is the name "
                 "your own codings carry in a project, kept apart from the "
@@ -801,7 +802,8 @@ class TestTheDocuments:
         assert "already has a coder name keeps it" not in install
 
     def test_install_the_variables(self):
-        install = _doc("INSTALL.md")
+        # (v0.15.2: the variables are the Terminal guide's)
+        install = _doc("docs/installing-from-the-terminal.md")
         # after 0.15.1 the tool set is no longer one of them
         assert ("The desktop extension sets both spellings of three of "
                 "these settings itself (the two for the workspace and the "

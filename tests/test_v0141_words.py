@@ -145,7 +145,8 @@ def test_the_check_would_notice():
 # CHANGELOG's past entries are history and stay as written; the old
 # design documents nobody links to stay too (the rename study, the
 # inventory's section 3).
-SHIPPED = ["README.md", "TOOLS.md", "INSTALL.md", "QUICKSTART.md",
+SHIPPED = ["README.md", "TOOLS.md", "INSTALL.md",
+           "docs/installing-from-the-terminal.md", "QUICKSTART.md",
            "PROJECT_SELECTION_GUIDE.md", "PRIVACY.md", "SUPPORT.md",
            "CONTRIBUTING.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
            "docs/history/IMPORT_INSTRUCTIONS.md", "example_config.json",
@@ -236,37 +237,46 @@ def _section(text, heading, end="\n## "):
     return text[start:stop if stop != -1 else len(text)]
 
 
+# v0.15.2: INSTALL.md is the desktop extension's, and every Terminal
+# route moved, whole, to the Terminal guide, with its part of "Coming from
+# qualcoder-mcp"
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 class TestInstallSaysHowToMove:
 
-    def _coming_from(self):
-        text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+    def _coming_from(self, name="INSTALL.md"):
+        text = (REPO / name).read_text(encoding="utf-8")
         return " ".join(_section(text, "## Coming from qualcoder-mcp")
                         .split())
 
     def test_the_section_is_there_and_linked_from_the_top(self):
         install = _flat("INSTALL.md")
-        assert "## Coming from qualcoder-mcp" in \
+        assert "### Coming from qualcoder-mcp" in \
             (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        assert "\n## Coming from qualcoder-mcp\n" in \
+            (REPO / GUIDE).read_text(encoding="utf-8")
         assert install.index("(#coming-from-qualcoder-mcp)") < \
-            install.index("## Claude Desktop: the one-click extension")
+            install.index("## Installing the extension")
         readme = _flat("README.md")
         assert "INSTALL.md#coming-from-qualcoder-mcp" in readme
 
     def test_keep_your_entry(self):
-        section = self._coming_from()
+        section = self._coming_from(GUIDE)
         assert ("keep it, and do not add an `exegete` entry beside it: "
                 "that would start two servers, show every tool twice and "
                 "need a second set of \"always allow\" rules") in section
 
     def test_the_copies_of_the_source(self):
-        section = self._coming_from()
+        section = self._coming_from(GUIDE)
         for words in ("`python -m qualcoder_mcp.server` and the "
-                      "`qualcoder-mcp` command still start the server",
-                      "will list the old `qualcoder-mcp` beside `exegete` "
-                      "in `pip list`, which does no harm",
-                      "Only those two ways of starting survive",
-                      "(`qualcoder_mcp.database` and the like) does not",
-                      "this adds no step"):
+                      "`qualcoder-mcp` command still start Exegete",
+                      "your environment will list the old `qualcoder-mcp` "
+                      "beside `exegete` in `pip list`, which does no harm",
+                      "(`qualcoder_mcp.database` and the like) no longer "
+                      "works",
+                      "its last step, `pip install -e .`, also makes the "
+                      "version read right"):
             assert words in section, words
 
     def test_the_extension(self):
@@ -274,21 +284,22 @@ class TestInstallSaysHowToMove:
         # v0.14.2, the check for new versions: the extension has a third
         # setting, so the sentence says the settings chosen are kept and
         # the third is added (the port's truth check, round 1)
-        for words in ("it updates the extension you have, with the settings "
-                      "you chose, rather than adding a second one (0.14.2 "
-                      "adds a third, \"Tell me when a new version is out\", "
-                      "on unless you switch it off)",
-                      "may take longer and needs the internet",
+        # v0.15.2: what an update does to the settings is "Updating"'s,
+        # just above
+        for words in ("It updates the extension you have, with the "
+                      "settings you chose, rather than adding a second one.",
                       "Claude may ask again before it uses each tool"):
             assert words in section, words
+        assert ("The first start after an update can take longer, and "
+                "needs the internet") in _flat("INSTALL.md")
 
     @pytest.mark.parametrize("heading", [
         "## Coming from qualcoder-mcp",
-        "### Path A: stay on the git install",
-        "**Git (contributor) install**",
-        "### Tools missing or unchanged after an upgrade"])
+        "## Updating",
+        "**A copy of the source**, with your host quit",
+        "**Tools missing or unchanged after an update.**"])
     def test_quit_before_updating(self, heading):
-        text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        text = (REPO / GUIDE).read_text(encoding="utf-8")
         start = text.index(heading)
         passage = " ".join(text[start:start + 1800].split())
         # (the staleness audit of 20 October 2026: a copy of the source
@@ -305,18 +316,15 @@ class TestFixRoundOneWords:
     does, or described what pip did under the old name."""
 
     def test_path_b_says_what_happens_now(self):
-        text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        text = (REPO / GUIDE).read_text(encoding="utf-8")
         passage = " ".join(_section(
-            text, "### Path B: switch to the PyPI install", "\n### ")
-            .split())
-        for words in ("**Use a FRESH environment. Do not install into the "
-                      "old clone's venv.**",
-                      "pip installs Exegete beside the clone's own package "
-                      "rather than in its place",
+            text, "**Moving to an install from PyPI**",
+            "**Reusing the old environment instead**").split())
+        for words in ("takes a new environment of its own",
+                      "installed into the old copy's environment, Exegete "
+                      "would sit beside the copy's own package",
                       "an entry that still runs `-m qualcoder_mcp.server` "
-                      "keeps running the clone's code, the program as it "
-                      "was, until the clone itself is updated",
-                      "A fresh environment keeps them apart."):
+                      "would keep running the copy's code"):
             assert words in passage, words
         for gone in ("Requirement already satisfied", "Verified behaviour",
                      "silently does nothing"):

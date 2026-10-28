@@ -74,7 +74,8 @@ def test_the_documents_name_the_release_as_verified():
     assert ("Parity claims were verified against QualCoder 4.0, and cite "
             "its code at commit `9bddf17` (see \"Supported QualCoder "
             "versions\").") in tools
-    install = _flat("INSTALL.md")
+    # (v0.15.2: the variables are the Terminal guide's)
+    install = _flat("docs/installing-from-the-terminal.md")
     # (the staleness audit of 20 October 2026: a missing or unreadable
     # value is refused too, database.py, write_support)
     assert ("newer than the schemas this release is verified against (v14 "
@@ -295,7 +296,9 @@ def test_tools_gives_both_new_facts():
 
 
 def test_install_keeps_the_entry_with_a_word_of_care():
-    install = _flat("INSTALL.md")
+    # (v0.15.2: the Terminal routes' part of "Coming from qualcoder-mcp"
+    # is the Terminal guide's)
+    install = _flat("docs/installing-from-the-terminal.md")
     entry = _between(install, "**Keep your entry.**", "**The settings.**")
     # the advice itself is unchanged
     assert ("keep it, and do not add an `exegete` entry beside it") in entry

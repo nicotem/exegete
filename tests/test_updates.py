@@ -1164,22 +1164,22 @@ def test_install_says_the_extension_tells_of_new_versions():
     manifest = json.loads((REPO / "packaging" / "desktop-extension" /
                            "manifest.in.json").read_text(encoding="utf-8"))
     assert manifest["user_config"]["update_check"]["default"] is True
+    # v0.15.2: INSTALL.md is the extension's, its "Updating" a section
     install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-    start = install.index("## Claude Desktop: the one-click extension")
-    section = " ".join(install[start:install.index("\n## ", start + 4)]
-                       .split())
-    updating = section[section.index("**Updating**"):
-                       section.index("**Removing**")]
+    section = " ".join(install[:install.index(
+        "\n## What hosts do with the tools'")].split())
+    start = install.index("## Updating\n")
+    updating = " ".join(install[start:install.index("\n### ", start)]
+                        .split())
     assert "does not look for new versions" not in section
-    assert updating.startswith(
-        "**Updating**: download the newer `.mcpb` and install it the same "
-        "way. Exegete asks Claude to tell you when a newer version is "
-        "out, unless you switch that off")
     # the setting named by its title in the manifest, never by its place
     # (the facts check, tests/test_v0151_facts.py, holds every quoted
     # title and every setting named by place)
     title = manifest["user_config"]["update_check"]["title"]
-    assert f'(the setting "{title}", above)' in updating
+    assert (f'Unless you switched off "{title}", Exegete asks Claude to '
+            f"tell you when a newer version is out") in updating
+    assert ("To update, download the newer `.mcpb` and install it the same "
+            "way.") in updating
     # (the staleness audit of 20 October 2026: no setting named by its
     # place, since 0.15.0 put three settings before this one)
     assert not re.search(r"the (?:first|second|third|fourth|fifth|sixth) "

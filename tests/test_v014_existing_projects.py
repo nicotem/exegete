@@ -1113,8 +1113,11 @@ class TestTheDocumentsSayIt:
                        "an unclean backup is refused",
                        "copied with SQLite's own online backup"):
             assert phrase in readme, phrase
-        install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
-        assert ("a configured project is used by whichever tool comes "
+        # (v0.15.2: a project set in the host's configuration is the
+        # Terminal guide's)
+        install = _flat((REPO / "docs/installing-from-the-terminal.md"
+                         ).read_text(encoding="utf-8"))
+        assert ("A configured project is used by whichever tool comes "
                 "first") in install
 
     def test_privacy_and_install(self, tmp_path, monkeypatch, capsys):
@@ -1123,7 +1126,8 @@ class TestTheDocumentsSayIt:
             privacy
         assert "marked unclean by list_backups and refused by " \
                "restore_backup" in privacy
-        install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
+        install = _flat((REPO / "docs/installing-from-the-terminal.md"
+                         ).read_text(encoding="utf-8"))
         assert "The project is opened by whichever tool comes first" in \
             install
         assert "Error: the project set in EXEGETE_PROJECT_PATH was not " \

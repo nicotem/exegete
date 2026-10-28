@@ -854,12 +854,13 @@ def _section(text, heading):
 class TestTheDocuments:
 
     def test_install_starts_with_the_extension(self):
+        # v0.15.2: INSTALL.md is the extension's, from what you need to
+        # getting help; the Terminal routes are the Terminal guide's
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         headings = re.findall(r"^## (.+)$", text, flags=re.M)
-        assert headings[0] == "Claude Desktop: the one-click extension " \
-                              "(recommended)"
-        section = " ".join(_section(
-            text, "## Claude Desktop: the one-click extension").split())
+        assert headings[:2] == ["What you need", "Installing the extension"]
+        section = " ".join(text[:text.index(
+            "\n## What hosts do with the tools'")].split())
         option = TEMPLATE["user_config"]
         # after 0.15.1 the switch's bullet names both sets
         switch = section[section.index(
@@ -881,8 +882,9 @@ class TestTheDocuments:
         # and those with one spelling only (the check for new versions,
         # the time per import call)
         read |= set(names.NEW_ONLY_SETTINGS.values())
-        text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-        section = _section(text, "## Environment variables the server reads")
+        text = (REPO / "docs/installing-from-the-terminal.md").read_text(
+            encoding="utf-8")
+        section = _section(text, "## Environment variables Exegete reads")
         documented = set(re.findall(r"^- `(EXEGETE_[A-Z_]+)`", section,
                                     flags=re.M))
         assert documented == read

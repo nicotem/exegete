@@ -589,7 +589,10 @@ class TestTheSpellingInUse:
 class TestTheDocuments:
 
     def test_install(self):
-        text = _doc("INSTALL.md")
+        # (v0.15.2: the extension's setting in INSTALL.md, the variable in
+        # the Terminal guide)
+        text = _doc("INSTALL.md") + " " + _doc(
+            "docs/installing-from-the-terminal.md")
         assert ("**AI coder name**: empty by default. It is the name "
                 "Claude's work in your projects is stored under, so that it "
                 "stays apart from yours; a model's name lets codings by "

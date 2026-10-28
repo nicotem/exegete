@@ -155,12 +155,16 @@ FIRST_SET = {
                ("which python",
                 "/Users/yourname/Documents/exegete/venv/bin/python"),
                ("whoami", "yourname")],
+    # v0.15.2: the Terminal guide's commands install the optional part
+    # for PDF and EPUB, as README's does
     "venv": [("python3 -m venv ~/exegete-venv", None),
-             ("~/exegete-venv/bin/pip install exegete", None),
+             ('~/exegete-venv/bin/pip install "exegete[pdf-epub]"', None),
              ("~/exegete-venv/bin/exegete --version", "exegete <version>")],
-    "pipx": [("pipx install exegete", None), ("which exegete", None),
+    "pipx": [('pipx install "exegete[pdf-epub]"', None),
+             ("which exegete", None),
              ("exegete --version", "exegete <version>")],
-    "uv": [("uv tool install exegete", None), ("which exegete", None),
+    "uv": [('uv tool install "exegete[pdf-epub]"', None),
+           ("which exegete", None),
            ("exegete --version", "exegete <version>")],
 }
 

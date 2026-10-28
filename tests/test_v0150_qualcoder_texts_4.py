@@ -449,6 +449,10 @@ class TestNeverLifted:
 # THE GUARD, AND THE DOCUMENTS
 # =============================================================================
 
+# v0.15.2: the variables are the Terminal guide's
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _doc(name):
     return _flat((REPO / name).read_text(encoding="utf-8"))
 
@@ -476,7 +480,7 @@ class TestTheDocuments:
             install.index("- **Tell me when a new version is out**")
 
     def test_install_the_variable(self):
-        install = _doc("INSTALL.md")
+        install = _doc(GUIDE)
         start = install.index("- `EXEGETE_USES_QUALCODER` (0.15.0)")
         entry = install[start:install.index("- `", start + 3)]
         for words in (
@@ -517,7 +521,7 @@ def _install_bullet():
 
 
 def _install_entry():
-    install = _doc("INSTALL.md")
+    install = _doc(GUIDE)
     start = install.index("- `EXEGETE_USES_QUALCODER` (0.15.0)")
     return install[start:install.index("- `", start + 3)]
 

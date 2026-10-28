@@ -353,8 +353,9 @@ class TestTheEntryIsOneAccount:
         # (82) since read_pseudonym_list was removed (piece 5)
         assert "80 tools (82 with the earlier names" in entry
         sizes = re.findall(r"about (1[23],\d00) characters", entry)
-        # (0.15.0's figure, history: v0.15.2's opening texts took the
-        # brief to about 13,400, which TOOLS.md gives)
+        # (0.15.0's figure, history: v0.15.2's opening texts, then the
+        # brief's lines on undoing a change, took the brief further; TOOLS.md
+        # gives the current figure)
         assert sizes == ["13,200"]
         assert "12,500" not in entry and "12,900" not in entry
 
@@ -420,10 +421,12 @@ class TestTheDocumentsOtherPoints:
 
     def test_the_brief_s_two_steps_and_its_literature(self):
         brief = _flat(server.BRIEF_FULL)
-        # v0.15.0, the files design, piece 4: and saving the names list
-        assert ("restoring or pruning backups, pseudonymising a file, "
-                "importing documents, saving the names list and correcting "
-                "the researcher's coder name take two steps") in brief
+        # v0.15.0, the files design, piece 4: and saving the names list;
+        # v0.15.2: and undoing a change
+        assert ("restoring or pruning backups, undoing a change, "
+                "pseudonymising a file, importing documents, saving the "
+                "names list and correcting the researcher's coder name take "
+                "two steps") in brief
         assert ("gives the methods notes and approaches to prompting (two "
                 "published)") in brief
         assert "some published approaches" not in brief

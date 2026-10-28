@@ -684,9 +684,10 @@ class TestTheDocuments:
                 "registered: read_brief,") in tools.replace("> ", "")
         assert ("search_files, read_file_with_codings, search_memos, "
                 "open_file_for_reading,") in tools.replace("> ", "")
+        # (v0.15.2: and undo_changes)
         assert ("copy_project_to_workspace, delete_coding, list_backups, "
-                "restore_backup, and the two earlier names below."
-                ) in tools.replace("> ", "")
+                "restore_backup, undo_changes, and the two earlier names "
+                "below.") in tools.replace("> ", "")
         # v0.15.2: the variables and the Terminal recipes are the Terminal
         # guide's
         install = _flat(_read("docs/installing-from-the-terminal.md"))
@@ -704,9 +705,11 @@ class TestTheDocuments:
         # (v0.15.2, the opening texts: the rows in a researcher's words)
         assert (f"| `full` | {FULL_TOOLS}: every tool, creating a project and "
                 "the earlier names of two renamed tools included |") in readme
+        # (v0.15.2, undo: undoing changes among what core is for)
         assert (f"| `core` | {CORE_TOOLS}: reading, searching, coding with "
-                "your approval, memos and backups, without creating a "
-                "project or bringing documents in |") in readme
+                "your approval, memos, backups and undoing changes, "
+                "without creating a project or bringing documents in |"
+                ) in readme
         for name in DOCUMENTS:
             flat = _flat(_read(name))
             for stale in ("78 tools", "23-tool", "registers 78", "| 78:",

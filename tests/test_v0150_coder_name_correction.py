@@ -1137,8 +1137,10 @@ class TestTheTool:
         assert "Exegete cannot change it" not in tools
         # 83 since save_names_list (the files design, piece 4), 82 since
         # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        assert "registers 79 tools" in tools
+        # removed three tools, as announced in 0.14, and the snapshot's
+        # count since (tests/tool_counts.py; 80 with v0.15.2's undo)
+        from tool_counts import FULL_TOOLS
+        assert f"registers {FULL_TOOLS} tools" in tools
 
     def test_the_changelog_says_what_was_added(self):
         log = _flat((REPO / "CHANGELOG.md").read_text(

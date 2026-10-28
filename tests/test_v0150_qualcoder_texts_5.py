@@ -248,7 +248,9 @@ class TestTheWriteToolsSentence:
         served = _listed("full")
         carriers = {name for name, text in served.items()
                     if _spans(SENTENCE, text)}
-        assert carriers == CARRIERS | {"apply_codings"}
+        # (v0.15.2: and undo_changes, a new tool, through the shared
+        # paragraph)
+        assert carriers == CARRIERS | {"apply_codings", "undo_changes"}
 
     def test_apply_codings_says_it_first_among_its_guarantees(self):
         for mode in TOOL_SETS:
@@ -302,8 +304,9 @@ class TestTheOpeningText:
         assert short.index(RULE_9) + len(RULE_9) <= CUT
         assert "9. If QualCoder may have the project open" not in short
         # 1,988 characters before; the new rule took it to 2,034, within
-        # Claude Code's cut, as the design says (v0.15.2, the opening
-        # texts: 2,046, saying once what QualCoder is; the exact figure is
+        # Claude Code's cut, as the design says (v0.15.2: the opening texts
+        # took it to 2,046, saying once what QualCoder is, and rule 8, naming
+        # undoing a change, to 2,042; the exact figure is
         # docs/snapshot/sizes.json's)
         assert len(short) == len(short.encode("utf-8")) <= CUT
 
@@ -542,8 +545,8 @@ class TestFixRound1:
         comment = _comment_above(source, "SERVER_INSTRUCTIONS = BRIEF_SHORT")
         # (the whole-branch review, round 1: 2,048 now a margin, since
         # Claude Code keeps 4,096 from its version 2.1.296)
-        # (v0.15.2, the opening texts: the figure of the release that
-        # changed it last)
+        # (v0.15.2, the opening texts, then undo: the figure of the release
+        # that changed it last)
         found = re.search(r"within ([\d,]+) characters and bytes, now kept "
                           r"as a margin \(([\d,]+) in v0\.15\.\d\)", comment)
         assert found, comment

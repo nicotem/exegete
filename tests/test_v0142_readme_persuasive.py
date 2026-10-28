@@ -364,11 +364,12 @@ def _tools(mode="full"):
 # QUICKSTART's readers found the list reads its usual places, not the
 # whole computer: 7 characters more, 40,253 in 625 lines.
 # v0.15.2, undo: undo_changes in core (its count and size, and undoing
-# changes among what core is for) and among the guarded changes, and
-# one sentence in "Go back" on undoing a change alone, take 174
-# characters and 3 lines: 40,427 in 628 lines.
-README_LIMIT = 40_427
-README_LINES = 628
+# changes among what core is for) and among the guarded changes,
+# undoing a change among the changes that show a preview first, and
+# one sentence in "Go back" on undoing a change alone, take 192
+# characters and 4 lines: 40,445 in 629 lines.
+README_LIMIT = 40_445
+README_LINES = 629
 
 
 def test_the_readme_stays_short():

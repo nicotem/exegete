@@ -15353,9 +15353,9 @@ def undo_changes(receipts: Optional[List[str]] = None,
         locked = held["locked"]
         try:
             undo.write(wdb.conn, locked, context[0])
-        except undo.WriteCheckFailed as e:
-            logger.error("An undo was rolled back: %s row(s) did not read "
-                         "back as planned", e.args[0] if e.args else "some")
+        except undo.WriteCheckFailed:
+            logger.error("An undo was rolled back: a row it wrote did not "
+                         "read back as planned")
             raise RuntimeError(UNDO_CHECK_FAILED) from None
         rows = _undo_rows([change.counts() for change in locked.changes])
         total = {what: sum(tables.values()) for what, tables in rows.items()}

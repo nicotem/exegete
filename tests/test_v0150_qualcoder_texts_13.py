@@ -503,8 +503,9 @@ class TestTheDocuments:
                 "is no.") in section
         assert ("whether the overview is asked for with no topic or as "
                 "`overview`") in section
-        # (0.15.0's figure, history: v0.15.2's opening texts took the
-        # brief to about 13,400, which TOOLS.md gives)
+        # (0.15.0's figure, history: v0.15.2's opening texts, then the
+        # brief's lines on undoing a change, took the brief further; TOOLS.md
+        # gives the current figure)
         assert re.findall(r"The full brief is now about ([\d,]+) characters",
                           section) == ["13,200"]
         assert ("the four outcomes' sentence, in the text "

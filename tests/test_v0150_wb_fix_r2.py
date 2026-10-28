@@ -408,10 +408,12 @@ class TestTheSmallerPoints:
         # previews first too; both lists follow the token registry)
         # (v0.15.2, the opening texts: the same fact, reworded), pruning backups named beside restoring them
         # (the readability reading: pruning said as clearing old backups)
+        # (v0.15.2, undo: undoing a change previews first too)
         assert ("The larger ones show a preview first: merging or deleting "
                 "codes and categories, replacing names, restoring a backup or "
                 "clearing old ones, bringing documents in, correcting your own "
-                "coder name and saving the names list.") in readme
+                "coder name, saving the names list and undoing a change."
+                ) in readme
         from exegete import preview_tokens
         guarded = readme[readme.index("- **Guarded changes**"):]
         # (v0.15.2, the opening texts: the import among them, every tool
@@ -424,9 +426,11 @@ class TestTheSmallerPoints:
         # previews first, so the import's own words say what it does)
         assert "`import_documents` (bringing documents in, after a " \
                "backup)" in readme
+        # (v0.15.2, undo: and undoing a change)
         assert ("`set_project_coder_name` (your own coder name, while "
                 "nothing is recorded under it), `save_names_list` (saving "
-                "the names list), and `import_documents`") in readme
+                "the names list), `undo_changes` (undoing a change), and "
+                "`import_documents`") in readme
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
         install = _flat(_read(GUIDE))

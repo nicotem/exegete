@@ -616,7 +616,9 @@ def _tools_running_the_process_scan():
 # failed switch leaves the previous project selected)
 _TOOL_OF_HELPER = {"_select_project": "select_project",
                    # 0.14.3: the import's preview passes the signs on
-                   "_import_documents_preview": "import_documents"}
+                   "_import_documents_preview": "import_documents",
+                   # v0.15.2: and undo's preview, as the restore's does
+                   "_undo_preview": "undo_changes"}
 
 
 def _paragraph_after(text, marker):
@@ -641,7 +643,9 @@ class TestProcessScanCallersAreDocumented:
                 # v0.15.0, the names list's save (its fix round 1): the
                 # preview, the call without a token, passes on the signs
                 # as restore_backup's and import_documents' do
-                "save_names_list"}
+                "save_names_list",
+                # v0.15.2: undo's preview, the same
+                "undo_changes"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's

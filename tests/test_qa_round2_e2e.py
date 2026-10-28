@@ -73,6 +73,8 @@ EXPECTED_TOOLS = {
     # document import (0.14.3)
     "import_documents",
     "list_backups", "restore_backup", "export_refi_qda",
+    # v0.15.2: undoing a change Exegete made
+    "undo_changes",
     # sessions & help (4; v0.15.1 removed cleanup_old_sessions)
     "get_coding_session_info", "list_coding_sessions",
     "delete_coding_session", "explain_ai_coding_tools",

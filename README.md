@@ -143,8 +143,9 @@ takes a backup. Then it writes every approved coding, or none, under the
 AI coder name you chose. Other changes, such as making a code or writing
 a memo, are made at once. The larger ones show a preview first: merging
 or deleting codes and categories, replacing names, restoring a backup or
-clearing old ones, bringing documents in, correcting your own coder name
-and saving the names list. Coding with the assistant is described in
+clearing old ones, bringing documents in, correcting your own coder
+name, saving the names list and undoing a change. Coding with the
+assistant is described in
 [AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md).
 
 A suggested coding takes this path:

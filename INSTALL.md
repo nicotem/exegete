@@ -289,6 +289,12 @@ guide (project configuration, testing, updating) applies unchanged.
 These commands leave out the optional part for PDF and EPUB ("PDF and
 EPUB: the optional part", below, adds it).
 
+<!-- ci: run venv: python3 -m venv ~/exegete-venv -->
+<!-- ci: run venv: ~/exegete-venv/bin/pip install exegete -->
+<!-- ci: run pipx: pipx install exegete -->
+<!-- ci: run uv: uv tool install exegete -->
+<!-- ci: run pipx, uv: which exegete -->
+
 An install from PyPI takes the newest release of each library Exegete
 allows, so it can be newer than the releases the tests ran with and the
 desktop extension installs. Exegete sets an upper limit, at the next
@@ -1814,6 +1820,10 @@ start the server itself by hand (the same command without `--version`),
 it prints its start-up lines and a paragraph saying that it
 expects an MCP host on its standard input and output, and then waits; that is the expected
 behaviour, not an error. Press Ctrl+C to stop it.
+
+<!-- ci: run venv: ~/exegete-venv/bin/exegete --version -->
+<!-- ci: run pipx, uv: exegete --version -->
+<!-- ci: expect venv, pipx, uv: exegete <version> -->
 
 ### If you used Option A (Dynamic):
 

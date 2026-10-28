@@ -285,6 +285,61 @@ def this_run(project: str) -> List[Dict[str, Any]]:
     return found
 
 
+def records(project: str) -> List[Dict[str, Any]]:
+    """Every record in the project's folder, of any run, newest first; a
+    record that cannot be read, or of a higher format, is passed over.
+    Undo reads them to tell which later change touched a row."""
+    found = []
+    for entry in _record_names(folder(project)):
+        if not _is_record_name(entry.name):
+            continue
+        try:
+            record = _load(Path(entry.path))
+        except NewerRecord:
+            continue
+        if record and record.get("receipt") == entry.name[:-len(
+                RECORD_SUFFIX)]:
+            found.append(record)
+    found.sort(key=lambda r: _seconds(r.get("time")) or 0, reverse=True)
+    return found
+
+
+def elsewhere(project: str, receipt: str) -> Optional[Dict[str, Any]]:
+    """The record a receipt names in another folder than the project's:
+    a change made in another project, or under a secret since replaced,
+    which keys the folder's name. None when there is none. A receipt
+    that is not 32 lowercase hex characters is refused (ValueError)
+    before any path is made; a record of a higher format raises
+    NewerRecord."""
+    if not isinstance(receipt, str) or not HEX_32.fullmatch(receipt):
+        raise ValueError("not a receipt")
+    for entry in _record_names(root()):
+        if entry.name == project or not HEX_32.fullmatch(entry.name):
+            continue
+        try:
+            if not entry.is_dir(follow_symlinks=False):
+                continue
+        except OSError:
+            continue
+        record = _load(Path(entry.path) / f"{receipt}{RECORD_SUFFIX}")
+        if record is not None and record.get("receipt") == receipt:
+            return record
+    return None
+
+
+def remove(project: str, receipt: str) -> bool:
+    """Remove the record a receipt names, once its change is undone; True
+    when a file went. A file already gone, or held by another copy, is
+    passed over."""
+    if not isinstance(receipt, str) or not HEX_32.fullmatch(receipt):
+        raise ValueError("not a receipt")
+    try:
+        os.unlink(folder(project) / f"{receipt}{RECORD_SUFFIX}")
+        return True
+    except OSError:
+        return False
+
+
 def _seconds(value: Any) -> Optional[float]:
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         return float(value)

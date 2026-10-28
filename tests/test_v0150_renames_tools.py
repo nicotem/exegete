@@ -687,7 +687,9 @@ class TestTheDocuments:
         assert ("copy_project_to_workspace, delete_coding, list_backups, "
                 "restore_backup, and the two earlier names below."
                 ) in tools.replace("> ", "")
-        install = _flat(_read("INSTALL.md"))
+        # v0.15.2: the variables and the Terminal recipes are the Terminal
+        # guide's
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
         assert (f"`full` (default) registers {FULL_TOOLS} tools, every "
                 "tool,") in install
         assert ("two of them are the earlier names of two renamed tools "
@@ -695,8 +697,9 @@ class TestTheDocuments:
         assert (f"`core` registers the {CORE_TOOLS}-tool supervised coding "
                 "set") in install
         assert f"Exegete offers {FULL_TOOLS} tools by default" in install
-        assert (f"register only the {CORE_TOOLS}-tool supervised coding set"
-                ) in install
+        assert f"for the {CORE_TOOLS} tools of `core`" in install
+        assert ("`EXEGETE_TOOLSET=core`, in the entry of step 5, gives only "
+                "the smaller set.") in install
         readme = _read("README.md")
         assert (f"| `full` | {FULL_TOOLS}: all, creating a project and two "
                 "renamed tools' earlier names included |") in readme
@@ -715,7 +718,11 @@ class TestTheDocuments:
         # here, each document gives both sets' sizes in one of them
         sys.path.insert(0, str(Path(__file__).parent))
         from test_v0151_facts import SIZE_PATTERNS
-        for name in ("README.md", "INSTALL.md", "TOOLS.md"):
+        # (v0.15.2: the sizes matter on the Terminal routes, a local
+        # model's among them, so the Terminal guide gives them, not
+        # INSTALL.md, whose extension offers the default set)
+        for name in ("README.md", "docs/installing-from-the-terminal.md",
+                     "TOOLS.md"):
             text = _read(name).replace("\n>", " ")
             given = {quantity for pattern, groups in SIZE_PATTERNS
                      if re.search(pattern, text)
@@ -816,12 +823,11 @@ class TestTheDocuments:
             encoding="utf-8")
         assert flat.index("Two tools were renamed in 0.15.0") < \
             flat.index("## How your data flows")
+        # v0.15.2: PRIVACY.md points to TOOLS.md's list of the tools that
+        # report the signs, which tests/test_qc40_gui_detection.py holds
         listing = flat[flat.index("**Process listing.**"):]
-        assert ("(today: select_project, get_current_project, "
-                "start_coding_session, also under its earlier name, and the "
-                "restore_backup, import_documents and save_names_list "
-                "previews, each the call without a preview_token)") in \
-            listing[:400]
+        assert ("the tools that report a `qualcoder_gui_signals` field "
+                "(TOOLS.md lists them)") in listing[:400]
 
     def test_a_coding_session_by_one_name(self):
         """The tool starts a coding session: the documents call it that,

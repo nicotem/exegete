@@ -421,6 +421,11 @@ def _blocks(text):
     return blocks
 
 
+# v0.15.2: INSTALL.md is the desktop extension's; every Terminal route
+# moved, whole, to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _flat(name):
     text = (REPO / name).read_text(encoding="utf-8")
     return " ".join(text.replace("\n>", " ").split())
@@ -469,19 +474,20 @@ class TestTheDocuments:
                           "the earlier name"]
 
     def test_install_terminal_route_warns_of_synced_folders(self):
-        flat = _flat("INSTALL.md")
-        item = flat[flat.index("- ✅ **A project, or a new one.**"):]
-        item = item[:item.index("- **QualCoder, optional.**")]
+        # v0.15.2: the Terminal routes are the Terminal guide's
+        flat = _flat(GUIDE)
+        item = flat[flat.index("- **A project, or none yet.**"):]
+        item = item[:item.index("## Installing from PyPI")]
         assert ("The default tool set, `full`, includes creating a "
                 "project: the assistant can start one in the conversation, "
                 "in a new folder, never changing an existing one.") in item
         assert "`EXEGETE_WORKSPACE`" in item
         assert ("iCloud (Desktop and Documents) or OneDrive may sync "
                 "Documents, and a sync service can copy a project's "
-                "database and its journal separately: consider naming a "
-                "folder outside Documents, such as `~/Exegete projects`."
-                ) in item
-        assert "Or use an existing project (a folder ending in `.qda`," \
+                "database and its journal separately, so a folder outside "
+                "Documents, such as `~/Exegete projects`, may suit you "
+                "better.") in item
+        assert "A project you have works too: a folder ending in `.qda`," \
             in item
 
     def test_the_figures_sit_in_their_sentences(self):
@@ -501,8 +507,11 @@ class TestTheDocuments:
         # after 0.15.1 the extension no longer passes a tool set
         assert ("`lifecycle`, the earlier name of `full`, is still accepted "
                 "in `EXEGETE_TOOLSET` and means `full`.") in readme
-        install = _flat("INSTALL.md")
-        assert f"`full` (default) registers {EXPECTED_FULL} tools" in install
+        # v0.15.2: the Terminal routes, and their figures, are the
+        # Terminal guide's
+        install = _flat(GUIDE)
+        assert (f"`full` (default) registers {EXPECTED_FULL} tools"
+                in install)
         for sentence in (
                 f"Exegete offers {EXPECTED_FULL} tools by default, and the "
                 f"serialised tool definitions alone measure about FIGURE "
@@ -569,7 +578,7 @@ class TestTheDocuments:
         assert "Can you give me a summary of my project?" in step5
 
     def test_install_says_exegete_names_it_in_its_log(self):
-        flat = _flat("INSTALL.md")
+        flat = _flat(GUIDE)
         item = flat[flat.index("- `EXEGETE_TOOLSET`: `full` (default)"):]
         item = item[:item.index("- `EXEGETE_WORKSPACE` (v0.14)")]
         assert ("is read as `full` until v1.0, and Exegete names it in its "
@@ -592,7 +601,8 @@ class TestTheDocuments:
                 "names another folder. iCloud (Desktop and Documents) or "
                 "OneDrive may sync Documents, and so copy the project, "
                 "imported originals included, off the computer: consider a "
-                "folder outside it (INSTALL.md, \"What You'll Need\").") in item
+                "folder outside it (the Terminal guide, \"What you need\").") \
+            in item
 
     def test_the_ai_coding_guide_on_every_route(self):
         flat = _flat("AI_CODING_GUIDE.md")
@@ -617,9 +627,18 @@ class TestTheDocuments:
 
     @staticmethod
     def _install_titles():
+        """INSTALL's headings, and (v0.15.2) the titles of the sections
+        that moved to the Terminal guide, each a row of INSTALL's table
+        "Sections now in the Terminal guide", where a reader who searches
+        INSTALL for the words finds the link."""
         install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-        return [re.sub(r"^#+\s*", "", line).strip()
-                for line in install.splitlines() if line.startswith("#")]
+        titles = [re.sub(r"^#+\s*", "", line).strip()
+                  for line in install.splitlines() if line.startswith("#")]
+        moved = install[install.index("## Sections now in the Terminal "
+                                      "guide"):]
+        titles += re.findall(r"(?m)^\| <a id=\"[^\"]+\"></a>([^|]+?) \|",
+                             moved)
+        return titles
 
     POINTER = re.compile(r"INSTALL(?:\.md)?(?:'s)?,?\s+"
                          r"((?:\"[^\"]+\"(?:,?\s+(?:and|or)\s+|,\s+)?)+)")
@@ -652,18 +671,22 @@ class TestTheDocuments:
                    if title not in titles
                    and not any(h.startswith(title + ":") for h in titles)]
         assert unknown == []
-        # the three pointers to the advice on synced folders, by name
-        for where in ("QUICKSTART.md", "PRIVACY.md",
-                      "CHANGELOG.md, [0.15.0-alpha]"):
+        # the pointers to the advice on synced folders, by name (v0.15.2:
+        # PRIVACY.md's points to the Terminal guide's "What you need")
+        for where in ("QUICKSTART.md", "CHANGELOG.md, [0.15.0-alpha]"):
             assert "What You'll Need" in quoted[where], where
             assert "What you need" not in quoted[where], where
+        assert ("(the Terminal guide, \"What you need\")"
+                in texts["PRIVACY.md"])
 
     def test_the_title_check_sees_a_wrong_title(self):
-        flat = ('see INSTALL.md, "What you need" and "Environment '
+        flat = ('see INSTALL.md, "What you will need" and "Environment '
                 'variables the server reads"')
         assert self._quoted_titles(flat) == [
-            "What you need", "Environment variables the server reads"]
-        assert "What you need" not in self._install_titles()
+            "What you will need", "Environment variables the server reads"]
+        assert "What you will need" not in self._install_titles()
+        assert "Environment variables the server reads" in \
+            self._install_titles()
 
     def test_the_changelog_names_the_bug_reports_option_as_the_form(self):
         form = (REPO / ".github" / "ISSUE_TEMPLATE" /

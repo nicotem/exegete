@@ -50,9 +50,12 @@ def test_start_here_names_importing_a_file_and_reading_it():
 
 
 def test_install_says_which_formats_need_the_optional_part():
+    # v0.15.2: the Terminal guide installs the part, and INSTALL.md, the
+    # desktop extension's, says what it is
     install = _flat("INSTALL.md")
-    section = _between(install, "### PDF and EPUB: the optional part",
-                       "The step-by-step install below")
+    section = _between(_flat("docs/installing-from-the-terminal.md"),
+                       "### PDF and EPUB: the optional part",
+                       "## Installing from the source")
     assert "PDF and EPUB need an optional part, `pdf-epub`" in section
     assert ("The Claude Desktop extension switches it on by itself."
             ) in section
@@ -63,16 +66,15 @@ def test_install_says_which_formats_need_the_optional_part():
     # pipx leaves an installed package as it is unless told to replace it
     assert 'pipx install "exegete[pdf-epub]"' not in section
     # the extension's own section points there
-    extension = _between(install, "## Claude Desktop: the one-click",
-                         "## Choosing your AI host")
-    assert ("The extension switches on the optional part that reads PDF "
-            "and EPUB documents") in extension
+    extension = _between(install, "## PDF and EPUB: the optional part",
+                         "## Updating")
+    assert "The extension always has this part." in extension
 
 
 def test_install_gives_the_parts_licence_as_pyproject_and_notice_do():
     section = _between(_flat("INSTALL.md"),
-                       "### PDF and EPUB: the optional part",
-                       "The step-by-step install below")
+                       "## PDF and EPUB: the optional part",
+                       "## Updating")
     assert ("PyMuPDF and EbookLib are under the GNU Affero General Public "
             "License, version 3 (AGPL-3.0), so an install with this part "
             "is, taken as a whole, under the AGPL's terms") in section

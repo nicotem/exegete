@@ -635,8 +635,14 @@ def test_the_assistants_table():
     assert ("For unambiguous commercial-terms coverage, use a Console "
             "account created for the institution or research group") \
         in privacy
-    install = _flat(_read("INSTALL.md"))
-    assert "local models are markedly weaker on many-tool work" in install
+    # (ruling 108, 27 October 2026: an expected drop of unknown size, in
+    # the Terminal guide's table of routes, where the routes moved)
+    install = _flat(_read("docs/installing-from-the-terminal.md"))
+    assert ("We expect a local model to do the analysis less well than the "
+            "hosted models, and do not know by how much, since we have "
+            "evaluated neither.") in install
+    assert "local models are markedly weaker on many-tool work" not in \
+        install
     assert "Requires the reduced core toolset." in install
     assert cells["Claude Desktop's chat"][VERDICT] == \
         "**This one**, set up as below"
@@ -668,8 +674,10 @@ def test_the_assistants_table():
         "**This one too**, with no other server or plugin that reads files. "
         "Choose the `core` tool set, since local models cope less well with "
         "many tools. No local model has been evaluated with Exegete yet")
-    assert ("LM Studio's chat with Exegete and no other server or plugin "
-            "that reads files") in privacy
+    # (ruling 108: LM Studio's chat opens no file by itself, and a local
+    # model is a route for particular uses, not a blanket suggestion)
+    assert ("LM Studio's chat, with Exegete and no other server or plugin "
+            "that reads files, opens no file by itself either") in privacy
     # the Experimental routes say so, and why (for LM Studio, in the
     # suggestion's cell since the redraft)
     assert "(Experimental)" in cells["ChatGPT's desktop app and Codex"][0]
@@ -715,9 +723,13 @@ def test_the_assistants_table():
             "\"Choosing your AI host\"](https://github.com/nicotem/exegete/"
             "blob/main/INSTALL.md#choosing-your-ai-host-data-governance-"
             "options-experimental)).") in flat
+    # (v0.15.2, the Terminal guide's table: the sentence on organisational
+    # accounts gives its reason, as ruling 108 has the README's do)
     assert ("| **Anthropic commercial-terms routes** (Claude Code with a "
-            "Console API key; Team/Enterprise accounts) |") in install
-    assert "Institutions should prefer organisational accounts." in install
+            "Console API key; Team or Enterprise accounts) |") in install
+    assert ("An institution's agreement sets the terms for its data, and a "
+            "personal account the consumer terms, which is why "
+            "organisational accounts suit institutions.") in install
 
 
 # ---------------------------------------------------------------------------
@@ -769,7 +781,8 @@ def test_the_tool_set_table():
     assert rows["core"][4].startswith("none: set `EXEGETE_TOOLSET=core`")
     assert manifest["user_config"]["small_toolset"]["title"] in \
         rows["core"][4]
-    assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
+    assert "at least 32k for the core toolset" in _flat(_read(
+        "docs/installing-from-the-terminal.md"))
     # the sentence under it, with the interpreters and the per cent
     # (v0.14.2, the README's second round of checks: shorter, the same
     # facts; v0.15.2: Python 3.11 or newer)

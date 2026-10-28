@@ -1134,11 +1134,13 @@ class TestTextsThatSentTheAssistantNowhere:
         missing = " ".join(host_json("list_available_projects", {
             "search_directories": [str(tmp_path / "Nowhere")]})[
                 "message"].split())
-        for name, suffix in (("INSTALL.md", " (Option A)"),
-                             ("PROJECT_SELECTION_GUIDE.md", "")):
+        # (v0.15.2: INSTALL.md's are headings of its "Troubleshooting",
+        # one level down, with no "(Option A)")
+        for name, level in (("INSTALL.md", "####"),
+                            ("PROJECT_SELECTION_GUIDE.md", "###")):
             text = (root / name).read_text(encoding="utf-8")
-            headings = re.findall(r'^### "(No projects found[^"]*)"'
-                                  + re.escape(suffix) + r"$", text, re.M)
+            headings = re.findall("^" + level + r' "(No projects found[^"]*)"$',
+                                  text, re.M)
             assert len(headings) == 2, (name, headings)
             for heading in headings:
                 assert given.startswith(heading) or \
@@ -1146,8 +1148,8 @@ class TestTextsThatSentTheAssistantNowhere:
             assert any(given.startswith(h) for h in headings), name
             assert any(usual.startswith(h) for h in headings), name
             heading = next(h for h in headings if given.startswith(h))
-            start = text.index(f'### "{heading}"')
-            section = " ".join(text[start:text.index("\n### ", start + 4)]
+            start = text.index(f'{level} "{heading}"')
+            section = " ".join(text[start:text.index(f"\n{level} ", start + 4)]
                                .split()).lower()
             assert "three levels deep" in section, name
             assert "not the usual places" in section, name
@@ -1955,7 +1957,7 @@ class TestHiddenCodersOnTheCodebook:
                      "the answer of `create_code`, `create_category` or "
                      "`create_case` when the name already exists"):
             assert tool in privacy, tool
-        assert "its `file_info` still names the file's owner" in privacy
+        assert "its `file_info` still gives the file's owner" in privacy
 
     def test_the_other_rows_a_hidden_coder_owns_name_them(self, tmp_path):
         """Fix round 1: a file, a case and a journal entry owned by the

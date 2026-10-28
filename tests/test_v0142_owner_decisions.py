@@ -65,7 +65,11 @@ def _between(text, start, end):
     return text[first:text.index(end, first + len(start))]
 
 
-DOCUMENTS = ("README.md", "INSTALL.md", "PRIVACY.md", "QUICKSTART.md")
+DOCUMENTS = ("README.md", "INSTALL.md", "PRIVACY.md", "QUICKSTART.md",
+             "docs/installing-from-the-terminal.md")
+# v0.15.2: INSTALL.md is the desktop extension's; the routes table and
+# every Terminal recipe moved, whole, to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
 
 
 # ---------------------------------------------------------------------------
@@ -138,9 +142,9 @@ def test_the_summary_promises_no_more_than_the_checks_do():
 
 
 def test_install_and_privacy_give_the_same_advice():
-    install = _flat("INSTALL.md")
+    install = _flat(GUIDE)
     privacy = _flat("PRIVACY.md")
-    rows = {maker: _between(_read("INSTALL.md"), row, "\n")
+    rows = {maker: _between(_read(GUIDE), row, "\n")
             for maker, row in (("Anthropic", "| **Claude consumer plans**"),
                                ("OpenAI", "| **OpenAI's apps**"))}
     for maker, row in rows.items():
@@ -152,6 +156,7 @@ def test_install_and_privacy_give_the_same_advice():
     assert RATED.format(maker="OpenAI") in first
     assert "turn off Codex's \"Include environments\"" in first
     assert "practice included" not in install
+    assert "practice included" not in _flat("INSTALL.md")
     # PRIVACY.md: each maker's section, and the checklist for both
     rung_one = _between(privacy, "### Rung 1:", "### Rung 2:")
     assert ADVICE.format(maker="Anthropic") in rung_one
@@ -159,7 +164,7 @@ def test_install_and_privacy_give_the_same_advice():
                            "**ChatGPT Business, Enterprise and Edu")
     assert ADVICE.format(maker="OpenAI") in individuals
     checklist = _between(privacy, "## Before you use real participant data",
-                         "## Practical mitigations")
+                         "## How your data flows")
     item = _between(checklist, "- **Training, with either maker.**",
                     "- **Controller")
     for words in (ADVICE.format(maker="the maker"), "Model Improvement",
@@ -179,8 +184,8 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
                                    "3. **Switch training off**",
                                    " (PRIVACY.md quotes the terms)"))[3:]
     one_click = _plain(_between(
-        _flat("INSTALL.md"), "## Claude Desktop: the one-click extension",
-        "**Not signed.**"))
+        _flat("INSTALL.md"), "## Installing the extension",
+        "### Approving the AI's suggestions"))
     quickstart = _plain(_between(_flat("QUICKSTART.md"),
                                  "### 5. Test It Out",
                                  "In Claude Desktop, try these prompts:"))
@@ -237,15 +242,15 @@ OWNERS_WORDS_AND_AFTER = OWNERS_WORDS + (
 
 
 def _warning_places():
-    install = _read("INSTALL.md")
+    install = _read(GUIDE)
     return {
         "README, a first session": _between(
             _flat("README.md"), "### A first session",
             "### Other assistants, and updates"),
-        "INSTALL, Claude Code": " ".join(_between(
-            install, "## Alternative: Claude Code and other MCP clients",
-            "## Environment variables the server reads").split()),
-        "INSTALL, Codex's folder": " ".join(_between(
+        "the Terminal guide, Claude Code": " ".join(_between(
+            install, "\n## Claude Code\n",
+            "## Claude Code with an Anthropic API key").split()),
+        "the Terminal guide, Codex's folder": " ".join(_between(
             install, "**Step 3. Give Codex a folder of its own",
             "**Step 4. Keep it asking.**").split()),
         "PRIVACY, assistants that open files": _between(
@@ -364,8 +369,8 @@ def test_openais_route_is_warned_of_with_an_alternative():
     readme = _between(_flat("README.md"), "### ChatGPT's desktop app and "
                       "Codex (OpenAI)", "1. **Switch training off**")
     assert ("Codex reads files by itself, so " + suggestion + ".") in readme
-    install = _flat("INSTALL.md")
-    row = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
+    install = _flat(GUIDE)
+    row = _between(_read(GUIDE), "| **OpenAI's apps**", "\n")
     assert ("Codex can also read your projects' files by itself, without "
             "asking, so " + suggestion + ".") in row
     box = _between(install, "## ChatGPT's desktop app and Codex "
@@ -383,8 +388,8 @@ def test_openais_route_is_warned_of_with_an_alternative():
     checklist = _between(privacy, "- **Which assistant, and whether it opens "
                          "files by itself.**", "- **What stays on")
     for where, text in (("README, the route", readme),
-                        ("INSTALL, the row", row),
-                        ("INSTALL, the box", box),
+                        ("the Terminal guide, the row", row),
+                        ("the Terminal guide, the box", box),
                         ("PRIVACY, summary", hosts),
                         ("PRIVACY, checklist", checklist)):
         assert CODEX_SETTING in " ".join(text.split()), where
@@ -402,7 +407,7 @@ def test_openais_route_is_warned_of_with_an_alternative():
     assert ("for participants' data, this project suggests an assistant "
             "with no file access of its own, such as Claude Desktop's chat."
             ) in openai
-    for name in ("README.md", "INSTALL.md", "PRIVACY.md"):
+    for name in ("README.md", "INSTALL.md", "PRIVACY.md", GUIDE):
         for words in CODEX_PROMISES:
             assert words not in _flat(name), (name, words)
 
@@ -436,7 +441,7 @@ def test_cowork_is_out_of_reach_only_with_all_three_conditions():
 def test_the_facts_behind_the_warning_stay():
     """The decided disclosure stays, as explanation: what the assistants
     read by themselves, and the conditions for participants' data."""
-    install = " ".join(_read("INSTALL.md").split())
+    install = " ".join(_read(GUIDE).split())
     for words in (
             "its read-only commands (such as `cat`, `grep` and `find`) read "
             "outside that folder without asking too, in every mode",
@@ -557,10 +562,10 @@ def test_the_readme_says_what_it_costs():
     assert "Claude Code opens files by itself" in other
     # INSTALL.md reads OpenAI's page the same way, and its table no
     # longer reads as if a free plan included Claude Code
-    install = _flat("INSTALL.md")
+    install = _flat(GUIDE)
     assert ("for Free and Go it mentions only the desktop app, \"subject to "
             "rollout\".") in install
-    row = _between(_read("INSTALL.md"), "| **Claude consumer plans**", "\n")
+    row = _between(_read(GUIDE), "| **Claude consumer plans**", "\n")
     assert row.startswith("| **Claude consumer plans** (claude.ai and Claude "
                           "Desktop on a Free, Pro or Max plan; Claude Code "
                           "with a Pro or Max login) |"), row
@@ -571,7 +576,7 @@ def test_the_readme_says_what_it_costs():
         assert claim not in cost.lower(), claim
     # OpenAI's words, as INSTALL.md quotes the same page
     assert ("\"Every MCP server adds more context to your messages and uses "
-            "more of your limit.") in _flat("INSTALL.md")
+            "more of your limit.") in _flat(GUIDE)
     # the first screen points to it
     assert "costs nothing (your assistant may: see \"Start here\")" in \
         _opening()

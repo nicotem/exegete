@@ -163,8 +163,9 @@ class TestThePlacesAndTheTable:
 
     def test_the_earlier_names_in_sentences_of_their_own(self):
         section = _files_section()
-        assert ("Some of these had other names in earlier versions. The "
-                "state folder was `~/.qualcoder_mcp` before 0.14.1: since "
+        assert ("Some of these had other names in earlier versions. "
+                "Exegete's own folder was `~/.qualcoder_mcp` before 0.14.1: "
+                "since "
                 "then Exegete keeps a link under that name pointing at "
                 "`~/.exegete`, as \"How your data flows\" says.") in section
         # the maintainer's sitting of 19 October 2026: the update moved a

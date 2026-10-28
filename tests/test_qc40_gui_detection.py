@@ -654,13 +654,15 @@ class TestProcessScanCallersAreDocumented:
         assert _tools_running_the_process_scan() == self.EXPECTED
 
     def test_privacy_doc_names_every_caller(self):
+        # v0.15.2: PRIVACY.md names the callers once, by pointing to
+        # TOOLS.md's list, which the next test holds to the code (the
+        # staleness audit's row on PRIVACY's list of them)
         privacy = (_ROOT / "PRIVACY.md").read_text(encoding="utf-8")
-        bullet = _paragraph_after(privacy, "**Process listing.**")
-        for tool in _tools_running_the_process_scan():
-            assert tool in bullet, tool
-        # and says the preview is the call WITHOUT a token, so nobody is
-        # surprised (v0.12 replaced confirm with the preview token)
-        assert "without a preview_token" in bullet
+        bullet = " ".join(_paragraph_after(
+            privacy, "**Process listing.**").split())
+        assert ("the tools that report a `qualcoder_gui_signals` field "
+                "(TOOLS.md lists them)") in bullet
+        assert "(today:" not in bullet
 
     def test_tools_md_names_every_caller(self):
         # v0.14.1: the paragraph moved from README.md to TOOLS.md

@@ -458,9 +458,11 @@ class TestTheDocumentsOtherPoints:
         assert ("In Claude Desktop, both names and the switch \"I use "
                 "QualCoder on this computer\" are in Settings, Extensions, "
                 "Exegete. After changing one, quit Claude Desktop and open it "
-                "again. Elsewhere, see [INSTALL.md](https://github.com/"
-                "nicotem/exegete/blob/main/INSTALL.md#environment-variables-"
-                "the-server-reads)") in readme
+                "again. Elsewhere, see [the Terminal guide](https://github."
+                "com/nicotem/exegete/blob/main/docs/installing-from-the-"
+                "terminal.md#environment-variables-exegete-reads)") in readme
+        # (v0.15.2, the merge onto the integration branch: the variables
+        # that set the two names elsewhere are the Terminal guide's)
 
     def test_the_hidden_name_s_departure_is_named(self):
         tools = _flat(_read("TOOLS.md"))

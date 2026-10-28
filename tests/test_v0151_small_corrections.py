@@ -162,7 +162,9 @@ class TestTheRestartIsSaid:
         names = readme[readme.index("**Two coder names.**"):]
         names = names[:names.index("**A project you already have.**")]
         settings = names[names.index("Settings, Extensions, Exegete"):]
-        settings = settings[:settings.index("INSTALL.md")]
+        # (v0.15.2, the merge onto the integration branch: the pointer to
+        # the other routes names the Terminal guide)
+        settings = settings[:settings.index("Elsewhere, see")]
         assert "quit Claude Desktop and open it again" in settings
 
     def test_the_quick_start_says_it_where_the_coder_name_is_named(self):

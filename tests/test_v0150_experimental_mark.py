@@ -81,8 +81,10 @@ CHANGES = [
      "Exegete called Practice\". With the extension"),
     ("README.md",
      "can create a project too (Experimental).",
+     # (v0.15.2, the merge onto the integration branch: the Terminal
+     # guide's)
      "whose default tool set, `full`, can create a project too "
-     "([INSTALL.md]"),
+     "([the Terminal guide]"),
     # (the comparison table, and its row, gave way to the list of what is
     # not in Exegete yet)
     ("README.md",
@@ -105,7 +107,9 @@ CHANGES = [
      "started from the conversation"),
     ("QUICKSTART.md",
      "(Experimental; INSTALL.md says where it goes)",
-     "can create one in the conversation (INSTALL.md says where it goes)"),
+     # (v0.15.2, the merge onto the integration branch: QUICKSTART's own
+     # step 3 says it, for this route)
+     "can create one in the conversation (step 3 says where it goes)"),
     ("QUICKSTART.md",
      "create one (Experimental).",
      "in step 5 you can ask the assistant to create one."),

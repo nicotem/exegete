@@ -17,9 +17,9 @@ needs no typed commands:
   Code ("Claude Code instead of Claude Desktop", below).
 - A project, if you have one: a folder whose name ends in `.qda`, kept
   in QualCoder's file format. If you have none, the assistant can create
-  one in the conversation (INSTALL.md says where it goes).
+  one in the conversation (step 3 says where it goes).
 - If you are still choosing how to run the AI,
-  [INSTALL.md, "Choosing your AI host: data-governance options (Experimental)"](INSTALL.md#choosing-your-ai-host-data-governance-options-experimental)
+  [Installing Exegete from the Terminal, "Choosing your AI host: data-governance options (Experimental)"](docs/installing-from-the-terminal.md#choosing-your-ai-host-data-governance-options-experimental)
   compares Claude's plans, an API key and a model that runs on your own
   computer. The API-key and LM Studio routes are Experimental.
 
@@ -28,19 +28,19 @@ needs no typed commands:
 In Claude Code, leave out step 3's settings file and run
 `claude mcp add exegete -- <venv-python> -m exegete.server` in an empty
 folder of its own, with the path `which python` gives in place of
-`<venv-python>` (INSTALL.md, "Alternative: Claude Code and other MCP
-clients"). Claude Code opens files by itself, outside Exegete, so a real
-study kept on the same computer is within its reach even while you
-practise, and Exegete's list of projects tells it where it is. Started
-in your home folder, or in a folder that holds a study, it reads that
-study without asking. If that matters for a study, you could keep
-practice projects in a folder of their own, or work on that study with
-Claude Desktop's chat. In that chat, you could keep computer use off,
-connect no folder that holds your projects or transcripts, and add no
-other extension that reads files. A folder of their own keeps practice
-projects apart but does not put the study out of Claude Code's reach,
-and what it opens goes to the AI provider, which may train on it while
-training is on. For Claude Code, that is Anthropic, which runs its model
+`<venv-python>` (the Terminal guide, "Claude Code"). Claude Code opens
+files by itself, outside Exegete, so a real study kept on the same
+computer is within its reach even while you practise, and Exegete's list
+of projects tells it where it is. Started in your home folder, or in a
+folder that holds a study, it reads that study without asking. If that
+matters for a study, you could keep practice projects in a folder of
+their own, or work on that study with Claude Desktop's chat. In that
+chat, you could keep computer use off, connect no folder that holds your
+projects or transcripts, and add no other extension that reads files. A
+folder of their own keeps practice projects apart but does not put the
+study out of Claude Code's reach, and what it opens goes to the AI
+provider, which may train on it while training is on. For Claude Code,
+that is Anthropic, which runs its model
 ([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
 
 ## Installation steps
@@ -49,10 +49,10 @@ training is on. For Claude Code, that is Anthropic, which runs its model
 
 These steps install Exegete from its source. You can install it from
 PyPI instead: `pip install exegete` in a virtual environment, or
-`pipx install exegete` (INSTALL.md, "Recommended: Install from PyPI").
+`pipx install exegete` (the Terminal guide, "Installing from PyPI").
 PDF and EPUB need its optional part, `"exegete[pdf-epub]"` in place of
-`exegete`, or `".[pdf-epub]"` in place of `.` below (INSTALL.md, "PDF
-and EPUB: the optional part").
+`exegete`, or `".[pdf-epub]"` in place of `.` below (the Terminal
+guide, "PDF and EPUB: the optional part").
 
 <!-- ci: run source -->
 ```bash
@@ -151,8 +151,8 @@ project's database and the working file beside it, the database's
 journal, at different moments, which can leave a damaged copy. You could
 name a folder outside Documents, such as `~/Exegete projects`. To do so,
 add `"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"` as a line
-of the `env` block, with a comma after the line before it (INSTALL.md,
-"What You'll Need" and "Environment variables the server reads").
+of the `env` block, with a comma after the line before it (the Terminal
+guide, "What you need" and "Environment variables Exegete reads").
 
 ### 4. Restart Claude Desktop
 
@@ -243,7 +243,7 @@ environment's.
 
 ## Getting help
 
-- [INSTALL.md's troubleshooting section](INSTALL.md#troubleshooting)
+- [The Terminal guide's troubleshooting section](docs/installing-from-the-terminal.md#troubleshooting)
 - If you use QualCoder, [its documentation](https://github.com/ccbogel/QualCoder/wiki)
 - [GitHub Issues](https://github.com/nicotem/exegete/issues), the only
   support channel. It is public, so leave out participants' data.

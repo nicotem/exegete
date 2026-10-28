@@ -614,8 +614,10 @@ def test_install_turns_training_off_first_in_the_readmes_words():
     assert steps == ["1", "2", "3", "4"]
     assert install.index("**First, switch training off**") < \
         install.index("**Step 1. Install Exegete.**")
-    assert ("INSTALL.md#chatgpts-desktop-app-and-codex-experimental"
-            in _flat("README.md"))
+    # (v0.15.2, the merge onto the integration branch: the README links
+    # to the recipe in the Terminal guide, where it moved)
+    assert ("installing-from-the-terminal.md#chatgpts-desktop-app-and-"
+            "codex-experimental" in _flat("README.md"))
 
 
 # ---------------------------------------------------------------------------
@@ -839,9 +841,11 @@ def test_a_first_session_says_what_to_do_next():
     # (the staleness audit of 20 October 2026: on `core`, as LM Studio's
     # recipe sets it, neither step works, CORE_TOOLSET; INSTALL's recipe
     # says how to make the project once)
+    # (v0.15.2, the merge onto the integration branch: the recipe is the
+    # Terminal guide's)
     assert ("LM Studio's `core` tool set cannot create a project or bring "
-            "documents in: \"A first project\", in INSTALL.md's recipe, says "
-            "how to do both once.") in first
+            "documents in: \"A first project\", in the Terminal guide's "
+            "recipe, says how to do both once.") in first
     for tool in ("create_project", "import_documents", "import_text_file"):
         assert tool not in server.CORE_TOOLSET, tool
     assert "**A first project.**" in _flat(GUIDE)
@@ -878,10 +882,12 @@ def test_the_terminal_route_says_where_projects_go():
     assert ("There, new projects and copies go to `~/Documents/Exegete "
             "projects`,") in other
     # the sync caveat, and the setting that moves it
+    # (v0.15.2, the merge onto the integration branch: the link goes to
+    # the Terminal guide's list of settings, where the section moved)
     assert ("which iCloud or OneDrive may sync, unless [`EXEGETE_WORKSPACE`]"
-            "(https://github.com/nicotem/exegete/blob/main/INSTALL.md"
-            "#environment-variables-the-server-reads) names another "
-            "folder.") in other
+            "(https://github.com/nicotem/exegete/blob/main/docs/installing-"
+            "from-the-terminal.md#environment-variables-exegete-reads) names "
+            "another folder.") in other
     # v0.15.2: the section is the Terminal guide's, and INSTALL.md keeps
     # the old anchor as a pointer to it
     assert "\n## Environment variables Exegete reads\n" in _read(GUIDE)

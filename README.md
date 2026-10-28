@@ -242,7 +242,7 @@ plans add weekly limits. At a limit you wait, move up a plan or, on a
 paid plan, pay for extra use. Longer conversations and more tool use
 count for more, so coding many transcripts uses far more than practice.
 Other routes, such as OpenAI's apps and LM Studio, are compared in
-[INSTALL.md, "Choosing your AI host"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#choosing-your-ai-host-data-governance-options-experimental).
+[Installing Exegete from the Terminal, "Choosing your AI host"](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#choosing-your-ai-host-data-governance-options-experimental).
 Their recipes there give OpenAI's plans and what LM Studio needs.
 
 ### Claude Desktop, with one click
@@ -288,7 +288,7 @@ plan (Free, Go, Plus or Pro), training is switched off with "Improve the
 model for everyone" in ChatGPT's Settings, Data controls, and with
 Codex's separate "Include environments". Rating a reply, with a thumbs
 up or down, can still let OpenAI train on that conversation. Then follow
-[INSTALL.md's steps](https://github.com/nicotem/exegete/blob/main/INSTALL.md#chatgpts-desktop-app-and-codex-experimental),
+[the Terminal guide's steps](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#chatgpts-desktop-app-and-codex-experimental),
 which make the app ask before every change Exegete makes.
 
 ### A first session
@@ -311,9 +311,9 @@ file and give the assistant its location, which keeps its text out of
 the conversation. On a Mac, hold Option, right-click the file and choose
 Copy as Pathname. On Windows 11, choose Copy as path. To see your coding
 in the text, ask to open a file for reading, or open the project in
-QualCoder, if you use it (Project, Open Project).
-LM Studio's `core` tool set cannot create a project or bring documents
-in: "A first project", in INSTALL.md's recipe, says how to do both once.
+QualCoder, if you use it (Project, Open Project). LM Studio's `core`
+tool set cannot create a project or bring documents in: "A first
+project", in the Terminal guide's recipe, says how to do both once.
 
 **Two coder names.** When it makes the project, the assistant asks for
 your own coder name, unless you have filled it in Exegete's settings.
@@ -325,7 +325,7 @@ conversation. It does not ask if the project was made with that name in
 Exegete's settings. In Claude Desktop, both names and the switch "I use
 QualCoder on this computer" are in Settings, Extensions, Exegete. After
 changing one, quit Claude Desktop and open it again. Elsewhere, see
-[INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads).
+[the Terminal guide](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#environment-variables-exegete-reads).
 
 **A project you already have.** Ask the assistant to copy it into the
 folder for projects and work on the copy. Exegete does not touch the
@@ -348,15 +348,15 @@ sees signs of an open 4.0 window, but only you can make sure. An open
 **Other assistants.** Claude Code (not on Claude's Free plan), LM
 Studio, other assistant apps and Claude Desktop set up by hand take the
 Terminal route, whose default tool set, `full`, can create a project too
-([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)).
+([the Terminal guide](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md)).
 There, new projects and copies go to `~/Documents/Exegete projects`,
 which iCloud or OneDrive may sync, unless
-[`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/INSTALL.md#environment-variables-the-server-reads)
+[`EXEGETE_WORKSPACE`](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#environment-variables-exegete-reads)
 names another folder. Claude Code opens files by itself, so for
 participants' data this project suggests Claude Desktop's chat ("Where
 your data goes", above). LM Studio, with a model on your own computer,
 has a recipe of its own in seven steps, with the `core` tool set:
-[INSTALL.md, "LM Studio (fully local) (Experimental)"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#lm-studio-fully-local-experimental).
+[the Terminal guide, "LM Studio (fully local) (Experimental)"](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#lm-studio-fully-local-experimental).
 
 **Updating.** Updates are never installed by themselves and never touch
 your projects. In the extension, Exegete tells you when a new version is
@@ -370,9 +370,9 @@ is out" in Claude Desktop's Settings, Extensions, Exegete
 Once it has checked, ask "How do I update Exegete?" for the steps on
 your computer, or install the newer `.mcpb` the same way. On the
 Terminal route the check is off unless you set `EXEGETE_UPDATE_CHECK=on`
-([INSTALL.md has the steps](https://github.com/nicotem/exegete/blob/main/INSTALL.md#updating-the-mcp-server);
+([the Terminal guide has the steps](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#updating);
 for the earlier name,
-[INSTALL.md, "Coming from qualcoder-mcp"](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp)).
+[its "Coming from qualcoder-mcp"](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#coming-from-qualcoder-mcp)).
 
 ## Exegete and QualCoder
 
@@ -398,7 +398,7 @@ QualCoder 3.8.2, read
 before you edit transcripts in its coding view. QualCoder 4.0's own MCP
 server calls itself "qualcoder-mcp", Exegete's former name, as checked
 on 6 October 2026. TOOLS.md gives the facts, and
-[INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#coming-from-qualcoder-mcp)
+[the Terminal guide](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#coming-from-qualcoder-mcp)
 says how to keep the two apart. QualCoder's AI permission setting, such
 as Read-only, applies to that server and to QualCoder's own assistant,
 not to Exegete. This project welcomes QualCoder's own server, and is
@@ -451,10 +451,10 @@ which carry your project's texts. `lifecycle`, the earlier name of
 - **The brief** (provisional), how the assistant is to work with you
   (`read_brief`). A host may keep only the start of a description, so
   the rules that matter come within its first 2,048 characters, a few
-  named exceptions apart (INSTALL.md gives Claude Code's figures). One
-  description is longer than 16,384 characters, `pseudonymise_source`'s
-  (about 17,000 on Python 3.13, about 18,000 on 3.11 and 3.12):
-  [INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md#alternative-claude-code-and-other-mcp-clients) says how to let it through whole.
+  named exceptions apart (the Terminal guide gives Claude Code's
+  figures). One description is longer than 16,384 characters,
+  `pseudonymise_source`'s (about 17,000 on Python 3.13, about 18,000
+  on 3.11 and 3.12): [the guide's section on Claude Code](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#claude-code) says how to let it through whole.
 
 **Tested.** More than 8,000 automated tests run on Windows, macOS and
 Linux, with Python 3.11 and 3.13 (and 3.14 on Linux), on every change

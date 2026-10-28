@@ -577,8 +577,10 @@ class TestTheDocuments:
                 "comma after the line before it") in step3
         assert '`"env": {"EXEGETE_WORKSPACE"' not in step3
         # Fix round 2: INSTALL's heading in its own words
-        assert ("(INSTALL.md, \"What You'll Need\" and \"Environment "
-                "variables the server reads\")") in step3
+        # (v0.15.2, the merge onto the integration branch: both sections
+        # are the Terminal guide's, named by its headings)
+        assert ("(the Terminal guide, \"What you need\" and \"Environment "
+                "variables Exegete reads\")") in step3
         step5 = flat[flat.index("### 5. Try it"):]
         step5 = step5[:step5.index("## Updating later")]
         # (v0.15.2, the opening texts: the request in a sentence)
@@ -629,8 +631,10 @@ class TestTheDocuments:
         # own)
         assert (f"Leave its switch \"{switch}\" off, as it comes. The "
                 f"small set, `core`, cannot create a project") in readme
+        # (v0.15.2, the merge onto the integration branch: the Terminal
+        # route is the Terminal guide's)
         assert ("whose default tool set, `full`, can create a project too "
-                "([INSTALL.md]") in readme
+                "([the Terminal guide]") in readme
         # (v0.15.2, the opening texts: the comparison table gave way, and
         # the two sets are the table's rows)
         assert "| `full` | 79: every tool, creating a project" in readme
@@ -655,6 +659,11 @@ class TestTheDocuments:
 
     POINTER = re.compile(r"INSTALL(?:\.md)?(?:'s)?,?\s+"
                          r"((?:\"[^\"]+\"(?:,?\s+(?:and|or)\s+|,\s+)?)+)")
+    # (v0.15.2) The same, for the Terminal guide, by its short name or its
+    # title
+    GUIDE_POINTER = re.compile(
+        r"(?:[Tt]he Terminal guide|Installing Exegete from the Terminal)"
+        r"(?:'s)?,?\s+((?:\"[^\"]+\"(?:,?\s+(?:and|or)\s+|,\s+)?)+)")
 
     def _quoted_titles(self, flat):
         return [title for found in self.POINTER.finditer(flat)
@@ -685,12 +694,33 @@ class TestTheDocuments:
                    and not any(h.startswith(title + ":") for h in titles)]
         assert unknown == []
         # the pointers to the advice on synced folders, by name (v0.15.2:
-        # PRIVACY.md's points to the Terminal guide's "What you need")
-        for where in ("QUICKSTART.md", "CHANGELOG.md, [0.15.0-alpha]"):
+        # PRIVACY.md's points to the Terminal guide's "What you need", and,
+        # since the merge onto the integration branch, QUICKSTART's too;
+        # the CHANGELOG's entry is a record)
+        for where in ("CHANGELOG.md, [0.15.0-alpha]",):
             assert "What You'll Need" in quoted[where], where
             assert "What you need" not in quoted[where], where
         assert ("(the Terminal guide, \"What you need\")"
                 in texts["PRIVACY.md"])
+        assert ("(the Terminal guide, \"What you need\" and \"Environment "
+                "variables Exegete reads\")" in texts["QUICKSTART.md"])
+        # (v0.15.2, the merge onto the integration branch) A title quoted
+        # after the Terminal guide's name is one of the guide's headings,
+        # so a reader who searches the guide for the words finds them
+        guide = (REPO / "docs/installing-from-the-terminal.md").read_text(
+            encoding="utf-8")
+        headings = [re.sub(r"^#+\s*", "", line).strip()
+                    for line in guide.splitlines() if line.startswith("#")]
+        texts["docs/installing-from-the-terminal.md"] = " ".join(
+            guide.split())
+        named = [(where, title) for where, text in texts.items()
+                 for found in self.GUIDE_POINTER.finditer(text)
+                 for title in re.findall(r'"([^"]+)"', found.group(1))]
+        assert ("QUICKSTART.md", "Installing from PyPI") in named
+        wrong = [(where, title) for where, title in named
+                 if title not in headings
+                 and not any(h.startswith(title + ":") for h in headings)]
+        assert wrong == []
 
     def test_the_title_check_sees_a_wrong_title(self):
         flat = ('see INSTALL.md, "What you will need" and "Environment '

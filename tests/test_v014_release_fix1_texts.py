@@ -109,8 +109,10 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "`core`, cannot create a project" in one_click_readme
     assert "whose standard tool set cannot create a project unless switched " \
         "on" not in flat
+    # (v0.15.2, the merge onto the integration branch: the Terminal route
+    # is the Terminal guide's, which the sentence links to)
     assert ("whose default tool set, `full`, can create a project too "
-            "([INSTALL.md]") in flat
+            "([the Terminal guide]") in flat
     assert "`lifecycle`" not in one_click_readme
     # (v0.15.2: INSTALL.md's own section on the extension's settings)
     one_click = install[install.index("## The settings page"):

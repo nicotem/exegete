@@ -265,11 +265,17 @@ def test_the_readme_gives_both_new_facts():
                      "This project welcomes QualCoder's own server")
     # (v0.15.2, the readability reading: the date ends the sentence, the
     # pointers are one of their own, and the setting applies to the server)
+    # (v0.15.2, the merge onto the integration branch: the Terminal
+    # guide's "Coming from qualcoder-mcp" says how to keep the two apart)
     assert ("calls itself \"qualcoder-mcp\", Exegete's former name, as "
             "checked on 6 October 2026. TOOLS.md gives the facts, and "
-            "[INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
-            "INSTALL.md#coming-from-qualcoder-mcp) says how to keep the two "
-            "apart.") in facts
+            "[the Terminal guide](https://github.com/nicotem/exegete/blob/"
+            "main/docs/installing-from-the-terminal.md#coming-from-"
+            "qualcoder-mcp) says how to keep the two apart.") in facts
+    guide = " ".join((REPO / "docs/installing-from-the-terminal.md")
+                     .read_text(encoding="utf-8").split())
+    assert ("a name of its own, such as `qualcoder-app`, keeps the two "
+            "apart.") in guide
     assert ("QualCoder's AI permission setting, such as Read-only, applies "
             "to that server and to QualCoder's own assistant, not to "
             "Exegete.") in facts

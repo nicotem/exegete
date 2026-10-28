@@ -1411,51 +1411,63 @@ class _Planner:
         file by `fid`, which the digest of the file's text guards
         (TEXT_CHANGED). A reference that pointed at nothing before the
         change goes back as it was."""
-        lost: Dict[str, int] = {}
-        replaced: Dict[str, int] = {}
+        if backup is None:
+            return
+        counts: Dict[str, Dict[str, int]] = {PARENT_GONE: {},
+                                             PARENT_REPLACED: {}}
         targets: Dict[str, List[Tuple[str, Any]]] = {PARENT_GONE: [],
                                                      PARENT_REPLACED: []}
-        cache: Dict[Any, bool] = {}
-        same: Dict[Any, bool] = {}
+        caches: Tuple[Dict[Any, bool], Dict[Any, bool]] = ({}, {})
         for step in change.put_back + change.set_back:
             post = self.overlay.get(step.table.lower(), {}).get(step.key)
             if post is None:
                 continue
             for ref in REFERENCES_FROM.get(step.table.lower(), ()):
-                if ref.when is not None and text_of(
-                        post.get(ref.when[0])) != ref.when[1]:
-                    continue
-                values = tuple(post.get(c, NULL) for c in ref.columns)
-                if any(v.kind == "null" for v in values) or (
-                        len(values) == 1 and points_at_nothing(values[0])):
-                    continue
-                if step.now is not None and all(
-                        _norm(step.now.get(c, NULL)) == _norm(v)
-                        for c, v in zip(ref.columns, values)):
-                    continue            # a reference the undo keeps
-                if backup is None:
-                    continue
-                target = self._numbered(ref, values)
-                if not self._exists(ref, values, cache):
-                    if backup.holds(ref.target, list(zip(
-                            ref.target_columns, values))):
-                        lost[step.table] = lost.get(step.table, 0) + 1
-                        if target is not None:
-                            targets[PARENT_GONE].append(target[::2])
-                        break
-                    continue
-                if target is None or (ref.table in POSITIONED_TABLES
-                                      and ref.columns == ("fid",)):
-                    continue
-                if not self._same_row(change, target, backup, same):
-                    replaced[step.table] = replaced.get(step.table, 0) + 1
-                    targets[PARENT_REPLACED].append(target[::2])
+                fault = self._parent_fault(change, step, post, ref, backup,
+                                           caches)
+                if fault is not None:
+                    reason, target = fault
+                    counts[reason][step.table] = counts[reason].get(
+                        step.table, 0) + 1
+                    if target is not None:
+                        targets[reason].append(target[::2])
                     break
-        for reason, counts in ((PARENT_GONE, lost),
-                               (PARENT_REPLACED, replaced)):
-            if counts:
-                change.refuse(reason, rows=counts,
+        for reason, rows in counts.items():
+            if rows:
+                change.refuse(reason, rows=rows,
                               **self.later(change, targets[reason]))
+
+    def _parent_fault(self, change: ChangePlan, step: Step, post: Row,
+                      ref: Reference, backup: Source,
+                      caches: Tuple[Dict[Any, bool], Dict[Any, bool]]
+                      ) -> Optional[Tuple[str, Optional[Tuple[str, str,
+                                                               int]]]]:
+        """Why one reference of a row put back or set back would not point
+        where it pointed before the change: (PARENT_GONE or
+        PARENT_REPLACED, the row it names by id, if it does), or None."""
+        if ref.when is not None and text_of(
+                post.get(ref.when[0])) != ref.when[1]:
+            return None
+        values = tuple(post.get(c, NULL) for c in ref.columns)
+        if any(v.kind == "null" for v in values) or (
+                len(values) == 1 and points_at_nothing(values[0])):
+            return None
+        if step.now is not None and all(
+                _norm(step.now.get(c, NULL)) == _norm(v)
+                for c, v in zip(ref.columns, values)):
+            return None                 # a reference the undo keeps
+        target = self._numbered(ref, values)
+        if not self._exists(ref, values, caches[0]):
+            if backup.holds(ref.target, list(zip(ref.target_columns,
+                                                 values))):
+                return PARENT_GONE, target
+            return None
+        if target is None or (ref.table in POSITIONED_TABLES
+                              and ref.columns == ("fid",)):
+            return None
+        if not self._same_row(change, target, backup, caches[1]):
+            return PARENT_REPLACED, target
+        return None
 
     def check_documents(self, change: ChangePlan) -> None:
         """A text's name set back that a file in the project's documents

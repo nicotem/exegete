@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "display_name": "Exegete",
   "description": "A qualitative analysis application you use in conversation with Claude, compatible with QualCoder. You can start projects, bring in documents, read and search them, code them with suggestions you approve, and export your codebook, coding and counts. Your projects are folders on this computer.",
-  "long_description": "Exegete (formerly qualcoder-mcp) is a qualitative analysis application you use in conversation with Claude, compatible with QualCoder. You start projects, bring in documents and transcripts, read them with their codings, search them, and code them with suggestions you approve. You also edit the codebook, write memos, and export your codebook, coding and counts. Each project is a folder on this computer, kept in QualCoder's file format. QualCoder is free software for qualitative analysis, and you can work on a project in either program, one at a time. QualCoder's developers did not make Exegete and have not endorsed it.\n\nBefore every change to a project's database, Exegete takes a backup, a copy of the project kept beside it. Exegete runs on this computer and adds no telemetry of its own. On Windows x64, a library it installs for PDFs reports its use, as PRIVACY.md explains. What Exegete's tools return goes into the conversation, and Claude Desktop sends it to Anthropic like the rest of the chat. PRIVACY.md says where your data goes and what to check before you use participants' data: https://github.com/nicotem/exegete/blob/main/PRIVACY.md.\n\nWith the setting \"Tell me when a new version is out\" on, as it is by default, Exegete checks its website for a newer version once a week at most, and when you ask. Nothing from your projects is sent, and GitHub, which hosts the website, records your computer's internet address. The other settings are \"Limit Exegete to its small tool set\", \"Folder for projects\", \"Your coder name\", \"AI coder name\" and \"I use QualCoder on this computer\".",
+  "long_description": "Exegete (formerly qualcoder-mcp) is a qualitative analysis application you use in conversation with Claude, compatible with QualCoder. You start projects, bring in documents and transcripts, read them with their codings, search them, and code them with suggestions you approve. You also edit the codebook, write memos, and export your codebook, coding and counts. Each project is a folder on this computer, kept in QualCoder's file format. QualCoder is free software for qualitative analysis, and you can work on a project in either program, one at a time. QualCoder's developers did not make Exegete and have not endorsed it.\n\nBefore every change to a project's database, Exegete takes a backup, a copy of the project kept beside it. Exegete runs on this computer and adds no telemetry of its own. On Windows x64, a library it installs for PDFs reports its use, as PRIVACY.md explains. What Exegete's tools return goes into the conversation, and Claude Desktop sends it to Anthropic like the rest of the chat. PRIVACY.md says where your data goes and what to check before you use participants' data: https://github.com/nicotem/exegete/blob/main/PRIVACY.md.\n\nThe setting \"Tell me when a new version is out\" is on by default. With it on, Exegete checks its website for a newer version once a week at most, and when you ask. Nothing from your projects is sent, and GitHub, which hosts the website, records your computer's internet address. The other settings are \"Limit Exegete to its small tool set\", \"Folder for projects\", \"Your coder name\", \"AI coder name\" and \"I use QualCoder on this computer\".",
   "documentation": "https://github.com/nicotem/exegete/blob/main/INSTALL.md",
   "server": {
     "type": "uv",
@@ -47,14 +47,14 @@
     "small_toolset": {
       "type": "boolean",
       "title": "Limit Exegete to its small tool set",
-      "description": "With this on, Exegete offers its small tool set, made for local models. That set cannot create a project or bring documents in. With it off, the default, Exegete offers every tool. Settings take effect after Claude Desktop is quit and opened again.",
+      "description": "With this on, Exegete offers its small tool set, made for models on your computer. That set cannot create a project or bring documents in. With it off, the default, Exegete offers every tool. Settings take effect after Claude Desktop is quit and opened again.",
       "default": false,
       "required": false
     },
     "projects_folder": {
       "type": "directory",
       "title": "Folder for projects",
-      "description": "Where Exegete creates new projects and working copies. The default, Exegete projects in your home folder, is made when needed. A sync service keeping this folder copies your projects off this computer and can leave a damaged copy. With this empty, Exegete does not start.",
+      "description": "Where Exegete creates projects and working copies. The default, Exegete projects in your home folder, is made when needed. A sync service that keeps this folder copies your projects off this computer and can leave a damaged copy. With this empty, Exegete does not start.",
       "default": "~/Exegete projects",
       "required": false
     },
@@ -68,7 +68,7 @@
     "ai_coder_name": {
       "type": "string",
       "title": "AI coder name",
-      "description": "The name under which Exegete stores Claude's work, kept apart from yours. A model's name lets you compare models. Each project Exegete creates gets it. Otherwise, Claude asks when a project first needs a name. Empty is the default.",
+      "description": "The name under which Exegete stores Claude's work, kept apart from yours. Each project Exegete creates gets it. If it is empty, the default, Claude asks for it when a project first needs one. A model's name here lets you compare models' work.",
       "default": "",
       "required": false
     },

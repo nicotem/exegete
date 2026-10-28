@@ -349,9 +349,9 @@ def test_tools_says_the_figures():
             f"extension's call after {COWORK_SECONDS} seconds, and Claude "
             f"Desktop's ordinary chat after {CHAT_MINUTES} minutes), or the "
             f"whole number of seconds from {least} to {most} set in "
-            f"`{SETTING}` (INSTALL.md); the preview reads for that long "
-            f"and the import works within the same time; the files not "
-            f"reached") in tools
+            f"`{SETTING}` (docs/installing-from-the-terminal.md); the preview "
+            f"reads for that long and the import works within the same "
+            f"time; the files not reached") in tools
     assert "30 seconds (40 when the import reads a file again)" in tools
 
 

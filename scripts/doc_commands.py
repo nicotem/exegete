@@ -70,7 +70,7 @@ from typing import Dict, List, Optional, Tuple
 REPO = Path(__file__).resolve().parents[1]
 SKIPPED = ("tests/fixtures/",)
 TOOLS = ("python3", "pipx", "uv")
-SESSION_SECONDS = 10 * 60    # one session's limit, so a hang ends
+SESSION_SECONDS = 5 * 60     # one session's limit, so a hang ends
 QUIET_SECONDS = 5            # a waiting program has settled...
 SETTLE_SECONDS = 60          # ...within this
 STOP_SECONDS = 10            # one Ctrl+C stops it within this

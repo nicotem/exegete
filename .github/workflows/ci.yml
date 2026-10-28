@@ -630,10 +630,12 @@ jobs:
     needs: tier
     if: needs.tier.outputs.fast != 'true'
     runs-on: ubuntu-latest
-    # Thirty minutes for its first run, before anything was measured; then
-    # its measured time with a margin, as the newest-libraries job's limit
-    # was set.
-    timeout-minutes: 30
+    # Measured on its first run (28 October 2026, run 40609618078): the
+    # five sessions took 41 seconds, the job a minute. Ten minutes leaves
+    # room for a slow day on PyPI, from which every session downloads; a
+    # hang in one session is cut first, at five minutes, by the script,
+    # so the others still run and the summary is written.
+    timeout-minutes: 10
     permissions:
       contents: read
     continue-on-error: true
@@ -650,9 +652,13 @@ jobs:
           python-version: "3.13"
 
       # On the path, where a reader's uv is: one session installs Exegete
-      # with `uv tool install`. Another uses pipx, the runner image's own.
-      - name: Install uv 0.9.7
-        run: python -m pip install uv==0.9.7
+      # with `uv tool install`, and another uses pipx, the runner image's
+      # own. A reader's uv is a recent release, not the 0.9.7 the desktop
+      # extension's jobs use: pipx works through any uv on the path and
+      # needs 0.9.17 or newer, so 0.9.7 failed pipx's install in the first
+      # run. 0.13.1, of 14 October 2026.
+      - name: Install uv 0.13.1
+        run: python -m pip install uv==0.13.1
 
       # Each session has a home of its own under the runner's temporary
       # folder, and the script itself runs with HOME there too, so nothing

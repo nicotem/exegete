@@ -439,10 +439,12 @@ class TestTheDocumentsOtherPoints:
         # long, since "a while" can be days: the first start or import
         # after their hour, kept_texts.ENTRY_LIFETIME, in
         # tests/test_v0152_opening_texts.py)
+        # (the second fix round: the time given exactly, 65 minutes, as
+        # the reader acts on it; that test holds it to the constant)
         assert ("- the whole texts an import's preview read, before names "
                 "are replaced, kept in Exegete's own folder until the "
                 "import, or else until Exegete starts or imports again "
-                "after an hour, which can be days") in stays
+                "after 65 minutes, which can be days") in stays
 
     def test_where_the_settings_are(self):
         # v0.15.1, the small corrections: the restart a change there needs

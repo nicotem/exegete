@@ -314,7 +314,11 @@ def _tools(mode="full"):
 # its recipes hold; the REFI-QDA fix without media; the untrue clause on
 # QualCoder's coder name gone. That takes 165 characters more within
 # the same 500 lines: 32,782.
-README_LIMIT = 32_782
+# The second fix round (28 October): how long a preview's texts stay,
+# given exactly, "after 65 minutes" for "after an hour"
+# (kept_texts.ENTRY_LIFETIME), since the reader acts on that time.
+# That takes 3 characters more within the same 500 lines: 32,785.
+README_LIMIT = 32_785
 README_LINES = 500
 
 

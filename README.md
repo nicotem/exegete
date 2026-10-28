@@ -220,7 +220,7 @@ copies its folder (PRIVACY.md says where):
   opened in Apple Books joins its library, and iCloud if Books syncs)
 - the whole texts an import's preview read, before names are replaced,
   kept in Exegete's own folder until the import, or else until Exegete
-  starts or imports again after an hour, which can be days
+  starts or imports again after 65 minutes, which can be days
 - the files you fill in for a project, such as the names file
   (`Names to replace.txt`, in the project's `Exegete` folder), which
   Exegete never shows to the assistant

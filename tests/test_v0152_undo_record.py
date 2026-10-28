@@ -1426,3 +1426,19 @@ def test_create_proposed_codes_keeps_the_proposals_it_made_codes_of(project):
     record = records()[done["undo_receipt"]]
     assert (record["session"], record["items"]) == (session, [keep])
     assert [row["table"] for row in record["rows"]] == ["code_name"]
+
+
+def test_a_write_asked_for_no_record_captures_nothing_and_says_nothing(
+        project, capture_spy):
+    """`record=False`, which undo's own write will use: no capture, no
+    record, and its answer says nothing of one."""
+    kept = set(record_files())
+
+    def rename(write_db):
+        write_db.conn.execute("UPDATE code_name SET name = 'Faith' "
+                              "WHERE cid = 1")
+        return {"success": True}
+    done = server._perform_write(rename, record=False)
+    assert done.get("success") and done.get("backup_path")
+    assert "undo_receipt" not in done and "no_undo_receipt" not in done
+    assert capture_spy["start"] == [] and set(record_files()) == kept

@@ -68,128 +68,23 @@ e474b802076064e1	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be rea
 d827ac78b62fefc6	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Parity claims cite the pinned QualCoder commit. Any statement that "QualCoder do
 0f6895bc8ad69280	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	QualCoder is licensed under LGPL-3.0-or-later as well, and the rule for its code
 6184a94127c0b44b	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	The QA review checks that each new behaviour has a test that fails without it, t
-f246dff9981409c0	CONTRIBUTING.md	document	qualcoder	read 27 October: for contributors; each mention is about QualCoder itself (a QualCoder window as a sign that it is in use, its own folders) or the choice 'if you use QualCoder'	The facts the documents repeat are checked too (tests/test_v0151_facts.py): the 
+29116e9799e58ca1	CONTRIBUTING.md	document	qualcoder	read 27 October: for contributors; each mention is about QualCoder itself (a QualCoder window as a sign that it is in use, its own folders) or the choice 'if you use QualCoder'	The facts the documents repeat are checked too (tests/test_v0151_facts.py): the 
 350add8e09ffe3e9	CONTRIBUTING.md	document	qualcoder	says what the texts check looks for; proposed by the developer, 27 October	The first names QualCoder other than about QualCoder itself or its format, on a 
 789491632df6d336	CONTRIBUTING.md	document	request	says what the texts check looks for; proposed by the developer, 27 October	The second asks everyone to close QualCoder.
 362ba0db321b6fb6	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	UTF-8 pinned on text IO. Every open() of a text file passes encoding="utf-8" (or
 c8d987d69f5d6c27	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	What researchers are told Exegete is verified against is the release itself, Qua
 a8f08fe2c8e716cc	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Write our own implementation by default, and prove parity with tests against Qua
 219321cc1d9462f3	CONTRIBUTING.md	document	qualcoder	read 27 October: for contributors; about QualCoder itself, the comparison of the import's text with QualCoder 4.0's extraction and with its newest code	qualcoder-watch.yml compares the text the import stores with what QualCoder's ne
-92faa3eaea3b3abe	INSTALL.md	document	voice	seeded 27 October, to be read	"The server isn't responding"
-d305f905f2f971e2	INSTALL.md	document	qualcoder	seeded 27 October, to be read	A PDF's text is QualCoder 4.0's only at the same PyMuPDF release: with another, 
-d305f905f2f971e2	INSTALL.md	document	voice	seeded 27 October, to be read	A PDF's text is QualCoder 4.0's only at the same PyMuPDF release: with another, 
-0ec0f67990c3cb53	INSTALL.md	document	voice	seeded 27 October, to be read	A copy of the server left running while its files change fails the first time it
-f37ea05cacfc0eef	INSTALL.md	document	voice	seeded 27 October, to be read	A copy of the server left running while its files change fails the first time it
-e8c44ed740b838de	INSTALL.md	document	voice	seeded 27 October, to be read	A copy of the server older than 0.14.1, or a restore from a backup, made a new ~
-10febb0b892c51a1	INSTALL.md	document	voice	seeded 27 October, to be read	A link is left under the old name (a junction on Windows), so an older copy of t
-887922b49d97eaf5	INSTALL.md	document	qualcoder	seeded 27 October, to be read	A missing or unreadable value is no sign of a newer QualCoder: if it was changed
-bcb1c097ac682c9b	INSTALL.md	document	voice	seeded 27 October, to be read	A project folder deeper than three levels is not found either: naming the folder
-b103636779537183	INSTALL.md	document	voice	seeded 27 October, to be read	A project from before still has qualcoder_mcp.json, which is read as before; the
-fd364a1deb708afd	INSTALL.md	document	qualcoder	seeded 27 October, to be read	A relative path, or a folder inside ~/.exegete (or ~/.qualcoder_mcp, its earlier
-fd364a1deb708afd	INSTALL.md	document	voice	seeded 27 October, to be read	A relative path, or a folder inside ~/.exegete (or ~/.qualcoder_mcp, its earlier
-b03bd80ad183c114	INSTALL.md	document	voice	seeded 27 October, to be read	Add the server. Open the Program tab in the right sidebar, click Install > Edit 
-0a8c12e21aa7e874	INSTALL.md	document	voice	seeded 27 October, to be read	After editing mcp.json or upgrading the package, toggle the server off and on or
-27c2bf60eedd87f9	INSTALL.md	document	voice	seeded 27 October, to be read	All configuration is by environment variables in the env block of the server ent
-cd203b67150e9ae4	INSTALL.md	document	voice	seeded 27 October, to be read	An EXEGETE_TOOLSET other than full or core stops Exegete at start-up (lifecycle,
-632cd0eb90202532	INSTALL.md	document	voice	seeded 27 October, to be read	An entry that runs uvx exegete has no optional part for PDF and EPUB unless it n
-f057e679ea081f0f	INSTALL.md	document	voice	seeded 27 October, to be read	An unrecognised value means off, and the log says so once; it never stops the se
-524770a327497175	INSTALL.md	document	voice	seeded 27 October, to be read	Before you update anything, fully quit every AI host that uses the server (Claud
-05da765d701ff87b	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Both releases read the test documents' PDFs to the same text, the text QualCoder
-fbed2f2827a6b0cc	INSTALL.md	document	voice	seeded 27 October, to be read	Check the key and the server. Inside the session, /status shows which credential
-753cba198158c2d5	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Claude Desktop configured by hand: Settings > Developer > Edit Config, delete th
-88cc2f735464aa8d	INSTALL.md	document	voice	seeded 27 October, to be read	Claude Desktop is not required: the server speaks standard MCP over stdio, so an
-7281a2fd6f1a002e	INSTALL.md	document	voice	seeded 27 October, to be read	Claude should respond with information about your project!
-3f71360b3d532ebe	INSTALL.md	document	voice	seeded 27 October, to be read	Codex passes Exegete only the settings its entry names ("Environment variables t
-77c2188378707ae3	INSTALL.md	document	voice	seeded 27 October, to be read	Do not install into the old clone's venv. (If you run pip install exegete inside
-44724221a5e03f8e	INSTALL.md	document	qualcoder	seeded 27 October, to be read	EXEGETE_USES_QUALCODER (0.15.0): your answer to "Do you also use QualCoder on th
-dc25a38890b9a5b2	INSTALL.md	document	voice	seeded 27 October, to be read	EXEGETE_WORKSPACE_REQUIRED (v0.14): 1 makes a blank or missing EXEGETE_WORKSPACE
-35d885e7f5344a32	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Each release's downloads are under its notes, in Assets, for Windows, Linux and 
-13fed0e79d2c7887	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Either way, Exegete still refuses to write while QualCoder 3.8.2 has a project o
-fddbb7578ca6266b	INSTALL.md	document	voice	seeded 27 October, to be read	Environment variables the server reads
-9a1d6ee342a3bcb6	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Exegete works with both, but can tell that QualCoder has a project open only wit
-b5924a36baf65bf6	INSTALL.md	document	voice	seeded 27 October, to be read	First fully quit your Claude client (Claude Desktop: Cmd+Q, not just closing the
-fd9723aefe876ed4	INSTALL.md	document	voice	seeded 27 October, to be read	First fully quit your MCP client (Claude Desktop: Cmd+Q; Claude Code: end the se
-ddb603f6b3b9b9c6	INSTALL.md	document	voice	seeded 27 October, to be read	First, the reassurance: upgrading only replaces the SERVER code. It never touche
-1ddfc19173f0b50a	INSTALL.md	document	voice	seeded 27 October, to be read	For a copy of the source, it names the folder and says to quit your host before 
-69259bf0ffb0fda9	INSTALL.md	document	voice	seeded 27 October, to be read	For single-project work, pinning EXEGETE_PROJECT_PATH in the server's env block 
-634732806938ca80	INSTALL.md	document	voice	seeded 27 October, to be read	Fully quit the client BEFORE pip install --upgrade (or before git pull and the r
-7ea0b1c3ed790ee4	INSTALL.md	document	voice	seeded 27 October, to be read	Go to Claude > Settings (or just Settings)
-df855685f04b4322	INSTALL.md	document	voice	seeded 27 October, to be read	Happy analysing! 🎉
-9e20024a561f69b1	INSTALL.md	document	voice	seeded 27 October, to be read	If Codex reports that the server timed out while starting, raise startup_timeout
-07b165cf062721c6	INSTALL.md	document	voice	seeded 27 October, to be read	If both spellings of one setting are set with different values, the server does 
-232aacd37f3e5267	INSTALL.md	document	voice	seeded 27 October, to be read	If it says it has no such tool, the server is not connected: see Troubleshooting
-362b59a45db08a4c	INSTALL.md	document	qualcoder	seeded 27 October, to be read	If one of them is Exegete under the earlier name (a "qualcoder" section), keep i
-3275c4201056f21f	INSTALL.md	document	voice	seeded 27 October, to be read	If the error comes back in the middle of a conversation, the host has restarted 
-286a38f7e362b628	INSTALL.md	document	voice	seeded 27 October, to be read	If the path does not exist the server refuses to start and prints "Error: the pr
-6393fe7b5a449390	INSTALL.md	document	voice	seeded 27 October, to be read	If the path does not exist the server refuses to start and prints "Error: the pr
-113c5e3a841b8f1e	INSTALL.md	document	voice	seeded 27 October, to be read	If the path exists but is not a .qda project, or its database will not open, the
-91754a29d2df9444	INSTALL.md	document	voice	seeded 27 October, to be read	If you ALSO have a Pro/Max subscription login, the authentication docs state tha
-1a3f72e8fc91409f	INSTALL.md	document	voice	seeded 27 October, to be read	If you also configured the server by hand (the route below), remove that entry f
-e1947274a30bc24a	INSTALL.md	document	qualcoder	seeded 27 October, to be read	If you also set up QualCoder 4.0's own MCP server (TOOLS.md), take care with its
-9d92f8893ec7fd59	INSTALL.md	document	qualcoder	seeded 27 October, to be read	If you also use QualCoder 4.0's own assistant, AI Agent is the exact name it wri
-1195fdf0be48e356	INSTALL.md	document	voice	seeded 27 October, to be read	If you just want to USE Exegete (no code changes), you don't need git or this re
-cdba387c4154bc63	INSTALL.md	document	voice	seeded 27 October, to be read	If you start the server itself by hand (the same command without --version), it 
-b1d0a5db54c18f6d	INSTALL.md	document	voice	seeded 27 October, to be read	If your LM Studio build offers per-chat or per-tool toggles for MCP servers, dis
-5cf3d5051a6e001f	INSTALL.md	document	voice	seeded 27 October, to be read	If your study needs any of these now, get it from the start: . 4.0 is at the top
-c5f0466cffc769d3	INSTALL.md	document	voice	seeded 27 October, to be read	In one Terminal window: a folder of its own, the key, the server, then Claude Co
-b3df2e1cac0745a5	INSTALL.md	document	qualcoder	seeded 27 October, to be read	It must differ from your own coder name (EXEGETE_CODER_NAME, and each project's)
-6a4e4275a5b1aff2	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Its licence. PyMuPDF and EbookLib are under the GNU Affero General Public Licens
-0ca088afbc553b0f	INSTALL.md	document	voice	seeded 27 October, to be read	LM Studio loads the server when you save.
-ed5c81478598f34a	INSTALL.md	document	voice	seeded 27 October, to be read	LM Studio on macOS persists it into ~/Library/Logs/LM Studio/main.log; search th
-b092dd2be294111c	INSTALL.md	document	qualcoder	seeded 27 October, to be read	LM Studio: delete the "exegete" (or "qualcoder") block from mcp.json
-7ddbefc3443fbec0	INSTALL.md	document	voice	seeded 27 October, to be read	Logs. The server's own lines say Exegete.
-24b9d6463799f2ac	INSTALL.md	document	voice	seeded 27 October, to be read	New tools only appear after the restart; the client launches the server once per
-8b5433125a5a5da8	INSTALL.md	document	voice	seeded 27 October, to be read	No prior technical knowledge required!
-927b54d14dcddac5	INSTALL.md	document	voice	seeded 27 October, to be read	Nothing else is stored there, except, if an older copy of the server ever made a
-80d050a019719177	INSTALL.md	document	voice	seeded 27 October, to be read	On the Terminal route the check is off unless you set EXEGETE_UPDATE_CHECK to on
-aa402056f8593a58	INSTALL.md	document	voice	seeded 27 October, to be read	On this route new projects, and copies made by copy_project_to_workspace, go to 
-0fb171d692794b45	INSTALL.md	document	qualcoder	seeded 27 October, to be read	On, Exegete adds some notes that matter only if you also open your projects in Q
-5a356bd70f21736e	INSTALL.md	document	voice	seeded 27 October, to be read	Only those two ways of starting survive: code of your own that imported the serv
-b4195f61e0a76223	INSTALL.md	document	voice	seeded 27 October, to be read	Or set EXEGETE_PROJECT_PATH in the host's configuration." (get_current_project s
-f273f2913e68b5a4	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Or use an existing project (a folder ending in .qda, made by Exegete or by QualC
-e2a3a9fa29781cf5	INSTALL.md	document	qualcoder	seeded 27 October, to be read	PDFs can then be saved as plain text from a PDF program that offers it, and EPUB
-4de8d33d2992a0c2	INSTALL.md	document	voice	seeded 27 October, to be read	PRIVACY.md, "Assistants that open files by themselves", quotes Anthropic's pages
-ce82850c16342e95	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Projects in the formats of QualCoder 3.8.x and 4.0 work (project schemas v14 thr
-ae363e841a5ee54d	INSTALL.md	document	voice	seeded 27 October, to be read	PyPI install, one command, with your MCP client fully quit first (see "Tools mis
-20cfe543cdd65274	INSTALL.md	document	qualcoder	seeded 27 October, to be read	QualCoder's own help, if you also use QualCoder:
-cf89372e085766f2	INSTALL.md	document	qualcoder	seeded 27 October, to be read	QualCoder, optional. Today it does what Exegete does not do yet: bringing in ima
-2c107e2f4b1d79f9	INSTALL.md	document	voice	seeded 27 October, to be read	Reusing the old venv instead?
-6ce5f69114254423	INSTALL.md	document	voice	seeded 27 October, to be read	Since 0.11 every "no project selected" error names the last project used on this
-5f7a2f9bb3075120	INSTALL.md	document	qualcoder	seeded 27 October, to be read	The Claude Desktop extension switches on the optional part for PDF and EPUB (AGP
-ef54d4bedbdc0515	INSTALL.md	document	voice	seeded 27 October, to be read	The MCP library's own lines beside them name the kind of each request, and carry
-5d56a459e2f629a8	INSTALL.md	document	voice	seeded 27 October, to be read	The client starts the server once per session and reads the tool list at that mo
-5e0a61304b0b02f5	INSTALL.md	document	voice	seeded 27 October, to be read	The first start after the update may take longer and needs the internet, since C
-0a634cee0861881e	INSTALL.md	document	voice	seeded 27 October, to be read	The lines the server writes carry no memo text, and since v0.14 no SQLite messag
-d7aa6319e64427ed	INSTALL.md	document	voice	seeded 27 October, to be read	The maintainer verified this recipe as functional against LM Studio 0.4.22 on 20
-c45cea9bdb4fccd7	INSTALL.md	document	voice	seeded 27 October, to be read	The multi-host support (the core toolset and the recipes below) is Experimental:
-b6da2bfc5e1a14f1	INSTALL.md	document	voice	seeded 27 October, to be read	The server behaves the same under any client; which tools are registered is deci
-8343a9d71fb02659	INSTALL.md	document	voice	seeded 27 October, to be read	The server writes its log lines (INFO and above) to standard error; the host dec
-fa542ed29bb48436	INSTALL.md	document	qualcoder	seeded 27 October, to be read	The value is trimmed and must be at most 80 characters, single-line plain text (
-a3592e2c6b27bedb	INSTALL.md	document	voice	seeded 27 October, to be read	Then reopen your MCP client (Claude Desktop: reopen it; Claude Code: start a new
-6a4de366f8dffd11	INSTALL.md	document	qualcoder	seeded 27 October, to be read	They name no project, file, code, category, case, journal entry or attribute and
-3a5bebab413da6ca	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Two choices are made only on the Terminal route: the tool set by name (EXEGETE_T
-3a5bebab413da6ca	INSTALL.md	document	voice	seeded 27 October, to be read	Two choices are made only on the Terminal route: the tool set by name (EXEGETE_T
-2d202feab6f8c1d0	INSTALL.md	document	voice	seeded 27 October, to be read	Until then Exegete works with the settings it started with: a coder name filled 
-48bc4d249b6b25a3	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Up to 0.15.1 the extension also had two text boxes, "Tool set" and "Do you also 
-3ca9f362be33d485	INSTALL.md	document	voice	seeded 27 October, to be read	Update your Claude client config: change command to that path and REMOVE the arg
-4d3c0f1b082f1024	INSTALL.md	document	voice	seeded 27 October, to be read	Use a FRESH environment.
-1d1494344f2e215c	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Whatever it says, Exegete still refuses to write while QualCoder 3.8.2 has a pro
-57e36b872c54abee	INSTALL.md	document	voice	seeded 27 October, to be read	With default_tools_approval_mode = "writes" in the server's entry, Codex asks be
-2b7740feab65fd6b	INSTALL.md	document	qualcoder	seeded 27 October, to be read	With yes, Exegete adds some notes that matter only if you also open your project
-7c060822a7aa1386	INSTALL.md	document	qualcoder	seeded 27 October, to be read	Writes to a project whose database schema is newer than the schemas this release
-7c060822a7aa1386	INSTALL.md	document	voice	seeded 27 October, to be read	Writes to a project whose database schema is newer than the schemas this release
-54ec50913053a3c6	INSTALL.md	document	qualcoder	seeded 27 October, to be read	default and QualCoder's speaker coder are never stored as an AI coder name: a ne
-a025afc56eaea33c	INSTALL.md	document	voice	seeded 27 October, to be read	python -m qualcoder_mcp.server and the qualcoder-mcp command still start the ser
-49fc3ac074058b22	INSTALL.md	document	voice	seeded 27 October, to be read	uv tool upgrade exegete keeps a version that was pinned when Exegete was install
-a458e3c9b4d5d8f4	INSTALL.md	document	voice	seeded 27 October, to be read	~/Documents/Qualcoder MCP Projects is never moved or emptied, and list_available
-cc66d46673a00254	INSTALL.md	document	voice	seeded 27 October, to be read	✅ A computer with macOS, Windows or Linux (paths differ slightly), and Python 3.
-7bda4561c4bd208e	INSTALL.md	document	voice	seeded 27 October, to be read	✅ A project, or a new one. The default tool set, full, includes creating a proje
-be0395df17f3d5c7	INSTALL.md	document	voice	seeded 27 October, to be read	✅ An MCP host: the step-by-step guide below uses Claude Desktop configured by ha
-697848fc680228bf	INSTALL.md	document	voice	seeded 27 October, to be read	✅ Analyse complete transcripts with coding context
-2c7ee389c4fe7ba9	INSTALL.md	document	voice	seeded 27 October, to be read	✅ Discover patterns and relationships in your coding
-48885f810248ac9f	INSTALL.md	document	voice	seeded 27 October, to be read	✅ Explore your project in your own words
-39d9425cb7c2d37e	INSTALL.md	document	voice	seeded 27 October, to be read	✅ Get AI-assisted thematic analysis
-59d87f61397d7d7c	INSTALL.md	document	voice	seeded 27 October, to be read	✅ Query by demographics and attributes
+bcb1c097ac682c9b	INSTALL.md	document	voice	'just' means a moment before or immediately next to, not 'merely'	A project folder deeper than three levels is not found either: naming the folder
+35d885e7f5344a32	INSTALL.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Each release's downloads are under its notes, in Assets, for Windows, Linux and 
+13fed0e79d2c7887	INSTALL.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Either way, Exegete still refuses to write while QualCoder 3.8.2 has a project o
+fddbb7578ca6266b	INSTALL.md	document	voice	the earlier section's title in the table of sections now in the Terminal guide, kept so that a text naming it finds the pointer	Environment variables the server reads
+9a1d6ee342a3bcb6	INSTALL.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Exegete works with both, but can tell that QualCoder has a project open only wit
+e9754ddf7c882f54	INSTALL.md	document	voice	'just' means a moment before or immediately next to, not 'merely'	Its releases are at : 4.0 is at the top of the page, the release marked "Latest"
+0fb171d692794b45	INSTALL.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	On, Exegete adds some notes that matter only if you also open your projects in Q
+cf89372e085766f2	INSTALL.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder, optional. Today it does what Exegete does not do yet: bringing in ima
+59e090f2d4595d9c	INSTALL.md	document	qualcoder	quotes a setting's question or a section's title	Two choices are made only on the Terminal route: the tool set by name (EXEGETE_T
+39f4f2250c31bd01	INSTALL.md	document	qualcoder	quotes the title of a setting the extension had up to 0.15.1, so that a researcher who saw it recognises it	Up to 0.15.1 the extension had two text boxes, "Tool set" and "Do you also use Q
 317223a80298e242	NOTICE	document	voice	seeded 27 October, to be read	Exegete is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
 441162f254ea563b	NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SCHEMA_VERSION, TABLES, CODER_NAMES_TABLE, VIS
 bca8fa48f189d75f	NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and about_line.
@@ -200,129 +95,100 @@ ab7d8a481d2c4237	NOTICE	document	voice	seeded 27 October, to be read	The owner s
 69a80d522ac6b43e	NOTICE	document	voice	seeded 27 October, to be read	Why: a file name QualCoder 4.0 treats as invalid (empty, spaces only or dots onl
 c143f37f7035cb38	NOTICE	document	voice	seeded 27 October, to be read	Why: named parity cases, computed with QualCoder's function.
 14a6c93024631cb7	NOTICE	document	voice	seeded 27 October, to be read	Why: parity tests run QualCoder's own harvest.
-3d6f6753e7ae893e	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A backup that holds them (copied while a program was writing, made before 0.14, 
-8613ec854aa8d0dc	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A declaration seen without all four of QualCoder's views is refused by the read 
-99514df3cc4fd580	PRIVACY.md	document	voice	seeded 27 October, to be read	A file saved as UTF-16 or UTF-32 without the mark that names it, which reads as 
-13eb06803b64965d	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A file that exists keeps its own permissions, as QualCoder's write keeps them, a
-3663130300a47e55	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A file the save creates is owner-only (0600) on macOS and Linux, where QualCoder
-3a4822e4395364ba	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A file-system error in the log is its kind and the system's short name for it (f
-e14b3cf77d88364d	PRIVACY.md	document	voice	seeded 27 October, to be read	A link named ~/.qualcoder_mcp (on Windows, a junction) is left pointing at it, s
-68ba4d5932720ad6	PRIVACY.md	document	voice	seeded 27 October, to be read	A name written otherwise in the PDF, in capitals ("MARIA BROWN") or split across
-6adba8bef7a59c6a	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A page written before you pseudonymised a file would otherwise keep the real nam
-3236793f60ebdb9f	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A rename cannot reach, and the preview's count does not read: the stored copy an
-7b88f48317b67eb8	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A restored or copied project without search.sqlite is normal: QualCoder rebuilds
-284e06d1699cc71f	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A row whose stored end lies past the end of the text is clamped first, as QualCo
-d6e27ef00a3c7bbd	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	A save merges with what is there by QualCoder's own rules, and is written only o
-1aa8c1664d0a2f16	PRIVACY.md	document	voice	seeded 27 October, to be read	All of this is about the lines the server writes, and the MCP library's own line
-147aa3562d5f9371	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	An explicit coder argument reads that coder's rows from the full data instead, t
-8fc5a361fd6b9754	PRIVACY.md	document	voice	seeded 27 October, to be read	An older copy that makes a folder of its own under the old name (then, or after 
-e7c1b484279864ca	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Be aware that ai_data/search.sqlite contains a full plaintext copy of every text
-a9ab0baf35185ccf	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Case and file names, and what a rename cannot reach. Since v0.13, rename_case an
-300b9d49c1400a76	PRIVACY.md	document	voice	seeded 27 October, to be read	Coder visibility: reading and writing what the user sees
-d39c1c44c4b53d2c	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Codes, categories, files, cases, attribute types, case links and journal entries
-6276d955b7421956	PRIVACY.md	document	voice	seeded 27 October, to be read	Deleting the originals from Downloads after the import would not have closed tha
-c350531fcfb8c61e	PRIVACY.md	document	voice	seeded 27 October, to be read	Deliberate disclosure: because the refusal triggers only on rows that carry a pr
-88b380d02eee40d8	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Every backup, Exegete's session files, QualCoder's search index and QualCoder's 
-77b1ada754eae9b9	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Every row Exegete writes carries one coder name, so AI work stays distinguishabl
-4bcb8097bc265408	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Exegete reads no file in ai_data/ for any answer (it is QualCoder's own territor
-7c11b88640d6a522	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Exegete tidies the reading folder itself: a file's page and copy go whenever Exe
-2f860e0a276d62ed	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	For the settings folder and the files in ai_data, only presence is checked: the 
-cbc1b5bf6b18be3f	PRIVACY.md	document	voice	seeded 27 October, to be read	Four things are still returned as they stand, because a preview whose files cann
-3f2d991ae2d055ee	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Hiding a coder in QualCoder hides their codings and annotations from these reads
-e86ec8bbaf0046e6	PRIVACY.md	document	voice	seeded 27 October, to be read	In a Cowork session that runs in the cloud, "Claude fetches a copy of just that 
-61c292e2f3642dd6	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	It is not a 4.0 feature: QualCoder 3.8.2 and 4.0, schema v14 and later, create t
-57f9674f4aa51cd7	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	It is still given when a program may be a QualCoder the scan could not read (one
-a71180f0246b0472	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	It is the project's names list, applied when files are imported, and it is the r
-47ac8309d8389d60	PRIVACY.md	document	voice	seeded 27 October, to be read	It is there so that an older copy of the server (0.12 to 0.14, from before the r
-c9c987c214d2281f	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	It writes a new folder with four empty subfolders, an empty ai_data folder (sinc
-1f266929502cc1cc	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Its backups and workspace copies include ai_data/ whole, minus exactly the files
-e475496f00627c2e	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Its coding REPORT is another matter: in both pinned builds it reads the base cod
-e475496f00627c2e	PRIVACY.md	document	voice	seeded 27 October, to be read	Its coding REPORT is another matter: in both pinned builds it reads the base cod
-5be34f1467f71d75	PRIVACY.md	document	voice	seeded 27 October, to be read	LM Studio (0.4.25, its chat window): not by itself. Its pages document no file t
-e0d9f3708108748e	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	More of a document comes in than in QualCoder: a Word, OpenDocument or RTF file'
-c77b05046d81a586	PRIVACY.md	document	voice	seeded 27 October, to be read	On a mapping you type, it also lists the longer words a name sits inside (Thomas
-45de25c965eb9a6e	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	On a project whose visibility capability is present but whose coder_names table 
-d267f6664769a432	PRIVACY.md	document	voice	seeded 27 October, to be read	Only the NUMBER of matches is reported into the conversation; process names, com
-c30e43f9bf195e0f	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Or you could move a file out of the project once Exegete has used it, and remove
-84bd3fb657d59c2d	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Process listing. To warn when a QualCoder 4.0 window appears to have a project o
-855cac402f7c5401	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder (3.8.2 and 4.0) uses a marker for memos: everything from the first ###
-7626ac26972f42c7	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder 3.8's store, faiss_store.bin, matches none of those names, so Exegete'
-6420c55c05cb48bb	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder 3.8, if it opened the project with its AI switched on (whether or not 
-14d53f057aabdf1c	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder 4.0's own AI server answers the same way about a coding but not about 
-2ca476738dd4741a	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder lets a project hide individual coders' work (a per-coder visibility se
-115bbbfa27225ad1	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder never reads or writes this file.
-6a7274bebb68e8d2	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder shows the owner in its code tree and its journal list (journals.py 181
-6a7274bebb68e8d2	PRIVACY.md	document	voice	seeded 27 October, to be read	QualCoder shows the owner in its code tree and its journal list (journals.py 181
-7d82050ea97499e8	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder's ai_data/ folder. Its chat history may quote the previous text, and i
-263bcfaafcd84f20	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder's ignore set does not match them, and a journal copied mid-write holds
-dbfdeff8d7a986eb	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder's own _BKUP_ backups do not count as keeping a copy, because QualCoder
-dbfdeff8d7a986eb	PRIVACY.md	document	voice	seeded 27 October, to be read	QualCoder's own _BKUP_ backups do not count as keeping a copy, because QualCoder
-52ecfea6027ebf28	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	QualCoder's own guidance is to remove pseudonyms.json and store it securely once
-2c49c62b10cae6c3	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Reads go through QualCoder's own visibility views by default, so coded segments,
-2c49c62b10cae6c3	PRIVACY.md	document	voice	seeded 27 October, to be read	Reads go through QualCoder's own visibility views by default, so coded segments,
-8288b90750e031bb	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Remember that Exegete's safety features (read-only default, automatic local back
-dea634c4dbf135da	PRIVACY.md	document	voice	seeded 27 October, to be read	Restoring the backup taken just before the import takes it back while nothing el
-31773ceb894488ad	PRIVACY.md	document	voice	seeded 27 October, to be read	Results disclose when hidden-coder filtering shaped them as a COUNT of hidden co
-abd257615da8947c	PRIVACY.md	document	voice	seeded 27 October, to be read	Services for individuals (OpenAI's phrase; the page names the business plans sep
-97898aaf0fe1d095	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Since 0.15.0 it makes the folder, empty, when it creates a project or copies one
-4240ed625d4b8ae7	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Since v0.14 a command line that merely mentions QualCoder in its arguments no lo
-73c030b53ccfb40f	PRIVACY.md	document	voice	seeded 27 October, to be read	Since v0.14 every read re-reads the declaration from the project when it is made
-9b18d736129eae7e	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Since v0.14 that includes the project memo (set_memo with the target project), w
-40971e63d4b02800	PRIVACY.md	document	voice	seeded 27 October, to be read	Since v0.14 the log also names no project, file, code, category, case, journal e
-40ac9a66322ce281	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Since v0.15.0 that file's recent change is not given as a sign when the process 
-1c799030a2533d59	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	So do rename_case and rename_file, before a rename, to decide whether their note
-5c7feb6b14be7ff6	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Symlinks that resolve inside the project are copied as before, with one exceptio
-d5eaefed191d0487	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Symlinks. Unlike QualCoder's own backups, Exegete's backups and workspace copies
-4bc286cc5be526bc	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	TOOLS.md, "Supported QualCoder versions", says what else was checked at the rele
-2322c63ee5d121da	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	That mask is a courtesy of the preview, not a guarantee: elsewhere, memo searche
-de1ea7bbef56bea7	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	That mirrors QualCoder's own backups, keeps the non-regenerable prompt library a
-6718238b4b25f94d	PRIVACY.md	document	voice	seeded 27 October, to be read	That re-read is one way: a declaration that was there when the connection opened
-1fc696bba02baeb8	PRIVACY.md	document	voice	seeded 27 October, to be read	The August 2025 consumer announcement (, quoted 2026-08-17; the page renders the
-b67f816deb6edb06	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The check reads the base table, because the unique constraint lives there; so if
-3153f7c6ca382494	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The code behind the private memo marker, the coder-visibility table and its view
-362d538ff06efe5b	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The coder name is asked for, or taken from Exegete's own settings when the resea
-ee569ef0d25cbb22	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The copy holds SQLite's read lock while it runs, about 1.2 seconds per gigabyte 
-6103631411d9f1c5	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The copy of an original is not pseudonymised, as in QualCoder, which applies the
-18ff0fbfa7b6330f	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The database holds the researcher's own coder name when they give it (and QualCo
-a752f5ef3917b672	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The exception, deliberately: exported FILES (the REFI-QDA .qdpx and codebook fil
-a752f5ef3917b672	PRIVACY.md	document	voice	seeded 27 October, to be read	The exception, deliberately: exported FILES (the REFI-QDA .qdpx and codebook fil
-a832222933fa70ac	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The exegete://codes/list and exegete://categories/list resources name each row's
-29d9de2abc1de251	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The exported FILE is never affected by this: it carries every coder's counts, fo
-29d9de2abc1de251	PRIVACY.md	document	voice	seeded 27 October, to be read	The exported FILE is never affected by this: it carries every coder's counts, fo
-7d6d78e30b683a60	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The field also gives, as setting, the researcher's answer to "Do you also use Qu
-fb2395dd668f3a62	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The listing is filtered in memory for processes that are QualCoder itself: a pro
-de9560188de1e2c0	PRIVACY.md	document	voice	seeded 27 October, to be read	The owner accepts this trade so that a hidden coder's work is never changed with
-3e55a4fbd0f0d6d4	PRIVACY.md	document	voice	seeded 27 October, to be read	The owner accepts this trade so that a private note is never destroyed without a
-aa9dbf20e12578f8	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	The project database is the one file not copied as a file (since 0.14): data.qda
-3b320cb1914d14fa	PRIVACY.md	document	voice	seeded 27 October, to be read	The refusal names neither the coder nor a count.
-495bf992365a1e47	PRIVACY.md	document	voice	seeded 27 October, to be read	The restore result says so when the file appears, disappears or changes, and the
-4d97a53ab7031c42	PRIVACY.md	document	voice	seeded 27 October, to be read	The state folder was ~/.qualcoder_mcp before 0.14.1: since then Exegete keeps a 
-a0cec21bd3612253	PRIVACY.md	document	voice	seeded 27 October, to be read	The token-gated cascades (delete_code, delete_category, merge_codes, merge_categ
-a0ca49160c24fe9a	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	They REFUSE unless the caller passes allow_hidden_coder=true; the refusal says o
-a0ca49160c24fe9a	PRIVACY.md	document	voice	seeded 27 October, to be read	They REFUSE unless the caller passes allow_hidden_coder=true; the refusal says o
-2e7af417a0ee00bc	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	They travel with the project into every backup (Exegete's, and QualCoder's if yo
-803b9655bbdb2c9d	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	This departs from QualCoder's own AI server, which drops the marker silently; th
-07d9d6f7f9dc1898	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	This is a deliberate, owner-approved deviation from QualCoder's save_backup, whi
-190eac873cae8a5c	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	This is a heuristic: it can miss an open window (an idle 4.0 window with no rece
-1f6e1cb8ede02899	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Those counts are a heuristic that reads wider than the rewrite does: the rewrite
-b3c83b092c55fcd8	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Three limits remain, as in QualCoder: an RTF file is read by the code page it de
-b1c93eb9a8f64ff5	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	What is not pseudonymised: the originals (copied unchanged into the project's fo
-4b32e77edaa2bb19	PRIVACY.md	document	voice	seeded 27 October, to be read	What it does NOT touch, and where the names therefore stay, is stated by the too
-db0d22dd24117c23	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	What these sections say of QualCoder's own assistant and AI server, whose code c
-7d093c335a89cc8d	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	What they say of QualCoder is verified against QualCoder 4.0, released on 2 Octo
-cc403e2203910e03	PRIVACY.md	document	voice	seeded 27 October, to be read	When no link can be made, the folder is put back where it was, unless an older c
-078a57fa61e4b150	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	When the capability arrives while Exegete is connected. QualCoder creates the vi
-55d4b72d9c30aa7c	PRIVACY.md	document	voice	seeded 27 October, to be read	With a names list, a file whose name holds a listed name (in any letter case, ac
-9a61cf93d43155f6	PRIVACY.md	document	voice	seeded 27 October, to be read	With the override, the result echoes ids only (update_annotation also echoes bac
-37c560cf7bbd34fe	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Without psutil, a few such paths are still read as no QualCoder, and the sign is
-272b4fbb4e67bf6e	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	Writes that target an existing row by id (delete_coding, update_annotation, dele
-13d195710d2b0040	PRIVACY.md	document	voice	seeded 27 October, to be read	create_project runs no process scan for the project it has just made.
-533e49ffaa039ccc	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	import_documents reads documents on your computer, by their paths, following Qua
-533e49ffaa039ccc	PRIVACY.md	document	voice	seeded 27 October, to be read	import_documents reads documents on your computer, by their paths, following Qua
-d0009d0e4fdb85b3	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	list_backups, and pseudonymise_source after a run, read the same history to deci
-05322712caa74329	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	select_project and get_current_project also give the project's history with Qual
-d2225d7842008a65	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	set_project_coder_name reads the same history after a change it has made, to dec
-9f94a67d831a59af	PRIVACY.md	document	qualcoder	seeded 27 October, to be read	whatever later reads return, as for any file in the project; for a PDF, its note
+3d6f6753e7ae893e	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A backup that holds them (copied while a program was writing, made before 0.14, 
+8613ec854aa8d0dc	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	A declaration seen without all four of QualCoder's views is refused by the read 
+13eb06803b64965d	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A file that exists keeps its own permissions, as QualCoder's write keeps them, a
+3663130300a47e55	PRIVACY.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	A file the save creates is owner-only (0600) on macOS and Linux, where QualCoder
+3a4822e4395364ba	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A file-system error in the log is its kind and the system's short name for it (f
+e14b3cf77d88364d	PRIVACY.md	document	voice	an older copy of the server: the server as a running program, the sense the conventions keep (tests/test_v0142_selfrep.py)	A link named ~/.qualcoder_mcp (on Windows, a junction) is left pointing at it, s
+68ba4d5932720ad6	PRIVACY.md	document	voice	an example of a name written in capitals, quoted, not emphasis	A name written otherwise in the PDF, in capitals ("MARIA BROWN") or split across
+6adba8bef7a59c6a	PRIVACY.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	A page written before you pseudonymised a file would otherwise keep the real nam
+3236793f60ebdb9f	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A rename cannot reach, and the preview's count does not read: the stored copy an
+7b88f48317b67eb8	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A restored or copied project without search.sqlite is normal: QualCoder rebuilds
+284e06d1699cc71f	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A row whose stored end lies past the end of the text is clamped first, as QualCo
+d6e27ef00a3c7bbd	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A save merges with what is there by QualCoder's own rules, and is written only o
+147aa3562d5f9371	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	An explicit coder argument reads that coder's rows from the full data instead, t
+e7c1b484279864ca	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Be aware that ai_data/search.sqlite contains a full plaintext copy of every text
+a9ab0baf35185ccf	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Case and file names, and what a rename cannot reach. Since v0.13, rename_case an
+d39c1c44c4b53d2c	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	Codes, categories, files, cases, attribute types, case links and journal entries
+6276d955b7421956	PRIVACY.md	document	voice	'easily' says how readily an assistant reads the copies: a warning, not praise (the section is held word for word by tests/test_v0150_qualcoder_texts_2.py)	Deleting the originals from Downloads after the import would not have closed tha
+88b380d02eee40d8	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Every backup, Exegete's session files, QualCoder's search index and QualCoder's 
+77b1ada754eae9b9	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Every row Exegete writes carries one coder name, so AI work stays distinguishabl
+4bcb8097bc265408	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete reads no file in ai_data/ for any answer (it is QualCoder's own territor
+7c11b88640d6a522	PRIVACY.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	Exegete tidies the reading folder itself: a file's page and copy go whenever Exe
+2f860e0a276d62ed	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	For the settings folder and the files in ai_data, only presence is checked: the 
+3f2d991ae2d055ee	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	Hiding a coder in QualCoder hides their codings and annotations from these reads
+e86ec8bbaf0046e6	PRIVACY.md	document	voice	inside a quotation of the maker's page, kept word for word	In a Cowork session that runs in the cloud, "Claude fetches a copy of just that 
+61c292e2f3642dd6	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	It is not a 4.0 feature: QualCoder 3.8.2 and 4.0, schema v14 and later, create t
+57f9674f4aa51cd7	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	It is still given when a program may be a QualCoder the scan could not read (one
+a71180f0246b0472	PRIVACY.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	It is the project's names list, applied when files are imported, and it is the r
+47ac8309d8389d60	PRIVACY.md	document	voice	an older copy of the server: the server as a running program, the sense the conventions keep (tests/test_v0142_selfrep.py)	It is there so that an older copy of the server (0.12 to 0.14, from before the r
+c9c987c214d2281f	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	It writes a new folder with four empty subfolders, an empty ai_data folder (sinc
+1f266929502cc1cc	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Its backups and workspace copies include ai_data/ whole, minus exactly the files
+bff518547afd0436	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	Its coding report is another matter: in both versions checked it reads the base 
+5be34f1467f71d75	PRIVACY.md	document	voice	inside a quotation of the maker's page, kept word for word	LM Studio (0.4.25, its chat window): not by itself. Its pages document no file t
+e0d9f3708108748e	PRIVACY.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	More of a document comes in than in QualCoder: a Word, OpenDocument or RTF file'
+45de25c965eb9a6e	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	On a project whose visibility capability is present but whose coder_names table 
+c30e43f9bf195e0f	PRIVACY.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	Or you could move a file out of the project once Exegete has used it, and remove
+d3491386cb6f994d	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Process listing. To warn when a QualCoder 4.0 window appears to have a project o
+855cac402f7c5401	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	QualCoder (3.8.2 and 4.0) uses a marker for memos: everything from the first ###
+7626ac26972f42c7	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	QualCoder 3.8's store, faiss_store.bin, matches none of those names, so Exegete'
+6420c55c05cb48bb	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder 3.8, if it opened the project with its AI switched on (whether or not 
+14d53f057aabdf1c	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder 4.0's own AI server answers the same way about a coding but not about 
+2ca476738dd4741a	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	QualCoder lets a project hide individual coders' work (a per-coder visibility se
+115bbbfa27225ad1	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder never reads or writes this file.
+8e5eb4b737d31b00	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder shows a row's owner in its code tree and its journal list (journals.py
+7d82050ea97499e8	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's ai_data/ folder. Its chat history may quote the previous text, and i
+263bcfaafcd84f20	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	QualCoder's ignore set does not match them, and a journal copied mid-write holds
+f1a9878c93ba000c	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's own _BKUP_ backups do not count as keeping a copy, because QualCoder
+52ecfea6027ebf28	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	QualCoder's own guidance is to remove pseudonyms.json and store it securely once
+f468efb3cfb4b581	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	Reads go through QualCoder's own visibility views by default, so coded segments,
+8288b90750e031bb	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Remember that Exegete's safety features (read-only default, automatic local back
+dea634c4dbf135da	PRIVACY.md	document	voice	'just' means a moment before or immediately next to, not 'merely'	Restoring the backup taken just before the import takes it back while nothing el
+97898aaf0fe1d095	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Since 0.15.0 it makes the folder, empty, when it creates a project or copies one
+4240ed625d4b8ae7	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Since v0.14 a command line that merely mentions QualCoder in its arguments no lo
+9b18d736129eae7e	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Since v0.14 that includes the project memo (set_memo with the target project), w
+40ac9a66322ce281	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Since v0.15.0 that file's recent change is not given as a sign when the process 
+1c799030a2533d59	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	So do rename_case and rename_file, before a rename, to decide whether their note
+5c7feb6b14be7ff6	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Symlinks that resolve inside the project are copied as before, with one exceptio
+d5eaefed191d0487	PRIVACY.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	Symlinks. Unlike QualCoder's own backups, Exegete's backups and workspace copies
+4bc286cc5be526bc	PRIVACY.md	document	qualcoder	quotes a setting's question or a section's title	TOOLS.md, "Supported QualCoder versions", says what else was checked at the rele
+2322c63ee5d121da	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	That mask is a courtesy of the preview, not a guarantee: elsewhere, memo searche
+de1ea7bbef56bea7	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	That mirrors QualCoder's own backups, keeps the non-regenerable prompt library a
+b67f816deb6edb06	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	The check reads the base table, because the unique constraint lives there; so if
+3153f7c6ca382494	PRIVACY.md	document	qualcoder	says what was checked against QualCoder's own code and releases	The code behind the private memo marker, the coder-visibility table and its view
+17a2635f481dd14e	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The coder name is asked for, or taken from Exegete's own settings when the resea
+ee569ef0d25cbb22	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The copy holds SQLite's read lock while it runs, about 1.2 seconds per gigabyte 
+6103631411d9f1c5	PRIVACY.md	document	qualcoder	about QualCoder's own behaviour, which Exegete follows: a sentence about QualCoder itself	The copy of an original is not pseudonymised, as in QualCoder, which applies the
+18ff0fbfa7b6330f	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	The database holds the researcher's own coder name when they give it (and QualCo
+51e51885a51fc91b	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	The exception, deliberately: exported files (the REFI-QDA .qdpx and codebook fil
+a832222933fa70ac	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	The exegete://codes/list and exegete://categories/list resources name each row's
+e860cecd912a5acb	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	The exported file is never affected by this: it carries every coder's counts, as
+7d6d78e30b683a60	PRIVACY.md	document	qualcoder	quotes a setting's question or a section's title	The field also gives, as setting, the researcher's answer to "Do you also use Qu
+fb2395dd668f3a62	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	The listing is filtered in memory for processes that are QualCoder itself: a pro
+aa9dbf20e12578f8	PRIVACY.md	document	qualcoder	QualCoder as one example of another program	The project database is the one file not copied as a file (since 0.14): data.qda
+e1f2fe8c20c79bf1	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	They refuse unless the caller passes allow_hidden_coder=true; the refusal says o
+2e7af417a0ee00bc	PRIVACY.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	They travel with the project into every backup (Exegete's, and QualCoder's if yo
+803b9655bbdb2c9d	PRIVACY.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	This departs from QualCoder's own AI server, which drops the marker silently; th
+f1770eb46a95e0a0	PRIVACY.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	This is a deliberate departure from QualCoder's save_backup, which copies whatev
+190eac873cae8a5c	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	This is a heuristic: it can miss an open window (an idle 4.0 window with no rece
+1f6e1cb8ede02899	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Those counts are a heuristic that reads wider than the rewrite does: the rewrite
+b3c83b092c55fcd8	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Three limits remain, as in QualCoder: an RTF file is read by the code page it de
+b1c93eb9a8f64ff5	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	What is not pseudonymised: the originals (copied unchanged into the project's fo
+db0d22dd24117c23	PRIVACY.md	document	qualcoder	says what was checked against QualCoder's own code and releases	What these sections say of QualCoder's own assistant and AI server, whose code c
+7d093c335a89cc8d	PRIVACY.md	document	qualcoder	says what was checked against QualCoder's own code and releases	What they say of QualCoder is verified against QualCoder 4.0, released on 2 Octo
+cc403e2203910e03	PRIVACY.md	document	voice	an older copy of the server: the server as a running program, the sense the conventions keep (tests/test_v0142_selfrep.py)	When no link can be made, the folder is put back where it was, unless an older c
+078a57fa61e4b150	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	When the capability arrives while Exegete is connected. QualCoder creates the vi
+9a61cf93d43155f6	PRIVACY.md	document	voice	'just' means a moment before or immediately next to, not 'merely'	With the override, the result echoes ids only (update_annotation also echoes bac
+37c560cf7bbd34fe	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Without psutil, a few such paths are still read as no QualCoder, and the sign is
+272b4fbb4e67bf6e	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	Writes that target an existing row by id (delete_coding, update_annotation, dele
+13d195710d2b0040	PRIVACY.md	document	voice	'just' means a moment before or immediately next to, not 'merely'	create_project runs no process scan for the project it has just made.
+533e49ffaa039ccc	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	import_documents reads documents on your computer, by their paths, following Qua
+533e49ffaa039ccc	PRIVACY.md	document	voice	the decided words for the import's departures, kept word for word here and in TOOLS.md (tests/test_v0143_wording.py)	import_documents reads documents on your computer, by their paths, following Qua
+d0009d0e4fdb85b3	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	list_backups, and pseudonymise_source after a run, read the same history to deci
+05322712caa74329	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	select_project and get_current_project also give the project's history with Qual
+d2225d7842008a65	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	set_project_coder_name reads the same history after a change it has made, to dec
+9f94a67d831a59af	PRIVACY.md	document	qualcoder	about QualCoder's own behaviour, which Exegete follows: a sentence about QualCoder itself	whatever later reads return, as for any file in the project; for a PDF, its note
 c0d96785a95ff245	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	A project more than three levels down is not found; naming the folder just above
 dc2e5f667604b944	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	If unsure: Start with Option 1 - it's more flexible!
 44b1606e6a12cc61	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	No need to select anything - just start asking questions:
@@ -644,6 +510,17 @@ b19c45675f3940e6	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Sess
 fa8b274ba33f4fd3	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Test on copies - Try workflow on test projects first
 b52fbb547bf7c047	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Workspace directory: ~/Documents/Exegete projects/, or the folder EXEGETE_WORK
 6a7ced46df9466aa	changelog.d/weekly-workflow.md	document	qualcoder	read 27 October: about QualCoder itself, the weekly watch on its newest code; no plainer way to say whose code it is	The watch on QualCoder's newest code runs once a week, on Mondays, in a workflow
+887922b49d97eaf5	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A missing or unreadable value is no sign of a newer QualCoder: if it was changed
+3b0f7ce1a53b034d	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A relative path, or a folder inside ~/.exegete (or ~/.qualcoder_mcp, its earlier
+44724221a5e03f8e	docs/installing-from-the-terminal.md	document	qualcoder	quotes the question this setting answers	EXEGETE_USES_QUALCODER (0.15.0): your answer to "Do you also use QualCoder on th
+e1947274a30bc24a	docs/installing-from-the-terminal.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	If you also set up QualCoder 4.0's own MCP server (TOOLS.md), take care with its
+9d92f8893ec7fd59	docs/installing-from-the-terminal.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	If you also use QualCoder 4.0's own assistant, AI Agent is the exact name it wri
+b3df2e1cac0745a5	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	It must differ from your own coder name (EXEGETE_CODER_NAME, and each project's)
+fa542ed29bb48436	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	The value is trimmed and must be at most 80 characters, single-line plain text (
+1d1494344f2e215c	docs/installing-from-the-terminal.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Whatever it says, Exegete still refuses to write while QualCoder 3.8.2 has a pro
+2b7740feab65fd6b	docs/installing-from-the-terminal.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	With yes, Exegete adds some notes that matter only if you also open your project
+b7661791c8c44547	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Writes to a project whose database schema is newer than the schemas this release
+54ec50913053a3c6	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	default and QualCoder's speaker coder are never stored as an AI coder name: a ne
 170955d65282fa8f	packaging/desktop-extension/manifest.in.json	document	qualcoder	seeded 27 October, to be read	On: Exegete adds some notes that matter only if you also open your projects in Q
 c56d0c32093289e5	packaging/desktop-extension/manifest.in.json	document	qualcoder	seeded 27 October, to be read	QualCoder is free software for qualitative analysis; Exegete is an independent p
 e0ef46a5faed68bd	packaging/desktop-extension/manifest.in.json	document	qualcoder	seeded 27 October, to be read	The settings choose the tool set (every tool, or a smaller set for local models)

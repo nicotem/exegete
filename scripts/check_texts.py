@@ -13,7 +13,8 @@
 What it reads, of the files git tracks (the tree is never walked): every
 Markdown file at the top of the repository but CHANGELOG.md (its released
 entries are records) and CLAUDE.md (instructions for coding agents);
-changelog.d/*.md; both NOTICE files, below their heading "Code derived
+the guides under docs/ that GUIDES names (v0.15.2: the guide to
+installing from the Terminal); changelog.d/*.md; both NOTICE files, below their heading "Code derived
 from QualCoder" for the voice alone; the descriptions in pyproject.toml
 and .zenodo.json; the old name's README.md, NOTICE and description
 (packaging/pypi-old-name/); the issue forms' texts; the update site's two
@@ -81,6 +82,9 @@ NOTICES = ("NOTICE", "packaging/pypi-old-name/NOTICE")
 # Below this heading, every mention is about QualCoder's own code
 DERIVED = "Code derived from QualCoder"
 OLD_NAME_README = "packaging/pypi-old-name/README.md"
+# The documents under docs/ written for researchers, read as the
+# documents at the top are; the rest of docs/ is records and designs
+GUIDES = ("docs/installing-from-the-terminal.md",)
 TOML_DESCRIPTIONS = ("pyproject.toml",
                      "packaging/pypi-old-name/pyproject.toml")
 ZENODO = ".zenodo.json"
@@ -926,7 +930,8 @@ def _reader(name: str):
     """The reader of one tracked file, or None when it is not read."""
     top = "/" not in name and name not in NOT_READ
     fragment = name.startswith(FRAGMENTS) and name.count("/") == 1
-    if name.endswith(".md") and (top or fragment or name == OLD_NAME_README):
+    if name.endswith(".md") and (top or fragment or name == OLD_NAME_README
+                                 or name in GUIDES):
         return read_markdown
     if name.startswith(ISSUE_FORMS) and name.count("/") == 2 \
             and name.endswith((".yml", ".yaml")):

@@ -78,6 +78,9 @@ MANIFEST = "packaging/desktop-extension/manifest.in.json"
 CHANGELOG = "CHANGELOG.md"
 PYPROJECT = "pyproject.toml"
 UPDATE_PAGE = "pages/update/index.html"
+# The guide to installing from the Terminal (v0.15.2), which took
+# INSTALL.md's Terminal routes: their facts are stated there now
+GUIDE = "docs/installing-from-the-terminal.md"
 HISTORY = "docs/history/"
 LOCK = "uv.lock"
 SERVER_SOURCE = "src/exegete/server.py"
@@ -105,7 +108,8 @@ FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN, SIZES)
 # values alone: the CHANGELOG's `[Unreleased]` part and the fragments
 # in changelog.d/ (read_documents).
 DOCUMENTS = (
-    "README.md", "INSTALL.md", "PRIVACY.md", "TOOLS.md", "QUICKSTART.md",
+    "README.md", "INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
+    "QUICKSTART.md",
     "SUPPORT.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
     "PROJECT_SELECTION_GUIDE.md", HISTORY + "IMPORT_INSTRUCTIONS.md",
     "CLAUDE.md", "CONTRIBUTING.md", "NOTICE",
@@ -719,7 +723,8 @@ SIGNALS_LIST_DOCUMENT = "TOOLS.md"
 KEPT_LISTS = (
     ("PRIVACY.md", "section", "Files Exegete keeps on your computer"),
     ("PRIVACY.md", "item", "What stays on the computer"),
-    ("INSTALL.md", "section", "Uninstalling"))
+    ("INSTALL.md", "section", "Uninstalling"),
+    (GUIDE, "section", "Uninstalling"))
 STATE_FOLDER_WORDS = r"(?i:\bExegete's\s+own\s+folder|\bstate\s+folder)"
 READING_FOLDER_WORDS = r"(?i:\breading\s+folder)"
 # CONTRIBUTING.md's map of the clone, the code block under this heading
@@ -790,8 +795,8 @@ FACTS: Dict[str, Fact] = {
              "EXTENSION_WORKSPACE_FOLDER, OLD_EXTENSION_WORKSPACE_FOLDER; "
              "server.py: _USUAL_SEARCH_PLACES (its folders for projects "
              "in Documents)",
-        documents=("README.md", "INSTALL.md", "PRIVACY.md", "TOOLS.md",
-                   "AI_CODING_WORKFLOW.md", "QUICKSTART.md",
+        documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
+                   "TOOLS.md", "AI_CODING_WORKFLOW.md", "QUICKSTART.md",
                    "PROJECT_SELECTION_GUIDE.md", "pages/update/index.html",
                    MANIFEST),
         patterns=(PROJECTS_FOLDER, DEFAULT_BEFORE, DEFAULT_AFTER,
@@ -804,7 +809,7 @@ FACTS: Dict[str, Fact] = {
         history=True),
     "the state folder": Fact(
         code="names.py: STATE_FOLDER, OLD_STATE_FOLDER",
-        documents=("INSTALL.md", "PRIVACY.md", "TOOLS.md",
+        documents=("INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
                    "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
                    "PROJECT_SELECTION_GUIDE.md",
                    "docs/history/IMPORT_INSTRUCTIONS.md",
@@ -815,19 +820,19 @@ FACTS: Dict[str, Fact] = {
         code="doc_import.py: EXTENSION_CALL_SECONDS, TERMINAL_CALL_SECONDS, "
              "CALL_SECONDS_LEAST, CALL_SECONDS_MOST, IMPORT_FILE_SECONDS, "
              "KEEP_SECONDS; import_reading.py: READ_TIMEOUT_SECONDS",
-        documents=("INSTALL.md", "TOOLS.md"),
+        documents=(GUIDE, "TOOLS.md"),
         patterns=tuple(p for p, _ in TIME_PATTERNS),
         history=True),
     "the counts": Fact(
         code="server.py: the tools registered at import (STANDARD_TOOL_"
              "NAMES), CORE_TOOLSET, RENAMED_TOOLS; preview_tokens.py: "
              "REGISTRY; pyproject.toml: dependencies",
-        documents=("README.md", "INSTALL.md", "TOOLS.md", "CONTRIBUTING.md"),
+        documents=("README.md", GUIDE, "TOOLS.md", "CONTRIBUTING.md"),
         patterns=tuple(p for p, _ in COUNT_PATTERNS),
         history=True),
     "the install commands": Fact(
         code="pyproject.toml: the optional part that lists PyMuPDF",
-        documents=("README.md", "INSTALL.md", "QUICKSTART.md", "CLAUDE.md",
+        documents=("README.md", GUIDE, "QUICKSTART.md", "CLAUDE.md",
                    "CONTRIBUTING.md", "packaging/pypi-old-name/README.md"),
         patterns=(INSTALL_COMMAND, EXEGETE_PACKAGE, EXEGETE_SOURCE,
                   NAMES_THE_PART),
@@ -837,21 +842,21 @@ FACTS: Dict[str, Fact] = {
         left_out=(UPDATE_PAGE,)),
     "the settings": Fact(
         code="the extension's manifest: each setting's title and type",
-        documents=("README.md", "INSTALL.md", "TOOLS.md", MANIFEST),
+        documents=("README.md", "INSTALL.md", GUIDE, "TOOLS.md", MANIFEST),
         patterns=(SETTING_BY_PLACE, QUOTED_SETTING, QUOTED_SWITCH,
                   SETTINGS_LIST)),
     "the names": Fact(
         code="server.py: the registered tools (STANDARD_TOOL_NAMES), "
              "RENAMED_TOOLS, the prompts and each tool's input schema",
-        documents=("README.md", "INSTALL.md", "PRIVACY.md", "TOOLS.md",
-                   "SUPPORT.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
-                   "CONTRIBUTING.md"),
+        documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
+                   "TOOLS.md", "SUPPORT.md", "AI_CODING_GUIDE.md",
+                   "AI_CODING_WORKFLOW.md", "CONTRIBUTING.md"),
         patterns=(CALL_FORM,) + TOOL_CLAIMS + (TOOL_NAMES_LIST,)
         + ARGUMENT_CLAIMS + (ARGUMENT_NAMES_LIST,)),
     "the sizes": Fact(
         code="docs/snapshot/sizes.json: each set's tool definitions, in "
              "characters (scripts/served_texts.py writes it from the code)",
-        documents=("README.md", "INSTALL.md", "TOOLS.md"),
+        documents=("README.md", GUIDE, "TOOLS.md"),
         patterns=tuple(p for p, _ in SIZE_PATTERNS)),
     "the memory to read a file": Fact(
         code="import_reading.py: MEMORY_CAP_BYTES, PDF_MEMORY_CAP_BYTES",
@@ -864,13 +869,14 @@ FACTS: Dict[str, Fact] = {
         patterns=(RELEASE, MEASURED, REQUIREMENT)),
     "the routes with Claude": Fact(
         code="the table that follows the sentence",
-        documents=("INSTALL.md",),
+        documents=(GUIDE,),
         patterns=(ROUTES_WITH_CLAUDE, CLAUDE_ROW)),
     "the lists": Fact(
         code="preview_tokens.py: REGISTRY; server.py: the tools that set "
              "qualcoder_gui_signals; names.py: STATE_FOLDER; the reading "
              "folder",
-        documents=("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md"),
+        documents=("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
+                   GUIDE),
         patterns=(SIGNALS_LIST, STATE_FOLDER_WORDS, READING_FOLDER_WORDS)),
     "the project structure": Fact(
         code="the tracked modules in src/exegete and scripts in scripts/",
@@ -879,20 +885,21 @@ FACTS: Dict[str, Fact] = {
         needs=("modules", "scripts")),
     "the reading folder": Fact(
         code="reading_folder.py: root, on each system",
-        documents=("INSTALL.md", "PRIVACY.md", "TOOLS.md"),
+        documents=("INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md"),
         patterns=(READING_FOLDER_PATH,)),
     "QualCoder's folders": Fact(
         code="server.py: _USUAL_SEARCH_PLACES named after QualCoder; "
              "names.py: the folders for projects",
-        documents=("INSTALL.md", "QUICKSTART.md",
+        documents=("INSTALL.md", GUIDE, "QUICKSTART.md",
                    "PROJECT_SELECTION_GUIDE.md"),
         patterns=(IF_YOU_USE_QUALCODER, USUAL_PLACES_LIST)),
     "the releases to come": Fact(
         code="pyproject.toml: the version; scripts/release_plan.py: "
              "PLANNED and RELEASES",
-        documents=("README.md", "INSTALL.md", "PRIVACY.md", "TOOLS.md",
-                   "CONTRIBUTING.md", "packaging/pypi-old-name/README.md",
-                   UPDATE_PAGE, SERVER_SOURCE, "src/exegete/updates.py"),
+        documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
+                   "TOOLS.md", "CONTRIBUTING.md",
+                   "packaging/pypi-old-name/README.md", UPDATE_PAGE,
+                   SERVER_SOURCE, "src/exegete/updates.py"),
         patterns=RELEASE_NAMED + (VERSION_NAMED, NAMES_EXEGETE, ADDRESS),
         code_texts=True),
 }
@@ -3300,8 +3307,9 @@ def test_routes_in_a_sentence(text, verdict):
 
 
 def test_a_fourth_claude_row_names_the_routes_sentence(tmp_path):
+    # v0.15.2: the routes and their table are the Terminal guide's
     root = _scratch_copy(tmp_path)
-    install = root / "INSTALL.md"
+    install = root / GUIDE
     text = install.read_text(encoding="utf-8")
     sentence = re.search(ROUTES_WITH_CLAUDE, text)
     separator = text.index("\n|---|", sentence.end())
@@ -3310,7 +3318,7 @@ def test_a_fourth_claude_row_names_the_routes_sentence(tmp_path):
                        "same terms | here |" + text[end:], encoding="utf-8")
     outcome = check_documents(facts_from_the_code(), read_documents(root))
     assert [(p.document, p.line, p.fact) for p in _unknown(outcome)] == [
-        ("INSTALL.md", text.count("\n", 0, sentence.start()) + 1,
+        (GUIDE, text.count("\n", 0, sentence.start()) + 1,
          "the routes with Claude")]
 
 

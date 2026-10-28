@@ -469,9 +469,10 @@ class TestTheDocuments:
         # answer no is a Terminal setting only, and step 4 says so
         install = _doc("INSTALL.md")
         assert "- **Do you also use QualCoder on this" not in install
-        assert ("Two choices are made only on the Terminal route: the tool "
-                "set by name (`EXEGETE_TOOLSET`) and the answer no to "
-                "whether you use QualCoder (`EXEGETE_USES_QUALCODER`)") \
+        assert (("Two choices can be made only when Exegete is installed "
+                 "from the Terminal: choosing a tool set by its name "
+                 "(`EXEGETE_TOOLSET`), and answering no to \"Do you also use "
+                 "QualCoder on this computer?\" (`EXEGETE_USES_QUALCODER`)")) \
             in install
         # between the AI coder name and the check for new versions, as in
         # the extension

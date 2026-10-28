@@ -683,8 +683,9 @@ class TestQualCoderIsOptional:
 
     def test_the_checklists_list_qualcoder_as_optional(self):
         install = _flat((REPO / "INSTALL.md").read_text(encoding="utf-8"))
-        assert "- **QualCoder, optional.** Today it does what Exegete does " \
-               "not do yet:" in install
+        assert ("- **QualCoder, optional.** QualCoder is free software for "
+                "qualitative analysis. Today it does what Exegete does not "
+                "do yet:") in install
         # v0.15.0: the default set creates a project on every route
         # (v0.15.2: INSTALL.md's list, and the Terminal guide's)
         assert "- **A project, or none yet.**" in install

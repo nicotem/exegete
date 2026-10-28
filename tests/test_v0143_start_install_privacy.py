@@ -68,7 +68,8 @@ def test_install_says_which_formats_need_the_optional_part():
     # the extension's own section points there
     extension = _between(install, "## PDF and EPUB: the optional part",
                          "## Updating")
-    assert "The extension always has this part." in extension
+    assert ("PDF and EPUB need an optional part, and the extension always "
+            "has this part.") in extension
 
 
 def test_install_gives_the_parts_licence_as_pyproject_and_notice_do():

@@ -872,7 +872,7 @@ class TestTheDocuments:
         assert f"`{option['projects_folder']['default']}`" in section
         assert "double-click the file" in section
         assert "This extension isn't signed" in section
-        assert "the Terminal route" in section
+        assert "installed from the Terminal" in section
 
     def test_install_documents_every_variable_the_server_reads(self):
         # v0.14.1: every setting is read through one table, under both

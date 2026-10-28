@@ -453,7 +453,7 @@ class TestTheWordsSayWhatTheSwitchesDo:
                           "- **Tell me when a new version is out**")
         for where, clause in (
                 ("the page", page[page.index("Off, the default: "):]),
-                ("INSTALL, step 4", bullet[bullet.index("; off, ") + 2:])):
+                ("INSTALL, step 4", bullet[bullet.index("With it off, "):])):
             clause = clause.split(". ")[0]
             assert title not in clause, where
             assert "signs of QualCoder on the project or" in clause, where

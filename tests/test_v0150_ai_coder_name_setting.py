@@ -593,15 +593,16 @@ class TestTheDocuments:
         # the Terminal guide)
         text = _doc("INSTALL.md") + " " + _doc(
             "docs/installing-from-the-terminal.md")
-        assert ("**AI coder name**: empty by default. It is the name "
-                "Claude's work in your projects is stored under, so that it "
-                "stays apart from yours; a model's name lets codings by "
-                "different models be compared later. Filled in, Exegete "
-                "gives it to each project it creates, without asking, and "
-                "says so, and offers it first when another project needs "
-                "one; left empty, Claude asks the first time a project "
-                "needs it. A project that already has an AI coder name "
-                "keeps it, and Claude asks you once whether to switch.") \
+        assert (("**AI coder name**: empty by default. It is the name "
+                 "Claude's work in your projects is stored under, so that it "
+                 "stays apart from yours. If you use a model's name, codings "
+                 "by different models can be compared later. If you fill it "
+                 "in, Exegete gives it to each project it creates, without "
+                 "asking, and tells you. When any other project needs an AI "
+                 "coder name, Exegete offers this one first. If you leave it "
+                 "empty, Claude asks the first time a project needs one. A "
+                 "project that already has an AI coder name keeps it, and "
+                 "Claude asks you once whether to switch.")) \
             in text
         assert ("- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's "
                 "settings. The name that rows actually carry is each "

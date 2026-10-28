@@ -247,6 +247,9 @@ rather than fewer.
   server as a subprocess only when the transport or startup gating is
   the thing under test, and give it an explicit environment. The suite
   has to pass on the Windows runner, not only on your machine.
+- **The writing guide.** [docs/WRITING.md](docs/WRITING.md) says who
+  reads Exegete's texts and how to write them: the documents, the
+  screens a researcher sees and the texts the assistant receives.
 - **No em dashes in prose.** This applies to documentation, docstrings,
   error strings, CHANGELOG entries and commit messages. Use a colon, a
   comma, parentheses or a new sentence.

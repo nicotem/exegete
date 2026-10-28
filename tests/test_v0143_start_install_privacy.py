@@ -36,7 +36,11 @@ def test_the_readmes_features_name_importing_and_reading():
     # are read)
     assert "**Bring in documents**: Word, OpenDocument" in features
     assert "Exegete reads them on your computer" in features
-    assert "in the conversation or in your browser." in features
+    # (the fix round: in the browser, the file's text stays out of the
+    # conversation, as open_file_for_reading answers with the page's
+    # place and counts: tests/test_v0152_opening_texts.py)
+    assert ("in the conversation or, keeping its text out of it, in your "
+            "browser.") in features
 
 
 def test_start_here_names_importing_a_file_and_reading_it():
@@ -53,8 +57,10 @@ def test_start_here_names_importing_a_file_and_reading_it():
     assert "ask to open a file for reading" in start
     features = _between(_flat("README.md"), "## What you can do",
                         "## How it works")
-    assert "read a transcript with its codings, in the conversation or in " \
-        "your browser" in features
+    # (the fix round: in the browser, its text stays out of the
+    # conversation)
+    assert ("read a transcript with its codings in the conversation or, "
+            "keeping its text out of it, in your browser") in features
 
 
 def test_install_says_which_formats_need_the_optional_part():

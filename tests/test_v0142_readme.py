@@ -325,16 +325,20 @@ def test_a_first_session_names_both_coder_names():
     # (v0.15.2, the opening texts: statements for the two questions)
     # (the readability reading: who asks, and when, named; the exception
     # a sentence of its own)
+    # (the fix round: the clause "QualCoder, if you use it, records your
+    # coding under it" goes, since QualCoder records coding under the name
+    # in its own settings, and asks to keep or switch when the project
+    # holds another: CODER_NAME_QUALCODER_SWITCH_NOTE in server.py)
     assert ("When it makes the project, the assistant asks for your own "
             "coder name, unless you have filled it in Exegete's settings. "
             "The project keeps it so that your work and the AI's stay "
-            "apart, and QualCoder, if you use it, records your coding under "
-            "it. Any name you choose will do, and if you do not know yours, "
-            "say so. Before Exegete first writes to the project, the "
+            "apart. Any name you choose will do, and if you do not know "
+            "yours, say so. Before Exegete first writes to the project, the "
             "assistant asks for the AI coder name, kept per project, under "
             "which Exegete writes what is done through the conversation. It "
             "does not ask if the project was made with that name in "
             "Exegete's settings.") in names
+    assert "records your coding under it" not in names
     assert "Not using QualCoder, or no coder name?" not in names
     assert "no QualCoder yet" not in names
     # the example on the first screen shows the second ask, before the

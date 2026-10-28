@@ -200,6 +200,12 @@ class Receipts(one_backup.Measured):
         holder.counted.append(call)
         for broken in call["broken"]:
             holder.problems.append((name, broken))
+        # every record as it was written: an undo later in the run
+        # removes the records of the changes it takes back
+        seen = getattr(holder, "seen_records", None)
+        if seen is None:
+            seen = holder.seen_records = {}
+        seen.update(records())
         return result
 
 
@@ -216,10 +222,13 @@ def _runs():
     return {}
 
 
-def finished(run_calls):
+def finished(run_calls, seen=None):
     """What a measured run leaves for the tests: its calls, the records
-    and the secret read inside the sandbox of the test that made it."""
-    return {"calls": run_calls, "records": records(), "secret": secret()}
+    (every record written during the run, those an undo removed since
+    included) and the secret read inside the sandbox of the test that
+    made it."""
+    return {"calls": run_calls, "records": {**(seen or {}), **records()},
+            "secret": secret()}
 
 
 @pytest.fixture
@@ -233,7 +242,7 @@ def every_tool_run(_runs, tmp_path):
             run = host_session(lambda client: call_every_tool(client, root))
         assert isinstance(run, ReceiptRun)
         assert run.problems == [], run.problems
-        return finished(run.counted)
+        return finished(run.counted, getattr(run, "seen_records", None))
     return made_once(_runs, "the run over every tool", make)
 
 
@@ -248,7 +257,8 @@ def two_step_run(_runs, tmp_path):
             holder = host_session(lambda client: two_step_sequence(client,
                                                                    root))
         assert holder.problems == [], holder.problems
-        return finished(holder.counted)
+        return finished(holder.counted,
+                        getattr(holder, "seen_records", None))
     return made_once(_runs, "the two-step sequence", make)
 
 
@@ -297,15 +307,16 @@ def test_every_tool_that_writes_a_project_is_covered(every_tool_run,
 
 def test_the_tools_that_keep_no_record_say_nothing_of_one(every_tool_run,
                                                            two_step_run):
-    """restore_backup, and save_names_list until it keeps a record: each
-    change they make leaves no record, and its answer carries neither a
-    receipt nor the sentence that none was kept, as the changelog's entry
-    says of them."""
+    """restore_backup, undo_changes, and save_names_list until it keeps a
+    record: each change they make leaves no record, and its answer
+    carries neither a receipt nor the sentence that none was kept, as the
+    changelog's entry says of them."""
     calls = [call for call in all_calls(every_tool_run, two_step_run)
              if (call["tool"] in NO_RECEIPT_BY_DESIGN
                  or call["tool"] in NOT_YET_RECORDED) and call["changed"]]
     assert {call["tool"] for call in calls} == {"restore_backup",
-                                                "save_names_list"}
+                                                "save_names_list",
+                                                "undo_changes"}
     assert [(call["tool"], call["receipt"], call["new_records"],
              call["says_no_receipt"]) for call in calls
             if call["receipt"] or call["new_records"]

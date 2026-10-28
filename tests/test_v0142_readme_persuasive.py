@@ -363,8 +363,12 @@ def _tools(mode="full"):
 # projects tells an assistant where each listed project is, as
 # QUICKSTART's readers found the list reads its usual places, not the
 # whole computer: 7 characters more, 40,253 in 625 lines.
-README_LIMIT = 40_253
-README_LINES = 625
+# v0.15.2, undo: undo_changes in core (its count and size, and undoing
+# changes among what core is for) and among the guarded changes, and
+# one sentence in "Go back" on undoing a change alone, take 174
+# characters and 3 lines: 40,427 in 628 lines.
+README_LIMIT = 40_427
+README_LINES = 628
 
 
 def test_the_readme_stays_short():
@@ -1008,7 +1012,9 @@ GUARDED = ("merge_codes", "merge_category", "delete_code", "delete_category",
            "pseudonymise_source", "restore_backup", "prune_backups",
            # (the staleness audit of 20 October 2026: the names list's
            # save previews first too)
-           "set_project_coder_name", "save_names_list")
+           "set_project_coder_name", "save_names_list",
+           # (v0.15.2, undo: undoing a change previews first too)
+           "undo_changes")
 
 
 def test_the_advanced_section_rests_on_the_code():
@@ -1098,8 +1104,9 @@ def test_the_advanced_section_rests_on_the_code():
                  "find_cooccurring_codes"):
         doc = " ".join(getattr(server, tool).__doc__.split())
         assert "bypassing the visibility filter" in doc, tool
-    # nothing the branch does not have: undo is not on it yet
-    assert "undo" not in beyond
+    # (v0.15.2, undo: undoing a change is on the branch now, among the
+    # guarded changes, which GUARDED holds to the code)
+    assert "`undo_changes` (undoing a change)" in beyond
     # Claude Code's limits, whose figures are the Terminal guide's (its
     # version 2.1.296 and after; tests/test_v0150_wb_fix_r2.py pins the
     # long description), and what follows from them

@@ -40,11 +40,11 @@ from test_v014_server_wide import (EXPECTED_HINTS, NOT_PROJECT_WRITES,
 PROJECT_WRITES = {name for name, hints in EXPECTED_HINTS.items()
                   if not hints[0] and name not in NOT_PROJECT_WRITES}
 
-# The seven tools whose run over every tool previews and never executes
+# The eight tools whose run over every tool previews and never executes
 # (server-wide's call_every_tool); the sequence below executes them.
 TWO_STEP_TOOLS = ("merge_codes", "delete_code", "delete_category",
                   "merge_category", "set_project_coder_name",
-                  "pseudonymise_source", "restore_backup")
+                  "pseudonymise_source", "undo_changes", "restore_backup")
 
 class PromiseBroken(AssertionError):
     """The promise itself failed: a backup too many, one missing, or a
@@ -189,15 +189,17 @@ def allow_scratch_folders(patch, root):
 
 
 async def two_step_sequence(client, root):
-    """Each of the seven two-step tools previewed, then executed with
-    the call its preview's execute_with gives, every call measured."""
+    """Each of the eight two-step tools previewed, then executed with
+    the call its preview's execute_with gives, every call measured: the
+    undo takes back the code D's creation."""
     holder = Holder()
     measured = Measured(client, holder)
     holder.folder = await new_project(client, root)
     await call(measured, "import_text_file", {"filename": "int1.txt",
                                               "content": TEXT_1})
     for name in "ABCD":
-        await call(measured, "create_code", {"name": name})
+        made = await call(measured, "create_code", {"name": name})
+    made_d = made["undo_receipt"]
     for name in "XYZ":
         await call(measured, "create_category", {"name": name})
     code = ids_by_name(holder.folder, "code_name", "cid")
@@ -213,6 +215,7 @@ async def two_step_sequence(client, root):
         "pseudonymise_source": {
             "mapping": [{"original": "Maria", "pseudonym": "Joan"}],
             "file_id": 1, "researcher_keeps_mapping": True},
+        "undo_changes": {"receipts": [made_d]},
         "restore_backup": None,
     }
     assert tuple(steps) == TWO_STEP_TOOLS

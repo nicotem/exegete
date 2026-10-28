@@ -51,7 +51,7 @@ pass on, so the brief reaches the assistant four ways:
 
 - **The opening text**, a short version of the brief. Claude Code shows
   it (and keeps the first 4,096 characters of a server's opening text,
-  2,048 before its version 2.1.296; this one is 2,046). Claude Desktop
+  2,048 before its version 2.1.296; this one is 2,042). Claude Desktop
   does not pass it on, in its chat or in Cowork (checked on 9 October
   2026), and LM Studio does not support it.
 - **The tool `read_brief`**, in every tool set. Its description asks the
@@ -365,7 +365,7 @@ within each description's first 2,048 characters. The few named
 exceptions reach the model through `read_brief` or the tools' answers.
 The descriptions are longer on Python 3.11 and 3.12 than on 3.13, which
 strips the indentation they are written with. On Python 3.13, 4 of
-`full`'s 79 descriptions are longer than 4,096 characters
+`full`'s 80 descriptions are longer than 4,096 characters
 (`pseudonymise_source`, about 17,000; `start_coding_session`, about
 6,000; `search_files`, about 4,500; `record_suggestions`, about 4,500).
 On 3.11 and 3.12, the same four are, at about 18,000, 6,300, 4,900 and
@@ -548,10 +548,10 @@ output improperly formatted tool calls"
 reports place the practical minimum for work with many tools around
 14B parameters.
 
-**Step 3. Use the small tool set.** Exegete offers 79 tools by default,
+**Step 3. Use the small tool set.** Exegete offers 80 tools by default,
 and the serialised tool definitions alone measure about 200,000
-characters, roughly 50,000 tokens, against about 74,000 characters,
-roughly 18,000 tokens, for the 27 tools of `core` (measured on Python 3.13
+characters, roughly 50,000 tokens, against about 76,000 characters,
+roughly 19,000 tokens, for the 28 tools of `core` (measured on Python 3.13
 with the libraries in `uv.lock`; TOOLS.md says how, and
 [docs/snapshot/](snapshot/) gives the exact figures). The full set
 fills LM Studio's default context of 8k several times over before you
@@ -560,7 +560,7 @@ this size. `EXEGETE_TOOLSET=core`, in the entry of step 5, gives only
 the smaller set.
 
 **Step 4. Raise the context length.** Even the core toolset's roughly
-18,000 tokens of schema exceed the default context of 8k. In the model's
+19,000 tokens of schema exceed the default context of 8k. In the model's
 load settings, or its default settings
 (<https://lmstudio.ai/docs/app/advanced/per-model>), set the context
 length to at least 32k for the core toolset (that leaves about 14k
@@ -1084,11 +1084,11 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   opened by whichever tool comes first (since v0.14; before, the backup
   tools and a few others answered that no project was selected until
   another tool had run). Without it, select a project with the tools.
-- `EXEGETE_TOOLSET`: `full` (default) registers 79 tools, every tool,
+- `EXEGETE_TOOLSET`: `full` (default) registers 80 tools, every tool,
   creating a project included, so that a study can be started from the
   conversation (TOOLS.md, "Starting a project from the conversation");
   two of them are the earlier names of two renamed tools (TOOLS.md,
-  "Earlier names"). `core` registers the 27-tool supervised coding set
+  "Earlier names"). `core` registers the 28-tool supervised coding set
   for local models (see the LM Studio recipe), which cannot create a
   project. `lifecycle`, the earlier name of `full` (the desktop
   extension's default before 0.15.0), is read as `full` until v1.0, and

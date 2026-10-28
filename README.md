@@ -93,6 +93,8 @@ takes questions and ideas, in public, so leave out participants' data.
 - **Go back**: before every change to the project's database, Exegete
   takes a backup, a copy of the project kept beside it, and can restore
   one. Setting the AI coder name and preparing the names file take none.
+  For a day after a change to the database, Exegete can also undo that
+  change alone, unless later work depends on it.
 
 **Not in Exegete yet.** It cannot bring in or code images, audio and
 video, or code an area of a PDF page or text you select yourself. It
@@ -493,8 +495,8 @@ EPUB, with libraries under the AGPL: INSTALL.md says more).
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 79: every tool, creating a project and the earlier names of two renamed tools included | about 200,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | every route |
-| `core` | 27: reading, searching, coding with your approval, memos and backups, without creating a project or bringing documents in | about 74,000 characters, 18k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
+| `full` | 80: every tool, creating a project and the earlier names of two renamed tools included | about 200,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `core` | 28: reading, searching, coding with your approval, memos, backups and undoing changes, without creating a project or bringing documents in | about 76,000 characters, 19k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
 
 A host sends every tool's definition (name, description and arguments)
 with each request, using that much of a model's context. The figures
@@ -531,8 +533,9 @@ which carry your project's texts. `lifecycle`, the earlier name of
   `delete_category`, `pseudonymise_source` (these five also say whose
   work is affected), `restore_backup`, `prune_backups`,
   `set_project_coder_name` (your own coder name, while nothing is
-  recorded under it), `save_names_list` (saving the names list), and
-  `import_documents` (bringing documents in, after a backup).
+  recorded under it), `save_names_list` (saving the names list),
+  `undo_changes` (undoing a change), and `import_documents` (bringing
+  documents in, after a backup).
 - **Documents in, whole files read**: `import_documents` needs the
   optional part, `exegete[pdf-epub]`, for PDF and EPUB.
   `open_file_for_reading` shows you a whole file on your screen and keeps

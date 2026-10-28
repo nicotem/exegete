@@ -146,7 +146,9 @@ class TestTheOpeningText:
                 "Never give a score",
                 "Coding frequencies count codings, not participants or "
                 "importance",
-                "then run with the preview token",
+                # v0.15.2: rule 8 names undoing a change, and its last
+                # words are shorter so that the text stays within the cut
+                "then run with its token",
                 # v0.15.0 (not presuming QualCoder, piece 5): rule 9
                 # follows what a tool says
                 "When a tool says another program, such as QualCoder, may "
@@ -636,11 +638,18 @@ def test_the_lengths_the_documents_give_are_the_briefs():
     unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                            changelog.index("## [0.14.3-alpha]")]
     # (0.15.0's figure is history too: v0.15.2's opening texts took the
-    # text to 2,046, saying once what QualCoder is; the figure in
-    # TOOLS.md, below, is the current one)
+    # text to 2,046, saying once what QualCoder is, and its rule 8 then
+    # named undoing a change; the figure the guide to installing from the
+    # Terminal gives, below, follows the text, which INSTALL.md gave
+    # before that guide took its Terminal routes; the facts check holds
+    # the documents' counts, and no test reads a CHANGELOG fragment)
     assert re.findall(r"Exegete's opening text is now ([\d,]+) characters",
                       unreleased) == ["2,034"]
     assert short <= 2048
+    guide = " ".join(REPO.joinpath(
+        "docs/installing-from-the-terminal.md").read_text(
+        encoding="utf-8").split())
+    assert re.findall(r"this one is ([\d,]+)\)", guide) == [f"{short:,}"]
     # 0.14.2's figure for the full brief is history: v0.14.3 added a line
     # (provisional) on reading a whole file, served the line on a fresh
     # reading 0.14.2 held back, and shortened section 4's list

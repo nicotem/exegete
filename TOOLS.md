@@ -45,7 +45,7 @@ Through these tools an AI assistant can:
 - **AI-assisted coding**: the assistant suggests, you review and approve, and Exegete applies what you approved. Nothing is written until an item is marked approved. Exegete records the approval the assistant reports and cannot tell whether you gave it. The safeguards are the app you use with the assistant, called its host, asking you before each decision or write ("allow once"), and your own reading of the counts ("Who approves", below)
 - **Codebook editing**: create, rename, recolour, merge, move, and delete codes and categories
 - **Memo & journal writing**: annotate codes, files, codings, and cases; keep a research journal
-- **Undo & restore**: delete a coding, list backups, and restore a whole project to an earlier state
+- **Undo & restore**: take back a change Exegete made, whole, for a day after it (`undo_changes`), delete a coding, list backups, and restore a whole project to an earlier state
 - **Bring in documents** from the computer (Word, OpenDocument, RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part) and **transcripts** through the conversation, link files to cases, and **rename cases and files** (`rename_case`, `rename_file`)
 - **REFI-QDA export** (.qdpx) for interchange with NVivo, ATLAS.ti and MAXQDA, with known faults (a later release is meant to fix them). It files every coding under the AI coder name, yours and a hidden coder's included, it leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions, unmarked. Exegete has no other REFI-QDA export yet. If you use QualCoder, its own export (Project, Export, REFI-QDA Project export) keeps each coder, the cases, the notes and the media
 - **Report exports**: codebook, coded segments, code frequencies and case-code matrix as CSV, txt or Markdown files
@@ -94,7 +94,7 @@ You can work with the reading tools alone, or with the tools that write as well.
 > window, reported as `qualcoder_gui_signals` by `select_project`,
 > `get_current_project`, `start_coding_session`, `create_project`
 > (without the process scan) and the `restore_backup`,
-> `import_documents` and `save_names_list` previews:
+> `import_documents`, `save_names_list` and `undo_changes` previews:
 >
 > - the database's write sidecars (`data.qda-journal`, `data.qda-wal`,
 >   `data.qda-shm`), files that sit beside it while it is being written;
@@ -700,7 +700,7 @@ keeps.
   (`qualcoder_gui_signals`), checks the file's text again within the
   write itself, and relies on you, if you use QualCoder, to make sure no
   window has the project open
-- **Recovery tools**: `delete_coding`, `list_backups`, `restore_backup`
+- **Recovery tools**: `undo_changes`, `delete_coding`, `list_backups`, `restore_backup`
 
 ### The workspace
 
@@ -870,7 +870,7 @@ reaches it four ways:
   9 October 2026);
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
-  project: it returns the full brief (about 13,400 characters), or in
+  project: it returns the full brief (about 13,500 characters), or in
   the `core` set the short version;
 - the same full brief as the help topic `explain_ai_coding_tools('brief')`
   and the resource `exegete://guidance/brief`;
@@ -1048,7 +1048,7 @@ answered, though no longer listed, until v1.0.
 
 The assistant uses these tools on your project. The full toolset
 (`EXEGETE_TOOLSET=full`, the default everywhere: in the Claude Desktop
-extension and when you configure Exegete yourself) registers 79
+extension and when you configure Exegete yourself) registers 80
 tools, two of them the earlier names of two renamed tools (see "Earlier
 names" below). The argument lists below give every argument each tool
 declares, and each tool's own description says what each one does.
@@ -1061,7 +1061,7 @@ declares, and each tool's own description says what each one does.
 > **Reduced toolset for local models (Experimental):** with
 > `EXEGETE_TOOLSET=core` in Exegete's environment (in the extension,
 > the switch "Limit Exegete to its small tool set"), only the
-> 27-tool supervised coding set is registered: read_brief,
+> 28-tool supervised coding set is registered: read_brief,
 > list_available_projects, select_project, get_current_project,
 > get_project_summary,
 > search_files, read_file_with_codings, search_memos,
@@ -1072,13 +1072,13 @@ declares, and each tool's own description says what each one does.
 > update_suggestion_status, apply_codings, create_code, set_memo,
 > set_project_ai_coder_name,
 > copy_project_to_workspace, delete_coding, list_backups,
-> restore_backup, and the two earlier names below.
+> restore_backup, undo_changes, and the two earlier names below.
 > Meant for local models, and optional elsewhere. An unknown value
 > stops Exegete at startup, with a message giving the valid values. Measured on Python 3.13 with the libraries in
 > `uv.lock` (the serialised tool definitions: name, description and
 > input schema), the definitions run to about 203,000 characters for
 > `full`, roughly 51k tokens at four characters per token, and about
-> 74,000 characters for `core`, roughly 18k tokens. On Python 3.11 and
+> 76,000 characters for `core`, roughly 19k tokens. On Python 3.11 and
 > 3.12 the same definitions measure about five per cent more, because
 > those interpreters keep the docstring indentation that 3.13 strips.
 > [docs/snapshot/](docs/snapshot/) gives the exact figures, in
@@ -1186,6 +1186,7 @@ answer is a finding.
 - `list_backups()` - List this project's backups (Exegete's `_backup_` ones and QualCoder's `_BKUP_` ones); a backup holding its database's journal or WAL file, copied while a program was writing, is marked `unclean`; each says whether it holds a file in its audio or video folders (`holds_audio_or_video`, read from the backup: Exegete's backups now leave the folders out, and an older one may hold files there; empty folders give no mark)
 - `prune_backups(keep_last, older_than_days, preview_token)` - Delete Exegete's own backups by a retention policy (preview first, then the token the preview returns; QualCoder's `_BKUP_` backups are never removed); the preview counts, for each backup it would remove, the files in its audio or video folders that neither the project nor a backup kept holds (`audio_video_files_only_here`), which may be the only copies of recordings
 - `restore_backup(backup_path, preview_token)` - Restore the project from a backup (previews first, then the token the preview returns, reporting `qualcoder_gui_signals`; safety backup of the current state; an `unclean` backup is refused). The project's `Exegete` folder (files the researcher fills in) is kept as it is, never taken from the backup; the preview says when either has one. So are its `audio` and `video` folders. The preview gives when the backup was taken (`backup_taken`, as `list_backups` dates it); how many files, codes, categories, codings, cases, annotations and journal entries the project has now and the backup has (`counts`, every coder's rows together); and whether the project's names list (`pseudonyms.json`) is the same in the backup, replaced, removed or brought back (`names_list_note`, never a name), pointing to the names file in the project's `Exegete` folder when it may then no longer match the list. A names list saved or changed after the preview makes its token stale. The project's lock file is held, kept fresh, from the checks to the end of the copy, so QualCoder 3.8.2, or another conversation using Exegete, finds the project in use until the restore ends; over a lock file already stale (not refreshed for over 30 seconds, as one left by a program that stopped without removing it, or by a write cut short), none is held: the restore removes that file and copies with no lock file in place. If another program takes the lock file over before the project is cleared, the restore is refused with nothing removed, and the safety backup's name given. The answer repeats `backup_taken` and gives the restored project's `counts`. In `core` too
+- `undo_changes(receipts, preview_token)` - **Writes to the database** - Take back changes Exegete made to this project, each whole or not at all. Called with no receipts, it lists the changes Exegete has made to this project since it last started, those of every conversation the same Exegete serves included, newest first: each change's receipt, tool and age, the rows an undo would remove, put back or set back, and whether it can be undone now, or why not. Called with receipts (the `undo_receipt` of each change's answer), it previews what would be removed, put back or set back, by table and by coder (the AI coder name and visible coders by name, a hidden coder's rows counted, never named), or each refusal with its reason and what to do, and no token; the call with the preview's token takes a backup, then writes the old rows back from each change's own backup, each value with its storage class and its bytes, and checks every row it wrote before saving. A change can be undone for a day, on the project it was made in, while its backup is kept; a change that only added rows needs no backup, so pruning does not end its undo. Refused, each with its reason: a change whose rows have been changed since, judged by the rows' content (the project's coder name, which QualCoder 4.0 writes at every open, set aside; a first open of a project made by an older version changes the project's own row, so a change to the project memo is then refused); later work that depends on it, in the project or in a coding session (a coding suggestion naming a code the undo would remove: move it to another code, or delete its session); a row that would no longer fit (its number or a unique name taken, a row it points at deleted since, a loop in the tree of categories or of codes, a file's old name taken by a file in the `documents` folder); a backup gone, unclean or changed; and changes by `pseudonymise_source`, `import_documents`, `set_project_coder_name` and `save_names_list`, which cannot be undone yet. Several changes go newest first, and one blocked only by a later one in the same call goes through after it; a later change of this run not included is named by its receipt. An undone `apply_codings` returns its suggestions to approved, so the next `apply_codings` writes them again unless they are rejected; an undone `create_proposed_codes` returns its proposals to approved; an undone `delete_coding` returns its suggestion to applied; a removed code's or file's id leaves every coding session's scope. The undo keeps no record and gives no receipt: `restore_backup` with the backup it takes first is the way back. QualCoder 4.0 keeps an undo of its own for its assistant's changes; Exegete's departs from it so that nothing it puts back is out of place: one change per call, from a record kept on the computer for a day (digests, never a text) and the change's own backup; every column of every row the change touched compared; later work, coding suggestions included, refusing it; each row put back or set back checked for its place; whole or nothing, bound to one project, with a preview and its token; and every tool that writes a project covered but the four named above. In `core` too
 
 **Interchange and report exports (exported files keep full memos, private sections included; give `output_path` as a full path or one starting with `~`: a relative one is refused and nothing is written):**
 - `export_refi_qda(output_path, coding_session_id, overwrite)` - Export codings (or a session's suggestions) as a REFI-QDA .qdpx for QualCoder, NVivo, ATLAS.ti, MAXQDA and other programs. **Known faults** (a later release is meant to fix them): it files every coding under the AI coder name, yours and a hidden coder's included, it leaves out cases, annotations, journals and media, and a session's export includes rejected suggestions, unmarked. Exegete has no other REFI-QDA export yet. If you use QualCoder, its own export (Project, Export, REFI-QDA Project export) keeps each coder, the cases, the notes and the media
@@ -1316,7 +1317,7 @@ For AI-assisted coding, which writes to the database:
 - Last-used project pointer: `~/.exegete/mru_project.json` (one
   project path and a timestamp, given only in the "no project selected"
   error, as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md))
-- Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the ten tools that preview first; never shown in a result, an error or the log)
+- Preview-token secret: `~/.exegete/preview_secret` (signs the tokens of the eleven tools that preview first; never shown in a result, an error or the log)
 
 ## Example requests
 

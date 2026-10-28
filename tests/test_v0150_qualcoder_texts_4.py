@@ -46,12 +46,9 @@ from exegete.qualcoder_history import (AI_DATA_SIGN,  # noqa: E402
 
 SETTING = "EXEGETE_USES_QUALCODER"
 TITLE = "Do you also use QualCoder on this computer?"
-LONG_DESCRIPTION_END = (
-    "The settings choose the tool set (every tool, or a smaller set for "
-    "local models), the folder where new projects and working copies are "
-    "kept, your coder name and the AI coder name, whether you also use "
-    "QualCoder on this computer, and whether Exegete tells you when a new "
-    "version is out.")
+# v0.15.2, the opening texts: the long description names the settings
+# by their titles, the switch among them
+SWITCH_TITLE = "I use QualCoder on this computer"
 SENTINEL = "Zq9-Sentinel-Answer"
 ANSWERS = ("yes", "no", "not sure")
 
@@ -344,7 +341,9 @@ class TestTheExtensionsSetting:
                        for value in env.values())
 
     def test_the_long_description(self):
-        assert TEMPLATE["long_description"].endswith(LONG_DESCRIPTION_END)
+        long = TEMPLATE["long_description"]
+        assert f'"{SWITCH_TITLE}"' in long
+        assert TITLE not in long
 
     def test_the_default_reaches_the_server_as_not_sure(self, tmp_path):
         import smoke_desktop_extension as smoke
@@ -549,11 +548,16 @@ class TestFixRoundOneTheTextsClaimWhatTheLevelDecides:
                       ["description"]), _install_bullet())
 
     def test_the_switch_promises_some_notes_too(self):
-        for text in self._switch_texts():
+        description, bullet = self._switch_texts()
+        for text in (description, bullet):
             assert "the notes that matter only if" not in text
             assert "later import" not in text
-            assert "some notes that matter only if you also open your " \
-                   "projects in QualCoder" in text
+        # v0.15.2, the opening texts: the description in the writing
+        # checklist's own rewrite, notes without "the"
+        assert "adds notes that matter if you open projects in QualCoder" \
+            in description
+        assert "some notes that matter only if you also open your " \
+               "projects in QualCoder" in bullet
 
     def test_no_example_the_level_does_not_decide(self):
         for text in self._texts():

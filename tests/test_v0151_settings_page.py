@@ -75,10 +75,12 @@ def test_no_sentence_is_said_twice():
 
 @pytest.mark.parametrize("key", ["small_toolset", "i_use_qualcoder"])
 def test_each_switch_says_on_and_off_once(key):
+    # v0.15.2, the opening texts: in the writing checklist's words, "With
+    # this on" and "With it off, the default"
     sentences = _sentences(CONFIG[key]["description"])
-    assert len([s for s in sentences if s.startswith("On: ")]) == 1
+    assert len([s for s in sentences if s.startswith("With this on, ")]) == 1
     assert len([s for s in sentences
-                if s.startswith("Off, the default: ")]) == 1
+                if s.startswith("With it off, the default, ")]) == 1
     assert CONFIG[key]["default"] is False
 
 
@@ -87,15 +89,18 @@ def test_what_each_other_setting_says():
     default_name = folder["default"].removeprefix("~/")
     assert f"The default, {default_name} in your home folder," in \
         folder["description"]
-    assert "no sync service" in folder["description"]
+    # v0.15.2, the opening texts: a warning, not a prescription
+    assert "sync service" in folder["description"]
+    assert "off this computer" in folder["description"]
     for key in ("coder_name", "ai_coder_name"):
-        assert "Empty, the default: Claude asks" in \
-            CONFIG[key]["description"], key
+        assert "the default" in CONFIG[key]["description"], key
+        assert "Claude asks" in CONFIG[key]["description"], key
         assert CONFIG[key]["default"] == ""
     check = CONFIG["update_check"]["description"]
-    for words in ("On, the default: once a week at most, and when you ask",
-                  "GitHub", "Nothing from your projects is sent",
-                  "Off: Exegete itself makes no connection"):
+    for words in ("With this on, the default,", "once a week at most",
+                  "and when you ask", "GitHub",
+                  "Nothing from your projects is sent",
+                  "With it off, Exegete itself makes no connection"):
         assert words in check, words
 
 

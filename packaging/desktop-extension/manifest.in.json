@@ -1,8 +1,8 @@
 {
   "manifest_version": "0.4",
   "display_name": "Exegete",
-  "description": "A qualitative analysis application you use in conversation with Claude, compatible with QualCoder: create projects, read, search and code your qualitative data, edit the codebook, write memos and export, in project files on this computer.",
-  "long_description": "Exegete (formerly qualcoder-mcp) is a qualitative analysis application you use in conversation with Claude, compatible with QualCoder. With Claude, you start projects, bring in documents and transcripts, read them with their codings, search, code them with suggestions you approve, edit the codebook, write memos, and export your codebook, coding and counts. Your projects are folders on this computer in QualCoder's format, so you can work on them in either program, one at a time. QualCoder is free software for qualitative analysis; Exegete is an independent project, not part of QualCoder and not made by its developers.\n\nExegete takes a backup of the project before every change to its database. Exegete runs on this computer and adds no telemetry of its own (on Windows x64, a library it installs for PDFs reports its use: PRIVACY.md), but what its tools return enters the conversation and is sent to Anthropic like any other chat content: read PRIVACY.md before you use research data (https://github.com/nicotem/exegete/blob/main/PRIVACY.md). Once a week at most, and when you ask, it fetches a small file from its website, which GitHub hosts, to see whether a newer version exists; nothing from your projects is sent, and the setting \"Tell me when a new version is out\" switches it off.\n\nThe settings choose the tool set (every tool, or a smaller set for local models), the folder where new projects and working copies are kept, your coder name and the AI coder name, whether you also use QualCoder on this computer, and whether Exegete tells you when a new version is out.",
+  "description": "A qualitative analysis application you use in conversation with Claude, compatible with QualCoder. You can start projects, bring in documents, read and search them, code them with suggestions you approve, and export your codebook, coding and counts. Your projects are folders on this computer.",
+  "long_description": "Exegete (formerly qualcoder-mcp) is a qualitative analysis application you use in conversation with Claude, compatible with QualCoder. You start projects, bring in documents and transcripts, read them with their codings, search them, and code them with suggestions you approve. You also edit the codebook, write memos, and export your codebook, coding and counts. Each project is a folder on this computer, kept in QualCoder's file format. QualCoder is free software for qualitative analysis, and you can work on a project in either program, one at a time. QualCoder's developers did not make Exegete and have not endorsed it.\n\nBefore every change to a project's database, Exegete takes a backup, a copy of the project kept beside it. Exegete runs on this computer and adds no telemetry of its own. On Windows x64, a library it installs for PDFs reports its use, as PRIVACY.md explains. What Exegete's tools return goes into the conversation, and Claude Desktop sends it to Anthropic like the rest of the chat. PRIVACY.md says where your data goes and what to check before you use participants' data: https://github.com/nicotem/exegete/blob/main/PRIVACY.md.\n\nWith the setting \"Tell me when a new version is out\" on, as it is by default, Exegete checks its website for a newer version once a week at most, and when you ask. Nothing from your projects is sent, and GitHub, which hosts the website, records your computer's internet address. The other settings are \"Limit Exegete to its small tool set\", \"Folder for projects\", \"Your coder name\", \"AI coder name\" and \"I use QualCoder on this computer\".",
   "documentation": "https://github.com/nicotem/exegete/blob/main/INSTALL.md",
   "server": {
     "type": "uv",
@@ -47,42 +47,42 @@
     "small_toolset": {
       "type": "boolean",
       "title": "Limit Exegete to its small tool set",
-      "description": "On: Exegete offers its small tool set, for a local model with little room for the tools' descriptions; that set cannot create a project. Off, the default: Exegete offers every tool. Settings take effect after Claude Desktop is quit and opened again.",
+      "description": "With this on, Exegete offers its small tool set, made for local models. That set cannot create a project or bring documents in. With it off, the default, Exegete offers every tool. Settings take effect after Claude Desktop is quit and opened again.",
       "default": false,
       "required": false
     },
     "projects_folder": {
       "type": "directory",
       "title": "Folder for projects",
-      "description": "Where Exegete creates new projects and keeps working copies of projects. The default, Exegete projects in your home folder, is made when the first project needs it. Choose a folder that no sync service keeps. Leaving it empty stops the extension from starting.",
+      "description": "Where Exegete creates new projects and working copies. The default, Exegete projects in your home folder, is made when needed. A sync service keeping this folder copies your projects off this computer and can leave a damaged copy. With this empty, Exegete does not start.",
       "default": "~/Exegete projects",
       "required": false
     },
     "coder_name": {
       "type": "string",
       "title": "Your coder name",
-      "description": "The name your own codings carry in a project, kept apart from the AI's; Exegete gives it to each project it creates. Empty, the default: Claude asks for it at each new project. It must differ from the AI coder name.",
+      "description": "The name your own codings carry, kept apart from the AI's. Exegete gives it to each project it creates. If it is empty, the default, Claude asks for it at each new project. It must differ from the AI coder name.",
       "default": "",
       "required": false
     },
     "ai_coder_name": {
       "type": "string",
       "title": "AI coder name",
-      "description": "The name Claude's work in a project is stored under, kept apart from yours and given to each project Exegete creates; a model's name lets different models' work be compared. Empty, the default: Claude asks the first time a project needs it.",
+      "description": "The name under which Exegete stores Claude's work, kept apart from yours. A model's name lets you compare models. Each project Exegete creates gets it. Otherwise, Claude asks when a project first needs a name. Empty is the default.",
       "default": "",
       "required": false
     },
     "i_use_qualcoder": {
       "type": "boolean",
       "title": "I use QualCoder on this computer",
-      "description": "On: Exegete adds some notes that matter only if you also open your projects in QualCoder. Off, the default: only when it finds signs of QualCoder on the project or this computer. Either way, it still checks whether QualCoder has a project open.",
+      "description": "With this on, Exegete adds notes that matter if you open projects in QualCoder. With it off, the default, Exegete adds them only when it finds signs of QualCoder in the project or on this computer. It always checks whether QualCoder has a project open.",
       "default": false,
       "required": false
     },
     "update_check": {
       "type": "boolean",
       "title": "Tell me when a new version is out",
-      "description": "On, the default: once a week at most, and when you ask, Exegete fetches a file naming the newest version from its website, which GitHub hosts. Nothing from your projects is sent; GitHub records your computer's internet address. Off: Exegete itself makes no connection.",
+      "description": "With this on, the default, Exegete checks its website for new versions once a week at most, and when you ask. Nothing from your projects is sent. GitHub, which hosts the website, records your computer's internet address. With it off, Exegete itself makes no connection.",
       "default": true,
       "required": false
     }

@@ -203,7 +203,7 @@ assistant a brief: how it expects the assistant to work with you
 pass on, so the brief reaches the assistant four ways. A short version
 is Exegete's opening text: Claude Code shows it (and keeps the first
 4,096 characters of a server's opening text, 2,048 before its version
-2.1.296; this one is 2,034); Claude Desktop does not pass it on, in its chat or in Cowork
+2.1.296; this one is 2,046); Claude Desktop does not pass it on, in its chat or in Cowork
 (checked on 9 October 2026); and LM Studio does not support it. The
 tool `read_brief`, in every tool set, has a description that asks the
 assistant to call it at the start of every conversation about a

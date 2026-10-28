@@ -301,10 +301,11 @@ class TestTheOpeningText:
         assert RULE_9 in short
         assert short.index(RULE_9) + len(RULE_9) <= CUT
         assert "9. If QualCoder may have the project open" not in short
-        # 1,988 characters before; the new rule takes it to 2,034, within
-        # Claude Code's cut, as the design says
-        assert len(short) == 2034
-        assert len(short.encode("utf-8")) == 2034
+        # 1,988 characters before; the new rule took it to 2,034, within
+        # Claude Code's cut, as the design says (v0.15.2, the opening
+        # texts: 2,046, saying once what QualCoder is; the exact figure is
+        # docs/snapshot/sizes.json's)
+        assert len(short) == len(short.encode("utf-8")) <= CUT
 
     @pytest.mark.parametrize("mode", TOOL_SETS)
     def test_the_instructions_carry_it_in_every_set(self, mode):
@@ -541,8 +542,10 @@ class TestFixRound1:
         comment = _comment_above(source, "SERVER_INSTRUCTIONS = BRIEF_SHORT")
         # (the whole-branch review, round 1: 2,048 now a margin, since
         # Claude Code keeps 4,096 from its version 2.1.296)
+        # (v0.15.2, the opening texts: the figure of the release that
+        # changed it last)
         found = re.search(r"within ([\d,]+) characters and bytes, now kept "
-                          r"as a margin \(([\d,]+) in v0\.15\.0\)", comment)
+                          r"as a margin \(([\d,]+) in v0\.15\.\d\)", comment)
         assert found, comment
         bound, now = (int(n.replace(",", "")) for n in found.groups())
         text = server.SERVER_INSTRUCTIONS

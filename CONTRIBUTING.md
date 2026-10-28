@@ -40,6 +40,7 @@ is looked at first.
    `main`.
 3. **Install for development** (Python 3.11 or newer):
 
+   <!-- ci: run dev -->
    ```bash
    git clone https://github.com/<you>/exegete.git
    cd exegete
@@ -385,6 +386,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── smoke_desktop_extension.py  # Installs and starts a built extension as Claude Desktop does
 │   ├── check_pages_site.py     # Checks the update site against this release
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)
+│   ├── doc_commands.py         # Runs the commands the documents mark, and checks what they print
 │   ├── release_plan.py         # What comes in which release: the table the texts are held to
 │   ├── code_texts.py           # The texts the package's code holds, read without running it
 │   ├── check_advisories.py     # Asks OSV's database of advisories about every release in uv.lock and the validator's lock

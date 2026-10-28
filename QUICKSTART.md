@@ -53,6 +53,7 @@ optional part: `"exegete[pdf-epub]"` in place of `exegete`, or
 "PDF and EPUB: the optional part"). The steps below use the source
 install:
 
+<!-- ci: run source -->
 ```bash
 # Navigate to where you want to install (e.g., Documents)
 cd ~/Documents
@@ -89,6 +90,7 @@ in step 5 you can ask the assistant to create one.
 
 **Get the paths you'll need:**
 
+<!-- ci: run source -->
 ```bash
 # Get Python path (while virtual environment is active)
 which python

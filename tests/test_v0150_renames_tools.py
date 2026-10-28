@@ -701,10 +701,12 @@ class TestTheDocuments:
         assert ("`EXEGETE_TOOLSET=core`, in the entry of step 5, gives only "
                 "the smaller set.") in install
         readme = _read("README.md")
-        assert (f"| `full` | {FULL_TOOLS}: all, creating a project and two "
-                "renamed tools' earlier names included |") in readme
-        assert (f"| `core` | {CORE_TOOLS}: the coding loop and its safety "
-                "tools |") in readme
+        # (v0.15.2, the opening texts: the rows in a researcher's words)
+        assert (f"| `full` | {FULL_TOOLS}: every tool, creating a project and "
+                "the earlier names of two renamed tools included |") in readme
+        assert (f"| `core` | {CORE_TOOLS}: reading, searching, coding with "
+                "your approval, memos and backups, without creating a "
+                "project or bringing documents in |") in readme
         for name in DOCUMENTS:
             flat = _flat(_read(name))
             for stale in ("78 tools", "23-tool", "registers 78", "| 78:",

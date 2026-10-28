@@ -210,61 +210,22 @@ ff3d84d4f818c5fd	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to
 22ccc94b3581ca91	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime
 bc6c47e09c41b5b8	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime too (select_project works; the variable only sets the start-up 
 d56a3d46348b2fb2	QUICKSTART.md	document	voice	quotes INSTALL.md's heading by its own words, so a reader can search for it; there "the server" is how an app starts Exegete, the sense the conventions allow	You could name a folder outside Documents, such as ~/Exegete projects: add "EXEG
-92b4189f07d86e87	README.md	document	qualcoder	seeded 27 October, to be read	A project from before QualCoder 3.8 must first be opened once in 3.8 or newer; w
-cbb926ba9bca2b29	README.md	document	qualcoder	seeded 27 October, to be read	Before you edit transcripts in QualCoder 3.8.2's coding view, read its edit-mode
-e901d005421b3943	README.md	document	qualcoder	seeded 27 October, to be read	Both names, and whether you also use QualCoder on this computer, are set in Clau
-e901d005421b3943	README.md	document	voice	seeded 27 October, to be read	Both names, and whether you also use QualCoder on this computer, are set in Clau
-d83c78de26f6b835	README.md	document	voice	seeded 27 October, to be read	Came straight here?
-509c28cc59e66342	README.md	document	qualcoder	seeded 27 October, to be read	Coder comparison: per-code agreement between two coders, with QualCoder's own co
-16dad5750382dc80	README.md	document	voice	seeded 27 October, to be read	Coming from qualcoder-mcp?
-08db757fd6e43819	README.md	document	qualcoder	seeded 27 October, to be read	Compatibility with QualCoder. Exegete reads and writes projects in the formats o
-9fc9fc4f3cc9c2a0	README.md	document	voice	seeded 27 October, to be read	Do not know yours?
-3ff6eddeeac9f04f	README.md	document	qualcoder	seeded 27 October, to be read	Exegete has an aim of its own: that you can run a whole project, from its creati
-a89285a339dd7e0f	README.md	document	qualcoder	seeded 27 October, to be read	Exegete is free, open-source software, under QualCoder's own licence (LGPL-3.0-o
-00f88bee04c48dee	README.md	document	qualcoder	seeded 27 October, to be read	Exegete is licensed under the GNU Lesser General Public License, version 3 or (a
-a65a7c7817d2da18	README.md	document	qualcoder	seeded 27 October, to be read	Exegete works with both, but can tell for certain that QualCoder has a project o
-a65a7c7817d2da18	README.md	document	voice	seeded 27 October, to be read	Exegete works with both, but can tell for certain that QualCoder has a project o
-5eae4d14cbbf1b2d	README.md	document	qualcoder	seeded 27 October, to be read	Exegete's own export, export_refi_qda, writes the exchange file other packages r
-fbddcb014b4632af	README.md	document	qualcoder	seeded 27 October, to be read	If your study needs any of these now, you may want QualCoder from the start.
-da5c49e63cb847b7	README.md	document	qualcoder	seeded 27 October, to be read	In QualCoder
-30dfaab17d5000bb	README.md	document	qualcoder	seeded 27 October, to be read	In QualCoder 4.0 it cannot be detected for certain: Exegete warns when it sees s
-cf9581ce4fbc7b72	README.md	document	qualcoder	seeded 27 October, to be read	Interoperability. Work on a project in QualCoder and from the conversation, one 
-4f46f1dc76aa766e	README.md	document	qualcoder	seeded 27 October, to be read	It is a separate program that reads and writes projects in QualCoder's file form
-5166a73896550f20	README.md	document	qualcoder	seeded 27 October, to be read	It is an early version (an alpha) built by one researcher, independently of Qual
-31f572dfd73b8b3d	README.md	document	qualcoder	seeded 27 October, to be read	It is built to stay interoperable with QualCoder: your project is a folder on yo
-948ab3f8cd0e9745	README.md	document	qualcoder	seeded 27 October, to be read	It is in QualCoder 4.0, released on 2 October 2026, as "allow external MCP acces
-63ae834dfe5e00c6	README.md	document	qualcoder	seeded 27 October, to be read	It is not QualCoder, nor an add-on or a remote control for it, and it is not mad
-e7c19fa6ab25e0c7	README.md	document	qualcoder	seeded 27 October, to be read	It reads a project's SQLite database read-only; each tool that writes opens its 
-82adaf968320e970	README.md	document	qualcoder	seeded 27 October, to be read	Later: coding images, audio, video and areas of PDF pages; more QualCoder 4.0 co
-1fffd5d58fed62b0	README.md	document	qualcoder	seeded 27 October, to be read	Not in Exegete yet, and done in QualCoder for now: bringing in images, audio and
-a8ca26f4279b236e	README.md	document	qualcoder	seeded 27 October, to be read	Not using QualCoder?
-a8ca26f4279b236e	README.md	document	voice	seeded 27 October, to be read	Not using QualCoder?
-96dedfcddea02a27	README.md	document	qualcoder	seeded 27 October, to be read	On the way there, the commitments above hold: every project keeps QualCoder's fo
-96dedfcddea02a27	README.md	document	voice	seeded 27 October, to be read	On the way there, the commitments above hold: every project keeps QualCoder's fo
-075988256bfc26cd	README.md	document	voice	seeded 27 October, to be read	Opens files by itself, outside Exegete?
-f0f69f12f293a43c	README.md	document	qualcoder	seeded 27 October, to be read	Per code, with a figure QualCoder labels Kappa
-5b8dfd07a1ac76d2	README.md	document	qualcoder	seeded 27 October, to be read	Private notes and names. Exegete never passes the part of a memo from a ##### ma
-3045135a80da0e31	README.md	document	qualcoder	seeded 27 October, to be read	Pull request #1571, by kaixxx, merged on 10 September 2026, added a setting, off
-708a928dfe73b219	README.md	document	qualcoder	seeded 27 October, to be read	QualCoder 3.8.2 and 4.0 as checked on 10 October 2026, beside Exegete 0.15.1:
-f31b03c3c820fd39	README.md	document	qualcoder	seeded 27 October, to be read	QualCoder 4.0's assistant works through an MCP server built into QualCoder.
-311bfb6186f9a2e0	README.md	document	qualcoder	seeded 27 October, to be read	QualCoder by Dr Colin Curtain and Dr Kai Dröge (homepage)
-333b17f65c8580e3	README.md	document	qualcoder	seeded 27 October, to be read	QualCoder's AI permission setting (Read-only, for example) governs its own assis
-c12cbe9a2db71a58	README.md	document	qualcoder	seeded 27 October, to be read	QualCoder's conventions: per-coder visibility (reads hide what QualCoder hides; 
-7e6a3e628e53d641	README.md	document	qualcoder	seeded 27 October, to be read	QualCoder's own MCP server (checked 6 October 2026).
-0f54216e6d2aa69c	README.md	document	qualcoder	seeded 27 October, to be read	QualCoder, if you want it. Exegete opens a file for you to read with its coding 
-ea9971e7f4c8c54e	README.md	document	qualcoder	seeded 27 October, to be read	Symmetry: the same work in either place, as a commitment. The aim is that the an
-8e751eb3dd96c277	README.md	document	qualcoder	seeded 27 October, to be read	Text you paste or attach goes in full; a document in the project, brought in thr
-39570b85c2c6e8a7	README.md	document	qualcoder	seeded 27 October, to be read	That is a direction, not yet a fact: today QualCoder is still needed for several
-aa931c31b59cb502	README.md	document	qualcoder	seeded 27 October, to be read	The aim is the whole life of a project in Exegete, from its creation to the fini
-dba0010f916ae668	README.md	document	qualcoder	seeded 27 October, to be read	The server calls itself "qualcoder-mcp", Exegete's former name, and the extensio
-dba0010f916ae668	README.md	document	voice	seeded 27 October, to be read	The server calls itself "qualcoder-mcp", Exegete's former name, and the extensio
-b038017a43714f0a	README.md	document	qualcoder	seeded 27 October, to be read	This project welcomes QualCoder's own server, and is ready to cooperate with Qua
-adf1851e631992e8	README.md	document	qualcoder	seeded 27 October, to be read	Where QualCoder has a rule, Exegete follows it, and names any departure with its
-adf1851e631992e8	README.md	document	voice	seeded 27 October, to be read	Where QualCoder has a rule, Exegete follows it, and names any departure with its
-5c0e24ce2b11c3bf	README.md	document	qualcoder	seeded 27 October, to be read	With QualCoder 3.8.2, an open project is detected and the change refused.
-ff5d5d3317221ac9	README.md	document	qualcoder	seeded 27 October, to be read	With the extension or OpenAI's steps, the project is made, by default, in "Exege
-fa7d591020060ac9	README.md	document	qualcoder	seeded 27 October, to be read	Without QualCoder at all, a new project made in Exegete from the original docume
-9f61794672859998	README.md	document	qualcoder	seeded 27 October, to be read	You do not need QualCoder to start, or running while you work, though a few thin
+0826218108fda5c4	README.md	document	qualcoder	about QualCoder itself: only QualCoder 3.8 or newer updates a project made before 3.8	A project made in QualCoder before 3.8 must first be opened in QualCoder 3.8 or 
+26ced2d4d3ae163a	README.md	document	qualcoder	about QualCoder itself: the figure is QualCoder's own, reproduced so that results match	Compare two coders, code by code, with the figure QualCoder labels Kappa and Coh
+5de1493ad56524c0	README.md	document	qualcoder	the heading of the section on how the two programs relate, each of its sentences about QualCoder itself or its format	Exegete and QualCoder
+a2a33522122caf72	README.md	document	qualcoder	about QualCoder itself: the licence Exegete shares with the code it derives from QualCoder	Exegete is licensed under the GNU Lesser General Public License, version 3 or (a
+fbddcb014b4632af	README.md	document	qualcoder	a suggestion the researcher may take or leave: QualCoder as a choice for what Exegete does not do yet	If your study needs any of these now, you may want QualCoder from the start.
+d21e05e3208e00ad	README.md	document	qualcoder	about QualCoder itself: the provenance of the code Exegete takes from it, which NOTICE lists	It contains a small number of routines and values taken from QualCoder so that i
+31f572dfd73b8b3d	README.md	document	qualcoder	the commitment, in the words the vocabulary gives for it where it is the subject	It is built to stay interoperable with QualCoder: your project is a folder on yo
+5074082c0e50b232	README.md	document	qualcoder	about QualCoder's format: the releases whose format Exegete reads and writes	It reads and writes the formats of QualCoder 3.8.2 to 4.0, and does not write to
+1d5091139be843e5	README.md	document	qualcoder	QualCoder offered as a choice for what Exegete does not do yet, as the conventions allow	Not in Exegete yet, and done in QualCoder for now: bringing in images, audio and
+cb861af58d4a00f0	README.md	document	qualcoder	about QualCoder itself: its own server, which a researcher may take for Exegete's, with the date it was checked	QualCoder 4.0's own MCP server calls itself "qualcoder-mcp", Exegete's former na
+311bfb6186f9a2e0	README.md	document	qualcoder	about QualCoder itself: the credit to its authors	QualCoder by Dr Colin Curtain and Dr Kai Dröge (homepage)
+3a3785e3e638a141	README.md	document	qualcoder	about QualCoder itself: its own setting, which does not govern Exegete	QualCoder's AI permission setting, such as Read-only, governs it and QualCoder's
+873597c4765555fc	README.md	document	qualcoder	about QualCoder itself: who made Exegete	QualCoder's developers did not make it and have not endorsed it.
+b038017a43714f0a	README.md	document	qualcoder	about QualCoder itself: the project's stance towards QualCoder's own server and its developers	This project welcomes QualCoder's own server, and is ready to cooperate with Qua
+8266c01f1afbc5ab	README.md	document	qualcoder	about QualCoder itself: its rules, which Exegete follows and departs from only with a reason	Where QualCoder has a rule, Exegete follows it and says where it departs, and wh
+9f61794672859998	README.md	document	qualcoder	says once that QualCoder is not needed, for readers who knew Exegete as qualcoder-mcp	You do not need QualCoder to start, or running while you work, though a few thin
 4a29c118c100f7ef	SUPPORT.md	document	voice	seeded 27 October, to be read	(For what happens to research data when you USE the tool, what leaves your machi
 5e8c3345cdc7d27d	SUPPORT.md	document	qualcoder	seeded 27 October, to be read	Include in bug reports: your QualCoder version, if you use QualCoder (a 3.8.x re
 17ca6e737d41dd91	SUPPORT.md	document	qualcoder	seeded 27 October, to be read	QualCoder 4.0 writes no lock file, so there Exegete can only report signs that t

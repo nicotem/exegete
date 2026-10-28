@@ -396,15 +396,18 @@ class TestTheTexts:
 
     def test_the_readme(self):
         readme = _doc("README.md")
+        # (v0.15.2, the opening texts: the comparison table that said it a
+        # second time gave way to the list of what is not in Exegete yet)
         assert readme.count("PDF and EPUB with the optional part, which "
-                            "the extension has") == 2
+                            "the extension has") == 1
         assert "read by Exegete on your computer" in readme
         assert "on Windows 11, Copy as path" in readme
         assert ("an EPUB opened in Apple Books joins its library, and "
                 "iCloud if Books syncs") in readme
-        # v0.15.0, the release review: the stamp names 0.15.0's column
-        assert ("as checked on 10 October 2026, beside Exegete 0.15.1"
-                in readme)
+        # v0.15.0, the release review: the stamp named the comparison's
+        # column; v0.15.2, the opening texts: the comparison gave way to
+        # the list of what is not in Exegete yet, which needs no stamp
+        assert "**Not in Exegete yet**" in readme
 
     def test_the_small_wording_points(self):
         assert "into the selected project" in _description()

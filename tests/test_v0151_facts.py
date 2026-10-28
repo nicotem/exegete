@@ -3650,7 +3650,8 @@ ROW_SENTENCES = {
     "coding sessions kept with their project": (
         "coding sessions kept with their project",),
     "the housekeeping that touches data": (
-        "the housekeeping that touches data",),
+        "the housekeeping that touches data",
+        "stricter checks on the names of codes, categories and cases"),
     "the review of method": (
         "how the assistant supports a study's method, reviewed",
         "the review of method"),

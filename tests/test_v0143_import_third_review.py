@@ -557,8 +557,10 @@ class TestTheTexts:
         readme = _doc("README.md")
         assert "PDF and EPUB in the extension" not in readme
         assert "PDF and EPUB with the optional part" in readme
-        assert "of an import gives the assistant the documents' names" in \
-            readme
+        # (v0.15.2, the opening texts: the writing checklist's rewrite)
+        assert ("Before an import, Exegete shows the assistant a preview" in
+                readme) or ("Before an import, Exegete shows the assistant "
+                            "each document's name" in " ".join(readme.split()))
 
     def test_the_developer_notes_say_exegete(self):
         assert "when the server starts" not in reading_folder.__doc__

@@ -386,8 +386,11 @@ def test_each_record_is_its_change(every_tool_run, two_step_run):
     for run in (every_tool_run, two_step_run):
         key_secret = run["secret"]
         for call in run["calls"]:
-            if not call["receipt"]:
+            if call["tool"] in NO_RECEIPT_BY_DESIGN or \
+                    call["tool"] in NOT_YET_RECORDED or \
+                    call["refused"] or not call["changed"]:
                 continue
+            assert call["receipt"], call["tool"]
             calls += 1
             record = run["records"][call["receipt"]]
             kept = {(row["table"], row["key"]) for row in record["rows"]}

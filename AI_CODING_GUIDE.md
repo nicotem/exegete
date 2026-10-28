@@ -21,6 +21,10 @@ approved.
 > - includes the suggestions you rejected, without marking them, when it
 >   exports a single coding session.
 >
+> The file keeps memos in full, a private part after `#####` included.
+> Exegete never shows that part to the assistant, but anyone you send
+> the file to can read it.
+>
 > Exegete has no other REFI-QDA export yet. If you use QualCoder, its
 > own export (Project, Export, REFI-QDA Project export) keeps each
 > coder, the cases, the notes and the media.
@@ -92,7 +96,7 @@ counts that the approval step reports against what you said.
   (`propose_codes`, then `create_proposed_codes`). Other tools edit the
   codebook from the conversation, such as `create_code`, `rename_code`
   and `move_code_to_category`
-- A project in the format of QualCoder 3.8.2 to 4.0 (schema v14 to
+- A project in the format of QualCoder 3.8 to 4.0 (schema v14 to
   v17). An older project is refused; "Supported QualCoder versions" in
   TOOLS.md says how to bring one up to date, with QualCoder or without
   it
@@ -237,7 +241,7 @@ suggestion.
   for writing during its own call, and opens it read-only again
   afterwards
 - Writes need a project schema from v14 to v17, the formats of
-  QualCoder 3.8.2 to 4.0. An older project is refused. Exegete refuses
+  QualCoder 3.8 to 4.0. An older project is refused. Exegete refuses
   to write to a newer one until it has been verified against that
   format. "Supported QualCoder versions" in TOOLS.md says what can be
   done with either
@@ -266,8 +270,8 @@ analysis through the conversation, in the app you use with it: Claude
 Desktop with a Claude account, for example, needs no key. Exegete only
 stores and applies what is marked approved, and cannot see who
 approved it ("How it works", above). INSTALL.md describes the routes
-that use an API key, and a route that runs entirely on your computer,
-under "Choosing your AI host".
+that use an API key, and a route in which the model runs on your own
+computer, under "Choosing your AI host".
 
 **Can the assistant create new codes?** Yes, with your approval, in
 four steps:
@@ -308,10 +312,29 @@ Exegete's reads, and in QualCoder if you use it. What was written under
 an earlier name keeps that name.
 
 **Can I pseudonymise transcripts that are already coded?** Yes.
-`pseudonymise_source` replaces the names you list, as whole words, in
-the stored text of one text source per call, so you run it file by
-file. It moves every coding, annotation and case link with the text.
-It runs after a preview you approve, and always takes a backup first.
+`pseudonymise_source` replaces the names on your names list, as whole
+words, in the stored text of one text source per call, so you run it
+file by file. It moves every coding, annotation and case link with the
+text. It runs after a preview you approve, and always takes a backup
+first.
+
+The names list pairs each real name with its pseudonym. You can fill it
+in on your own computer, so that the real names do not pass through the
+conversation. Exegete never shows that file to the assistant, though an
+assistant that opens files by itself could read it (PRIVACY.md,
+"Assistants that open files by themselves"). `prepare_names_list`
+makes the names file, `Names to replace.txt`, in the project's
+`Exegete` folder, and opens it for you. Once you have filled it in and
+saved it, `save_names_list` checks it and, on your word, saves it as
+the project's own `pseudonyms.json`. Each run then reads the list from
+there (`use_project_pseudonyms`). You can also type the list in the
+conversation. It then passes through the conversation, like everything
+you type there, and so reaches the AI provider, the company that runs
+the assistant's model, unless that model runs on your own computer. A
+typed list is either saved into `pseudonyms.json`, in QualCoder's
+format (`save_mapping_to_project`), or kept by you
+(`researcher_keeps_mapping`), and the run asks you which.
+
 The rest of the project is treated in other ways:
 
 - notes and journal entries are scanned and their names counted. With
@@ -329,13 +352,19 @@ own rule matches. A case or file label such as `Thomas_P01` is renamed
 with `rename_case` or `rename_file`; an imported file's stored copy
 keeps its original name and text.
 
-A list of names you type, with their pseudonyms, is half of what links
-the pseudonyms back to the real names; the backup holds the other
-half. So the run asks where that list is kept: saved into the project's
-own `pseudonyms.json`, in QualCoder's format
-(`save_mapping_to_project`), or kept by you
-(`researcher_keeps_mapping`). Pseudonymised data is still personal
-data. PRIVACY.md says what that means before you send it anywhere.
+The names list and the backup each lead back from the pseudonyms to
+the real names on their own. The list pairs each name with its
+pseudonym. The backup taken before the run holds the text as it was,
+real names included, and so does every older backup beside the
+project. Every backup and copy of the project also carries
+`pseudonyms.json` and the names file, when the project has them.
+Anyone who can read one of these can undo the pseudonyms, so they are
+best kept somewhere secure. Exegete's coding sessions, kept outside the
+project, hold each suggested passage word for word, so after a run they
+still hold the real names until `delete_coding_session` removes them.
+The run's answer lists those sessions. Pseudonymised data is still
+personal data. PRIVACY.md says what that means before you send it
+anywhere.
 
 **What happens to my original project?** Exegete changes a project
 made in Exegete directly, with a backup before every change. A project
@@ -346,4 +375,6 @@ conversation, or in QualCoder if you use it.
 
 **Where are sessions stored?** In `~/.exegete/sessions/`, that is, the
 folder `.exegete/sessions` in your home folder, as JSON, one file per
-session. `delete_coding_session` removes one.
+session. Each file holds every suggested passage word for word, with
+its reason, outside the project. It stays until `delete_coding_session`
+removes it.

@@ -23,6 +23,7 @@ git's notice, the 2,048 rule's list of exceptions, what protects the
 state folder, its map).
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -178,18 +179,27 @@ def test_tools_says_what_the_full_re_check_found():
             "4.0 opened Exegete's new and edited projects with no message, "
             "upgrade or repair",
             "4.0 says \"The project database could not be opened.\" and "
-            "changes nothing, and trying again works",
-            # (v0.15.2: the commit the citations give, as it stands
-            # today, with no promise of a re-reading)
-            "A line number cited from QualCoder, in this document or in "
-            "Exegete's code, is that commit's unless a release is given "
-            "beside it"):
+            "changes nothing, and trying again works"):
         assert words in versions, words
     assert "not yet" not in versions.lower()
     # the document's one citation into QualCoder's own MCP server gives
     # the release's line beside the development commit's
     assert ("(`ai_mcp_server.py:5228` at `9bddf17`, line 6161 in the 4.0 "
             "release)") in _flat("TOOLS.md")
+    # (v0.15.2: the commit the citations give, as it stands today, with
+    # no promise of a re-reading; then, from the readers' fix round, held
+    # as a fact of this document alone, since Exegete's code also cites
+    # lines at the 4.0 tag: every line TOOLS.md cites from QualCoder's
+    # code gives the commit, or a release, in the same brackets)
+    assert "in this document or in Exegete's code" not in versions
+    tools = _flat("TOOLS.md")
+    cited = [found.start() for found in
+             re.finditer(r"`[\w/.-]*\.py:\d|`:\d", tools)]
+    assert len(cited) >= 3, cited
+    for at in cited:
+        brackets = tools[tools.rindex("(", 0, at):tools.index(")", at)]
+        assert re.search(r"`9bddf17`|\b(?:tag|release)\b", brackets), \
+            brackets
 
 
 def test_the_readme_table_is_checked_against_the_release():

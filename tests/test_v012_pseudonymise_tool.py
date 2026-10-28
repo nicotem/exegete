@@ -8803,8 +8803,13 @@ class TestTheDocumentsTellTheTruth:
         "`overlap_policy` takes one value, `snap_to_pseudonym`, the "
         "default: a coding that cut into a name grows to contain the whole "
         "pseudonym, and nothing is deleted.",
-        "PRIVACY.md's \"Coder visibility\" section says what is and is not "
-        "re-read",
+        # (v0.15.2, the readers' fix round: no exception for a project
+        # that gains coder visibility while Exegete is connected, since
+        # every read checks for it; tests/test_v0152_tools_guides.py
+        # holds the fact against the code)
+        "Exegete checks for the setting at every read, so a project that "
+        "gains it while Exegete is connected is read the same way from "
+        "the next read on.",
         # v0.13, Brief 1.
         "Every `residue` count is two readings, `{\"wide\": N, "
         "\"whole_word\": M}`",

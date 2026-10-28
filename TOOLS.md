@@ -68,12 +68,11 @@ You can work with the reading tools alone, or with the tools that write as well.
 > either QualCoder version works the same way.
 >
 > Before its release, 4.0 was checked in its development code, at commit
-> `9bddf17` (25 August 2026). A line number cited from QualCoder, in this
-> document or in Exegete's code, is that commit's unless a release is
-> given beside it. That holds for QualCoder's own MCP server too, a file
-> much changed in the release: this document's one citation into it,
-> under "The novelty filter and coder visibility", gives the release's
-> line as well. A full check against the release, on 6 October 2026,
+> `9bddf17` (25 August 2026). Each line this document cites from
+> QualCoder's code gives that commit, or a release, beside it. Its one
+> citation into QualCoder's own MCP server, a file much changed in the
+> release, under "The novelty filter and coder visibility", gives the
+> release's line as well. A full check against the release, on 6 October 2026,
 > found the same project schema (v17) and the same format for a new
 > project. The format tests now compare every project Exegete creates
 > with one made by 4.0's own New Project. The check also found the same
@@ -275,8 +274,10 @@ case-insensitively. QualCoder's database keeps coder names apart letter
 for letter, capitals included, so `AI Agent` and `AI agent` really are
 two coders there. Code, category and case names follow the opposite
 rule: Exegete compares them ignoring letter case, spacing and Unicode
-form. QualCoder 4.0 also ignores spacing and letter case there, but only
-for the letters A to Z.
+form, so `Coping` and `coping` are one name to Exegete. QualCoder's own
+dialogs compare these names exactly, so a project made in QualCoder can
+hold both. QualCoder 4.0's own MCP server ignores spacing and letter
+case, but only for the letters A to Z.
 
 The setting travels with the project folder: Exegete's backups and
 workspace copies carry it, so do QualCoder's own `_BKUP_` backups, and
@@ -364,9 +365,11 @@ models leaves it out.
   project. Exegete never
   reads QualCoder's settings file, which holds API keys.
 - **Names.** A name already used in that folder is refused, never given
-  a "_1". So is one that differs from it only in letter case or accents,
-  since a project copied to macOS or Windows would otherwise merge with
-  it. Names QualCoder cannot open (with `|`), names Windows cannot
+  a "_1". So is one that differs from it only in letter case, in how an
+  accented letter is encoded, or by a dot or space at its end. macOS and
+  Windows treat such names as one by default, so the two projects would
+  become one folder when copied there, and one would be lost. Names
+  QualCoder cannot open (with `|`), names Windows cannot
   store, names holding `_backup_` or `_BKUP_`, and a name whose older
   backup folders sit in that folder are refused too, each with the
   reason. Short names, in folders near the top of the disk, travel
@@ -449,10 +452,13 @@ this is a deliberate difference.
 4.0 (schema v14 and later) can hide some coders' work, by a setting
 stored in its database. When it does, the reads and analyses of coded
 passages read by default only what the visibility setting shows, as
-QualCoder does. They say how many coders are hidden, never their names,
-with one stated exception: a project that gained coder visibility after
-Exegete connected to it (PRIVACY.md's "Coder visibility" section says
-what is and is not re-read). These reads are `get_coded_segments`,
+QualCoder does. They say how many coders are hidden, never their names.
+Exegete checks for the setting at every read, so a project that gains
+it while Exegete is connected is read the same way from the next read
+on. A hidden coder's name still shows as the owner of what they made
+besides codings and annotations, such as codes, categories, files,
+cases and journal entries: PRIVACY.md's "Coder visibility" section says
+where. These reads are `get_coded_segments`,
 `search_coded_text`, `get_coding_frequencies`,
 `find_cooccurring_codes`, `get_case_code_matrix`, `get_codes_by_case`,
 `get_cases_by_code`, the codings and annotations in
@@ -476,7 +482,10 @@ which coder, or how many coders are hidden, a trade PRIVACY.md states.
 **Backups, workspace copies and `ai_data/`.** Backups and
 `copy_project_to_workspace` copy the whole project tree including
 `ai_data/`, where QualCoder 4.0 keeps its prompt library and chat
-history, which are yours. They leave out QualCoder's own backup ignore
+history, which are yours. They also carry the project's names list,
+`pseudonyms.json`, and the names file in its `Exegete` folder,
+`Names to replace.txt`, when the project has them. Both hold real
+names in plain text. They leave out QualCoder's own backup ignore
 set (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`,
 `*.sqlite-wal`, `*.sqlite-journal`) and lock files. Backups also leave
 out the project's `audio/` and `video/` folders, whatever is at those
@@ -527,7 +536,7 @@ Exegete's writes until the project is reopened there.
 
 **Recovery hint.** If a host restarts Exegete in the middle of a
 conversation (seen with LM Studio in September 2026), every "no project
-selected" error gives the name of the last project used on this
+selected" error gives the full path of the last project used on this
 computer, when it still exists. One `select_project` call then
 recovers. The selection is never restored automatically. Exegete keeps
 the last project's path in `~/.exegete/mru_project.json`.
@@ -1097,7 +1106,7 @@ declares, and each tool's own description says what each one does.
 - `search_files(pattern, search_filename, search_content, case_sensitive, limit, exclude_code_ids, cursor, max_matches_per_file)` - Find files by name or content (for notes, `search_memos`); when a request does not say which, the assistant is told to ask whether to search names, content or both; `exclude_code_ids` hides content matches that are already coded under those codes, and `cursor` walks the results page by page. A PDF with no usable text (no text layer, or a PDF QualCoder 3.8.2 stored as the file itself) is not content-searched and is counted and named as not searched, so finding nothing there is not a "not found"; a search of any PDF covers its text layer only
 - `search_coded_text(query, code_name, limit, coder, exclude_code_ids, cursor)` - Search coded segments, with the same novelty filter and paging
 - `get_coded_segments(code_id, limit, coder, strategy, max_chars, file_ids, cursor)` - Segments for a code, sampled by strategy (`by_document`, `diverse_by_document`, `recent_first`, `sequential`) under an optional character budget; `codings_not_shown` counts the code's region codings (areas on PDF pages or images) and audio/video codings in the same scope, which a text read does not show
-- `get_coding_frequencies(coder)` - Coding statistics: text codings per code, with `codings_not_counted` giving the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
+- `get_coding_frequencies(coder)` - Coding statistics: how many text codings each code has. A count of codings is not a count of participants, nor of a code's importance. `codings_not_counted` gives the region and audio/video codings beside them, so the two together are QualCoder's own count when no coder is hidden (on a project that hides a coder both are the visible coders', while QualCoder's Codebook counts every coder)
 - `search_memos(query, limit)` - Search every memo and note but those on the project's saved graphs (public text only): the project memo; code, category, file, case and attribute type memos; text, region and audio/video coding memos (where the AI's reasons are stored); case link memos; annotations; and journal entries, each result named by its type. In `core` too
 - `get_project_summary()` - An overview of the project, naming any PDF with no usable text and counting the region and audio/video codings the text statistics leave out
 
@@ -1269,8 +1278,8 @@ For AI-assisted coding, which writes to the database:
 - **Writes to the database**: these tools change the project
 - **Backups**, taken by Exegete itself, before every change to the project's database
 - **Workspace**: new projects and copies are kept in the workspace folder; a project made in another program can be worked on as a copy
-- **Conversational approval**: nothing is written until an item is marked approved. Exegete cannot tell who approved, so the host asking you before each decision is the safeguard ("Who approves", above)
-- **Session files**: AI coding sessions (suggestions, proposals and their statuses) are saved in `~/.exegete/sessions/`
+- **Conversational approval**: nothing is written until an item is marked approved. Exegete cannot tell who approved, so two things stand behind the mark: the host asking you before each decision, and your own check of the counts the approval step reports ("Who approves", above)
+- **Session files**: AI coding sessions (each suggestion with its passage word for word and its reason, the proposals, and their statuses) are saved in `~/.exegete/sessions/`, outside the project, until `delete_coding_session` removes them
 - **Restoring**: a backup can return the project to an earlier state (`restore_backup`)
 
 **Suggestions for AI coding:**
@@ -1283,7 +1292,11 @@ For AI-assisted coding, which writes to the database:
 **General safety:**
 - Exegete runs on your computer. Its one connection beyond it, while
   switched on, is a check for new versions, which carries nothing from
-  your projects (PRIVACY.md, "Checking for new versions"). But tool
+  your projects (PRIVACY.md, "Checking for new versions"). On Windows
+  x64, a library Exegete uses to read PDFs also sends a few reports of
+  its own use to Windows' diagnostic data each time a PDF is read, with
+  nothing from your documents (PRIVACY.md, "A library's usage reports").
+  But tool
   results enter the conversation, and they go to the AI provider, the
   company that runs the assistant's model. There is none when that model
   runs on your own computer. **See
@@ -1291,8 +1304,10 @@ For AI-assisted coding, which writes to the database:
 - Backups of your own, beyond Exegete's, are worth keeping
 - Exegete's backups: `<project>_backup_<timestamp>.qda` folders next to
   the project, one per change to the project's database. Each holds the
-  project tree but its audio and video folders; "Backups, workspace
-  copies and `ai_data/`", above, says what else it leaves out.
+  project tree but its audio and video folders, so it holds whatever
+  real names the project holds, the names list and the names file
+  included; "Backups, workspace copies and `ai_data/`", above, says what
+  else it leaves out.
   `prune_backups` removes old ones
 - The workspace folder: `~/Documents/Exegete projects/`, or the
   folder `EXEGETE_WORKSPACE` gives (the desktop extension's default

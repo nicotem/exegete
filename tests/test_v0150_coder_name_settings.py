@@ -127,10 +127,12 @@ CODER_DESCRIPTION = ("kept apart from the AI's",
                      "It must differ from the AI coder name")
 # The coder names, piece 3: the AI coder name in the settings is given
 # to each project Exegete creates (tests/test_v0150_ai_coder_name_setting.py)
+# (v0.15.2, the readability reading: the empty default and the question
+# in one sentence, as the coder name's own description says them)
 AI_DESCRIPTION = ("kept apart from yours",
                   "Each project Exegete creates gets it",
-                  "Claude asks when a project first needs a name",
-                  "Empty is the default")
+                  "Claude asks for it when a project first needs one",
+                  "If it is empty, the default,")
 
 
 class TestTheExtensionsSettings:

@@ -814,7 +814,8 @@ def stdio_parameters(home):
 
 async def twenty_changes(client, prefix):
     """Twenty codes made, each change retried while the other copy holds
-    the project; the receipts."""
+    the project (refused at the gate, or by the lock or a backup it
+    holds); the receipts."""
     receipts = []
     for number in range(20):
         for _ in range(500):
@@ -824,7 +825,7 @@ async def twenty_changes(client, prefix):
             if isinstance(body, dict) and body.get("undo_receipt"):
                 receipts.append(body["undo_receipt"])
                 break
-            assert isinstance(body, dict) and "lock" in text.lower(), text
+            assert isinstance(body, dict) and "error" in body, text
             await asyncio.sleep(0.02)
         else:
             pytest.fail(f"{prefix} {number:02d} never landed")
@@ -1167,11 +1168,14 @@ def four_changes():
 
 def without_the_record(done, folder):
     """An answer as 0.15.1-alpha.1 gave it: no receipt, and the project's
-    own paths set aside."""
+    own paths set aside, as written and as JSON escapes them."""
     text = json.dumps({key: value for key, value in done.items()
                        if key not in ("undo_receipt", "no_undo_receipt",
                                       "backup_path")})
-    return text.replace(str(folder.parent), "<projects>")
+    for spelling in (json.dumps(str(folder.parent))[1:-1],
+                     str(folder.parent)):
+        text = text.replace(spelling, "<projects>")
+    return text
 
 
 def test_nothing_is_decoded(tmp_path, server_state, monkeypatch):

@@ -45,7 +45,7 @@ JOB_TIME_LIMITS = {
     "documents": 10,
     # v0.15.2: the documents' commands, reporting only
     # (scripts/doc_commands.py)
-    "doc-commands": 30,
+    "doc-commands": 10,
     # v0.15.1: the suite on the newest library releases, reporting only
     "newest-libraries": 45,
 }

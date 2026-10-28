@@ -51,7 +51,7 @@ pass on, so the brief reaches the assistant four ways:
 
 - **The opening text**, a short version of the brief. Claude Code shows
   it (and keeps the first 4,096 characters of a server's opening text,
-  2,048 before its version 2.1.296; this one is 2,034). Claude Desktop
+  2,048 before its version 2.1.296; this one is 2,046). Claude Desktop
   does not pass it on, in its chat or in Cowork (checked on 9 October
   2026), and LM Studio does not support it.
 - **The tool `read_brief`**, in every tool set. Its description asks the

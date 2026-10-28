@@ -116,9 +116,12 @@ class TestTheOpeningText:
         # Its first sentence (the owner's ruling of 7 October 2026), which
         # no other served text holds, so that the owner's live check can
         # recognise it (tests/test_v0142_selfrep.py pins the two sentences)
+        # (v0.15.2, the opening texts: QualCoder said once what it is,
+        # which takes the text to 2,046)
         assert short.startswith(
             "Exegete is a qualitative analysis application for working with "
-            "the researcher on their project, in QualCoder's format. ")
+            "the researcher on their project, in the format of QualCoder, a "
+            "free qualitative analysis program. ")
         assert server.BRIEF_START in short
         assert "The rules that matter most:" in short
 
@@ -251,7 +254,8 @@ class TestTheStartTool:
         assert "read_brief" not in answer
         assert answer.startswith(
             "Exegete is a qualitative analysis application for working with "
-            "the researcher on their project, in QualCoder's format.")
+            "the researcher on their project, in the format of QualCoder, a "
+            "free qualitative analysis program.")
         assert "\nThe rules that matter most:\n1. " in answer
 
     def test_it_needs_no_project(self, monkeypatch):
@@ -625,8 +629,12 @@ def test_the_lengths_the_documents_give_are_the_briefs():
     assert [int(s.replace(",", "")) for s in stated] == [1988]
     unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                            changelog.index("## [0.14.3-alpha]")]
+    # (0.15.0's figure is history too: v0.15.2's opening texts took the
+    # text to 2,046, saying once what QualCoder is; the figure in
+    # TOOLS.md, below, is the current one)
     assert re.findall(r"Exegete's opening text is now ([\d,]+) characters",
-                      unreleased) == [f"{short:,}"]
+                      unreleased) == ["2,034"]
+    assert short <= 2048
     # 0.14.2's figure for the full brief is history: v0.14.3 added a line
     # (provisional) on reading a whole file, served the line on a fresh
     # reading 0.14.2 held back, and shortened section 4's list

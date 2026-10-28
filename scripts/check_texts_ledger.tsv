@@ -472,6 +472,8 @@ c5f340c58a7406d3	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Chec
 b19c45675f3940e6	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Session files: ~/.exegete/sessions/
 fa8b274ba33f4fd3	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Test on copies - Try workflow on test projects first
 b52fbb547bf7c047	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Workspace directory: ~/Documents/Exegete projects/, or the folder EXEGETE_WORK
+b27e4c4930fb8e11	changelog.d/opening-texts.md	document	qualcoder	about how the README treats QualCoder itself (ruling 102), the change this entry reports	It mentions QualCoder only where a sentence is about QualCoder or offers it as a
+9d2ff987d0ffeb4d	changelog.d/opening-texts.md	document	qualcoder	about how the served texts describe QualCoder itself, the change this entry reports	What the assistant is told first says what QualCoder is. The opening text and th
 6a7ced46df9466aa	changelog.d/weekly-workflow.md	document	qualcoder	read 27 October: about QualCoder itself, the weekly watch on its newest code; no plainer way to say whose code it is	The watch on QualCoder's newest code runs once a week, on Mondays, in a workflow
 887922b49d97eaf5	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A missing or unreadable value is no sign of a newer QualCoder: if it was changed
 3b0f7ce1a53b034d	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A relative path, or a folder inside ~/.exegete (or ~/.qualcoder_mcp, its earlier
@@ -691,9 +693,8 @@ b8ff8af78d11e8a3	src/exegete/server.py	served	voice	seeded 27 October, to be rea
 ab35df6a9da4b56b	src/exegete/server.py	path	request	seeded 27 October, to be read	Ask the researcher to close it in QualCoder, or wait a moment, then re-check.
 8dacf5c1e717826d	src/exegete/server.py	path	request	seeded 27 October, to be read	Ask the researcher to close the project in QualCoder, or wait a moment, before a
 415be80e44a53bef	src/exegete/server.py	path	request	seeded 27 October, to be read	Ask the researcher to close the project in QualCoder, or wait a moment, before c
+5154f6f049a0b858	src/exegete/server.py	path	request	said only when the project shows signs of an open QualCoder window (qualcoder_gui_signals), so QualCoder is named on its sign	Ask the researcher to close the project in QualCoder, then retry; only if that d
 a3dd393fc3d2a954	src/exegete/server.py	served	voice	seeded 27 October, to be read	Ask the user before calling it: the name is theirs to choose.
-37c6a2680daace28	src/exegete/server.py	path	request	seeded 27 October, to be read	Ask the user to close the project in QualCoder, then retry; only if that does no
-37c6a2680daace28	src/exegete/server.py	path	voice	seeded 27 October, to be read	Ask the user to close the project in QualCoder, then retry; only if that does no
 073b23018e5f3d45	src/exegete/server.py	path	voice	seeded 27 October, to be read	Ask the user whether anyone does (a yes or no is enough) before executing; if so
 b6f8abe60ae382ee	src/exegete/server.py	path	voice	seeded 27 October, to be read	Ask the user which coder name this project's AI codings and other AI writes shou
 be1fdb21dee60900	src/exegete/server.py	path	voice	seeded 27 October, to be read	Ask the user which they want.
@@ -759,6 +760,7 @@ bba41559695ebc38	src/exegete/server.py	served	voice	seeded 27 October, to be rea
 1be4b3e72685351e	src/exegete/server.py	served	voice	seeded 27 October, to be read	Deleting a category is SHALLOW and safe for your coding: its codes and its direc
 6350c63fd1c7ce38	src/exegete/server.py	served	voice	seeded 27 October, to be read	Deleting a code removes the code itself and EVERY coded segment made with it (te
 1c9191ef9b9a8dbb	src/exegete/server.py	served	voice	seeded 27 October, to be read	Do NOT print the alternative texts.
+32525e57b0ae7484	src/exegete/server.py	path	qualcoder	the brief's instruction not to presume that the researcher uses QualCoder (ruling 62, item 6)	Do not assume that they use QualCoder: when a request needs something Exegete do
 10bea49b6fdaa541	src/exegete/server.py	served	request	seeded 27 October, to be read	Does not require QualCoder to be closed, because it writes no database row.
 7dc4767378604f90	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Each backup is the project tree, ai_data/ included (minus the regenerable search
 d35630367cc065a8	src/exegete/server.py	path	voice	seeded 27 October, to be read	Each file in character_sets must be named as the preview names it; nothing was d
@@ -776,6 +778,7 @@ d00d1209c4891048	src/exegete/server.py	served	voice	seeded 27 October, to be rea
 c44b99da16228842	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Exegete applies the list in one pass, longest name first, so nothing it writes i
 1e8de4c31a846f53	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Exegete found no sign that QualCoder has this project open now.
 c7235ed7e60fc5f9	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Exegete has no other REFI-QDA export yet; QualCoder's own export (Project, Expor
+29f463625f8b2bc4	src/exegete/server.py	served	qualcoder	about the format, and says once what QualCoder is, as the conventions ask of a first mention (ruling 102)	Exegete is a qualitative analysis application for working with the researcher on
 1f61c5f0bb2fdc85	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Exegete may have created it, or the researcher may have begun it in QualCoder; t
 ed9ad2b62bcd6d34	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Exegete reads Word, OpenDocument, RTF, web page, Markdown, plain text and subtit
 ed9ad2b62bcd6d34	src/exegete/server.py	path	voice	seeded 27 October, to be read	Exegete reads Word, OpenDocument, RTF, web page, Markdown, plain text and subtit
@@ -982,7 +985,6 @@ e11b730facc2606c	src/exegete/server.py	served	qualcoder	seeded 27 October, to be
 e11b730facc2606c	src/exegete/server.py	served	voice	seeded 27 October, to be read	QualCoder's own _BKUP_ backups are NEVER removed.
 6a893e478c362f17	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder's own _BKUP_ backups are never touched.
 84c4aedd27977bc5	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	QualCoder's text and transcript imports (not PDFs) apply the file one entry at a
-595bdb5fae7073a4	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder: when a request needs something Exegete does not do yet (section 4), s
 346a0bb2190706df	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Quick picks: "AI Coding Assistant" (Exegete's built-in default), "AI Agent" (Qua
 127dfb38be1d4260	src/exegete/server.py	path	voice	seeded 27 October, to be read	Quote both, say which is which, and never call either one simply 'kappa'.
 6fce5083d410e2b0	src/exegete/server.py	served	voice	seeded 27 October, to be read	READING AND CODE: the reading (explicit or interpretive) belongs to the code it 
@@ -1064,7 +1066,6 @@ a0c492c4d38e4e8b	src/exegete/server.py	path	voice	seeded 27 October, to be read	
 b27d71be9161d17b	src/exegete/server.py	served	voice	seeded 27 October, to be read	The last five arguments, record_in_journal and researcher_keeps_mapping are NOT 
 3c9aec7afa79a7d3	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The mapping cannot be saved into this project's pseudonyms.json: entry {} maps a
 190395c26c42b471	src/exegete/server.py	path	voice	seeded 27 October, to be read	The names file there could not be read just now (it changed or went while Exeget
-4d57db74649aae74	src/exegete/server.py	path	voice	seeded 27 October, to be read	The next write here tries to mark it; if this stays, ask the user to unlock the 
 a73e1a2ed86cfd4f	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The note must be non-empty: the note IS the annotation, and clearing it later (u
 9f3ac3b8a6b9aa90	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The other notes have no per-coder visibility in QualCoder and are always searche
 9f3ac3b8a6b9aa90	src/exegete/server.py	served	voice	seeded 27 October, to be read	The other notes have no per-coder visibility in QualCoder and are always searche
@@ -1073,7 +1074,7 @@ a73e1a2ed86cfd4f	src/exegete/server.py	served	qualcoder	seeded 27 October, to be
 0e53368210664a72	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The project database could not be opened, and it APPEARS to be open in QualCoder
 0e53368210664a72	src/exegete/server.py	path	voice	seeded 27 October, to be read	The project database could not be opened, and it APPEARS to be open in QualCoder
 81928d24ea732708	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The project is in QualCoder's format, so QualCoder 4.0 can open it too, if the r
-b9499921a304f065	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The project is theirs, a folder kept in QualCoder's format and conventions, so t
+e94899c3d697f3a7	src/exegete/server.py	path	qualcoder	about the format and the commitment of ruling 62 (either program, one at a time); says once what QualCoder is	The project is theirs, a folder kept in the format and conventions of QualCoder,
 a875958d830e9232	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The project memo (target_type 'project', target_id null) describes the study: Qu
 b4887668a38d2497	src/exegete/server.py	path	voice	seeded 27 October, to be read	The project's database could not be read just now (another program may be writin
 318cc4b25c7bcd61	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The project's lock file is held, kept fresh, for the whole restore, so QualCoder
@@ -1099,7 +1100,6 @@ c5fb856a00b18337	src/exegete/server.py	path	qualcoder	seeded 27 October, to be r
 7e4a87308aabc9a4	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	This export is the QualCoder-parity artefact.
 7e4a87308aabc9a4	src/exegete/server.py	served	voice	seeded 27 October, to be read	This export is the QualCoder-parity artefact.
 bac7c6a206990e48	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	This file contains Windows line breaks or characters beyond U+FFFF (such as emoj
-c3e90f20fa044370	src/exegete/server.py	path	voice	seeded 27 October, to be read	This is a heuristic (4.0 writes no lock file), so confirm with the user before a
 5619940a59cbce9e	src/exegete/server.py	path	voice	seeded 27 October, to be read	This is a heuristic: confirm with the user before writing.
 5437753e8d01b2c5	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	This matches QualCoder exactly and is LOSSY BY DESIGN: where both codes already 
 5437753e8d01b2c5	src/exegete/server.py	served	voice	seeded 27 October, to be read	This matches QualCoder exactly and is LOSSY BY DESIGN: where both codes already 

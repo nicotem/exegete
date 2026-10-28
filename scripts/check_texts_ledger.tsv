@@ -474,7 +474,7 @@ b19c45675f3940e6	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Sess
 fa8b274ba33f4fd3	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Test on copies - Try workflow on test projects first
 b52fbb547bf7c047	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Workspace directory: ~/Documents/Exegete projects/, or the folder EXEGETE_WORK
 b27e4c4930fb8e11	changelog.d/opening-texts.md	document	qualcoder	about how the README treats QualCoder itself (ruling 102), the change this entry reports	It mentions QualCoder only where a sentence is about QualCoder or offers it as a
-9d2ff987d0ffeb4d	changelog.d/opening-texts.md	document	qualcoder	about how the served texts describe QualCoder itself, the change this entry reports	What the assistant is told first says what QualCoder is. The opening text and th
+09e26bb0f895736a	changelog.d/opening-texts.md	document	qualcoder	about how the served texts describe QualCoder itself, the change this entry reports	What the assistant is told first says what QualCoder is. The opening text and th
 6a7ced46df9466aa	changelog.d/weekly-workflow.md	document	qualcoder	read 27 October: about QualCoder itself, the weekly watch on its newest code; no plainer way to say whose code it is	The watch on QualCoder's newest code runs once a week, on Mondays, in a workflow
 887922b49d97eaf5	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A missing or unreadable value is no sign of a newer QualCoder: if it was changed
 3b0f7ce1a53b034d	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A relative path, or a folder inside ~/.exegete (or ~/.qualcoder_mcp, its earlier
@@ -785,7 +785,7 @@ ed9ad2b62bcd6d34	src/exegete/server.py	path	qualcoder	seeded 27 October, to be r
 ed9ad2b62bcd6d34	src/exegete/server.py	path	voice	seeded 27 October, to be read	Exegete reads Word, OpenDocument, RTF, web page, Markdown, plain text and subtit
 6ecfb97b261c0973	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garbl
 6ecfb97b261c0973	src/exegete/server.py	served	voice	seeded 27 October, to be read	Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garbl
-5e9846fc46c8e2cd	src/exegete/server.py	path	request	seeded 27 October, to be read	Exegete refuses to write while the project's lock file is active (QualCoder 3.8.
+3b34f824e1b8831a	src/exegete/server.py	path	qualcoder	about QualCoder itself: the lock file QualCoder 3.8.2 writes while it has the project open	Exegete refuses to write while the project's lock file is active (QualCoder 3.8.
 4032800add04887b	src/exegete/server.py	served	voice	seeded 27 October, to be read	Exegete writes what is marked approved and cannot tell who approved it, so the c
 5bda4eea483f70c1	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Exegete's settings give "{speaker}" as the researcher's own coder name, but that
 b08c3effa75a4f46	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Export the code-frequencies table (QualCoder's Code Frequencies report) as CSV.
@@ -795,6 +795,7 @@ b08c3effa75a4f46	src/exegete/server.py	served	qualcoder	seeded 27 October, to be
 4ad8bdf149570206	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	File(s) {} contain Windows line breaks or characters beyond U+FFFF (such as emoj
 5cf9a827b689bd64	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	File(s) {} contain Windows line breaks or characters beyond U+FFFF (such as emoj
 2efa92749688bd18	src/exegete/server.py	served	voice	seeded 27 October, to be read	Files imported with import_text_file are NOT linked to any case by default.
+097aed0f74355df5	src/exegete/server.py	path	request	asks only on a sign: a tool has said that QualCoder 4.0 may have the project open	For QualCoder 4.0 it can only see signs, so when a tool says the project may be 
 e0e00aca691a4f2f	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	For QualCoder's imports, edit pseudonyms.json after the save so that the longer 
 aef12588ee4b198a	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	For QualCoder's imports, the new entries were written longest name first, so a s
 1b1712dee4685c65	src/exegete/server.py	path	voice	seeded 27 October, to be read	For a copy of the source it names the folder and says to quit the AI host before
@@ -861,7 +862,7 @@ cbe3fa77efe94ab4	src/exegete/server.py	served	qualcoder	seeded 27 October, to be
 5347b934689d795b	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Memo privacy (QualCoder 4.0 convention): memo text from the first '#####' marker
 5b4495f54c42e1b3	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Memo privacy (QualCoder 4.0 convention): memo text from the first '#####' marker
 bd5dedc947584590	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Memo privacy (QualCoder 4.0 convention): only the note text before the first '##
-58cfac2a2ffd7c3a	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Mention QualCoder when the researcher says they use it, when they ask about it, 
+8b47837505ecd78f	src/exegete/server.py	path	qualcoder	the brief's rule for when the assistant may mention QualCoder: each mention is the rule or a sign that QualCoder is in use	Mention QualCoder when the researcher says they use it, when they ask about it, 
 db1ab1cc70b3ac0d	src/exegete/server.py	served	voice	seeded 27 October, to be read	Mention this to the user if they plan to share the exported file.
 5d5b8fec63e71f87	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Merging to the top level, or on a pre-sub-code schema (QualCoder 3.8.2 parity), 
 5d5b8fec63e71f87	src/exegete/server.py	served	voice	seeded 27 October, to be read	Merging to the top level, or on a pre-sub-code schema (QualCoder 3.8.2 parity), 
@@ -963,6 +964,7 @@ fa5aebe07f55c7d9	src/exegete/server.py	path	qualcoder	seeded 27 October, to be r
 6661f54976d0b398	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder is on this computer, though nothing shows it has opened this project.
 39488dd7cc03ec35	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder itself would refuse to open it with 'This is not a QualCoder database'
 3e5e109bd530b08d	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder may adopt file id {} ('{}') as the transcript of recording id {} ('{}'
+143c1d5bf1e47422	src/exegete/server.py	path	qualcoder	the same rule's limit: QualCoder installed is no sign of use once the researcher has said no	QualCoder merely installed is not a sign once the setting is no.
 7524c699dffea221	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	QualCoder notes: an open QualCoder window does not refresh from this write on it
 f71b219d4b794dd0	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	QualCoder rebuilds search.sqlite when it opens the copy.
 99f389f91a6da53d	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder removes its own backups beyond the number its settings keep when it cl

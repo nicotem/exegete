@@ -1840,7 +1840,9 @@ class TestTheSmallerPoints:
             assert not UNQUALIFIED_PRIVATE_PART.search(_flat(name)), name
         for name in ("TOOLS.md", "AI_CODING_GUIDE.md"):
             text = _flat(name)
-            assert ("never sent to the AI through Exegete (an assistant that "
+            # (v0.15.2: the private part "never reaches the assistant",
+            # in each document's own grammar)
+            assert ("the assistant through Exegete (an assistant that "
                     "opens a project's files by itself reads every memo "
                     "whole:") in text, name
             assert HOSTS_SECTION in text, name

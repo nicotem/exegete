@@ -551,14 +551,14 @@ class TestTheDocuments:
         assert "Close the project in QualCoder again" not in tools
 
     def test_the_coding_guide(self):
+        # (v0.15.2: told once, in TOOLS.md, whose words test_tools_md
+        # holds, and pointed to from the guide, with the way without
+        # QualCoder named)
         guide = _flat("AI_CODING_GUIDE.md")
-        assert ("older projects are refused (until QualCoder 3.8 or newer "
-                "has opened them once, which brings them up to date with "
-                "no save, and they are selected again; Exegete cannot, but "
-                "someone with QualCoder who may see the data can do it and "
-                "send the updated copy, and without QualCoder at all a "
-                "new project made in Exegete from the original documents "
-                "is a way on, without the old coding)") in guide
+        assert ("An older project is refused; \"Supported QualCoder "
+                "versions\" in TOOLS.md says how to bring one up to date, "
+                "with QualCoder or without it") in guide
+        assert "## Supported QualCoder versions" in _flat("TOOLS.md")
         assert "open and save them in QualCoder 3.8" not in guide
 
     def test_the_readme(self):

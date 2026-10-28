@@ -503,8 +503,10 @@ class TestTheDocuments:
                 "is no.") in section
         assert ("whether the overview is asked for with no topic or as "
                 "`overview`") in section
+        # (0.15.0's figure, history: v0.15.2's undo line took the brief
+        # to about 13,300, which TOOLS.md gives)
         assert re.findall(r"The full brief is now about ([\d,]+) characters",
-                          section) == [f"{round(len(server.BRIEF_FULL), -2):,}"]
+                          section) == ["13,200"]
         assert ("the four outcomes' sentence, in the text "
                 "`start_coding_session`'s description shares, lost its "
                 "attribution to QualCoder 4.0's assistant: 55 characters "

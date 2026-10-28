@@ -388,9 +388,11 @@ class TestTheSmallerPoints:
             assert f"`{name}`" in guarded, name
         assert "`import_documents` (a preview, then the import on its " \
                "token" in readme
+        # (v0.15.2: and undoing a change)
         assert ("`set_project_coder_name` (your own coder name, while "
                 "nothing is recorded under it), `save_names_list` (saving "
-                "the names list).") in readme
+                "the names list), `undo_changes` (undoing a change)."
+                ) in readme
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
         install = _flat(_read("INSTALL.md"))

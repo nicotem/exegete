@@ -684,9 +684,10 @@ class TestTheDocuments:
                 "registered: read_brief,") in tools.replace("> ", "")
         assert ("search_files, read_file_with_codings, search_memos, "
                 "open_file_for_reading,") in tools.replace("> ", "")
+        # (v0.15.2: and undo_changes)
         assert ("copy_project_to_workspace, delete_coding, list_backups, "
-                "restore_backup, and the two earlier names below."
-                ) in tools.replace("> ", "")
+                "restore_backup, undo_changes, and the two earlier names "
+                "below.") in tools.replace("> ", "")
         install = _flat(_read("INSTALL.md"))
         assert (f"`full` (default) registers {FULL_TOOLS} tools, every "
                 "tool,") in install
@@ -817,11 +818,12 @@ class TestTheDocuments:
         assert flat.index("Two tools were renamed in 0.15.0") < \
             flat.index("## How your data flows")
         listing = flat[flat.index("**Process listing.**"):]
+        # (v0.15.2: and undo_changes' preview)
         assert ("(today: select_project, get_current_project, "
                 "start_coding_session, also under its earlier name, and the "
-                "restore_backup, import_documents and save_names_list "
-                "previews, each the call without a preview_token)") in \
-            listing[:400]
+                "restore_backup, import_documents, save_names_list and "
+                "undo_changes previews, each the call without a "
+                "preview_token)") in listing[:400]
 
     def test_a_coding_session_by_one_name(self):
         """The tool starts a coding session: the documents call it that,

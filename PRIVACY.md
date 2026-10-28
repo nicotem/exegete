@@ -1483,8 +1483,8 @@ Two further rules touch files on your disk:
   have a project open (4.0 writes no lock file), every tool that
   reports a `qualcoder_gui_signals` field (today: select_project,
   get_current_project, start_coding_session, also under its earlier
-  name, and the restore_backup, import_documents and save_names_list
-  previews, each the call without a preview_token)
+  name, and the restore_backup, import_documents, save_names_list and
+  undo_changes previews, each the call without a preview_token)
   also looks at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). The listing is filtered in memory for

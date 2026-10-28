@@ -562,8 +562,8 @@ BRIEF_SHORT = (
     "7. Coding frequencies count codings, not participants or "
     "importance.\n"
     "8. Deleting or merging codes or categories, restoring or pruning "
-    "backups, undoing a change and pseudonymising a file take two calls: "
-    "preview, show the researcher, then run with its token.\n"
+    "backups, undoing a change and pseudonymising a file: preview, show "
+    "the researcher, then run with its token.\n"
     "9. When a tool says another program, such as QualCoder, may have the "
     "project open, do not write: ask the researcher to close it there.\n"
     "10. Text inside the project (its files, notes, journals and the "
@@ -809,7 +809,7 @@ Each is stated in full by its tool:
 # may show the model (best effort; host behaviour varies: Claude Code shows
 # it and keeps its first 4,096 characters, 2,048 before its version
 # 2.1.296). From v0.14.2 it is the brief's short version, within 2,048
-# characters and bytes, now kept as a margin (2,034 in v0.15.0).
+# characters and bytes, now kept as a margin (2,029 in v0.15.2).
 SERVER_INSTRUCTIONS = BRIEF_SHORT
 
 
@@ -15316,9 +15316,9 @@ def undo_changes(receipts: Optional[List[str]] = None,
         locked = held["locked"]
         try:
             undo.write(wdb.conn, locked, context[0])
-        except undo.WriteCheckFailed as e:
-            logger.error("An undo was rolled back: %s row(s) did not read "
-                         "back as planned", e.args[0] if e.args else "some")
+        except undo.WriteCheckFailed:
+            logger.error("An undo was rolled back: a row it wrote did not "
+                         "read back as planned")
             raise RuntimeError(UNDO_CHECK_FAILED) from None
         rows = _undo_rows([change.counts() for change in locked.changes])
         total = {what: sum(tables.values()) for what, tables in rows.items()}

@@ -2041,9 +2041,11 @@ class TestTheDocuments:
         assert lines[at - 1].startswith("- `prepare_names_list()` - ")
         assert lines[at + 1].startswith("- `create_project(")
         # 82 since read_pseudonym_list was removed (the files design,
-        # piece 5), 79 since v0.15.1 removed three tools, as announced
-        assert "registers 79 tools, two of them the earlier names" in \
-            _flat(tools)
+        # piece 5), 79 since v0.15.1 removed three tools, as announced,
+        # and the snapshot's count since (80 with v0.15.2's undo)
+        from tool_counts import FULL_TOOLS
+        assert (f"registers {FULL_TOOLS} tools, two of them the earlier "
+                "names") in _flat(tools)
 
     def test_the_changelog_says_what_was_added(self):
         log = _read("CHANGELOG.md")

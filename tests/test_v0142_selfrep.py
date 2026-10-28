@@ -872,12 +872,16 @@ class TestNoDescriptionGrew:
     # project without an ai_data folder gets an empty one, a sentence
     # longer, as the design says (create_project is counted above)
     CHANGED_IN_0151 = {"copy_project_to_workspace"}
+    # and v0.15.2: a new tool that undoes a change
+    # (tests/test_v0152_undo_tool.py; its words are in docs/snapshot/)
+    NEW_IN_0152 = {"undo_changes"}
 
     def test_every_description_is_no_longer_than_before(self):
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         assert set(registered) == set(BEFORE) | {"check_for_updates"} | \
-            self.NEW_IN_0143 | self.EARLIER_NAMES_0150 | self.NEW_IN_0150
+            self.NEW_IN_0143 | self.EARLIER_NAMES_0150 | self.NEW_IN_0150 | \
+            self.NEW_IN_0152
         exact = sys.version_info[:2] == (3, 13)
         indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
         grew = []

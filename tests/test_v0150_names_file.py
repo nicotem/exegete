@@ -1300,9 +1300,11 @@ class TestTheDocuments:
             TOOLS_ENTRY) < tools.index("**Keeping Exegete up to date:**")
         # 83 since save_names_list (the files design, piece 4), 82 since
         # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        assert "registers 79 tools, two of them the earlier names" in \
-            _flat(tools)
+        # removed three tools, as announced in 0.14, and the snapshot's
+        # count since (tests/tool_counts.py; 80 with v0.15.2's undo)
+        from tool_counts import FULL_TOOLS
+        assert (f"registers {FULL_TOOLS} tools, two of them the earlier "
+                "names") in _flat(tools)
 
     def test_privacy_names_the_file_among_the_files_you_fill_in(self):
         privacy = _flat(_read("PRIVACY.md"))

@@ -429,9 +429,10 @@ class TestToolsReadmePrivacy:
 
     def test_tools(self):
         tools = _read("TOOLS.md")
-        # (79 since v0.15.1's removals)
+        # (79 since v0.15.1's removals; the snapshot's count since,
+        # 80 with v0.15.2's undo)
         assert ("extension and when you configure Exegete yourself) "
-                "registers 79 tools,") in tools
+                f"registers {FULL_TOOLS} tools,") in tools
         assert ("(`pseudonymise_source`): replace the names you list, or a "
                 "list you fill in on your own computer (`prepare_names_list`, "
                 "`save_names_list`), as whole words,") in tools

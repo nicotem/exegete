@@ -598,7 +598,7 @@ project's texts, are not in it. `lifecycle`, the earlier name of
   work is affected), `restore_backup`, `prune_backups`,
   `set_project_coder_name` (your own coder name, while nothing is
   recorded under it), `save_names_list` (saving the names list),
-  `undo_changes` (a change Exegete made, taken back for a day).
+  `undo_changes` (undoing a change).
 - **Documents in, whole files read**: `import_documents`
   (a preview, then the import on its token, after a backup; PDF and
   EPUB need `exegete[pdf-epub]`) and `open_file_for_reading` (on the

@@ -44,21 +44,25 @@ TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 TAGLINE = ("A qualitative analysis application you use in conversation "
            "with an AI assistant, compatible with QualCoder.")
 
+# (v0.15.2, the opening texts: QualCoder said once what it is, and
+# documents, not transcripts alone)
 OPENING = ("Exegete is a qualitative analysis application for working with "
-           "the researcher on their project, in QualCoder's format. Use its "
-           "tools to read and search documents and transcripts, codes and "
-           "coded passages, memos, cases and attributes, and to suggest "
-           "codings for the researcher to approve.")
+           "the researcher on their project, in the format of QualCoder, a "
+           "free qualitative analysis program. Use its tools to read and "
+           "search documents, codes, coded passages, memos, cases and "
+           "attributes, and to suggest codings for the researcher to "
+           "approve.")
 
 BRIEF_FIRST_PARAGRAPH = (
     "In Exegete, a qualitative analysis application on the researcher's "
     "computer, you and the researcher work on their project through this "
     "conversation: the researcher decides, and you read, search and "
     "suggest through Exegete's tools. The project is theirs, a folder "
-    "kept in QualCoder's format and conventions, so they may work on it "
-    "here or in QualCoder, one program at a time. Do not assume that they "
-    "use QualCoder: when a request needs something Exegete does not do "
-    "yet (section 4), say so plainly.")
+    "kept in the format and conventions of QualCoder, a free qualitative "
+    "analysis program, so they may work on it here or in QualCoder, one "
+    "program at a time. Do not assume that they use QualCoder: when a "
+    "request needs something Exegete does not do yet (section 4), say so "
+    "plainly.")
 
 BRIEF_SECTION_4 = (
     "## 4. The project, Exegete and QualCoder "

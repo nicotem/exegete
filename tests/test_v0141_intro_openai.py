@@ -1277,8 +1277,12 @@ class TestTheOtherFirstImpressions:
         for where in ("the command's help", "NOTICE's first line",
                       "the old name's page"):
             assert "compatible with QualCoder" in texts[where], where
-        assert "in QualCoder's format" in texts["opening text"]
-        assert "in QualCoder's format" in texts["brief's first paragraph"]
+        # (v0.15.2, the opening texts: QualCoder said once what it is)
+        assert ("in the format of QualCoder, a free qualitative analysis "
+                "program") in texts["opening text"]
+        assert ("in the format and conventions of QualCoder, a free "
+                "qualitative analysis program") in \
+            texts["brief's first paragraph"]
         import exegete
         with open(REPO / "pyproject.toml", "rb") as handle:
             summary = tomllib.load(handle)["project"]["description"]

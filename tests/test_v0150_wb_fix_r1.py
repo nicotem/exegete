@@ -353,7 +353,9 @@ class TestTheEntryIsOneAccount:
         # (82) since read_pseudonym_list was removed (piece 5)
         assert "80 tools (82 with the earlier names" in entry
         sizes = re.findall(r"about (1[23],\d00) characters", entry)
-        assert sizes == [f"{round(len(server.BRIEF_FULL), -2):,}"]
+        # (0.15.0's figure, history: v0.15.2's opening texts took the
+        # brief to about 13,400, which TOOLS.md gives)
+        assert sizes == ["13,200"]
         assert "12,500" not in entry and "12,900" not in entry
 
     def test_the_maintainer_s_decisions(self):

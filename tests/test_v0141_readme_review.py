@@ -311,8 +311,10 @@ def test_a_project_from_the_conversation_stays_in_one_qualcoder():
     tools = _flat("TOOLS.md")
     opening = tools[tools.index("**Opening it in QualCoder.**"):
                     tools.index("**The project memo**")]
-    assert ("Keep such a project in one QualCoder: moving it between 3.8.2 "
-            "and 4.0 is what changes it.") in opening
+    # (v0.15.2: the warning and its suggestion, not a prescription)
+    assert ("Moving such a project between 3.8.2 and 4.0 is what changes "
+            "it, so keeping it in one version of QualCoder avoids this.") \
+        in opening
     assert "Work on such a project in QualCoder 4.0." not in opening
     # (the staleness audit of 20 October 2026: with 4.0, Exegete warns
     # on signs of an open window, database.py, qualcoder_gui_signals;
@@ -329,9 +331,11 @@ def test_a_project_from_the_conversation_stays_in_one_qualcoder():
 
 def test_the_three_questions_are_what_the_assistant_is_told():
     tools = _flat("TOOLS.md")
-    step = tools[tools.index("**Step 2: Analyse Files**"):
-                 tools.index("**Step 3: Review in Chat**")]
-    assert ("Claude is told to: - Ask you three things before it starts: "
+    # (v0.15.2: the assistant, not Claude for every assistant)
+    step = tools[tools.index("**Step 2: Analyse files**"):
+                 tools.index("**Step 3: Review in the conversation**")]
+    assert ("The assistant is told to: - Ask you three things before it "
+            "starts: "
             "what to look for, how long a coded passage should be, and "
             "whether a passage may carry more than one code; and pass your "
             "answers as the session's `instruction`, which is required. "

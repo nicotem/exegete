@@ -138,10 +138,11 @@ def test_the_guide_readme_and_changelog_name_the_tools():
            "file's stored copy keeps its original name and text." \
            in _flat("AI_CODING_GUIDE.md")
     readme = _flat("TOOLS.md")   # v0.14.1: the tool list moved there
-    assert "- `rename_case(case_id, new_name, create_backup)` - **WRITES " \
-           "TO DATABASE**" in readme
-    assert "- `rename_file(file_id, new_name, create_backup)` - **WRITES " \
-           "TO DATABASE**" in readme
+    # (v0.15.2: the mark in sentence case, no longer in capitals)
+    assert "- `rename_case(case_id, new_name, create_backup)` - **Writes " \
+           "to the database**" in readme
+    assert "- `rename_file(file_id, new_name, create_backup)` - **Writes " \
+           "to the database**" in readme
     unreleased = _flat("CHANGELOG.md").split("## [0.12")[0]
     assert "### Added: `rename_case` and `rename_file`" in unreleased
     assert "**`import_text_file` shares `rename_file`'s name rules, so " \

@@ -372,8 +372,9 @@ OWNER_ARGUMENT = re.compile(
     r"(?i)`owner`|\bowner argument|\bargument[`']? owner\b|\bomit owner\b"
     r"|\bwithout owner\b|(?-i:\bowner:\s)|(?:apply_codings|import_text_file)"
     r"\([^)]*\bowner\b")
-# "removed in 0.15.1", not 0.14's "removed in v0.15.1", which announced it
-SAYS_REMOVED = re.compile(r"\bremoved in 0\.15\.1")
+# "removed in 0.15.1", not 0.14's "removed in v0.15.1", which announced it;
+# or, in a document that gives no release (v0.15.2), "has been removed"
+SAYS_REMOVED = re.compile(r"\bremoved in 0\.15\.1|\bhas been removed\b")
 
 
 def _flat(text):

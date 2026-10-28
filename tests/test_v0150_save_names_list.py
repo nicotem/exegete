@@ -2026,7 +2026,7 @@ class TestTheSharedParts:
 # ---------------------------------------------------------------------------
 
 TOOLS_ENTRY = (
-    "- `save_names_list(preview_token)` - **WRITES TO THE PROJECT** - Checks "
+    "- `save_names_list(preview_token)` - **Writes to the project** - Checks "
     "the names file and saves it as `pseudonyms.json`: a preview of counts "
     "and line numbers, never a name, then the save, after a backup. In the "
     "full tool set, not in core")

@@ -1245,8 +1245,8 @@ class TestTheTexts:
                 "in) is kept as it is, never taken from the backup; the "
                 "preview says when either has one. So are its `audio` and "
                 "`video` folders") in entry
-        assert ("`list_backups` + `restore_backup` roll the project back "
-                "to a snapshot, all but its `Exegete`, `audio` and `video` "
+        assert ("`list_backups` and `restore_backup` roll the project back "
+                "to a backup, all but its `Exegete`, `audio` and `video` "
                 "folders, which a restore keeps.") in tools
         # v0.15.1, the restore: its preview counts rows by kind, every
         # coder's together, never by owner

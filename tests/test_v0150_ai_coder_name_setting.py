@@ -647,8 +647,8 @@ class TestTheDocuments:
                 "the project folder then also holds `exegete.json` and the "
                 "earlier file `qualcoder_mcp.json`, written already marked "
                 "as moved so that copies of Exegete from before its rename "
-                "(0.12 to 0.14) refuse to write the project; QualCoder reads "
-                "neither;") in text
+                "refuse to write the project; QualCoder reads neither;") \
+            in text
         assert "Left empty, each project is asked." in text
         assert ("with the note \"Taken from Exegete's settings when the "
                 "project was created.\" A project made another way") in text

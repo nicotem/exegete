@@ -1,7 +1,8 @@
 ### Fixed
 
-- **One Ctrl+C stops Exegete started by hand in a terminal**, as
-  INSTALL, QUICKSTART and Exegete's own note say. Exegete prints one
+- **One Ctrl+C stops Exegete started by hand in a terminal**, as the
+  guide to installing from the Terminal, QUICKSTART and Exegete's own
+  note say. Exegete prints one
   line, `Stopped by Ctrl+C`. Before, it kept running after a Ctrl+C
   until Enter was pressed or the terminal was closed, and Enter or a
   second Ctrl+C printed an error report from Python. An interrupt can

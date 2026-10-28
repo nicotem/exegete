@@ -16,6 +16,7 @@ the sets of part three, each named after what it pins.
 
 import json
 import os
+import re
 import sqlite3
 import time
 from contextlib import closing
@@ -28,8 +29,9 @@ from exegete import change_record, preview_tokens, undo
 from exegete.database import is_this_servers_backup_name
 
 from test_v014_server_wide import QUOTE, TEXT_1, TEXT_2, _database_rows
-from test_v0152_undo_record import (answer, make_project, receipt_of,
-                                    records, server_state)  # noqa: F401
+from test_v0152_undo_record import (NO_RECEIPT_BY_DESIGN, answer,
+                                    make_project, receipt_of, records,
+                                    server_state)  # noqa: F401
 
 
 # ---------------------------------------------------------------------------
@@ -1533,6 +1535,21 @@ class TestTheCodingSessionsMarks:
 
 
 class TestTheSetsAndThePrune:
+
+    def test_tools_md_names_every_tool_whose_changes_it_cannot_undo(self):
+        """TOOLS.md's entry for undo_changes says which tools that write a
+        project it does not cover: those whose changes answer no receipt
+        by design, and those whose changes it refuses until the third
+        undo piece, each from the code and the record's tests."""
+        lines = (Path(__file__).resolve().parents[1] / "TOOLS.md"
+                 ).read_text(encoding="utf-8").splitlines()
+        entry = next(line for line in lines
+                     if line.startswith("- `undo_changes("))
+        covered = [sentence for sentence in re.split(r"(?<=\.) ", entry)
+                   if " covered" in sentence]
+        assert len(covered) == 1, covered
+        named = set(re.findall(r"`(\w+)`", covered[0]))
+        assert set(NO_RECEIPT_BY_DESIGN) | undo.NOT_YET_UNDOABLE_TOOLS <= named
 
     def test_undo_is_in_both_sets_beside_the_restore(self):
         assert {"undo_changes", "restore_backup"} <= server.CORE_TOOLSET

@@ -145,6 +145,18 @@ class TestTheThreeCalls:
         assert listed["changes"][0]["rows"] == {"removed": {"code_name": 1}}
         assert listed["changes"][0]["can_be_undone"] is True
 
+    def test_the_list_says_why_a_change_cannot_be_undone(self, project):
+        _, receipt = new_code("Belonging")
+        server.set_memo(target_type="code",
+                        target_id=code_id(project, "Belonging"),
+                        memo="A note")
+        listed = answer(server.undo_changes())
+        entry = next(c for c in listed["changes"]
+                     if c["undo_receipt"] == receipt)
+        assert entry["can_be_undone"] is False
+        assert [w["reason"] for w in entry["why_not"]] == [
+            undo.CHANGED_SINCE]
+
     def test_a_malformed_receipt_is_refused_before_any_path(self, project):
         found = answer(server.undo_changes(receipts=["../../etc/passwd"]))
         assert found["nothing_changed"] is True
@@ -665,6 +677,19 @@ class TestARowThatHasLostItsPlace:
         refused = unchanged_by(project, lambda: undo_preview(receipt))
         assert reasons(refused) == {undo.LOOP}
         assert made
+
+    def test_a_number_taken_by_a_code_made_since(self, project):
+        """SQLite gives the highest id out again once its row is gone: a
+        code deleted, then another made, takes its number."""
+        deleted = answer(two_step(server.delete_code,
+                                  code_id=3))["undo_receipt"]
+        _, made = new_code("Other")
+        assert code_id(project, "Other") == 3
+        refused = unchanged_by(project, lambda: undo_preview(deleted))
+        assert reasons(refused) == {undo.KEY_IN_USE}
+        assert refusal(refused, undo.KEY_IN_USE)["later_changes"] == [made]
+        assert undo_run(deleted, made)["success"] is True
+        assert code_id(project, "Hope") == 3
 
     def test_a_name_taken_by_a_code_made_since(self, project):
         renamed = renamed_code(project)
@@ -1272,6 +1297,23 @@ class TestTheCodingSessionsMarks:
         session = session_file(sid)
         assert session.description == "edited elsewhere"
         assert session.suggestions[0].status == "approved"
+
+
+class TestTheSetsAndThePrune:
+
+    def test_undo_is_in_both_sets_beside_the_restore(self):
+        assert {"undo_changes", "restore_backup"} <= server.CORE_TOOLSET
+        assert "undo_changes" in server.ALL_TOOL_NAMES
+        assert "undo_changes" in preview_tokens.REGISTRY
+        assert "undo_changes" not in preview_tokens.KEYED_BIND
+
+    def test_the_prune_counts_the_changes_that_lose_their_undo(
+            self, project):
+        renamed = renamed_code(project)
+        new_code("Belonging")
+        preview = answer(server.prune_backups(keep_last=0))
+        assert preview["preview"]["changes_losing_undo"] == 1
+        assert renamed
 
 
 class TestTheReadingCopies:

@@ -14925,14 +14925,14 @@ def _undo_context() -> Tuple[str, str, str, Path]:
             change_record.digest(secret, "key check", ""), project_db)
 
 
-def _undo_plan(db_, receipts: Sequence[str], context,
-               sessions=None, clock: Optional[float] = None) -> undo.Plan:
+def _undo_plan(db_, receipts: Sequence[str], context, sessions=None,
+               clock: Optional[float] = None, records=None) -> undo.Plan:
     secret, project, key_check, project_db = context
     if sessions is None:
         sessions = undo.project_sessions(session_manager, project_db)
     return undo.plan(db_, receipts, secret=secret, project=project,
                      key_check=key_check, project_db=project_db,
-                     sessions=sessions, clock=clock)
+                     sessions=sessions, clock=clock, records=records)
 
 
 def _undo_coders(owners: Sequence[Optional[str]], db_) -> Dict[str, Any]:
@@ -15098,10 +15098,12 @@ def _undo_list(context) -> Dict[str, Any]:
         return {"changes": [], "note": _mark_unregistered(UNDO_LIST_EMPTY)}
     ro = get_db()
     sessions = undo.project_sessions(session_manager, project_db)
+    every = change_record.records(context[1])
     clock = change_record.now()
     changes = []
     for record in records:
-        plan = _undo_plan(ro, [record["receipt"]], context, sessions, clock)
+        plan = _undo_plan(ro, [record["receipt"]], context, sessions, clock,
+                          every)
         entry: Dict[str, Any] = {
             "undo_receipt": record["receipt"], "tool": record.get("tool"),
             "minutes_ago": max(0, int((clock - record.get("time", clock))
@@ -15641,7 +15643,11 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "step_5": "Apply approved codings to database (apply_codings: "
                           "bound to the session's project, all-or-nothing, "
                           "a backup first, as before every change)",
-                "step_6": "Recover if needed: delete_coding removes a single "
+                "step_6": "Recover if needed: undo_changes takes back a "
+                          "change Exegete made, whole, for a day after it, "
+                          "with the undo_receipt its answer gave (a preview "
+                          "first, then the call with its token); "
+                          "delete_coding removes a single "
                           "coding (on projects with the coder-visibility "
                           "capability it refuses a hidden coder's row without "
                           "allow_hidden_coder, and a row whose memo carries a "
@@ -15650,8 +15656,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "restore_backup roll the project back (all but its "
                           "Exegete, audio and video folders, which a restore "
                           "keeps). The "
-                          "destructive codebook tools, restore_backup and "
-                          "prune_backups are two-step: call without "
+                          "destructive codebook tools, restore_backup, "
+                          "prune_backups and undo_changes are two-step: call "
+                          "without "
                           "preview_token to see exactly what would change and "
                           "whose work it is, show the user that preview and "
                           "the warnings, then call again with the "

@@ -796,7 +796,8 @@ class _Planner:
 
     def __init__(self, db_, *, secret: str, project: str,
                  project_db: Path, sessions: Sequence[Tuple[str, Any, bytes]],
-                 receipts: Sequence[str]):
+                 receipts: Sequence[str],
+                 records: Optional[Sequence[Dict[str, Any]]] = None):
         from .database import _capture_table
         self._capture_table = _capture_table
         self.db_ = db_
@@ -813,6 +814,7 @@ class _Planner:
         self._open: List[sqlite3.Connection] = []
         self._backups: Dict[str, Tuple[Optional[Source], Optional[str]]] = {}
         self.returned: Set[Tuple[Any, Any]] = set()
+        self._records = records
         self._index: Optional[Dict[Tuple[str, Any], List[Tuple[Any, ...]]]] = None
 
     def close(self) -> None:
@@ -871,7 +873,9 @@ class _Planner:
         this run's by their receipts, another run's counted."""
         if self._index is None:
             self._index = {}
-            for record in change_record.records(self.project_key):
+            if self._records is None:
+                self._records = change_record.records(self.project_key)
+            for record in self._records:
                 for row in record.get("rows") or []:
                     if isinstance(row, dict) and isinstance(row.get("table"),
                                                             str):
@@ -1436,7 +1440,8 @@ def _marks_of(record: Dict[str, Any]) -> Tuple[Optional[str], List[str]]:
 def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
          key_check: str, project_db: Path,
          sessions: Sequence[Tuple[str, Any, bytes]],
-         clock: Optional[float] = None) -> Plan:
+         clock: Optional[float] = None,
+         records: Optional[Sequence[Dict[str, Any]]] = None) -> Plan:
     """The plan for undoing these changes, newest first, read-only.
 
     `db_` is the connection's database object (the read-only one for the
@@ -1445,11 +1450,13 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
     project's data.qda; `sessions` this project's coding sessions. Each
     receipt was checked as 32 lowercase hex characters before any path
     was made. A change blocked only by a later one in the same call goes
-    through after it."""
+    through after it. `records`, every record of the project, read once
+    for a list of several plans, else when a refusal asks which later
+    change touched a row."""
     result = Plan()
     planner = _Planner(db_, secret=secret, project=project,
                        project_db=project_db, sessions=sessions,
-                       receipts=receipts)
+                       receipts=receipts, records=records)
     try:
         located = []
         for receipt in dict.fromkeys(receipts):

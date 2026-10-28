@@ -560,7 +560,7 @@ class TestTheDocuments:
                 "word"):
             assert said in tools, said
         section = tools[tools.index("## Document import: where it departs"):
-                        tools.index("## Available Resources")]
+                        tools.index("## Available resources")]
         assert "encoding" not in section
         assert "a named character set" not in section
 

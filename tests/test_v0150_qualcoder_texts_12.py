@@ -797,8 +797,9 @@ class TestTheDocuments:
         flat = _doc("TOOLS.md")
         assert (
             "Quick picks if you have no preference: `AI Coding Assistant` "
-            "(Exegete's built-in default, and what every project coded "
-            "with v0.11 and earlier already holds), or a name of your own. "
+            "(Exegete's built-in default, and the name already on AI "
+            "codings made before each project had a name of its own for "
+            "them), or a name of your own. "
             "When the project shows that QualCoder's AI may have been used "
             "(it already holds rows under `AI Agent`, or has an `ai_data` "
             "folder with something in it), the picks also include "

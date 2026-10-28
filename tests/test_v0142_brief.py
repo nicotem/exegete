@@ -495,11 +495,14 @@ class TestProvisionalAndHeldBack:
                             ("CHANGELOG's 0.14.2 entry", entry_0142)):
             assert "restates the rules the tools already give" not in text
             assert "takes no new position on method" not in text, where
-            assert ("carries the tools' own rules, adds how to work with "
+            # (v0.15.2, TOOLS.md: "a later release may change it", as
+            # the brief says of itself, in place of a plan with no date)
+            said = ("carries the tools' own rules, adds how to work with "
                     "the researcher where no single tool says, and leaves "
-                    "out, until this project's statement on method, the "
-                    "lines that would take a position on method"
-                    in text), where
+                    "out")
+            assert said in text, where
+            assert "the lines that would take a position on method" \
+                in text, where
 
 
 # ---------------------------------------------------------------------------

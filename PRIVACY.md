@@ -46,7 +46,7 @@ ask.
 Your participants may have consented to *you* analysing their data.
 That is not the same as consenting to their data being processed by a
 third-party AI provider. Whether this flow is acceptable for your
-project is **yours to decide**, and the answer belongs in:
+project is **your responsibility to decide**, and the answer belongs in:
 
 - your **informed-consent language** (does it cover processing by an
   AI service?)

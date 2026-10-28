@@ -235,8 +235,7 @@ project. The error also gives the last project used on this computer,
 if it still exists, so one `select_project` call can open it again.
 
 **"Database file not found"**: check that the path to the `.qda` folder
-is right and complete, and that the folder holds a file called
-`data.qda`.
+is right and complete, and that the folder holds `data.qda`.
 
 **"Module not found"**: check that you ran `pip install -e .` in the
 virtual environment, or `pip install -e ".[pdf-epub]"` for PDF and EPUB

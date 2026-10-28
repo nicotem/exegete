@@ -123,13 +123,14 @@ def _nothing_made(tmp_path):
 # cut to plain statements: tests/test_v0151_settings_page.py)
 CODER_DESCRIPTION = ("kept apart from the AI's",
                      "Exegete gives it to each project it creates",
-                     "Empty, the default: Claude asks for it",
+                     "the default, Claude asks for it",
                      "It must differ from the AI coder name")
 # The coder names, piece 3: the AI coder name in the settings is given
 # to each project Exegete creates (tests/test_v0150_ai_coder_name_setting.py)
 AI_DESCRIPTION = ("kept apart from yours",
-                  "given to each project Exegete creates",
-                  "Empty, the default: Claude asks the first time")
+                  "Each project Exegete creates gets it",
+                  "Claude asks when a project first needs a name",
+                  "Empty is the default")
 
 
 class TestTheExtensionsSettings:
@@ -163,12 +164,11 @@ class TestTheExtensionsSettings:
         assert env[AI] == env[AI_OLD] == "${user_config.ai_coder_name}"
 
     def test_the_long_description_names_them(self):
-        assert TEMPLATE["long_description"].endswith(
-            "The settings choose the tool set (every tool, or a smaller set "
-            "for local models), the folder where new projects and working "
-            "copies are kept, your coder name and the AI coder name, "
-            "whether you also use QualCoder on this computer, and "
-            "whether Exegete tells you when a new version is out.")
+        # v0.15.2, the opening texts: each setting by its title, as the
+        # settings page shows it
+        for option in TEMPLATE["user_config"].values():
+            title = option["title"]
+            assert f'"{title}"' in TEMPLATE["long_description"], title
 
 
 class TestTheSettingsTable:

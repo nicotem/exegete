@@ -644,9 +644,8 @@ b19c45675f3940e6	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Sess
 fa8b274ba33f4fd3	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Test on copies - Try workflow on test projects first
 b52fbb547bf7c047	TOOLS.md	document	voice	seeded 27 October, to be read	🔒 Workspace directory: ~/Documents/Exegete projects/, or the folder EXEGETE_WORK
 6a7ced46df9466aa	changelog.d/weekly-workflow.md	document	qualcoder	read 27 October: about QualCoder itself, the weekly watch on its newest code; no plainer way to say whose code it is	The watch on QualCoder's newest code runs once a week, on Mondays, in a workflow
-170955d65282fa8f	packaging/desktop-extension/manifest.in.json	document	qualcoder	seeded 27 October, to be read	On: Exegete adds some notes that matter only if you also open your projects in Q
-c56d0c32093289e5	packaging/desktop-extension/manifest.in.json	document	qualcoder	seeded 27 October, to be read	QualCoder is free software for qualitative analysis; Exegete is an independent p
-e0ef46a5faed68bd	packaging/desktop-extension/manifest.in.json	document	qualcoder	seeded 27 October, to be read	The settings choose the tool set (every tool, or a smaller set for local models)
+0b312d0fe9002b51	packaging/desktop-extension/manifest.in.json	document	qualcoder	about QualCoder itself: who made Exegete, said once where the program is introduced	QualCoder's developers did not make Exegete and have not endorsed it.
+9de1783fd1de4124	packaging/desktop-extension/manifest.in.json	document	qualcoder	the switch "I use QualCoder on this computer" is itself the sign; the writing checklist's own rewrite of this description	With this on, Exegete adds notes that matter if you open projects in QualCoder.
 317223a80298e242	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Exegete is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
 441162f254ea563b	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SCHEMA_VERSION, TABLES, CODER_NAMES_TABLE, VIS
 bca8fa48f189d75f	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and about_line.

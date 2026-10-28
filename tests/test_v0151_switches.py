@@ -448,9 +448,13 @@ class TestTheWordsSayWhatTheSwitchesDo:
         page = " ".join(CONFIG["i_use_qualcoder"]["description"].split())
         bullet = _between(INSTALL, "- **I use QualCoder on this computer**:",
                           "- **Tell me when a new version is out**")
-        for where, clause in (
-                ("the page", page[page.index("Off, the default: "):]),
-                ("INSTALL, step 4", bullet[bullet.index("; off, ") + 2:])):
+        # v0.15.2, the opening texts: the page in the writing checklist's
+        # words ("in the project or on this computer")
+        for where, clause, signs in (
+                ("the page", page[page.index("With it off, the default, "):],
+                 "signs of QualCoder in the project or on this computer"),
+                ("INSTALL, step 4", bullet[bullet.index("; off, ") + 2:],
+                 "signs of QualCoder on the project or")):
             clause = clause.split(". ")[0]
             assert title not in clause, where
-            assert "signs of QualCoder on the project or" in clause, where
+            assert signs in clause, where

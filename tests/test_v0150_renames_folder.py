@@ -44,9 +44,12 @@ DESCRIPTION_LINES = (
 # What the extension's description says, as facts (after 0.15.1 the page's
 # descriptions were cut to plain statements, the earlier default left to
 # the CHANGELOG: tests/test_v0151_settings_page.py)
+# v0.15.2, the opening texts: the sync service as a warning, and the
+# empty setting's effect, in the writing checklist's voice
 SETTING_DESCRIPTION = ("Exegete projects in your home folder",
-                       "no sync service",
-                       "Leaving it empty stops the extension from starting")
+                       "sync service",
+                       "copies your projects off this computer",
+                       "With this empty, Exegete does not start")
 
 MANIFEST = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))

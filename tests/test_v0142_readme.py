@@ -413,11 +413,13 @@ def test_the_approval_steps_are_named_where_the_readme_points():
         assert name in tools, name
         assert name not in newcomer, name
     # (v0.15.2, the opening texts: TOOLS.md lists the coding loop's tools,
-    # the advanced section pointing to it)
+    # the advanced section pointing to it; the owner's word of 29 October
+    # 2026: the advanced section names them again)
     tools_md = _flat("TOOLS.md")
     for name in ("update_suggestion_status", "apply_codings",
                  "create_proposed_codes"):
         assert f"`{name}" in tools_md, name
+        assert f"`{name}`" in advanced, name
     assert "TOOLS.md#available-tools" in advanced
 
 

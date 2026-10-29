@@ -509,6 +509,23 @@ which carry your project's texts. `lifecycle`, the earlier name of
 **Beyond the basics**, each tool described in
 [TOOLS.md](https://github.com/nicotem/exegete/blob/main/TOOLS.md#available-tools):
 
+- **Coding with your approval**, the path drawn above:
+  `start_coding_session`, `record_suggestions`, `review_suggestions`,
+  `edit_suggestion`, `update_suggestion_status` and `apply_codings`.
+  For codes the assistant proposes, the tools include `propose_codes`,
+  `update_proposal` and `create_proposed_codes`.
+- **Large projects**, larger than a model's context: `get_coded_segments`
+  reads a page at a time. You choose the order, and how many characters
+  a page may hold. `search_files` and `search_coded_text` read a page at
+  a time too. Their `exclude_code_ids` leaves out text already coded with
+  the codes you name.
+- **QualCoder's conventions**: reads leave out the work of coders a
+  project hides. A `coder` argument reads one coder's work in full. A
+  memo's private part starts at a `#####` mark. Each project has its own
+  AI coder name (`set_project_ai_coder_name`).
+- **Analysis**: `find_cooccurring_codes` with a window measured in
+  characters, `query_by_attribute` with comparisons such as greater
+  than, `get_case_code_matrix` and `compare_coders`.
 - **Guarded changes**, previewed, then made on a token bound to the
   preview: `merge_codes`, `merge_category`, `delete_code`,
   `delete_category`, `pseudonymise_source` (these five also say whose
@@ -516,6 +533,10 @@ which carry your project's texts. `lifecycle`, the earlier name of
   `set_project_coder_name` (your own coder name, while nothing is
   recorded under it), `save_names_list` (saving the names list), and
   `import_documents` (bringing documents in, after a backup).
+- **Documents in, whole files read**: `import_documents` needs the
+  optional part, `exegete[pdf-epub]`, for PDF and EPUB.
+  `open_file_for_reading` shows you a whole file on your screen and keeps
+  its text out of the conversation.
 - **The brief** (provisional), how the assistant is to work with you
   (`read_brief`). A host may keep only the start of a description, so
   the rules that matter come within its first 2,048 characters, a few
@@ -523,6 +544,9 @@ which carry your project's texts. `lifecycle`, the earlier name of
   figures). One description is longer than 16,384 characters,
   `pseudonymise_source`'s (about 17,000 on Python 3.13, about 18,000
   on 3.11 and 3.12): [the guide's section on Claude Code](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#claude-code) says how to let it through whole.
+- **Resources** (`exegete://...`) and prompts. The command
+  `exegete --check-transition` lists what the change of name from
+  qualcoder-mcp left behind.
 
 **Tested.** More than 8,000 automated tests run on Windows, macOS and
 Linux, with Python 3.11 and 3.13 (and 3.14 on Linux), on every change

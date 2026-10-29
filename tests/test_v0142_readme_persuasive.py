@@ -346,8 +346,12 @@ def _tools(mode="full"):
 # links, the seven modules of the code), and the links to the two
 # documents linked nowhere else on the page, take 1,503 characters and 33
 # lines: 38,885 in 601 lines.
-README_LIMIT = 38_885
-README_LINES = 601
+# The groups under "Beyond the basics" (coding with your approval, large
+# projects, QualCoder's conventions, analysis, documents in, resources)
+# around the two the rewrite kept, take 1,462 characters and 24 lines:
+# 40,347 in 625 lines.
+README_LIMIT = 40_347
+README_LINES = 625
 
 
 def test_the_readme_stays_short():
@@ -973,6 +977,13 @@ def test_the_tool_set_table():
 # The advanced section, against the code
 # ---------------------------------------------------------------------------
 
+# The arguments the list names, each a parameter of its tool
+ARGUMENTS = {"get_coded_segments": ("cursor", "strategy", "max_chars",
+                                    "coder"),
+             "search_files": ("cursor", "exclude_code_ids"),
+             "search_coded_text": ("cursor", "exclude_code_ids"),
+             "find_cooccurring_codes": ("window_size",),
+             "query_by_attribute": ("operator",)}
 GUARDED = ("merge_codes", "merge_category", "delete_code", "delete_category",
            "pseudonymise_source", "restore_backup", "prune_backups",
            # (the staleness audit of 20 October 2026: the names list's
@@ -1026,25 +1037,49 @@ def test_the_advanced_section_rests_on_the_code():
     assert "?mode=ro" in database
     assert "The whole project tree is copied" in database
     assert "by_owner" in database
-    # every name in the list is a tool the assistant is given
+    # every name in the list is a tool the assistant is given, or one of
+    # the arguments it names
     beyond = _between(flat, "**Beyond the basics**", "**Tested.**")
     tools = _tools("full")
     for name in re.findall(r"`([a-z_]+)`", beyond):
-        assert name in tools, name
+        assert name in tools or name in ("exclude_code_ids", "coder"), name
+    for tool, arguments in ARGUMENTS.items():
+        parameters = inspect.signature(getattr(server, tool)).parameters
+        for argument in arguments:
+            assert argument in parameters, (tool, argument)
     for tool in GUARDED:
         assert f"`{tool}`" in beyond, tool
         assert "preview_token" in inspect.signature(
             getattr(server, tool)).parameters, tool
     # v0.15.2, the opening texts: the families of tools the list named
     # (coding, large projects, QualCoder's conventions, analysis,
-    # resources) are TOOLS.md's, linked above the list, within the
-    # README's 500 lines; the guarded changes and the brief stay
+    # resources) were left to TOOLS.md, linked above the list, within the
+    # README's 500 lines; the owner's word of 29 October 2026 brought them
+    # back, in their old order, around the two the rewrite kept
     assert ("**Beyond the basics**, each tool described in [TOOLS.md]"
             "(https://github.com/nicotem/exegete/blob/main/TOOLS.md"
             "#available-tools):") in beyond
-    for lead in ("**Guarded changes**", "**The brief**"):
-        assert lead in beyond, lead
+    leads = ("**Coding with your approval**, the path drawn above:",
+             "**Large projects**, larger than a model's context",
+             "**QualCoder's conventions**", "**Analysis**",
+             "**Guarded changes**", "**Documents in, whole files read**",
+             "**The brief**", "**Resources**")
+    positions = [beyond.index(lead) for lead in leads]
+    assert positions == sorted(positions)
+    assert f"`{names.RESOURCE_SCHEME}://...`" in beyond
     assert f"`{names.RESOURCE_SCHEME}://" in _read("TOOLS.md")
+    assert asyncio.run(server.mcp.list_prompts())
+    assert "\"--check-transition\"" in inspect.getsource(server)
+    # QualCoder's conventions: reads hide what a project hides, and a
+    # coder argument reads that coder's rows in full
+    assert ("reads leave out the work of coders a project hides. A "
+            "`coder` argument reads one coder's work in full.") in beyond
+    for tool in ("get_coded_segments", "search_coded_text",
+                 "find_cooccurring_codes"):
+        doc = " ".join(getattr(server, tool).__doc__.split())
+        assert "bypassing the visibility filter" in doc, tool
+    # nothing the branch does not have: undo is not on it yet
+    assert "undo" not in beyond
     # Claude Code's limits, whose figures are the Terminal guide's (its
     # version 2.1.296 and after; tests/test_v0150_wb_fix_r2.py pins the
     # long description), and what follows from them

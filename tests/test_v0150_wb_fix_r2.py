@@ -415,8 +415,9 @@ class TestTheSmallerPoints:
         from exegete import preview_tokens
         guarded = readme[readme.index("- **Guarded changes**"):]
         # (v0.15.2, the opening texts: the import among them, every tool
-        # that previews first in the one list)
-        guarded = guarded[:guarded.index("- **The brief**")]
+        # that previews first in the one list; the owner's word of 29
+        # October 2026: the group after it back, documents in)
+        guarded = guarded[:guarded.index("- **Documents in")]
         for name in set(preview_tokens.REGISTRY):
             assert f"`{name}`" in guarded, name
         # (the readability reading: the list's lead says that each

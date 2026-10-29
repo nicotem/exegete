@@ -4,13 +4,18 @@
 Every change Exegete makes to a project through its write routes leaves
 one record: the rows the change touched, by table and key, each with a
 digest of the row before the change and after it, keyed with Exegete's
-secret. A record holds ids and digests, never a name, a text, a note or
-a path. A sweep removes it once it is a day old: when Exegete starts, or
-after the next record of a change to the same project, so the record of
-a project that is not changed again stays until Exegete next starts.
-Undo reads it later, to judge whether the change can still be taken back
-and to find the old rows in the change's own backup; the change's answer
-carries its receipt.
+secret. Three kinds of change keep more (v0.15.2, the third undo
+piece): a pseudonymisation run keeps a digest of every table as the run
+left it (`content`, route "whole"); a document import, a digest of each
+original it stored, by the file's id (`files`); a save of the names
+list, digests of the list before and after it (`names_list`, route
+"names_list", with no rows). A record holds ids and digests, never a
+name, a text, a note or a path. A sweep removes it once it is a day
+old: when Exegete starts, or after the next record of a change to the
+same project, so the record of a project that is not changed again
+stays until Exegete next starts. Undo reads it later, to judge whether
+the change can still be taken back and to find what it needs in the
+change's own backup; the change's answer carries its receipt.
 
 Where: `state_home() / "changes" / <project>`, `<project>` a keyed
 digest of the project's path, so that no path is kept. Each record is a
@@ -54,10 +59,18 @@ HEX_32 = re.compile(r"[0-9a-f]{32}")
 # What the SQL function gives for a value it cannot digest: never a
 # digest, so a change holding it is not recorded
 UNREADABLE = "unreadable"
-# The fields a record holds; a reader skips any other
+# The fields a record holds; a reader skips any other. `content`,
+# `files` and `names_list` joined at format 1 (v0.15.2)
 FIELDS = ("format", "receipt", "run", "time", "tool", "project",
           "key_check", "backup", "route", "tables", "rows", "texts",
-          "session", "items")
+          "session", "items", "content", "files", "names_list")
+# The routes a change is taken back by: its rows (most changes, the
+# document import's originals with them), its rows only while nothing
+# else has been written (a pseudonymisation run), or the names list's
+# file, from its backup
+ROWS_ROUTE = "rows"
+WHOLE_ROUTE = "whole"
+NAMES_LIST_ROUTE = "names_list"
 # What every digest is keyed over before its value, with its own label
 LABEL_PREFIX = "exegete change record"
 # Windows: a scanner holding the new file refuses the rename for a moment
@@ -136,20 +149,43 @@ def new_receipt() -> str:
 
 def new_record(*, tool: Optional[str], project: str, key_check: str,
                backup: Optional[str], found: Dict[str, Any],
-               marks: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+               marks: Optional[Dict[str, Any]] = None,
+               route: str = ROWS_ROUTE,
+               content: Optional[Dict[str, Any]] = None,
+               files: Optional[List[Dict[str, Any]]] = None
+               ) -> Dict[str, Any]:
     """A record, whole, its fields in the order `write` keeps: the head
     first, the rows after it. `found` is what `finish_capture` gave;
     `marks`, the coding session's id and the random ids of the items the
-    call marked, when it marked some."""
+    call marked, when it marked some; `content`, a run's digests of the
+    project as it left it (route "whole"); `files`, an import's
+    originals, each `{"file": id, "digest": keyed digest}`."""
     record = {"format": FORMAT, "receipt": new_receipt(), "run": RUN,
               "time": now(), "tool": tool, "project": project,
-              "key_check": key_check, "backup": backup, "route": "rows",
+              "key_check": key_check, "backup": backup, "route": route,
               "tables": found["tables"], "rows": found["rows"],
               "texts": found["texts"]}
     if marks:
         record["session"] = marks.get("session")
         record["items"] = list(marks.get("items") or [])
+    if content is not None:
+        record["content"] = content
+    if files is not None:
+        record["files"] = list(files)
     return record
+
+
+def names_list_record(*, project: str, key_check: str, backup: str,
+                      before: Optional[str], after: str) -> Dict[str, Any]:
+    """The record of a save of the names list (route "names_list"): the
+    digest of its backup's name, and keyed digests of the list's bytes
+    before the save (None when there was none) and of the bytes it
+    wrote. No rows: the list is a file beside the database."""
+    return {"format": FORMAT, "receipt": new_receipt(), "run": RUN,
+            "time": now(), "tool": "save_names_list", "project": project,
+            "key_check": key_check, "backup": backup,
+            "route": NAMES_LIST_ROUTE,
+            "names_list": {"before": before, "after": after}}
 
 
 def _ensure_folder(project: str) -> Path:

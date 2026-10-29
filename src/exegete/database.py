@@ -12,8 +12,8 @@ import stat
 import sys
 import threading
 from pathlib import Path
-from typing import (Optional, List, Dict, Any, Callable, NamedTuple,
-                    Sequence, Tuple, Union)
+from typing import (Optional, List, Dict, Any, Callable, Iterator,
+                    NamedTuple, Sequence, Tuple, Union)
 import json
 import re
 import time
@@ -4670,6 +4670,128 @@ def _register_capture_function(conn, function) -> None:
 class _Capture(NamedTuple):
     tables: List[CaptureTable]
     before: Tuple[Optional[int], Optional[int]]
+    secret: str
+
+
+# ======================================================================
+# A pseudonymisation run's content (v0.15.2): the whole project as the
+# run left it
+# ======================================================================
+# A run is undone only while nothing has been written to the project
+# since it (the owner's rule), so its record keeps, for each of the
+# project's own tables, a keyed digest of its columns' names and the
+# sorted list of its rows' digests, each row read as the capture reads
+# it (`typeof` and `CAST(... AS BLOB)`, nothing decoded), so that a
+# column added to a table with no rows counts too. Sorted, so that
+# neither a row's place in the file nor the order of a scan counts:
+# QualCoder runs VACUUM each time it opens a project (qc40 __main__.py
+# 2865 to 2867, qc382 3023 to 3024, at b95e021). QualCoder's
+# bookkeeping when it opens a project is set aside (qc40 app.py 1555 to
+# 1677, __main__.py 2866 to 2871): the project row's coder name, which
+# the capture sets aside already, and in the coder list a name added or
+# made visible again. The coder list's own names are kept each by its
+# row's digest, so that one removed or hidden since still counts.
+
+CODER_LIST_TABLE = "coder_names"
+CODER_LIST_VISIBILITY = "visibility"
+
+
+class ContentRow(NamedTuple):
+    """One row as a run's content reads it."""
+    key: Any                    # its key as a record keeps it
+    digest: str                 # as the capture's triggers make it
+    if_hidden: Optional[str]    # a visible coder's row, digested hidden
+
+
+def is_coder_list(table: CaptureTable) -> bool:
+    """The coder list, keyed by its names: its rows are compared by name,
+    so that QualCoder's additions are set aside."""
+    return (str(table.name).lower() == CODER_LIST_TABLE
+            and table.key_kind == "digest")
+
+
+def content_rows(conn, table: CaptureTable, fn) -> Iterator[ContentRow]:
+    """Each row of a table, read as the capture reads it: its key as a
+    record keeps it (the integer key, a unique column's digest, None for
+    the one-row table and a table without a key) and its digest over the
+    capture's columns, `fn` being change_record.row_function. A row of
+    the coder list whose visibility is 1 is also digested as if it were
+    0, which tells a name made visible again. Raises ValueError for a
+    value that cannot be digested, sqlite3.Error for a read that fails."""
+    columns = list(table.columns)
+    if not columns:
+        return
+    lowered = [str(column).lower() for column in columns]
+    key_at = (lowered.index(str(table.key).lower())
+              if table.key_kind == "digest" else None)
+    shown_at = (lowered.index(CODER_LIST_VISIBILITY)
+                if is_coder_list(table) and CODER_LIST_VISIBILITY in lowered
+                else None)
+    head = (f"r.{_quoted(table.key)}" if table.key_kind == "integer"
+            else "NULL")
+    parts = ", ".join(rf"typeof(r.{_quoted(c)}), CAST(r.{_quoted(c)} AS BLOB)"
+                      for c in columns)
+    cursor = conn.cursor()
+    try:
+        cursor.row_factory = None
+        for row in cursor.execute(
+                f"SELECT {head}, {parts} FROM main.{_quoted(table.name)} "
+                f"AS r"):
+            pairs = []
+            for i in range(len(columns)):
+                kind, raw = row[1 + 2 * i], row[2 + 2 * i]
+                if raw is not None and not isinstance(raw, bytes):
+                    raw = bytes(raw)
+                pairs.append((kind, raw))
+            digest = fn("row", *(v for pair in pairs for v in pair))
+            if digest == change_record.UNREADABLE:
+                raise ValueError("a value could not be digested")
+            key: Any = None
+            if table.key_kind == "integer":
+                key = row[0]
+            elif key_at is not None:
+                key = fn("key", *pairs[key_at])
+                if pairs[key_at][0] == "null" or \
+                        key == change_record.UNREADABLE:
+                    raise ValueError("a key could not be digested")
+            if_hidden = None
+            if shown_at is not None and pairs[shown_at] == ("integer", b"1"):
+                hidden = list(pairs)
+                hidden[shown_at] = ("integer", b"0")
+                if_hidden = fn("row", *(v for pair in hidden for v in pair))
+            yield ContentRow(key, digest, if_hidden)
+    finally:
+        cursor.close()
+
+
+def project_content(conn, secret: str,
+                    tables: Optional[Sequence[CaptureTable]] = None
+                    ) -> Dict[str, Any]:
+    """The project's content as a run's record keeps it: {"tables": each
+    table's name to the keyed digest of its columns and its rows'
+    digests, sorted (`table_content`), the coder list left out; "coders":
+    each name of the coder list, by its key's digest, to its row's
+    digest}. Reads every table; raises as `content_rows` does."""
+    fn = change_record.row_function(secret)
+    tables = _capture_tables(conn) if tables is None else tables
+    found: Dict[str, str] = {}
+    coders: Dict[str, str] = {}
+    for table in tables:
+        if is_coder_list(table):
+            for row in content_rows(conn, table, fn):
+                coders[row.key] = row.digest
+            continue
+        found[table.name] = table_content(
+            secret, table, (row.digest for row in content_rows(conn, table,
+                                                               fn)))
+    return {"tables": found, "coders": coders}
+
+
+def table_content(secret: str, table: CaptureTable, digests) -> str:
+    """One table's digest in a run's content: its columns' names, as the
+    capture digests them, and its rows' digests, sorted."""
+    return change_record.digest(secret, "content",
+                                [list(table.columns), sorted(digests)])
 
 
 class QualcoderDatabase:
@@ -12841,10 +12963,11 @@ class QualcoderDatabase:
                 logger.warning("This change is not recorded: %s",
                                error_label(e))
             return False
-        self._capture = _Capture(tables, before)
+        self._capture = _Capture(tables, before, secret)
         return True
 
-    def finish_capture(self) -> Optional[Dict[str, Any]]:
+    def finish_capture(self, content: bool = False
+                       ) -> Optional[Dict[str, Any]]:
         """What the capture found, then the capture taken away: after the
         change, before the lock's re-check and the commit.
 
@@ -12853,8 +12976,10 @@ class QualcoderDatabase:
         whose digests are equal (an update to the same value) is dropped;
         for a row with positions, a digest of its file's text, read as
         bytes too. {"tables", "rows", "texts"}, "rows" empty when nothing
-        changed; None when no capture ran or it cannot give a record, and
-        the write goes ahead unrecorded. Raises nothing.
+        changed; with `content` (a pseudonymisation run, v0.15.2), also
+        "content", every table as the change left it (`project_content`).
+        None when no capture ran or it cannot give a record, the content
+        included, and the write goes ahead unrecorded. Raises nothing.
         """
         capture = getattr(self, "_capture", None)
         self._capture = None
@@ -12862,7 +12987,11 @@ class QualcoderDatabase:
             return None
         conn = self.conn
         try:
-            return _captured(conn, capture.tables)
+            found = _captured(conn, capture.tables)
+            if content and found["rows"]:
+                found["content"] = project_content(conn, capture.secret,
+                                                   capture.tables)
+            return found
         except _NotRecorded:
             return None
         except Exception as e:

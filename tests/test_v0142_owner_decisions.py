@@ -292,10 +292,6 @@ def _warning_places():
         "PRIVACY, assistants that open files": _between(
             _flat("PRIVACY.md"), "## Assistants that open files by "
             "themselves", "## Keeping notes private"),
-        "QUICKSTART, Claude Code": _between(
-            _flat("QUICKSTART.md"),
-            "### Claude Code instead of Claude Desktop",
-            "## Installation steps"),
     }
 
 
@@ -316,6 +312,54 @@ def test_the_warning_is_where_a_reader_meets_those_routes():
     first = places["README, a first session"]
     assert first.index("Practise on text that is not from a participant") \
         < first.index(OWNERS_WORDS) < first.index("Ask the assistant to")
+
+
+def test_quickstart_gives_the_warning_in_short_sentences():
+    """v0.15.2, the lead's reading of 29 October: QUICKSTART's paragraph
+    on Claude Code gives the warning's facts in short sentences: Claude
+    Code opens files by itself; a study on the same computer is in its
+    reach wherever the practice projects are, and Exegete's list of
+    projects says where each project is; what it opens goes to Anthropic,
+    which may train on it; and the chat, with its three conditions, as a
+    suggestion."""
+    section = _between(_flat("QUICKSTART.md"),
+                       "### Claude Code instead of Claude Desktop",
+                       "## Installation steps")
+    for sentence in (
+            "Claude Code opens files by itself, outside Exegete.",
+            "A study kept on the same computer is within its reach, "
+            "wherever your practice projects are, and Exegete's list of "
+            "projects tells it where each project is.",
+            "What Claude Code opens goes to Anthropic, the AI provider "
+            "that runs its model.",
+            "While training is on, Anthropic may train its models on it.",
+            "If that matters for a study, you could work on that study in "
+            "Claude Desktop's chat, with computer use off, no folder that "
+            "holds your projects or transcripts connected, and no other "
+            "extension that reads files ([PRIVACY.md, \"Assistants that "
+            "open files by themselves\"](PRIVACY.md#assistants-that-open-"
+            "files-by-themselves))."):
+        assert sentence in section, sentence
+
+
+def test_the_list_of_projects_finds_a_study_beside_practice_projects(
+        tmp_path, monkeypatch):
+    """The fact behind "wherever your practice projects are": with the
+    practice projects in a folder of their own, Exegete's list of
+    projects still finds a study kept in Documents, and gives its path."""
+    import json
+    home = tmp_path / "home"
+    practice = home / "Practice projects" / "Practice.qda"
+    study = home / "Documents" / "Study.qda"
+    for project in (practice, study):
+        project.mkdir(parents=True)
+        (project / "data.qda").write_bytes(b"")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("EXEGETE_WORKSPACE", str(practice.parent))
+    found = json.loads(server.list_available_projects())
+    paths = {Path(project["path"]) for project in found["projects"]}
+    assert {practice, study} <= paths, found
 
 
 # Words that dictate where a researcher may use Exegete, which the owner

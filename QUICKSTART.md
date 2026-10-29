@@ -25,23 +25,20 @@ needs no typed commands:
 
 ### Claude Code instead of Claude Desktop
 
-In Claude Code, leave out step 3's settings file and run
+In Claude Code, leave out step 3's settings file. Instead, run
 `claude mcp add exegete -- <venv-python> -m exegete.server` in an empty
 folder of its own, with the path `which python` gives in place of
-`<venv-python>` (the Terminal guide, "Claude Code"). Claude Code opens
-files by itself, outside Exegete, so a real study kept on the same
-computer is within its reach even while you practise, and Exegete's list
-of projects tells it where it is. Started in your home folder, or in a
-folder that holds a study, it reads that study without asking. If that
-matters for a study, you could keep practice projects in a folder of
-their own, or work on that study with Claude Desktop's chat. In that
-chat, you could keep computer use off, connect no folder that holds your
-projects or transcripts, and add no other extension that reads files. A
-folder of their own keeps practice projects apart but does not put the
-study out of Claude Code's reach, and what it opens goes to the AI
-provider, which may train on it while training is on. For Claude Code,
-that is Anthropic, which runs its model
-([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
+`<venv-python>` (the Terminal guide, "Claude Code").
+
+Claude Code opens files by itself, outside Exegete. A study kept on the
+same computer is within its reach, wherever your practice projects are,
+and Exegete's list of projects tells it where each project is. What
+Claude Code opens goes to Anthropic, the AI provider that runs its
+model. While training is on, Anthropic may train its models on it. If
+that matters for a study, you could work on that study in Claude
+Desktop's chat, with computer use off, no folder that holds your
+projects or transcripts connected, and no other extension that reads
+files ([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
 
 ## Installation steps
 

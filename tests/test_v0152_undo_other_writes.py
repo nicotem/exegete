@@ -217,6 +217,52 @@ class TestTheRun:
         refused = unchanged_by(project, lambda: undo_preview(first))
         assert refusal(refused, undo.WRITTEN_SINCE)["tables"] == ["journal"]
 
+    def test_a_write_between_the_first_plan_and_the_lock_refuses_it(
+            self, project, monkeypatch):
+        """The content compared again under SQLite's write lock: a coding
+        written straight into the database after the call's first plan,
+        as a program that keeps no lock file writes, refuses the undo
+        with no backup, the coding and the run's text as they were."""
+        _, receipt = a_run(record_in_journal=False)
+        preview = undo_preview(receipt)
+        first_plan = server._undo_plan
+
+        def then_a_coding(*args, **kwargs):
+            made = first_plan(*args, **kwargs)
+            if kwargs.get("compare_backup"):
+                execute(project, "insert into code_text (cid, fid, seltext, "
+                                 "pos0, pos1, owner, date) values (2, 1, "
+                                 "'Joan', 0, 4, 'Researcher', "
+                                 "'2026-10-29 10:00:00')")
+            return made
+        monkeypatch.setattr(server, "_undo_plan", then_a_coding)
+        made = backups(project)
+        done = answer(server.undo_changes(
+            receipts=[receipt], preview_token=preview["preview_token"]))
+        assert "error" in done and done.get("nothing_changed"), done
+        assert backups(project) == made
+        assert value(project, "select count(*) from code_text where "
+                              "seltext = 'Joan'") == 1
+        assert "Joan" in value(project, "select fulltext from source "
+                                        "where id = 1")
+
+    def test_a_coder_shown_again_since_does_not_stop_it(self, project):
+        """A coder hidden before the run and made visible again since, as
+        QualCoder makes visible the coder who opens a project, is set
+        aside, as a name added is."""
+        execute(project, "insert into coder_names (name, visibility) "
+                         "values ('Returning Coder', 0)")
+        before = rows(project)
+        _, receipt = a_run(record_in_journal=False)
+        qualcoder_40_opens(project, coder="Returning Coder")
+        undone = undo_run(receipt)
+        assert undone["success"] is True, undone
+        after = rows(project)
+        for table in set(before) - {"coder_names", "project"}:
+            assert after[table] == before[table], table
+        assert value(project, "select visibility from coder_names where "
+                              "name = 'Returning Coder'") == 1
+
     def test_a_qualcoder_40_open_and_a_table_rewritten_do_not_stop_it(
             self, project):
         """QualCoder 4.0's plain open between the run and its undo, by a
@@ -583,6 +629,27 @@ class TestTheImport:
         refused = unchanged_by(project, lambda: undo_preview(receipt))
         assert time.monotonic() - started < 5
         assert reasons(refused) == {undo.ORIGINAL_UNREADABLE}
+
+    def test_an_original_kept_online_only_is_refused_unread(
+            self, project, scratch_folders, monkeypatch):
+        """An original a sync service keeps online only is refused by file
+        id without being read, so that the undo's reading downloads
+        nothing."""
+        _, receipt, found = an_import(project)
+        original = project / "documents" / "int3.txt"
+        read = []
+        whole = doc_import._read_whole
+
+        def reading(path, *args, **kwargs):
+            read.append(Path(path))
+            return whole(path, *args, **kwargs)
+        monkeypatch.setattr(doc_import, "_dataless", lambda info: True)
+        monkeypatch.setattr(doc_import, "_read_whole", reading)
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.ORIGINAL_UNREADABLE}
+        assert refusal(refused, undo.ORIGINAL_UNREADABLE)["file_ids"] == [
+            found["int3.txt"]]
+        assert original not in read and original.is_file()
 
     def test_an_unexpected_error_in_the_removals_answers_the_undo_as_made(
             self, project, scratch_folders, monkeypatch):

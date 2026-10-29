@@ -16,7 +16,7 @@
 
 ### Documents
 
-- **README.md is plainer and a little shorter**: 625 lines, from 682,
+- **README.md is plainer and a little shorter**: 625 lines, from 678,
   in the voice of the writing guide. It mentions QualCoder only where a
   sentence is about QualCoder or offers it as a choice, explains "the AI
   provider" once, and gives its warnings as what could happen and what you could

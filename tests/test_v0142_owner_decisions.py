@@ -139,10 +139,14 @@ def test_the_summary_promises_no_more_than_the_checks_do():
     # (v0.15.2, the opening texts: the same promise, without a semicolon)
     one_click = _between(readme, "### Claude Desktop, with one click",
                          "### ChatGPT's desktop app and Codex (OpenAI)")
+    # (v0.15.2, the lead's reading of 29 October: the checks help keep
+    # the files out of Claude's reach, as far as Anthropic's pages say,
+    # the hedge the assistants table gives; the third switches training
+    # off on a personal plan)
     assert one_click.rstrip().endswith(
         "go through [the five checks](https://github.com/nicotem/exegete"
-        "#where-your-data-goes), which keep your files out of Claude's reach "
-        "and training off.")
+        "#where-your-data-goes), which help keep your files out of "
+        "Claude's reach and switch training off.")
     # (PRIVACY.md quotes OpenAI's "opted out of training", a quotation,
     # not a promise)
     for document in DOCUMENTS:
@@ -268,21 +272,44 @@ OWNERS_WORDS_AND_AFTER = OWNERS_WORDS + (
     " A folder of their own keeps practice projects apart but does not put "
     "the study out of reach, and what they open goes to their maker, which "
     "may train on it while training is on.")
-# v0.15.2, the opening texts: the README says "the AI provider", the one
-# term it explains, for "their maker"; PRIVACY.md keeps its words until its
-# own piece
-README_OWNERS_WORDS_AND_AFTER = OWNERS_WORDS + (
-    " A folder of their own keeps practice projects apart but does not put "
-    "the study out of reach, and what they open goes to their AI provider, "
-    "which may train on it while training is on.")
+
+
+def test_readme_gives_the_warning_in_short_sentences():
+    """v0.15.2, the lead's reading of 29 October: the README's paragraph
+    on practising gives the warning's facts in short sentences, in
+    QUICKSTART's words where the facts are the same: Codex and Claude
+    Code open files by themselves; a study on the same computer is in
+    their reach wherever the practice projects are, and Exegete's list
+    of projects says where each project is; what they open goes to
+    their AI provider, which may train on it; and Claude Desktop's chat
+    as a suggestion. It comes after the advice to practise on text that
+    is not a participant's, and before the steps."""
+    first = _between(_flat("README.md"), "### A first session",
+                     "### Other assistants, and updates")
+    sentences = (
+        "Codex and Claude Code open files on your computer by "
+        "themselves, outside Exegete.",
+        "A study kept on the same computer is within their reach, "
+        "wherever your practice projects are, and Exegete's list of "
+        "projects tells them where each project is.",
+        "What they open goes to their AI provider.",
+        "While training is on, the AI provider may train its models on "
+        "it.",
+        "If that matters for a study, you could work on that study in "
+        "Claude Desktop's chat.")
+    for sentence in sentences:
+        assert sentence in first, sentence
+    assert first.index("Practise on text that is not from a participant") \
+        < first.index(sentences[0]) < first.index(sentences[-1]) \
+        < first.index("Ask the assistant to")
+    # the owner's long sentences, kept where they were (PRIVACY.md and
+    # the Terminal guide), are not the README's now
+    assert OWNERS_WORDS not in first
 
 
 def _warning_places():
     install = _read(GUIDE)
     return {
-        "README, a first session": _between(
-            _flat("README.md"), "### A first session",
-            "### Other assistants, and updates"),
         "the Terminal guide, Claude Code": " ".join(_between(
             install, "\n## Claude Code\n",
             "## Claude Code with an Anthropic API key").split()),
@@ -308,14 +335,8 @@ def test_the_warning_is_where_a_reader_meets_those_routes():
         assert found, where
         assert SUGGESTION.search(text).end() < found.start(), where
     places = _warning_places()
-    assert README_OWNERS_WORDS_AND_AFTER in places["README, a first session"]
     assert ("**While you practise.** " + OWNERS_WORDS_AND_AFTER) in \
         places["PRIVACY, assistants that open files"]
-    # In the README, after the advice to practise on text that is not a
-    # participant's, and before the steps
-    first = places["README, a first session"]
-    assert first.index("Practise on text that is not from a participant") \
-        < first.index(OWNERS_WORDS) < first.index("Ask the assistant to")
 
 
 # Words that dictate where a researcher may use Exegete, which the owner

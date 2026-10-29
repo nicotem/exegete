@@ -917,8 +917,11 @@ class TestCodexWorksInAFolderOfItsOwn:
         assert "Codex reads files by itself" in section
         first = _between(_flat("README.md"), "### A first session",
                          "**Two coder names.**")
-        assert ("A folder of their own keeps practice projects apart but "
-                "does not put the study out of reach") in first
+        # (v0.15.2, the lead's reading of 29 October: the same fact in a
+        # short sentence, the study in reach wherever the practice
+        # projects are)
+        assert ("A study kept on the same computer is within their reach, "
+                "wherever your practice projects are") in first
 
     def test_install_step_three_has_the_folder_and_the_lines(self):
         section = _install_openai()
@@ -1221,8 +1224,10 @@ class TestTheStepsANewcomerCanGetWrong:
         # all; where the project is made, for each route, is TOOLS.md's.
         # The owner, 1 October 2026: the one exception is the warning
         # about practising, which names the two assistants it is about
-        warning = ("Codex and Claude Code can open files on your computer "
-                   "by themselves")
+        # (v0.15.2, the lead's reading of 29 October: the warning's facts
+        # in short sentences, the first naming the two assistants)
+        warning = ("Codex and Claude Code open files on your computer by "
+                   "themselves")
         assert warning in first
         steps = first.replace(warning, "")
         assert re.findall(r"\bClaude\b(?! Desktop)", steps) == []
@@ -1929,10 +1934,12 @@ class TestTheSmallerPoints:
         # v0.14.2, the README's first round of checks: a link to the five
         # checks, as the last of the checks after installing
         # v0.15.2, the opening texts: the check's paragraph ends with it
+        # (the lead's reading of 29 October: the checks help, as the
+        # assistants table's hedge says)
         assert ("Before you use participants' data, go through [the five "
                 "checks](https://github.com/nicotem/exegete#where-your-data-"
-                "goes), which keep your files out of Claude's reach and "
-                "training off.") in one_click
+                "goes), which help keep your files out of Claude's reach and "
+                "switch training off.") in one_click
         assert ("Connected folders may be listed under \"Trusted "
                 "folders\"") in _readme_data()
         assert "also check two things" not in one_click

@@ -32,6 +32,11 @@ readers, 28 October 2026).
   import reads, the PDF it refuses, whole files linked to a case, what
   it cannot delete or change, the reports, the REFI-QDA export before
   the fix the plan gives 0.15.2, names replaced in coded text).
+- README, the lead's reading of 29 October 2026: the REFI-QDA
+  export's known faults given once, in the table's row, with the
+  paragraph on exchange pointing at it; one aim on the page; the
+  map's line on docs/snapshot/ bounded to what Exegete sends before
+  a project opens, as the script that writes the folder says.
 """
 
 import inspect
@@ -278,3 +283,49 @@ def test_readme_comparison_rows_hold_against_the_code():
     assert callable(server.pseudonymise_source)
     assert exegete["Replacing names"] == ("When a file is brought in, and in "
                                           "text already coded")
+
+
+# ---------------------------------------------------------------------------
+# README: a fact said once and pointed to (the lead's reading, 29 October)
+# ---------------------------------------------------------------------------
+
+def test_readme_gives_the_refi_qda_faults_once():
+    """The REFI-QDA export's known faults are given in the comparison
+    table's row; the paragraph on exchange with other programs, after the
+    table, points at the row instead of giving them again."""
+    readme = _flat(_read("README.md"))
+    faults = ("every coding under the AI coder name, and cases, "
+              "annotations, journals and media left out")
+    assert readme.count(faults) == 1
+    row = readme.index("| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) |")
+    exchange = readme.index("**Exchange with other programs.**")
+    assert row < readme.index(faults) < exchange
+    paragraph = _between(readme, "**Exchange with other programs.**",
+                         "If you use QualCoder,")
+    assert "with the known faults the table above gives" in paragraph
+
+
+def test_readme_states_one_aim():
+    """One aim, at the end of "Not in Exegete yet": that a whole project
+    can be run in Exegete. The symmetry paragraph keeps its commitment
+    without a second aim framed by QualCoder."""
+    readme = _flat(_read("README.md"))
+    assert len(re.findall(r"(?i)\baims?\b", readme)) == 1
+    assert ("**The aim** is that you can run a whole project in Exegete"
+            in readme)
+    symmetry = _between(readme, "**Symmetry:", "| | In QualCoder |")
+    assert "Today the two programs differ in both directions." in symmetry
+
+
+def test_readme_map_bounds_the_snapshot():
+    """The map's line on docs/snapshot/ says what the folder holds: what
+    Exegete sends before a project is open, as the script that writes it
+    says, and not the tools' answers, which carry the project's texts."""
+    lines = [line for line in _read("README.md").splitlines()
+             if "── snapshot/" in line]
+    assert len(lines) == 1
+    assert lines[0].split("snapshot/", 1)[1].strip() == (
+        "what Exegete sends before a project opens")
+    script = _read("scripts/served_texts.py")
+    assert "what Exegete sends the assistant before a project is open" in \
+        _flat(script[:script.index("python scripts/served_texts.py")])

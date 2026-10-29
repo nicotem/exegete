@@ -114,12 +114,13 @@ Exegete runs on your computer. It has no AI of its own.
 │  You ─ ask ─► Assistant app ◄────────────────────┼─┐
 │               (Claude Desktop, ChatGPT...)       │ │
 │                    │ uses Exegete's tools        │ │
-│                    │ (MCP, on this computer)     │ │
+│                    │ (on this computer)          │ │
 │                    ▼                             │ │
 │               Exegete (no AI of its own)         │ │
 │                    │ reads (read-only) and       │ │
-│                    │ changes its database        │ │
-│                    │ only after a backup         │ │
+│                    │ changes the project's       │ │
+│                    │ database only after         │ │
+│                    │ a backup                    │ │
 │                    ▼                             │ │
 │               Your project, in QualCoder's       │ │
 │               format                             │ │
@@ -314,7 +315,8 @@ October 2026, says this is reaching accounts gradually. That
 conversation's permission setting comes as Manual. On Auto, Claude does
 not ask. Before you use participants' data, go through
 [the five checks](https://github.com/nicotem/exegete#where-your-data-goes),
-which keep your files out of Claude's reach and training off.
+which help keep your files out of Claude's reach and switch
+training off.
 
 ### ChatGPT's desktop app and Codex (OpenAI)
 
@@ -341,14 +343,13 @@ which make the app ask before every change Exegete makes.
 ### A first session
 
 Practise on text that is not from a participant, such as a page you
-write. Codex and Claude Code can open files on your computer by
-themselves, so a real study kept on the same computer is within their
-reach even while you practise, and Exegete's list of projects tells them
-where it is. If that matters for a study, you could keep practice
-projects in a folder of their own, or work on that study with Claude
-Desktop's chat. A folder of their own keeps practice projects apart but
-does not put the study out of reach, and what they open goes to their AI
-provider, which may train on it while training is on.
+write. Codex and Claude Code open files on your computer by themselves,
+outside Exegete. A study kept on the same computer is within their
+reach, wherever your practice projects are, and Exegete's list of
+projects tells them where each project is. What they open goes to their
+AI provider. While training is on, the AI provider may train its models
+on it. If that matters for a study, you could work on that study in
+Claude Desktop's chat.
 
 Ask the assistant to "Create a new project in Exegete called Practice".
 With the extension or OpenAI's steps, the project is made, by default,
@@ -434,9 +435,9 @@ It contains a small number of routines and values taken from QualCoder,
 so that its results match QualCoder's exactly.
 [NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE) lists them.
 
-**Symmetry: the same work in either program, as a commitment.** The aim
-is that the analytic work you can do in QualCoder, you can also do from
-the conversation. Today the two programs differ in both directions. The
+**Symmetry: the same work in either program, as a commitment.**
+Whatever analytic work QualCoder offers should also be possible from the
+conversation. Today the two programs differ in both directions. The
 table sets QualCoder 3.8.2 and 4.0, as checked on 10 October 2026,
 beside Exegete 0.15.2: its REFI-QDA row gives the export as it is before
 the planned REFI-QDA fix.
@@ -456,12 +457,11 @@ the planned REFI-QDA fix.
 | AI suggestions for coding | 3.8.2: an AI search finds passages, which you code. 4.0: its assistant codes as it works, within the AI permission you set (Read-only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
 
 **Exchange with other programs.** The tool `export_refi_qda` writes the
-REFI-QDA file that ATLAS.ti, MAXQDA and NVivo read, with known faults:
-every coding under the AI coder name, and cases, annotations, journals
-and media left out ("What comes next" says when a fix is planned). If
-you use QualCoder, its own export (Project, Export, REFI-QDA Project
-export) keeps each coder, the cases, notes and media. If you use
-QualCoder 3.8.2, read
+REFI-QDA file that ATLAS.ti, MAXQDA and NVivo read, with the known
+faults the table above gives ("What comes next" says when a fix is
+planned). If you use QualCoder, its own export (Project, Export,
+REFI-QDA Project export) keeps each coder, the cases, notes and media.
+If you use QualCoder 3.8.2, read
 [its edit-mode caution](https://github.com/nicotem/exegete/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution)
 before you edit transcripts in its coding view. QualCoder 4.0's own MCP
 server calls itself "qualcoder-mcp", Exegete's former name, as checked
@@ -570,7 +570,7 @@ github.com/nicotem/exegete
 ├── docs/
 │   ├── installing-from-the-terminal.md  the Terminal routes
 │   ├── WRITING.md     the writing guide
-│   └── snapshot/      what Exegete sends the assistant
+│   └── snapshot/      what Exegete sends before a project opens
 ├── legal/
 │   └── GPL-3.0.txt    the GNU GPL the licence incorporates
 └── src/exegete/

@@ -529,6 +529,39 @@ Linux, with Python 3.11 and 3.13 (and 3.14 on Linux), on every change
 before it is released. They test Exegete, not a researcher's use of it
 ([CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md)).
 
+**The repository**, each document linked from this page:
+
+```text
+github.com/nicotem/exegete
+├── README.md          this page
+├── PRIVACY.md         where your data goes, with a checklist
+├── INSTALL.md         the Claude Desktop extension, and help
+├── QUICKSTART.md      Exegete set up by hand in Claude Desktop
+├── TOOLS.md           every tool: what it reads and writes
+├── AI_CODING_GUIDE.md coding with the assistant, with examples
+├── CHANGELOG.md       every release, in detail
+├── CONTRIBUTING.md    reporting, building and testing
+├── NOTICE             what comes from QualCoder, and where
+├── COPYING.LESSER     the licence, LGPL-3.0-or-later
+├── docs/
+│   ├── installing-from-the-terminal.md  the Terminal routes
+│   ├── WRITING.md     the writing guide
+│   └── snapshot/      what Exegete sends the assistant
+├── legal/
+│   └── GPL-3.0.txt    the GNU GPL the licence incorporates
+└── src/exegete/
+    ├── server.py           the tools, resources and brief
+    ├── database.py         QualCoder's format, read and written
+    ├── sessions.py         the review list of suggestions
+    ├── pseudonymise.py     replacing names, keeping the coding
+    ├── coder_comparison.py two coders compared, both figures
+    ├── memo_privacy.py     the private note after '#####'
+    └── preview_tokens.py   a preview before larger changes
+```
+
+[QUICKSTART.md](https://github.com/nicotem/exegete/blob/main/QUICKSTART.md) ·
+[docs/WRITING.md](https://github.com/nicotem/exegete/blob/main/docs/WRITING.md)
+
 ## What comes next
 
 Plans, not promises: the order may change with what testers report.

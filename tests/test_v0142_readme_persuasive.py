@@ -5,16 +5,18 @@ advertising features present and future, and the table about different
 model configuration. And it's wordy.").
 
 Pinned here: the length the rewrite reached, so that the README cannot
-grow back; the example, and the two diagrams (their width, and only
-characters that render one column wide on GitHub and on PyPI; prose in
-v0.15.2's opening texts, back by the owner's word of 29 October 2026);
+grow back; the example, the two diagrams and the map (their width, and
+only characters that render one column wide on GitHub and on PyPI; prose
+and links in v0.15.2's opening texts, back by the owner's word of 29
+October 2026);
 the architecture diagram's labels and borders, and the path of a coding,
 each step a behaviour of the server; the example's steps, in order, each one the
 software takes; the assistants table against PRIVACY.md's verdicts,
 with the paragraph before it and the sentence after it; the tool-set table against the server's
 tool sets and the CHANGELOG's measurement; the advanced section's tool
 names and arguments against the server; how it is tested, against the CI
-workflow; the documents the map named, each linked from the page; "What
+workflow; the map against the files, naming every document the page
+links, each one linked from the page; "What
 comes next" as plans; and the two badges, with no test badge.
 """
 
@@ -340,8 +342,12 @@ def _tools(mode="full"):
 # written", take 1,857 characters and 47 lines: 34,953 in 547 lines.
 # The comparison table, with its introduction, in "Exegete and QualCoder",
 # takes 2,429 characters and 21 lines: 37,382 in 568 lines.
-README_LIMIT = 37_382
-README_LINES = 568
+# The map of the repository, brought up to date (every document the page
+# links, the seven modules of the code), and the links to the two
+# documents linked nowhere else on the page, take 1,503 characters and 33
+# lines: 38,885 in 601 lines.
+README_LIMIT = 38_885
+README_LINES = 601
 
 
 def test_the_readme_stays_short():
@@ -382,8 +388,9 @@ def test_the_blocks_render_alike_everywhere():
     # v0.15.2, the opening texts: the three diagrams gave way to prose
     # within the README's 500 lines ("How it works", and links to the
     # documents); the owner's word of 29 October 2026 brought them back,
-    # the architecture and a coding's path in "How it works"
-    assert len(blocks) == 2
+    # the architecture and a coding's path in "How it works", the map at
+    # the end of "For advanced users"
+    assert len(blocks) == 3
     for block in blocks:
         assert _diagram_faults(block) == []
     # every fenced block is marked text, and nothing PyPI shows as source
@@ -528,17 +535,65 @@ def test_the_path_of_a_coding():
     assert "single all-or-nothing transaction" in doc
 
 
-def test_the_documents_are_linked_from_the_page():
-    # v0.15.2, the opening texts: the map of the repository gave way to
-    # links in the prose, within the README's 500 lines; each document it
-    # named is still linked from the page, which matters on PyPI, where
-    # there is no file list
+# What the map says each module of the code is, in the words of the
+# module's own opening docstring
+ROLES = {"server.py": "Model Context Protocol server",
+         "database.py": "Qualcoder .qda files",
+         "sessions.py": "AI coding suggestions",
+         "pseudonymise.py": "pseudonymisation engine",
+         "coder_comparison.py": "Coder-comparison statistics",
+         "memo_privacy.py": "'#####' personal-note convention",
+         "preview_tokens.py": "a preview"}
+
+
+def test_the_map_names_files_that_exist():
+    """v0.15.2, the opening texts: the map of the repository gave way to
+    links in the prose, within the README's 500 lines. The owner's word of
+    29 October 2026 brought it back at the end of "For advanced users",
+    brought up to date: every document the page links, and the seven
+    modules of the code, each where the map puts it."""
+    section = _section("For advanced users", "What comes next")
+    block = _blocks(section)[-1]
+    lines = block.splitlines()
+    assert lines[0] == "github.com/nicotem/exegete"
+    folders, named = [], []
+    for line in lines[1:]:
+        match = re.match(r"((?:[│ ]   )*)[├└]── (\S+)", line)
+        assert match, line
+        depth, name = len(match.group(1)) // 4, match.group(2)
+        del folders[depth:]
+        path = "/".join(folders + [name.rstrip("/")])
+        if name.endswith("/"):
+            assert (REPO / path).is_dir(), path
+            folders.append(name.rstrip("/"))
+        else:
+            assert (REPO / path).is_file(), path
+        named.append(path)
+    # the code: the seven modules, each with the role the map gives it
+    for module, words in ROLES.items():
+        assert f"src/exegete/{module}" in named, module
+        opening = " ".join(_read(f"src/exegete/{module}")[:1500].split())
+        assert words in opening, module
+    # led as the other parts of the section are, saying what the reader
+    # gets from it
     readme = _read("README.md")
-    for name in ("PRIVACY.md", "INSTALL.md", "TOOLS.md", "AI_CODING_GUIDE.md",
-                 "CHANGELOG.md", "CONTRIBUTING.md", "NOTICE"):
-        assert (REPO / name).is_file(), name
-        assert f"](https://github.com/nicotem/exegete/blob/main/{name}" \
-            in readme, name
+    assert ("\n**The repository**, each document linked from this page:\n"
+            "\n```text\ngithub.com/nicotem/exegete\n") in readme
+    # the map is a code block, so nothing in it can be clicked, and PyPI
+    # has no file list: every document it names is a link somewhere on the
+    # page, and every document the page links is in the map
+    linked = set(re.findall(r"\]\(https://github\.com/nicotem/exegete/"
+                            r"(?:blob|tree)/main/([^)#\s]+)", readme))
+    documents = {path for path in named if not path.startswith("src/")
+                 and path not in ("README.md", "docs", "legal")}
+    assert linked == documents
+    # v0.14.2, the README's second round of checks: the descriptions of
+    # the code line up, and the map does not call both figures "kappas"
+    code = [line for line in lines if line.startswith("    ")]
+    assert len({len(re.match(r" *[├└]── \S+ +", line).group(0))
+                for line in code}) == 1
+    assert "coder_comparison.py two coders compared, both figures" in block
+    assert "kappa" not in block
     # QualCoder's figure is not Cohen's kappa (coder_comparison.py says
     # so), so the page does not call both "kappas"
     # (the readability reading: Cohen's kappa beside QualCoder's figure)

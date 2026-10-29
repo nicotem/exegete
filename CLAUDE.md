@@ -19,7 +19,7 @@ of a project from the conversation. It runs as an MCP server.
   `pip install -e ".[dev]"` takes the newest releases `pyproject.toml`
   allows instead, as an install from PyPI does.
 - **Tests:** `python -m pytest -q` from the repository root. The full
-  suite takes about twelve minutes on a Mac, longer on Windows CI; CI
+  suite takes about twenty minutes on a Mac, longer on Windows CI; CI
   runs it on Ubuntu, Windows and macOS with Python 3.11 and 3.13, and
   on Ubuntu with 3.14, on `main` and the integration branches
   (`feat/*`), and on Ubuntu with 3.13 alone on other branches

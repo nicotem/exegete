@@ -300,6 +300,32 @@ def test_the_page_gives_the_checks_whole_rule():
             "when you ask.") in _words(_page())
 
 
+def test_the_pdf_paragraph_links_where_each_thing_is_said():
+    """v0.15.2: the page said that the Terminal guide's section on the
+    optional part says what its licence means, which INSTALL.md's section
+    of the same name does. Each link now leads to the section that holds
+    what the page says it holds."""
+    paragraph = next(part for part in _page().split("<p>")
+                     if part.startswith("Bringing in PDF and EPUB files"))
+    links = re.findall(r'<a href="https://github\.com/nicotem/exegete/'
+                       r'blob/main/([^"#]+)#([^"]+)">', paragraph)
+    assert links == [("docs/installing-from-the-terminal.md",
+                      "pdf-and-epub-the-optional-part"),
+                     ("INSTALL.md", "pdf-and-epub-the-optional-part")], links
+    words = _words(paragraph)
+    assert "\"PDF and EPUB: the optional part\", says how to add it." in words
+    assert ("INSTALL.md's section of the same name says what its licence "
+            "means, under \"The part's licence\".") in words
+
+    def section(name):
+        text = (REPO / name).read_text(encoding="utf-8")
+        start = text.index("# PDF and EPUB: the optional part\n")
+        return " ".join(text[start:text.index("\n## ", start)].split())
+    assert "To add the part later:" in section(
+        "docs/installing-from-the-terminal.md")
+    assert "**The part's licence.**" in section("INSTALL.md")
+
+
 def _blocks():
     return [html.unescape(block) for block in
             re.findall(r"<pre><code>(.*?)</code></pre>", _page(), re.S)]

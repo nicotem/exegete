@@ -10,9 +10,10 @@
   Python 3.13 with the libraries in `uv.lock`, writes it again, and a
   change to any of these texts is reviewed as a diff of those files;
   `tests/test_served_texts.py` fails when the code and the snapshot
-  differ. README.md, INSTALL.md and TOOLS.md give the sizes rounded and
-  point there for the exact figures, which the facts check holds them to
-  within five per cent. The exact sizes kept by hand in
+  differ. README.md, the Terminal guide
+  (`docs/installing-from-the-terminal.md`) and TOOLS.md give the sizes
+  rounded and point there for the exact figures, which the facts check
+  holds them to within five per cent. The exact sizes kept by hand in
   `tests/test_toolset_modes.py` and `tests/test_v0142_brief.py` are
   gone, and so are the tests that compared each description with a
   fingerprint of its earlier words.

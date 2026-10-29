@@ -163,6 +163,60 @@ class TestTheRun:
         assert undo_run(receipt)["success"] is True
         assert rows(project) == before
 
+    def test_two_runs_with_journal_entries_are_undone_newest_first(
+            self, project):
+        """Two runs on file 1, each writing its journal entry: the earlier
+        is refused while the later stands, naming the later's receipt;
+        once the later is undone, the earlier is undone too, its refusal's
+        advice followed. Every table is then as before the two runs but
+        the journal, which keeps both entries, each with its line."""
+        before, entries = rows(project), journal(project)
+        _, first = a_run()
+        _, second = a_run(mapping=[{"original": "Lopez",
+                                    "pseudonym": "Smith"}])
+        refused = unchanged_by(project, lambda: undo_preview(first))
+        assert refusal(refused, undo.WRITTEN_SINCE)["later_changes"] == [
+            second]
+        assert undo_run(second)["success"] is True
+        listed = {entry["undo_receipt"]: entry for entry in answer(
+            server.undo_changes())["changes"]}
+        assert listed[first]["can_be_undone"] is True, listed[first]
+        undone = undo_run(first)
+        assert undone["success"] is True, undone
+        after = rows(project)
+        for table in set(before) | set(after):
+            if table != "journal":
+                assert after[table] == before[table], table
+        now = journal(project)
+        made = set(now) - set(entries)
+        assert len(made) == 2 and set(entries) <= set(now)
+        for jid in made:
+            assert now[jid][1].endswith(
+                "with undo_changes: the text is as it was before the run.")
+        assert value(project, "select fulltext from source where id = 1"
+                     ).startswith("Maria Lopez runs the garden.")
+
+    def test_a_kept_entry_changed_since_still_refuses_the_earlier_run(
+            self, project):
+        """The later run's kept journal entry is set aside only as its undo
+        wrote it: edited since, as another program could, it counts as
+        written since, and the earlier run's record keeps it by its id and
+        a digest, never its text."""
+        entries = journal(project)
+        _, first = a_run()
+        _, second = a_run(mapping=[{"original": "Lopez",
+                                    "pseudonym": "Smith"}])
+        assert undo_run(second)["success"] is True
+        kept = record_of(first)["kept"]
+        assert len(kept) == 1 and set(kept[0]) == {"table", "key", "digest"}
+        later = max(set(journal(project)) - set(entries))
+        assert kept[0]["key"] == later
+        assert "undone" not in json.dumps(record_of(first))
+        execute(project, "update journal set jentry = jentry || ' Seen.' "
+                         "where jid = ?", (later,))
+        refused = unchanged_by(project, lambda: undo_preview(first))
+        assert refusal(refused, undo.WRITTEN_SINCE)["tables"] == ["journal"]
+
     def test_a_qualcoder_40_open_and_a_table_rewritten_do_not_stop_it(
             self, project):
         """QualCoder 4.0's plain open between the run and its undo, by a
@@ -908,8 +962,30 @@ class TestTheEarlierPiecesPoints:
 
     def test_the_record_keeps_its_new_fields_at_format_1(self):
         assert change_record.FORMAT == 1
-        assert {"content", "files", "names_list"} <= set(
+        assert {"content", "files", "names_list", "kept"} <= set(
             change_record.FIELDS)
+
+    def test_a_run_record_given_kept_rows_keeps_its_other_fields(
+            self, project):
+        """A run's record given the rows a later undo kept is written again
+        whole, a field this version does not know kept; kept rows that
+        are not each a table, an integer id and a digest make the record
+        unreadable."""
+        _, receipt = a_run(record_in_journal=False)
+        path = record_path(receipt)
+        record = json.loads(path.read_text(encoding="ascii"))
+        record["later_field"] = [1, 2]
+        path.write_text(json.dumps(record), encoding="ascii")
+        row = {"table": "journal", "key": 7, "digest": "0" * 32}
+        assert change_record.add_kept(record["project"], receipt, [row])
+        again = json.loads(path.read_text(encoding="ascii"))
+        assert again == {**record, "kept": [row]}
+        assert list(again)[:4] == ["format", "receipt", "run", "time"]
+        assert reasons(undo_preview(receipt)) == set()
+        again["kept"] = [{**row, "key": "7"}]
+        path.write_text(json.dumps(again), encoding="ascii")
+        refused = unchanged_by(project, lambda: undo_preview(receipt))
+        assert reasons(refused) == {undo.RECORD_UNREADABLE}
 
     def test_every_route_tool_must_carry_its_route(self, project):
         """A record of a run without its route, or of an import without its

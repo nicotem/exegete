@@ -15378,6 +15378,39 @@ def _undo_sessions(plan: undo.Plan, project_db: Path) -> List[Dict[str, Any]]:
     return updates
 
 
+def _undo_keep_aside(plan: undo.Plan, kept: List[Dict[str, Any]],
+                     context) -> None:
+    """Right after a run's undo commits, still under the lock file: each
+    earlier run's record of this project is given the journal entries
+    this undo kept (`change_record.add_kept`), so that its own undo,
+    which compares every table with the content that run left, sets them
+    aside while they are as written. A record that cannot be given them
+    stays as it was, and that run's undo is then refused as written
+    since, never made wrong. The log gives counts and the error's kind."""
+    undone = {change.receipt for change in plan.changes}
+    times = [change.time for change in plan.changes
+             if change.route == change_record.WHOLE_ROUTE]
+    if not times:
+        return
+    given = failed = 0
+    for record in change_record.records(context[1]):
+        when = record.get("time")
+        if record.get("route") != change_record.WHOLE_ROUTE or \
+                record.get("receipt") in undone or \
+                not isinstance(when, (int, float)) or when >= min(times):
+            continue
+        try:
+            given += change_record.add_kept(context[1], record["receipt"],
+                                            kept)
+        except Exception as e:                          # noqa: BLE001
+            failed += 1
+            logger.warning("An earlier run's record was not given the "
+                           "journal entry an undo kept: %s", error_label(e))
+    if given or failed:
+        logger.info("An undone run's journal entry was given to %d earlier "
+                    "run record(s); %d could not be", given, failed)
+
+
 def _undo_after(result: Dict[str, Any], plan: undo.Plan, context) -> None:
     """After the commit: the changes' records removed, the coding
     sessions set back, the reading copies of the files the undo touched
@@ -15887,7 +15920,8 @@ def undo_changes(receipts: Optional[List[str]] = None,
     if not first.can_run:
         return json.dumps(_undo_refused(first, ro), indent=2)
     held: Dict[str, Any] = {"plan": first, "locked": None,
-                            "originals": originals, "read_again": None}
+                            "originals": originals, "read_again": None,
+                            "kept": None}
 
     def _state_of(wdb) -> str:
         # The plan built once more, on the write connection under SQLite's
@@ -15913,6 +15947,8 @@ def undo_changes(receipts: Optional[List[str]] = None,
     def _after_commit(result: Dict[str, Any]) -> None:
         # Right after the commit, still under the lock file
         locked = held["locked"]
+        if locked is not None and held["kept"]:
+            _undo_keep_aside(locked, held["kept"], context)
         if locked is not None and (locked.originals
                                    or locked.originals_unnamed):
             _undo_remove_originals(result, locked, held["read_again"],
@@ -15932,6 +15968,14 @@ def undo_changes(receipts: Optional[List[str]] = None,
             logger.error("An undo was rolled back: a row it wrote did not "
                          "read back as planned")
             raise RuntimeError(UNDO_CHECK_FAILED) from None
+        if locked.journal_entries_kept:
+            # A run's journal entry kept with its line, read as written,
+            # for the earlier runs' records after the commit
+            try:
+                held["kept"] = undo.kept_rows(wdb.conn, locked, context[0])
+            except Exception as e:                      # noqa: BLE001
+                logger.warning("The journal entry an undo kept could not be "
+                               "read back: %s", error_label(e))
         rows = _undo_rows([change.counts() for change in locked.changes])
         total = {what: sum(tables.values()) for what, tables in rows.items()}
         return {"success": True,

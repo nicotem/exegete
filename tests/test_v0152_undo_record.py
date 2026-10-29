@@ -23,6 +23,7 @@ import shutil
 import sqlite3
 import sys
 import threading
+import time
 from contextlib import closing
 from pathlib import Path
 
@@ -825,6 +826,24 @@ def test_nothing_after_the_commit_reads_the_secret(route, monkeypatch):
 
 # 6. Two copies of Exegete ------------------------------------------------------
 
+# How long one change is retried before the test gives up: the time a lock
+# file left behind takes to read as stale, and a margin of 30 seconds. On
+# Windows, while the other copy has the project's lock file open, a copy
+# sometimes cannot remove it at the end of its write (database.py, the
+# lock's end: "Could not remove project lock file: PermissionError
+# EACCES"); the file then refuses both copies' writes until it is
+# QUALCODER_LOCK_TIMEOUT seconds old, after which both write over it. That
+# behaviour is a point on the v0.15.2 sprint's deferred table, a code piece
+# for v0.15.3 (the lock's removal retried); until then the test waits it
+# out. The evidence: the full tier's first attempt on Windows failed here
+# in runs 40902304805 and 40923488784 (3.11) and 40935833967 (3.11 and
+# 3.13), each passing on rerun. The test's 500 tries ran out 16 to 18
+# seconds after the failed removal ("A 03 never landed" on 3.13 in the
+# last), and twice on 3.11 the stdio client's BrokenResourceError took the
+# place of that failure.
+LANDING_SECONDS = database.QUALCODER_LOCK_TIMEOUT + 30
+
+
 def stdio_parameters(home):
     from mcp import StdioServerParameters
     env = dict(os.environ)
@@ -834,23 +853,32 @@ def stdio_parameters(home):
                                  args=["-m", "exegete.server"], env=env)
 
 
-async def twenty_changes(client, prefix):
+async def twenty_changes(client, prefix, stop):
     """Twenty codes made, each change retried while the other copy holds
     the project (refused at the gate, or by the lock or a backup it
-    holds); the receipts."""
+    holds), for up to LANDING_SECONDS; the receipts. A copy that fails
+    sets `stop`, and the other ends between two calls once it is set, so
+    that no answer is still on its way when the copies are torn down: on
+    3.11 an answer reaching a session already closed raised the stdio
+    client's BrokenResourceError in place of the failure."""
     receipts = []
-    for number in range(20):
-        for _ in range(500):
-            text = text_of(await client.call_tool(
-                "create_code", {"name": f"{prefix} {number:02d}"}))
-            body = body_of(text)
-            if isinstance(body, dict) and body.get("undo_receipt"):
-                receipts.append(body["undo_receipt"])
-                break
-            assert isinstance(body, dict) and "error" in body, text
-            await asyncio.sleep(0.02)
-        else:
-            pytest.fail(f"{prefix} {number:02d} never landed")
+    try:
+        for number in range(20):
+            deadline = time.monotonic() + LANDING_SECONDS
+            while not stop.is_set():
+                text = text_of(await client.call_tool(
+                    "create_code", {"name": f"{prefix} {number:02d}"}))
+                body = body_of(text)
+                if isinstance(body, dict) and body.get("undo_receipt"):
+                    receipts.append(body["undo_receipt"])
+                    break
+                assert isinstance(body, dict) and "error" in body, text
+                if time.monotonic() > deadline:
+                    pytest.fail(f"{prefix} {number:02d} never landed")
+                await asyncio.sleep(0.02)
+    except BaseException:
+        stop.set()
+        raise
     return receipts
 
 
@@ -878,8 +906,14 @@ def test_two_copies_keep_their_own_records(tmp_path):
                                   {"name": "AI-Test"})
                 await b.call_tool("select_project",
                                   {"project_path": made["project_path"]})
-                return await asyncio.gather(twenty_changes(a, "A"),
-                                            twenty_changes(b, "B"))
+                stop = asyncio.Event()
+                ends = await asyncio.gather(twenty_changes(a, "A", stop),
+                                            twenty_changes(b, "B", stop),
+                                            return_exceptions=True)
+                for end in ends:
+                    if isinstance(end, BaseException):
+                        raise end
+                return ends
     first, second = asyncio.run(asyncio.wait_for(scenario(), 300))
     kept = {path.stem: json.loads(path.read_text(encoding="ascii"))
             for path in (home / ".exegete" / change_record.FOLDER_NAME

@@ -96,8 +96,9 @@ def _edit(path, old, new):
     ("update/index.html", updates.spoken_date(RELEASE_DAY),
      "1 October 2026", "does not give the version"),
     # words of this release's summary (0.14.2's named QualCoder 4.0,
-    # 0.14.3's "Word, PDF and other", 0.15.0's "reads each document once")
-    ("update/index.html", "a restore's\npreview says", "a restore's\npreview",
+    # 0.14.3's "Word, PDF and other", 0.15.0's "reads each document once",
+    # 0.15.1's "a restore's preview says")
+    ("update/index.html", "showing first what it", "showing what it",
      "does not give the summary"),
     ("update/index.html", "/releases/download/v", "/releases/tag/v",
      "does not link the download link"),

@@ -597,7 +597,6 @@ github.com/nicotem/exegete
 Plans, not promises: the order may change with what testers report.
 [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md) says what each release changed.
 
-- v0.15.2: undo, which takes back a change Exegete made, whole, for a day
 - v0.15.3: coding sessions kept with their project; stricter checks on
   the names of codes, categories and cases; when replacing names, choose
   which mentions to keep; the REFI-QDA export fixed, except for media;

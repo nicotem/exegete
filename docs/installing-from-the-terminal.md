@@ -1291,7 +1291,7 @@ In the Terminal, the command with `--version` prints `exegete` and the
 version, then stops: `~/exegete-venv/bin/exegete --version` for the
 virtual environment, `exegete --version` after pipx or uv tool, and
 `~/Documents/exegete/venv/bin/python -m exegete.server --version` for a
-copy of the source. The version `0.15.1-alpha` shows as `0.15.1a0`, its
+copy of the source. The version `0.15.2-alpha` shows as `0.15.2a0`, its
 normalised form. Started without `--version`, Exegete prints its
 start-up lines and a paragraph saying that it expects an MCP host on
 its standard input and output, then waits: that is expected, not an
@@ -1390,7 +1390,7 @@ and EPUB: to be sure of keeping it, write
 fetched first, until the command names a version or uv's cache is
 cleared. To update, quit the host, change `exegete` (or the earlier
 name, qualcoder-mcp) in that entry to `exegete@` and the newest version
-as PyPI spells it, for example `exegete@0.15.1a0`, and open the host
+as PyPI spells it, for example `exegete@0.15.2a0`, and open the host
 again: it fetches that version when it next starts, which needs the
 internet that once. With the check for new versions on, "How do I update
 Exegete?" gives this step with the version filled in. An entry that runs

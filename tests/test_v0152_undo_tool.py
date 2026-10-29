@@ -427,6 +427,12 @@ class TestTheRecordsRefusals:
         assert restored.get("success"), restored
         refused = unchanged_by(project, lambda: undo_preview(receipt))
         assert reasons(refused) == {undo.CHANGED_SINCE}
+        # a restore keeps no record, so no later change is named: the
+        # refusal names a restore as one cause, the change taken back
+        # already (undo's rebase, its review's finding 14)
+        found = refusal(refused, undo.CHANGED_SINCE)
+        assert "later_changes" not in found
+        assert "restore_backup" in found["message"]
 
     def test_a_column_added_since_counts_once_it_holds_a_value(
             self, project):

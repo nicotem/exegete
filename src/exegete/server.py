@@ -18552,10 +18552,13 @@ UNDO_REFUSAL_TEXTS = {
         + _THE_WAY_BACK),
     undo.CHANGED_SINCE: (
         "Rows this change touched have been changed since (counted by table "
-        "in rows), so undoing it would also take back that later work. To "
-        "keep the later work, leave this change as it is. To undo both, "
-        "undo the later changes first, or in the same call: later_changes "
-        "gives the receipts of those this conversation's Exegete made."),
+        "in rows). If restore_backup has restored a backup taken before "
+        "this change, the restore has taken the change back already, and "
+        "there is nothing to undo. Otherwise, undoing the change would also "
+        "take back the later work that changed those rows. To keep that "
+        "work, leave this change as it is. To undo both, undo the later "
+        "changes first, or in the same call: later_changes gives the "
+        "receipts of those this conversation's Exegete made."),
     undo.PROJECT_ROW_CHANGED: (
         "The project's own row, which holds the project memo, has changed "
         "since this change, so the change cannot be undone. A later "

@@ -33,7 +33,7 @@ PLANNED = {
         r"\bREFI-QDA\s+(?:export\s+)?fix",
         r"\bfix(?:es|ed)?\s+(?:to\s+)?(?:the\s+)?REFI-QDA\b"), "85, 105"),
     "PyMuPDF 2.0 on Apple silicon": ("feature", "0.15.3", (
-        r"\bApple\s+silicon\b",), "98, 105, 107"),
+        r"\bApple\s+silicon\b",), "98, 105, 111"),
     "coding sessions kept with their project": ("feature", "0.15.3", (
         r"\bsessions\s+(?:are\s+)?kept\s+with\s+(?:their|the|its)\s+"
         r"project",), "85, 105"),

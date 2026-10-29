@@ -350,7 +350,17 @@ def _tools(mode="full"):
 # projects, QualCoder's conventions, analysis, documents in, resources)
 # around the two the rewrite kept, take 1,462 characters and 24 lines:
 # 40,347 in 625 lines.
-README_LIMIT = 40_347
+# The lead's reading of 29 October 2026: the same facts in plainer
+# words. The drawing says "the project's database" and leaves "MCP"
+# to "For advanced users", which explains it (one line more); the
+# symmetry paragraph keeps its commitment without a second aim; the
+# exchange paragraph points at the table's row for the REFI-QDA
+# export's faults (one line less); the map says the snapshot is what
+# Exegete sends before a project opens; the paragraph on practising
+# gives its facts in short sentences (one line less); and the five
+# checks help keep files out of Claude's reach (one line more). The
+# figures are the README's own: 40,246 in 625 lines.
+README_LIMIT = 40_246
 README_LINES = 625
 
 
@@ -428,13 +438,17 @@ def test_the_architecture_diagram():
     # v0.14.2, the README's first round of checks: the technical labels
     # 0.14.0's diagram had, and a pointer to the assistants that open
     # files by themselves
+    # (v0.15.2, the lead's reading of 29 October: "MCP" is explained in
+    # "For advanced users", after the drawing, so the drawing says where
+    # the tools run without it; and the database the backup covers is
+    # the project's, not one of Exegete's own)
     for label in ("Your computer", "You ask Assistant app",
-                  "uses Exegete's tools (MCP, on this computer)",
+                  "uses Exegete's tools (on this computer)",
                   "Exegete (no AI of its own)",
                   # the two writes outside the database take no backup
                   # ("Go back", below)
-                  "reads (read-only) and changes its database only after "
-                  "a backup",
+                  "reads (read-only) and changes the project's database "
+                  "only after a backup",
                   "Your project, in QualCoder's format",
                   "one program at a time", "QualCoder, if you use it",
                   "The AI model, on the AI provider's computers",
@@ -442,6 +456,9 @@ def test_the_architecture_diagram():
                   "Exegete goes there. Some assistants also open files by "
                   "themselves: see below."):
         assert label in flat, label
+    assert "MCP" not in flat
+    assert "Model Context Protocol (MCP)" in _section(
+        "For advanced users", "What comes next")
     assert ("Setting the AI coder name and preparing the names file take "
             "none.") in _flat(_section("What you can do", "How it works"))
     lines = block.splitlines()

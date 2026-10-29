@@ -437,11 +437,13 @@ def test_the_check_after_installing_is_a_short_list():
     # each, and the step before participants' data with its verb)
     assert ("That conversation's permission setting comes as Manual. On "
             "Auto, Claude does not ask.") in check
+    # (the lead's reading of 29 October: the checks help keep the files
+    # out of Claude's reach, and switch training off)
     assert check.endswith("Before you use participants' data, go through "
                           "[the five checks](https://github.com/nicotem/"
-                          "exegete#where-your-data-goes), which keep your "
-                          "files out of Claude's reach and training off."), \
-        check
+                          "exegete#where-your-data-goes), which help keep "
+                          "your files out of Claude's reach and switch "
+                          "training off."), check
     assert not re.findall(r"(?<![\w.])(\d)\. ", check)
     data = _between(_flat("README.md"), "Before you use participants' data "
                     "with Claude Desktop's chat", "**Private notes and "

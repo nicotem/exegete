@@ -1132,6 +1132,27 @@ class TestTheEarlierPiecesPoints:
         assert [w["reason"] for w in listed[imported]["why_not"]] == [
             undo.ORIGINAL_CHANGED]
 
+    def test_the_list_reads_the_projects_content_once(self, project,
+                                                      monkeypatch):
+        """The list judges each run recorded against the project's content,
+        read once for the whole list rather than once a run."""
+        for mapping in (MAPPING, [{"original": "Lopez",
+                                   "pseudonym": "Smith"}],
+                        [{"original": "Tuesdays", "pseudonym": "Mondays"}]):
+            a_run(mapping=mapping, record_in_journal=False)
+        reads = []
+        content = undo._Planner._content
+
+        def counted(planner, conn):
+            reads.append(conn is planner.db_.conn)
+            return content(planner, conn)
+        monkeypatch.setattr(undo._Planner, "_content", counted)
+        listed = answer(server.undo_changes())["changes"]
+        runs = [c for c in listed if c["tool"] == "pseudonymise_source"]
+        assert len(runs) == 3
+        assert [c["can_be_undone"] for c in runs] == [True, False, False]
+        assert reads.count(True) == 1
+
     def test_the_record_keeps_its_new_fields_at_format_1(self):
         assert change_record.FORMAT == 1
         assert {"content", "files", "names_list", "kept"} <= set(

@@ -45,7 +45,8 @@ from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Se
 
 from . import change_record
 from .database import (POSITIONED_TABLES, ContentRow,
-                       CoderNameRecordsUnreadable, _capture_tables, _quoted,
+                       CoderNameRecordsUnreadable, _capture_table,
+                       _capture_tables, _quoted,
                        _sqlite_ro_immutable_uri, backup_database_is_link,
                        coder_name_record_kinds, content_rows,
                        documents_name_key, file_name_problem, is_coder_list,
@@ -726,6 +727,16 @@ def content_well_formed(content: Any) -> bool:
             and isinstance(content.get("rewrite_memos", False), bool))
 
 
+def kept_well_formed(kept: Any) -> bool:
+    """A run's `kept`: the rows later runs' undos kept (each run's journal
+    entry, with a line), each by its table's name, its integer key and
+    its digest as that undo wrote it."""
+    return isinstance(kept, list) and all(
+        isinstance(row, dict) and isinstance(row.get("table"), str)
+        and _integer(row.get("key")) and _hex32(row.get("digest"))
+        for row in kept)
+
+
 def files_well_formed(files: Any) -> bool:
     """An import's `files`: each original by its file's id and a digest."""
     return isinstance(files, list) and all(
@@ -752,8 +763,9 @@ def _route_well_formed(record: Dict[str, Any]) -> bool:
         return names_list_well_formed(record)
     if not well_formed(record):
         return False
-    if route == change_record.WHOLE_ROUTE and \
-            not content_well_formed(record.get("content")):
+    if route == change_record.WHOLE_ROUTE and not (
+            content_well_formed(record.get("content"))
+            and kept_well_formed(record.get("kept", []))):
         return False
     return tool not in FILES_TOOLS or files_well_formed(record.get("files"))
 
@@ -1739,19 +1751,35 @@ class _Planner:
                     conn, table, self.digests.function)))
                 for table in _capture_tables(conn)}
 
-    def _content_digests(self, rows: Dict[str, Tuple[Any, List[ContentRow]]]
+    def _content_digests(self, rows: Dict[str, Tuple[Any, List[ContentRow]]],
+                         aside: Optional[Dict[Tuple[str, Any], str]] = None
                          ) -> Tuple[Dict[str, str], Dict[str, ContentRow]]:
         """A database's content as a run's record keeps it (the tables by
-        their digests, the coder list by its names), from its rows."""
+        their digests, the coder list by its names), from its rows; a row
+        `aside` names, by table and key, left out while it holds the
+        digest given there."""
+        aside = aside or {}
         tables: Dict[str, str] = {}
         coders: Dict[str, ContentRow] = {}
         for table, found in rows.values():
+            name = str(table.name).lower()
             if is_coder_list(table):
                 coders.update((row.key, row) for row in found)
             else:
-                tables[str(table.name).lower()] = table_content(
-                    self.secret, table, (r.digest for r in found))
+                tables[name] = table_content(
+                    self.secret, table, (r.digest for r in found
+                                         if aside.get((name, r.key))
+                                         != r.digest))
         return tables, coders
+
+    @staticmethod
+    def _kept_since(change: ChangePlan) -> Dict[Tuple[str, Any], str]:
+        """The rows later runs' undos kept since this run (each run's
+        journal entry, with its line), by table in lower case and key, to
+        the digest each undo wrote: set aside in this run's comparisons
+        while each is as written. One changed or gone since is not."""
+        return {(row["table"].lower(), row["key"]): row["digest"]
+                for row in change.record.get("kept") or []}
 
     @staticmethod
     def _same_coder(then: Optional[str], now: Optional[ContentRow]) -> bool:
@@ -1766,9 +1794,10 @@ class _Planner:
         """The tables whose content differs from the run's record: every
         table as the run left it, QualCoder's bookkeeping aside (the
         project row's coder name, a name added to the coder list or made
-        visible again). Names in lower case."""
+        visible again), and the journal entries later runs' undos kept
+        (`_kept_since`). Names in lower case."""
         content = change.record["content"]
-        tables, coders = self._content_digests(rows)
+        tables, coders = self._content_digests(rows, self._kept_since(change))
         recorded = {str(name).lower(): digest
                     for name, digest in content["tables"].items()}
         differ = {name for name in set(recorded) | set(tables)
@@ -1784,8 +1813,10 @@ class _Planner:
                        ) -> List[str]:
         """The tables in which the run's backup differs from the project
         outside the rows the run's record lists, QualCoder's bookkeeping
-        aside: with the project as the run left it, a backup that is the
-        project as it was just before the run differs in none."""
+        aside, and the journal entries later runs' undos kept: with the
+        project as the run left it, a backup that is the project as it was
+        before the run differs in none."""
+        kept = self._kept_since(change)
         listed: Dict[str, Set[Any]] = {}
         for row in change.record["rows"]:
             listed.setdefault(row["table"].lower(), set()).add(row["key"])
@@ -1803,7 +1834,8 @@ class _Planner:
                         for row in rows_then):
                     differ.append(name)
                 continue
-            if Counter(r.digest for r in rows_now if r.key not in keep) != \
+            if Counter(r.digest for r in rows_now if r.key not in keep
+                       and kept.get((name, r.key)) != r.digest) != \
                     Counter(r.digest for r in rows_then if r.key not in keep):
                 differ.append(name)
         return differ
@@ -2271,3 +2303,24 @@ def _check_written(conn: sqlite3.Connection, plan_: Plan, secret: str) -> None:
                 wrong += 1
     if wrong:
         raise WriteCheckFailed(wrong)
+
+
+def kept_rows(conn: sqlite3.Connection, plan_: Plan, secret: str
+              ) -> List[Dict[str, Any]]:
+    """The rows a run's undo kept rather than removed (the run's journal
+    entry, with its line), read on the write connection after `write`,
+    each by table, key and digest as a run's content reads a row: what
+    each earlier run's record is given (`change_record.add_kept`), so
+    that its own undo, which compares every table with the content that
+    run left, sets them aside while they are as written."""
+    wanted: Dict[str, Set[Any]] = {}
+    for change in plan_.changes:
+        for step in change.kept_entries:
+            wanted.setdefault(step.table, set()).add(step.key)
+    fn = change_record.row_function(secret)
+    found: List[Dict[str, Any]] = []
+    for actual, keys in wanted.items():
+        table = _capture_table(conn, 0, actual)
+        found += [{"table": actual, "key": row.key, "digest": row.digest}
+                  for row in content_rows(conn, table, fn) if row.key in keys]
+    return found

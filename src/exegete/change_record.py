@@ -9,8 +9,10 @@ piece): a pseudonymisation run keeps a digest of every table as the run
 left it (`content`, route "whole"); a document import, a digest of each
 original it stored, by the file's id (`files`); a save of the names
 list, digests of the list before and after it (`names_list`, route
-"names_list", with no rows). A record holds ids and digests, never a
-name, a text, a note or a path. A sweep removes it once it is a day
+"names_list", with no rows). A run's record is also given, when a later
+run is undone, the rows that undo kept (`kept`: its journal entry, with
+a line), which this run's undo sets aside. A record holds ids and
+digests, never a name, a text, a note or a path. A sweep removes it once it is a day
 old: when Exegete starts, or after the next record of a change to the
 same project, so the record of a project that is not changed again
 stays until Exegete next starts. Undo reads it later, to judge whether
@@ -60,10 +62,10 @@ HEX_32 = re.compile(r"[0-9a-f]{32}")
 # digest, so a change holding it is not recorded
 UNREADABLE = "unreadable"
 # The fields a record holds; a reader skips any other. `content`,
-# `files` and `names_list` joined at format 1 (v0.15.2)
+# `files`, `names_list` and `kept` joined at format 1 (v0.15.2)
 FIELDS = ("format", "receipt", "run", "time", "tool", "project",
           "key_check", "backup", "route", "tables", "rows", "texts",
-          "session", "items", "content", "files", "names_list")
+          "session", "items", "content", "files", "names_list", "kept")
 # The routes a change is taken back by: its rows (most changes, the
 # document import's originals with them), its rows only while nothing
 # else has been written (a pseudonymisation run), or the names list's
@@ -186,6 +188,36 @@ def names_list_record(*, project: str, key_check: str, backup: str,
             "key_check": key_check, "backup": backup,
             "route": NAMES_LIST_ROUTE,
             "names_list": {"before": before, "after": after}}
+
+
+def add_kept(project: str, receipt: str, rows: List[Dict[str, Any]]
+             ) -> bool:
+    """Give a run's record the rows a later run's undo kept rather than
+    removed (that run's journal entry, with its line), each `{"table":
+    name, "key": id, "digest": digest}` as that undo wrote it, so that
+    this run's own undo, which compares every table with the content
+    the run left, sets them aside while they are as written (v0.15.2).
+    The record is written again whole, every other field as it was, a
+    field this version does not know included. False when there is no
+    such record, or it is of another format or cannot be read; raises
+    on a write that fails."""
+    if not isinstance(receipt, str) or not HEX_32.fullmatch(receipt):
+        raise ValueError("not a receipt")
+    path = folder(project) / f"{receipt}{RECORD_SUFFIX}"
+    try:
+        with open(path, "rb") as f:
+            data = json.loads(f.read().decode("utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(data, dict) or data.get("format") != FORMAT or \
+            data.get("receipt") != receipt:
+        return False
+    kept = data.get("kept", [])
+    if not isinstance(kept, list):
+        return False
+    data["kept"] = kept + [dict(row) for row in rows]
+    write(project, data)
+    return True
 
 
 def _ensure_folder(project: str) -> Path:

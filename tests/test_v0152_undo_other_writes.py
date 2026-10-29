@@ -477,17 +477,50 @@ def documents(folder):
     return sorted(p.name for p in place.iterdir()) if place.is_dir() else []
 
 
+ROUTES = ["by_path", "folder_held_open"]
+
+
+def removal_route(monkeypatch, route):
+    """The route doc_import.remove_original takes: by the path, or through
+    the folder held open, where the system allows. The suite's own
+    wrapper of os.unlink (conftest's Windows rule) is not in
+    os.supports_dir_fd, which would keep the second route from every
+    test: a wrapper that is, and that keeps each removal made through a
+    folder held open, by name and by that folder's device and inode."""
+    if route == "by_path":
+        monkeypatch.setattr(os, "supports_dir_fd", set())
+        return []
+    if os.open not in os.supports_dir_fd or not hasattr(os, "O_DIRECTORY"):
+        pytest.skip("no removal through a folder held open here")
+    through = []
+    previous = os.unlink
+
+    def unlink(path, **kwargs):
+        if kwargs.get("dir_fd") is not None:
+            held = os.fstat(kwargs["dir_fd"])
+            through.append((path, (held.st_dev, held.st_ino)))
+        return previous(path, **kwargs)
+    monkeypatch.setattr(os, "unlink", unlink)
+    monkeypatch.setattr(os, "supports_dir_fd",
+                        set(os.supports_dir_fd) | {unlink})
+    return through
+
+
 class TestTheImport:
 
+    @pytest.mark.parametrize("route", ROUTES)
     def test_an_import_is_undone_rows_and_originals_gone(
-            self, project, scratch_folders):
-        """The rows and the originals go, the documents folder as before;
-        the record keeps each original by its file's id and a keyed digest
-        of the SHA-256 the import verified, never of a name; the reading
-        folder's page and read-only copy of the original are forgotten."""
+            self, project, scratch_folders, monkeypatch, route):
+        """The rows and the originals go, the documents folder as before, by
+        either route; the record keeps each original by its file's id and
+        a keyed digest of the SHA-256 the import verified, never of a
+        name; the reading folder's page and read-only copy of the
+        original are forgotten."""
+        through = removal_route(monkeypatch, route)
         before, kept = rows(project), documents(project)
         _, receipt, found = an_import(project)
         assert documents(project) == sorted(kept + ["int3.txt"])
+        folder = os.stat(project / "documents")
         server.open_file_for_reading(file_id=found["int3.txt"],
                                      show="original")
         copies = server.reading_folder.file_folder(project, found["int3.txt"])
@@ -504,6 +537,9 @@ class TestTheImport:
         assert rows(project) == before
         assert documents(project) == kept
         assert not copies.exists()
+        assert [name for name, held in through if held == (
+            folder.st_dev, folder.st_ino)] == (
+                [] if route == "by_path" else ["int3.txt"])
 
     def test_the_preview_and_the_answer_say_what_stays_never_a_name(
             self, project, scratch_folders, caplog):
@@ -691,10 +727,13 @@ class TestTheImport:
         assert rows(project) == before
         assert "int3.txt" in documents(project)
 
+    @pytest.mark.parametrize("route", ROUTES)
     def test_an_original_replaced_after_its_reading_is_kept(
-            self, project, scratch_folders, monkeypatch):
+            self, project, scratch_folders, monkeypatch, route):
         """Replaced between its reading under the lock file and its
-        removal: compared once more by its identity, kept and counted."""
+        removal: compared once more by its identity, by either route,
+        kept and counted."""
+        through = removal_route(monkeypatch, route)
         _, receipt, found = an_import(project)
         original = project / "documents" / "int3.txt"
         real_write = undo.write
@@ -708,6 +747,7 @@ class TestTheImport:
         assert done["success"] is True, done
         assert done["originals_kept"] == [found["int3.txt"]]
         assert original.read_bytes() == b"Notes from another visit.\n"
+        assert "int3.txt" not in [name for name, _held in through]
 
     @pytest.mark.parametrize("spelling", ["INT3.TXT", "int3.txt.",
                                           "int3.txt "])

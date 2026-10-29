@@ -193,11 +193,13 @@ class TestTheRun:
                               "name = 'Someone Else'") == 1
 
     @pytest.mark.parametrize("since", ["coding_note", "value", "coding_gone",
-                                       "column_added"])
+                                       "column_added", "coder_hidden",
+                                       "coder_removed"])
     def test_any_other_change_since_refuses_it(self, project, since):
         """Any change since the run that is not QualCoder's bookkeeping
         refuses its undo, naming the tables, and a later change Exegete
-        recorded by its receipt."""
+        recorded by its receipt: a coder hidden or removed since counts,
+        where one added or made visible again does not."""
         ctid = None
         if since in ("coding_note", "coding_gone"):
             a_coding_on_maria()
@@ -215,14 +217,21 @@ class TestTheRun:
             assert later
         elif since == "coding_gone":
             execute(project, "delete from code_text where ctid = ?", (ctid,))
+        elif since == "coder_hidden":
+            execute(project, "update coder_names set visibility = 0 "
+                             "where name = 'Researcher'")
+        elif since == "coder_removed":
+            execute(project, "delete from coder_names where name = "
+                             "'Researcher'")
         else:
             execute(project, "alter table cases add column region text")
         refused = unchanged_by(project, lambda: undo_preview(receipt))
         assert reasons(refused) == {undo.WRITTEN_SINCE}
         found = refusal(refused, undo.WRITTEN_SINCE)
         expected = {"coding_note": "code_text", "value": "attribute",
-                    "coding_gone": "code_text",
-                    "column_added": "cases"}[since]
+                    "coding_gone": "code_text", "column_added": "cases",
+                    "coder_hidden": "coder_names",
+                    "coder_removed": "coder_names"}[since]
         assert expected in found["tables"]
         if later:
             assert found["later_changes"] == [later]
@@ -784,6 +793,22 @@ class TestTheNamesList:
         assert refused["nothing_changed"] is True
         assert Path(refused["backup_path"]).name in backups(project)
         assert (project / "pseudonyms.json").read_bytes() == written
+
+    @pytest.mark.skipif(os.name != "nt", reason="Windows holds files open")
+    def test_a_list_held_open_on_windows_is_refused_naming_the_backup(
+            self, project):
+        """On Windows a names list another program holds open can be
+        neither replaced nor removed: the undo is refused, its backup
+        named, and the list stays as it is."""
+        receipt = a_save(project)
+        now = (project / "pseudonyms.json").read_bytes()
+        preview = undo_preview(receipt)
+        with open(project / "pseudonyms.json", "rb"):
+            refused = answer(server.undo_changes(
+                receipts=[receipt], preview_token=preview["preview_token"]))
+        assert refused["nothing_changed"] is True
+        assert Path(refused["backup_path"]).name in backups(project)
+        assert (project / "pseudonyms.json").read_bytes() == now
 
     def test_the_backups_list_a_link_is_refused(self, project):
         receipt = a_save(project)

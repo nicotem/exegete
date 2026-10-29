@@ -426,7 +426,8 @@ def test_the_commitments_open_with_what_they_promise():
     # "Exegete and QualCoder", which opens with what Exegete is, in the
     # writing checklist's rewrite; symmetry as an aim gave way to the aim
     # without QualCoder as its frame, and to the list of what is not in
-    # Exegete yet
+    # Exegete yet; the owner's word of 29 October 2026 brought symmetry
+    # back, as an aim with its dated table (test_v0141_readme_review.py)
     section = _between(_readme(), "## Exegete and QualCoder",
                        "## For advanced users")
     assert section.startswith("## Exegete and QualCoder Exegete is a "
@@ -434,7 +435,7 @@ def test_the_commitments_open_with_what_they_promise():
                               "projects in QualCoder's format.")
     assert "**Exchange with other programs.**" in section
     for words in ("keep your project yours", "whatever you do",
-                  "There are three:", "Symmetry"):
+                  "There are three:"):
         assert words not in section, words
 
 
@@ -443,11 +444,16 @@ def test_latest_carries_the_date_it_was_checked():
     claim about another program's release carries the day it was checked.
     (v0.15.2, the opening texts: the download step and the comparison
     table gave way; the README dates its sentence on QualCoder's own
-    server and points to TOOLS.md, which names the releases.)"""
+    server and points to TOOLS.md, which names the releases. The owner's
+    word of 29 October 2026 brought the table back, with its date.)"""
     readme = _readme()
     assert "\"Latest\"" not in readme
     assert "QualCoder 4.0's own MCP server calls itself \"qualcoder-mcp\", " \
         "Exegete's former name, as checked on 6 October 2026" in readme
+    # v0.15.0, the release review: QualCoder's side as checked, beside
+    # the Exegete the table's column describes
+    assert re.search(r"QualCoder 3\.8\.2 and 4\.0, as checked on \d{1,2} "
+                     r"\w+ \d{4}, beside Exegete 0\.\d+\.\d+:", readme)
 
 
 # ---------------------------------------------------------------------------

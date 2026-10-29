@@ -27,6 +27,11 @@ readers, 28 October 2026).
   link names. A section moved to another document, with only a pointer
   left at its old anchor, fails the test until the README names the
   document that holds it (the second fix round).
+- README, the comparison table the owner's word of 29 October 2026
+  brought back: its Exegete column as the code has it (the kinds the
+  import reads, the PDF it refuses, whole files linked to a case, what
+  it cannot delete or change, the reports, the REFI-QDA export before
+  the fix the plan gives 0.15.2, names replaced in coded text).
 """
 
 import inspect
@@ -196,3 +201,80 @@ def test_readme_points_to_the_routes_and_their_recipes():
                      r"\(<[^>]+>, read \d{1,2} \w+ \d{4}\)", codex)
     assert re.search(r"16 GB (?:RAM|of memory) is a realistic minimum",
                      sections["lm-studio-fully-local-experimental"])
+
+
+# ---------------------------------------------------------------------------
+# README: the comparison table, back by the owner's word of 29 October 2026
+# ---------------------------------------------------------------------------
+
+COMPARISON = "| | In QualCoder | From the conversation, with Exegete |"
+
+
+def _comparison() -> dict:
+    """The table's rows by their first cell: Exegete's column."""
+    readme = _read("README.md")
+    start = readme.index(COMPARISON)
+    lines = readme[start:readme.index("\n\n", start)].splitlines()
+    rows = [[cell.strip() for cell in line.strip().strip("|").split("|")]
+            for line in lines[2:]]
+    return {cells[0]: cells[2] for cells in rows}
+
+
+def test_readme_comparison_rows_hold_against_the_code():
+    from exegete import doc_readers, import_words
+    exegete = _comparison()
+    # the kinds the import reads, PDF and EPUB with the optional part
+    assert exegete["Bring in files"] == (
+        "Documents from your computer (Word, OpenDocument, RTF, text, "
+        "Markdown, web pages, subtitles; PDF and EPUB with the optional "
+        "part, which the extension has), and text the assistant hands over")
+    named = {doc_readers.WORD, doc_readers.OPENDOCUMENT, doc_readers.RTF,
+             doc_readers.TEXT, doc_readers.MARKDOWN, doc_readers.WEB,
+             doc_readers.SUBTITLES}
+    assert named == set(doc_readers.FORMATS.values()) - \
+        doc_readers.OPTIONAL_FORMATS
+    assert doc_readers.OPTIONAL_FORMATS == {doc_readers.PDF,
+                                            doc_readers.EPUB}
+    assert callable(server.import_text_file)
+    # a PDF with no text to read is pictures of pages, as the import says
+    assert "pictures of pages" in import_words.WARNINGS["pdf_scanned"][1]
+    assert exegete["Code text, a PDF's text included"].endswith(
+        "(not a PDF that is only pictures of pages)")
+    # what it cannot do with cases and journals: a file is linked whole,
+    # and no tool deletes or changes the rest
+    assert "whole-file case_text link" in server.link_file_to_case.__doc__
+    cases = exegete["Cases, attributes, memos, annotations, journal"]
+    for words in ("deleting a case, an attribute or a journal entry",
+                  "changing a journal entry", "renaming an attribute",
+                  "linking part of a file (not the whole) to a case",
+                  "taking a file out of a case"):
+        assert words in cases, words
+    for missing in ("delete_case", "delete_attribute_type",
+                    "delete_journal_entry", "update_journal_entry",
+                    "rename_attribute_type", "unlink_file_from_case"):
+        assert not hasattr(server, missing), missing
+    # the reports, each a tool
+    for tool in ("export_codebook", "export_coded_segments_report",
+                 "export_frequencies_csv", "export_case_code_matrix_csv",
+                 "find_cooccurring_codes"):
+        assert callable(getattr(server, tool)), tool
+    # REFI-QDA: the export alone, before the fix the plan gives 0.15.2
+    assert exegete["REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo)"] == (
+        "Export only, with known faults: every coding under the AI coder "
+        "name, and cases, annotations, journals and media left out")
+    assert callable(server.export_refi_qda)
+    assert not [name for name in dir(server) if name.startswith(
+        "import_refi")]
+    plan = {}
+    exec((REPO / "scripts" / "release_plan.py").read_text(encoding="utf-8"),
+         plan)
+    assert plan["PLANNED"]["the REFI-QDA fix"][1] == "0.15.2"
+    assert ("beside Exegete 0.15.2: its REFI-QDA row gives the export as "
+            "it is before the planned REFI-QDA fix.") in _flat(
+                _read("README.md"))
+    # names replaced as a file comes in, and in text already coded
+    assert "apply_project_pseudonyms" in inspect.signature(
+        server.import_documents).parameters
+    assert callable(server.pseudonymise_source)
+    assert exegete["Replacing names"] == ("When a file is brought in, and in "
+                                          "text already coded")

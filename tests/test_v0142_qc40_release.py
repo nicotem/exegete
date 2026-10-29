@@ -209,6 +209,13 @@ def test_the_readme_table_is_checked_against_the_release():
     # which the README points to
     assert "QualCoder 3.8.2 to 4.0" in readme
     assert "TOOLS.md#supported-qualcoder-versions" in readme
+    # the owner's word of 29 October 2026: the table back, its QualCoder
+    # column as checked against the release on 10 October 2026
+    assert ("The table sets QualCoder 3.8.2 and 4.0, as checked on 10 "
+            "October 2026, beside Exegete 0.15.2:") in readme
+    assert ("3.8.2: an AI search finds passages, which you code. 4.0: its "
+            "assistant codes as it works, within the AI permission you set "
+            "(Read-only stops it), with undo") in readme
     # the README no longer names the beta or the August commit at all
     for words in ("4.0-Beta", "4.0 beta", "9bddf17"):
         assert words not in readme, words

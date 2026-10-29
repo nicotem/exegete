@@ -96,6 +96,10 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     # reads them)
     assert ("**Bring in documents**: Word, OpenDocument, RTF, text, "
             "Markdown, web pages and subtitles, and PDF and EPUB") in flat
+    # (the owner's word of 29 October 2026: the comparison table back, its
+    # import row saying what each program brings in)
+    assert "| Bring in files | Text, documents, PDFs, images, audio, " \
+        "video | Documents from your computer" in flat
     assert "Or you can import a document in QualCoder" not in flat
     one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
                             flat.index("### ChatGPT's desktop app")]

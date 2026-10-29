@@ -210,15 +210,42 @@ def test_the_three_commitments():
     """v0.15.2, the opening texts: the three commitments became the section
     "Exegete and QualCoder" (the format, its rules and their departures,
     what Exegete takes from QualCoder) and the list of what is not in
-    Exegete yet; the dated comparison table gave way to that list."""
+    Exegete yet; the dated comparison table gave way to that list. The
+    owner's word of 29 October 2026 brought the table back with its
+    introduction, after the format's commitment and before the exchange
+    with other programs, as the old order had it."""
     readme = _flat("README.md")
     section = readme[readme.index("## Exegete and QualCoder"):
                      readme.index("## For advanced users")]
     for words in ("reads and writes the formats of QualCoder 3.8.2 to 4.0",
                   "Where QualCoder has a rule, Exegete follows it and says "
                   "where it departs, and why",
+                  "**Symmetry: the same work in either program, as a "
+                  "commitment.**",
                   "**Exchange with other programs.**"):
         assert words in section, words
+    assert section.index("lists them.") < section.index("**Symmetry:") < \
+        section.index("**Exchange with other programs.**")
+    # an aim, said as one
+    assert "Today the two programs differ in both directions." in section
+    # v0.14.2, the README review: every row checked again, and re-dated;
+    # then against QualCoder 4.0's release (the owner's ruling of 6
+    # October 2026); v0.15.0, the release review: QualCoder's column as
+    # checked, beside the Exegete the column describes, which the owner's
+    # word of 29 October 2026 makes 0.15.2, its REFI-QDA row from before
+    # the fix the plan gives that release
+    dated = section.index("The table sets QualCoder 3.8.2 and 4.0, as "
+                          "checked on 10 October 2026, beside Exegete "
+                          "0.15.2: its REFI-QDA row gives the export as it "
+                          "is before the planned REFI-QDA fix.")
+    table = section.index("| | In QualCoder | From the conversation, with "
+                          "Exegete |")
+    assert dated < table
+    # The table's agreement row keeps the server's own caveat
+    row = section[section.index("| Comparing two coders |"):]
+    assert row.index("Against the AI coder name, the figures do not "
+                     "measure agreement between independent coders") < \
+        row.index("| Replacing names |")
     # The agreement caveat, the server's own, where the comparison is named
     # (v0.15.2, the readability reading: what the figures do not measure)
     assert ("Against the AI coder name, the figures do not measure agreement "

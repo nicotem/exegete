@@ -338,8 +338,10 @@ def _tools(mode="full"):
 # The two drawings in "How it works", the architecture after the two
 # sentences it had before it and a coding's path after "When anything is
 # written", take 1,857 characters and 47 lines: 34,953 in 547 lines.
-README_LIMIT = 34_953
-README_LINES = 547
+# The comparison table, with its introduction, in "Exegete and QualCoder",
+# takes 2,429 characters and 21 lines: 37,382 in 568 lines.
+README_LIMIT = 37_382
+README_LINES = 568
 
 
 def test_the_readme_stays_short():

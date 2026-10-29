@@ -79,11 +79,11 @@ officer will ask, and the summary above depends on them:
   participants' data: while it is on, the AI provider may use your
   conversations to train its models. With Anthropic it is the Model
   Improvement setting (rung 1, the first of the governance options in
-  "Your governance options", below); with OpenAI, "Improve the model for
-  everyone" and Codex's separate "Include environments" ("OpenAI's
-  apps"). Rating a reply (thumbs up or down) can still let either
-  provider train on that conversation ("Cross-rung cautions"; "OpenAI's
-  apps").
+  "Your governance options", below). With OpenAI it is "Improve the
+  model for everyone", and Codex's separate "Include environments"
+  ("OpenAI's apps"). Rating a reply (thumbs up or down) can still let
+  either provider train on that conversation ("Cross-rung cautions";
+  "OpenAI's apps").
 - **Controller and processor, and a written agreement.** Your
   institution is normally the data controller, which decides how the
   data is used, and the AI provider a processor, which handles it for
@@ -178,8 +178,8 @@ PDFs reports its use to Windows' diagnostic data each time a PDF is
 read, with nothing from your documents. Left as it comes, that library
 would report on Linux too. Exegete switches its reports off: on Linux
 before the library starts, so it reports nothing there, and on Windows
-once it has loaded, after its first few reports ("A library's usage
-reports", below, says what they hold, and what you can do).
+once it has loaded, after its first few reports. "A library's usage
+reports", below, says what they hold, and what you can do.
 
 Exegete opens your project's database read-only by default. The one
 thing it fetches from the internet itself, while switched on, is a

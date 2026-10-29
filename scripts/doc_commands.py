@@ -41,10 +41,11 @@ other setting of the caller's: its PATH is the home's `.local/bin`, then a
 folder of links to the caller's python3, pipx and uv, then /usr/bin and
 /bin, so the only `exegete` it can find is one it installed. A waiting
 program runs with a terminal on its standard input. It must print, fall
-quiet for 5 seconds within 60, still be running, show no Traceback or
-error line, and stop within 10 seconds of one Ctrl+C; 10 seconds after the
-Ctrl+C the terminal closes, 5 seconds later the program is killed, and the
-summary says which of the three ended it.
+quiet for 5 seconds within 60, still be running, and stop within 10
+seconds of one Ctrl+C, with no Traceback or error line before the Ctrl+C
+or after it; 10 seconds after the Ctrl+C the terminal closes, 5 seconds
+later the program is killed, and the summary says which of the three
+ended it.
 
 Every Markdown file `git ls-files '*.md'` lists is read, test content under
 tests/fixtures/ aside. A mark the script cannot run fails with its file and
@@ -476,9 +477,10 @@ def run_sessions(sessions: List[Session], scratch: Path,
 def watch(command: str, result: Path, cut: str,
           times: Tuple[float, float, float, float]) -> int:
     """Start a waiting program as a terminal does and stop it with one
-    Ctrl+C: 0 when it settled cleanly and one Ctrl+C stopped it, else 1.
-    Its output follows on standard output once it has ended, what came
-    after the Ctrl+C behind `cut`; what happened goes to `result`."""
+    Ctrl+C: 0 when it settled cleanly and one Ctrl+C stopped it, with no
+    Traceback or error line before the Ctrl+C or after it, else 1. Its
+    output follows on standard output once it has ended, what came after
+    the Ctrl+C behind `cut`; what happened goes to `result`."""
     import fcntl
     import termios
     quiet, settle, stop, close = times
@@ -543,6 +545,12 @@ def watch(command: str, result: Path, cut: str,
     if master >= 0:
         os.close(master)
     written = log.read_bytes()
+    if ended_by != "itself":
+        # a program that stops on one Ctrl+C but prints Python's report
+        # of the interrupt, a Traceback, has not stopped cleanly
+        after = written[len(before):].decode("utf-8", "replace")
+        problems.extend(f"it printed `{bad.strip()}` after the Ctrl+C"
+                        for bad in BAD_LINES if bad in after)
     out = sys.stdout.buffer
     out.write(before + (b"\n" if before and not before.endswith(b"\n")
                         else b""))

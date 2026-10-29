@@ -212,12 +212,14 @@ Exegete's own code.
 
 Leave out the `export` line if you have no project yet.
 
+<!-- ci: run source waits -->
 ```bash
 cd ~/Documents/exegete
 source venv/bin/activate
 export EXEGETE_PROJECT_PATH="/path/to/your/project.qda"
 python -m exegete.server
 ```
+<!-- ci: expect source: that is not there -->
 
 Exegete should start without errors, then wait for an app that is not
 there. To stop it, press Ctrl+C or close the Terminal window. After a

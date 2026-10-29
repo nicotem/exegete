@@ -8,7 +8,11 @@ those. Then, in bash with a terminal (Linux and macOS; CI runs the
 sessions on Ubuntu): a session's own home, with nothing of the caller's
 settings or PATH; each expectation matched against its own step alone;
 and a waiting program stopped with one Ctrl+C, the terminal closed and
-then a kill when it does not stop, and which of the three ended it.
+then a kill when it does not stop, and which of the three ended it. A
+Traceback or error line fails a waiting program after the Ctrl+C as well
+as before it, and Exegete started by hand is marked in QUICKSTART and in
+the Terminal guide, each to be stopped with one Ctrl+C (v0.15.2, the
+marks the Ctrl+C fix left for later).
 """
 
 import importlib.util
@@ -328,11 +332,18 @@ def test_an_expectation_is_matched_against_its_step_alone(tmp_path):
 
 # Stand-ins for a program that keeps running, and what ends each
 STAND_INS = {
-    "good": ("print('ready', flush=True)\ntime.sleep(600)", "one Ctrl+C"),
+    # stops on one Ctrl+C with a line of its own, as Exegete does
+    "good": ("try:\n    print('ready', flush=True)\n    time.sleep(600)\n"
+             "except KeyboardInterrupt:\n    print('stopped', flush=True)",
+             "one Ctrl+C"),
     "early": ("print('done', flush=True)", "itself"),
     "traceback": ("print('Traceback (most recent call last):', flush=True)"
                   "\ntime.sleep(600)", "one Ctrl+C"),
-    # lets the first Ctrl+C pass, as Exegete started by hand does today
+    # stops on one Ctrl+C, then prints Python's report of the interrupt,
+    # a Traceback, as Exegete did on a second Ctrl+C before 0.15.2
+    "late": ("print('ready', flush=True)\ntime.sleep(600)", "one Ctrl+C"),
+    # lets the first Ctrl+C pass, as Exegete started by hand did before
+    # 0.15.2
     "stubborn": ("signal.signal(signal.SIGINT, lambda *_: None)\n"
                  "print('ready', flush=True)\ntime.sleep(600)",
                  "closing the terminal"),
@@ -375,6 +386,12 @@ def test_a_waiting_program_is_stopped_with_ctrl_c(tmp_path, monkeypatch,
         assert all(failure.startswith(f"guide.md:{mark}: ")
                    for failure in outcome.failures), outcome.failures
         assert bool(outcome.failures) is (name != "good"), outcome.failures
+    # what follows the Ctrl+C is read too
+    late = next(outcome for outcome in outcomes
+                if outcome.session.name == "late")
+    assert [failure.split(": ", 1)[1] for failure in late.failures] == [
+        f"`{commands['late']}`: it printed `Traceback` after the Ctrl+C"], \
+        late.failures
     # never held past the Ctrl+C's wait, the terminal's and a margin
     limit = sum(times.values()) - times["SETTLE_SECONDS"] + 8
     assert took["stubborn"] < limit and took["deaf"] < limit, took
@@ -383,3 +400,26 @@ def test_a_waiting_program_is_stopped_with_ctrl_c(tmp_path, monkeypatch,
     for name, (_, ended_by) in STAND_INS.items():
         row = next(row for row in rows if row.startswith(f"| guide.md | {name} |"))
         assert ended_by in row, row
+
+
+def test_exegete_started_by_hand_is_marked_to_stop_with_one_ctrl_c():
+    """QUICKSTART's "Start Exegete by hand" and the Terminal guide's
+    "Testing the install" each end a session with Exegete started by
+    hand, which the commands job starts in a terminal and stops with one
+    Ctrl+C. What each expects it to print is in the note Exegete prints
+    there, so a change to the note shows here as well as in that job."""
+    from exegete import server
+    sessions, bad = doc_commands.read_all(REPO)
+    assert not bad, bad
+    found = {(session.file, session.name): session for session in sessions}
+    note = " ".join(server.TTY_NOTICE.split())
+    for (file, name), (command, words) in {
+            ("QUICKSTART.md", "source"): (
+                "python -m exegete.server", "that is not there"),
+            ("docs/installing-from-the-terminal.md", "venv"): (
+                "~/exegete-venv/bin/exegete",
+                "standard input and output")}.items():
+        last = found[(file, name)].steps[-1]
+        assert last.waits and last.command == command, (file, last)
+        assert [text for _, text in last.expects] == [words], (file, last)
+        assert words in note, (words, note)

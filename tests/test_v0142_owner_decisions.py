@@ -179,14 +179,24 @@ def test_install_and_privacy_give_the_same_advice():
     assert ADVICE.format(maker="OpenAI") in individuals
     checklist = _between(privacy, "## Before you use real participant data",
                          "## How your data flows")
-    item = _between(checklist, "- **Training, with either maker.**",
+    # (v0.15.2, the lead's reading: "the AI provider", the one term, for
+    # "the maker"; and rung 1 said to be one of the governance options
+    # the document sets out, at its first mention)
+    item = _between(checklist, "- **Training, with either AI provider.**",
                     "- **Controller")
-    for words in (ADVICE.format(maker="the maker"), "Model Improvement",
+    for words in (ADVICE.format(maker="the AI provider"), "Model Improvement",
                   "\"Improve the model for everyone\"",
                   "\"Include environments\"",
                   "Rating a reply (thumbs up or down) can still let either "
-                  "maker train on that conversation"):
+                  "provider train on that conversation",
+                  "(rung 1, the first of the governance options in \"Your "
+                  "governance options\", below)"):
         assert words in item, words
+    assert "maker" not in checklist
+    assert privacy.index("rung 1, the first of the governance options") \
+        == privacy.lower().index("rung")
+    assert "\n## Your governance options, from default to fully local" in \
+        _read("PRIVACY.md")
 
 
 def test_the_advice_is_where_claude_desktop_is_set_up():

@@ -734,14 +734,15 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "and when you will delete them."):
         assert words in checklist, words
     # the ten questions, in that order: terms first, as before, then
-    # training with either maker (the owner, 1 October 2026); the check
+    # training with either AI provider (the owner, 1 October 2026; "AI
+    # provider", the one term, since v0.15.2); the check
     # for new versions adds what Exegete itself connects to, before the
     # last two (pull request #11, the owner's ruling 60 of 6 October 2026)
     questions = re.findall(r"- \*\*([^*]+)\*\*", checklist)
     assert len(questions) == 10
     assert questions[-3] == "What Exegete itself connects to."
     assert questions[0].startswith("Your Claude plan's terms differ")
-    assert questions[1] == "Training, with either maker."
+    assert questions[1] == "Training, with either AI provider."
     assert questions[-2:] == ["Which assistant, and whether it opens files "
                               "by itself.", "What stays on the computer, "
                               "and for how long."]

@@ -395,13 +395,29 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     data; and the four passages that say nothing else leaves point to
     it."""
     flows = _flat_section("PRIVACY.md", "## How your data flows")
+    # (v0.15.2, the lead's reading: the section's first paragraph names the
+    # systems the summary names, Windows x64, where the library reports,
+    # and Linux, where Exegete's setting stops it before it starts)
     assert ("no telemetry, no analytics, and no separate cloud path** of "
-            "its own. One library it installs to read PDFs on Windows x64 "
-            "and Linux reports on its own use to Microsoft unless it is "
-            "switched off") in flows
-    assert ("on Windows a few reports still go to Windows' diagnostic data "
-            "each time a PDF is read, with nothing from your documents") \
-        in flows
+            "its own. On Windows x64, a library Exegete installs to read "
+            "PDFs reports its use to Windows' diagnostic data each time a "
+            "PDF is read, with nothing from your documents.") in flows
+    assert ("Exegete switches its reports off: on Linux before the library "
+            "starts, so it reports nothing there, and on Windows once it "
+            "has loaded, after its first few reports") in flows
+    summary = _flat_section("PRIVACY.md", "## Where your data goes, in "
+                            "short")
+    assert ("**On Windows x64**, a library Exegete installs to read PDFs "
+            "reports its use to Windows' diagnostic data each time a PDF "
+            "is read, with nothing from your documents") in summary
+    assert "Linux reports" not in flows and "Linux reports" not in summary
+    # the two switches those sentences describe: the setting in the
+    # reading process's environment, before onnxruntime loads, and
+    # onnxruntime's own switch once it has loaded
+    import inspect
+    assert env_settings.READER_SETTINGS == {"ORT_DISABLE_TELEMETRY": "1"}
+    assert "disable_telemetry_events()" in inspect.getsource(
+        import_reading._onnxruntime_reports_off)
     start = flows.index("**A library's usage reports (what Microsoft can "
                         "learn about the library being used on this "
                         "computer, with no participant data).**")

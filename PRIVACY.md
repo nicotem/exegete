@@ -75,13 +75,15 @@ officer will ask, and the summary above depends on them:
   Max) and Team, Enterprise and API terms. Existing participant consent
   would almost never cover inputs used for model training, and an ethics
   board asks this first.
-- **Training, with either maker.** Switch training off before
-  participants' data: while it is on, the maker may use your
+- **Training, with either AI provider.** Switch training off before
+  participants' data: while it is on, the AI provider may use your
   conversations to train its models. With Anthropic it is the Model
-  Improvement setting (rung 1); with OpenAI, "Improve the model for
+  Improvement setting (rung 1, the first of the governance options in
+  "Your governance options", below); with OpenAI, "Improve the model for
   everyone" and Codex's separate "Include environments" ("OpenAI's
-  apps"). Rating a reply (thumbs up or down) can still let either maker
-  train on that conversation ("Cross-rung cautions"; "OpenAI's apps").
+  apps"). Rating a reply (thumbs up or down) can still let either
+  provider train on that conversation ("Cross-rung cautions"; "OpenAI's
+  apps").
 - **Controller and processor, and a written agreement.** Your
   institution is normally the data controller, which decides how the
   data is used, and the AI provider a processor, which handles it for
@@ -118,7 +120,7 @@ officer will ask, and the summary above depends on them:
 - **Which assistant, and whether it opens files by itself.** Codex,
   Claude Code and Claude's Cowork can open files on your computer by
   themselves, outside Exegete, and what they read that way goes to
-  their maker whole, the private part of memos included. Exegete cannot
+  their AI provider whole, the private part of memos included. Exegete cannot
   see such a read or stop it ("Assistants that open files by
   themselves", below). For participants' data this project suggests
   Claude Desktop's chat with the extension, with computer use off, no
@@ -171,12 +173,13 @@ this document says of either tool holds under both its names.
 **Exegete itself runs entirely on your machine.** It is a local
 process, started by the app you use it in (Claude Desktop, Claude Code,
 or another). It adds **no telemetry, no analytics, and no separate cloud
-path** of its own. One library it installs to read PDFs on Windows x64
-and Linux reports on its own use to Microsoft unless it is switched
-off. Exegete switches it off entirely on Linux, but on Windows a few
-reports still go to Windows' diagnostic data each time a PDF is read,
-with nothing from your documents ("A library's usage reports", below,
-says what they hold, and what you can do).
+path** of its own. On Windows x64, a library Exegete installs to read
+PDFs reports its use to Windows' diagnostic data each time a PDF is
+read, with nothing from your documents. Left as it comes, that library
+would report on Linux too. Exegete switches its reports off: on Linux
+before the library starts, so it reports nothing there, and on Windows
+once it has loaded, after its first few reports ("A library's usage
+reports", below, says what they hold, and what you can do).
 
 Exegete opens your project's database read-only by default. The one
 thing it fetches from the internet itself, while switched on, is a

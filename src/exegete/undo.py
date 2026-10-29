@@ -17,19 +17,39 @@ row it points at gone, or another row in its place under the same id, a
 loop in the tree of categories or of codes. Each value crosses from the
 backup with its storage class and its bytes, nothing decoded.
 
+Three kinds of change take a route of their own (v0.15.2, the third undo
+piece). A pseudonymisation run (route "whole") is undone only while
+nothing has been written to the project since it: its record keeps every
+table as the run left it, compared with the project, and, in a call's
+first plan, its backup is compared with the project outside the rows the
+run changed; its rows are then written back as any change's, and its
+journal entry is kept with a line saying it was undone. A document
+import's originals, kept by file id, are found here from their rows; the
+files themselves are read and removed by server.py. A correction of the
+researcher's coder name compares and sets back the project row's coder
+name, which other changes set aside. A save of the names list (route
+"names_list") is judged and written back by server.py, in a call of its
+own.
+
 A refusal here is a reason and its counts, never a value, a name or a
 path; the words are server.py's (UNDO_REFUSAL_TEXTS).
 """
 
 import os
 import sqlite3
+import unicodedata
+from collections import Counter
 from contextlib import closing
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple
 
 from . import change_record
-from .database import (POSITIONED_TABLES, _quoted, _sqlite_ro_immutable_uri,
-                       backup_database_is_link, is_this_servers_backup_name,
+from .database import (POSITIONED_TABLES, ContentRow,
+                       CoderNameRecordsUnreadable, _capture_tables, _quoted,
+                       _sqlite_ro_immutable_uri, backup_database_is_link,
+                       coder_name_record_kinds, content_rows,
+                       documents_name_key, file_name_problem, is_coder_list,
+                       is_this_servers_backup_name, table_content,
                        unclean_backup_side_files, validate_qda_path)
 from .sessions import SessionManager
 
@@ -43,7 +63,6 @@ NEWER_FORMAT = "newer_format"
 RECORD_UNREADABLE = "unreadable_record"
 TOO_OLD = "too_old"
 DATED_AHEAD = "dated_ahead"
-NOT_YET_UNDOABLE = "not_yet_undoable"
 OWN_TRIGGERS = "own_triggers"
 BACKUP_GONE = "backup_gone"
 BACKUP_UNCLEAN = "backup_unclean"
@@ -61,12 +80,33 @@ PARENT_GONE = "parent_gone"
 PARENT_REPLACED = "parent_replaced"
 DOCUMENTS_CLASH = "documents_clash"
 LOOP = "loop"
+# The routes of their own (v0.15.2): a run and the names list alone in
+# their call; a run with nothing written since, its backup whole
+ALONE = "alone"
+WRITTEN_SINCE = "written_since"
+BACKUP_DIFFERS = "backup_differs"
+# an import's originals: another entry naming one, one changed since, one
+# that cannot be read whole (server.py reads the files)
+ORIGINAL_SHARED = "original_shared"
+ORIGINAL_CHANGED = "original_changed"
+ORIGINAL_UNREADABLE = "original_unreadable"
+# a correction of the researcher's coder name
+CODER_NAME_CHANGED = "coder_name_changed"
+CODER_NAME_IN_USE = "coder_name_in_use"
+# a save of the names list
+NAMES_LIST_CHANGED = "names_list_changed"
 
-# The tools whose changes take a route of their own back, which the third
-# undo design adds: refused here until it lands
-NOT_YET_UNDOABLE_TOOLS = frozenset({
-    "pseudonymise_source", "import_documents", "set_project_coder_name",
-    "save_names_list"})
+# The tools whose changes take a route of their own back, each with the
+# route its record must carry, and the tool whose record must carry its
+# originals: a record without them (one made before v0.15.2 on a build
+# of its own) is refused as unreadable rather than undone by another
+# route. (No string constant here but the reasons: a test reads them.)
+OWN_ROUTES = {"pseudonymise_source": change_record.WHOLE_ROUTE,
+              "save_names_list": change_record.NAMES_LIST_ROUTE}
+FILES_TOOLS = frozenset({"import_documents"})
+# The correction whose undo compares and sets back the project row's
+# coder name, which every other change's sets aside
+CODER_NAME_TOOLS = frozenset({"set_project_coder_name"})
 # The tools whose marks in a coding session an undo sets back, each with
 # the kind of mark: an apply's suggestions to approved, a creation's
 # proposals to approved, a deleted coding's suggestion to applied
@@ -303,6 +343,11 @@ class Digests:
     def __init__(self, secret: str):
         self._fn = change_record.row_function(secret)
 
+    @property
+    def function(self):
+        """The function itself, for `database.content_rows`."""
+        return self._fn
+
     def row(self, columns: Sequence[str], values: Dict[str, Value]
             ) -> Optional[str]:
         """A row's digest over `columns`, None when one is missing."""
@@ -325,6 +370,14 @@ class Digests:
         if value is None:
             return None
         found = self._fn("text", value.kind, value.raw)
+        return None if found == change_record.UNREADABLE else found
+
+    def apart(self, value: Optional[Value]) -> Optional[str]:
+        """The digest of the project row's coder name, as the capture
+        keeps it apart from the rest of the row."""
+        if value is None:
+            return None
+        found = self._fn("apart", value.kind, value.raw)
         return None if found == change_record.UNREADABLE else found
 
 
@@ -656,6 +709,55 @@ def well_formed(record: Dict[str, Any]) -> bool:
     return True
 
 
+def _integer(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def content_well_formed(content: Any) -> bool:
+    """A run's `content`: each table's name to a digest, each coder's key
+    digest to its row's digest, and whether the run rewrote notes."""
+    if not isinstance(content, dict):
+        return False
+    tables, coders = content.get("tables"), content.get("coders")
+    return (isinstance(tables, dict) and isinstance(coders, dict)
+            and all(isinstance(k, str) and _hex32(v)
+                    for k, v in tables.items())
+            and all(_hex32(k) and _hex32(v) for k, v in coders.items())
+            and isinstance(content.get("rewrite_memos", False), bool))
+
+
+def files_well_formed(files: Any) -> bool:
+    """An import's `files`: each original by its file's id and a digest."""
+    return isinstance(files, list) and all(
+        isinstance(f, dict) and _integer(f.get("file"))
+        and _hex32(f.get("digest")) for f in files)
+
+
+def names_list_well_formed(record: Dict[str, Any]) -> bool:
+    """A save of the names list: its time, its backup's digest, and the
+    list's digests before (None for none) and after."""
+    found = record.get("names_list")
+    return (_number(record.get("time")) and _hex32(record.get("backup"))
+            and isinstance(found, dict) and _hex32(found.get("after"))
+            and _digest_or_none(found.get("before")))
+
+
+def _route_well_formed(record: Dict[str, Any]) -> bool:
+    """Whether a record carries the route its tool's changes are taken
+    back by, with what that route reads."""
+    route, tool = record.get("route"), record.get("tool")
+    if route != OWN_ROUTES.get(tool, change_record.ROWS_ROUTE):
+        return False
+    if route == change_record.NAMES_LIST_ROUTE:
+        return names_list_well_formed(record)
+    if not well_formed(record):
+        return False
+    if route == change_record.WHOLE_ROUTE and \
+            not content_well_formed(record.get("content")):
+        return False
+    return tool not in FILES_TOOLS or files_well_formed(record.get("files"))
+
+
 class Located(NamedTuple):
     record: Optional[Dict[str, Any]]
     reason: Optional[str]
@@ -664,9 +766,9 @@ class Located(NamedTuple):
 def locate(project: str, receipt: str, key_check: str,
            clock: Optional[float] = None) -> Located:
     """The record a receipt names, judged: known, of this project, made
-    under this secret, of a known format, readable, not dated ahead of
-    the clock, under a day old, of a tool whose changes this route takes
-    back; or the reason it is not.
+    under this secret, of a known format, readable and carrying the route
+    its tool's changes are taken back by, not dated ahead of the clock,
+    under a day old; or the reason it is not.
     The receipt was checked as 32 lowercase hex characters before any
     path was made."""
     try:
@@ -684,15 +786,13 @@ def locate(project: str, receipt: str, key_check: str,
         return Located(None, SECRET_REPLACED)
     if record.get("project") != project:
         return Located(None, ANOTHER_PROJECT)
-    if record.get("route") != "rows" or not well_formed(record):
+    if not _route_well_formed(record):
         return Located(None, RECORD_UNREADABLE)
     age = (change_record.now() if clock is None else clock) - record["time"]
     if age < -CLOCK_SLACK_SECONDS:
         return Located(None, DATED_AHEAD)
     if age > change_record.KEEP_SECONDS:
         return Located(None, TOO_OLD)
-    if record.get("tool") in NOT_YET_UNDOABLE_TOOLS:
-        return Located(record, NOT_YET_UNDOABLE)
     return Located(record, None)
 
 
@@ -736,6 +836,15 @@ class Step(NamedTuple):
     now: Optional[Row]
 
 
+class Original(NamedTuple):
+    """An original a document import stored, found from its row: the
+    file's id, its name in the folder of originals, and the record's
+    keyed digest of the SHA-256 its copy was verified by."""
+    file_id: int
+    name: str
+    digest: str
+
+
 class ChangePlan:
     """What undoing one change would do, or why it cannot be done."""
 
@@ -744,10 +853,17 @@ class ChangePlan:
         self.record = record
         self.tool = record.get("tool") if record else None
         self.time = record.get("time") if record else None
+        self.route = record.get("route") if record else None
         self.refusals: List[Dict[str, Any]] = []
         self.removed: List[Step] = []
         self.put_back: List[Step] = []
         self.set_back: List[Step] = []
+        # A run's journal entry, kept with a line rather than removed
+        self.kept_entries: List[Step] = []
+        # An import's originals, and the files whose stored name cannot
+        # be used as a file's name (never made into a path: kept)
+        self.originals: List[Original] = []
+        self.originals_unnamed: List[int] = []
         self.fingerprint: Dict[str, Any] = {"receipt": receipt}
         self.suggestions_on_removed_files = 0
 
@@ -781,6 +897,17 @@ class Plan:
         self.removed_files: Set[int] = set()
         self.files_touched: Set[int] = set()
         self.suggestions_on_removed_files = 0
+        # The routes of their own (v0.15.2): a save of the names list,
+        # judged and written by server.py; a run, its files and whether
+        # it rewrote notes, and its journal entries kept with a line; an
+        # import's originals
+        self.names_list: Optional[ChangePlan] = None
+        self.run = False
+        self.rewrite_memos = False
+        self.run_files: Set[int] = set()
+        self.journal_entries_kept: List[int] = []
+        self.originals: List[Original] = []
+        self.originals_unnamed: List[int] = []
 
     @property
     def can_run(self) -> bool:
@@ -831,9 +958,11 @@ class _Planner:
     def __init__(self, db_, *, secret: str, project: str,
                  project_db: Path, sessions: Sequence[Tuple[str, Any, bytes]],
                  receipts: Sequence[str],
-                 records: Optional[Sequence[Dict[str, Any]]] = None):
+                 records: Optional[Sequence[Dict[str, Any]]] = None,
+                 journal_line: Optional[bytes] = None):
         from .database import _capture_table
         self._capture_table = _capture_table
+        self.journal_line = journal_line
         self.db_ = db_
         self.secret = secret
         self.project_key = project
@@ -969,23 +1098,10 @@ class _Planner:
 
     def _find_backup(self, digest: str) -> Tuple[Optional[Source],
                                                  Optional[str]]:
-        folder = self.project_db.parent
-        prefix = f"{folder.stem}_backup_"
-        try:
-            names = sorted(os.listdir(folder.parent))
-        except OSError:
-            return None, BACKUP_GONE
-        match = None
-        for name in names:
-            if is_this_servers_backup_name(name, prefix) and \
-                    change_record.digest(self.secret, "backup", name) == digest:
-                match = folder.parent / name
-                break
+        match, reason = find_backup_folder(self.project_db, self.secret,
+                                           digest)
         if match is None:
-            return None, BACKUP_GONE
-        if match.is_symlink() or unclean_backup_side_files(match) or \
-                backup_database_is_link(match):
-            return None, BACKUP_UNCLEAN
+            return None, reason
         try:
             data = validate_qda_path(str(match))
         except Exception:
@@ -1041,7 +1157,9 @@ class _Planner:
         # Changed since: each touched row as the undo so far leaves it,
         # against "after", over the columns recorded (a column added since
         # counts only when it holds a value), the project row's coder
-        # name set aside; a row the change removed must still be absent
+        # name set aside but for a correction of that name, whose own
+        # row it is; a row the change removed must still be absent
+        coder_name = change.tool in CODER_NAME_TOOLS
         signed: List[List[Any]] = []
         changed: Dict[str, int] = {}
         in_use: Dict[str, int] = {}
@@ -1065,7 +1183,8 @@ class _Planner:
             digest = db_digest if now is db_now else (
                 None if now is None else self.digests.row(columns, now))
             if now is None or digest != row["after"] \
-                    or self._filled_since(now, entry):
+                    or self._filled_since(now, entry) \
+                    or (coder_name and self._apart_since(now, entry, row)):
                 changed[actual] = changed.get(actual, 0) + 1
                 blocking.append((actual, key))
                 project_row = project_row or entry["key_kind"] == "one_row"
@@ -1089,9 +1208,12 @@ class _Planner:
             backup=record.get("backup") if needs_backup else None,
             rows=signed, texts=signed_texts)
         if changed:
-            change.refuse(PROJECT_ROW_CHANGED if project_row
+            change.refuse(CODER_NAME_CHANGED if coder_name
+                          else PROJECT_ROW_CHANGED if project_row
                           else CHANGED_SINCE, rows=changed,
                           **self.later(change, blocking))
+        elif coder_name:
+            self.check_coder_name(change)
         if in_use:
             change.refuse(KEY_IN_USE, rows=in_use,
                           **self.later(change, blocking))
@@ -1110,7 +1232,8 @@ class _Planner:
                 change.refuse(reason)
             else:
                 try:
-                    old, altered = self._old_rows(backup, by_table, info)
+                    old, altered = self._old_rows(backup, by_table, info,
+                                                  coder_name)
                 except BackupUnreadable:
                     change.refuse(BACKUP_UNREADABLE)
                     backup, altered = None, {}
@@ -1123,9 +1246,16 @@ class _Planner:
             name, key = row["table"], row["key"]
             actual, entry = info[name]
             columns = tuple(entry["columns"])
+            if coder_name and entry.get("apart"):
+                columns += (entry["apart"],)
             now = self.state(actual, key, entry["key"], entry["key_kind"])
             kind = kind_of(row)
             if kind == ADDED:
+                kept = self._kept_entry(change, actual, key, entry, now)
+                if kept is not None:
+                    change.kept_entries.append(kept)
+                    effects[(actual.lower(), key)] = {**now, **kept.values}
+                    continue
                 step = Step(actual, key, entry["key"], entry["key_kind"],
                             columns, None, now)
                 change.removed.append(step)
@@ -1168,12 +1298,14 @@ class _Planner:
 
     def _old_rows(self, backup: Source,
                   by_table: Dict[str, List[Dict[str, Any]]],
-                  info: Dict[str, Tuple[str, Dict[str, Any]]]
+                  info: Dict[str, Tuple[str, Dict[str, Any]]],
+                  coder_name: bool = False
                   ) -> Tuple[Dict[Tuple[str, Any], Row], Dict[str, int]]:
         """The rows the change altered or removed, as its backup holds
-        them, each compared with the record's "before": those that match,
-        by table and key, and how many do not, by table. A read of the
-        backup that fails raises BackupUnreadable."""
+        them, each compared with the record's "before" (for a correction
+        of the coder name, the project row's coder name too): those that
+        match, by table and key, and how many do not, by table. A read of
+        the backup that fails raises BackupUnreadable."""
         old: Dict[Tuple[str, Any], Row] = {}
         altered: Dict[str, int] = {}
         for name, its in by_table.items():
@@ -1186,11 +1318,61 @@ class _Planner:
             for r in wanted:
                 values = got.get(r["key"])
                 if values is None or self.digests.row(
-                        entry["columns"], values) != r["before"]:
+                        entry["columns"], values) != r["before"] or (
+                        coder_name and entry.get("apart")
+                        and self.digests.apart(values.get(entry["apart"]))
+                        != r.get("apart_before")):
                     altered[actual] = altered.get(actual, 0) + 1
                 else:
                     old[(name, r["key"])] = values
         return old, altered
+
+    def _apart_since(self, now: Row, entry: Dict[str, Any],
+                     row: Dict[str, Any]) -> bool:
+        """Whether the project row's coder name differs from the one a
+        correction of that name left (its digest kept apart)."""
+        apart = entry.get("apart")
+        return bool(apart) and self.digests.apart(
+            now.get(apart)) != row.get("apart_after")
+
+    def _kept_entry(self, change: ChangePlan, actual: str, key: Any,
+                    entry: Dict[str, Any], now: Optional[Row]
+                    ) -> Optional[Step]:
+        """A run's journal entry, kept with a line saying the run was
+        undone (server.py's words, passed in), rather than removed: the
+        entry's text as the run wrote it, then a line break and the line.
+        None for any other row."""
+        if change.route != change_record.WHOLE_ROUTE or \
+                self.journal_line is None or now is None or \
+                actual.lower() != "journal" or "jentry" not in now:
+            return None
+        text = now["jentry"]
+        raw = (text.raw or b"") + b"\n" if text.kind == "text" else b""
+        return Step(actual, key, entry["key"], entry["key_kind"],
+                    ("jentry",),
+                    {"jentry": Value("text", raw + self.journal_line, None)},
+                    now)
+
+    def check_coder_name(self, change: ChangePlan) -> None:
+        """A correction of the researcher's coder name, refused when work
+        is now recorded under the name it set (as the correction itself
+        is refused), since the old name back would change whose work the
+        record shows; a table that does not answer refuses it too."""
+        info = self.table_info("project")
+        if info is None or info[2] != "one_row":
+            return
+        rows = self.project.one_row(info[0])
+        if len(rows) != 1:
+            return
+        name = text_of(rows[0].get("codername"))
+        if not name:
+            return
+        try:
+            kinds = coder_name_record_kinds(self.db_.coder_name_records(name))
+        except CoderNameRecordsUnreadable:
+            kinds = ["unchecked"]
+        if kinds:
+            change.refuse(CODER_NAME_IN_USE)
 
     @staticmethod
     def _filled_since(now: Row, entry: Dict[str, Any]) -> bool:
@@ -1521,6 +1703,206 @@ class _Planner:
         if loops:
             change.refuse(LOOP, rows=loops)
 
+    # -- a run: nothing written since, its backup whole ----------------------
+
+    def _content(self, conn: sqlite3.Connection
+                 ) -> Dict[str, Tuple[Any, List[ContentRow]]]:
+        """Every row of every table of one database, as a run's content
+        reads it, by table name in lower case. Raises sqlite3.Error for a
+        read that fails, ValueError for a value it cannot digest."""
+        return {str(table.name).lower(): (table, list(content_rows(
+                    conn, table, self.digests.function)))
+                for table in _capture_tables(conn)}
+
+    def _content_digests(self, rows: Dict[str, Tuple[Any, List[ContentRow]]]
+                         ) -> Tuple[Dict[str, str], Dict[str, ContentRow]]:
+        """A database's content as a run's record keeps it (the tables by
+        their digests, the coder list by its names), from its rows."""
+        tables: Dict[str, str] = {}
+        coders: Dict[str, ContentRow] = {}
+        for table, found in rows.values():
+            if is_coder_list(table):
+                coders.update((row.key, row) for row in found)
+            else:
+                tables[str(table.name).lower()] = table_content(
+                    self.secret, table, (r.digest for r in found))
+        return tables, coders
+
+    @staticmethod
+    def _same_coder(then: Optional[str], now: Optional[ContentRow]) -> bool:
+        """A coder's row as it was, or made visible again since, which
+        QualCoder does for the coder who opens a project."""
+        return now is not None and then is not None and (
+            now.digest == then or now.if_hidden == then)
+
+    def written_since(self, change: ChangePlan,
+                      rows: Dict[str, Tuple[Any, List[ContentRow]]]
+                      ) -> List[str]:
+        """The tables whose content differs from the run's record: every
+        table as the run left it, QualCoder's bookkeeping aside (the
+        project row's coder name, a name added to the coder list or made
+        visible again). Names in lower case."""
+        content = change.record["content"]
+        tables, coders = self._content_digests(rows)
+        recorded = {str(name).lower(): digest
+                    for name, digest in content["tables"].items()}
+        differ = {name for name in set(recorded) | set(tables)
+                  if recorded.get(name) != tables.get(name)}
+        if any(not self._same_coder(digest, coders.get(key))
+               for key, digest in content["coders"].items()):
+            differ.add("coder_names")
+        return sorted(differ)
+
+    def backup_differs(self, change: ChangePlan,
+                       now: Dict[str, Tuple[Any, List[ContentRow]]],
+                       then: Dict[str, Tuple[Any, List[ContentRow]]]
+                       ) -> List[str]:
+        """The tables in which the run's backup differs from the project
+        outside the rows the run's record lists, QualCoder's bookkeeping
+        aside: with the project as the run left it, a backup that is the
+        project as it was just before the run differs in none."""
+        listed: Dict[str, Set[Any]] = {}
+        for row in change.record["rows"]:
+            listed.setdefault(row["table"].lower(), set()).add(row["key"])
+        differ = []
+        for name in sorted(set(now) | set(then)):
+            if name not in now or name not in then:
+                differ.append(name)
+                continue
+            (table, rows_now), (_, rows_then) = now[name], then[name]
+            keep = listed.get(name, set())
+            if is_coder_list(table):
+                by_key = {row.key: row for row in rows_now}
+                if any(row.key not in keep and not self._same_coder(
+                        row.digest, by_key.get(row.key))
+                        for row in rows_then):
+                    differ.append(name)
+                continue
+            if Counter(r.digest for r in rows_now if r.key not in keep) != \
+                    Counter(r.digest for r in rows_then if r.key not in keep):
+                differ.append(name)
+        return differ
+
+    def later_records(self, change: ChangePlan) -> Dict[str, Any]:
+        """Every later change Exegete recorded on this project, not in
+        this undo: this run's by their receipts, another run's counted."""
+        if self._records is None:
+            self._records = change_record.records(self.project_key)
+        receipts: Dict[str, float] = {}
+        others = 0
+        for record in self._records:
+            when, receipt = record.get("time"), record.get("receipt")
+            if not _number(when) or change.time is None or \
+                    when <= change.time or receipt in self.receipts:
+                continue
+            if record.get("run") == change_record.RUN:
+                receipts[receipt] = when
+            else:
+                others += 1
+        out: Dict[str, Any] = {}
+        if receipts:
+            out["later_changes"] = sorted(receipts, key=receipts.get)
+        if others:
+            out["other_runs"] = others
+        return out
+
+    def plan_run(self, change: ChangePlan, compare_backup: bool) -> bool:
+        """A pseudonymisation run's own checks, before its rows are
+        planned as any change's: the project's content now against the
+        record's, on every plan; in a call's first plan, before SQLite's
+        lock, the run's backup against the project outside the rows the
+        record lists. False when refused here."""
+        try:
+            now = self._content(self.db_.conn)
+        except ValueError:
+            now = None
+        differ = [] if now is None else self.written_since(change, now)
+        if now is None or differ:
+            change.refuse(WRITTEN_SINCE, **({"tables": differ} if differ
+                                            else {}),
+                          **self.later_records(change))
+            return False
+        if not compare_backup:
+            return True
+        backup, reason = self.backup(change.record.get("backup"))
+        if reason is not None:
+            change.refuse(reason)
+            return False
+        try:
+            then = self._content(backup.conn)
+        except (sqlite3.Error, ValueError):
+            change.refuse(BACKUP_UNREADABLE)
+            return False
+        differ = self.backup_differs(change, now, then)
+        if differ:
+            change.refuse(BACKUP_DIFFERS, tables=differ)
+            return False
+        return True
+
+    # -- an import's originals -------------------------------------------------
+
+    def _source_names(self) -> Dict[Any, Tuple[Optional[str], Optional[str]]]:
+        """Every file's name and stored path as the undo so far leaves the
+        project, by id, decoded only to be compared."""
+        info = self.table_info("source")
+        if info is None or info[2] != "integer":
+            return {}
+        actual, key, _ = info
+        columns = self.project.columns(actual)
+        if "name" not in columns or "mediapath" not in columns:
+            return {}
+        found: Dict[Any, Row] = {}
+        for row in self.project._execute(
+                f"SELECT r.{_quoted(key)}, {_read_sql('name', 'r.')}, "
+                f"{_read_sql('mediapath', 'r.')} FROM main."
+                f"{_quoted(actual)} AS r"):
+            found[row[0]] = _values(row, 1, ("name", "mediapath"))
+        for k, row in self.overlay.get(actual.lower(), {}).items():
+            if row is None:
+                found.pop(k, None)
+            else:
+                found[k] = row
+        return {k: (text_of(row.get("name")), text_of(row.get("mediapath")))
+                for k, row in found.items()}
+
+    def plan_originals(self, change: ChangePlan) -> None:
+        """An import's originals, found from the rows the undo removes:
+        each row, checked against its "after", gives its original's name
+        through its stored path (`/docs/<name>`), checked as a file's
+        name before any path is made; one that cannot be used is counted
+        as kept. Refused when another file's entry, as the undo leaves
+        the project, names the same original, judged as the documents
+        folder judges names (letter case, Unicode form, trailing dots and
+        spaces, an entry with no stored path by its own name)."""
+        removed = {step.key: step for step in change.removed
+                   if step.table.lower() == "source" and step.now}
+        for entry in change.record.get("files") or []:
+            step = removed.get(entry["file"])
+            if step is None:
+                continue
+            path = text_of(step.now.get("mediapath"))
+            name = (path[len("/docs/"):] if path and path.startswith("/docs/")
+                    else None)
+            if name is None or file_name_problem(name) is not None or \
+                    name != unicodedata.normalize("NFC", name):
+                change.originals_unnamed.append(entry["file"])
+                continue
+            change.originals.append(Original(entry["file"], name,
+                                             entry["digest"]))
+        if not change.originals:
+            return
+        wanted = {documents_name_key(o.name) for o in change.originals}
+        mine = {o.file_id for o in change.originals}
+        shared = 0
+        for file_id, (name, path) in self._source_names().items():
+            if file_id in mine:
+                continue
+            if any(isinstance(own, str) and documents_name_key(own) in wanted
+                   for own in self.db_.own_stored_names(path, name)):
+                shared += 1
+        if shared:
+            change.refuse(ORIGINAL_SHARED, files=shared)
+
     def check_sessions(self, change: ChangePlan) -> None:
         """Later work in a coding session: a suggestion naming a code the
         undo removes, in any session of this project, the change's own
@@ -1551,6 +1933,34 @@ class _Planner:
         change.suggestions_on_removed_files = on_files
         if depending:
             change.refuse(SUGGESTIONS_DEPEND, suggestions=depending)
+
+
+def find_backup_folder(project_db: Path, secret: str, digest: Optional[str]
+                       ) -> Tuple[Optional[Path], Optional[str]]:
+    """A change's backup folder, found by its name's digest among the
+    names Exegete gives its backups beside the project, that folder alone,
+    and checked in the restore's order: no journal file or link (unclean).
+    (folder, None), or (None, the reason)."""
+    if digest is None:
+        return None, BACKUP_GONE
+    folder = Path(project_db).parent
+    prefix = f"{folder.stem}_backup_"
+    try:
+        names = sorted(os.listdir(folder.parent))
+    except OSError:
+        return None, BACKUP_GONE
+    match = None
+    for name in names:
+        if is_this_servers_backup_name(name, prefix) and \
+                change_record.digest(secret, "backup", name) == digest:
+            match = folder.parent / name
+            break
+    if match is None:
+        return None, BACKUP_GONE
+    if match.is_symlink() or unclean_backup_side_files(match) or \
+            backup_database_is_link(match):
+        return None, BACKUP_UNCLEAN
+    return match, None
 
 
 # ---------------------------------------------------------------------------
@@ -1586,7 +1996,9 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
          key_check: str, project_db: Path,
          sessions: Sequence[Tuple[str, Any, bytes]],
          clock: Optional[float] = None,
-         records: Optional[Sequence[Dict[str, Any]]] = None) -> Plan:
+         records: Optional[Sequence[Dict[str, Any]]] = None,
+         compare_backup: bool = False,
+         journal_line: Optional[bytes] = None) -> Plan:
     """The plan for undoing these changes, newest first, read-only.
 
     `db_` is the connection's database object (the read-only one for the
@@ -1597,11 +2009,19 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
     was made. A change blocked only by a later one in the same call goes
     through after it. `records`, every record of the project, read once
     for a list of several plans, else when a refusal asks which later
-    change touched a row."""
+    change touched a row.
+
+    A run and a save of the names list are undone in a call of their
+    own. A run is judged first against its content and, with
+    `compare_backup` (a call's first plan, before SQLite's lock), its
+    backup; `journal_line`, server.py's line for a run's journal entry,
+    kept rather than removed. A save of the names list is left to
+    server.py, in `names_list`."""
     result = Plan()
     planner = _Planner(db_, secret=secret, project=project,
                        project_db=project_db, sessions=sessions,
-                       receipts=receipts, records=records)
+                       receipts=receipts, records=records,
+                       journal_line=journal_line)
     try:
         located = []
         for receipt in dict.fromkeys(receipts):
@@ -1612,7 +2032,14 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
             located.append(change)
         result.changes = sorted((c for c in located if c.record is not None),
                                 key=lambda c: c.time, reverse=True)
+        if len(located) > 1:
+            for change in result.changes:
+                if change.route != change_record.ROWS_ROUTE:
+                    change.refuse(ALONE)
         ready = [c for c in result.changes if not c.refusals]
+        if ready and ready[0].route == change_record.NAMES_LIST_ROUTE:
+            result.names_list = ready[0]
+            ready = []
         if ready and planner.project.holds_triggers():
             for change in ready:
                 change.refuse(OWN_TRIGGERS)
@@ -1622,7 +2049,12 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
                 session, items = _marks_of(change.record)
                 planner.returned |= {(session, guid) for guid in items}
         for change in ready:
+            if change.route == change_record.WHOLE_ROUTE and \
+                    not planner.plan_run(change, compare_backup):
+                continue
             planner.plan_change(change)
+            if change.tool in FILES_TOOLS:
+                planner.plan_originals(change)
         result.refusals = [r for c in located for r in c.refusals]
         result.overlay = planner.overlay
         if result.can_run:
@@ -1635,8 +2067,22 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
 def _gather(result: Plan) -> None:
     """What the write checks before its commit, and what the undo sets
     back after it: the coding sessions' marks, the scopes and the files
-    whose reading copies go."""
+    whose reading copies go; a run's files and journal entries kept, an
+    import's originals."""
     for change in result.changes:
+        for step in change.kept_entries:
+            result.checked[(step.table.lower(), step.key)] = (step.table,
+                                                              step.columns)
+            result.journal_entries_kept.append(step.key)
+        if change.route == change_record.WHOLE_ROUTE:
+            result.run = True
+            result.rewrite_memos = bool(
+                change.record["content"].get("rewrite_memos"))
+            result.run_files |= {step.key for step in change.set_back
+                                 if step.table.lower() == "source"
+                                 and isinstance(step.key, int)}
+        result.originals += change.originals
+        result.originals_unnamed += change.originals_unnamed
         for what, steps in (("removed", change.removed),
                             ("put_back", change.put_back),
                             ("set_back", change.set_back)):
@@ -1737,7 +2183,8 @@ def write(conn: sqlite3.Connection, plan_: Plan, secret: str) -> None:
                 conn.executemany(
                     f"DELETE FROM main.{_quoted(table)}{where}",
                     [_where(step, 1)[1] for step in kind_steps])
-        for (table, columns), steps in _grouped(change.set_back).items():
+        for (table, columns), steps in _grouped(
+                change.set_back + change.kept_entries).items():
             for kind_steps in _by_key_kind(steps):
                 start = 2 * len(columns) + 1
                 where, _ = _where(kind_steps[0], start)
@@ -1777,7 +2224,8 @@ def _check_written(conn: sqlite3.Connection, plan_: Plan, secret: str) -> None:
     wanted: Dict[str, List[Tuple[Any, Tuple[str, ...]]]] = {}
     kinds: Dict[str, Tuple[Optional[str], str]] = {}
     for change in plan_.changes:
-        for step in change.removed + change.put_back + change.set_back:
+        for step in (change.removed + change.put_back + change.set_back
+                     + change.kept_entries):
             kinds[step.table.lower()] = (step.key_column, step.key_kind)
     for (low, key), (actual, columns) in plan_.checked.items():
         wanted.setdefault(actual, []).append((key, columns))

@@ -1260,20 +1260,22 @@ def _set_attribute(folder):
                                         attribute_name="Age", value="30")
 
 
-# The third design's four tools: refused as not yet undoable until it
-# lands on this branch
+# The third design's four tools (v0.15.2): each by a route of its own
 @case("set_project_coder_name")
 def _set_project_coder_name(folder):
     return lambda: two_step(server.set_project_coder_name,
                             name="Researcher R.")
 
 
+# The run saves its mapping and writes no journal entry (the journal
+# entry's line has its own test): its undo leaves pseudonyms.json as the
+# run left it, the one file not as before the call
 @case("pseudonymise_source")
 def _pseudonymise_source(folder):
     return lambda: two_step(
         server.pseudonymise_source,
         mapping=[{"original": "Maria", "pseudonym": "Joan"}], file_id=1,
-        researcher_keeps_mapping=True)
+        save_mapping_to_project=True, record_in_journal=False)
 
 
 @case("save_names_list")
@@ -1295,8 +1297,8 @@ def _import_documents(folder):
                             paths=[str(interviews)])
 
 
-THIRD_DESIGN = ("set_project_coder_name", "pseudonymise_source",
-                "save_names_list", "import_documents")
+# What the undo leaves as the call left it, by tool
+LEFT_AS_THE_CALL_LEFT_IT = {"pseudonymise_source": ("names_list",)}
 
 
 def snapshot(folder):
@@ -1331,6 +1333,9 @@ def undo_case(tool, folder):
     if not done.get("success"):
         raise NotUndone(f"{tool}: {done}")
     after = snapshot(folder)
+    for part in LEFT_AS_THE_CALL_LEFT_IT.get(tool, ()):
+        assert after[part] == after_call[part] != before[part], part
+        after[part] = before[part]
     if after != before:
         changed = {table for table in set(after["rows"]) | set(before["rows"])
                    if after["rows"].get(table) != before["rows"].get(table)}
@@ -1344,16 +1349,11 @@ def scratch_folders(monkeypatch, tmp_path):
     allow_scratch_folders(monkeypatch, tmp_path)
 
 
-@pytest.mark.parametrize("tool", [
-    pytest.param(tool, marks=pytest.mark.xfail(
-        strict=True, raises=NotUndone,
-        reason="the third undo design takes these back"))
-    if tool in THIRD_DESIGN else tool
-    for tool in sorted(UNDO_CASES)])
+@pytest.mark.parametrize("tool", sorted(UNDO_CASES))
 def test_each_tool_that_writes_a_project_is_undone(tool, project,
                                                     scratch_folders):
     """Every table, the names list and the documents folder as before the
-    call, after its undo."""
+    call, after its undo; a run leaves the names list it saved."""
     undo_case(tool, project)
 
 
@@ -1550,10 +1550,12 @@ class TestTheCodingSessionsMarks:
 class TestTheSetsAndThePrune:
 
     def test_tools_md_names_every_tool_whose_changes_it_cannot_undo(self):
-        """TOOLS.md's entry for undo_changes says which tools that write a
-        project it does not cover: those whose changes answer no receipt
-        by design, and those whose changes it refuses until the third
-        undo piece, each from the code and the record's tests."""
+        """TOOLS.md's entry for undo_changes says which tools that write in
+        a project's folder it does not cover, and no other: those whose
+        changes answer no receipt by design, and the two that write files
+        there without writing the project (v0.15.2), each from the code
+        and the record's tests."""
+        from test_v014_server_wide import NOT_PROJECT_WRITES
         lines = (Path(__file__).resolve().parents[1] / "TOOLS.md"
                  ).read_text(encoding="utf-8").splitlines()
         entry = next(line for line in lines
@@ -1562,7 +1564,9 @@ class TestTheSetsAndThePrune:
                    if " covered" in sentence]
         assert len(covered) == 1, covered
         named = set(re.findall(r"`(\w+)`", covered[0]))
-        assert set(NO_RECEIPT_BY_DESIGN) | undo.NOT_YET_UNDOABLE_TOOLS <= named
+        no_record = {"set_project_ai_coder_name", "prepare_names_list"}
+        assert no_record <= set(NOT_PROJECT_WRITES)
+        assert named == set(NO_RECEIPT_BY_DESIGN) | no_record
 
     def test_undo_is_in_both_sets_beside_the_restore(self):
         assert {"undo_changes", "restore_backup"} <= server.CORE_TOOLSET

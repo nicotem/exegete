@@ -41,6 +41,7 @@ from .database import (
     error_label,
     error_text,
     pseudonyms_json_fingerprint,
+    _read_pseudonyms_json_bytes as read_pseudonyms_json_bytes,
     project_counts,
     CoderVisibilityUnreadable,
     coder_is_hidden,
@@ -3565,6 +3566,11 @@ class _ChangeCapture:
         self.unchanged = False      # no row changed: the answer says nothing
         self.record: Optional[Dict[str, Any]] = None
         self.receipt: Optional[str] = None
+        # A pseudonymisation run's facts (v0.15.2): its record takes the
+        # route "whole", with the project's content as the run left it
+        self.whole: Optional[Dict[str, Any]] = None
+        # Keyed with the secret read once: (label, value) -> digest
+        self.digest: Optional[Callable[[str, Any], str]] = None
 
 
 def _capture_start(write_db, backup_path) -> _ChangeCapture:
@@ -3578,6 +3584,8 @@ def _capture_start(write_db, backup_path) -> _ChangeCapture:
     try:
         capture.changes_before = write_db.conn.total_changes
         secret = load_secret()
+        capture.digest = (lambda label, value:
+                          change_record.digest(secret, label, value))
         capture.project = change_record.digest(secret, "project",
                                                _token_project())
         capture.key_check = change_record.digest(secret, "key check", "")
@@ -3593,11 +3601,19 @@ def _capture_start(write_db, backup_path) -> _ChangeCapture:
 
 
 def _capture_finish(capture: Optional[_ChangeCapture], write_db,
-                    marks: Optional[Dict[str, Any]] = None) -> None:
+                    marks: Optional[Dict[str, Any]] = None,
+                    files: Optional[Sequence[Tuple[int, str]]] = None
+                    ) -> None:
     """After the change, before the lock's re-check and the commit: the
     rows found and the record assembled whole, in memory. A capture that
     finds no row changed makes no record, and its answer says nothing of
-    one; with no capture, the connection's count of changes tells."""
+    one; with no capture, the connection's count of changes tells.
+
+    A run's record (`capture.whole`) also keeps the project's content as
+    the run left it, read here under SQLite's lock; an import's, `files`,
+    each original it stored as its file's id and a keyed digest of the
+    SHA-256 the import verified, never of a name (v0.15.2). Any failure,
+    the content's included, leaves the change unrecorded, never failed."""
     if capture is None:
         return
     try:
@@ -3606,16 +3622,26 @@ def _capture_finish(capture: Optional[_ChangeCapture], write_db,
                                  and write_db.conn.total_changes
                                  == capture.changes_before)
             return
-        found = write_db.finish_capture()
+        found = (write_db.finish_capture() if capture.whole is None
+                 else write_db.finish_capture(content=True))
         if found is None:
             return
         if not found["rows"]:
             capture.unchanged = True
             return
+        route, content, kept = change_record.ROWS_ROUTE, None, None
+        if capture.whole is not None:
+            route = change_record.WHOLE_ROUTE
+            content = {**found.pop("content"), **capture.whole}
+        if files is not None:
+            kept = [{"file": int(file_id),
+                     "digest": capture.digest("original", sha256)}
+                    for file_id, sha256 in files]
         capture.record = change_record.new_record(
             tool=capture.tool, project=capture.project,
             key_check=capture.key_check, backup=capture.backup,
-            found=found, marks=marks)
+            found=found, marks=marks, route=route, content=content,
+            files=kept)
     except Exception as e:
         logger.warning("This change is not recorded: %s", error_label(e))
         capture.record = None
@@ -3661,10 +3687,24 @@ def _receipt_line(capture: Optional[_ChangeCapture]) -> Optional[str]:
     return fields.get("no_undo_receipt")
 
 
+def _after_commit(hook, result) -> None:
+    """A write's own step right after its commit, still under the lock
+    file (v0.15.2: an import's undo removes its originals here): a
+    failure is logged by its kind, never answered as an error of a change
+    that committed."""
+    try:
+        hook(result)
+    except Exception as e:
+        logger.warning("A step after a committed change did not finish: %s",
+                       error_label(e))
+
+
 def _perform_write(op, *, check=None,
                    backup_fail_detail: str = "nothing was written",
                    record: bool = True,
-                   marks: Optional[Dict[str, Any]] = None):
+                   marks: Optional[Dict[str, Any]] = None,
+                   record_whole: Optional[Dict[str, Any]] = None,
+                   before_backup=None, after_commit=None):
     """Run a mutation under the full write-safety discipline.
 
     This is the single, uniform implementation of the write pattern every
@@ -3694,6 +3734,15 @@ def _perform_write(op, *, check=None,
             (v0.15.2); False captures nothing and says nothing.
         marks: The coding session's id and the random ids of the items
             the call marks, kept in the record.
+        record_whole: A pseudonymisation run's facts: its record takes
+            the route "whole", with the project's content as it left it.
+        before_backup: Optional callable before_backup(), run under the
+            lock file before the backup and SQLite's lock (an import's
+            undo reads its originals again here): None goes on; a dict
+            is the answer, and the write stops with no backup.
+        after_commit: Optional callable after_commit(result), run right
+            after the commit, still under the lock file, inside a catch:
+            it may add to the answer, and its failure is only logged.
 
     Returns:
         The op's success dict (with backup_path and the receipt added),
@@ -3719,6 +3768,10 @@ def _perform_write(op, *, check=None,
     committed = False
     try:
         with hold_project_lock(project_folder) as lock_held:
+            if before_backup is not None:
+                stopped = before_backup()
+                if stopped is not None:
+                    return stopped
             backup_path, stopped = _backup_before_change(
                 write_db, f"Aborting to protect your data: "
                           f"{backup_fail_detail}.", check,
@@ -3727,6 +3780,8 @@ def _perform_write(op, *, check=None,
                 return stopped
             capture = (_capture_start(write_db, backup_path) if record
                        else None)
+            if capture is not None:
+                capture.whole = record_whole
             try:
                 result = op(write_db)
                 _capture_finish(capture, write_db, marks)
@@ -3766,6 +3821,8 @@ def _perform_write(op, *, check=None,
                         e)},
                     backup_path)
             # Committed: every arm above returns
+            if after_commit is not None:
+                _after_commit(after_commit, result)
             _record_after_commit(capture)
     finally:
         # Unconditional cleanup on EVERY exit path (SEC M-1). The previous
@@ -6807,9 +6864,14 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
                                    "nothing_changed": True}, indent=2)
             kept_backup = {"nothing_changed": True, "backup": backup.name}
             tmp: Optional[Path] = None
+            written: Optional[str] = None
             try:
                 tmp = _write_pseudonyms_json_data_tmp(folder, again.data,
                                                       again.existing_mode)
+                # What the record keeps of the list written (v0.15.2):
+                # the bytes it wrote, never the file read again after the
+                # replace, which another program may have written
+                written = _names_list_written(tmp)
                 # The lock file does not keep every program from the
                 # list: one written since it was read again is not
                 # written over (below)
@@ -6840,6 +6902,7 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
                         "save_names_list", "project_changed")]
                     + BACKUP_KEPT_ANYWAY,
                     "reason": "project_changed", **kept_backup}, indent=2)
+            receipt = _record_names_list_save(backup, written)
     except DatabaseLockedError as e:
         # The lock file appeared between the check and the lock, before
         # anything was read again or backed up
@@ -6854,7 +6917,58 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
         "backup": backup.name,
         "saved_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "note": SAVE_NAMES_LIST_NOTE,
+        **({"undo_receipt": receipt} if receipt
+           else {"no_undo_receipt": NO_UNDO_RECEIPT}),
     }, indent=2)
+
+
+def _names_list_written(tmp: Path) -> Optional[str]:
+    """The SHA-256 of the names list just written to its temporary file,
+    read as `pseudonyms_json_fingerprint` reads a list; None when it
+    cannot be read, and the save then keeps no record."""
+    try:
+        raw, _mode = read_pseudonyms_json_bytes(tmp)
+        return hashlib.sha256(raw).hexdigest()
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("This change is not recorded: %s", error_label(e))
+        return None
+
+
+def _record_names_list_save(backup: Path,
+                            written: Optional[str]) -> Optional[str]:
+    """After save_names_list's replace, still under the lock file
+    (v0.15.2): the record its undo reads (route "names_list"), with keyed
+    digests of the list before the save, read from the save's backup as
+    `pseudonyms_json_fingerprint` reads it (a link refused), and of the
+    bytes the save wrote. The receipt, or None when no record could be
+    kept, which the answer then says. Never raises."""
+    if written is None:
+        return None
+    try:
+        before = pseudonyms_json_fingerprint(backup)
+        if before in ("link", "unreadable"):
+            logger.info("This change is not recorded: the backup's names "
+                        "list cannot be read")
+            return None
+        secret = load_secret()
+        record = change_record.names_list_record(
+            project=change_record.digest(secret, "project", _token_project()),
+            key_check=change_record.digest(secret, "key check", ""),
+            backup=change_record.digest(secret, "backup", backup.name),
+            before=(None if before is None
+                    else change_record.digest(secret, "names list", before)),
+            after=change_record.digest(secret, "names list", written))
+        change_record.write(record["project"], record)
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("The record of this change could not be kept: %s",
+                       error_label(e))
+        return None
+    try:
+        change_record.sweep(record["project"])
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("Could not tidy the records of changes: %s",
+                       error_label(e))
+    return record["receipt"]
 
 
 @mcp.tool(annotations=TOOL_ADDS)
@@ -12729,7 +12843,11 @@ def _import_documents_write(paths, ctx, token_args, preview_token,
                         "error": "No file was imported: every file was held "
                                  "back or refused when read again.",
                         "nothing_changed": True}, backup_path), indent=2)
-                _capture_finish(capture, write_db)
+                # Each original it stored, for its undo (v0.15.2): the
+                # file's id and the SHA-256 its copy was verified by
+                _capture_finish(capture, write_db, files=[
+                    (item.numbers["file_id"], item.digest)
+                    for item in taken])
                 _recheck_lock_before_commit(project_folder, lock_held)
                 write_db.conn.commit()
                 committed = True
@@ -14926,13 +15044,20 @@ def _undo_context() -> Tuple[str, str, str, Path]:
 
 
 def _undo_plan(db_, receipts: Sequence[str], context, sessions=None,
-               clock: Optional[float] = None, records=None) -> undo.Plan:
+               clock: Optional[float] = None, records=None,
+               compare_backup: bool = False) -> undo.Plan:
+    """The plan; `compare_backup` for a call's first plan, before SQLite's
+    lock, where a run's backup is compared with the project."""
     secret, project, key_check, project_db = context
     if sessions is None:
         sessions = undo.project_sessions(session_manager, project_db)
+    line = UNDO_RUN_JOURNAL_LINE.format(
+        date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     return undo.plan(db_, receipts, secret=secret, project=project,
                      key_check=key_check, project_db=project_db,
-                     sessions=sessions, clock=clock, records=records)
+                     sessions=sessions, clock=clock, records=records,
+                     compare_backup=compare_backup,
+                     journal_line=line.encode("utf-8"))
 
 
 def _undo_coders(owners: Sequence[Optional[str]], db_) -> Dict[str, Any]:
@@ -14995,7 +15120,8 @@ def _undo_refused(plan: Optional[undo.Plan], db_) -> Dict[str, Any]:
         entry["reason"] = reason
         entry["message"] = _mark_unregistered(
             UNDO_REFUSAL_TEXTS[reason].format(tool=tool or "that tool"))
-        for field, name in (("rows", "rows"), ("files", "files"),
+        for field, name in (("rows", "rows"), ("tables", "tables"),
+                            ("files", "files"), ("file_ids", "file_ids"),
                             ("suggestions", "suggestions"),
                             ("later_changes", "later_changes"),
                             ("other_runs", "later_changes_elsewhere")):
@@ -15011,12 +15137,16 @@ def _undo_refused(plan: Optional[undo.Plan], db_) -> Dict[str, Any]:
             "refusals": refusals, "nothing_changed": True}
 
 
-def _undo_preview(plan: undo.Plan, db_, readable: bool) -> Dict[str, Any]:
+def _undo_preview(plan: undo.Plan, db_, readable: bool,
+                  originals: Optional["_OriginalsRead"] = None
+                  ) -> Dict[str, Any]:
     """What the undo would do: by change, by table and kind (removed, put
     back, set back) and by coder, and what it sets back in the coding
-    sessions. `readable` adds what moves between two calls a minute
-    apart (each change's age, the signs of a QualCoder window), which the
-    token does not sign (`_undo_signed`)."""
+    sessions; a run's journal entries kept, an import's originals.
+    `readable` adds what moves between two calls a minute apart (each
+    change's age, the signs of a QualCoder window, what an import's undo
+    leaves elsewhere, a run's note), which the token does not sign
+    (`_undo_signed`)."""
     clock = change_record.now()
     changes = []
     for change in plan.changes:
@@ -15039,6 +15169,17 @@ def _undo_preview(plan: undo.Plan, db_, readable: bool) -> Dict[str, Any]:
     if plan.suggestions_on_removed_files:
         preview["suggestions_naming_removed_files"] = \
             plan.suggestions_on_removed_files
+    if plan.journal_entries_kept:
+        preview["journal_entries_kept"] = sorted(plan.journal_entries_kept)
+    if plan.originals or plan.originals_unnamed:
+        preview["originals"] = _undo_originals_counts(plan, originals)
+    if readable and plan.run:
+        preview["pseudonymisation_note"] = _mark_unregistered(
+            UNDO_RUN_NOTE.format(
+                notes=UNDO_RUN_NOTES_TOO if plan.rewrite_memos else ""))
+    if readable and plan.removed_files and any(
+            c.tool in undo.FILES_TOOLS for c in plan.changes):
+        preview.update(_undo_import_leaves(plan))
     if readable:
         preview["note"] = _mark_unregistered(UNDO_WAY_BACK)
         signals = qualcoder_gui_signals(_current_project_folder())
@@ -15049,7 +15190,8 @@ def _undo_preview(plan: undo.Plan, db_, readable: bool) -> Dict[str, Any]:
     return preview
 
 
-_UNDO_UNSIGNED = ("note", "qualcoder_gui_signals", "qualcoder_gui_hint")
+_UNDO_UNSIGNED = ("note", "qualcoder_gui_signals", "qualcoder_gui_hint",
+                  "pseudonymisation_note", "what_stays", "what_stays_note")
 
 
 def _undo_signed(preview: Dict[str, Any]) -> Dict[str, Any]:
@@ -15103,17 +15245,31 @@ def _undo_list(context) -> Dict[str, Any]:
     changes = []
     for record in records:
         plan = _undo_plan(ro, [record["receipt"]], context, sessions, clock,
-                          every)
+                          every, compare_backup=True)
+        refused: Optional[Dict[str, Any]] = None
+        if plan.names_list is not None:
+            reasons, _backup, _state = _undo_names_list_judge(
+                plan.names_list, context)
+            if reasons:
+                refused = _undo_names_list_refused(plan.names_list, reasons)
+        elif plan.can_run and plan.originals:
+            _undo_refuse_originals(plan, _read_originals(plan, context))
+        if refused is None and not plan.can_run:
+            refused = _undo_refused(plan, ro)
         entry: Dict[str, Any] = {
             "undo_receipt": record["receipt"], "tool": record.get("tool"),
             "minutes_ago": max(0, int((clock - record.get("time", clock))
                                       // 60)),
             "rows": undo.record_counts(record),
-            "can_be_undone": plan.can_run}
-        if not plan.can_run:
+            "can_be_undone": refused is None}
+        if record.get("route") == change_record.NAMES_LIST_ROUTE:
+            entry["names_list"] = (
+                "brought_back" if (record.get("names_list") or {}).get(
+                    "before") else "removed")
+        if refused is not None:
             entry["why_not"] = [
                 {k: v for k, v in refusal.items() if k != "undo_receipt"}
-                for refusal in _undo_refused(plan, ro)["refusals"]]
+                for refusal in refused["refusals"]]
         changes.append(entry)
     return {"changes": changes, "count": len(changes),
             "note": _mark_unregistered(UNDO_LIST_NOTE)}
@@ -15223,7 +15379,10 @@ def _undo_sessions(plan: undo.Plan, project_db: Path) -> List[Dict[str, Any]]:
 def _undo_after(result: Dict[str, Any], plan: undo.Plan, context) -> None:
     """After the commit: the changes' records removed, the coding
     sessions set back, the reading copies of the files the undo touched
-    forgotten, and what the answer says of them."""
+    forgotten (for a run, the whole project's, as a run that rewrote
+    notes forgets them), and what the answer says of them; for a run, its
+    journal entries kept and the sessions holding passages of its file;
+    for an import, what stays elsewhere."""
     project = context[1]
     for change in plan.changes:
         try:
@@ -15238,14 +15397,435 @@ def _undo_after(result: Dict[str, Any], plan: undo.Plan, context) -> None:
     if again:
         result["sessions_note"] = _mark_unregistered(
             UNDO_SUGGESTIONS_AGAIN.format(count=again))
-    if plan.files_touched:
+    if plan.run:
+        _forget_reading_copies(None)
+    elif plan.files_touched:
         _forget_reading_copies(sorted(plan.files_touched))
+    notes: List[str] = []
+    if plan.run:
+        if plan.journal_entries_kept:
+            result["journal_entries_kept"] = sorted(plan.journal_entries_kept)
+        notes.append(_mark_unregistered(UNDO_RUN_DONE_NOTE.format(
+            state=state_folder.shown())))
+        holding, _to_apply = _sessions_holding_old_text(
+            sorted(plan.run_files))
+        result["stale_sessions"] = holding
+        if holding:
+            notes.append(_mark_unregistered(UNDO_RUN_SESSIONS_NOTE.format(
+                count=len(holding))))
+    if any(c.tool in undo.FILES_TOOLS for c in plan.changes):
+        leaves = _undo_import_leaves(plan, result.get("backup_path"),
+                                     with_ids=True)
+        result.update(leaves)
+    if "originals_kept" in result:
+        notes.append(_mark_unregistered(UNDO_ORIGINALS_KEPT.format(
+            count=len(result["originals_kept"]))))
+    if notes:
+        result["notes"] = notes
     result["way_back"] = _mark_unregistered(UNDO_WAY_BACK)
     totals = result.get("rows") or {}
     logger.info("Undid %d change(s): %d row(s) removed, %d put back, %d set "
                 "back", len(plan.changes),
                 *(sum((totals.get(what) or {}).values())
                   for what in ("removed", "put_back", "set_back")))
+
+
+# ---------------------------------------------------------------------------
+# An import's originals (v0.15.2): read whole in a call's first plan and
+# again under the lock file before the backup, removed right after the
+# commit while the lock file is held; never a name in an answer or a log
+# ---------------------------------------------------------------------------
+
+class _OriginalsRead(NamedTuple):
+    """One reading of an undone import's originals: by file id, those read
+    whole and found to be the file the import stored (their identity),
+    those gone (passed over), those changed or that could not be read
+    whole (by receipt), and whether the folder of originals is not an
+    ordinary folder inside the project (none read, each kept)."""
+    identities: Dict[int, Tuple[int, ...]]
+    gone: Set[int]
+    changed: Dict[str, List[int]]
+    unreadable: Dict[str, List[int]]
+    folder_problem: bool
+
+
+def _read_originals(plan: undo.Plan, context) -> _OriginalsRead:
+    """Each original of the plan read whole as the import's reader reads a
+    file (doc_import.read_original) and compared with the record's keyed
+    digest of the SHA-256 the import verified."""
+    secret, project_db = context[0], context[3]
+    folder = project_db.parent
+    identities: Dict[int, Tuple[int, ...]] = {}
+    gone: Set[int] = set()
+    changed: Dict[str, List[int]] = {}
+    unreadable: Dict[str, List[int]] = {}
+    if doc_import.documents_folder_problem(folder) is not None:
+        return _OriginalsRead(identities, gone, changed, unreadable, True)
+    documents = folder / "documents"
+    for change in plan.changes:
+        for original in change.originals:
+            try:
+                data, opened = doc_import.read_original(
+                    documents / original.name)
+            except FileNotFoundError:
+                gone.add(original.file_id)
+                continue
+            except doc_import._ReadRefusal:
+                unreadable.setdefault(change.receipt, []).append(
+                    original.file_id)
+                continue
+            if change_record.digest(secret, "original",
+                                    doc_import.digest_of(data)) != \
+                    original.digest:
+                changed.setdefault(change.receipt, []).append(
+                    original.file_id)
+                continue
+            identities[original.file_id] = doc_import.original_identity(
+                opened)
+    return _OriginalsRead(identities, gone, changed, unreadable, False)
+
+
+def _undo_refuse_originals(plan: undo.Plan, read: _OriginalsRead) -> None:
+    """An original changed since the import, or that cannot be read whole,
+    refuses its change, by count and file id."""
+    for change in plan.changes:
+        for reason, found in ((undo.ORIGINAL_CHANGED, read.changed),
+                              (undo.ORIGINAL_UNREADABLE, read.unreadable)):
+            ids = found.get(change.receipt)
+            if ids:
+                change.refuse(reason, files=len(ids), file_ids=sorted(ids))
+                plan.refusals.append(change.refusals[-1])
+
+
+def _undo_originals_counts(plan: undo.Plan,
+                           read: Optional[_OriginalsRead]) -> Dict[str, int]:
+    """What the undo does with the originals, by count: removed, kept
+    (the folder of originals not an ordinary folder, or a stored name that
+    cannot be a file's name), already gone."""
+    every = [o.file_id for o in plan.originals]
+    if read is None or read.folder_problem:
+        removed, gone = 0, 0
+    else:
+        removed = sum(1 for i in every if i in read.identities)
+        gone = sum(1 for i in every if i in read.gone)
+    return {"to_remove": removed,
+            "kept": len(every) - removed - gone + len(plan.originals_unnamed),
+            "already_gone": gone}
+
+
+def _import_files_removed(plan: undo.Plan) -> List[int]:
+    return sorted({step.key for change in plan.changes
+                   if change.tool in undo.FILES_TOOLS
+                   for step in change.removed
+                   if step.table.lower() == "source"
+                   and isinstance(step.key, int)})
+
+
+def _backups_since(plan: undo.Plan, exclude: Optional[str] = None) -> int:
+    """The backups Exegete made beside the project since the first of the
+    undone imports, the one named `exclude` left out: each holds the
+    originals and their text. Ordered by the time and number in their
+    names, after the import's own backup (taken just before it), or, with
+    that one gone, from the second after the import's record."""
+    imports = [c for c in plan.changes if c.tool in undo.FILES_TOOLS]
+    if not imports:
+        return 0
+    try:
+        secret = load_secret()
+        folder = _current_project_folder()
+        prefix = f"{folder.stem}_backup_"
+        first = min(imports, key=lambda c: c.time)
+        entries = [entry for entry in folder.parent.iterdir()
+                   if is_this_servers_backup_name(entry.name, prefix)]
+        keys = {entry.name: backup_sort_key(entry, prefix)[:2]
+                for entry in entries}
+        own = [name for name in keys if change_record.digest(
+            secret, "backup", name) == first.record.get("backup")]
+        since = (keys[own[0]] if own else
+                 (datetime.fromtimestamp(int(first.time) + 1), 0))
+        return sum(1 for name, key in keys.items()
+                   if name != exclude and (key > since if own
+                                           else key >= since))
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("Could not count the backups since an import: %s",
+                       error_label(e))
+        return 0
+
+
+def _undo_import_leaves(plan: undo.Plan, backup_path: Optional[str] = None,
+                        with_ids: bool = False) -> Dict[str, Any]:
+    """What an import's undo leaves elsewhere on the computer, each with
+    its way out: the backups made since the import, the coding sessions
+    holding passages of its files, and, on a sign, QualCoder's own backups
+    and its AI files. Counts, and with `with_ids` (the answer) the
+    sessions' ids; never a name."""
+    files = _import_files_removed(plan)
+    exclude = Path(backup_path).name if backup_path else None
+    backups = _backups_since(plan, exclude)
+    holding, _to_apply = _sessions_holding_old_text(files)
+    stays: Dict[str, Any] = {"backups_since_import": backups,
+                             "coding_sessions_holding_passages":
+                             (holding if with_ids else len(holding))}
+    note = [_mark_unregistered(UNDO_IMPORT_NOTE.format(
+        backups=backups, sessions=len(holding)))]
+    folder = _current_project_folder()
+    if qualcoder_history.qualcoder_backup_beside(folder):
+        note.append(UNDO_IMPORT_QUALCODER_BACKUPS)
+    ai_files = []
+    if qualcoder_history.search_index_found(folder):
+        note.append(UNDO_IMPORT_SEARCH_INDEX)
+        ai_files.append("search index")
+    if qualcoder_history.chat_history_found(folder):
+        note.append(UNDO_IMPORT_CHAT_HISTORY)
+        ai_files.append("chat history")
+    if ai_files:
+        note.append(UNDO_IMPORT_NEITHER.format(
+            which="either file" if len(ai_files) == 2 else "it"))
+    if plan.originals and \
+            doc_import.documents_folder_problem(folder) is not None:
+        note.append(UNDO_ORIGINALS_FOLDER)
+    return {"what_stays": stays, "what_stays_note": " ".join(note)}
+
+
+def _undo_remove_originals(result: Dict[str, Any], plan: undo.Plan,
+                           read: Optional[_OriginalsRead], context) -> None:
+    """Right after the undo's commit, still under the lock file: the folder
+    of originals checked again, then each original read whole under the
+    lock file removed if it is still that file (doc_import.remove_original);
+    one that differs, cannot be opened or cannot be removed is kept, by
+    file id, and so is every original when anything unexpected stops this.
+    The log gives counts only."""
+    originals = list(plan.originals)
+    if not originals and not plan.originals_unnamed:
+        return
+    gone = set() if read is None else read.gone
+    removed: Set[int] = set()
+    try:
+        folder = context[3].parent
+        usable = (read is not None and not read.folder_problem
+                  and doc_import.documents_folder_problem(folder) is None)
+        for original in originals:
+            identity = (read.identities.get(original.file_id)
+                        if read is not None else None)
+            if original.file_id in gone or not usable or identity is None:
+                continue
+            if doc_import.remove_original(folder / "documents",
+                                          original.name, identity):
+                removed.add(original.file_id)
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("An undone import's originals were not all removed: "
+                       "%s", error_label(e))
+    kept = sorted({o.file_id for o in originals
+                   if o.file_id not in removed and o.file_id not in gone}
+                  | set(plan.originals_unnamed))
+    result["originals_removed"] = len(removed)
+    if kept:
+        result["originals_kept"] = kept
+    logger.info("An undone import removed %d original(s) and kept %d",
+                len(removed), len(kept))
+
+
+# ---------------------------------------------------------------------------
+# A save of the names list (v0.15.2): taken back from its own backup, in a
+# call of its own, outside _perform_write as the save is
+# ---------------------------------------------------------------------------
+
+def _undo_names_list_judge(change: undo.ChangePlan, context
+                           ) -> Tuple[List[str], Optional[Path], Dict[str, Any]]:
+    """A save of the names list judged: the list now against the record's
+    "after", the save's backup found and clean, its list (a link refused)
+    against "before". (the reasons, the backup's folder, the state: each
+    list's keyed digest and the backup's name's)."""
+    secret, project_db = context[0], context[3]
+    folder = project_db.parent
+    found = change.record["names_list"]
+    reasons: List[str] = []
+
+    def keyed(fingerprint):
+        return (None if fingerprint is None
+                else change_record.digest(secret, "names list", fingerprint))
+
+    now = pseudonyms_json_fingerprint(folder)
+    if now in (None, "link", "unreadable") or keyed(now) != found["after"]:
+        reasons.append(undo.NAMES_LIST_CHANGED)
+    backup, reason = undo.find_backup_folder(project_db, secret,
+                                             change.record.get("backup"))
+    then = None
+    if reason is not None:
+        reasons.append(reason)
+    else:
+        then = pseudonyms_json_fingerprint(backup)
+        if then == "link":
+            reasons.append(undo.BACKUP_UNCLEAN)
+        elif then == "unreadable":
+            reasons.append(undo.BACKUP_UNREADABLE)
+        elif keyed(then) != found["before"]:
+            reasons.append(undo.BACKUP_CHANGED)
+    state = {"list": None if now in (None, "link", "unreadable")
+             else keyed(now),
+             "backup": change.record.get("backup"),
+             "backup_list": None if then in (None, "link", "unreadable")
+             else keyed(then)}
+    return reasons, backup, state
+
+
+def _undo_names_list_refused(change: undo.ChangePlan,
+                             reasons: Sequence[str]) -> Dict[str, Any]:
+    refusals = [{"undo_receipt": change.receipt, "tool": change.tool,
+                 "reason": reason,
+                 "message": _mark_unregistered(
+                     UNDO_REFUSAL_TEXTS[reason].format(tool=change.tool))}
+                for reason in reasons]
+    return {"error": UNDO_REFUSED.format(refused=1, total=1),
+            "refusals": refusals, "nothing_changed": True}
+
+
+def _write_names_list_back(folder: Path, data: bytes,
+                           mode: Optional[int]) -> Path:
+    """The backup's names list written in binary, unchanged, to a
+    temporary file beside the project's, with the project's file's
+    permission bits, for the caller to rename into place."""
+    fd, tmp_name = tempfile.mkstemp(dir=str(folder),
+                                    prefix=f"{PSEUDONYMS_JSON_NAME}.",
+                                    suffix=".tmp")
+    tmp = Path(tmp_name)
+    try:
+        try:
+            handle = os.fdopen(fd, "wb")
+        except BaseException:
+            os.close(fd)
+            raise
+        with handle as f:
+            f.write(data)
+            f.flush()
+            os.fsync(f.fileno())
+            if mode is not None and os.name != "nt":
+                os.fchmod(f.fileno(), mode)
+        return tmp
+    except BaseException:
+        try:
+            tmp.unlink()
+        except OSError:
+            pass
+        raise
+
+
+def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
+                     preview_token: Optional[str], context) -> Dict[str, Any]:
+    """The names list's undo, outside _perform_write as the save is: the
+    preview and its token; then QualCoder's lock file, Exegete's lock file,
+    the judgement again, one backup, the list compared again, the save's
+    backup's bytes written beside it in binary (or, when there was none
+    before the save, the list removed), compared once more just before
+    the replace. A list another program wrote after the backup is kept,
+    and the undo refused with its backup named."""
+    folder = context[3].parent
+    reasons, backup, state = _undo_names_list_judge(change, context)
+    if reasons:
+        return _undo_names_list_refused(change, reasons)
+    restores = change.record["names_list"]["before"] is not None
+    preview: Dict[str, Any] = {
+        "changes": [{"undo_receipt": change.receipt, "tool": change.tool}],
+        "names_list": "brought_back" if restores else "removed"}
+    signed = dict(preview)
+    preview["note"] = _mark_unregistered(
+        (UNDO_NAMES_LIST_BACK if restores else UNDO_NAMES_LIST_REMOVED)
+        + " " + UNDO_NAMES_FILE_NOTE + " " + UNDO_WAY_BACK)
+    signals = qualcoder_gui_signals(folder)
+    preview["qualcoder_gui_signals"] = signals
+    if signals:
+        preview["qualcoder_gui_hint"] = UNDO_QUALCODER_HINT.format(
+            signals="; ".join(signals))
+    token_args = canonical_args("undo_changes", receipts=list(receipts))
+    if preview_token is None:
+        try:
+            return _issue_preview(
+                "undo_changes", token_args, preview, state,
+                _mark_unregistered(UNDO_CONFIRM_HINT),
+                {"receipts": list(receipts)}, state_preview=signed)
+        except PreviewSecretUnavailable:
+            return _token_error("preview_secret_unavailable", "undo_changes")
+    try:
+        outcome = verify(preview_token, "undo_changes", token_args,
+                         _token_project(), fingerprint_rows(signed, state))
+    except PreviewSecretUnavailable:
+        return _token_error("preview_secret_unavailable", "undo_changes")
+    if outcome != OK:
+        return _token_error(outcome, "undo_changes")
+    lock_error = _qualcoder_open_error()
+    if lock_error is not None:
+        return {**lock_error, "reason": "project_locked",
+                "nothing_changed": True}
+    target = folder / PSEUDONYMS_JSON_NAME
+    try:
+        with hold_project_lock(folder):
+            reasons, backup, again = _undo_names_list_judge(change, context)
+            if reasons:
+                return _undo_names_list_refused(change, reasons)
+            if again != state:
+                return _token_error(PROJECT_CHANGED, "undo_changes")
+            now = pseudonyms_json_fingerprint(folder)
+            try:
+                made = backup_project(folder)
+            except Exception as e:                      # noqa: BLE001
+                logger.error("An undo of the names list made no backup: %s",
+                             error_label(e))
+                return {"error": _backup_failed_text(False),
+                        "nothing_changed": True}
+            kept = {"nothing_changed": True, "backup_path": str(made)}
+            tmp: Optional[Path] = None
+            try:
+                if restores:
+                    source = backup / PSEUDONYMS_JSON_NAME
+                    if source.is_symlink():
+                        raise ValueError("the backup's names list is a link")
+                    data, _mode = read_pseudonyms_json_bytes(source)
+                    _now_data, mode = read_pseudonyms_json_bytes(target)
+                    tmp = _write_names_list_back(folder, data, mode)
+                # The lock file does not keep every program from the
+                # list: one written since the backup is not written over
+                if pseudonyms_json_fingerprint(folder) != now:
+                    if tmp is not None:
+                        tmp.unlink()
+                    return {"error": UNDO_NAMES_LIST_WRITTEN_DURING.format(
+                        backup=made.name), "reason": "project_changed",
+                        **kept}
+                if tmp is not None:
+                    os.replace(str(tmp), str(target))
+                    tmp = None
+                else:
+                    os.unlink(str(target))
+            except Exception as e:                      # noqa: BLE001
+                if tmp is not None:
+                    try:
+                        tmp.unlink()
+                    except OSError:
+                        pass
+                logger.error("An undo of the names list did not write it: "
+                             "%s", error_label(e))
+                return {"error": UNDO_NAMES_LIST_NOT_WRITTEN.format(
+                    kind=type(e).__name__, backup=made.name),
+                    "reason": "not_saved", **kept}
+    except DatabaseLockedError as e:
+        return {"error": f"{e} Nothing was undone.",
+                "reason": "project_locked", "nothing_changed": True}
+    try:
+        change_record.remove(context[1], change.receipt)
+    except Exception as e:                              # noqa: BLE001
+        logger.warning("Could not remove the record of an undone change: %s",
+                       error_label(e))
+    logger.info("Undid a save of the names list")
+    return {"success": True,
+            "message": ("Undid 1 change: the names list is as it was before "
+                        "the save." if restores else
+                        "Undid 1 change: the names list is removed, as "
+                        "before the save."),
+            "undone": [{"undo_receipt": change.receipt,
+                        "tool": change.tool}],
+            "names_list": "brought_back" if restores else "removed",
+            "backup_path": str(made),
+            "note": _mark_unregistered(UNDO_NAMES_FILE_NOTE),
+            "way_back": _mark_unregistered(UNDO_WAY_BACK)}
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
@@ -15292,19 +15872,49 @@ def undo_changes(receipts: Optional[List[str]] = None,
         return json.dumps({"error": UNDO_NOT_A_RECEIPT,
                            "nothing_changed": True})
     ro = get_db()
-    first = _undo_plan(ro, receipts, context)
+    # The call's first plan, before SQLite's lock: a run's backup compared
+    # with the project, an import's originals read whole
+    first = _undo_plan(ro, receipts, context, compare_backup=True)
+    if first.names_list is not None:
+        return json.dumps(_undo_names_list(first.names_list, receipts,
+                                           preview_token, context), indent=2)
+    originals = (_read_originals(first, context) if first.originals
+                 else None)
+    if originals is not None:
+        _undo_refuse_originals(first, originals)
     if not first.can_run:
         return json.dumps(_undo_refused(first, ro), indent=2)
-    held: Dict[str, Optional[undo.Plan]] = {"plan": first, "locked": None}
+    held: Dict[str, Any] = {"plan": first, "locked": None,
+                            "originals": originals, "read_again": None}
 
     def _state_of(wdb) -> str:
         # The plan built once more, on the write connection under SQLite's
         # write lock, for the signed state, the checks and the write
         locked = _undo_plan(wdb, receipts, context)
         held["locked"] = locked
-        return fingerprint_rows(_undo_signed(_undo_preview(locked, wdb,
-                                                           False)),
-                                locked.fingerprint())
+        return fingerprint_rows(_undo_signed(_undo_preview(
+            locked, wdb, False, held["originals"])), locked.fingerprint())
+
+    def _before_backup() -> Optional[Dict[str, Any]]:
+        # An import's originals read whole again under the lock file,
+        # before the backup and SQLite's lock: one changed since, or that
+        # cannot be read whole, refuses the undo with no backup
+        if not first.originals:
+            return None
+        again = _read_originals(first, context)
+        if again.changed or again.unreadable:
+            _undo_refuse_originals(first, again)
+            return _undo_refused(first, get_db())
+        held["read_again"] = again
+        return None
+
+    def _after_commit(result: Dict[str, Any]) -> None:
+        # Right after the commit, still under the lock file
+        locked = held["locked"]
+        if locked is not None and (locked.originals
+                                   or locked.originals_unnamed):
+            _undo_remove_originals(result, locked, held["read_again"],
+                                   context)
 
     def _check(wdb) -> Optional[Dict[str, Any]]:
         locked = held["locked"]
@@ -15332,7 +15942,8 @@ def undo_changes(receipts: Optional[List[str]] = None,
                 "rows": rows}
 
     result = _guarded_destructive(
-        preview_fn=lambda db_: _undo_preview(held["plan"], db_, True),
+        preview_fn=lambda db_: _undo_preview(held["plan"], db_, True,
+                                             held["originals"]),
         op_fn=_op,
         fingerprint_fn=lambda db_: held["plan"].fingerprint(),
         tool="undo_changes",
@@ -15346,7 +15957,9 @@ def undo_changes(receipts: Optional[List[str]] = None,
         warnings_fn=_undo_warnings,
         state_of_fn=_state_of,
         check_fn=_check,
-        record=False)
+        record=False,
+        before_backup=_before_backup,
+        after_commit=_after_commit)
     if result.get("success") and "error" not in result:
         _undo_after(result, held["locked"], context)
     return json.dumps(result, indent=2)
@@ -17773,9 +18386,6 @@ UNDO_REFUSAL_TEXTS = {
         "The record of this change is dated ahead of this computer's clock, "
         "as when the clock has been set back since, so Exegete cannot tell "
         "how old the change is." + _THE_WAY_BACK),
-    undo.NOT_YET_UNDOABLE: (
-        "Changes made by {tool} cannot be undone with undo_changes yet."
-        + _THE_WAY_BACK),
     undo.OWN_TRIGGERS: (
         "This project holds triggers of its own, which would run during an "
         "undo and change rows Exegete cannot check, so Exegete does not "
@@ -17790,9 +18400,10 @@ UNDO_REFUSAL_TEXTS = {
         "folder, so Exegete does not read it; list_backups marks such a "
         "backup unclean." + _THE_WAY_BACK),
     undo.BACKUP_UNREADABLE: (
-        "The backup Exegete took before this change has no database Exegete "
-        "can read, so the rows the change altered or removed cannot be put "
-        "back." + _THE_WAY_BACK),
+        "The backup Exegete took before this change cannot be read whole: it "
+        "has no database Exegete can read, or part of its database cannot "
+        "be read. So what the change altered or removed cannot be put back "
+        "from it." + _THE_WAY_BACK),
     undo.BACKUP_CHANGED: (
         "The backup Exegete took before this change no longer holds those "
         "rows as they were before the change, so they cannot be put back."
@@ -17841,7 +18452,11 @@ UNDO_REFUSAL_TEXTS = {
         "A row this undo would put back has its number taken by a row made "
         "since (counted by table in rows), so it cannot be put back. "
         "later_changes gives the receipt of a later change this "
-        "conversation's Exegete made, which can be undone first."),
+        "conversation's Exegete made, which can be undone first. A row made "
+        "in another program, or by Exegete before it last started, can be "
+        "removed first where a tool removes it (delete_code, "
+        "delete_category, delete_coding or delete_annotation), if the "
+        "researcher no longer needs it." + _THE_WAY_BACK),
     undo.VALUE_TAKEN: (
         "A row this undo would put back or set back holds a name, or "
         "another value that must be unique, that another row has taken "
@@ -17878,6 +18493,64 @@ UNDO_REFUSAL_TEXTS = {
         "Setting a category's or a code's parent back would make it its own "
         "ancestor, since its old parent has been moved under it since. Move "
         "that branch back first."),
+    undo.ALONE: (
+        "A pseudonymisation run, and a save of the names list, are each "
+        "undone in a call of their own. Undo this change on its own, then "
+        "the others."),
+    undo.WRITTEN_SINCE: (
+        "The project has changed since this pseudonymisation run (the tables "
+        "that changed are named in tables), and a run is undone only while "
+        "nothing has been written to the project since it, since its undo "
+        "returns every table to how it was just before the run. "
+        "later_changes gives the "
+        "receipts of later changes this conversation's Exegete made: undo "
+        "them first, then the run. Work done since in another program "
+        "cannot be undone here." + _THE_WAY_BACK),
+    undo.BACKUP_DIFFERS: (
+        "The backup Exegete took before this run differs from the project in "
+        "rows the run did not change (the tables are named in tables), so it "
+        "no longer holds the project as it was just before the run, and the "
+        "run cannot be taken back from it." + _THE_WAY_BACK),
+    undo.ORIGINAL_SHARED: (
+        "Another file's entry names the same original, in the project's "
+        "documents folder, as a file this undo would remove (counted in "
+        "files), so the undo would take that original from the other entry "
+        "too. Nothing was changed." + _THE_WAY_BACK),
+    undo.ORIGINAL_CHANGED: (
+        "An original this undo would remove from the project's documents "
+        "folder is no longer the file the import stored: it has been changed "
+        "or replaced since (counted in files, by file id in file_ids). "
+        "Exegete removes only the file it stored. If the researcher no "
+        "longer needs that file in the project, they can move it out of the "
+        "documents folder, then undo again: an original already gone is "
+        "passed over."),
+    undo.ORIGINAL_UNREADABLE: (
+        "An original this undo would remove from the project's documents "
+        "folder cannot be read whole now (counted in files, by file id in "
+        "file_ids): a sync service may keep it online only, or it is not an "
+        "ordinary file, or it cannot be opened. Exegete removes only a file "
+        "it has read and found to be the one the import stored. Make the "
+        "file available on this computer, or move it out of the documents "
+        "folder, then undo again."),
+    undo.CODER_NAME_CHANGED: (
+        "The project's coder name, or the rest of the project's own row or "
+        "its list of coder names, has changed since this correction, so the "
+        "correction cannot be undone. QualCoder writes the coder name each "
+        "time it opens a project, as the name it is set to use, and its "
+        "first open of a project made by an older version adds to the "
+        "project's row. set_project_coder_name can correct the name again; "
+        "its preview says what would change."),
+    undo.CODER_NAME_IN_USE: (
+        "Work is now recorded under the coder name this correction set, or a "
+        "table of the project did not say whether it is, so giving back the "
+        "old name would change whose work the project shows. "
+        "set_project_coder_name can correct the name again; its preview "
+        "says what would change."),
+    undo.NAMES_LIST_CHANGED: (
+        "The project's names list has changed since this save, or has been "
+        "removed, so undoing the save would also take that later change "
+        "back. save_names_list can save the list again from the names file; "
+        "its preview says what would change."),
 }
 # The answer to a call whose plan has refusals
 UNDO_REFUSED = (
@@ -17938,6 +18611,80 @@ UNDO_QUALCODER_HINT = (
     "project is opened again.")
 UNDO_SESSIONS_NOT_SAVED = "not saved: the session still shows the change"
 UNDO_SESSION_GONE = "gone: the session could not be read"
+# A pseudonymisation run taken back (v0.15.2): the line its journal entry
+# keeps, and what the preview and the answer say
+UNDO_RUN_JOURNAL_LINE = (
+    "This run was undone on {date} with undo_changes: the text is as it was "
+    "before the run.")
+UNDO_RUN_NOTE = (
+    "Undoing this pseudonymisation run gives the file back its text as it "
+    "was before the run, real names included{notes}. Every table returns "
+    "to how it was just before the run, except that the run's journal "
+    "entry, if it wrote one, is kept with a line saying the run was "
+    "undone. The run record in Exegete's folder and the project's names "
+    "list stay as the run left them.")
+UNDO_RUN_NOTES_TOO = (
+    ", and so do the public parts of the notes and journal entries it "
+    "rewrote")
+UNDO_RUN_DONE_NOTE = (
+    "The text is as it was before the run, real names included, and every "
+    "position in the file is as it was then: re-read the file before any "
+    "further coding. The run record in {state}/pseudonymisation/ and the "
+    "project's names list, pseudonyms.json, are as the run left them.")
+UNDO_RUN_SESSIONS_NOTE = (
+    "{count} coding session file(s) of this project (stale_sessions) hold "
+    "passages of this file. Passages recorded after the run hold the "
+    "pseudonymised text, which no longer matches the file: applying them "
+    "is refused rather than written at the wrong place.")
+# A document import taken back (v0.15.2): what stays on the computer, and
+# the originals the undo leaves in the documents folder
+UNDO_IMPORT_NOTE = (
+    "Undoing this import removes the files' entries and the originals "
+    "Exegete stored for them in the project's documents folder. Copies stay "
+    "elsewhere. The backups made since the import ({backups}), and the "
+    "backup this undo takes first, hold each original and its text: "
+    "prune_backups removes them, but the undo's own backup is its way back. "
+    "Coding sessions holding passages of these files ({sessions}) keep the "
+    "passages and the files' names until delete_coding_session removes "
+    "them.")
+UNDO_IMPORT_QUALCODER_BACKUPS = (
+    "QualCoder's own backups beside the project may hold the originals "
+    "too.")
+UNDO_IMPORT_SEARCH_INDEX = (
+    "QualCoder 4.0's AI search index in this project (ai_data/search.sqlite) "
+    "keeps the files' text until QualCoder next re-indexes with AI on.")
+UNDO_IMPORT_CHAT_HISTORY = (
+    "QualCoder's AI chat history in this project "
+    "(ai_data/chat_history.sqlite) may quote the files.")
+UNDO_IMPORT_NEITHER = "Exegete neither reads nor writes {which}."
+UNDO_ORIGINALS_KEPT = (
+    "{count} original(s) stay in the project's documents folder with no "
+    "entry (by file id in originals_kept): Exegete could not remove them, "
+    "or found them changed just before. Such a file holds back a new "
+    "import of its name until it is moved out of the documents folder.")
+UNDO_ORIGINALS_FOLDER = (
+    "The project's documents folder is not an ordinary folder inside the "
+    "project (it may be a link), so Exegete removes nothing through it: "
+    "the originals stay there with no entry, counted in originals_kept.")
+# A save of the names list taken back (v0.15.2)
+UNDO_NAMES_LIST_BACK = (
+    "Undoing this save brings back the names list, pseudonyms.json, as it "
+    "was before the save, from the save's backup.")
+UNDO_NAMES_LIST_REMOVED = (
+    "Undoing this save removes the names list, pseudonyms.json, which the "
+    "project did not have before the save.")
+UNDO_NAMES_FILE_NOTE = (
+    "The names file in the project's Exegete folder is as it was: it still "
+    "holds the list this undo took back, so saving the list again "
+    "(save_names_list) saves that list again. To keep the earlier list, "
+    "correct the names file first.")
+UNDO_NAMES_LIST_NOT_WRITTEN = (
+    "The names list could not be put back ({kind}), and it is as it was: "
+    "nothing was undone. The backup this undo took first is {backup}.")
+UNDO_NAMES_LIST_WRITTEN_DURING = (
+    "The names list was written by another program while this undo took its "
+    "backup, so it was left as that program wrote it and nothing was "
+    "undone. The backup this undo took first is {backup}.")
 
 
 def _qda_file_stamp(path) -> List[Any]:
@@ -17982,7 +18729,8 @@ def _restore_fingerprint(project_folder, backup_folder) -> Dict[str, Any]:
 def _changes_losing_undo(names: Sequence[str]) -> int:
     """How many changes recorded on this project, under a day old, need a
     backup these names give for their undo: a change that altered or
-    removed rows. A change that only added rows needs none. Never
+    removed rows, and a save of the names list, whose undo reads the list
+    from its backup. A change that only added rows needs none. Never
     raises; 0 when the records cannot be read."""
     try:
         secret = load_secret()
@@ -17994,8 +18742,10 @@ def _changes_losing_undo(names: Sequence[str]) -> int:
             1 for record in change_record.records(project)
             if record.get("backup") in doomed
             and clock - (record.get("time") or 0) <= change_record.KEEP_SECONDS
-            and any(isinstance(row, dict) and row.get("before") is not None
-                    for row in record.get("rows") or []))
+            and (record.get("route") == change_record.NAMES_LIST_ROUTE
+                 or any(isinstance(row, dict)
+                        and row.get("before") is not None
+                        for row in record.get("rows") or [])))
     except Exception:                                   # noqa: BLE001
         return 0
 
@@ -18194,7 +18944,10 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
                          execute_guard_fn=None,
                          state_of_fn=None,
                          check_fn=None,
-                         record: bool = True) -> Dict[str, Any]:
+                         record: bool = True,
+                         record_whole: Optional[Dict[str, Any]] = None,
+                         before_backup=None,
+                         after_commit=None) -> Dict[str, Any]:
     """Preview -> token -> safety-backup gate for destructive operations.
 
     Without a token this returns a preview (read-only, no backup, no
@@ -18239,7 +18992,10 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
       way a refusal there leaves no backup.
 
     `record` is passed on to `_perform_write` (v0.15.2): False keeps no
-    record of the change and gives no receipt, for undo's own write.
+    record of the change and gives no receipt, for undo's own write; so
+    are `record_whole` (a run's record takes the route "whole") and the
+    two steps an import's undo adds, `before_backup` and `after_commit`,
+    each defaulting to none.
     """
     def state_of(db_) -> str:
         """The signed state: what the preview says AND which rows it covers.
@@ -18303,7 +19059,9 @@ def _guarded_destructive(preview_fn, op_fn, fingerprint_fn, tool: str,
                             check=_state_check(state_of, state, tool,
                                                check_fn),
                             backup_fail_detail=backup_fail_detail,
-                            record=record)
+                            record=record, record_whole=record_whole,
+                            before_backup=before_backup,
+                            after_commit=after_commit)
     if isinstance(result, dict) and "error" not in result \
             and "collateral" in preview:
         # What the user approved travels with what was done, so the
@@ -21094,6 +21852,9 @@ def pseudonymise_source(
             execute_guard_fn=_collisions_refusal,
             state_of_fn=_state_on_write_connection,
             check_fn=_save_check,
+            # Undone only while nothing has been written since (v0.15.2):
+            # the record keeps every table as the run left it
+            record_whole={"rewrite_memos": bool(rewrite_memos)},
         )
     finally:
         # A run that did not commit leaves no pseudonyms.json behind for

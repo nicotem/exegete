@@ -1305,8 +1305,10 @@ class TestTheSave:
         assert answer["note"] == NOTE
         assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d",
                             answer["saved_at"])
+        # v0.15.2: the save keeps a record for undo, and answers its
+        # receipt last
         assert list(answer) == ["success", "entries", "backup", "saved_at",
-                                "note"]
+                                "note", "undo_receipt"]
         assert _backups(selected) == [answer["backup"]]
         # the backup holds the list as it was
         assert (selected.parent / answer["backup"] / "pseudonyms.json"

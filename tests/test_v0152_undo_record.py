@@ -48,8 +48,9 @@ NO_RECEIPT_BY_DESIGN = {
     "restore_backup": "its way back is the safety backup it takes first",
     "undo_changes": "an undo is not itself undone",
 }
-# Written to the project by a route of its own until the third design
-NOT_YET_RECORDED = {"save_names_list"}
+# Recorded with no rows: the names list is a file beside the database
+# (v0.15.2, route "names_list")
+RECORDED_WITHOUT_ROWS = {"save_names_list"}
 
 
 def receipt_of(text):
@@ -277,7 +278,7 @@ def test_each_change_answers_a_receipt_and_leaves_its_record(
     for run in (every_tool_run, two_step_run):
         for call in run["calls"]:
             tool, receipt = call["tool"], call["receipt"]
-            if tool in NO_RECEIPT_BY_DESIGN or tool in NOT_YET_RECORDED:
+            if tool in NO_RECEIPT_BY_DESIGN:
                 continue
             if call["refused"] or not call["changed"]:
                 if receipt or call["new_records"] or call["says_no_receipt"]:
@@ -300,22 +301,18 @@ def test_every_tool_that_writes_a_project_is_covered(every_tool_run,
     calls = all_calls(every_tool_run, two_step_run)
     assert {call["tool"] for call in calls} == PROJECT_WRITES
     receipted = {call["tool"] for call in calls if call["receipt"]}
-    assert receipted == (PROJECT_WRITES - set(NO_RECEIPT_BY_DESIGN)
-                         - NOT_YET_RECORDED)
+    assert receipted == PROJECT_WRITES - set(NO_RECEIPT_BY_DESIGN)
     assert set(TWO_STEP_TOOLS) - set(NO_RECEIPT_BY_DESIGN) <= receipted
 
 
 def test_the_tools_that_keep_no_record_say_nothing_of_one(every_tool_run,
                                                            two_step_run):
-    """restore_backup, undo_changes, and save_names_list until it keeps a
-    record: each change they make leaves no record, and its answer
-    carries neither a receipt nor the sentence that none was kept, as the
-    changelog's entry says of them."""
+    """restore_backup and undo_changes: each change they make leaves no
+    record, and its answer carries neither a receipt nor the sentence
+    that none was kept, as the changelog's entry says of them."""
     calls = [call for call in all_calls(every_tool_run, two_step_run)
-             if (call["tool"] in NO_RECEIPT_BY_DESIGN
-                 or call["tool"] in NOT_YET_RECORDED) and call["changed"]]
+             if call["tool"] in NO_RECEIPT_BY_DESIGN and call["changed"]]
     assert {call["tool"] for call in calls} == {"restore_backup",
-                                                "save_names_list",
                                                 "undo_changes"}
     assert [(call["tool"], call["receipt"], call["new_records"],
              call["says_no_receipt"]) for call in calls
@@ -323,12 +320,15 @@ def test_the_tools_that_keep_no_record_say_nothing_of_one(every_tool_run,
             or call["says_no_receipt"]] == []
 
 
-@pytest.mark.xfail(strict=True, reason="save_names_list writes the names "
-                   "list by a route of its own: the third undo design")
 def test_saving_the_names_list_answers_a_receipt(every_tool_run):
+    """save_names_list keeps a record of its own (v0.15.2): its answer
+    carries the receipt, and the record holds no rows."""
     saved = [call for call in every_tool_run["calls"]
              if call["tool"] == "save_names_list" and call["changed"]]
     assert saved and all(call["receipt"] for call in saved)
+    for call in saved:
+        record = every_tool_run["records"][call["receipt"]]
+        assert record["route"] == "names_list" and "rows" not in record
 
 
 # 2. The record is the change -------------------------------------------------
@@ -409,7 +409,7 @@ def test_each_record_is_its_change(every_tool_run, two_step_run):
         key_secret = run["secret"]
         for call in run["calls"]:
             if call["tool"] in NO_RECEIPT_BY_DESIGN or \
-                    call["tool"] in NOT_YET_RECORDED or \
+                    call["tool"] in RECORDED_WITHOUT_ROWS or \
                     call["refused"] or not call["changed"]:
                 continue
             assert call["receipt"], call["tool"]

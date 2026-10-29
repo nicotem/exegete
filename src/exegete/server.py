@@ -683,7 +683,9 @@ for a way round it.
 - To undo: undo_changes takes back a change Exegete made, whole, for a
   day after it, with the undo_receipt its answer gave; delete_coding
   removes one coding; restore_backup returns the project to an earlier
-  state.
+  state. An undone pseudonymisation run brings the real names back into
+  the text, and an undone import leaves copies of its files in backups
+  and coding sessions: say so when you show the preview.
 - Rows you write carry the project's AI coder name, which the
   researcher chooses, in Exegete's settings or when Exegete asks: relay
   Exegete's question; never choose it yourself.
@@ -18535,11 +18537,11 @@ UNDO_REFUSAL_TEXTS = {
     undo.CODER_NAME_CHANGED: (
         "The project's coder name, or the rest of the project's own row or "
         "its list of coder names, has changed since this correction, so the "
-        "correction cannot be undone. QualCoder writes the coder name each "
-        "time it opens a project, as the name it is set to use, and its "
-        "first open of a project made by an older version adds to the "
-        "project's row. set_project_coder_name can correct the name again; "
-        "its preview says what would change."),
+        "correction cannot be undone. QualCoder 4.0 writes the coder name it "
+        "is set to use each time it opens a project, and when it first "
+        "opens a project made by an older version it adds to the project's "
+        "row. set_project_coder_name can correct the name again; its "
+        "preview says what would change."),
     undo.CODER_NAME_IN_USE: (
         "Work is now recorded under the coder name this correction set, or a "
         "table of the project did not say whether it is, so giving back the "

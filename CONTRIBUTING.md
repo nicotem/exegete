@@ -340,7 +340,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── sessions.py          # AI coding session management
 │   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
-│   │   ├── change_record.py     # The record each change leaves for undo, kept a day
+│   │   ├── change_record.py     # The record each change leaves for undo; a sweep removes it once a day old
 │   │   ├── undo.py              # undo_changes: the plan, its refusals and the write-back (0.15.2)
 │   │   ├── path_identity.py     # Whether a path is inside a folder, by the folder's identity
 │   │   ├── qualcoder_history.py # A project's history with QualCoder, worked out once per selection (0.15.0)

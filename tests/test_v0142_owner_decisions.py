@@ -234,6 +234,20 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
         flat.index("Can you give me a summary of my project?")
 
 
+def test_quickstart_dates_the_setting_as_privacy_does():
+    """v0.15.2, the lead's reading of 29 October: QUICKSTART's sentence on
+    the Model Improvement setting, a claim about Anthropic's product,
+    carries the date PRIVACY.md gives for the terms it quotes there."""
+    governance = _between(_flat("PRIVACY.md"), "## Your governance options",
+                          "### Rung 1:")
+    date = re.search(r"The terms below were quoted on (\d{1,2} [A-Z][a-z]+ "
+                     r"\d{4})", governance).group(1)
+    step5 = _between(_flat("QUICKSTART.md"), "### 5. Try it",
+                     "If you have no project yet, ask Claude")
+    assert ("https://claude.ai/settings/data-privacy-controls switches "
+            f"training off, as Anthropic's pages said on {date}.") in step5
+
+
 # ---------------------------------------------------------------------------
 # 2. The warning about practising: explained, never prescribed
 # ---------------------------------------------------------------------------

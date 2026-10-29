@@ -21,15 +21,18 @@ plainer words: INSTALL.md is now the guide to the desktop extension
 alone, and the ways of installing from the Terminal have a guide of
 their own. Exegete now needs Python 3.11 or newer.
 
-Three things planned for this release move to v0.15.3, because the week
-had no room for them: choosing which mentions to keep when replacing
-names, the fix of the REFI-QDA export, and PyMuPDF 2.0 on Apple silicon
-Macs. "Upgrading from 0.15.1-alpha.1" comes first and says what changes
-for you. The account then follows undo, the other changes, the fix, the
-documents and the known limits, then a part for contributors and the
-measurements.
+Three things planned for this release move to v0.15.3, because there
+was not enough time to build them: choosing which mentions to keep when
+replacing names, the fix of the REFI-QDA export, and PyMuPDF 2.0 on
+Apple silicon Macs. "Upgrading from 0.15.1-alpha.1" comes first and says
+what changes for you. The account then follows undo, the other changes,
+the fix, the documents and the known limits, then a part for
+contributors and the measurements.
 
 ### Upgrading from 0.15.1-alpha.1
+
+Coming from a release before 0.15.1-alpha.1, read the "Upgrading" part
+of each release in between as well, below.
 
 Your projects and their backups are untouched, and the settings you
 chose stay as they were. After updating, quit your AI app and open it
@@ -54,7 +57,7 @@ again, so that it loads the new tool list.
 - **The main documents are rewritten** ("Documents", below). PRIVACY.md
   opens with where your data goes, in short, followed by the checklist
   to read before using real participants' data. README.md and
-  QUICKSTART.md are shorter and plainer. TOOLS.md and the two coding
+  QUICKSTART.md use plainer words. TOOLS.md and the two coding
   guides were read against the code and rewritten.
 - **Python 3.10 is no longer supported.** Exegete needs Python 3.11 or
   newer, and is tested with Python 3.11 and 3.13 on macOS, Windows and
@@ -146,13 +149,21 @@ again, so that it loads the new tool list.
   removes the files' entries and the originals Exegete stored for them
   in the project's `documents` folder. It removes an original only if it
   is still the file the import stored, and it refuses the undo when one
-  has changed since. Copies stay elsewhere. The backups taken since the
-  import, and the backup the undo takes first, keep the files until
-  `prune_backups` removes them. Coding sessions that hold passages of
-  the files keep them until `delete_coding_session` removes them. The
-  preview and the answer count these copies. If you use QualCoder, they
-  also name its own files that may hold the text, when the project has
-  them.
+  has changed since. An undo that goes ahead can still leave originals
+  in the `documents` folder with no entry. It leaves them all when that
+  folder is a link, or not an ordinary folder inside the project.
+  Otherwise it leaves an original that it finds changed or cannot read
+  just before removing it, one it cannot remove, and one whose stored
+  name cannot be a file's name. The answer counts them in
+  `originals_kept`. Such a file travels with the project, into its later
+  backups and copies, and holds back a new import under its name, until
+  it is moved out of the `documents` folder. Copies stay elsewhere. The
+  backups taken since the import, and the backup the undo takes first,
+  keep the files until `prune_backups` removes them. Coding sessions
+  that hold passages of the files keep them until
+  `delete_coding_session` removes them. The preview and the answer count
+  these copies. If you use QualCoder, they also name its own files that
+  may hold the text, when the project has them.
 - **A correction of your coder name can be undone,** unless work has
   been recorded under the name it set, or the project's coder name has
   changed since. QualCoder 3.8.2 writes the coder name it is set to use
@@ -280,8 +291,9 @@ again, so that it loads the new tool list.
   told once, in AI_CODING_GUIDE.md. The guides call the assistant the
   assistant, wherever a sentence is not about Claude itself.
 - **The guides say where real names stay.** The coding guide's answer on
-  pseudonymisation starts with the names file, which keeps the real
-  names out of the conversation. It says that the names list and each
+  pseudonymisation explains the names file, which you fill in on your
+  own computer so that the names list does not pass through the
+  conversation. It says that the names list and each
   backup taken before a run lead back to the real names on their own.
   The guides say that a session file holds each suggested passage word
   for word until it is deleted, that the REFI-QDA file keeps memos in
@@ -307,23 +319,34 @@ again, so that it loads the new tool list.
   Windows, not measured. On a Windows computer, you could start
   `exegete` in a terminal, press Ctrl+C once, and check that the line
   `Stopped by Ctrl+C` appears and the prompt comes back.
-- **On Windows, two copies of Exegete working on one project can hold up
+- **On Windows, two copies of Exegete working on one project can block
   each other's writes.** When another copy of Exegete has the project
   open, a copy sometimes cannot delete the project's lock file after its
-  write. The file then holds up every copy's writes until it reads as
-  left over, after 30 seconds. Two copies run when two apps each start
-  Exegete for the same project. Working on a project from one app at a
-  time avoids this.
+  write. Exegete then refuses every write to the project until the file
+  reads as left over, after 30 seconds. Two copies run when two apps
+  each start Exegete, or when an app that starts a copy for each
+  session, such as Claude Code, has two sessions open. Working on a
+  project from one app at a time, and in such an app from one session at
+  a time, avoids this.
 - **A record of one of the largest changes can pass 1 MB.** Deleting a
   code with 20,000 codings left a record of 1.8 MB in Exegete's own
   folder, and merging codes over 20,000 codings one of 2.4 MB. Each
-  record is removed once it is a day old, as "The record of a change"
+  record is removed after it is a day old, as "The record of a change"
   says.
 - **An import's undo leaves the project's bookmarks as they are.** If
   you use QualCoder and its bookmark is on a file the import brought in,
   the bookmark stays after the undo, as it does when QualCoder 4.0
   deletes a file itself. A file imported later can take the removed
   file's number, and the bookmark then opens that file.
+- **A copy of the names list can be left in the project's folder.**
+  Exegete writes `pseudonyms.json`, the project's names list, to a
+  temporary file beside it first, then puts that file in its place: when
+  the list is saved, when a save is undone, and when a run saves a list
+  you typed. If Exegete is ended in that moment, as when an app stops it
+  at once, the temporary file can stay, named `pseudonyms.json.` with a
+  random ending and `.tmp`. It holds the real names in plain text. Later
+  backups copy it, and Exegete does not remove it. If you find one, you
+  can delete it: the project does not read it.
 
 ### For contributors
 

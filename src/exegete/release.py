@@ -25,5 +25,5 @@ RELEASED = "2026-11-02"
 # which the update page links)
 SUMMARY = ("Exegete can now undo most changes it makes to a project, whole "
            "or not at all, for a day after each one, showing first what it "
-           "would take back. Its guides are shorter and plainer, and "
-           "installing from a Terminal has a guide of its own.")
+           "would take back. Its main documents are rewritten in plainer "
+           "words, and installing from a Terminal has a guide of its own.")

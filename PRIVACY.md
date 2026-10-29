@@ -1646,12 +1646,12 @@ it is read out or returned; "Practical mitigations", on
 `pseudonyms.json`, says why). In 0.15.0 and earlier, `rename_file` read
 the names in the backups to recognise a rename back.
 
-`undo_changes` reads the backup Exegete took just before a change, to
-take that change back. It opens that backup's database read-only and
+`undo_changes` reads the backup Exegete took before a change, to take
+that change back. It opens that backup's database read-only and
 immutable, so that reading it writes nothing into it. It reads the rows
 the change altered or removed, and the rows they point at, such as a
 code's category. For a pseudonymisation run, it reads
-every table, to check that the backup holds the project as it was just
+every table, to check that the backup holds the project as it was
 before the run. For a save of the names list, it reads that backup's
 `pseudonyms.json` and copies its bytes back into the project. Its
 preview gives counts of rows, by table and by coder, never a row's

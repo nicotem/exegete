@@ -18629,16 +18629,15 @@ UNDO_REFUSAL_TEXTS = {
         "The project has changed since this pseudonymisation run (the tables "
         "that changed are named in tables), and a run is undone only while "
         "nothing has been written to the project since it, since its undo "
-        "returns every table to how it was just before the run. "
-        "later_changes gives the "
-        "receipts of later changes this conversation's Exegete made: undo "
-        "them first, then the run. Work done since in another program "
-        "cannot be undone here." + _THE_WAY_BACK),
+        "returns the project to how it was before the run. later_changes "
+        "gives the receipts of later changes this conversation's Exegete "
+        "made: undo them first, newest first, then the run. Work done since "
+        "in another program cannot be undone here." + _THE_WAY_BACK),
     undo.BACKUP_DIFFERS: (
         "The backup Exegete took before this run differs from the project in "
         "rows the run did not change (the tables are named in tables), so it "
-        "no longer holds the project as it was just before the run, and the "
-        "run cannot be taken back from it." + _THE_WAY_BACK),
+        "no longer holds the project as it was before the run, and the run "
+        "cannot be taken back from it." + _THE_WAY_BACK),
     undo.ORIGINAL_SHARED: (
         "Another file's entry names the same original, in the project's "
         "documents folder, as a file this undo would remove (counted in "
@@ -18749,9 +18748,12 @@ UNDO_RUN_JOURNAL_LINE = (
 UNDO_RUN_NOTE = (
     "Undoing this pseudonymisation run gives the file back its text as it "
     "was before the run, real names included{notes}. Every table returns "
-    "to how it was just before the run, except that the run's journal "
-    "entry, if it wrote one, is kept with a line saying the run was "
-    "undone. The run record in Exegete's folder and the project's names "
+    "to how it was before the run, with these exceptions. The run's "
+    "journal entry, if it wrote one, is kept with a line saying the run "
+    "was undone, and so are the entries of later runs undone before it. "
+    "Names added to the project's list of coder names since the run, or "
+    "shown again since, and the project's coder name stay as they are "
+    "now. The run record in Exegete's folder and the project's names "
     "list stay as the run left them.")
 UNDO_RUN_NOTES_TOO = (
     ", and so do the public parts of the notes and journal entries it "
@@ -18790,7 +18792,7 @@ UNDO_IMPORT_NEITHER = "Exegete neither reads nor writes {which}."
 UNDO_ORIGINALS_KEPT = (
     "{count} original(s) stay in the project's documents folder with no "
     "entry (by file id in originals_kept): Exegete could not remove them, "
-    "or found them changed just before. Such a file holds back a new "
+    "or found them changed since it read them. Such a file holds back a new "
     "import of its name until it is moved out of the documents folder.")
 UNDO_ORIGINALS_FOLDER = (
     "The project's documents folder is not an ordinary folder inside the "

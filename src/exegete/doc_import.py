@@ -533,8 +533,104 @@ def read_bytes(path: Path, limit: int) -> Tuple[bytes, int]:
     """The file's bytes, opened once without following a link, or a
     refusal code. (data, size); data is None when the file is over
     `limit`, which is checked from its size before anything is read."""
+    data, opened = _read_whole(path, limit, 0)
+    return data, opened.st_size
+
+
+# The largest original an import stores, of any kind
+LARGEST_ORIGINAL = max(SIZE_LIMITS.values())
+
+
+def read_original(path: Path) -> Tuple[bytes, os.stat_result]:
+    """An original in the project's folder of originals read whole, for
+    an import's undo (v0.15.2): as `read_bytes` reads a file (`lstat`, no
+    link followed, `fstat`), and also opened non-blocking, so that a pipe
+    put in its place is refused rather than waited on, and refused unread
+    when a sync service keeps it online only. (data, the `fstat` of what
+    was read). Raises FileNotFoundError when it is gone, _ReadRefusal
+    when it cannot be read whole."""
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        raise
+    except OSError:
+        raise _ReadRefusal("unreadable") from None
+    if _dataless(info):
+        raise _ReadRefusal("online_only")
+    data, opened = _read_whole(path, LARGEST_ORIGINAL,
+                               getattr(os, "O_NONBLOCK", 0))
+    if data is None:
+        raise _ReadRefusal("too_large")
+    return data, opened
+
+
+def same_original(opened: os.stat_result, identity: Tuple[int, ...]) -> bool:
+    """Whether a file opened now is the one read whole before: the same
+    device, inode, size and time of its last change."""
+    return (stat.S_ISREG(opened.st_mode) and identity == original_identity(
+        opened))
+
+
+def original_identity(opened: os.stat_result) -> Tuple[int, ...]:
+    return (opened.st_dev, opened.st_ino, opened.st_size, opened.st_mtime_ns)
+
+
+def remove_original(folder: Path, name: str,
+                    identity: Tuple[int, ...]) -> bool:
+    """Remove one original from the folder of originals, an import's undo
+    (v0.15.2), only if it is still the file read whole under the lock
+    file (`same_original`): opened without following a link, through the
+    folder opened once (without following a link) where the system
+    allows, else by its path once it is found to be no link. True when
+    it went; False when it differs, cannot be opened or cannot be
+    removed, as a file another program holds open on Windows. The caller
+    has checked the folder (`documents_folder_problem`) just before."""
+    nofollow = getattr(os, "O_NOFOLLOW", 0)
+    flags = (os.O_RDONLY | nofollow | getattr(os, "O_NONBLOCK", 0)
+             | getattr(os, "O_BINARY", 0))
+    try:
+        if (os.open in os.supports_dir_fd and os.unlink in os.supports_dir_fd
+                and hasattr(os, "O_DIRECTORY")):
+            folder_fd = os.open(folder, os.O_RDONLY | os.O_DIRECTORY
+                                | nofollow)
+            try:
+                fd = os.open(name, flags, dir_fd=folder_fd)
+                try:
+                    opened = os.fstat(fd)
+                finally:
+                    os.close(fd)
+                if not same_original(opened, identity):
+                    return False
+                os.unlink(name, dir_fd=folder_fd)
+                return True
+            finally:
+                os.close(folder_fd)
+        from . import reading_folder
+        path = Path(folder) / name
+        info = os.lstat(path)
+        if stat.S_ISLNK(info.st_mode) or reading_folder.is_link(path):
+            return False
+        fd = os.open(path, flags)
+        try:
+            opened = os.fstat(fd)
+        finally:
+            os.close(fd)
+        if not same_original(opened, identity):
+            return False
+        os.unlink(path)
+        return True
+    except OSError:
+        return False
+
+
+def _read_whole(path: Path, limit: int, extra_flags: int
+                ) -> Tuple[Optional[bytes], os.stat_result]:
+    """The file's bytes and the `fstat` of what was read, opened once
+    without following a link (`extra_flags` added), or a refusal code;
+    data is None when the file is over `limit`, which is checked from
+    its size before anything is read."""
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(
-        os, "O_BINARY", 0)
+        os, "O_BINARY", 0) | extra_flags
     try:
         info = os.lstat(path)
         if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
@@ -551,7 +647,7 @@ def read_bytes(path: Path, limit: int) -> Tuple[bytes, int]:
         if not stat.S_ISREG(opened.st_mode):
             raise _ReadRefusal("not_a_file")
         if opened.st_size > limit:
-            return None, opened.st_size
+            return None, opened
         chunks = []
         remaining = opened.st_size + 1
         while remaining > 0:
@@ -567,7 +663,7 @@ def read_bytes(path: Path, limit: int) -> Tuple[bytes, int]:
         data = b"".join(chunks)
         if len(data) != opened.st_size:
             raise _ReadRefusal("changed_while_read")
-        return data, opened.st_size
+        return data, opened
     finally:
         os.close(fd)
 

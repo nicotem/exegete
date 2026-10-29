@@ -190,9 +190,10 @@ In a Terminal, go into Exegete's folder with `cd`, run `git pull`, then
 `venv/bin/pip install -e .`, or `venv/bin/pip install -e ".[pdf-epub]"`
 for PDF and EPUB as well. New tools appear once the app is open again.
 `venv/bin/python -m exegete.server --version` prints the installed
-version, which `venv/bin/pip show exegete` shows as `0.15.1a0` for
-`0.15.1-alpha`. An update never touches your projects or their backups:
-it changes only Exegete's own code.
+version, and `venv/bin/pip show exegete` shows it too. Both spell it as
+PyPI does, with an a for alpha: `0.15.1a1` for `0.15.1-alpha.1`. An
+update never touches your projects or their backups: it changes only
+Exegete's own code.
 
 ## Troubleshooting
 

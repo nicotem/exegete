@@ -280,10 +280,13 @@ def test_readme_gives_the_warning_in_short_sentences():
     QUICKSTART's words where the facts are the same: Codex and Claude
     Code open files by themselves; a study on the same computer is in
     their reach wherever the practice projects are, and Exegete's list
-    of projects says where each project is; what they open goes to
-    their AI provider, which may train on it; and Claude Desktop's chat
-    as a suggestion. It comes after the advice to practise on text that
-    is not a participant's, and before the steps."""
+    of projects says where each listed project is (the list reads its
+    usual places and a workspace's top level, not the whole computer,
+    as the readers of QUICKSTART's paragraph found); what they open
+    goes to their AI provider, which may train on it; and Claude
+    Desktop's chat as a suggestion. It comes after the advice to
+    practise on text that is not a participant's, and before the
+    steps."""
     first = _between(_flat("README.md"), "### A first session",
                      "### Other assistants, and updates")
     sentences = (
@@ -291,7 +294,7 @@ def test_readme_gives_the_warning_in_short_sentences():
         "themselves, outside Exegete.",
         "A study kept on the same computer is within their reach, "
         "wherever your practice projects are, and Exegete's list of "
-        "projects tells them where each project is.",
+        "projects tells them where each listed project is.",
         "What they open goes to their AI provider.",
         "While training is on, the AI provider may train its models on "
         "it.",

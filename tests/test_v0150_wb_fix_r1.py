@@ -149,12 +149,11 @@ class TestTheRemovalsInV0151:
         items = {item.split(",")[0].split(":")[0]: item
                  for item in nxt.split(" - ")[1:]}
         # v0.15.1's release preparation: its own item goes once it is
-        # released; what it brought is in the CHANGELOG's entry
-        assert list(items)[:4] == ["v0.15.2", "v0.15.3", "v0.15.4", "v0.16"]
-        # v0.15.2's release preparation: undo is what v0.15.2 brings, and
-        # the occurrences choice, the REFI-QDA fix and Apple silicon moved
-        # to v0.15.3, the week having no room for them
-        assert "takes back a change Exegete made" in items["v0.15.2"]
+        # released; what it brought is in the CHANGELOG's entry. So does
+        # v0.15.2's, whose preparation moved the occurrences choice, the
+        # REFI-QDA fix and Apple silicon to v0.15.3, the week having no
+        # room for them
+        assert list(items)[:4] == ["v0.15.3", "v0.15.4", "v0.16", "v0.17"]
         assert "choose which mentions to keep" in items["v0.15.3"]
         assert "the REFI-QDA export fixed" in items["v0.15.3"]
         assert "on Apple silicon Macs" in items["v0.15.3"]

@@ -26,7 +26,6 @@ RELEASES = {"0.15.4": "method", "0.16": "chat-first"}
 # The rows of ruling 41, the rename's, keep the release that
 # names.OLD_SPELLINGS_UNTIL gives.
 PLANNED = {
-    "undo": ("feature", "0.15.2", (r"\bundo\b",), "88, 105"),
     "the occurrences choice": ("feature", "0.15.3", (
         r"\bwhich\s+mentions\s+to\s+keep\b", r"\boccurrences\s+choice\b"),
         "85, 105, 106"),

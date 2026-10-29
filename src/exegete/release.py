@@ -13,17 +13,17 @@ same character rule as everything else this server echoes.
 """
 
 # pyproject.toml's version, as written there
-VERSION = "0.15.1-alpha.1"
+VERSION = "0.15.2-alpha"
 # The release date, as the CHANGELOG heading gives it (set again on the
 # day if the release moves: the CHANGELOG heading, CITATION.cff and the
 # update site's two files hold the same date)
-RELEASED = "2026-10-23"
+RELEASED = "2026-11-02"
 # One or two plain sentences: what is new for a researcher
-# (0.15.1's note after an update; the removals, the switches' details
-# and what an update changes are in the release notes and the
-# CHANGELOG's "Upgrading from 0.15.0", which the update page links)
-SUMMARY = ("Exegete now takes one backup before every change to a project's "
-           "database, without its audio and video, and a restore's preview "
-           "says what it would bring back. A file not saved as UTF-8 can be "
-           "read in the character set you choose, and two settings are now "
-           "switches.")
+# (0.15.2's note after an update; undo's limits, the one Ctrl+C, Python
+# 3.11 as the oldest supported and what an update changes are in the
+# release notes and the CHANGELOG's "Upgrading from 0.15.1-alpha.1",
+# which the update page links)
+SUMMARY = ("Exegete can now undo most changes it makes to a project, whole "
+           "or not at all, for a day after each one, showing first what it "
+           "would take back. Its guides are shorter and plainer, and "
+           "installing from a Terminal has a guide of its own.")

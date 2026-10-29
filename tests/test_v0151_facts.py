@@ -3640,7 +3640,6 @@ def test_future_releases_in_a_sentence(name, text, verdict):
 
 # For each row of the plan, a sentence for each of its words, in order
 ROW_SENTENCES = {
-    "undo": ("v0.15.2: undo a session's changes",),
     "the occurrences choice": (
         "when replacing names, choose which mentions to keep",
         "the occurrences choice"),

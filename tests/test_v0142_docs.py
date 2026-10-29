@@ -799,6 +799,28 @@ def test_quickstart_sends_a_newcomer_to_the_one_click_start():
     assert "\n### Claude Desktop, with one click\n" in _read("README.md")
 
 
+def test_quickstart_spells_the_version_as_pypi_does():
+    """v0.15.2, the lead's reading of 29 October: "Updating later" says
+    that both commands print the version as PyPI spells it, and gives an
+    example in that spelling (refreshed at each release's preparation)."""
+    from packaging.version import Version
+    import exegete
+    try:
+        import tomllib
+    except ModuleNotFoundError:          # Python 3.10
+        import tomli as tomllib
+    later = _between(_flat("QUICKSTART.md"), "## Updating later",
+                     "## Troubleshooting")
+    found = re.search(r"Both spell it as PyPI does, with an a for alpha: "
+                      r"`([^`]+)` for `([^`]+)`\.", later)
+    assert found, later
+    spelt, name = found.groups()
+    assert str(Version(name)) == spelt and "alpha" in name, found.groups()
+    # what `--version` and pip print: the installed version, so spelt
+    release = tomllib.loads(_read("pyproject.toml"))["project"]["version"]
+    assert exegete.__version__ == str(Version(release))
+
+
 def test_quickstart_stays_within_its_budget():
     """v0.15.2, the opening texts: QUICKSTART rewritten to the writing
     checklist within 250 lines, the documents' commands marks included

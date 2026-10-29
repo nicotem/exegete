@@ -25,8 +25,8 @@
   the project has them.
 - **A correction of your coder name can be undone,** unless work has
   been recorded under the name it set, or the project's coder name has
-  changed since. QualCoder 4.0 writes the coder name it is set to use
-  each time it opens a project.
+  changed since. QualCoder 3.8.2 writes the coder name it is set to use
+  each time it opens a project, as 4.0 does.
 - **A save of the names list can be undone.** `save_names_list` now
   answers an undo receipt. `undo_changes` brings back the list as it
   was before the save, byte for byte, from the save's own backup, or

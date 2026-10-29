@@ -156,10 +156,10 @@ officer will ask, and the summary above depends on them:
     `$XDG_CACHE_HOME` if it is set). They stay until Exegete's first
     tidy once they are a week old (an hour for an import's page), and
     longer while Exegete is not running;
-  - the records of changes kept for undo (`~/.exegete/changes/`), which
-    hold digests, never a name or a text, until Exegete's next start,
-    or its next record of a change to the same project, once they are a
-    day old;
+  - the records of changes kept for undo (`~/.exegete/changes/`): ids
+    and digests, never a name or a text. They stay until Exegete's next
+    start, or its next record of a change to the same project, once
+    they are a day old;
   - the pseudonymisation run records (`~/.exegete/pseudonymisation/`),
     until you delete them;
   - Claude Desktop's log of the extension, which keeps every request and

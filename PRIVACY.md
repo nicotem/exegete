@@ -83,7 +83,8 @@ officer will ask, and the summary above depends on them:
   model for everyone", and Codex's separate "Include environments"
   ("OpenAI's apps"). Rating a reply (thumbs up or down) can still let
   either provider train on that conversation ("Cross-rung cautions";
-  "OpenAI's apps").
+  "OpenAI's apps"). By its terms, Anthropic can also train on a
+  conversation flagged for a safety review (rung 1).
 - **Controller and processor, and a written agreement.** Your
   institution is normally the data controller, which decides how the
   data is used, and the AI provider a processor, which handles it for

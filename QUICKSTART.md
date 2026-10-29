@@ -7,8 +7,7 @@ Exegete by hand: you type a few commands in a Terminal window and edit
 Claude Desktop's settings file.
 
 If you are new to Exegete, the one-click extension for Claude Desktop
-needs no typed commands:
-[README, "Claude Desktop, with one click"](https://github.com/nicotem/exegete#claude-desktop-with-one-click).
+needs no typed commands: [README, "Claude Desktop, with one click"](https://github.com/nicotem/exegete#claude-desktop-with-one-click).
 
 ## What you need
 
@@ -18,8 +17,7 @@ needs no typed commands:
 - A project, if you have one: a folder whose name ends in `.qda`, kept
   in QualCoder's file format. If you have none, the assistant can create
   one in the conversation (step 3 says where it goes).
-- If you are still choosing how to run the AI,
-  [Installing Exegete from the Terminal, "Choosing your AI host: data-governance options (Experimental)"](docs/installing-from-the-terminal.md#choosing-your-ai-host-data-governance-options-experimental)
+- If you are still choosing how to run the AI, [Installing Exegete from the Terminal, "Choosing your AI host: data-governance options (Experimental)"](docs/installing-from-the-terminal.md#choosing-your-ai-host-data-governance-options-experimental)
   compares Claude's plans, an API key and a model that runs on your own
   computer. The API-key and LM Studio routes are Experimental.
 
@@ -27,13 +25,14 @@ needs no typed commands:
 
 In Claude Code, leave out step 3's settings file. Instead, run
 `claude mcp add exegete -- <venv-python> -m exegete.server` in an empty
-folder of its own, with the path `which python` gives in place of
-`<venv-python>` (the Terminal guide, "Claude Code").
+folder, with the path `which python` gives in place of `<venv-python>`
+(the Terminal guide, "Claude Code"). Started in your home folder, or in
+one that holds a study, Claude Code reads that study without asking.
 
 Claude Code opens files by itself, outside Exegete. A study kept on the
 same computer is within its reach, wherever your practice projects are,
-and Exegete's list of projects tells it where each project is. What
-Claude Code opens goes to Anthropic, the AI provider that runs its
+and Exegete's list of projects tells it where each listed project is.
+What Claude Code opens goes to Anthropic, the AI provider that runs its
 model. While training is on, Anthropic may train its models on it. If
 that matters for a study, you could work on that study in Claude
 Desktop's chat, with computer use off, no folder that holds your
@@ -163,8 +162,9 @@ Claude's AI model. While training is on, Anthropic may use your
 conversations, with any participants' data in them, to train its models.
 On a personal plan (Free, Pro or Max), the Model Improvement setting at
 https://claude.ai/settings/data-privacy-controls switches training off,
-as Anthropic's pages said on 17 August 2026. Rating a reply, with a
-thumbs up or down, can still let Anthropic train on that conversation.
+as Anthropic's pages said on 17 August 2026. The same pages said that
+rating a reply, with a thumbs up or down, can still let Anthropic train
+on that conversation, and so can its being flagged for a safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.

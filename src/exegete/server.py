@@ -15047,9 +15047,11 @@ def _undo_context() -> Tuple[str, str, str, Path]:
 
 def _undo_plan(db_, receipts: Sequence[str], context, sessions=None,
                clock: Optional[float] = None, records=None,
-               compare_backup: bool = False) -> undo.Plan:
+               compare_backup: bool = False,
+               contents: Optional[Dict[str, Any]] = None) -> undo.Plan:
     """The plan; `compare_backup` for a call's first plan, before SQLite's
-    lock, where a run's backup is compared with the project."""
+    lock, where a run's backup is compared with the project; `contents`
+    shared by the list's plans, which read the project's content once."""
     secret, project, key_check, project_db = context
     if sessions is None:
         sessions = undo.project_sessions(session_manager, project_db)
@@ -15059,7 +15061,7 @@ def _undo_plan(db_, receipts: Sequence[str], context, sessions=None,
                      key_check=key_check, project_db=project_db,
                      sessions=sessions, clock=clock, records=records,
                      compare_backup=compare_backup,
-                     journal_line=line.encode("utf-8"))
+                     journal_line=line.encode("utf-8"), contents=contents)
 
 
 def _undo_coders(owners: Sequence[Optional[str]], db_) -> Dict[str, Any]:
@@ -15244,10 +15246,11 @@ def _undo_list(context) -> Dict[str, Any]:
     sessions = undo.project_sessions(session_manager, project_db)
     every = change_record.records(context[1])
     clock = change_record.now()
+    contents: Dict[str, Any] = {}
     changes = []
     for record in records:
         plan = _undo_plan(ro, [record["receipt"]], context, sessions, clock,
-                          every, compare_backup=True)
+                          every, compare_backup=True, contents=contents)
         refused: Optional[Dict[str, Any]] = None
         if plan.names_list is not None:
             reasons, _backup, _state = _undo_names_list_judge(

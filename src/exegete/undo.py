@@ -991,7 +991,8 @@ class _Planner:
                  project_db: Path, sessions: Sequence[Tuple[str, Any, bytes]],
                  receipts: Sequence[str],
                  records: Optional[Sequence[Dict[str, Any]]] = None,
-                 journal_line: Optional[bytes] = None):
+                 journal_line: Optional[bytes] = None,
+                 contents: Optional[Dict[str, Any]] = None):
         from .database import _capture_table
         self._capture_table = _capture_table
         self.journal_line = journal_line
@@ -1011,6 +1012,7 @@ class _Planner:
         self.returned: Set[Tuple[Any, Any]] = set()
         self._records = records
         self._index: Optional[Dict[Tuple[str, Any], List[Tuple[Any, ...]]]] = None
+        self._contents = contents
 
     def close(self) -> None:
         for conn in self._open:
@@ -1751,6 +1753,21 @@ class _Planner:
                     conn, table, self.digests.function)))
                 for table in _capture_tables(conn)}
 
+    def _project_content(self) -> Dict[str, Tuple[Any, List[ContentRow]]]:
+        """The project's content, as `_content` reads it: once for a list
+        of several plans on one connection (`contents`, shared by them),
+        else for this plan. Raises as `_content` does."""
+        if self._contents is None:
+            return self._content(self.db_.conn)
+        if "project" not in self._contents:
+            try:
+                self._contents["project"] = self._content(self.db_.conn)
+            except ValueError:
+                self._contents["project"] = None
+        if self._contents["project"] is None:
+            raise ValueError("a value could not be digested")
+        return self._contents["project"]
+
     def _content_digests(self, rows: Dict[str, Tuple[Any, List[ContentRow]]],
                          aside: Optional[Dict[Tuple[str, Any], str]] = None
                          ) -> Tuple[Dict[str, str], Dict[str, ContentRow]]:
@@ -1870,7 +1887,7 @@ class _Planner:
         lock, the run's backup against the project outside the rows the
         record lists. False when refused here."""
         try:
-            now = self._content(self.db_.conn)
+            now = self._project_content()
         except ValueError:
             now = None
         differ = [] if now is None else self.written_since(change, now)
@@ -2055,7 +2072,8 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
          clock: Optional[float] = None,
          records: Optional[Sequence[Dict[str, Any]]] = None,
          compare_backup: bool = False,
-         journal_line: Optional[bytes] = None) -> Plan:
+         journal_line: Optional[bytes] = None,
+         contents: Optional[Dict[str, Any]] = None) -> Plan:
     """The plan for undoing these changes, newest first, read-only.
 
     `db_` is the connection's database object (the read-only one for the
@@ -2072,13 +2090,15 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
     own. A run is judged first against its content and, with
     `compare_backup` (a call's first plan, before SQLite's lock), its
     backup; `journal_line`, server.py's line for a run's journal entry,
-    kept rather than removed. A save of the names list is left to
-    server.py, in `names_list`."""
+    kept rather than removed; `contents`, a dictionary shared by a list
+    of several plans on one connection, in which the project's content
+    is read once. A save of the names list is left to server.py, in
+    `names_list`."""
     result = Plan()
     planner = _Planner(db_, secret=secret, project=project,
                        project_db=project_db, sessions=sessions,
                        receipts=receipts, records=records,
-                       journal_line=journal_line)
+                       journal_line=journal_line, contents=contents)
     try:
         located = []
         for receipt in dict.fromkeys(receipts):

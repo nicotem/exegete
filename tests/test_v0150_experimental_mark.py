@@ -32,9 +32,11 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import exegete.server as server                 # noqa: E402
 from exegete import names                       # noqa: E402
+from tool_counts import FULL_TOOLS              # noqa: E402
 
 TOOLSET, TOOLSET_OLD = names.SETTINGS["toolset"]
 AI, AI_OLD = names.SETTINGS["ai_coder_name"]
@@ -87,9 +89,10 @@ CHANGES = [
      "([the Terminal guide]"),
     # (the comparison table, and its row, gave way to the list of what is
     # not in Exegete yet)
+    # (v0.15.2, undo: the count is the snapshot's, tests/tool_counts.py)
     ("README.md",
      "| Create a project | Yes | Yes (Experimental) |",
-     "79: every tool, creating a project"),
+     f"{FULL_TOOLS}: every tool, creating a project"),
     # without the count, which the names-list piece moves
     ("README.md",
      "creating a project (Experimental) and two renamed tools' earlier "

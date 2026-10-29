@@ -637,8 +637,11 @@ class TestTheDocuments:
                 "([the Terminal guide]") in readme
         # (v0.15.2, the opening texts: the comparison table gave way, and
         # the two sets are the table's rows)
-        assert "| `full` | 79: every tool, creating a project" in readme
-        assert "| `core` | 27:" in readme
+        # (v0.15.2, undo: the counts are the snapshot's,
+        # tests/tool_counts.py)
+        assert (f"| `full` | {FULL_TOOLS}: every tool, creating a "
+                "project") in readme
+        assert f"| `core` | {CORE_TOOLS}:" in readme
 
     # Fix round 2
 

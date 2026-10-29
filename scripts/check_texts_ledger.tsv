@@ -873,6 +873,7 @@ ce7a477f889db4d6	src/exegete/server.py	path	request	seeded 27 October, to be rea
 a6d1776caf407cef	src/exegete/server.py	path	request	seeded 27 October, to be read	QualCoder 4.0 leaves no lock file, so ask the researcher once in this conversati
 289cc2d67afc4a4f	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder 4.0 leaves no lock file, so if the researcher uses QualCoder, ask them
 8156e28d1a860473	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder 4.0 opens this project without a message and without changing its form
+685fddc273a75386	src/exegete/server.py	path	qualcoder	said only on a sign that QualCoder is in use: an import's undo adds it when it finds QualCoder's file beside or inside the project	QualCoder 4.0's AI search index in this project (ai_data/search.sqlite) keeps th
 20590cff60ad5ecd	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder 4.0's AI search index in this project (ai_data/search.sqlite) still ho
 a6507972badc9329	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder 4.0's own assistant reads it as the project's context too.
 fb00188b7caa886c	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	QualCoder 4.0's tree UI instead deletes the whole branch INCLUDING codes and cod
@@ -891,6 +892,7 @@ f71b219d4b794dd0	src/exegete/server.py	served	qualcoder	seeded 27 October, to be
 99f389f91a6da53d	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder removes its own backups beyond the number its settings keep when it cl
 4ad9c8cabe3a38ce	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder reserves "default" for anyone who has not set a name
 1e1cc978f62b3d6a	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder's 'Kappa' column reproduced from the same counts (reports.py:1140-1151
+328b9086701ab901	src/exegete/server.py	path	qualcoder	said only on a sign that QualCoder is in use: an import's undo adds it when it finds QualCoder's file beside or inside the project	QualCoder's AI chat history in this project (ai_data/chat_history.sqlite) may qu
 553950adab15042f	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder's AI chat history in this project (ai_data/chat_history.sqlite) may qu
 ce23aaa7825ab757	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder's AI search index lists the file under its old name until QualCoder ne
 8b1c281b5d641820	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder's Agree %: (both + neither) / N, the observed agreement Po.
@@ -908,6 +910,7 @@ f422fb92f2ce8655	src/exegete/server.py	served	qualcoder	seeded 27 October, to be
 e11b730facc2606c	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	QualCoder's own _BKUP_ backups are NEVER removed.
 e11b730facc2606c	src/exegete/server.py	served	voice	seeded 27 October, to be read	QualCoder's own _BKUP_ backups are NEVER removed.
 6a893e478c362f17	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	QualCoder's own _BKUP_ backups are never touched.
+0841c53ca960b136	src/exegete/server.py	path	qualcoder	said only on a sign that QualCoder is in use: an import's undo adds it when it finds QualCoder's file beside or inside the project	QualCoder's own backups beside the project may hold the originals too.
 84c4aedd27977bc5	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	QualCoder's text and transcript imports (not PDFs) apply the file one entry at a
 346a0bb2190706df	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Quick picks: "AI Coding Assistant" (Exegete's built-in default), "AI Agent" (Qua
 127dfb38be1d4260	src/exegete/server.py	path	voice	seeded 27 October, to be read	Quote both, say which is which, and never call either one simply 'kappa'.
@@ -980,7 +983,6 @@ ad7671bfd0ce947b	src/exegete/server.py	path	voice	seeded 27 October, to be read	
 5ffa41842fbd8bfd	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The database is copied with SQLite's own online backup, so a backup taken while 
 e9f48aa3b737cf02	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The database is copied with SQLite's own online backup, so a copy taken while Qu
 c91eca5064e1fdb2	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The date is compared as stored text, which equals chronological order for every 
-a8c559196506a91d	src/exegete/server.py	path	voice	seeded 27 October, to be read	The destructive codebook tools, restore_backup and prune_backups are two-step: c
 b196356792227b0e	src/exegete/server.py	served	voice	seeded 27 October, to be read	The execute is REFUSED on a typed mapping unless one of these two is true: the m
 250eb09084ba5c2a	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The exported FILE carries every coder's counts, as QualCoder's own frequencies r
 250eb09084ba5c2a	src/exegete/server.py	path	voice	seeded 27 October, to be read	The exported FILE carries every coder's counts, as QualCoder's own frequencies r

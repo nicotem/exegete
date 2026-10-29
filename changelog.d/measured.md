@@ -15,10 +15,10 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 - `undo_changes` joins both sets, 1,977 characters in each.
 - The opening text is 8 characters longer. The rewrite of the opening
-  texts added 12, saying once what QualCoder is. Rule 8 now names
-  undoing a change, as one instruction 4 characters shorter, so that
-  the text stays within 2,048 characters. The brief in `core`, which
-  is the opening text's rules, changes by the same 8.
+  texts added 12. Rule 8 now names undoing a change, as one instruction
+  4 characters shorter, so that the text stays within 2,048
+  characters. The brief in `core`, which is the opening text's rules,
+  changes by the same 8.
 - The full brief is 510 characters longer. The rewrite of the opening
   texts added 184. The lines on undoing a change added 326: how a
   change is undone, and that an undone pseudonymisation run brings the

@@ -15757,6 +15757,23 @@ def _undo_names_list_refused(change: undo.ChangePlan,
             "refusals": refusals, "nothing_changed": True}
 
 
+def _names_list_from_backup(backup: Path, change: undo.ChangePlan,
+                            secret: str) -> bytes:
+    """The save's backup's names list, read to be written back: refused
+    (ValueError) when it is a link, or when its bytes are not the list
+    judged before the undo's own backup was taken (the record's
+    "before")."""
+    source = backup / PSEUDONYMS_JSON_NAME
+    if source.is_symlink():
+        raise ValueError("the backup's names list is a link")
+    data, _mode = read_pseudonyms_json_bytes(source)
+    if change_record.digest(secret, "names list",
+                            hashlib.sha256(data).hexdigest()) != \
+            change.record["names_list"]["before"]:
+        raise ValueError("the backup's names list is not the one judged")
+    return data
+
+
 def _write_names_list_back(folder: Path, data: bytes,
                            mode: Optional[int]) -> Path:
     """The backup's names list written in binary, unchanged, to a
@@ -15853,16 +15870,8 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
             tmp: Optional[Path] = None
             try:
                 if restores:
-                    source = backup / PSEUDONYMS_JSON_NAME
-                    if source.is_symlink():
-                        raise ValueError("the backup's names list is a link")
-                    data, _mode = read_pseudonyms_json_bytes(source)
-                    if change_record.digest(
-                            context[0], "names list",
-                            hashlib.sha256(data).hexdigest()) != \
-                            change.record["names_list"]["before"]:
-                        raise ValueError("the backup's names list is not "
-                                         "the one judged")
+                    data = _names_list_from_backup(backup, change,
+                                                   context[0])
                     _now_data, mode = read_pseudonyms_json_bytes(target)
                     tmp = _write_names_list_back(folder, data, mode)
                 # The lock file does not keep every program from the

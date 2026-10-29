@@ -359,8 +359,11 @@ def _tools(mode="full"):
 # Exegete sends before a project opens; the paragraph on practising
 # gives its facts in short sentences (one line less); and the five
 # checks help keep files out of Claude's reach (one line more). The
-# figures are the README's own: 40,246 in 625 lines.
-README_LIMIT = 40_246
+# figures are the README's own: 40,246 in 625 lines. The list of
+# projects tells an assistant where each listed project is, as
+# QUICKSTART's readers found the list reads its usual places, not the
+# whole computer: 7 characters more, 40,253 in 625 lines.
+README_LIMIT = 40_253
 README_LINES = 625
 
 

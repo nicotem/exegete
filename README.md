@@ -346,10 +346,10 @@ Practise on text that is not from a participant, such as a page you
 write. Codex and Claude Code open files on your computer by themselves,
 outside Exegete. A study kept on the same computer is within their
 reach, wherever your practice projects are, and Exegete's list of
-projects tells them where each project is. What they open goes to their
-AI provider. While training is on, the AI provider may train its models
-on it. If that matters for a study, you could work on that study in
-Claude Desktop's chat.
+projects tells them where each listed project is. What they open goes
+to their AI provider. While training is on, the AI provider may train
+its models on it. If that matters for a study, you could work on that
+study in Claude Desktop's chat.
 
 Ask the assistant to "Create a new project in Exegete called Practice".
 With the extension or OpenAI's steps, the project is made, by default,

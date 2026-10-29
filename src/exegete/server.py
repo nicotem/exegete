@@ -23544,7 +23544,10 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
 # (v0.12). An MCP host never presents a TTY on stdin, so the notice only
 # ever appears in that situation; it goes to stderr (stdout is the MCP
 # transport) and Exegete keeps waiting as before. The hosts' configurations
-# are in the Terminal guide (v0.15.2), which the notice names by its path.
+# are in the Terminal guide (v0.15.2), which the notice gives by its web
+# address: an install from PyPI holds the package alone, with no docs
+# folder (private_files.PRIVACY_ADDRESS is given the same way). The
+# address ends the notice, so that a terminal's link takes nothing after it.
 TTY_NOTICE = (
     f"{names.SERVER_NAME} is a qualitative analysis application that runs "
     "as an MCP server. It is normally started by an MCP host "
@@ -23553,10 +23556,11 @@ TTY_NOTICE = (
     "a terminal it prints its start-up lines and this note, then waits for a "
     "host that is not there. To "
     f"check that the installation works, run '{names.COMMAND} --version' (or "
-    f"'python -m {names.PACKAGE}.server --version'). To use "
-    f"{names.SERVER_NAME}, add it to your host's MCP configuration, as the "
-    "Terminal guide (docs/installing-from-the-terminal.md) describes. Press "
-    "Ctrl+C to stop this process."
+    f"'python -m {names.PACKAGE}.server --version'). Press Ctrl+C to stop "
+    f"this process. To use {names.SERVER_NAME}, add it to your host's MCP "
+    f"configuration, as the Terminal guide on {names.SERVER_NAME}'s page "
+    "describes: https://github.com/nicotem/exegete/blob/main/docs/"
+    "installing-from-the-terminal.md"
 )
 
 

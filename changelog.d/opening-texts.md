@@ -16,16 +16,16 @@
 
 ### Documents
 
-- **README.md is shorter and plainer**: 500 lines, from 682, in the
-  voice of the writing guide. It mentions QualCoder only where a
+- **README.md is plainer and a little shorter**: 625 lines, from 682,
+  in the voice of the writing guide. It mentions QualCoder only where a
   sentence is about QualCoder or offers it as a choice, explains "the AI
   provider" once, and gives its warnings as what could happen and what you could
   do. It says that the desktop extension works on Claude's Free plan, as
   Claude's pricing page listed it on 28 October 2026, and presents a
-  local model as a route to consider for particular uses. The diagrams
-  and the map of the repository give way to prose and links. The lists
-  of tools are left to TOOLS.md, and Claude Code's figures to the guide
-  to installing from the Terminal. Before that guide's steps for
+  local model as a route to consider for particular uses. The
+  drawings, the table of the two programs, the groups of tools and the
+  map stay, rewritten. The map names the new documents. Claude Code's
+  figures are in the guide to installing from the Terminal. Before that guide's steps for
   OpenAI's apps it gives the training switch, and where it sends Claude
   Code's users it says that Claude Code opens files by itself.
 - **QUICKSTART.md** is rewritten in the same voice, within 250 lines.

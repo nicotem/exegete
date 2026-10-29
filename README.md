@@ -107,6 +107,31 @@ project in Exegete, from its creation to the finished analysis.
 
 ## How it works
 
+Exegete runs on your computer. It has no AI of its own.
+
+```text
+┌─ Your computer ──────────────────────────────────┐
+│  You ─ ask ─► Assistant app ◄────────────────────┼─┐
+│               (Claude Desktop, ChatGPT...)       │ │
+│                    │ uses Exegete's tools        │ │
+│                    │ (MCP, on this computer)     │ │
+│                    ▼                             │ │
+│               Exegete (no AI of its own)         │ │
+│                    │ reads (read-only) and       │ │
+│                    │ changes its database        │ │
+│                    │ only after a backup         │ │
+│                    ▼                             │ │
+│               Your project, in QualCoder's       │ │
+│               format                             │ │
+│                    ▲ one program at a time       │ │
+│               QualCoder, if you use it           │ │
+└──────────────────────────────────────────────────┘ │
+  The AI model, on the AI provider's computers ◄─────┘
+  (or yours, if local): what the assistant reads
+  through Exegete goes there. Some assistants also
+  open files by themselves: see below.
+```
+
 **When anything is written.** Reading changes nothing in your project.
 Suggested codings and proposed codes wait in a review list outside the
 project. The assistant is told to show you each passage with its label
@@ -118,6 +143,28 @@ or deleting codes and categories, replacing names, restoring a backup or
 clearing old ones, bringing documents in, correcting your own coder name
 and saving the names list. Coding with the assistant is described in
 [AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md).
+
+A suggested coding takes this path:
+
+```text
+You ask        "Suggest codings for coping in Interview 3"
+  │
+  ▼
+The assistant  reads the file through Exegete and suggests.
+  │            Exegete checks each quote is the file's own words
+  ▼
+Review list    outside your project, not yet written. The
+  │            assistant is told to show you each passage with
+  │            its label and its reason
+  ▼
+You decide     approve, reject or reopen, in the conversation.
+  │            The assistant passes it on: check the counts
+  ▼
+Apply          Exegete checks again, takes a backup, then
+  │            writes every approved coding, or none
+  ▼
+Your project   the codings, under the AI coder name you chose
+```
 
 **Your approval, and its limit.** Exegete hears only from the assistant,
 so it records the approval the assistant reports and cannot tell whether

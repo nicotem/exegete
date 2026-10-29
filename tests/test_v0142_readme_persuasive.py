@@ -5,11 +5,11 @@ advertising features present and future, and the table about different
 model configuration. And it's wordy.").
 
 Pinned here: the length the rewrite reached, so that the README cannot
-grow back; the example, and any fenced block (their width, and only
-characters that render one column wide on GitHub and on PyPI; since
-v0.15.2's opening texts the three diagrams are prose); what the
-architecture diagram drew, and the path of a coding, each step a
-behaviour of the server; the example's steps, in order, each one the
+grow back; the example, and the two diagrams (their width, and only
+characters that render one column wide on GitHub and on PyPI; prose in
+v0.15.2's opening texts, back by the owner's word of 29 October 2026);
+the architecture diagram's labels and borders, and the path of a coding,
+each step a behaviour of the server; the example's steps, in order, each one the
 software takes; the assistants table against PRIVACY.md's verdicts,
 with the paragraph before it and the sentence after it; the tool-set table against the server's
 tool sets and the CHANGELOG's measurement; the advanced section's tool
@@ -58,6 +58,11 @@ def _section(heading, following):
 
 def _blocks(text):
     return re.findall(r"(?ms)^```text\n(.*?)^```", text)
+
+
+def _words(block):
+    """A diagram's words, its drawing characters left out."""
+    return " ".join("".join(c for c in block if c not in DRAWING).split())
 
 
 
@@ -327,8 +332,14 @@ def _tools(mode="full"):
 # route, keeping QualCoder 4.0's server apart, and Claude Code's figures.
 # The guide's longer path and name take 311 characters more within the
 # same 500 lines: 33,096.
-README_LIMIT = 33_096
-README_LINES = 500
+# The owner's word of 29 October 2026: the drawings, the table, the map
+# and the groups back; about 600 lines. The README's length is no strict
+# cap: each block restored raises the figures by what it takes.
+# The two drawings in "How it works", the architecture after the two
+# sentences it had before it and a coding's path after "When anything is
+# written", take 1,857 characters and 47 lines: 34,953 in 547 lines.
+README_LIMIT = 34_953
+README_LINES = 547
 
 
 def test_the_readme_stays_short():
@@ -368,8 +379,9 @@ def test_the_blocks_render_alike_everywhere():
     # a phone, where a code block shows about 32 characters of each line)
     # v0.15.2, the opening texts: the three diagrams gave way to prose
     # within the README's 500 lines ("How it works", and links to the
-    # documents), so no fenced block is left
-    assert len(blocks) == 0
+    # documents); the owner's word of 29 October 2026 brought them back,
+    # the architecture and a coding's path in "How it works"
+    assert len(blocks) == 2
     for block in blocks:
         assert _diagram_faults(block) == []
     # every fenced block is marked text, and nothing PyPI shows as source
@@ -389,7 +401,53 @@ def test_the_diagram_check_would_notice():
 def test_the_architecture_diagram():
     """v0.15.2, the opening texts: the diagram gave way to prose within
     the README's 500 lines; what it drew is said in words, each still
-    true of the code."""
+    true of the code. The owner's word of 29 October 2026 brought the
+    diagram back in "How it works", in the writing checklist's words:
+    the AI provider, QualCoder as a choice, the database the backup
+    covers."""
+    section = _section("How it works", "Where your data goes")
+    # the two sentences it had before it
+    before = _flat(section[:section.index("```text")])
+    assert before == ("## How it works Exegete runs on your computer. It has "
+                      "no AI of its own.")
+    block = _blocks(section)[0]
+    flat = _words(block)
+    # v0.14.2, the README's first round of checks: the technical labels
+    # 0.14.0's diagram had, and a pointer to the assistants that open
+    # files by themselves
+    for label in ("Your computer", "You ask Assistant app",
+                  "uses Exegete's tools (MCP, on this computer)",
+                  "Exegete (no AI of its own)",
+                  # the two writes outside the database take no backup
+                  # ("Go back", below)
+                  "reads (read-only) and changes its database only after "
+                  "a backup",
+                  "Your project, in QualCoder's format",
+                  "one program at a time", "QualCoder, if you use it",
+                  "The AI model, on the AI provider's computers",
+                  "(or yours, if local): what the assistant reads through "
+                  "Exegete goes there. Some assistants also open files by "
+                  "themselves: see below."):
+        assert label in flat, label
+    assert ("Setting the AI coder name and preparing the names file take "
+            "none.") in _flat(_section("What you can do", "How it works"))
+    lines = block.splitlines()
+    # the box closes, its right border in one column
+    column = lines[0].index("┐")
+    bottom = next(i for i, line in enumerate(lines) if line.startswith("└"))
+    for line in lines[1:bottom + 1]:
+        assert line[column] in "│┼┘", line
+    # no arrow from Exegete to the AI: Exegete sends nothing itself; the
+    # line to the AI leaves from the assistant app's row only, and reaches
+    # the AI's row in one column
+    assistant = next(line for line in lines if "Assistant app" in line)
+    assert assistant.endswith("┼─┐")
+    connector = len(assistant) - 1
+    for line in lines[1:bottom + 2]:
+        assert line[connector] in "┐│┘", line
+    assert sum(line.rstrip().endswith("┐") for line in lines) == 2
+    exegete = next(line for line in lines if "Exegete (no AI" in line)
+    assert not set("◄►") & set(exegete)
     readme = _flat(_read("README.md"))
     opening = readme[:readme.index("## What you can do")]
     # (v0.15.2, the readability reading: a sentence to each fact)
@@ -418,8 +476,31 @@ def test_the_architecture_diagram():
 
 def test_the_path_of_a_coding():
     # v0.15.2, the opening texts: the path drawn as a diagram is said in
-    # "How it works", each step a behaviour of the server
-    section = _flat(_section("How it works", "Where your data goes"))
+    # "How it works", each step a behaviour of the server; the owner's
+    # word of 29 October 2026 brought the drawing back after "When
+    # anything is written", led by a sentence of its own
+    raw = _section("How it works", "Where your data goes")
+    block = _blocks(raw)[1]
+    assert raw.index("**When anything is written.**") < raw.index(
+        "\nA suggested coding takes this path:\n\n```text\n") < raw.index(
+        block)
+    steps = [re.split(r"\s{2,}", line)[0] for line in block.splitlines()
+             if line and not line.startswith(" ")]
+    assert steps == ["You ask", "The assistant", "Review list",
+                     "You decide", "Apply", "Your project"]
+    drawn = _words(block)
+    for words in ("reads the file through Exegete and suggests. Exegete "
+                  "checks each quote is the file's own words",
+                  "outside your project, not yet written. The assistant is "
+                  "told to show you each passage with its label and its "
+                  "reason",
+                  "approve, reject or reopen, in the conversation. The "
+                  "assistant passes it on: check the counts",
+                  "Exegete checks again, takes a backup, then writes every "
+                  "approved coding, or none",
+                  "the codings, under the AI coder name you chose"):
+        assert words in drawn, words
+    section = _flat(raw)
     # (v0.15.2, the readability reading: one step to a sentence)
     for words in ("Suggested codings and proposed codes wait in a review "
                   "list outside the project. The assistant is told to show "

@@ -135,6 +135,13 @@ def test_how_it_works_explains_before_it_instructs():
     # what Exegete checks: the quoted words, not whether the code fits
     assert "quotes the text word for word, which Exegete checks" in \
         _readme()
+    # the owner's word of 29 October 2026: the drawings back, the first
+    # after the two sentences it had before it, the second saying what
+    # Exegete checks (record_suggestions' verbatim check)
+    for words in ("## How it works Exegete runs on your computer. It has no "
+                  "AI of its own. ```text",
+                  "Exegete checks each quote is the file's own words"):
+        assert words in section, words
     for words in (
             # when anything is written, and not more than that: approving
             # marks, and the assistant writes in a step of its own

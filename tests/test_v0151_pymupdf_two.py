@@ -405,6 +405,13 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     assert ("Exegete switches its reports off: on Linux before the library "
             "starts, so it reports nothing there, and on Windows once it "
             "has loaded, after its first few reports") in flows
+    # (the fix round: "nothing there" holds for the release the lock
+    # gives, so the pointer names the switch's limits, which say so)
+    assert ("\"A library's usage reports\", below, says what they hold, "
+            "the switch's limits, and what you can do.") in flows
+    assert ("Another release of onnxruntime, installed other than through "
+            "Exegete's lock, may treat the setting and the switch "
+            "differently.") in flows
     summary = _flat_section("PRIVACY.md", "## Where your data goes, in "
                             "short")
     assert ("**On Windows x64**, a library Exegete installs to read PDFs "
@@ -457,6 +464,18 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     # the passages that say what else leaves the computer point to the part
     pointer = "a library Exegete installs for PDFs also reports its use"
     assert pointer in " ".join(flows.split())
+    # (the fix round: the checklist's question on what Exegete connects
+    # to, which says what a data-management plan can state, names them)
+    checklist = _flat_section("PRIVACY.md",
+                              "## Before you use real participant data")
+    connects = checklist[checklist.index("**What Exegete itself connects "
+                                         "to.**"):]
+    connects = connects[:connects.index(" - **")]
+    assert ("On Windows x64, " + pointer + " to Windows' diagnostic data, "
+            "with nothing from your documents (\"A library's usage "
+            "reports\", under \"How your data flows\").") in connects
+    assert connects.index("Windows' diagnostic data") < connects.index(
+        "it can say this")
     governance = _flat_section("PRIVACY.md", "## Your governance options")
     assert ("though on Windows x64 a library it installs for PDFs reports "
             "its use to Windows") in governance

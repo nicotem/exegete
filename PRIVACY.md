@@ -115,9 +115,12 @@ officer will ask, and the summary above depends on them:
   a week, and when you ask, Exegete requests a small public file, and
   the request carries nothing from your projects. GitHub, which hosts
   the file, records your computer's internet address ("Checking for new
-  versions"). If your ethics application or data-management plan says
-  what the software you use connects to, it can say this, or you can
-  switch the check off.
+  versions"). On Windows x64, a library Exegete installs for PDFs also
+  reports its use to Windows' diagnostic data, with nothing from your
+  documents ("A library's usage reports", under "How your data flows").
+  If your ethics application or data-management plan says what the
+  software you use connects to, it can say this, or you can switch the
+  check off.
 - **Which assistant, and whether it opens files by itself.** Codex,
   Claude Code and Claude's Cowork can open files on your computer by
   themselves, outside Exegete, and what they read that way goes to
@@ -180,7 +183,8 @@ read, with nothing from your documents. Left as it comes, that library
 would report on Linux too. Exegete switches its reports off: on Linux
 before the library starts, so it reports nothing there, and on Windows
 once it has loaded, after its first few reports. "A library's usage
-reports", below, says what they hold, and what you can do.
+reports", below, says what they hold, the switch's limits, and what you
+can do.
 
 Exegete opens your project's database read-only by default. The one
 thing it fetches from the internet itself, while switched on, is a

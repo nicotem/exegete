@@ -15290,7 +15290,8 @@ def _undo_list(context) -> Dict[str, Any]:
             reasons, _backup, _state = _undo_names_list_judge(
                 plan.names_list, context)
             if reasons:
-                refused = _undo_names_list_refused(plan.names_list, reasons)
+                refused = _undo_names_list_refused(plan.names_list, reasons,
+                                                   context[1])
         elif plan.can_run and plan.originals:
             _undo_refuse_originals(plan, _read_originals(plan, context))
         if refused is None and not plan.can_run:
@@ -15597,8 +15598,10 @@ def _backups_since(plan: undo.Plan, exclude: Optional[str] = None) -> int:
     """The backups Exegete made beside the project since the first of the
     undone imports, the one named `exclude` left out: each holds the
     originals and their text. Ordered by the time and number in their
-    names, after the import's own backup (taken just before it), or, with
-    that one gone, from the second after the import's record."""
+    names, after the import's own backup (taken before it), or, with that
+    one gone, from the second of the import's record: a backup of that
+    second may have come before the import, and is counted all the same,
+    since a count too low would leave copies of the originals unsaid."""
     imports = [c for c in plan.changes if c.tool in undo.FILES_TOOLS]
     if not imports:
         return 0
@@ -15614,7 +15617,7 @@ def _backups_since(plan: undo.Plan, exclude: Optional[str] = None) -> int:
         own = [name for name in keys if change_record.digest(
             secret, "backup", name) == first.record.get("backup")]
         since = (keys[own[0]] if own else
-                 (datetime.fromtimestamp(int(first.time) + 1), 0))
+                 (datetime.fromtimestamp(int(first.time)), 0))
         return sum(1 for name, key in keys.items()
                    if name != exclude and (key > since if own
                                            else key >= since))
@@ -15741,13 +15744,49 @@ def _undo_names_list_judge(change: undo.ChangePlan, context
     return reasons, backup, state
 
 
+def _later_names_list_saves(change: undo.ChangePlan, project: str
+                            ) -> Dict[str, Any]:
+    """The saves of the names list Exegete recorded on this project after
+    this one and not undone since: this run's by their receipts, oldest
+    first, another run's counted. Undone first, they bring the list back
+    to what this save wrote."""
+    receipts: Dict[str, float] = {}
+    others = 0
+    for record in change_record.records(project):
+        when = record.get("time")
+        if record.get("route") != change_record.NAMES_LIST_ROUTE or \
+                record.get("receipt") == change.receipt or \
+                change.time is None or \
+                not isinstance(when, (int, float)) or when <= change.time:
+            continue
+        if record.get("run") == change_record.RUN:
+            receipts[record["receipt"]] = when
+        else:
+            others += 1
+    out: Dict[str, Any] = {}
+    if receipts:
+        out["later_changes"] = sorted(receipts, key=receipts.get)
+    if others:
+        out["later_changes_elsewhere"] = others
+    return out
+
+
 def _undo_names_list_refused(change: undo.ChangePlan,
-                             reasons: Sequence[str]) -> Dict[str, Any]:
-    refusals = [{"undo_receipt": change.receipt, "tool": change.tool,
-                 "reason": reason,
-                 "message": _mark_unregistered(
-                     UNDO_REFUSAL_TEXTS[reason].format(tool=change.tool))}
-                for reason in reasons]
+                             reasons: Sequence[str],
+                             project: Optional[str] = None
+                             ) -> Dict[str, Any]:
+    """The answer to a save of the names list that cannot be undone now;
+    a list changed since names the later saves Exegete recorded."""
+    refusals = []
+    for reason in reasons:
+        entry: Dict[str, Any] = {
+            "undo_receipt": change.receipt, "tool": change.tool,
+            "reason": reason,
+            "message": _mark_unregistered(
+                UNDO_REFUSAL_TEXTS[reason].format(tool=change.tool))}
+        if reason == undo.NAMES_LIST_CHANGED and project is not None:
+            entry.update(_later_names_list_saves(change, project))
+        refusals.append(entry)
     return {"error": UNDO_REFUSED.format(refused=1, total=1),
             "refusals": refusals, "nothing_changed": True}
 
@@ -15794,7 +15833,7 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
     folder = context[3].parent
     reasons, backup, state = _undo_names_list_judge(change, context)
     if reasons:
-        return _undo_names_list_refused(change, reasons)
+        return _undo_names_list_refused(change, reasons, context[1])
     restores = change.record["names_list"]["before"] is not None
     preview: Dict[str, Any] = {
         "changes": [{"undo_receipt": change.receipt, "tool": change.tool}],
@@ -15833,7 +15872,7 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
         with hold_project_lock(folder):
             reasons, backup, again = _undo_names_list_judge(change, context)
             if reasons:
-                return _undo_names_list_refused(change, reasons)
+                return _undo_names_list_refused(change, reasons, context[1])
             if again != state:
                 return _token_error(PROJECT_CHANGED, "undo_changes")
             now = pseudonyms_json_fingerprint(folder)
@@ -15852,6 +15891,12 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
                     if source.is_symlink():
                         raise ValueError("the backup's names list is a link")
                     data, _mode = read_pseudonyms_json_bytes(source)
+                    if change_record.digest(
+                            context[0], "names list",
+                            hashlib.sha256(data).hexdigest()) != \
+                            change.record["names_list"]["before"]:
+                        raise ValueError("the backup's names list is not "
+                                         "the one judged")
                     _now_data, mode = read_pseudonyms_json_bytes(target)
                     tmp = _write_names_list_back(folder, data, mode)
                 # The lock file does not keep every program from the
@@ -18632,8 +18677,10 @@ UNDO_REFUSAL_TEXTS = {
     undo.NAMES_LIST_CHANGED: (
         "The project's names list has changed since this save, or has been "
         "removed, so undoing the save would also take that later change "
-        "back. save_names_list can save the list again from the names file; "
-        "its preview says what would change."),
+        "back. later_changes gives the receipts of later saves of the list "
+        "this conversation's Exegete made: undo them first, newest first, "
+        "then this one. Otherwise save_names_list can save the list again "
+        "from the names file; its preview says what would change."),
 }
 # The answer to a call whose plan has refusals
 UNDO_REFUSED = (

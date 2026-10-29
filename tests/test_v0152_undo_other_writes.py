@@ -19,9 +19,11 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 import sqlite3
 import time
 from contextlib import closing
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -545,6 +547,29 @@ class TestTheImport:
                       caplog.text):
             assert "Quill" not in shown
 
+    def test_backups_of_the_imports_second_count_once_its_own_is_gone(
+            self, project, scratch_folders, monkeypatch):
+        """With the import's own backup gone, the backups since are counted
+        from the second of the import's record, that second included: two
+        backups taken in it after the import both hold the original."""
+        clock = change_record.now
+        monkeypatch.setattr(change_record, "now", lambda: clock() + 60)
+        _, receipt, _found = an_import(project)
+        monkeypatch.setattr(change_record, "now", clock)
+        shutil.rmtree(backup_of(receipt))
+        made = backups(project)
+        for name in ("Belonging", "Place"):
+            call(server.create_code, name=name)
+        later = sorted(backups(project) - made)
+        assert len(later) == 2
+        second = datetime.fromtimestamp(int(record_of(receipt)["time"]))
+        for number, name in zip((7, 8), later):
+            os.rename(str(project.parent / name), str(
+                project.parent / f"{project.stem}_backup_"
+                f"{second:%Y%m%d_%H%M%S}_{number}.qda"))
+        stays = undo_preview(receipt)["preview"]["what_stays"]
+        assert stays["backups_since_import"] == 2
+
     def test_a_documents_folder_made_a_link_keeps_the_file_it_reaches(
             self, project, scratch_folders):
         """The folder of originals made a link since the import, to a
@@ -899,6 +924,46 @@ class TestTheNamesList:
         (project / "pseudonyms.json").write_bytes(EARLIER_LIST + b" ")
         refused = unchanged_by(project, lambda: undo_preview(receipt))
         assert reasons(refused) == {undo.NAMES_LIST_CHANGED}
+
+    def test_a_later_save_is_named_and_undone_first(self, project):
+        """A later save of the list Exegete recorded is named by its
+        receipt in the earlier save's refusal; undone first, it lets the
+        earlier save be undone, here by removing the list it made."""
+        first = a_save(project, earlier=None)
+        place = names_file(project)
+        place.write_text(place.read_text(encoding="utf-8-sig")
+                         + "Ada Quill = Participant Y\n", encoding="utf-8")
+        text = two_step(server.save_names_list)
+        assert answer(text).get("success"), text
+        second = receipt_of(text)
+        refused = unchanged_by(project, lambda: undo_preview(first))
+        assert refusal(refused, undo.NAMES_LIST_CHANGED)[
+            "later_changes"] == [second]
+        assert undo_run(second)["success"] is True
+        assert undo_run(first)["success"] is True
+        assert not (project / "pseudonyms.json").exists()
+
+    def test_a_backups_list_changed_after_the_judgement_is_not_written(
+            self, project, monkeypatch):
+        """The save's backup's list read again to be written back is the one
+        judged: changed in between, the undo is refused, its own backup
+        named, and the list stays as it is."""
+        receipt = a_save(project)
+        now = (project / "pseudonyms.json").read_bytes()
+        preview = undo_preview(receipt)
+        held = backup_of(receipt) / "pseudonyms.json"
+        real_backup = server.backup_project
+
+        def backup_then_edit(folder, *args, **kwargs):
+            made = real_backup(folder, *args, **kwargs)
+            held.write_bytes(EARLIER_LIST + b" ")
+            return made
+        monkeypatch.setattr(server, "backup_project", backup_then_edit)
+        refused = answer(server.undo_changes(
+            receipts=[receipt], preview_token=preview["preview_token"]))
+        assert refused["nothing_changed"] is True, refused
+        assert Path(refused["backup_path"]).name in backups(project)
+        assert (project / "pseudonyms.json").read_bytes() == now
 
     def test_a_list_written_during_the_undos_backup_is_kept(
             self, project, monkeypatch):

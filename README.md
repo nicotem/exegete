@@ -445,8 +445,7 @@ so that its results match QualCoder's exactly.
 Whatever analytic work QualCoder offers should also be possible from the
 conversation. Today the two programs differ in both directions. The
 table sets QualCoder 3.8.2 and 4.0, as checked on 10 October 2026,
-beside Exegete 0.15.2: its REFI-QDA row gives the export as it is before
-the planned REFI-QDA fix.
+beside Exegete 0.15.2.
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
@@ -598,11 +597,12 @@ github.com/nicotem/exegete
 Plans, not promises: the order may change with what testers report.
 [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md) says what each release changed.
 
-- v0.15.2: undo a session's changes; when replacing names, choose which
-  mentions to keep; the REFI-QDA export fixed, except for media; PyMuPDF
-  2.0, the newer library that reads PDFs, on Apple silicon Macs
+- v0.15.2: undo, which takes back a change Exegete made, whole, for a day
 - v0.15.3: coding sessions kept with their project; stricter checks on
-  the names of codes, categories and cases; other small corrections
+  the names of codes, categories and cases; when replacing names, choose
+  which mentions to keep; the REFI-QDA export fixed, except for media;
+  PyMuPDF 2.0, the newer library that reads PDFs, on Apple silicon Macs;
+  other small corrections
 - v0.15.4, method: a review of how the assistant supports a study's
   method; shorter tool descriptions; and retiring the earlier names of
   the two renamed tools and the tools' backup option, which Exegete

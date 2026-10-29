@@ -2324,7 +2324,8 @@ def _core_reachable_texts():
                "TOKEN_ERROR_TEXTS_BY_TOOL", "KEYED_BIND",
                # v0.15.2, undo_changes in core: tools' names compared with
                # the name a change's record keeps, never served
-               "NOT_YET_UNDOABLE_TOOLS", "SESSION_MARKS"}
+               "OWN_ROUTES", "FILES_TOOLS", "CODER_NAME_TOOLS",
+               "SESSION_MARKS"}
 
     def refs(node):
         out = set()

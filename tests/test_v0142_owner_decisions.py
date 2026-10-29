@@ -190,8 +190,12 @@ def test_install_and_privacy_give_the_same_advice():
                   "Rating a reply (thumbs up or down) can still let either "
                   "provider train on that conversation",
                   "(rung 1, the first of the governance options in \"Your "
-                  "governance options\", below)"):
+                  "governance options\", below)",
+                  # (the fix round: the terms' second exception)
+                  "By its terms, Anthropic can also train on a conversation "
+                  "flagged for a safety review (rung 1)."):
         assert words in item, words
+    assert "(2) your Materials are flagged for safety review" in rung_one
     assert "maker" not in checklist
     assert privacy.index("rung 1, the first of the governance options") \
         == privacy.lower().index("rung")
@@ -256,6 +260,18 @@ def test_quickstart_dates_the_setting_as_privacy_does():
                      "If you have no project yet, ask Claude")
     assert ("https://claude.ai/settings/data-privacy-controls switches "
             f"training off, as Anthropic's pages said on {date}.") in step5
+    # (the fix round: the sentence on rating a reply is a claim about the
+    # same terms, so it is dated by them, and it names their second
+    # exception, which the terms PRIVACY quotes that day give)
+    assert ("The same pages said that rating a reply, with a thumbs up or "
+            "down, can still let Anthropic train on that conversation, and "
+            "so can its being flagged for a safety review.") in step5
+    rung_one = _between(_flat("PRIVACY.md"), "### Rung 1:", "### Rung 2:")
+    exceptions = rung_one[rung_one.index("Exceptions that apply whatever "
+                                         "the setting"):]
+    assert f"(Consumer Terms, quoted {date}" in " ".join(exceptions.split())
+    for words in ("(1) you provide Feedback", "flagged for safety review"):
+        assert words in exceptions, words
 
 
 # ---------------------------------------------------------------------------
@@ -343,17 +359,26 @@ def test_quickstart_gives_the_warning_in_short_sentences():
     on Claude Code gives the warning's facts in short sentences: Claude
     Code opens files by itself; a study on the same computer is in its
     reach wherever the practice projects are, and Exegete's list of
-    projects says where each project is; what it opens goes to Anthropic,
-    which may train on it; and the chat, with its three conditions, as a
-    suggestion."""
+    projects says where each project it lists is; what it opens goes to
+    Anthropic, which may train on it; and the chat, with its three
+    conditions, as a suggestion. The fix round: the reason for the empty
+    folder, straight after it (PRIVACY.md, "Assistants that open files
+    by themselves", says the same of Claude Code)."""
     section = _between(_flat("QUICKSTART.md"),
                        "### Claude Code instead of Claude Desktop",
                        "## Installation steps")
+    reason = ("Started in your home folder, or in one that holds a study, "
+              "Claude Code reads that study without asking.")
+    assert section.index("in an empty folder") < section.index(reason)
+    assert ("Claude Code started in your home folder, your projects folder "
+            "or a study's folder, or given one of them as a working folder, "
+            "reads the studies there without asking") in _flat("PRIVACY.md")
     for sentence in (
+            reason,
             "Claude Code opens files by itself, outside Exegete.",
             "A study kept on the same computer is within its reach, "
             "wherever your practice projects are, and Exegete's list of "
-            "projects tells it where each project is.",
+            "projects tells it where each listed project is.",
             "What Claude Code opens goes to Anthropic, the AI provider "
             "that runs its model.",
             "While training is on, Anthropic may train its models on it.",
@@ -384,6 +409,31 @@ def test_the_list_of_projects_finds_a_study_beside_practice_projects(
     found = json.loads(server.list_available_projects())
     paths = {Path(project["path"]) for project in found["projects"]}
     assert {practice, study} <= paths, found
+
+
+def test_the_list_of_projects_holds_its_usual_places_alone(
+        tmp_path, monkeypatch):
+    """The fact behind "each listed project" (the fix round): Exegete's
+    list of projects walks its usual places, Documents among them, three
+    levels deep, and a workspace's top level, so a study kept in a folder
+    of another name is not on it, and the list says where the projects on
+    it are, not where every project is."""
+    import json
+    from exegete import names
+    home = tmp_path / "home"
+    listed = home / "Documents" / "Study.qda"
+    elsewhere = home / "Research" / "Other study.qda"
+    for project in (listed, elsewhere):
+        project.mkdir(parents=True)
+        (project / "data.qda").write_bytes(b"")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    for spelling in names.SETTINGS["workspace"]:
+        monkeypatch.delenv(spelling, raising=False)
+    found = json.loads(server.list_available_projects())
+    paths = {Path(project["path"]) for project in found["projects"]}
+    assert listed in paths and elsewhere not in paths, found
+    assert "tells it where each listed project is" in _flat("QUICKSTART.md")
 
 
 # Words that dictate where a researcher may use Exegete, which the owner

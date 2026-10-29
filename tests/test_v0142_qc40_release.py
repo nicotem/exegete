@@ -365,9 +365,11 @@ def test_the_server_names_are_quoted_as_qualcoder_has_them():
 
 def test_claude_md_says_what_holds():
     claude = _flat("CLAUDE.md")
-    assert ("The full suite takes about twelve minutes on a Mac, longer on "
+    # 20 min 43 s at 0.15.2-alpha's release preparation (0f5dc53)
+    assert ("The full suite takes about twenty minutes on a Mac, longer on "
             "Windows CI;") in claude
     assert "about ten minutes" not in claude
+    assert "about twelve minutes" not in claude
     assert "silently" not in claude
     assert ("git makes up an address from the machine's name, prints a "
             "notice and commits anyway") in claude

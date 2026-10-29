@@ -1303,6 +1303,8 @@ requests).
 <!-- ci: run venv: ~/exegete-venv/bin/exegete --version -->
 <!-- ci: run pipx, uv: exegete --version -->
 <!-- ci: expect venv, pipx, uv: exegete <version> -->
+<!-- ci: run venv waits: ~/exegete-venv/bin/exegete -->
+<!-- ci: expect venv: standard input and output -->
 
 ## Troubleshooting
 

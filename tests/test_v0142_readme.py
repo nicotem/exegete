@@ -454,8 +454,9 @@ def test_latest_carries_the_date_it_was_checked():
         "Exegete's former name, as checked on 6 October 2026" in readme
     # v0.15.0, the release review: QualCoder's side as checked, beside
     # the Exegete the table's column describes
+    # (v0.15.2's release preparation: the stamp may end the sentence)
     assert re.search(r"QualCoder 3\.8\.2 and 4\.0, as checked on \d{1,2} "
-                     r"\w+ \d{4}, beside Exegete 0\.\d+\.\d+:", readme)
+                     r"\w+ \d{4}, beside Exegete 0\.\d+\.\d+[:.]", readme)
 
 
 # ---------------------------------------------------------------------------
@@ -478,7 +479,7 @@ VERSIONS_IN_PLACE = ("## What comes next", "## Disclaimer", "## Licence",
 # (v0.15.0, the release review: the table's stamp gives QualCoder's
 # side its date and names the Exegete its column describes)
 DATED = re.compile(r"Exegete v?0\.\d+\.\d+ against QualCoder|"
-                   r"beside Exegete v?0\.\d+\.\d+:")
+                   r"beside Exegete v?0\.\d+\.\d+[:.]")
 
 
 def _release_labels(text):

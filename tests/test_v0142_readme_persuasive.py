@@ -1222,7 +1222,8 @@ def test_what_comes_next_is_plans():
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
-    for words in ("undo a session's changes",
+    # (v0.15.2's release preparation: undo said as what it does)
+    for words in ("undo, which takes back a change Exegete made, whole",
                   "when replacing names, choose which mentions to keep",
                   "more of the analysis shown in the conversation, as tables",
                   # v0.14.2, the README's second round of checks: the rest

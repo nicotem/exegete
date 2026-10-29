@@ -232,12 +232,12 @@ def test_the_three_commitments():
     # then against QualCoder 4.0's release (the owner's ruling of 6
     # October 2026); v0.15.0, the release review: QualCoder's column as
     # checked, beside the Exegete the column describes, which the owner's
-    # word of 29 October 2026 makes 0.15.2, its REFI-QDA row from before
-    # the fix the plan gives that release
+    # word of 29 October 2026 makes 0.15.2 (v0.15.2's release
+    # preparation: the clause on the REFI-QDA fix went with the fix's move
+    # to v0.15.3; "What comes next" names its release)
     dated = section.index("The table sets QualCoder 3.8.2 and 4.0, as "
                           "checked on 10 October 2026, beside Exegete "
-                          "0.15.2: its REFI-QDA row gives the export as it "
-                          "is before the planned REFI-QDA fix.")
+                          "0.15.2.")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table

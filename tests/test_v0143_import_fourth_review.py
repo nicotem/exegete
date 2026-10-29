@@ -414,7 +414,7 @@ class TestTheTexts:
         # the owner's word of 29 October 2026: the comparison back, its
         # stamp naming the release it describes
         assert "**Not in Exegete yet.**" in readme
-        assert ("as checked on 10 October 2026, beside Exegete 0.15.2:"
+        assert ("as checked on 10 October 2026, beside Exegete 0.15.2."
                 in readme)
 
     def test_the_small_wording_points(self):

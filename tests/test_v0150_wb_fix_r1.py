@@ -151,8 +151,13 @@ class TestTheRemovalsInV0151:
         # v0.15.1's release preparation: its own item goes once it is
         # released; what it brought is in the CHANGELOG's entry
         assert list(items)[:4] == ["v0.15.2", "v0.15.3", "v0.15.4", "v0.16"]
-        assert "undo a session's changes" in items["v0.15.2"]
-        assert "choose which mentions to keep" in items["v0.15.2"]
+        # v0.15.2's release preparation: undo is what v0.15.2 brings, and
+        # the occurrences choice, the REFI-QDA fix and Apple silicon moved
+        # to v0.15.3, the week having no room for them
+        assert "takes back a change Exegete made" in items["v0.15.2"]
+        assert "choose which mentions to keep" in items["v0.15.3"]
+        assert "the REFI-QDA export fixed" in items["v0.15.3"]
+        assert "on Apple silicon Macs" in items["v0.15.3"]
         assert "coding sessions kept with their project" in items["v0.15.3"]
         assert "method" in items["v0.15.4"]
         assert "the earlier names of the two renamed tools" \

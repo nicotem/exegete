@@ -27,13 +27,13 @@ RELEASES = {"0.15.4": "method", "0.16": "chat-first"}
 # names.OLD_SPELLINGS_UNTIL gives.
 PLANNED = {
     "undo": ("feature", "0.15.2", (r"\bundo\b",), "88, 105"),
-    "the occurrences choice": ("feature", "0.15.2", (
+    "the occurrences choice": ("feature", "0.15.3", (
         r"\bwhich\s+mentions\s+to\s+keep\b", r"\boccurrences\s+choice\b"),
         "85, 105, 106"),
-    "the REFI-QDA fix": ("feature", "0.15.2", (
+    "the REFI-QDA fix": ("feature", "0.15.3", (
         r"\bREFI-QDA\s+(?:export\s+)?fix",
         r"\bfix(?:es|ed)?\s+(?:to\s+)?(?:the\s+)?REFI-QDA\b"), "85, 105"),
-    "PyMuPDF 2.0 on Apple silicon": ("feature", "0.15.2", (
+    "PyMuPDF 2.0 on Apple silicon": ("feature", "0.15.3", (
         r"\bApple\s+silicon\b",), "98, 105, 107"),
     "coding sessions kept with their project": ("feature", "0.15.3", (
         r"\bsessions\s+(?:are\s+)?kept\s+with\s+(?:their|the|its)\s+"

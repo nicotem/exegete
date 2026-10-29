@@ -1038,7 +1038,6 @@ f0f89bf8fc7a2db2	src/exegete/server.py	path	qualcoder	seeded 27 October, to be r
 af7eb8a599d127bf	src/exegete/server.py	served	voice	seeded 27 October, to be read	To WRITE a memo, use set_memo(target_type, target_id, memo); to add a research j
 6ea87062442c5dce	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	To change those entries later, edit the file: QualCoder's Pseudonyms dialog, if 
 003295b51d4ab687	src/exegete/server.py	path	voice	seeded 27 October, to be read	To check one, open it with open_file_for_reading; if it reads wrongly, say so no
-11854999d643f2cf	src/exegete/server.py	path	voice	seeded 27 October, to be read	To check that the installation works, run 'exegete --version' (or 'python -m exe
 1abf92f13e580618	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Tree rows in depth order with -- per level in the Code Tree cell (QualCoder's te
 18ec298fb9dffd61	src/exegete/server.py	served	voice	seeded 27 October, to be read	Two guards, each with an explicit override the user must ask for:
 5dbb7ae73bf5d98c	src/exegete/server.py	served	voice	seeded 27 October, to be read	UNIT OF ANALYSIS: one character of one text file.

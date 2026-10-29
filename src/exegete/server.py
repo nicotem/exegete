@@ -23540,10 +23540,11 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
     return removed
 
 
-# One paragraph for a researcher who starts the server by hand in a terminal
-# (v0.12, A5). An MCP host never presents a TTY on stdin, so the notice only
+# One paragraph for a researcher who starts Exegete by hand in a terminal
+# (v0.12). An MCP host never presents a TTY on stdin, so the notice only
 # ever appears in that situation; it goes to stderr (stdout is the MCP
-# transport) and the server keeps waiting as before.
+# transport) and Exegete keeps waiting as before. The hosts' configurations
+# are in the Terminal guide (v0.15.2), which the notice names by its path.
 TTY_NOTICE = (
     f"{names.SERVER_NAME} is a qualitative analysis application that runs "
     "as an MCP server. It is normally started by an MCP host "
@@ -23552,10 +23553,10 @@ TTY_NOTICE = (
     "a terminal it prints its start-up lines and this note, then waits for a "
     "host that is not there. To "
     f"check that the installation works, run '{names.COMMAND} --version' (or "
-    f"'python -m {names.PACKAGE}.server --version'); to use the server, add "
-    "it to "
-    "your host's MCP configuration as described in INSTALL.md. Press Ctrl+C to "
-    "stop this process."
+    f"'python -m {names.PACKAGE}.server --version'). To use "
+    f"{names.SERVER_NAME}, add it to your host's MCP configuration, as the "
+    "Terminal guide (docs/installing-from-the-terminal.md) describes. Press "
+    "Ctrl+C to stop this process."
 )
 
 

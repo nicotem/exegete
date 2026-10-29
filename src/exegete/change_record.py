@@ -12,12 +12,13 @@ list, digests of the list before and after it (`names_list`, route
 "names_list", with no rows). A run's record is also given, when a later
 run is undone, the rows that undo kept (`kept`: its journal entry, with
 a line), which this run's undo sets aside. A record holds ids and
-digests, never a name, a text, a note or a path. A sweep removes it once it is a day
-old: when Exegete starts, or after the next record of a change to the
-same project, so the record of a project that is not changed again
-stays until Exegete next starts. Undo reads it later, to judge whether
-the change can still be taken back and to find what it needs in the
-change's own backup; the change's answer carries its receipt.
+digests, never a name, a text, a note or a path. A sweep removes it
+once it is a day old: when Exegete starts, or after the next record of
+a change to the same project, so the record of a project that is not
+changed again stays until Exegete next starts. Undo reads it later, to
+judge whether the change can still be taken back and to find what it
+needs in the change's own backup; the change's answer carries its
+receipt.
 
 Where: `state_home() / "changes" / <project>`, `<project>` a keyed
 digest of the project's path, so that no path is kept. Each record is a

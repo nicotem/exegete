@@ -36,7 +36,7 @@ from test_v0152_undo_record import (answer, make_project, receipt_of,
                                     server_state)  # noqa: F401
 from test_v0152_undo_tool import (a_session, backup_of, backups, call,
                                   code_id, database as project_database,
-                                  execute, ids, qualcoder_40_opens,
+                                  execute, ids, new_code, qualcoder_40_opens,
                                   reasons, record_path, refusal, rows,
                                   two_step, undo_preview, undo_run,
                                   unchanged_by)
@@ -197,6 +197,34 @@ class TestTheRun:
                 "with undo_changes: the text is as it was before the run.")
         assert value(project, "select fulltext from source where id = 1"
                      ).startswith("Maria Lopez runs the garden.")
+
+    def test_the_later_changes_are_listed_newest_first_and_followed(
+            self, project):
+        """A run's refusal lists the later changes newest first, the order
+        its words give, so that undoing them in the list's order, one
+        call each, cannot end a later run's undo (the third undo piece's
+        review, round 2, finding 41). A run, a code made, a run: the
+        earlier run names the later run, then the code; undone in that
+        order, then the earlier run, every one is undone and the file's
+        text is back. In the old order, oldest first, the code went
+        first: its undo removed a row the later run's record holds, so
+        the later run, and the earlier with it, could no longer be
+        undone."""
+        before = value(project, "select fulltext from source where id = 1")
+        _, first = a_run()
+        _, code = new_code("Belonging")
+        _, second = a_run(mapping=[{"original": "Lopez",
+                                    "pseudonym": "Smith"}])
+        refused = unchanged_by(project, lambda: undo_preview(first))
+        listed = refusal(refused, undo.WRITTEN_SINCE)["later_changes"]
+        assert listed == [second, code]
+        for receipt in listed:
+            done = undo_run(receipt)
+            assert done["success"] is True, (receipt, done)
+        undone = undo_run(first)
+        assert undone["success"] is True, undone
+        assert value(project, "select fulltext from source where id = 1"
+                     ) == before
 
     def test_a_kept_entry_changed_since_still_refuses_the_earlier_run(
             self, project):
@@ -980,6 +1008,33 @@ class TestTheNamesList:
         assert refusal(refused, undo.NAMES_LIST_CHANGED)[
             "later_changes"] == [second]
         assert undo_run(second)["success"] is True
+        assert undo_run(first)["success"] is True
+        assert not (project / "pseudonyms.json").exists()
+
+    def test_the_later_saves_are_listed_newest_first_and_followed(
+            self, project):
+        """The earlier save's refusal lists the later saves newest first,
+        the order its words give (finding 41): three saves, the first
+        refused naming the third, then the second; undone in that order,
+        then the first, the list is removed, as the first save made it.
+        In the old order the second went first and was refused, since
+        the third had changed the list since."""
+        first = a_save(project, earlier=None)
+        later = []
+        for name in ("Ada Quill = Participant Y",
+                     "Bea Quill = Participant X"):
+            place = names_file(project)
+            place.write_text(place.read_text(encoding="utf-8-sig")
+                             + name + "\n", encoding="utf-8")
+            text = two_step(server.save_names_list)
+            assert answer(text).get("success"), text
+            later.append(receipt_of(text))
+        refused = unchanged_by(project, lambda: undo_preview(first))
+        listed = refusal(refused, undo.NAMES_LIST_CHANGED)["later_changes"]
+        assert listed == later[::-1]
+        for receipt in listed:
+            done = undo_run(receipt)
+            assert done["success"] is True, (receipt, done)
         assert undo_run(first)["success"] is True
         assert not (project / "pseudonyms.json").exists()
 

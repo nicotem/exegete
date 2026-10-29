@@ -15750,9 +15750,10 @@ def _undo_names_list_judge(change: undo.ChangePlan, context
 def _later_names_list_saves(change: undo.ChangePlan, project: str
                             ) -> Dict[str, Any]:
     """The saves of the names list Exegete recorded on this project after
-    this one and not undone since: this run's by their receipts, oldest
-    first, another run's counted. Undone first, they bring the list back
-    to what this save wrote."""
+    this one and not undone since: this run's by their receipts, newest
+    first, the order in which the refusal asks for them to be undone
+    (one undone before a later save is refused), another run's counted.
+    Undone first, they bring the list back to what this save wrote."""
     receipts: Dict[str, float] = {}
     others = 0
     for record in change_record.records(project):
@@ -15768,7 +15769,8 @@ def _later_names_list_saves(change: undo.ChangePlan, project: str
             others += 1
     out: Dict[str, Any] = {}
     if receipts:
-        out["later_changes"] = sorted(receipts, key=receipts.get)
+        out["later_changes"] = sorted(receipts, key=receipts.get,
+                                      reverse=True)
     if others:
         out["later_changes_elsewhere"] = others
     return out
@@ -18643,8 +18645,9 @@ UNDO_REFUSAL_TEXTS = {
         "nothing has been written to the project since it, since its undo "
         "returns the project to how it was before the run. later_changes "
         "gives the receipts of later changes this conversation's Exegete "
-        "made: undo them first, newest first, then the run. Work done since "
-        "in another program cannot be undone here." + _THE_WAY_BACK),
+        "made, newest first: undo them in that order, then the run. Work "
+        "done since in another program cannot be undone here."
+        + _THE_WAY_BACK),
     undo.BACKUP_DIFFERS: (
         "The backup Exegete took before this run differs from the project in "
         "rows the run did not change (the tables are named in tables), so it "
@@ -18689,9 +18692,9 @@ UNDO_REFUSAL_TEXTS = {
         "The project's names list has changed since this save, or has been "
         "removed, so undoing the save would also take that later change "
         "back. later_changes gives the receipts of later saves of the list "
-        "this conversation's Exegete made: undo them first, newest first, "
-        "then this one. Otherwise save_names_list can save the list again "
-        "from the names file; its preview says what would change."),
+        "this conversation's Exegete made, newest first: undo them in that "
+        "order, then this one. Otherwise save_names_list can save the list "
+        "again from the names file; its preview says what would change."),
 }
 # The answer to a call whose plan has refusals
 UNDO_REFUSED = (

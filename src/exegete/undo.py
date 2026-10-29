@@ -1859,7 +1859,10 @@ class _Planner:
 
     def later_records(self, change: ChangePlan) -> Dict[str, Any]:
         """Every later change Exegete recorded on this project, not in
-        this undo: this run's by their receipts, another run's counted."""
+        this undo: this run's by their receipts, newest first, the order
+        in which the run's refusal asks for them to be undone (one undone
+        before a later run would end that run's undo); another run's
+        counted."""
         if self._records is None:
             self._records = change_record.records(self.project_key)
         receipts: Dict[str, float] = {}
@@ -1875,7 +1878,8 @@ class _Planner:
                 others += 1
         out: Dict[str, Any] = {}
         if receipts:
-            out["later_changes"] = sorted(receipts, key=receipts.get)
+            out["later_changes"] = sorted(receipts, key=receipts.get,
+                                          reverse=True)
         if others:
             out["other_runs"] = others
         return out

@@ -1092,7 +1092,10 @@ class TestTheDocuments:
                 "the folder for projects, or the folder you named for a new "
                 "project; where you export; "
                 "`~/.exegete/pseudonymisation/` |",
-                "| you (`prune_backups` deletes backups at your word) |",
+                # v0.15.2: undo removes an import's originals, and a
+                # names list a save made, at the researcher's word
+                "| you (`prune_backups` deletes backups at your word). At "
+                "your word, `undo_changes` also removes",
                 "The files you fill in are never returned to the assistant",
                 # piece 2's fix round 2: backups leave out files by name
                 "They travel with the project into every backup (Exegete's, "

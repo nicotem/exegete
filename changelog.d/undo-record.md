@@ -12,11 +12,14 @@
   until Exegete next starts. Triggers that live on Exegete's own
   connection for the length of the change find the rows, so nothing is
   added to the project's file or folder.
-- **Two tools keep no record, and their answers say nothing of one.**
+- **Some tools keep no record, and their answers say nothing of one.**
   `restore_backup` keeps none, since its way back is the safety backup
-  it makes first. `save_names_list`, which saves the names list as a
-  file in the project's folder, keeps none either. A call that changes
-  nothing keeps no record.
+  it makes first, and nor does `undo_changes`, whose way back is the
+  backup it makes first. `set_project_ai_coder_name` and `prepare_names_list`
+  keep none either: they write files in the project's folder (the AI
+  coder name kept with the project, and the names file you fill in)
+  without writing the project. A call that changes nothing keeps no
+  record.
 - **When any other change's record cannot be kept, the change stands
   as made.** Its answer says that no receipt was kept, and that
   `restore_backup` with the change's backup is the way back, which also

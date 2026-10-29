@@ -8,7 +8,7 @@
   of QualCoder, "a free qualitative analysis program". The opening text
   now says documents, where it said documents and transcripts. The
   opening text is 2,042 characters, within the 2,048 that Claude Code
-  kept before its version 2.1.296, and the full brief about 13,500. The
+  kept before its version 2.1.296, and the full brief about 13,700. The
   brief now says that the backup comes before every change to the
   project's database, and that setting the AI coder name and preparing
   the names file take none. Where `select_project`'s answer tells the

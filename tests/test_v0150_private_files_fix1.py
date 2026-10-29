@@ -196,8 +196,10 @@ class TestThePlacesAndTheTable:
         section = _files_section()
         assert ("| Exegete's working state | `~/.exegete`, hidden on macOS "
                 "and Linux |") in section
+        # v0.15.2: and the records of changes once a day old
         assert ("| Exegete removes the texts an import's preview read, as "
-                "\"How your data flows\" says; coding sessions go at your "
+                "\"How your data flows\" says, and a change's record once it "
+                "is a day old; coding sessions go at your "
                 "word (`delete_coding_session`); the "
                 "rest stays until you delete it.") in section
         # (v0.15.1: cleanup_old_sessions removed, as announced in 0.14)

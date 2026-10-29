@@ -156,6 +156,10 @@ officer will ask, and the summary above depends on them:
     `$XDG_CACHE_HOME` if it is set). They stay until Exegete's first
     tidy once they are a week old (an hour for an import's page), and
     longer while Exegete is not running;
+  - the records of changes kept for undo (`~/.exegete/changes/`), which
+    hold digests, never a name or a text, until Exegete's next start,
+    or its next record of a change to the same project, once they are a
+    day old;
   - the pseudonymisation run records (`~/.exegete/pseudonymisation/`),
     until you delete them;
   - Claude Desktop's log of the extension, which keeps every request and
@@ -231,8 +235,9 @@ protect three other things, each with its own readers:
 - **What stays on the computer, and who else reads it.** Several things
   stay on your disk: the project, its backups and copies, Exegete's own
   folder (coding sessions, the texts an import's preview read, the
-  pseudonymisation run records), the reading folder, and the host's own
-  records of the conversation (its log, its transcripts). Anything that
+  records of changes kept for undo, the pseudonymisation run records),
+  the reading folder, and the host's own records of the conversation
+  (its log, its transcripts). Anything that
   reads the disk can read them: a sync or backup service, a copy you
   give someone, another assistant that opens files by itself, a log or
   a support bundle you send. Exegete's own log lines name no project
@@ -791,10 +796,19 @@ project is moved, both folders are searched, and setting it back to
 
 | Kind | Where | What | Who deletes it |
 |---|---|---|---|
-| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read; the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the pseudonymisation run records, and the secret that keys their digests |
+| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read, and a record of each change Exegete makes to a project (`changes/`, below); the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says, and a change's record once it is a day old; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the records of changes (those changes can then no longer be undone), the pseudonymisation run records, and the secret that keys their digests |
 | Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page), as "Reading a whole file" says, so they can stay longer while Exegete is not running; the working folder as each reading ends; you, at any time |
 | Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
-| Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word) |
+| Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word). At your word, `undo_changes` also removes the originals an import stored, when it takes the import back, and `pseudonyms.json`, when it takes back the save that made it |
+
+Most changes Exegete makes to a project leave a record in
+`~/.exegete/changes/`, which `undo_changes` works from. A record holds
+ids and digests, never a name or a text. A digest of a single value,
+such as a coder's name, can be tested against a guess by whoever holds
+the whole folder, since the folder also holds the secret that keys it.
+Exegete removes a record once it is a day old: at its next start, or
+at its next record of a change to the same project. So a record can
+stay longer while Exegete is not running.
 
 For the length of each write, Exegete also writes a lock file into the
 project's folder (`project_in_use.lock`, the file QualCoder 3.8.2 uses
@@ -1480,6 +1494,21 @@ Seven cautions:
   since a backup copies the project (all but its audio and video
   folders). Restoring the backup taken
   just before the import takes it back while nothing else has changed.
+  For a day after an import, `undo_changes` can also take it back. It
+  removes the files' entries, and the originals Exegete stored in the
+  project's `documents` folder. It removes an original only if it is
+  still the file the import stored, and refuses the undo when one has
+  changed since. Copies stay elsewhere. The backups taken since the
+  import, and the backup the undo takes first, hold the originals and
+  their text until `prune_backups` removes them. Coding sessions that
+  hold passages of the files keep them, with the files' names, until
+  `delete_coding_session` removes them. An export made since keeps what
+  it holds until you delete it. If you use QualCoder, its own backups
+  beside the project may hold the files too. Its AI search index keeps
+  their text until it next re-indexes with AI on, and its AI chat
+  history may quote them. The undo's preview and answer count the
+  backups and the coding sessions, and name each of those other files
+  that Exegete finds beside or inside the project.
 - **More of a document comes in than in QualCoder**: a Word,
   OpenDocument or RTF file's footnotes, endnotes, comments, headers and
   footers (and an RTF file's text boxes) come after its text, where
@@ -1599,23 +1628,33 @@ Copy the whole project folder by hand, with no program using the
 project (QualCoder closed, if you use it), before trying any repair,
 and keep that copy.
 
-No tool reads the backups' contents, apart from `restore_backup` and
-`prune_backups`. `restore_backup` checks that no journal or WAL file
-sits beside the database of the backup you choose, opens it to check
-it, reads its first bytes for the preview and copies it back. Its
-preview counts the rows of each kind in that database and in the
-project's (files, codes, codings and the like, every coder's together:
-numbers only, never a row's content or an owner's name), opening the
-backup's read-only and immutable, so that the count writes nothing
-into the backup. It also compares a fingerprint of the bytes of the
-project's `pseudonyms.json` with the backup's in the preview, and
+No tool reads the backups' contents, apart from `restore_backup`,
+`prune_backups` and `undo_changes`. `restore_backup` checks that no
+journal or WAL file sits beside the database of the backup you choose,
+opens it to check it, reads its first bytes for the preview and copies
+it back. Its preview counts the rows of each kind in that database and
+in the project's (files, codes, codings and the like, every coder's
+together: numbers only, never a row's content or an owner's name),
+opening the backup's read-only and immutable, so that the count writes
+nothing into the backup. It also compares a fingerprint of the bytes of
+the project's `pseudonyms.json` with the backup's in the preview, and
 before and after the restore (once restored, the backup's copy), to say
 whether that file is the same, appears, disappears or changes, reading
 no name in either. `prune_backups` reads the `pseudonyms.json` of each
 backup beside the project only to compare such fingerprints (no name in
 it is read out or returned; "Practical mitigations", on
-`pseudonyms.json`, says why). In 0.15.0 and earlier, `rename_file`
-read the names in the backups to recognise a rename back.
+`pseudonyms.json`, says why). In 0.15.0 and earlier, `rename_file` read
+the names in the backups to recognise a rename back.
+
+`undo_changes` reads the backup Exegete took just before a change, to
+take that change back. It opens that backup's database read-only and
+immutable, so that reading it writes nothing into it. It reads the rows
+the change altered or removed. For a pseudonymisation run, it reads
+every table, to check that the backup holds the project as it was just
+before the run. For a save of the names list, it reads that backup's
+`pseudonyms.json` and copies its bytes back into the project. Its
+preview gives counts of rows, by table and by coder, never a row's
+content.
 
 Two further rules touch files on your disk:
 
@@ -2282,12 +2321,20 @@ near the top of this document, set them out.
     beside the project until you remove them; `list_backups` shows them
     and `prune_backups` removes Exegete's own. A project you are
     about to share is not pseudonymised while its backups are beside it.
+  - **An undo.** For a day after a run, `undo_changes` can take it
+    back, while nothing has been written to the project since. That
+    brings the real names back into the file's text. For a run that
+    rewrote notes and journal entries, it brings them back there too.
+    The undo's preview says so before you agree.
   - **`pseudonyms.json`**, if you keep one. It is the project's names
     list, applied when files are imported, and it is the reverse key in
     plain text at the project root, so it travels into every backup of
     the project (Exegete's, and QualCoder's if you use it). Exegete
     writes it only when asked, in QualCoder's own format, and removes or
-    replaces it only by a restore: `restore_backup` rolls the project
+    replaces it only by a restore or an undo. For a day after a save of
+    the names list, `undo_changes` brings back the list as it was before
+    that save, from the save's own backup, or removes the list if the
+    save made it. `restore_backup` rolls the project
     back (all but its `Exegete`, `audio` and `video` folders, which a
     restore keeps), this file with it, so restoring a backup taken
     before a save takes the file out of the project, and restoring one

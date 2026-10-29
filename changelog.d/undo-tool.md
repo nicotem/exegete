@@ -2,9 +2,11 @@
 
 - **Undoing a change Exegete made: `undo_changes`.** Most changes
   Exegete makes to a project answer with a receipt, `undo_receipt`. The
-  exceptions are `restore_backup`, `undo_changes` itself and
-  `save_names_list`, which answer none, and a change whose record could
-  not be kept, whose answer says so. For a day after a change, the
+  exceptions are `restore_backup` and `undo_changes` itself, which
+  answer none; `set_project_ai_coder_name` and `prepare_names_list`,
+  which write files in the project's folder without writing the
+  project, and answer none either; and a change whose record could not
+  be kept, whose answer says so. For a day after a change, the
   assistant can take it back with its receipt, on the project it was
   made in, whole or not at all. Called with no receipts, `undo_changes`
   lists the changes Exegete has made to the project since it last
@@ -26,9 +28,7 @@
   category it was in has been deleted, even when a category made since
   has taken that category's number. It refuses when the change's backup
   has gone, unless the change only added rows, and when that backup
-  cannot be read. Each refusal gives its reason and what to do. Changes
-  made by `pseudonymise_source`, `import_documents`,
-  `set_project_coder_name` and `save_names_list` cannot be undone yet.
+  cannot be read. Each refusal gives its reason and what to do.
 - **Coding sessions follow the undo.** Undoing `apply_codings` returns
   its suggestions to approved, so the next `apply_codings` on that
   session writes them again unless you reject them first. Undoing

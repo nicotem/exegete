@@ -617,8 +617,10 @@ def _tools_running_the_process_scan():
 _TOOL_OF_HELPER = {"_select_project": "select_project",
                    # 0.14.3: the import's preview passes the signs on
                    "_import_documents_preview": "import_documents",
-                   # v0.15.2: and undo's preview, as the restore's does
-                   "_undo_preview": "undo_changes"}
+                   # v0.15.2: and undo's preview, as the restore's does,
+                   # the names list's undo with its own
+                   "_undo_preview": "undo_changes",
+                   "_undo_names_list": "undo_changes"}
 
 
 def _paragraph_after(text, marker):

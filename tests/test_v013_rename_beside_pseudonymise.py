@@ -260,11 +260,14 @@ def test_privacy_says_rename_file_reads_the_backups():
         in paragraph
     assert "no name in it is read out or returned" in paragraph
     # v0.15.1: rename_file no longer reads the backups, as announced
-    # (tests/test_v0151_journal_and_rename_back.py)
+    # (tests/test_v0151_journal_and_rename_back.py); v0.15.2: undo reads
+    # the backup of the change it takes back, said in a paragraph of its own
     assert ("No tool reads the backups' contents, apart from "
-            "`restore_backup` and `prune_backups`.") in paragraph
+            "`restore_backup`, `prune_backups` and `undo_changes`."
+            ) in paragraph
     assert "In 0.15.0 and earlier, `rename_file` read the names in the " \
            "backups to recognise a rename back." in paragraph
+    assert "`undo_changes` reads the backup Exegete took" in paragraph
     assert "one tool reads the backups' contents" not in flat
     assert "To recognise a rename back, `rename_file` reads" not in flat
 

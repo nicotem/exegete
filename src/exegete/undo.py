@@ -951,6 +951,26 @@ def _made_together(then: Row, now: Row) -> bool:
 _MISSING = object()
 
 
+def _changed_reason(coder_name: bool, project_row: bool) -> str:
+    """The reason for rows changed since: a correction of the coder
+    name's own, the project row's (which holds the project memo), or any
+    other."""
+    if coder_name:
+        return CODER_NAME_CHANGED
+    return PROJECT_ROW_CHANGED if project_row else CHANGED_SINCE
+
+
+def _written_columns(entry: Dict[str, Any], coder_name: bool
+                     ) -> Tuple[str, ...]:
+    """The columns an undo writes for a row: those the record digests,
+    and for a correction of the coder name the project row's coder name
+    too, which every other undo leaves as it is."""
+    columns = tuple(entry["columns"])
+    if coder_name and entry.get("apart"):
+        columns += (entry["apart"],)
+    return columns
+
+
 class _Planner:
     """Builds a Plan on one connection: the project read through it, the
     backups each on a connection of their own, closed at the end."""
@@ -1182,9 +1202,7 @@ class _Planner:
                 continue
             digest = db_digest if now is db_now else (
                 None if now is None else self.digests.row(columns, now))
-            if now is None or digest != row["after"] \
-                    or self._filled_since(now, entry) \
-                    or (coder_name and self._apart_since(now, entry, row)):
+            if self._changed_since(now, digest, row, entry, coder_name):
                 changed[actual] = changed.get(actual, 0) + 1
                 blocking.append((actual, key))
                 project_row = project_row or entry["key_kind"] == "one_row"
@@ -1208,10 +1226,8 @@ class _Planner:
             backup=record.get("backup") if needs_backup else None,
             rows=signed, texts=signed_texts)
         if changed:
-            change.refuse(CODER_NAME_CHANGED if coder_name
-                          else PROJECT_ROW_CHANGED if project_row
-                          else CHANGED_SINCE, rows=changed,
-                          **self.later(change, blocking))
+            change.refuse(_changed_reason(coder_name, project_row),
+                          rows=changed, **self.later(change, blocking))
         elif coder_name:
             self.check_coder_name(change)
         if in_use:
@@ -1245,9 +1261,7 @@ class _Planner:
         for row in rows:
             name, key = row["table"], row["key"]
             actual, entry = info[name]
-            columns = tuple(entry["columns"])
-            if coder_name and entry.get("apart"):
-                columns += (entry["apart"],)
+            columns = _written_columns(entry, coder_name)
             now = self.state(actual, key, entry["key"], entry["key_kind"])
             kind = kind_of(row)
             if kind == ADDED:
@@ -1326,6 +1340,17 @@ class _Planner:
                 else:
                     old[(name, r["key"])] = values
         return old, altered
+
+    def _changed_since(self, now: Optional[Row], digest: Optional[str],
+                       row: Dict[str, Any], entry: Dict[str, Any],
+                       coder_name: bool) -> bool:
+        """Whether a row the change added or changed is no longer as the
+        change left it: gone, another digest over the columns recorded,
+        a column added since that holds a value, or, for a correction of
+        the coder name, another coder name in the project row."""
+        return (now is None or digest != row["after"]
+                or self._filled_since(now, entry)
+                or (coder_name and self._apart_since(now, entry, row)))
 
     def _apart_since(self, now: Row, entry: Dict[str, Any],
                      row: Dict[str, Any]) -> bool:

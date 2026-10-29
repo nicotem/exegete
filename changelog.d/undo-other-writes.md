@@ -5,9 +5,11 @@
   has been written to the project since. The file's text comes back as
   it was before the run, real names included. So do the public parts
   of the notes and journal entries the run rewrote, if it rewrote any.
-  Every table returns to how it was just before the run, with two
+  Every table returns to how it was before the run, with two
   exceptions. The run's journal entry is kept, with a line saying that
-  the run was undone. If you use QualCoder, what it writes when it
+  the run was undone, and so are the entries of later runs undone
+  before it, so that runs made one after another can be undone, newest
+  first. If you use QualCoder, what it writes when it
   opens a project, such as a coder name it adds, stays as it is.
   The run record in Exegete's own folder and the project's names list
   stay as the run left them. The preview says all this before you

@@ -94,7 +94,10 @@ takes questions and ideas, in public, so leave out participants' data.
   takes a backup, a copy of the project kept beside it, and can restore
   one. Setting the AI coder name and preparing the names file take none.
   For a day after a change to the database, Exegete can also undo that
-  change alone, unless later work depends on it.
+  change alone, unless later work stands in the way. Any later change to
+  the database stands in the way of undoing a replacement of names.
+  Clearing old backups can also rule out an undo. Restoring a backup and
+  undoing a change cannot themselves be undone.
 
 **Not in Exegete yet.** It cannot bring in or code images, audio and
 video, or code an area of a PDF page or text you select yourself. It

@@ -5,7 +5,8 @@ advertising features present and future, and the table about different
 model configuration. And it's wordy.").
 
 Pinned here: the length the rewrite reached, so that the README cannot
-grow back; the example, the two diagrams and the map (their width, and
+grow back; the limits of an undo in "Go back", against the code; the
+example, the two diagrams and the map (their width, and
 only characters that render one column wide on GitHub and on PyPI; prose
 and links in v0.15.2's opening texts, back by the owner's word of 29
 October 2026);
@@ -368,14 +369,49 @@ def _tools(mode="full"):
 # undoing a change among the changes that show a preview first, and
 # one sentence in "Go back" on undoing a change alone, take 192
 # characters and 4 lines: 40,445 in 629 lines.
-README_LIMIT = 40_445
-README_LINES = 629
+# The fix round after the review of undo's rebase (29 October 2026):
+# "Go back" gives the limits of an undo, as the code sets them: later
+# work in the way, any later change to the database for a replacement
+# of names, old backups cleared, and a restore or an undo that cannot be
+# undone (test_go_back_gives_the_limits_of_an_undo). That takes 213
+# characters and 3 lines: 40,658 in 632 lines.
+README_LIMIT = 40_658
+README_LINES = 632
 
 
 def test_the_readme_stays_short():
     readme = _read("README.md")
     assert len(readme) <= README_LIMIT
     assert readme.count("\n") <= README_LINES
+
+
+def test_go_back_gives_the_limits_of_an_undo():
+    """v0.15.2, undo's rebase, fix round 1 (its review's finding 13): "Go
+    back" gave one limit of an undo, later work that depends on the
+    change, while two others meet ordinary use. A replacement of names is
+    undone only while the database is as the run left it, and an undo
+    that needs the change's backup is refused once that backup is
+    cleared. The sentences give the limits the code sets, as the tool's
+    description, TOOLS.md and PRIVACY.md do. Restoring a backup and
+    undoing a change keep no record: test_v0152_undo_tool.py holds that
+    every other tool that writes a project can be undone (UNDO_CASES)."""
+    from exegete import change_record, undo
+    go_back = _flat(_section("What you can do", "How it works"))
+    # a day: the record's age past which undo refuses (undo.TOO_OLD)
+    assert change_record.KEEP_SECONDS == 24 * 60 * 60
+    # a run refused once the database is written since; a change whose
+    # backup is cleared, refused
+    assert {undo.TOO_OLD, undo.WRITTEN_SINCE, undo.BACKUP_GONE} <= set(
+        server.UNDO_REFUSAL_TEXTS)
+    for sentence in (
+            "For a day after a change to the database, Exegete can also "
+            "undo that change alone, unless later work stands in the way.",
+            "Any later change to the database stands in the way of "
+            "undoing a replacement of names.",
+            "Clearing old backups can also rule out an undo.",
+            "Restoring a backup and undoing a change cannot themselves be "
+            "undone."):
+        assert sentence in go_back, sentence
 
 
 # ---------------------------------------------------------------------------

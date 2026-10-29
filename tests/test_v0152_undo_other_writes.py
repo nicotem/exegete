@@ -623,6 +623,20 @@ class TestTheImport:
         assert done["originals_kept"] == [found["int3.txt"]]
         assert "int3.txt" in documents(project)
 
+    def test_a_qualcoder_40_open_between_does_not_stop_it(
+            self, project, scratch_folders):
+        """QualCoder 4.0's plain open between the import and its undo, as
+        its own statements run it: the rows and the originals go, and
+        QualCoder's bookkeeping stays as it is now."""
+        before, kept = rows(project), documents(project)
+        _, receipt, _found = an_import(project)
+        qualcoder_40_opens(project, coder="Someone Else")
+        assert undo_run(receipt)["success"] is True
+        after = rows(project)
+        for table in set(before) - {"coder_names", "project"}:
+            assert after[table] == before[table], table
+        assert documents(project) == kept
+
     def test_a_bookmark_naming_the_file_stays(self, project,
                                               scratch_folders):
         """The project row's bookmarks stay as QualCoder 4.0's own deletion
@@ -837,6 +851,29 @@ class TestTheEarlierPiecesPoints:
             undo.BACKUP_UNREADABLE]
         refused = unchanged_by(project, lambda: undo_preview(moved))
         assert reasons(refused) == {undo.BACKUP_UNREADABLE}
+
+    def test_the_list_judges_each_route(self, project, scratch_folders):
+        """The list of this run's changes judges a run, an import and a
+        save of the names list by their own routes, and gives a run
+        refused once something has been written since."""
+        _, run = a_run(record_in_journal=False)
+        _, imported, _found = an_import(project)
+        saved = a_save(project, earlier=None)
+        listed = {c["undo_receipt"]: c
+                  for c in answer(server.undo_changes())["changes"]}
+        assert listed[saved]["names_list"] == "removed"
+        assert listed[saved]["can_be_undone"] is True
+        assert listed[imported]["can_be_undone"] is True
+        assert [w["reason"] for w in listed[run]["why_not"]] == [
+            undo.WRITTEN_SINCE]
+        (project / "pseudonyms.json").write_bytes(EARLIER_LIST)
+        (project / "documents" / "int3.txt").write_bytes(b"Edited.\n")
+        listed = {c["undo_receipt"]: c
+                  for c in answer(server.undo_changes())["changes"]}
+        assert [w["reason"] for w in listed[saved]["why_not"]] == [
+            undo.NAMES_LIST_CHANGED]
+        assert [w["reason"] for w in listed[imported]["why_not"]] == [
+            undo.ORIGINAL_CHANGED]
 
     def test_the_record_keeps_its_new_fields_at_format_1(self):
         assert change_record.FORMAT == 1

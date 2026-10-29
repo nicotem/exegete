@@ -381,10 +381,15 @@ class TestTheImport:
             self, project, scratch_folders):
         """The rows and the originals go, the documents folder as before;
         the record keeps each original by its file's id and a keyed digest
-        of the SHA-256 the import verified, never of a name."""
+        of the SHA-256 the import verified, never of a name; the reading
+        folder's page and read-only copy of the original are forgotten."""
         before, kept = rows(project), documents(project)
         _, receipt, found = an_import(project)
         assert documents(project) == sorted(kept + ["int3.txt"])
+        server.open_file_for_reading(file_id=found["int3.txt"],
+                                     show="original")
+        copies = server.reading_folder.file_folder(project, found["int3.txt"])
+        assert copies.is_dir() and any(copies.iterdir())
         files = record_of(receipt)["files"]
         assert files == [{"file": found["int3.txt"],
                           "digest": change_record.digest(
@@ -396,6 +401,7 @@ class TestTheImport:
         assert "originals_kept" not in done
         assert rows(project) == before
         assert documents(project) == kept
+        assert not copies.exists()
 
     def test_the_preview_and_the_answer_say_what_stays_never_a_name(
             self, project, scratch_folders, caplog):

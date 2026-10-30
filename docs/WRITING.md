@@ -125,3 +125,7 @@ page of the Claude Desktop extension, the update page and Exegete's
 first answers in a conversation.
 Whoever changes PRIVACY.md, or any statement about what reaches the AI
 provider, checks it against the code.
+
+Headings and bold lead-ins name their subject and stop. They carry no
+flourish after a comma or a colon: "One click in Claude Desktop", not
+"Claude Desktop, with one click".

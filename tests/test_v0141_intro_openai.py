@@ -424,7 +424,8 @@ class TestTheReadmesRoute:
         # It sits in "Start here", after the one-click route
         start = _between(_flat("README.md"), "## Start here",
                          "## Exegete and QualCoder")
-        assert start.index("### Claude Desktop, with one click") < \
+        # (the owner's reading of 30 October: the heading without its flourish)
+        assert start.index("### One click in Claude Desktop") < \
             start.index("### ChatGPT's desktop app and Codex (OpenAI)")
         # training is turned off before anything is installed; the
         # settings lines' reason is INSTALL.md's, whose facts
@@ -1923,8 +1924,9 @@ class TestTheSmallerPoints:
             in _readme_data()
         assert "You could also add no other extension that reads files." in \
             _readme_data()
+        # (the owner's reading of 30 October: the heading without its flourish)
         one_click = _between(_flat("README.md"),
-                             "### Claude Desktop, with one click",
+                             "### One click in Claude Desktop",
                              "### ChatGPT's desktop app and Codex (OpenAI)")
         # v0.14.2, the README rewritten to persuade: the checks after
         # installing joined the one list before participants' data, which

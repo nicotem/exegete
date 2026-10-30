@@ -317,7 +317,10 @@ def test_readme_states_one_aim():
     assert len(re.findall(r"(?i)\baims?\b", readme)) == 1
     assert ("**The aim** is that you can run a whole project in Exegete"
             in readme)
-    symmetry = _between(readme, "**Symmetry:", "| | In QualCoder |")
+    # (the owner's reading of 30 October: the lead-in without its
+    # flourish, the commitment said in the sentence after it)
+    symmetry = _between(readme, "**The same work in either program.**",
+                        "| | In QualCoder |")
     assert "Today the two programs differ in both directions." in symmetry
 
 

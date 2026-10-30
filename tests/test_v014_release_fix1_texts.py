@@ -101,7 +101,8 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "| Bring in files | Text, documents, PDFs, images, audio, " \
         "video | Documents from your computer" in flat
     assert "Or you can import a document in QualCoder" not in flat
-    one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click_readme = flat[flat.index("### One click in Claude Desktop"):
                             flat.index("### ChatGPT's desktop app")]
     # v0.15.0: one set, `full`, every tool, the default on every route;
     # the one other set is named for what it cannot do. v0.15.1: the

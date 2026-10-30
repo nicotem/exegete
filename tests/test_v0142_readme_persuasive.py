@@ -381,9 +381,15 @@ def _tools(mode="full"):
 # it is a selection, the documents this page links and the main code
 # files, and that the map in CONTRIBUTING.md, under "Project
 # structure", lists every module and script. It takes 262 characters
-# and 4 lines: 40,920 in 636 lines (the README itself 40,810 in 635).
-README_LIMIT = 40_920
-README_LINES = 636
+# and 4 lines. The owner's reading of 30 October: two headings without
+# their flourish. "Claude Desktop, with one click" became "One click
+# in Claude Desktop" (3 characters fewer), and the lead-in "Symmetry:
+# the same work in either program, as a commitment" became "The same
+# work in either program", the commitment said in the sentence after
+# it (2 characters more, in the same lines). The README's own figures,
+# held exactly: 40,809 in 635 lines.
+README_LIMIT = 40_809
+README_LINES = 635
 
 
 def test_the_readme_stays_short():

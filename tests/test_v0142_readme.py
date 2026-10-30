@@ -292,8 +292,9 @@ def test_the_no_ai_check_would_notice():
 # ---------------------------------------------------------------------------
 
 def test_start_here_says_which_way():
+    # (the owner's reading of 30 October: the heading without its flourish)
     first = _between(_readme(), "## Start here",
-                     "### Claude Desktop, with one click")
+                     "### One click in Claude Desktop")
     # (v0.15.2, the opening texts: "easiest" is a word of praise the
     # writing checklist leaves out; the reader who came straight here is
     # sent to the checks by the one-click steps' link, below, as the
@@ -304,7 +305,7 @@ def test_start_here_says_which_way():
     assert "Came straight here?" not in first
     # and the one-click steps send the reader to the checks before
     # participants' data, which live where data is discussed
-    one_click = _between(_readme(), "### Claude Desktop, with one click",
+    one_click = _between(_readme(), "### One click in Claude Desktop",
                          "### ChatGPT's desktop app and Codex")
     assert ("Before you use participants' data, go through [the five "
             "checks](https://github.com/nicotem/exegete#where-your-data-"

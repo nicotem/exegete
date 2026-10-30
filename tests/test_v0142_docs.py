@@ -100,8 +100,9 @@ def test_the_download_step_survives_an_early_build():
     cannot help either. Both documents say which release to take."""
     # v0.14.2, the README rewritten to persuade: the README's step is
     # shorter; why (the Pre-release mark, the early build) is INSTALL's
-    readme = _between(_flat("README.md"), "### Claude Desktop, with one "
-                      "click", "### ChatGPT's desktop app and Codex")
+    # (the owner's reading of 30 October: the heading without its flourish)
+    readme = _between(_flat("README.md"), "### One click in Claude Desktop",
+                      "### ChatGPT's desktop app and Codex")
     assert ("take the file whose name starts with `exegete-` and ends in "
             "`.mcpb` from the newest release that has one under its "
             "Assets.") in readme
@@ -422,8 +423,9 @@ def test_the_check_after_installing_is_a_short_list():
     Manual setting where Claude asks, and a pointer to the one list of
     checks before participants' data (v0.14.2, the README rewritten to
     persuade: the three checks joined the list where the reader decides)."""
-    one_click = _between(_flat("README.md"), "### Claude Desktop, with one "
-                         "click", "### ChatGPT's desktop app and Codex")
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click = _between(_flat("README.md"), "### One click in Claude Desktop",
+                         "### ChatGPT's desktop app and Codex")
     # v0.14.2, the README's first round of checks: a short list after one
     # sentence, the five checks linked last, with why Manual is not enough
     # v0.15.2, the opening texts: one paragraph in place of the list, the
@@ -458,7 +460,8 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     read and how to tell: keep its permission setting on Manual; the
     folders and computer use are what keep projects out of reach."""
     readme = _flat("README.md")
-    one_click = _between(readme, "### Claude Desktop, with one click",
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click = _between(readme, "### One click in Claude Desktop",
                          "### ChatGPT's desktop app and Codex (OpenAI)")
     # v0.14.2, the README rewritten to persuade: in fewer words, still
     # once, with the date and how to tell
@@ -797,9 +800,11 @@ def test_quickstart_sends_a_newcomer_to_the_one_click_start():
     first = quickstart[:quickstart.index("## What you need")]
     assert ("If you are new to Exegete, the one-click extension for Claude "
             "Desktop needs no typed commands:") in " ".join(first.split())
-    assert "https://github.com/nicotem/exegete#claude-desktop-with-one-click" \
+    # (the owner's reading of 30 October: the heading without its flourish,
+    # its anchor with it)
+    assert "https://github.com/nicotem/exegete#one-click-in-claude-desktop" \
         in first
-    assert "\n### Claude Desktop, with one click\n" in _read("README.md")
+    assert "\n### One click in Claude Desktop\n" in _read("README.md")
 
 
 def test_quickstart_spells_the_version_as_pypi_does():

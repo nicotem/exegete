@@ -137,7 +137,8 @@ def test_the_summary_promises_no_more_than_the_checks_do():
     the checks do."""
     readme = _flat("README.md")
     # (v0.15.2, the opening texts: the same promise, without a semicolon)
-    one_click = _between(readme, "### Claude Desktop, with one click",
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click = _between(readme, "### One click in Claude Desktop",
                          "### ChatGPT's desktop app and Codex (OpenAI)")
     # (v0.15.2, the lead's reading of 29 October: the checks help keep
     # the files out of Claude's reach, as far as Anthropic's pages say,
@@ -692,8 +693,9 @@ def test_one_neutral_sentence_places_qualcoder():
 # ---------------------------------------------------------------------------
 
 def test_the_readme_says_what_it_costs():
+    # (the owner's reading of 30 October: the heading without its flourish)
     start = _between(_flat("README.md"), "## Start here",
-                     "### Claude Desktop, with one click")
+                     "### One click in Claude Desktop")
     cost = start[start.index("**What it costs.**"):]
     # v0.15.2, the opening texts: Claude's page read again on 28 October
     # 2026 (ruling 108: the desktop extension works on Claude's Free plan,

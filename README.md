@@ -299,7 +299,7 @@ Other routes, such as OpenAI's apps and LM Studio, are compared in
 [Installing Exegete from the Terminal, "Choosing your AI host"](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#choosing-your-ai-host-data-governance-options-experimental).
 Their recipes there give OpenAI's plans and what LM Studio needs.
 
-### Claude Desktop, with one click
+### One click in Claude Desktop
 
 1. **Get Claude Desktop** for macOS or Windows (not Claude in a
    browser): https://claude.ai/download. Sign in.
@@ -441,11 +441,11 @@ It contains a small number of routines and values taken from QualCoder,
 so that its results match QualCoder's exactly.
 [NOTICE](https://github.com/nicotem/exegete/blob/main/NOTICE) lists them.
 
-**Symmetry: the same work in either program, as a commitment.**
-Whatever analytic work QualCoder offers should also be possible from the
-conversation. Today the two programs differ in both directions. The
-table sets QualCoder 3.8.2 and 4.0, as checked on 10 October 2026,
-beside Exegete 0.15.2.
+**The same work in either program.**
+Exegete's commitment is that whatever analytic work QualCoder offers
+should also be possible from the conversation. Today the two programs
+differ in both directions. The table sets QualCoder 3.8.2 and 4.0, as
+checked on 10 October 2026, beside Exegete 0.15.2.
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|

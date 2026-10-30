@@ -217,14 +217,18 @@ def test_the_three_commitments():
     readme = _flat("README.md")
     section = readme[readme.index("## Exegete and QualCoder"):
                      readme.index("## For advanced users")]
+    # (the owner's reading of 30 October: the lead-in without its
+    # flourish, the commitment said in the sentence after it)
     for words in ("reads and writes the formats of QualCoder 3.8.2 to 4.0",
                   "Where QualCoder has a rule, Exegete follows it and says "
                   "where it departs, and why",
-                  "**Symmetry: the same work in either program, as a "
-                  "commitment.**",
+                  "**The same work in either program.** Exegete's "
+                  "commitment is that whatever analytic work QualCoder "
+                  "offers should also be possible from the conversation.",
                   "**Exchange with other programs.**"):
         assert words in section, words
-    assert section.index("lists them.") < section.index("**Symmetry:") < \
+    assert section.index("lists them.") < \
+        section.index("**The same work in either program.**") < \
         section.index("**Exchange with other programs.**")
     # an aim, said as one
     assert "Today the two programs differ in both directions." in section

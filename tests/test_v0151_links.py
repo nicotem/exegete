@@ -265,7 +265,8 @@ def test_only_tracked_files_are_read(tmp_path):
      "safeguard",
      "approving-the-ais-suggestions-your-hosts-settings-are-the-safeguard"),
     ("Bringing documents in (0.14.3)", "bringing-documents-in-0143"),
-    ("Claude Desktop, with one click", "claude-desktop-with-one-click"),
+    # (the owner's reading of 30 October: the heading without its flourish)
+    ("One click in Claude Desktop", "one-click-in-claude-desktop"),
     # INSTALL 183, TOOLS 16 and 19
     ("ChatGPT's desktop app and Codex (Experimental)",
      "chatgpts-desktop-app-and-codex-experimental"),

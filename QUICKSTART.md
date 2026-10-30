@@ -7,7 +7,7 @@ Exegete by hand: you type a few commands in a Terminal window and edit
 Claude Desktop's settings file.
 
 If you are new to Exegete, the one-click extension for Claude Desktop
-needs no typed commands: [README, "Claude Desktop, with one click"](https://github.com/nicotem/exegete#claude-desktop-with-one-click).
+needs no typed commands: [README, "One click in Claude Desktop"](https://github.com/nicotem/exegete#one-click-in-claude-desktop).
 
 ## What you need
 

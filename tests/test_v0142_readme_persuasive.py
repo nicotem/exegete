@@ -375,8 +375,16 @@ def _tools(mode="full"):
 # of names, old backups cleared, and a restore or an undo that cannot be
 # undone (test_go_back_gives_the_limits_of_an_undo). That takes 213
 # characters and 3 lines: 40,658 in 632 lines.
-README_LIMIT = 40_658
-README_LINES = 632
+# The owner's reading of 30 October: two headings without their
+# flourish. "Claude Desktop, with one click" became "One click in
+# Claude Desktop" (3 characters fewer), and the lead-in "Symmetry: the
+# same work in either program, as a commitment" became "The same work
+# in either program", the commitment said in the sentence after it (2
+# characters more, in the same lines). With the 110 characters and the
+# line that release preparation left under the figures above, the
+# README's own: 40,547 in 631 lines.
+README_LIMIT = 40_547
+README_LINES = 631
 
 
 def test_the_readme_stays_short():

@@ -899,9 +899,10 @@ class TestTheDocuments:
         the Terminal route, and links INSTALL.md's section for it."""
         text = (REPO / "README.md").read_text(encoding="utf-8")
         start = _section(text, "## Start here")
-        one_click = _section(start, "### Claude Desktop, with one click")
+        # (the owner's reading of 30 October: the heading without its flourish)
+        one_click = _section(start, "### One click in Claude Desktop")
         one_click = one_click[:one_click.index("### ChatGPT's desktop app")]
-        assert start.index("### Claude Desktop, with one click") \
+        assert start.index("### One click in Claude Desktop") \
             < start.index("**Other assistants.**")
         assert ("INSTALL.md#claude-desktop-the-one-click-extension-"
                 "recommended") in one_click

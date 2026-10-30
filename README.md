@@ -592,6 +592,10 @@ github.com/nicotem/exegete
 [QUICKSTART.md](https://github.com/nicotem/exegete/blob/main/QUICKSTART.md) ·
 [docs/WRITING.md](https://github.com/nicotem/exegete/blob/main/docs/WRITING.md)
 
+The map above is a selection, showing the documents this page links and
+the main code files; the map in [CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md#project-structure),
+under "Project structure", lists every module and script.
+
 ## What comes next
 
 Plans, not promises: the order may change with what testers report.

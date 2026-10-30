@@ -375,8 +375,15 @@ def _tools(mode="full"):
 # of names, old backups cleared, and a restore or an undo that cannot be
 # undone (test_go_back_gives_the_limits_of_an_undo). That takes 213
 # characters and 3 lines: 40,658 in 632 lines.
-README_LIMIT = 40_658
-README_LINES = 632
+# Release preparation left the README 110 characters and a line under
+# these figures (the plan's and the version's commits). The release day
+# (30 October 2026, ruling 112): one sentence under the map says that
+# it is a selection, the documents this page links and the main code
+# files, and that the map in CONTRIBUTING.md, under "Project
+# structure", lists every module and script. It takes 262 characters
+# and 4 lines: 40,920 in 636 lines (the README itself 40,810 in 635).
+README_LIMIT = 40_920
+README_LINES = 636
 
 
 def test_the_readme_stays_short():

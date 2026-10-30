@@ -36,8 +36,13 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server  # noqa: E402
+
+sys.path.insert(0, str(Path(__file__).parent))
+# the documents round a size to two significant figures (v0.15.2)
+from test_v0151_facts import SIZE_TOLERANCE  # noqa: E402
 
 DEPRECATIONS = sorted(name for name in dir(server)
                       if name.startswith("DEPRECATED_")
@@ -66,8 +71,13 @@ def _served(mode):
         server._apply_toolset("full")
 
 
+# v0.15.2: INSTALL.md is the desktop extension's; the Terminal routes and
+# the variables moved, whole, to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _long_paragraph():
-    install = _flat(_read("INSTALL.md"))
+    install = _flat(_read(GUIDE))
     long = install[install.index(
         "**Long tool descriptions in Claude Code.**"):]
     return long[:long.index("**", 45)]
@@ -123,26 +133,28 @@ class TestClaudeCodesLimitsOnEveryPython:
 
     def test_a_figure_under_16384_is_warned_of(self):
         long = _long_paragraph()
-        assert ("a figure under 16,384 lowers the limit for tools found "
-                "through tool search, so it cuts more, not less") in long
+        assert (("A figure under 16,384 lowers the limit for tools found "
+                 "through tool search, so it cuts more, not less")) in long
         # v0.15.1: measured again, create_backup's line in 22
         # descriptions and pseudonymise_source's sentence on its backup
-        assert ("Measured for 0.15.1, the descriptions are longer on "
-                "Python 3.10 to 3.12 than on 3.13, which strips the "
-                "indentation they are written with.") in long
+        # (v0.15.2: Python 3.11 or newer; rounded, the exact lengths in
+        # docs/snapshot/sizes.json)
+        assert ("The descriptions are longer on Python 3.11 and 3.12 than "
+                "on 3.13, which strips the indentation they are written "
+                "with.") in long
+        # (v0.15.2: the link as the Terminal guide, in docs/, writes it)
+        assert ("[docs/snapshot/sizes.json](snapshot/sizes.json) gives "
+                "each description's exact length on Python 3.13.") in long
 
-    @pytest.mark.skipif(not (3, 10) <= sys.version_info[:2] < (3, 13),
-                        reason="the figures are Python 3.10 to 3.12's")
+    @pytest.mark.skipif(not (3, 11) <= sys.version_info[:2] < (3, 13),
+                        reason="the figures are Python 3.11 and 3.12's")
     def test_installs_figures_on_3_10_to_3_12(self):
         served = _served("full")
         over = sorted(((len(d), name) for name, d in served.items()
                        if len(d) > 4096), reverse=True)
         lengths = {name: length for length, name in over}
         long = _long_paragraph()
-        # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        said = re.search(r"On Python 3\.13, 4 of `full`'s 79 descriptions "
+        said = re.search(r"On Python 3\.13, 4 of `full`'s \d+ descriptions "
                          r"are longer than 4,096 characters \(([^)]*)\)",
                          long).group(1)
         four = re.findall(r"`(\w+)`", said)
@@ -152,16 +164,21 @@ class TestClaudeCodesLimitsOnEveryPython:
         # no longer passes 4,096 on 3.10 to 3.12, so the same four are all
         # (tests/test_v0151_removed_arguments.py)
         assert others == [], others
-        same = (", ".join(f"{lengths[n]:,}" for n in four[:-1])
-                + f" and {lengths[four[-1]]:,}")
-        assert f"on 3.10 to 3.12, the same four are, at {same}." in long
+        # v0.15.2: each rounded, within five per cent of the length here;
+        # a sentence of its own in the Terminal guide, so "On" or "on"
+        then = re.search(r"[Oo]n 3\.11 and 3\.12, the same four are, at about "
+                         r"([\d,]+), ([\d,]+), ([\d,]+) and ([\d,]+)\.",
+                         long)
+        assert then, long
+        for name, figure in zip(four, then.groups()):
+            stated = int(figure.replace(",", ""))
+            assert abs(stated - lengths[name]) <= SIZE_TOLERANCE * lengths[
+                name], (name, stated, lengths[name])
         longest, name = over[0]
-        assert name == "pseudonymise_source"
-        # 1,441 since v0.15.1 (17,825 on 3.13); 754 since it removed the
-        # overlap policy qualcoder_edit_parity (17,138 on 3.13)
-        assert (f"its last 754 characters are cut even through tool "
-                f"search on 3.13, and its last {longest - 16384:,} on 3.10 "
-                f"to 3.12, its sentence on the lock file among them") in long
+        assert name == "pseudonymise_source" and longest > 16384
+        assert ("so its last part, its sentence on the lock file included, "
+                "is cut even through tool search, and a longer part on 3.11 "
+                "and 3.12") in long
 
     def test_the_readme_and_the_changelog_name_the_longest(self):
         served = _served("full")
@@ -169,27 +186,37 @@ class TestClaudeCodesLimitsOnEveryPython:
         length = len(served[name])
         assert name == "pseudonymise_source" and length > 16384
         readme = _flat(_read("README.md"))
-        # v0.15.1 measures again: the current figure is in the
-        # [Unreleased] part's Measured, 0.15.0's is history
+        # v0.15.2: the README rounds its length on each Python, held here
+        # within five per cent of the length on the Python running the
+        # test; the exact one is in docs/snapshot/sizes.json
+        found = re.search(r"`pseudonymise_source`'s \(about ([\d,]+) on "
+                          r"Python 3\.13, about ([\d,]+) on 3\.11 and "
+                          r"3\.12\):", readme)
+        assert found, readme
+        stated = int(found.group(1 if sys.version_info[:2] >= (3, 13)
+                                 else 2).replace(",", ""))
+        assert abs(stated - length) <= SIZE_TOLERANCE * length, stated
+        # 0.15.1's own figures, in its Measured part, as history
         log = _read("CHANGELOG.md")
-        current = log[log.index("## [0.15.1-alpha]"):
-                      log.index("## [0.15.0-alpha]")]
-        measured = _flat(current[current.index("### Measured"):])
-        if sys.version_info[:2] >= (3, 13):
-            assert (f"`pseudonymise_source`'s ({length:,} on Python 3.13, "
-                    ) in readme
-            assert (f"`pseudonymise_source` ({length:,} characters; "
-                    ) in measured
-        else:
-            assert f", {length:,} on 3.10 to 3.12):" in readme
-            assert f"; {length:,} on 3.11), passes 16,384" in measured
+        entry = log[log.index("## [0.15.1-alpha]"):
+                    log.index("## [0.15.0-alpha]")]
+        measured = _flat(entry[entry.index("### Measured"):])
+        assert ("`pseudonymise_source` (17,138 characters; 18,238 on 3.11), "
+                "passes 16,384") in measured
         assert ("One description is longer than 16,384 characters, "
                 "`pseudonymise_source`'s") in readme
-        assert ("[INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
-                "INSTALL.md#alternative-claude-code-and-other-mcp-clients) "
-                "says how to let it through whole.") in readme
-        assert ("\n## Alternative: Claude Code and other MCP clients\n"
-                in _read("INSTALL.md"))
+        # (v0.15.2, the merge onto the integration branch: Claude Code's
+        # section is the Terminal guide's, which the README links to by its
+        # own anchor)
+        assert ("[the guide's section on Claude Code](https://github.com/"
+                "nicotem/exegete/blob/main/docs/installing-from-the-terminal"
+                ".md#claude-code) says how to let it through whole.") in readme
+        assert "\n## Claude Code\n" in _read(GUIDE)
+        # (the anchor stays in INSTALL.md, a pointer to the Terminal
+        # guide's section, which carries it too)
+        for name in ("INSTALL.md", GUIDE):
+            assert ('<a id="alternative-claude-code-and-other-mcp-clients">'
+                    in _read(name)), name
 
 
 # ===========================================================================
@@ -246,30 +273,42 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
     def test_the_documents(self):
         # the guide's opening box, without its quotation marks
         guide = _flat(_read("AI_CODING_GUIDE.md").replace("\n> ", "\n"))
-        # (v0.15.1: the export kept, its faults named, ruling 85, item 2)
-        assert ("it files every coding under the AI coder name, yours "
-                "included. Exegete has no other REFI-QDA export yet; "
-                "QualCoder's own export, if you use QualCoder, keeps each "
-                "coder: Project, Export, REFI-QDA Project export.)") in guide
-        assert ("QualCoder's own export, if you use QualCoder, keeps each "
-                "coder)") in guide
+        # (v0.15.1: the export kept, its faults named, ruling 85, item 2;
+        # v0.15.2: the three faults the served text gives, told once in
+        # the guide, and QualCoder's own export on its condition)
+        for fault in ("yours and a hidden coder's included",
+                      "leaves out cases, annotations, journals and media",
+                      # (v0.15.2: the third fault read plainly)
+                      "includes the suggestions you rejected, without "
+                      "marking them, when it exports a single coding "
+                      "session"):
+            assert fault in guide, fault
+        assert ("If you use QualCoder, its own export (Project, Export, "
+                "REFI-QDA Project export) keeps each coder, the cases, the "
+                "notes and the media.") in guide
+        assert ("with the known faults given at the top of this guide") \
+            in guide
         assert "removed in v0.15.1; QualCoder's own export" not in guide
         tools = _flat(_read("TOOLS.md"))
         for words in (
-                "Exegete has no other REFI-QDA export yet, and QualCoder's "
-                "own export (Project, Export, REFI-QDA Project export), for "
-                "researchers who have QualCoder, keeps them",
+                # (v0.15.2: the faults as the served text gives them, and
+                # QualCoder's own export on its condition)
+                "a session's export includes rejected suggestions, unmarked. "
+                "Exegete has no other REFI-QDA export yet. If you use "
+                "QualCoder, its own export (Project, Export, REFI-QDA "
+                "Project export) keeps each coder, the cases, the notes and "
+                "the media",
                 # (v0.15.1: the rename back and journal attributes removed)
                 "A name the project's backups show is not looked for: "
                 "`restore_backup`, or QualCoder's own Rename if you use it, "
                 "can put an earlier name back",
-                "attributes on journal entries were removed in 0.15.1, and "
-                "those already in a project stay (QualCoder's Journals "
-                "window, for researchers who use it, sets and shows them)",
-                "rejected suggestions, unmarked. Exegete has no other "
-                "REFI-QDA export yet; QualCoder's own export (Project, "
-                "Export, REFI-QDA Project export), for researchers who have "
-                "QualCoder, keeps them"):
+                "attributes on journal entries are refused, and those "
+                "already in a project stay (QualCoder's Journals window, if "
+                "you use QualCoder, sets and shows them)",
+                "it files every coding under the AI coder name, yours and a "
+                "hidden coder's included, it leaves out cases, annotations, "
+                "journals and media, and a session's export includes "
+                "rejected suggestions, unmarked"):
             assert words in tools, words
         for text in (guide, tools):
             for old in UNCONDITIONAL + (
@@ -294,13 +333,16 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
     def test_the_coding_guide_on_older_projects(self):
         guide = _flat(_read("AI_CODING_GUIDE.md"))
         prerequisites = guide[guide.index("## Prerequisites"):]
-        prerequisites = prerequisites[:prerequisites.index("## Quick Start")]
-        assert ("An older project is refused until QualCoder 3.8 or newer "
-                "has opened it once; without QualCoder, someone who has it "
-                "and may see the project's data can do this and send you the "
-                "updated copy, and without QualCoder at all a new project "
-                "made in Exegete from the original documents is a way on, "
-                "without the old project's coding") in prerequisites
+        prerequisites = prerequisites[:prerequisites.index("## Quick start")]
+        # (v0.15.2: told once, in TOOLS.md, and pointed to; the way
+        # without QualCoder stays named there)
+        assert ("An older project is refused; \"Supported QualCoder "
+                "versions\" in TOOLS.md says how to bring one up to date, "
+                "with QualCoder or without it") in prerequisites
+        tools = _flat(_read("TOOLS.md"))
+        assert ("Without QualCoder at all, a new project made in Exegete "
+                "from the original documents is a way on, without the old "
+                "project's coding.") in tools
         assert "Older projects: open them once in QualCoder" not in guide
 
 
@@ -351,7 +393,7 @@ class TestTheSmallerPoints:
                 "Exegete finds decides") in upgrading
 
     def test_the_coder_name_reads_the_right_way_round(self):
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read("INSTALL.md")) + " " + _flat(_read(GUIDE))
         manifest = _manifest_setting("coder_name")
         assert install.count(CURRENT_CODER) == 2
         # after 0.15.1 the page's description says only what the name is
@@ -364,23 +406,34 @@ class TestTheSmallerPoints:
         readme = _flat(_read("README.md"))
         # (the staleness audit of 20 October 2026: saving the names list
         # previews first too; both lists follow the token registry)
-        assert ("the larger ones (merging or deleting codes and categories, "
-                "replacing names, restoring backups, bringing documents in, "
-                "correcting your own coder name, saving the names list) show "
-                "a preview first") in readme
+        # (v0.15.2, the opening texts: the same fact, reworded), pruning backups named beside restoring them
+        # (the readability reading: pruning said as clearing old backups)
+        # (v0.15.2, undo: undoing a change previews first too)
+        assert ("The larger ones show a preview first: merging or deleting "
+                "codes and categories, replacing names, restoring a backup or "
+                "clearing old ones, bringing documents in, correcting your own "
+                "coder name, saving the names list and undoing a change."
+                ) in readme
         from exegete import preview_tokens
         guarded = readme[readme.index("- **Guarded changes**"):]
+        # (v0.15.2, the opening texts: the import among them, every tool
+        # that previews first in the one list; the owner's word of 29
+        # October 2026: the group after it back, documents in)
         guarded = guarded[:guarded.index("- **Documents in")]
-        for name in set(preview_tokens.REGISTRY) - {"import_documents"}:
+        for name in set(preview_tokens.REGISTRY):
             assert f"`{name}`" in guarded, name
-        assert "`import_documents` (a preview, then the import on its " \
-               "token" in readme
+        # (the readability reading: the list's lead says that each
+        # previews first, so the import's own words say what it does)
+        assert "`import_documents` (bringing documents in, after a " \
+               "backup)" in readme
+        # (v0.15.2, undo: and undoing a change)
         assert ("`set_project_coder_name` (your own coder name, while "
                 "nothing is recorded under it), `save_names_list` (saving "
-                "the names list).") in readme
+                "the names list), `undo_changes` (undoing a change), and "
+                "`import_documents`") in readme
 
     def test_exegete_not_the_server_in_lines_new_in_0150(self):
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read(GUIDE))
         # v0.15.1: the switch's sentence now comes between "whose
         # default is `full`." and "Any other value"; after 0.15.1 the
         # extension sets the switch's variable instead
@@ -396,9 +449,11 @@ class TestTheSmallerPoints:
         tools = _flat(_read("TOOLS.md"))
         assert "when you configure Exegete yourself" in tools
         assert "configure the server yourself" not in tools
-        # the anchor many links use stays
-        assert "\n## Environment variables the server reads\n" in _read(
-            "INSTALL.md")
+        # the anchor many links use stays, in INSTALL.md as a pointer and
+        # in the Terminal guide on its section
+        for name in ("INSTALL.md", GUIDE):
+            assert ('<a id="environment-variables-the-server-reads">'
+                    in _read(name)), name
 
     def test_the_setting_names_the_creation_line(self):
         # after 0.15.1 the text setting left the page, and with it step
@@ -406,7 +461,7 @@ class TestTheSmallerPoints:
         assert "uses_qualcoder" not in \
             json.loads(_read("packaging/desktop-extension/manifest.in.json"))[
                 "user_config"]
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read(GUIDE))
         assert install.count(CREATION_LINE) == 1
         assert CREATION_LINE in _flat(_unreleased())
         # and what it names is what create_project gives

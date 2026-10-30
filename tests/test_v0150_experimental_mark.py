@@ -32,9 +32,11 @@ import pytest
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import exegete.server as server                 # noqa: E402
 from exegete import names                       # noqa: E402
+from tool_counts import FULL_TOOLS              # noqa: E402
 
 TOOLSET, TOOLSET_OLD = names.SETTINGS["toolset"]
 AI, AI_OLD = names.SETTINGS["ai_coder_name"]
@@ -72,36 +74,45 @@ def _server_comments():
 
 # 1. What changes: (document, old words, new words)
 CHANGES = [
+    # (v0.15.2, the opening texts: the new words of each sentence)
     ("README.md",
      "**Start a project** in QualCoder's format (Experimental)",
-     "**Start a project** in QualCoder's format, or work on a copy of "
-     "yours."),
+     "**Start a project**, or work on a copy of one you have."),
     ("README.md",
      "Practice\" (Experimental), then bring in your page",
-     "called Practice\", then bring in your page"),
+     "Exegete called Practice\". With the extension"),
     ("README.md",
      "can create a project too (Experimental).",
-     "whose default tool set, `full`, can create a project too."),
+     # (v0.15.2, the merge onto the integration branch: the Terminal
+     # guide's)
+     "whose default tool set, `full`, can create a project too "
+     "([the Terminal guide]"),
+    # (the comparison table, and its row, gave way to the list of what is
+    # not in Exegete yet)
+    # (v0.15.2, undo: the count is the snapshot's, tests/tool_counts.py)
     ("README.md",
      "| Create a project | Yes | Yes (Experimental) |",
-     "| Create a project | Yes | Yes |"),
+     f"{FULL_TOOLS}: every tool, creating a project"),
     # without the count, which the names-list piece moves
     ("README.md",
      "creating a project (Experimental) and two renamed tools' earlier "
      "names included",
-     "all, creating a project and two renamed tools' earlier names "
-     "included"),
-    ("INSTALL.md",
+     "every tool, creating a project and the earlier names of two renamed "
+     "tools included"),
+    # v0.15.2: the Terminal routes moved to the Terminal guide
+    ("docs/installing-from-the-terminal.md",
      "includes creating a project (Experimental): the assistant",
      "The default tool set, `full`, includes creating a project: the "
      "assistant can start one in the conversation"),
-    ("INSTALL.md",
+    ("docs/installing-from-the-terminal.md",
      "creating a project (Experimental) included, so that a study",
      "every tool, creating a project included, so that a study can be "
      "started from the conversation"),
     ("QUICKSTART.md",
      "(Experimental; INSTALL.md says where it goes)",
-     "can create one in the conversation (INSTALL.md says where it goes)"),
+     # (v0.15.2, the merge onto the integration branch: QUICKSTART's own
+     # step 3 says it, for this route)
+     "can create one in the conversation (step 3 says where it goes)"),
     ("QUICKSTART.md",
      "create one (Experimental).",
      "in step 5 you can ask the assistant to create one."),
@@ -117,8 +128,9 @@ CHANGES = [
      "**Creating projects:** `create_project` makes a new, empty project"),
     ("AI_CODING_GUIDE.md",
      "(Experimental; in the default tool set, `full`, on every route)",
-     "A project: a new one the assistant creates (in the default tool "
-     "set, `full`, on every route), or a copy of one you have"),
+     # (v0.15.2: the sentence read plainly, its fact unchanged)
+     "The assistant can create a new one, with a tool in the default "
+     "tool set, `full`, on every route"),
 ]
 
 UNRELEASED_CHANGES = [
@@ -161,24 +173,29 @@ class TestTheMarkLeavesCreatingAProject:
 
 # 2. What must not change: (document, words, times)
 KEPT = [
-    ("README.md", "parts marked Experimental have had little or no use yet",
+    ("README.md", "Parts marked Experimental have had little or no use yet",
      1),
     ("README.md", "| **ChatGPT's desktop app and Codex** (Experimental) |", 1),
     ("README.md", "| **LM Studio**, with a local model (Experimental) |", 1),
-    ("README.md", "Experimental: written from OpenAI's documentation, read "
-                  "on 30 September 2026", 1),
+    ("README.md", "This route is Experimental: we wrote it from OpenAI's "
+                  "documentation, read on 30 September 2026", 1),
     ("README.md", "#choosing-your-ai-host-data-governance-options-"
                   "experimental", 1),
     ("README.md", "#chatgpts-desktop-app-and-codex-experimental", 1),
-    ("README.md", "called experimental there", 1),
-    ("INSTALL.md", "## Choosing your AI host: data-governance options "
-                   "(Experimental)", 1),
-    ("INSTALL.md", "## Claude Code with an Anthropic API key (Experimental)",
-     1),
-    ("INSTALL.md", "## LM Studio (fully local) (Experimental)", 1),
-    ("INSTALL.md", "## ChatGPT's desktop app and Codex (Experimental)", 1),
-    ("INSTALL.md", "> **Status: Experimental.**", 3),
-    ("QUICKSTART.md", "(the API-key and LM Studio routes are Experimental).",
+    # (v0.15.2, the opening texts: QualCoder's own server is TOOLS.md's,
+    # below, the README pointing to it)
+    # v0.15.2: the routes, with their marks, moved to the Terminal guide
+    ("docs/installing-from-the-terminal.md",
+     "## Choosing your AI host: data-governance options (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md",
+     "## Claude Code with an Anthropic API key (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md",
+     "## LM Studio (fully local) (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md",
+     "## ChatGPT's desktop app and Codex (Experimental)", 1),
+    ("docs/installing-from-the-terminal.md", "> **Status: Experimental.**",
+     3),
+    ("QUICKSTART.md", "The API-key and LM Studio routes are Experimental.",
      1),
     ("TOOLS.md", "**Reduced toolset for local models (Experimental):**", 1),
     ("TOOLS.md", "called experimental there", 1),
@@ -361,6 +378,6 @@ def test_tools_says_how_opening_in_qualcoder_was_checked():
                     tools.index("**The project memo**")]
     assert ("Opening a new project was checked with QualCoder 4.0 and "
             "3.8.2 run from their published source on a Mac, not from their "
-            "installers or on Windows or Linux; if you use QualCoder in one "
+            "installers or on Windows or Linux. If you use QualCoder in one "
             "of those ways, letting it open a new project once, before much "
             "work goes into it, is a quick check.") in opening

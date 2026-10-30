@@ -65,7 +65,11 @@ def _between(text, start, end):
     return text[first:text.index(end, first + len(start))]
 
 
-DOCUMENTS = ("README.md", "INSTALL.md", "PRIVACY.md", "QUICKSTART.md")
+DOCUMENTS = ("README.md", "INSTALL.md", "PRIVACY.md", "QUICKSTART.md",
+             "docs/installing-from-the-terminal.md")
+# v0.15.2: INSTALL.md is the desktop extension's; the routes table and
+# every Terminal recipe moved, whole, to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
 
 
 # ---------------------------------------------------------------------------
@@ -76,6 +80,13 @@ ADVICE = ("Switch training off before participants' data: while it is on, "
           "{maker} may use your conversations to train its models.")
 RATED = ("Rating a reply (thumbs up or down) can still let {maker} train on "
          "that conversation")
+# v0.15.2, the opening texts: the README says it as a warning with what to
+# do, not an order (ruling 108: warn and suggest); INSTALL.md and
+# PRIVACY.md keep ADVICE until their own piece
+README_ADVICE = ("While training is on, {maker} may use your conversations, "
+                 "with the participants' data in them, to train its models.")
+README_RATED = ("Rating a reply, with a thumbs up or down, can still let "
+                "{maker} train on that conversation")
 
 
 def _plain(text):
@@ -84,27 +95,32 @@ def _plain(text):
 
 def test_the_readme_gives_both_makers_the_same_advice():
     readme = _flat("README.md")
-    claude = _plain(_between(readme, "3. **Switch training off**",
-                             "4. On an account"))
-    openai = _plain(_between(readme, "1. **Switch training off**",
-                             "2. **Then follow"))
+    claude = _plain(_between(readme, "3. **Training.**",
+                             "4. **Your account"))
+    # (the paragraph's last sentence sends the reader on to INSTALL.md's
+    # steps, which come after training; v0.15.2, the merge onto the
+    # integration branch: the Terminal guide's steps, where they moved)
+    openai = _plain(_between(readme, "**Training.** While training is on, "
+                             "OpenAI", " Then follow [the Terminal guide's "
+                             "steps]"))
     for maker, text in (("Anthropic", claude), ("OpenAI", openai)):
-        assert ADVICE.format(maker=maker) in text, maker
-        assert RATED.format(maker=maker) in text, maker
+        assert README_ADVICE.format(maker=maker) in text, maker
+        assert README_RATED.format(maker=maker) in text, maker
     # The same words: with the maker's name and the sentence that names
     # its setting taken out, what is left is one text
     def shape(text, maker):
         text = text.replace(maker, "MAKER")
         text = re.sub(r"^\d\. ", "", text)
-        text = re.sub(r"On a personal plan \([^)]*\) it is .*?\. (?=Rating)",
+        text = re.sub(r"On a personal plan \([^)]*\),? .*?\. (?=Rating)",
                       "", text)
         return text.replace(" (PRIVACY.md quotes the terms)", "").strip()
     assert shape(claude, "Anthropic") == shape(openai, "OpenAI")
     # each names its own settings, with Claude's address
-    assert ("the Model Improvement setting, at "
-            "https://claude.ai/settings/data-privacy-controls.") in claude
+    assert ("the Model Improvement setting at "
+            "https://claude.ai/settings/data-privacy-controls switches "
+            "training off.") in claude
     assert ("\"Improve the model for everyone\" in ChatGPT's Settings, Data "
-            "controls, and Codex's separate \"Include environments\".") \
+            "controls, and with Codex's separate \"Include environments\".") \
         in openai
     # and neither is a mere "check" or tied to practice
     for gone in ("check the Model Improvement setting", "practice included",
@@ -120,11 +136,18 @@ def test_the_summary_promises_no_more_than_the_checks_do():
     for safety review, as PRIVACY.md quotes them; the line now says what
     the checks do."""
     readme = _flat("README.md")
-    one_click = _between(readme, "### Claude Desktop, with one click",
-                         "**QualCoder, if you want it.**")
+    # (v0.15.2, the opening texts: the same promise, without a semicolon)
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click = _between(readme, "### One click in Claude Desktop",
+                         "### ChatGPT's desktop app and Codex (OpenAI)")
+    # (v0.15.2, the lead's reading of 29 October: the checks help keep
+    # the files out of Claude's reach, as far as Anthropic's pages say,
+    # the hedge the assistants table gives; the third switches training
+    # off on a personal plan)
     assert one_click.rstrip().endswith(
-        "Manual keeps Claude asking; the checks keep your files out of its "
-        "reach and switch training off.")
+        "go through [the five checks](https://github.com/nicotem/exegete"
+        "#where-your-data-goes), which help keep your files out of "
+        "Claude's reach and switch training off.")
     # (PRIVACY.md quotes OpenAI's "opted out of training", a quotation,
     # not a promise)
     for document in DOCUMENTS:
@@ -133,14 +156,14 @@ def test_the_summary_promises_no_more_than_the_checks_do():
                         "training", "never trains on"):
             assert promise not in text, (document, promise)
     # the exceptions are still there for a reader who looks
-    assert RATED.format(maker="Anthropic") in _plain(readme)
+        assert README_RATED.format(maker="Anthropic") in _plain(readme)
     assert "flagged for safety review" in _flat("PRIVACY.md")
 
 
 def test_install_and_privacy_give_the_same_advice():
-    install = _flat("INSTALL.md")
+    install = _flat(GUIDE)
     privacy = _flat("PRIVACY.md")
-    rows = {maker: _between(_read("INSTALL.md"), row, "\n")
+    rows = {maker: _between(_read(GUIDE), row, "\n")
             for maker, row in (("Anthropic", "| **Claude consumer plans**"),
                                ("OpenAI", "| **OpenAI's apps**"))}
     for maker, row in rows.items():
@@ -152,6 +175,7 @@ def test_install_and_privacy_give_the_same_advice():
     assert RATED.format(maker="OpenAI") in first
     assert "turn off Codex's \"Include environments\"" in first
     assert "practice included" not in install
+    assert "practice included" not in _flat("INSTALL.md")
     # PRIVACY.md: each maker's section, and the checklist for both
     rung_one = _between(privacy, "### Rung 1:", "### Rung 2:")
     assert ADVICE.format(maker="Anthropic") in rung_one
@@ -159,15 +183,29 @@ def test_install_and_privacy_give_the_same_advice():
                            "**ChatGPT Business, Enterprise and Edu")
     assert ADVICE.format(maker="OpenAI") in individuals
     checklist = _between(privacy, "## Before you use real participant data",
-                         "## Practical mitigations")
-    item = _between(checklist, "- **Training, with either maker.**",
+                         "## How your data flows")
+    # (v0.15.2, the lead's reading: "the AI provider", the one term, for
+    # "the maker"; and rung 1 said to be one of the governance options
+    # the document sets out, at its first mention)
+    item = _between(checklist, "- **Training, with either AI provider.**",
                     "- **Controller")
-    for words in (ADVICE.format(maker="the maker"), "Model Improvement",
+    for words in (ADVICE.format(maker="the AI provider"), "Model Improvement",
                   "\"Improve the model for everyone\"",
                   "\"Include environments\"",
                   "Rating a reply (thumbs up or down) can still let either "
-                  "maker train on that conversation"):
+                  "provider train on that conversation",
+                  "(rung 1, the first of the governance options in \"Your "
+                  "governance options\", below)",
+                  # (the fix round: the terms' second exception)
+                  "By its terms, Anthropic can also train on a conversation "
+                  "flagged for a safety review (rung 1)."):
         assert words in item, words
+    assert "(2) your Materials are flagged for safety review" in rung_one
+    assert "maker" not in checklist
+    assert privacy.index("rung 1, the first of the governance options") \
+        == privacy.lower().index("rung")
+    assert "\n## Your governance options, from default to fully local" in \
+        _read("PRIVACY.md")
 
 
 def test_the_advice_is_where_claude_desktop_is_set_up():
@@ -175,29 +213,70 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
     Desktop; both say where what Claude reads goes and give the training
     advice in the README's words (the judge, 6 October 2026: QUICKSTART
     pointed Claude at a real project without either)."""
-    claude_check = _plain(_between(_flat("README.md"),
-                                   "3. **Switch training off**",
-                                   " (PRIVACY.md quotes the terms)"))[3:]
+    # v0.15.2, the opening texts: the README and QUICKSTART say it in the
+    # writing checklist's voice and INSTALL.md, until its own piece, in
+    # its words; the three hold the same facts
+    readme = _plain(_between(_flat("README.md"),
+                             "Before you use participants' data with "
+                             "Claude Desktop's chat",
+                             "**Private notes and names.**"))
     one_click = _plain(_between(
-        _flat("INSTALL.md"), "## Claude Desktop: the one-click extension",
-        "**Not signed.**"))
+        _flat("INSTALL.md"), "## Installing the extension",
+        "### Approving the AI's suggestions"))
     quickstart = _plain(_between(_flat("QUICKSTART.md"),
-                                 "### 5. Test It Out",
-                                 "In Claude Desktop, try these prompts:"))
+                                 "### 5. Try it",
+                                 "If you have no project yet, ask Claude"))
+    for where, text in (("README, the checks", readme),
+                        ("INSTALL, one-click", one_click),
+                        ("QUICKSTART, step 5", quickstart)):
+        for words in ("Anthropic may use your conversations",
+                      "to train its models", "(Free, Pro or Max)",
+                      "Model Improvement",
+                      "https://claude.ai/settings/data-privacy-controls",
+                      "thumbs up or down",
+                      "can still let Anthropic train on that conversation"):
+            assert words in text, (where, words)
     for where, text in (("INSTALL, one-click", one_click),
                         ("QUICKSTART, step 5", quickstart)):
-        assert claude_check in text, where
         assert ("[Where your data goes](https://github.com/nicotem/exegete"
                 "#where-your-data-goes), in the README, says the rest: the "
                 "checks before participants' data, and which assistants open "
                 "files by themselves.") in text, where
+    # (v0.15.2, the readability reading: Anthropic named as the AI
+    # provider, the one term the documents use)
     assert ("What Claude reads through Exegete (passages, codes, memos, "
-            "names) goes to Anthropic, whose computers run the AI behind "
-            "Claude Desktop.") in quickstart
+            "names) goes to Anthropic, the AI provider that runs Claude's AI "
+            "model.") in quickstart
     # before the first prompt about the reader's own project
     flat = _flat("QUICKSTART.md")
     assert flat.index("goes to Anthropic") < \
         flat.index("Can you give me a summary of my project?")
+
+
+def test_quickstart_dates_the_setting_as_privacy_does():
+    """v0.15.2, the lead's reading of 29 October: QUICKSTART's sentence on
+    the Model Improvement setting, a claim about Anthropic's product,
+    carries the date PRIVACY.md gives for the terms it quotes there."""
+    governance = _between(_flat("PRIVACY.md"), "## Your governance options",
+                          "### Rung 1:")
+    date = re.search(r"The terms below were quoted on (\d{1,2} [A-Z][a-z]+ "
+                     r"\d{4})", governance).group(1)
+    step5 = _between(_flat("QUICKSTART.md"), "### 5. Try it",
+                     "If you have no project yet, ask Claude")
+    assert ("https://claude.ai/settings/data-privacy-controls switches "
+            f"training off, as Anthropic's pages said on {date}.") in step5
+    # (the fix round: the sentence on rating a reply is a claim about the
+    # same terms, so it is dated by them, and it names their second
+    # exception, which the terms PRIVACY quotes that day give)
+    assert ("The same pages said that rating a reply, with a thumbs up or "
+            "down, can still let Anthropic train on that conversation, and "
+            "so can its being flagged for a safety review.") in step5
+    rung_one = _between(_flat("PRIVACY.md"), "### Rung 1:", "### Rung 2:")
+    exceptions = rung_one[rung_one.index("Exceptions that apply whatever "
+                                         "the setting"):]
+    assert f"(Consumer Terms, quoted {date}" in " ".join(exceptions.split())
+    for words in ("(1) you provide Feedback", "flagged for safety review"):
+        assert words in exceptions, words
 
 
 # ---------------------------------------------------------------------------
@@ -227,33 +306,63 @@ OWNERS_WORDS = (
 APART = re.compile(
     r"A folder of their own keeps practice projects apart but does not put "
     r"the study out of (?:reach|Claude Code's reach|Codex's reach), and "
-    r"what (?:they open goes to their maker|it opens goes to the AI "
-    r"provider|Codex opens goes to OpenAI), which may train on it while "
-    r"training is on\b")
+    r"what (?:they open goes to their (?:maker|AI provider)|it opens goes "
+    r"to the AI provider|Codex opens goes to OpenAI), which may train on it "
+    r"while training is on\b")
 OWNERS_WORDS_AND_AFTER = OWNERS_WORDS + (
     " A folder of their own keeps practice projects apart but does not put "
     "the study out of reach, and what they open goes to their maker, which "
     "may train on it while training is on.")
 
 
+def test_readme_gives_the_warning_in_short_sentences():
+    """v0.15.2, the lead's reading of 29 October: the README's paragraph
+    on practising gives the warning's facts in short sentences, in
+    QUICKSTART's words where the facts are the same: Codex and Claude
+    Code open files by themselves; a study on the same computer is in
+    their reach wherever the practice projects are, and Exegete's list
+    of projects says where each listed project is (the list reads its
+    usual places and a workspace's top level, not the whole computer,
+    as the readers of QUICKSTART's paragraph found); what they open
+    goes to their AI provider, which may train on it; and Claude
+    Desktop's chat as a suggestion. It comes after the advice to
+    practise on text that is not a participant's, and before the
+    steps."""
+    first = _between(_flat("README.md"), "### A first session",
+                     "### Other assistants, and updates")
+    sentences = (
+        "Codex and Claude Code open files on your computer by "
+        "themselves, outside Exegete.",
+        "A study kept on the same computer is within their reach, "
+        "wherever your practice projects are, and Exegete's list of "
+        "projects tells them where each listed project is.",
+        "What they open goes to their AI provider.",
+        "While training is on, the AI provider may train its models on "
+        "it.",
+        "If that matters for a study, you could work on that study in "
+        "Claude Desktop's chat.")
+    for sentence in sentences:
+        assert sentence in first, sentence
+    assert first.index("Practise on text that is not from a participant") \
+        < first.index(sentences[0]) < first.index(sentences[-1]) \
+        < first.index("Ask the assistant to")
+    # the owner's long sentences, kept where they were (PRIVACY.md and
+    # the Terminal guide), are not the README's now
+    assert OWNERS_WORDS not in first
+
+
 def _warning_places():
-    install = _read("INSTALL.md")
+    install = _read(GUIDE)
     return {
-        "README, a first session": _between(
-            _flat("README.md"), "### A first session",
-            "### Other assistants, and updates"),
-        "INSTALL, Claude Code": " ".join(_between(
-            install, "## Alternative: Claude Code and other MCP clients",
-            "## Environment variables the server reads").split()),
-        "INSTALL, Codex's folder": " ".join(_between(
+        "the Terminal guide, Claude Code": " ".join(_between(
+            install, "\n## Claude Code\n",
+            "## Claude Code with an Anthropic API key").split()),
+        "the Terminal guide, Codex's folder": " ".join(_between(
             install, "**Step 3. Give Codex a folder of its own",
             "**Step 4. Keep it asking.**").split()),
         "PRIVACY, assistants that open files": _between(
             _flat("PRIVACY.md"), "## Assistants that open files by "
             "themselves", "## Keeping notes private"),
-        "QUICKSTART, what you need": _between(
-            _flat("QUICKSTART.md"), "## Prerequisites Checklist",
-            "## Installation Steps"),
     }
 
 
@@ -266,14 +375,90 @@ def test_the_warning_is_where_a_reader_meets_those_routes():
         assert found, where
         assert SUGGESTION.search(text).end() < found.start(), where
     places = _warning_places()
-    assert OWNERS_WORDS_AND_AFTER in places["README, a first session"]
     assert ("**While you practise.** " + OWNERS_WORDS_AND_AFTER) in \
         places["PRIVACY, assistants that open files"]
-    # In the README, after the advice to practise on text that is not a
-    # participant's, and before the steps
-    first = places["README, a first session"]
-    assert first.index("Practise on text that is not from a participant") \
-        < first.index(OWNERS_WORDS) < first.index("Ask the assistant to")
+
+
+def test_quickstart_gives_the_warning_in_short_sentences():
+    """v0.15.2, the lead's reading of 29 October: QUICKSTART's paragraph
+    on Claude Code gives the warning's facts in short sentences: Claude
+    Code opens files by itself; a study on the same computer is in its
+    reach wherever the practice projects are, and Exegete's list of
+    projects says where each project it lists is; what it opens goes to
+    Anthropic, which may train on it; and the chat, with its three
+    conditions, as a suggestion. The fix round: the reason for the empty
+    folder, straight after it (PRIVACY.md, "Assistants that open files
+    by themselves", says the same of Claude Code)."""
+    section = _between(_flat("QUICKSTART.md"),
+                       "### Claude Code instead of Claude Desktop",
+                       "## Installation steps")
+    reason = ("Started in your home folder, or in one that holds a study, "
+              "Claude Code reads that study without asking.")
+    assert section.index("in an empty folder") < section.index(reason)
+    assert ("Claude Code started in your home folder, your projects folder "
+            "or a study's folder, or given one of them as a working folder, "
+            "reads the studies there without asking") in _flat("PRIVACY.md")
+    for sentence in (
+            reason,
+            "Claude Code opens files by itself, outside Exegete.",
+            "A study kept on the same computer is within its reach, "
+            "wherever your practice projects are, and Exegete's list of "
+            "projects tells it where each listed project is.",
+            "What Claude Code opens goes to Anthropic, the AI provider "
+            "that runs its model.",
+            "While training is on, Anthropic may train its models on it.",
+            "If that matters for a study, you could work on that study in "
+            "Claude Desktop's chat, with computer use off, no folder that "
+            "holds your projects or transcripts connected, and no other "
+            "extension that reads files ([PRIVACY.md, \"Assistants that "
+            "open files by themselves\"](PRIVACY.md#assistants-that-open-"
+            "files-by-themselves))."):
+        assert sentence in section, sentence
+
+
+def test_the_list_of_projects_finds_a_study_beside_practice_projects(
+        tmp_path, monkeypatch):
+    """The fact behind "wherever your practice projects are": with the
+    practice projects in a folder of their own, Exegete's list of
+    projects still finds a study kept in Documents, and gives its path."""
+    import json
+    home = tmp_path / "home"
+    practice = home / "Practice projects" / "Practice.qda"
+    study = home / "Documents" / "Study.qda"
+    for project in (practice, study):
+        project.mkdir(parents=True)
+        (project / "data.qda").write_bytes(b"")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("EXEGETE_WORKSPACE", str(practice.parent))
+    found = json.loads(server.list_available_projects())
+    paths = {Path(project["path"]) for project in found["projects"]}
+    assert {practice, study} <= paths, found
+
+
+def test_the_list_of_projects_holds_its_usual_places_alone(
+        tmp_path, monkeypatch):
+    """The fact behind "each listed project" (the fix round): Exegete's
+    list of projects walks its usual places, Documents among them, three
+    levels deep, and a workspace's top level, so a study kept in a folder
+    of another name is not on it, and the list says where the projects on
+    it are, not where every project is."""
+    import json
+    from exegete import names
+    home = tmp_path / "home"
+    listed = home / "Documents" / "Study.qda"
+    elsewhere = home / "Research" / "Other study.qda"
+    for project in (listed, elsewhere):
+        project.mkdir(parents=True)
+        (project / "data.qda").write_bytes(b"")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    for spelling in names.SETTINGS["workspace"]:
+        monkeypatch.delenv(spelling, raising=False)
+    found = json.loads(server.list_available_projects())
+    paths = {Path(project["path"]) for project in found["projects"]}
+    assert listed in paths and elsewhere not in paths, found
+    assert "tells it where each listed project is" in _flat("QUICKSTART.md")
 
 
 # Words that dictate where a researcher may use Exegete, which the owner
@@ -306,11 +491,12 @@ def test_no_document_prescribes_where_exegete_may_be_used():
     # and the suggestion its last)
     data = _between(_flat("README.md"), "## Where your data goes",
                     "## Start here")
+    # (v0.15.2, the opening texts: a suggestion, "you could keep")
     assert ("| **Claude's Cowork** | Yes, in the folders you connect to it "
             "| Anthropic | Claude Desktop's chat instead. If you use Cowork, "
-            "keep projects and transcripts out of the folders you connect, "
-            "with computer use off and no other extension that reads "
-            "files |") in data
+            "you could keep projects and transcripts out of the folders you "
+            "connect, with computer use off and no other extension that "
+            "reads files |") in data
     assert ("| **Claude Code** | Yes, without asking, in the folder it "
             "starts in and beyond | Anthropic; with an organisation's API "
             "key, under commercial terms | Claude Desktop's chat instead "
@@ -362,10 +548,11 @@ def test_openais_route_is_warned_of_with_an_alternative():
                   "assistant with no file access of its own, such as Claude "
                   "Desktop's chat")
     readme = _between(_flat("README.md"), "### ChatGPT's desktop app and "
-                      "Codex (OpenAI)", "1. **Switch training off**")
+                      "Codex (OpenAI)", "**Training.** While training is "
+                      "on, OpenAI")
     assert ("Codex reads files by itself, so " + suggestion + ".") in readme
-    install = _flat("INSTALL.md")
-    row = _between(_read("INSTALL.md"), "| **OpenAI's apps**", "\n")
+    install = _flat(GUIDE)
+    row = _between(_read(GUIDE), "| **OpenAI's apps**", "\n")
     assert ("Codex can also read your projects' files by itself, without "
             "asking, so " + suggestion + ".") in row
     box = _between(install, "## ChatGPT's desktop app and Codex "
@@ -383,8 +570,8 @@ def test_openais_route_is_warned_of_with_an_alternative():
     checklist = _between(privacy, "- **Which assistant, and whether it opens "
                          "files by itself.**", "- **What stays on")
     for where, text in (("README, the route", readme),
-                        ("INSTALL, the row", row),
-                        ("INSTALL, the box", box),
+                        ("the Terminal guide, the row", row),
+                        ("the Terminal guide, the box", box),
                         ("PRIVACY, summary", hosts),
                         ("PRIVACY, checklist", checklist)):
         assert CODEX_SETTING in " ".join(text.split()), where
@@ -402,7 +589,7 @@ def test_openais_route_is_warned_of_with_an_alternative():
     assert ("for participants' data, this project suggests an assistant "
             "with no file access of its own, such as Claude Desktop's chat."
             ) in openai
-    for name in ("README.md", "INSTALL.md", "PRIVACY.md"):
+    for name in ("README.md", "INSTALL.md", "PRIVACY.md", GUIDE):
         for words in CODEX_PROMISES:
             assert words not in _flat(name), (name, words)
 
@@ -428,15 +615,15 @@ def test_cowork_is_out_of_reach_only_with_all_three_conditions():
         assert bare not in readme, bare
     # and the README's table, which suggests the chat instead, gives all
     # three where it says what keeps Cowork from a project
-    assert ("If you use Cowork, keep projects and transcripts out of the "
-            "folders you connect, with computer use off and no other "
+        assert ("If you use Cowork, you could keep projects and transcripts out "
+            "of the folders you connect, with computer use off and no other "
             "extension that reads files |") in readme
 
 
 def test_the_facts_behind_the_warning_stay():
     """The decided disclosure stays, as explanation: what the assistants
     read by themselves, and the conditions for participants' data."""
-    install = " ".join(_read("INSTALL.md").split())
+    install = " ".join(_read(GUIDE).split())
     for words in (
             "its read-only commands (such as `cat`, `grep` and `find`) read "
             "outside that folder without asking too, in every mode",
@@ -471,9 +658,11 @@ def _opening():
 def test_the_readme_says_free_open_source_and_names_the_licence():
     licence = tomllib.loads(_read("pyproject.toml"))["project"]["license"]
     assert licence == "LGPL-3.0-or-later"
-    assert ("Exegete is free, open-source software, under QualCoder's own "
-            f"licence ({licence}), and costs nothing") in _opening()
-    assert f"(`{licence}`), QualCoder's own licence" in _flat("README.md")
+    # (v0.15.2, the opening texts: the licence named in the opening, and
+    # whose it is said in "Licence")
+    assert ("Exegete is free, open-source software (" + licence + ") and "
+            "costs nothing") in _opening()
+    assert f"(`{licence}`), QualCoder's licence too" in _flat("README.md")
 
 
 # The owner's word of 23 October 2026: the README's opening no longer
@@ -504,77 +693,86 @@ def test_one_neutral_sentence_places_qualcoder():
 # ---------------------------------------------------------------------------
 
 def test_the_readme_says_what_it_costs():
+    # (the owner's reading of 30 October: the heading without its flourish)
     start = _between(_flat("README.md"), "## Start here",
-                     "### Claude Desktop, with one click")
+                     "### One click in Claude Desktop")
     cost = start[start.index("**What it costs.**"):]
+    # v0.15.2, the opening texts: Claude's page read again on 28 October
+    # 2026 (ruling 108: the desktop extension works on Claude's Free plan,
+    # with the date checked; the page's table marks "Desktop extensions"
+    # Yes on Free and Claude Code No); OpenAI's plans and LM Studio's
+    # needs are INSTALL.md's, read on 6 October 2026, the README pointing
+    # there
     for words in (
-            "Exegete costs nothing; your assistant may.",
-            # dated, with the makers' pages linked
-            "On 6 October 2026 the makers' pages listed, in US dollars,",
-            "[Claude's](https://claude.com/pricing) Free plan, Pro at $20 a "
-            "month, Max from $100, Team and Enterprise by the seat",
-            # learn.chatgpt.com/docs/pricing, read 6 October 2026: its
-            # table of features starts at Plus; its Free and Go cards
-            # name the desktop app, "subject to rollout"; where the page
-            # is unclear the README says no more than it (the owner)
-            "[ChatGPT's](https://learn.chatgpt.com/docs/pricing) desktop app "
-            "for local chats, and Codex's command line, from Plus ($20 a "
-            "month), with only the desktop app mentioned for Free and Go, "
-            "\"subject to rollout\".",
-            # what the limits mean for trying it and for longer work:
-            # claude.com/pricing, read 1 and 6 October 2026, "Every plan
-            # has usage limits that reset on a rolling five-hour session
-            # window, and paid plans add weekly limits on top." and "on
-            # paid plans, turn on usage credits"; OpenAI's page, the same
-            # days, "Weekly limits may also apply." and "can purchase
-            # additional credits"
-            "Plans have usage limits: Claude's reset every five hours, and "
-            "its paid plans add weekly limits, which longer work can reach; "
-            "OpenAI's may also be weekly.",
+            "Exegete costs nothing, but your assistant may.",
+            "On 28 October 2026, [Claude's pricing page]"
+            "(https://claude.com/pricing) listed desktop extensions in its "
+            "Free plan, so the extension works on Free, which allows the "
+            "least use.",
+            # (the page: "Pro gives you at least 5x more usage per 5-hour
+            # session than Free.")
+            # (v0.15.2, the readability reading: Max and the seat plans a
+            # sentence of their own)
+            "Pro, at $20 a month ($17 billed yearly), gives at least five "
+            "times as much. Max is from $100, and Team and Enterprise go by "
+            "the seat.",
+            # claude.com/pricing, 28 October 2026: "Every plan has usage
+            # limits that reset on a rolling five-hour session window, and
+            # paid plans add weekly limits on top." and "on paid plans,
+            # turn on usage credits"
+            "Usage limits reset every five hours, and paid plans add weekly "
+            "limits.",
             "At a limit you wait, move up a plan or, on a paid plan, pay for "
             "extra use.",
             "coding many transcripts uses far more than practice",
-            "every MCP server \"uses more of your limit\"",
-            # LM Studio's pricing page also sells cloud plans; its system
-            # requirements say "16GB+ RAM recommended"
-            "LM Studio is free with a local model; its pages recommend "
-            "16 GB of memory or more."):
+            # (the fix round: the table of routes compares them, and
+            # their recipes give OpenAI's plans and LM Studio's needs:
+            # tests/test_v0152_opening_texts.py)
+            # (the merge onto the integration branch: the table moved to
+            # the Terminal guide, named by its title)
+            "Other routes, such as OpenAI's apps and LM Studio, are "
+            "compared in [Installing Exegete from the Terminal, \"Choosing "
+            "your AI host\"]",
+            "Their recipes there give OpenAI's plans and what LM Studio "
+            "needs."):
         assert words in cost, words
-    # the five-hour limit alone is gone, and "from Plus" no longer ends
-    # the sentence, which turned the table's silence on Free and Go into
-    # a "no" (the judge, 6 October 2026)
     for gone in ("(Claude's reset every five hours)",
                  "you wait or move up a plan", "from Plus ($20 a month)."):
         assert gone not in cost, gone
-    # claude.com/pricing, read 6 October 2026: "Claude Code is included
-    # in all paid plans", and its table shows it "No" on Free. Said where
-    # the README offers Claude Code (the judge, 6 October 2026), whose
-    # warning that it opens files by itself is in the same paragraph
+    # claude.com/pricing: Claude Code is "No" on Free. Said where the
+    # README offers Claude Code, which points to the table of assistants
+    # that open files by themselves
     other = _between(_flat("README.md"), "**Other assistants.**",
                      "**Updating.**")
     assert other.startswith("**Other assistants.** Claude Code (not on "
                             "Claude's Free plan), LM Studio,"), other
-    assert "Claude Code opens files by itself" in other
+    # (v0.15.2, the opening texts: Claude Code's own reading said there,
+    # with the chat this project suggests and the table it points to)
+    assert ("Claude Code opens files by itself, so for participants' data "
+            "this project suggests Claude Desktop's chat (\"Where your data "
+            "goes\", above).") in other
     # INSTALL.md reads OpenAI's page the same way, and its table no
     # longer reads as if a free plan included Claude Code
-    install = _flat("INSTALL.md")
+    install = _flat(GUIDE)
     assert ("for Free and Go it mentions only the desktop app, \"subject to "
             "rollout\".") in install
-    row = _between(_read("INSTALL.md"), "| **Claude consumer plans**", "\n")
+    row = _between(_read(GUIDE), "| **Claude consumer plans**", "\n")
     assert row.startswith("| **Claude consumer plans** (claude.ai and Claude "
                           "Desktop on a Free, Pro or Max plan; Claude Code "
                           "with a Pro or Max login) |"), row
     assert "Free/Pro/Max login" not in install
     # It reports the makers' pages; it does not say a free plan is enough
+    # (ruling 108 asks for the extension's working on Claude's Free plan,
+    # dated, which says no more than the page)
     for claim in ("free plan is enough", "enough for exegete",
                   "works on the free", "free plan works"):
         assert claim not in cost.lower(), claim
     # OpenAI's words, as INSTALL.md quotes the same page
     assert ("\"Every MCP server adds more context to your messages and uses "
-            "more of your limit.") in _flat("INSTALL.md")
+            "more of your limit.") in _flat(GUIDE)
     # the first screen points to it
-    assert "costs nothing (your assistant may: see \"Start here\")" in \
-        _opening()
+    assert "costs nothing, though your assistant may (see \"Start here\")" \
+        in _opening()
 
 
 # ---------------------------------------------------------------------------
@@ -606,7 +804,7 @@ def test_the_fresh_reading_line_waits_for_its_option_and_honesty_kept():
         flat = " ".join(served[where].split())
         assert ("Do not agree to please. When you read a passage "
                 "differently from the researcher, say so plainly, show the "
-                "passage and say what in it your reading rests on; which "
+                "passage and say what in it your reading rests on. Which "
                 "reading to adopt is theirs.") in flat, where
     # what section 10 keeps
     assert ("When the task concerns the researcher's existing codes, start "

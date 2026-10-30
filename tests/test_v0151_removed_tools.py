@@ -67,42 +67,6 @@ DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "pages/index.html", "pages/update/index.html")
 
 
-# What the removals changed in two descriptions, as 0.15.0 served it, for
-# the tests that compare a description with earlier words
-HELP_TOPICS_NOTICE = (
-    "Deprecated, removed in v0.15.1: the topics analyze_for_coding, "
-    "apply_codings, edit_suggestion and coding_style_guidance, which "
-    "repeat the tools' own descriptions.")
-PROPOSE_NOW = (
-    "present them -> the user refines (update_proposal; to merge two,",
-    "reject one with update_proposal_status, then give the other its own",
-    "passages and the rejected one's together in update_proposal's",
-    "example_segments, which replaces the list) and decides",
-    "(update_proposal_status) -> create_proposed_codes writes the approved",
-    "ones.")
-PROPOSE_THEN = (
-    "present them -> the user refines (update_proposal / merge_proposals)",
-    "and decides (update_proposal_status) -> create_proposed_codes writes",
-    "the approved ones.")
-
-
-def before_the_removals(name, description):
-    """`name`'s description as 0.15.0 served it, on any interpreter: the
-    help topics' notice put back before explain_ai_coding_tools' Args, as
-    _with_guidance placed it, and propose_codes' WORKFLOW as it was."""
-    if name == "explain_ai_coding_tools":
-        match = re.search(r"\n\n([ \t]*)Args:", description)
-        assert match, name
-        description = (description[:match.start()] + "\n\n"
-                       + HELP_TOPICS_NOTICE + "\n\n" + match.group(1)
-                       + "Args:" + description[match.end():])
-    if name == "propose_codes":
-        from test_v0151_ignored_argument import _swap_lines
-        description = _swap_lines(description, PROPOSE_NOW, PROPOSE_THEN,
-                                  name)
-    return description
-
-
 def _flat(text):
     return " ".join(text.split())
 
@@ -184,14 +148,12 @@ class TestTheToolsAreGone:
         assert sorted(p.name for p in session_dir.iterdir()) == before
         assert server.session_manager.session_exists(sid)
 
-    def test_full_has_79_tools_and_core_27(self):
-        # core 26 since restore_backup joined it (v0.15.1, the restore),
-        # 27 since search_memos did (v0.15.1, search_memos in core)
-        assert (FULL_TOOLS, CORE_TOOLS) == (79, 27)
+    def test_each_set_lists_its_count(self):
+        # the counts are the snapshot's (tests/tool_counts.py)
         server._apply_toolset("full")
-        assert len(_listed()) == 79
+        assert len(_listed()) == FULL_TOOLS
         server._apply_toolset("core")
-        assert len(_listed()) == 27
+        assert len(_listed()) == CORE_TOOLS
 
 
 # ---------------------------------------------------------------------------
@@ -310,25 +272,6 @@ class TestTheHelpTopicsAreGone:
         description = _listed()["explain_ai_coding_tools"].description
         assert "Deprecated" not in description
         assert not set(TOPICS) & set(re.findall(r"\w+", description))
-
-
-    def test_the_descriptions_put_back_are_0150s(self):
-        """A guard for the put-back the older tests use: with it, the two
-        descriptions the removals changed are as 0.15.0 served them
-        (tests/test_v0142_description_cut.py's CHANGED_0150)."""
-        from test_v0142_description_cut import (CHANGED_0150,
-                                                REMOVALS_0151, _fingerprint)
-        server._apply_toolset("full")
-        assert set(REMOVALS_0151) == {"explain_ai_coding_tools",
-                                      "propose_codes"}
-        for name in REMOVALS_0151:
-            now = server.mcp.original_descriptions[name]
-            then = before_the_removals(name, now)
-            assert then != now, name
-            got = _fingerprint(then)
-            assert got[1:] == CHANGED_0150[name][1:], name
-            if sys.version_info[:2] == (3, 13):
-                assert got[0] == CHANGED_0150[name][0], name
 
 
 # ---------------------------------------------------------------------------

@@ -497,6 +497,15 @@ def _args_save_names_list(kwargs):
     return {}
 
 
+def _args_undo_changes(kwargs):
+    """The changes an undo takes back (v0.15.2): their receipts, sorted,
+    each once, so the same undo asked in another order binds alike. A
+    receipt is in the conversation already, so the public bind is plain;
+    the rows the changes touched and their backups are the state the
+    token's MAC covers, never the bind."""
+    return {"receipts": sorted({str(r) for r in kwargs["receipts"]})}
+
+
 REGISTRY: Dict[str, Any] = {
     "merge_codes": _args_merge_codes,
     "delete_code": _args_delete_code,
@@ -508,6 +517,7 @@ REGISTRY: Dict[str, Any] = {
     "import_documents": _args_import_documents,
     "set_project_coder_name": _args_set_project_coder_name,
     "save_names_list": _args_save_names_list,
+    "undo_changes": _args_undo_changes,
 }
 
 # The tools whose public `bind` is keyed with the secret. D3 3.2 declared

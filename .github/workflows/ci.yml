@@ -8,8 +8,47 @@ on:
   workflow_dispatch:
 
 jobs:
+  # v0.15.2, the two tiers (ruling 100): which jobs this run takes, chosen
+  # in one place, scripts/ci_tier.py, which says how. A push to a branch
+  # other than `main` and `feat/*` takes the fast tier: the suite once, on
+  # Ubuntu with Python 3.13, and the documents job, with the desktop
+  # extension's jobs only when the branch changed the packaging, the lock
+  # or a script they run. Every other run takes the full tier, the whole
+  # matrix. Only an explicit `true` narrows a run: the exclusions and
+  # conditions below read an empty or missing output as the full tier,
+  # and a failure here skips the jobs that need it and turns the run red.
+  tier:
+    name: tier
+    runs-on: ubuntu-latest
+    # A checkout and a few git commands; five minutes ends a hang.
+    timeout-minutes: 5
+    # Reads the checkout, nothing else.
+    permissions:
+      contents: read
+    # Without this block, `needs.tier.outputs` reads empty everywhere.
+    outputs:
+      fast: ${{ steps.choose.outputs.fast }}
+      skip_extension: ${{ steps.choose.outputs.skip_extension }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # Every branch and its history, for the point where this branch
+          # left its integration branch or main.
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The runner's own Python, since the script needs the standard
+      # library alone. The event and the ref reach it through its
+      # environment, never pasted into this line.
+      - name: Choose the tier
+        id: choose
+        run: python3 scripts/ci_tier.py
+
   test:
     name: tests (${{ matrix.os }}, py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format(', part {0} of 3', matrix.part) || '' }})
+    needs: tier
     runs-on: ${{ matrix.os }}
     # A limit on the whole job (v0.14): GitHub's default is six hours, so
     # a hung test held a runner that long. In the 120 green runs from 7 to
@@ -31,7 +70,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.13"]
+        # v0.15.2 (the owner's ruling of 27 October 2026): Python 3.11,
+        # the oldest Exegete supports, and 3.13, the desktop extension's,
+        # on every system; 3.14, the newest, on Ubuntu alone (the
+        # exclusions below).
+        python-version: ["3.11", "3.13", "3.14"]
         # v0.15: Windows runs the suite in three parts, a job each, as one
         # job there took 40 to 60 minutes; Linux and macOS keep one job,
         # part 1 alone (the exclusions below). tests/conftest.py makes
@@ -48,6 +91,18 @@ jobs:
             part: 2
           - os: macos-latest
             part: 3
+          - os: windows-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.14"
+          # v0.15.2, the fast tier (the `tier` job): Ubuntu with Python
+          # 3.13 alone. Each value names a matrix entry only on an
+          # explicit fast answer; otherwise it is 'none', which names no
+          # entry and leaves the full matrix.
+          - os: ${{ needs.tier.outputs.fast == 'true' && 'windows-latest' || 'none' }}
+          - os: ${{ needs.tier.outputs.fast == 'true' && 'macos-latest' || 'none' }}
+          - python-version: ${{ needs.tier.outputs.fast == 'true' && '3.11' || 'none' }}
+          - python-version: ${{ needs.tier.outputs.fast == 'true' && '3.14' || 'none' }}
 
     steps:
       # Actions are SHA-pinned (supply-chain hardening); the trailing
@@ -162,6 +217,12 @@ jobs:
 
   desktop-extension:
     name: desktop extension (${{ matrix.os }})
+    # v0.15.2: on the fast tier, only when the branch changed the
+    # packaging, the lock or a script this job runs (scripts/ci_tier.py
+    # names them); on the full tier, always. An empty answer runs it.
+    # desktop-extension-same, which needs this job, follows it.
+    needs: tier
+    if: needs.tier.outputs.skip_extension != 'true'
     runs-on: ${{ matrix.os }}
     # Building, validating and trying the package takes a few minutes
     # (the try fetches Python and the locked dependencies through uv);
@@ -344,27 +405,20 @@ jobs:
 
   # 0.14.3: the import's stored text against QualCoder's
   # own extraction functions, run without QualCoder's interface
-  # (scripts/qualcoder_parity.py): a gate at the release the readers
-  # follow, QualCoder 4.0 (tag 4.0, commit b95e021), and a watch on
-  # QualCoder's newest code, whose changes are a notice for the lead,
-  # never a failure. QualCoder's source is checked out read only;
-  # QualCoder itself is never run.
+  # (scripts/qualcoder_parity.py), at the release the readers follow,
+  # QualCoder 4.0 (tag 4.0, commit b95e021). QualCoder's source is
+  # checked out read only; QualCoder itself is never run. v0.15.2: the
+  # watch on QualCoder's newest code, which ran here beside it, runs once
+  # a week in a workflow of its own, .github/workflows/qualcoder-watch.yml.
   qualcoder-parity:
-    name: QualCoder parity (${{ matrix.which }})
+    name: QualCoder parity (4.0)
+    # v0.15.2: the full tier only (the `tier` job)
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
       contents: read
-    continue-on-error: ${{ matrix.which == 'watch' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - which: gate
-            # QualCoder 4.0, the release (tag 4.0)
-            ref: b95e021c93eb29a646ee7a8de196c281b7890ddf
-          - which: watch
-            ref: master
 
     steps:
       - name: Check out repository
@@ -376,7 +430,8 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           repository: ccbogel/QualCoder
-          ref: ${{ matrix.ref }}
+          # QualCoder 4.0, the release (tag 4.0)
+          ref: b95e021c93eb29a646ee7a8de196c281b7890ddf
           path: qualcoder-src
           persist-credentials: false
 
@@ -398,18 +453,16 @@ jobs:
           python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
           python -m pip install --no-deps -e .
 
-      # Both entries install from the lock (v0.15.1). The gate then
-      # reinstalls the EbookLib release the record names, which the lock
-      # already holds (tests/test_v0150_lock.py), so its text is compared,
-      # not skipped, should the two ever part. PyMuPDF stays as the lock
-      # gives it here, 2.0 (v0.15.1), a release the record lists as
-      # giving QualCoder's functions the same text (`same_text_with`), so
-      # the gate compares QualCoder's own functions with Exegete's under
-      # 2.0 and the suite compares each release with the record. The
-      # watch now watches QualCoder's newest code alone; the newest
-      # library releases have a job of their own, newest-libraries.
-      - name: The record's EbookLib release (gate)
-        if: matrix.which == 'gate'
+      # The job installs from the lock (v0.15.1), then reinstalls the
+      # EbookLib release the record names, which the lock already holds
+      # (tests/test_v0150_lock.py), so its text is compared, not skipped,
+      # should the two ever part. PyMuPDF stays as the lock gives it here,
+      # 2.0 (v0.15.1), a release the record lists as giving QualCoder's
+      # functions the same text (`same_text_with`), so the job compares
+      # QualCoder's own functions with Exegete's under 2.0 and the suite
+      # compares each release with the record. The newest library
+      # releases have a job of their own, newest-libraries.
+      - name: The record's EbookLib release
         shell: bash
         run: |
           pins=$(python -c "import json; v = json.load(open('tests/fixtures/import_expected.json'))['versions']; print('ebooklib==' + v['ebooklib'])")
@@ -418,31 +471,27 @@ jobs:
       - name: Exegete's text against QualCoder's
         env:
           QUALCODER_SOURCE: ${{ github.workspace }}/qualcoder-src
-          EXEGETE_PARITY_GATE: ${{ matrix.which == 'gate' && '1' || '' }}
+          # switches on the checks that belong to the 4.0 release
+          EXEGETE_PARITY_GATE: "1"
         # and QualCoder's backup, which copies the project folder whole,
         # its Exegete folder included (v0.15.0, the files design); and the
         # names list save_names_list writes, read and applied as
         # QualCoder's import reads and applies it (piece 4)
         run: python -m pytest -ra tests/test_v0143_import_parity.py tests/test_v0150_private_files_qualcoder.py tests/test_v0150_save_names_list_qualcoder.py
 
-      - name: What QualCoder's newest code stores differently
-        if: matrix.which == 'watch'
-        shell: bash
-        run: |
-          if ! python scripts/qualcoder_parity.py --qualcoder qualcoder-src --check tests/fixtures/import_expected.json; then
-            echo "::notice title=QualCoder parity watch::QualCoder's newest code stores different text for some test documents; the job log names them"
-          fi
-
-  # v0.14.1, the rename: the old name's package, built on every push, the
-  # upgrade paths through the old name, offline, and the published 0.14.0
-  # working through the state folder's link. The wheelhouse is fetched
-  # once; the tests then install only from it (--no-index), so the real
-  # PyPI's qualcoder-mcp can never make them pass. Linux runs them all
+  # v0.14.1, the rename: the old name's package, built on every full run,
+  # the upgrade paths through the old name, offline, and the published
+  # 0.14.0 working through the state folder's link. The wheelhouse is
+  # fetched once; the tests then install only from it (--no-index), so the
+  # real PyPI's qualcoder-mcp can never make them pass. Linux runs them all
   # (the upgrade paths are pip's and uv's, not the platform's), and the
   # transition check's steps followed with the real uv tool and pipx;
   # Windows runs the 0.14.0 proof, through a junction.
   rename-upgrade:
     name: the rename (${{ matrix.os }})
+    # v0.15.2: the full tier only (the `tier` job)
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
     runs-on: ${{ matrix.os }}
     # Two wheels, a handful of scratch environments and offline installs
     # take a few minutes; twenty ends a hang well before the suite's.
@@ -519,10 +568,16 @@ jobs:
   # that they work on PyPI and in every installed copy), against the
   # tracked files of this commit. Standard library only, so it runs
   # before anything is installed. The links to other sites are checked
-  # once a week instead (external-links.yml). Then the facts the
-  # documents repeat (tests/test_v0151_facts.py): the folders, the time
-  # per import call and the tool counts, held to the code's constants,
-  # which needs the package; the answer comes in about two minutes.
+  # once a week instead (external-links.yml). v0.15.2: then the texts
+  # (scripts/check_texts.py), also before the install: a mention of
+  # QualCoder outside the allowed cases, a request made of everyone to
+  # close it, or a plain breach of the writing conventions fails unless
+  # a reader has accepted its sentence in scripts/check_texts_ledger.tsv;
+  # the summary adds each document's readability, which never fails.
+  # Then the facts the documents repeat (tests/test_v0151_facts.py): the
+  # folders, the time per import call and the tool counts, held to the
+  # code's constants, which needs the package; the answer comes in about
+  # two minutes.
   documents:
     name: documents
     runs-on: ubuntu-latest
@@ -544,6 +599,9 @@ jobs:
       - name: The links inside the repository
         run: python scripts/check_links.py
 
+      - name: Mentions of QualCoder and the voice in the texts
+        run: python scripts/check_texts.py
+
       # From the lock, as the libraries' install does: uv, at the version
       # the extension job uses, in an environment of its own, so it never
       # joins the path; `--locked` fails when pyproject.toml and uv.lock
@@ -560,8 +618,79 @@ jobs:
           python -m pip install --require-hashes -r "$RUNNER_TEMP/locked.txt"
           python -m pip install --no-deps -e .
 
-      - name: The facts the documents repeat
-        run: python -m pytest -q tests/test_v0151_facts.py
+      # The documents' facts against the code, and what Exegete sends
+      # the assistant before a project is open, and the brief, against
+      # docs/snapshot/
+      - name: The facts the documents repeat, and the snapshot
+        run: python -m pytest -q tests/test_v0151_facts.py tests/test_served_texts.py
+
+  # v0.15.2: the commands the documents give a reader, run as written
+  # (scripts/doc_commands.py). An author marks a command with an HTML
+  # comment beside it; each set of marked commands runs in a new, empty
+  # home of its own, installing this commit, and what each command prints
+  # is compared with what its document says. The sessions install the
+  # newest library releases from PyPI, as the documents tell readers to,
+  # so a new release can turn this job red with no change of ours: it may
+  # fail and only reports (continue-on-error, and no job needs it), as the
+  # newest-libraries job does, and its summary is read before a release.
+  # The full tier only, since its installs take several minutes.
+  doc-commands:
+    name: the documents' commands (reports only)
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
+    runs-on: ubuntu-latest
+    # Measured on its first run (28 October 2026, run 40609618078): the
+    # five sessions took 41 seconds, the job a minute. Ten minutes leaves
+    # room for a slow day on PyPI, from which every session downloads; a
+    # hang in one session is cut first, at five minutes, by the script,
+    # so the others still run and the summary is written.
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    continue-on-error: true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: "3.13"
+
+      # On the path, where a reader's uv is: one session installs Exegete
+      # with `uv tool install`, and another uses pipx, the runner image's
+      # own. A reader's uv is a recent release, not the 0.9.7 the desktop
+      # extension's jobs use: pipx works through any uv on the path and
+      # needs 0.9.17 or newer, so 0.9.7 failed pipx's install in the first
+      # run. 0.13.1, of 14 October 2026.
+      - name: Install uv 0.13.1
+        run: python -m pip install uv==0.13.1
+
+      # Each session has a home of its own under the runner's temporary
+      # folder, and the script itself runs with HOME there too, so nothing
+      # it starts can reach the runner's own home.
+      - name: The commands the documents mark, each set in a new home
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/dc-home"
+          HOME="$RUNNER_TEMP/dc-home" USERPROFILE="$RUNNER_TEMP/dc-home" \
+            python scripts/doc_commands.py --run --scratch "$RUNNER_TEMP/doc-commands"
+
+      # Exegete keeps its folders in the home it is started with; none of
+      # them may appear in the runner's own.
+      - name: Nothing of Exegete's in the runner's own home
+        if: always()
+        shell: bash
+        run: |
+          for folder in .exegete .qualcoder_mcp; do
+            if [ -e "$HOME/$folder" ]; then
+              echo "::error title=the documents' commands::$HOME/$folder exists"
+              exit 1
+            fi
+          done
 
   # v0.15.1: the newest library releases. Every other job that runs tests
   # installs from the lock; this one takes the newest release of each
@@ -575,6 +704,9 @@ jobs:
   # (PyMuPDF 2.0, the MCP library's 2.0) is seen without being installed.
   newest-libraries:
     name: the newest library releases (reports only)
+    # v0.15.2: the full tier only (the `tier` job); still no job needs it
+    needs: tier
+    if: needs.tier.outputs.fast != 'true'
     runs-on: ubuntu-latest
     # Measured on its first run (20 October 2026, run 39416267478): this
     # job took 28 minutes, its install included, and the suite on Ubuntu

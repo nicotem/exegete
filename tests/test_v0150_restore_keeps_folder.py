@@ -26,10 +26,8 @@ speak of a restore).
 import errno
 import io
 import json
-import hashlib
 import logging
 import os
-import re
 import shutil
 import sqlite3
 import stat
@@ -1230,29 +1228,6 @@ SENTENCE = ("The project's Exegete folder (files the researcher fills in) "
             "when either has one.")
 
 
-# v0.15.1, audio and video left out of backups: the paragraph's second
-# sentence, taken out with it below
-MEDIA_SENTENCE = "So are its audio and video folders."
-
-
-def without_the_folder_paragraph(description):
-    """restore_backup's description with this piece's paragraph taken out,
-    as served on any interpreter (on 3.10 to 3.12 it keeps its
-    indentation), so that a test of an earlier piece still compares with
-    what that piece measured; the sentence v0.15.1 added at its end
-    (MEDIA_SENTENCE) goes with it, and so does the paragraph the restore
-    piece of v0.15.1 added after it (tests/test_v0151_restore.py)."""
-    from test_v0151_restore import without_the_preview_paragraph
-    description = without_the_preview_paragraph(description)
-    words = [re.escape(word) for word in SENTENCE.split()]
-    media = [re.escape(word) for word in MEDIA_SENTENCE.split()]
-    pattern = re.compile(r"\n[ \t]*\n[ \t]*" + r"\s+".join(words)
-                         + r"(?:\s+" + r"\s+".join(media) + r")?")
-    found = pattern.search(description)
-    return (description if found is None
-            else description[:found.start()] + description[found.end():])
-
-
 class TestTheTexts:
 
     def test_the_description_after_its_paragraph_on_symlinks(self):
@@ -1260,25 +1235,6 @@ class TestTheTexts:
         assert SENTENCE in description
         assert description.index("under safety_backup_skipped_symlinks.") \
             < description.index(SENTENCE) < description.index("Args:")
-
-    def test_the_paragraph_is_all_that_changed(self):
-        """Taken out, the description is word for word what the piece
-        before served (tests/test_v0142_description_cut.py's earlier
-        line), its length too on 3.13."""
-        # the fourth reading of the documents gave item 4's lock file one
-        # spelling: put back too (tests/test_v0150_lock_wording.py)
-        from test_v0150_lock_wording import put_back_the_lock_wording
-        server._apply_toolset("full")
-        served = server.mcp.original_descriptions["restore_backup"]
-        before = without_the_folder_paragraph(
-            put_back_the_lock_wording("restore_backup", served))
-        assert before != served
-        words = before.split()
-        assert (len("".join(words)), hashlib.sha256(
-            " ".join(sorted(words)).encode()).hexdigest()[:16]) == (
-                2247, "87717bbc6793a0e9")
-        if sys.version_info[:2] == (3, 13):
-            assert len(before) == 2730
 
     def test_tools(self):
         tools = _flat(_read("TOOLS.md"))
@@ -1289,8 +1245,8 @@ class TestTheTexts:
                 "in) is kept as it is, never taken from the backup; the "
                 "preview says when either has one. So are its `audio` and "
                 "`video` folders") in entry
-        assert ("`list_backups` + `restore_backup` roll the project back "
-                "to a snapshot, all but its `Exegete`, `audio` and `video` "
+        assert ("`list_backups` and `restore_backup` roll the project back "
+                "to a backup, all but its `Exegete`, `audio` and `video` "
                 "folders, which a restore keeps.") in tools
         # v0.15.1, the restore: its preview counts rows by kind, every
         # coder's together, never by owner

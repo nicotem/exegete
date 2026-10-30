@@ -61,19 +61,6 @@ DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "CLAUDE.md", "packaging/pypi-old-name/README.md")
 
 
-# What 0.15.0 served for the four, for the older tests that compare a
-# description with earlier words (before_the_removed_arguments)
-DEPRECATED_CASCADE_0150 = (
-    "Deprecated, removed in v0.15.1: cascade; the preview token already "
-    "approves the whole branch.")
-DEPRECATED_OWNER_0150 = (
-    "Deprecated, removed in v0.15.1: owner, which can only repeat the "
-    "project's AI coder name.")
-DEPRECATED_MEMO_SEARCH_0150 = (
-    "Deprecated, removed in v0.15.1: search_memo; search_memos searches "
-    "file memos and every other kind of note.")
-
-
 def _sentence(tool, argument):
     return server.REMOVED_ARGUMENTS[(tool, argument)]
 
@@ -385,8 +372,9 @@ OWNER_ARGUMENT = re.compile(
     r"(?i)`owner`|\bowner argument|\bargument[`']? owner\b|\bomit owner\b"
     r"|\bwithout owner\b|(?-i:\bowner:\s)|(?:apply_codings|import_text_file)"
     r"\([^)]*\bowner\b")
-# "removed in 0.15.1", not 0.14's "removed in v0.15.1", which announced it
-SAYS_REMOVED = re.compile(r"\bremoved in 0\.15\.1")
+# "removed in 0.15.1", not 0.14's "removed in v0.15.1", which announced it;
+# or, in a document that gives no release (v0.15.2), "has been removed"
+SAYS_REMOVED = re.compile(r"\bremoved in 0\.15\.1|\bhas been removed\b")
 
 
 def _flat(text):
@@ -481,130 +469,3 @@ def test_the_check_finds_what_0150_said():
 
 
 REMOVED_ARGUMENTS_SAID = tuple(server.REMOVED_ARGUMENTS.values())
-
-
-# ---------------------------------------------------------------------------
-# The put-back the older tests use
-# ---------------------------------------------------------------------------
-
-def _line_holding(text, words):
-    """The start and end of the one line of `text` holding `words`, and
-    its indentation."""
-    found = [m for m in re.finditer(r"(?m)^([ \t]*)(.*)$", text)
-             if words in m.group(2)]
-    assert len(found) == 1, words
-    return found[0].start(), found[0].end(), found[0].group(1)
-
-
-def _lines_after(text, words, lines, indent_of=None):
-    """`lines` (an argument's first line, then (offset, line) for each
-    further one, indented past it by offset) put after the line holding
-    `words`, at the indentation of the line holding `indent_of` (by
-    default, that line's)."""
-    _, end, indent = _line_holding(text, words)
-    if indent_of is not None:
-        indent = _line_holding(text, indent_of)[2]
-    added = "".join(f"\n{indent}{' ' * offset}{line}"
-                    for offset, line in [(0, lines[0])] + list(lines[1:]))
-    return text[:end] + added + text[end:]
-
-
-def _sentence_before(text, sentence, before="Args:"):
-    """The sentence put before the line holding `before`, as
-    server._with_guidance placed it."""
-    doc = text.rstrip()
-    idx = doc.find(before)
-    line_start = doc.rfind("\n", 0, idx) + 1
-    return (f"{doc[:line_start].rstrip()}\n\n{sentence}\n\n"
-            f"{doc[line_start:]}\n")
-
-
-def _replace_once(text, now, then):
-    assert text.count(now) == 1, now
-    return text.replace(now, then)
-
-
-def before_the_removed_arguments(name, description):
-    """`name`'s description as served before this piece, on any
-    interpreter: for the four tools, the removed argument's Args lines,
-    its deprecation sentence and the texts that spoke of it put back."""
-    if name == "delete_code":
-        from test_v0151_ignored_argument import _swap_lines
-        description = _swap_lines(description, (
-            "and the token it returns covers every code of the branch and "
-            "their",
-            "codings, so the researcher's approval of the preview is the "
-            "approval",
-            "of the branch, and a sub-code added or moved after it makes "
-            "the token",
-            "stale. Review the preview before confirming."), (
-            "and its execute_with carries cascade=true when there are any, "
-            "so the",
-            "researcher's approval of the preview is the approval of the "
-            "branch.",
-            "An execute without cascade=true on such a code is refused. "
-            "Review",
-            "the preview before confirming."), name)
-        description = _lines_after(description, "get the preview", [
-            "cascade: Must be true to delete a code that has sub-codes (the",
-            (9, "whole branch dies; default false refuses instead); the"),
-            (9, "preview's execute_with sets it. Deprecated (above)")],
-            indent_of="preview_token: The token from this operation's")
-        return _sentence_before(description, DEPRECATED_CASCADE_0150)
-    if name in ("apply_codings", "import_text_file"):
-        after = ("change (accepted until the release on method)"
-                 if name == "apply_codings" else
-                 "memo: Optional memo/description for the file")
-        indent_of = ("create_backup: No longer used"
-                     if name == "apply_codings" else after)
-        description = _lines_after(description, after, [
-            "owner: Deprecated (above). Only the project's AI coder name is",
-            (7, "accepted, as a no-op; any other value is refused before"),
-            (7, "backup or write (set_project_ai_coder_name changes it)")],
-            indent_of=indent_of)
-        return _sentence_before(description, DEPRECATED_OWNER_0150)
-    if name == "search_files":
-        description = _replace_once(
-            description, "Search for files by name or content.",
-            "Search for files by name, content, or memo.")
-        description = _lines_after(
-            description, "- Content search: slower (can take seconds",
-            ["- Memo search: file memos, the public part only (before "
-             "'#####')"])
-        _, _, indent = _line_holding(description, "Args:")
-        description = _replace_once(
-            description, "to them. Nothing is stored between calls.\n",
-            f"to them. Nothing is stored between calls.\n\n{indent}"
-            f"{DEPRECATED_MEMO_SEARCH_0150}\n")
-        description = _lines_after(
-            description, "search_content: Search in file content/fulltext",
-            ["search_memo: Search in file memos (default: False, fast)"])
-        description = _replace_once(
-            description, "- matched_in: {filename: bool, content: bool}",
-            "- matched_in: {filename: bool, content: bool, memo: bool}")
-        return _replace_once(
-            description, "(its name and the content matches shown), not",
-            "(its name, its memo, and the content matches shown), not")
-    return description
-
-
-def test_the_descriptions_put_back_are_as_served_before():
-    """A guard for the put-back the older tests use: with it, the four
-    descriptions this piece changed are as they were served before it
-    (tests/test_v0142_description_cut.py), on any interpreter, and each
-    differs from what is served now."""
-    import sys
-    from test_v0142_description_cut import (ARGUMENTS_0151,
-                                            WORDS_BEFORE_ARGUMENTS_0151,
-                                            _fingerprint)
-    server._apply_toolset("full")
-    assert set(ARGUMENTS_0151) == {tool for tool, _ in REMOVED}
-    for name in ARGUMENTS_0151:
-        now = server.mcp.original_descriptions[name]
-        then = before_the_removed_arguments(name, now)
-        assert then != now, name
-        got = _fingerprint(then)
-        before = WORDS_BEFORE_ARGUMENTS_0151[name]
-        assert got[1:] == before[1:], name
-        if sys.version_info[:2] == (3, 13):
-            assert got[0] == before[0], name

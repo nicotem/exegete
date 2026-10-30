@@ -75,11 +75,12 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     flat = " ".join(readme.split())
     # Since the owner's ruling of 7 October 2026: what is not in Exegete
     # yet, and QualCoder from the start only for a study that needs it
-    assert "You do not need QualCoder to start" in flat
+    assert "You do not need QualCoder, either to start" in flat
     # v0.14.3: documents come in through import_documents,
     # so the list starts with images, audio and video
-    assert ("**Not in Exegete yet**, and done in QualCoder for now: "
-            "bringing in images, audio and video;") in flat
+    # (v0.15.2, the readability reading: the list in sentences)
+    assert ("**Not in Exegete yet.** It cannot bring in or code images, "
+            "audio and video,") in flat
     assert ("If your study needs any of these now, you may want "
             "QualCoder from the start.") in flat
     # v0.14.3: neither document says any longer that only
@@ -89,10 +90,19 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
         assert "imports only text" not in " ".join(document.split())
         assert "documents (Word, PDF, images, audio, video)" not in \
             " ".join(document.split())
-    assert "| Import sources | Text, documents, PDFs, images, audio, " \
+    # (v0.15.2, the opening texts: the comparison table gave way to the
+    # list of what Exegete brings in, and of what is not in it yet)
+    # (the readability reading: the kinds of document, then where Exegete
+    # reads them)
+    assert ("**Bring in documents**: Word, OpenDocument, RTF, text, "
+            "Markdown, web pages and subtitles, and PDF and EPUB") in flat
+    # (the owner's word of 29 October 2026: the comparison table back, its
+    # import row saying what each program brings in)
+    assert "| Bring in files | Text, documents, PDFs, images, audio, " \
         "video | Documents from your computer" in flat
     assert "Or you can import a document in QualCoder" not in flat
-    one_click_readme = flat[flat.index("### Claude Desktop, with one click"):
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click_readme = flat[flat.index("### One click in Claude Desktop"):
                             flat.index("### ChatGPT's desktop app")]
     # v0.15.0: one set, `full`, every tool, the default on every route;
     # the one other set is named for what it cannot do. v0.15.1: the
@@ -104,23 +114,33 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     assert "`core`, cannot create a project" in one_click_readme
     assert "whose standard tool set cannot create a project unless switched " \
         "on" not in flat
-    assert ("whose default tool set, `full`, can create a project "
-            "too.") in flat
+    # (v0.15.2, the merge onto the integration branch: the Terminal route
+    # is the Terminal guide's, which the sentence links to)
+    assert ("whose default tool set, `full`, can create a project too "
+            "([the Terminal guide]") in flat
     assert "`lifecycle`" not in one_click_readme
-    one_click = install[install.index("## Claude Desktop: the one-click "
-                                      "extension"):
-                        install.index("## Choosing your AI host")]
+    # (v0.15.2: INSTALL.md's own section on the extension's settings)
+    one_click = install[install.index("## The settings page"):
+                        install.index("## The first start")]
     # after 0.15.1 the switch alone chooses the set in the extension
-    assert ("Off, Exegete offers every tool (the set called `full`), "
-            "creating a new project included; on, the smaller set `core`, "
-            "for local models, which cannot create a project.") in \
+    assert (("With it off, Exegete offers every tool, the set called `full`, "
+             "creating a new project included. With it on, Exegete offers "
+             "the smaller set called `core`, meant for local models, the AI "
+             "models that run on your own computer. The `core` set cannot "
+             "create a project.")) in \
         " ".join(one_click.split())
     assert "`lifecycle`" not in one_click
     install = _doc("INSTALL.md")
     assert "**Qualcoder installed** with at least one project created" \
         not in install
-    needs = install[install.index("## What You'll Need"):
-                    install.index("## Recommended: Install from PyPI")]
+    # (v0.15.2: what you need, in INSTALL.md for the extension and in
+    # the Terminal guide for the other routes)
+    guide = (REPO / "docs/installing-from-the-terminal.md").read_text(
+        encoding="utf-8")
+    needs = (install[install.index("## What you need"):
+                     install.index("## Installing the extension")]
+             + guide[guide.index("## What you need"):
+                     guide.index("## Installing from PyPI")])
     flat_needs = " ".join(needs.split())
     assert ("The default tool set, `full`, includes creating a project: "
             "the assistant") in flat_needs
@@ -130,10 +150,11 @@ def test_the_prerequisites_line_says_when_qualcoder_is_needed():
     # come in through Exegete, so the list starts with images, audio and
     # video
     flat_needs = " ".join(needs.split())
-    assert ("**QualCoder, optional.** Today it does what Exegete does not "
-            "do yet: bringing in images, audio and video") in flat_needs
-    assert ("Since 0.14.3, Exegete brings in documents itself with "
-            "`import_documents`") in flat_needs
+    assert (("**QualCoder, optional.** QualCoder is free software for "
+             "qualitative analysis. Today it does what Exegete does not do "
+             "yet: bringing in images, audio and video")) in flat_needs
+    assert (("Documents need no other program: since 0.14.3, Exegete brings "
+             "in documents itself with `import_documents`")) in flat_needs
     # The facts it rests on: the extension's tool set defaults to full
     # (after 0.15.1 its switch, off by default, and no tool set passed),
     # which has create_project since 0.15.0 on every route (not core), and
@@ -210,13 +231,16 @@ def test_the_changelog_on_ci_and_cowork():
 def test_the_guide_reads_every_suggestion():
     guide = _doc("AI_CODING_GUIDE.md")
     assert "**Read every suggestion, whatever its reading**" in guide
-    assert ("check that the code is right for the study: a passage can "
+    assert ("check that the code is right for the study. A passage can "
             "state what a code names and still not be what your study "
             "means by it") in guide
     assert ("**For an interpretive one, read the words its reason "
-            "names**") in guide
-    assert ("the review does not yet show a passage drawn on from "
-            "elsewhere, so open the file the reason names") in guide
+            "points to**") in guide
+    # (v0.15.2: what the review shows, with no "not yet")
+    assert ("The review shows the passage in its own paragraph or speaker "
+            "turn, so to read a passage drawn on from elsewhere, open the "
+            "file the reason gives.") in guide
+    assert "not yet show" not in guide
     assert ("How many readings are interpretive follows from the lens "
             "chosen") in guide
     for gone in ("Spot check the explicit ones", "Read the interpretive "
@@ -232,10 +256,13 @@ def test_the_guide_reads_every_suggestion():
 
 def test_the_workflow_decides_each_item():
     workflow = _doc("AI_CODING_WORKFLOW.md")
-    assert "**you decide each item**" in workflow
+    assert "You decide each item" in workflow
     assert "full control" not in workflow
-    assert workflow.count("Decide each suggestion; ask for details on any "
-                          "you want to read in context") == 2
+    # (v0.15.2: in the opening, the tips and the checklist, read plainly)
+    lowered = workflow.lower()
+    assert lowered.count("decide on each suggestion") == 3
+    assert lowered.count("ask for details on any you want to read in "
+                         "context") == 2
     for gone in ("at least a few suggestions", "at least some suggestions",
                  "The first 4 look good", "Claude remembers"):
         assert gone not in workflow, gone
@@ -266,5 +293,8 @@ def test_the_workflow_examples_quote_their_words():
     assert "where the codes blur" not in workflow
     assert "# Review every suggestion: do you share each interpretive " \
         "reading?" in workflow
-    assert ("the review does not yet show a passage drawn on from "
-            "elsewhere, so open the file the reason names") in workflow
+    # (v0.15.2: told once, in the coding guide, and pointed to)
+    assert ("[AI_CODING_GUIDE.md](AI_CODING_GUIDE.md), under \"Reviewing "
+            "suggestions\", says what an interpretive reading may draw on "
+            "and how to read one.") in workflow
+    assert "not yet show" not in workflow

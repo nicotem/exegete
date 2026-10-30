@@ -23,6 +23,7 @@ git's notice, the 2,048 rule's list of exceptions, what protects the
 state folder, its map).
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -66,15 +67,21 @@ def test_the_documents_name_the_release_as_verified():
         for words in COMMIT_AS_VERIFIED:
             assert words not in text, (name, words)
     tools = _flat("TOOLS.md")
-    assert ("Exegete is ground-truthed against QualCoder 3.8.2, the latest "
-            "stable release until 2 October 2026 (project schema v14), and "
+    # (v0.15.2: the reference release and the verified one, each in a
+    # sentence of its own)
+    assert ("Exegete takes as its reference QualCoder 3.8.2, the latest "
+            "stable release until 2 October 2026, whose projects use schema "
+            "v14 (the version of the project database's layout). It is "
             "verified against QualCoder 4.0, released on 2 October 2026 "
             "(tag `4.0` at `b95e021`, version string \"QualCoder 4.0\"), "
             "whose projects use schema v17.") in tools
-    assert ("Parity claims were verified against QualCoder 4.0, and cite "
-            "its code at commit `9bddf17` (see \"Supported QualCoder "
-            "versions\").") in tools
-    install = _flat("INSTALL.md")
+    # (v0.15.2: what was checked, without the word "parity")
+    assert ("Where a paragraph says that Exegete does as QualCoder does, it "
+            "was checked against QualCoder 4.0, and cites its code at "
+            "commit `9bddf17` (see \"Supported QualCoder versions\").") \
+        in tools
+    # (v0.15.2: the variables are the Terminal guide's)
+    install = _flat("docs/installing-from-the-terminal.md")
     # (the staleness audit of 20 October 2026: a missing or unreadable
     # value is refused too, database.py, write_support)
     assert ("newer than the schemas this release is verified against (v14 "
@@ -162,35 +169,53 @@ def test_tools_says_what_the_full_re_check_found():
     versions = _between(_flat("TOOLS.md"), "## Supported QualCoder versions",
                         "A project from a QualCoder older than 3.8")
     for words in (
-            "A full re-check against the release (6 October 2026) found "
+            "A full check against the release, on 6 October 2026, found "
             "the same project schema (v17) and the same format for a new "
-            "project (the format tests now compare every project Exegete "
-            "creates with one made by 4.0's own New Project)",
+            "project. The format tests now compare every project Exegete "
+            "creates with one made by 4.0's own New Project",
             "the same backups, private memo sections, coder visibility, "
             "\"AI Agent\" coder name, reports, merges and deletes, and the "
             "same fix for the 3.8.2 edit-mode caution (below)",
             "4.0 opened Exegete's new and edited projects with no message, "
             "upgrade or repair",
-            "it says \"The project database could not be opened.\" and "
-            "changes nothing, and trying again works",
-            # what was not re-read, said rather than left out
-            "Not yet re-read: the line citations into QualCoder's own MCP "
-            "server",
-            # and why the documents still cite 9bddf17
-            "the line numbers this document and Exegete's code cite from "
-            "QualCoder are still those of that commit"):
+            "4.0 says \"The project database could not be opened.\" and "
+            "changes nothing, and trying again works"):
         assert words in versions, words
+    assert "not yet" not in versions.lower()
+    # the document's one citation into QualCoder's own MCP server gives
+    # the release's line beside the development commit's
+    assert ("(`ai_mcp_server.py:5228` at `9bddf17`, line 6161 in the 4.0 "
+            "release)") in _flat("TOOLS.md")
+    # (v0.15.2: the commit the citations give, as it stands today, with
+    # no promise of a re-reading; then, from the readers' fix round, held
+    # as a fact of this document alone, since Exegete's code also cites
+    # lines at the 4.0 tag: every line TOOLS.md cites from QualCoder's
+    # code gives the commit, or a release, in the same brackets)
+    assert "in this document or in Exegete's code" not in versions
+    tools = _flat("TOOLS.md")
+    cited = [found.start() for found in
+             re.finditer(r"`[\w/.-]*\.py:\d|`:\d", tools)]
+    assert len(cited) >= 3, cited
+    for at in cited:
+        brackets = tools[tools.rindex("(", 0, at):tools.index(")", at)]
+        assert re.search(r"`9bddf17`|\b(?:tag|release)\b", brackets), \
+            brackets
 
 
 def test_the_readme_table_is_checked_against_the_release():
     readme = _flat("README.md")
-    # checked again for 0.14.3, whose import row the table carries
-    # v0.15.0, the release review: the Exegete column is 0.15.0's
-    assert ("QualCoder 3.8.2 and 4.0 as checked on 10 October 2026, beside "
-            "Exegete 0.15.1:") in readme
-    assert ("3.8.2: an AI search finds passages, which you code; 4.0: its "
+    # v0.15.2, the opening texts: the comparison table gave way to the list
+    # of what is not in Exegete yet; QualCoder's releases are TOOLS.md's,
+    # which the README points to
+    assert "QualCoder 3.8.2 to 4.0" in readme
+    assert "TOOLS.md#supported-qualcoder-versions" in readme
+    # the owner's word of 29 October 2026: the table back, its QualCoder
+    # column as checked against the release on 10 October 2026
+    assert ("The table sets QualCoder 3.8.2 and 4.0, as checked on 10 "
+            "October 2026, beside Exegete 0.15.2.") in readme
+    assert ("3.8.2: an AI search finds passages, which you code. 4.0: its "
             "assistant codes as it works, within the AI permission you set "
-            "(read only stops it), with undo") in readme
+            "(Read-only stops it), with undo") in readme
     # the README no longer names the beta or the August commit at all
     for words in ("4.0-Beta", "4.0 beta", "9bddf17"):
         assert words not in readme, words
@@ -260,20 +285,28 @@ def test_the_verified_check_would_notice():
 
 def test_the_readme_gives_both_new_facts():
     readme = _flat("README.md")
-    facts = _between(readme, "**QualCoder's own MCP server** (checked 6 "
-                     "October 2026).", "gives the commits these facts were "
-                     "read at.")
-    assert ("The server calls itself \"qualcoder-mcp\", Exegete's former "
-            "name, and the extension QualCoder's source can build is named "
-            "\"qualcoder\", a name an earlier Exegete setup may also use "
-            "([INSTALL.md](https://github.com/nicotem/exegete/blob/main/"
-            "INSTALL.md#coming-from-qualcoder-mcp) says how to keep the two "
-            "apart).") in facts
-    assert ("QualCoder's AI permission setting (Read-only, for example) "
-            "governs its own assistant and that server, not Exegete.") \
-        in facts
+    # v0.15.2, the opening texts: the two facts in one sentence, the rest
+    # TOOLS.md's (test_tools_gives_both_new_facts, below)
+    facts = _between(readme, "QualCoder 4.0's own MCP server",
+                     "This project welcomes QualCoder's own server")
+    # (v0.15.2, the readability reading: the date ends the sentence, the
+    # pointers are one of their own, and the setting applies to the server)
+    # (v0.15.2, the merge onto the integration branch: the Terminal
+    # guide's "Coming from qualcoder-mcp" says how to keep the two apart)
+    assert ("calls itself \"qualcoder-mcp\", Exegete's former name, as "
+            "checked on 6 October 2026. TOOLS.md gives the facts, and "
+            "[the Terminal guide](https://github.com/nicotem/exegete/blob/"
+            "main/docs/installing-from-the-terminal.md#coming-from-"
+            "qualcoder-mcp) says how to keep the two apart.") in facts
+    guide = " ".join((REPO / "docs/installing-from-the-terminal.md")
+                     .read_text(encoding="utf-8").split())
+    assert ("a name of its own, such as `qualcoder-app`, keeps the two "
+            "apart.") in guide
+    assert ("QualCoder's AI permission setting, such as Read-only, applies "
+            "to that server and to QualCoder's own assistant, not to "
+            "Exegete.") in facts
     # the facts come before the stance, which keeps its decided words
-    assert readme.index("not Exegete.") < readme.index(
+    assert readme.index("not to Exegete.") < readme.index(
         "This project welcomes QualCoder's own server")
 
 
@@ -281,21 +314,26 @@ def test_tools_gives_both_new_facts():
     tools = _flat("TOOLS.md")
     assert "Four facts about how the tools relate (checked 6 October " \
         "2026)." in tools
-    assert ("That server calls itself `qualcoder-mcp`, Exegete's name until "
-            "0.14.0, and the Claude Desktop extension QualCoder's source can "
-            "build (`tools/mcpb/build_mcpb.py` at the tag) is named "
-            "`qualcoder`, a name an earlier Exegete setup may also use for "
-            "its own entry:") in tools
-    assert ("QualCoder's AI permission setting (Read-only, Sandboxed, the "
-            "default, or Full access, stored in `~/.qualcoder/config.ini`, "
-            "not in the project) governs QualCoder's own assistant and that "
-            "server, not Exegete: Exegete does not read it, so Read-only in "
-            "QualCoder does not stop Exegete's writes.") in tools
+    # (v0.15.2: the earlier name, without its last release)
+    # (v0.15.2: each fact in a sentence of its own)
+    assert ("That server calls itself `qualcoder-mcp`, Exegete's earlier "
+            "name. QualCoder's source can also build a Claude Desktop "
+            "extension (`tools/mcpb/build_mcpb.py` at the tag), named "
+            "`qualcoder`, a name that an earlier Exegete setup may also use "
+            "for its own entry.") in tools
+    assert ("QualCoder's AI permission setting governs QualCoder's own "
+            "assistant and that server, not Exegete. Its choices are "
+            "Read-only, Sandboxed (the default) and Full access, and it is "
+            "stored in `~/.qualcoder/config.ini`, not in the project. "
+            "Exegete does not read it, so Read-only in QualCoder does not "
+            "stop Exegete's writes.") in tools
     assert "Two facts about how the tools relate" not in tools
 
 
 def test_install_keeps_the_entry_with_a_word_of_care():
-    install = _flat("INSTALL.md")
+    # (v0.15.2: the Terminal routes' part of "Coming from qualcoder-mcp"
+    # is the Terminal guide's)
+    install = _flat("docs/installing-from-the-terminal.md")
     entry = _between(install, "**Keep your entry.**", "**The settings.**")
     # the advice itself is unchanged
     assert ("keep it, and do not add an `exegete` entry beside it") in entry
@@ -327,9 +365,11 @@ def test_the_server_names_are_quoted_as_qualcoder_has_them():
 
 def test_claude_md_says_what_holds():
     claude = _flat("CLAUDE.md")
-    assert ("The full suite takes about twelve minutes on a Mac, longer on "
+    # 20 min 43 s at 0.15.2-alpha's release preparation (0f5dc53)
+    assert ("The full suite takes about twenty minutes on a Mac, longer on "
             "Windows CI;") in claude
     assert "about ten minutes" not in claude
+    assert "about twelve minutes" not in claude
     assert "silently" not in claude
     assert ("git makes up an address from the machine's name, prints a "
             "notice and commits anyway") in claude

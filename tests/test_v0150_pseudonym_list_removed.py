@@ -44,6 +44,7 @@ in v0.15.1, with its deprecation sentence, its mark and its metadata.
 import asyncio
 import json
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -98,7 +99,7 @@ IMPORT_NOTE = (
 BRIEF_SENTENCE = (
     "The tools keep the private part of memos out of the conversation, and "
     "the project's list of the real names behind its pseudonyms "
-    "(pseudonyms.json, in the project folder) too; they back the project "
+    "(pseudonyms.json, in the project folder) too. They back the project "
     "up, hold suggestions for approval and check whether QualCoder has the "
     "project open.")
 
@@ -273,7 +274,10 @@ class TestTheTexts:
 # ---------------------------------------------------------------------------
 
 SHIPPED = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md", "SUPPORT.md",
-           "AI_CODING_GUIDE.md")
+           "AI_CODING_GUIDE.md", "docs/installing-from-the-terminal.md")
+# v0.15.2: the Terminal recipes, Codex's among them, moved from INSTALL.md
+# to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
 # The one sentence a shipped document keeps, which says the tool was removed
 # (fix round 1: "see" rather than "read")
 PRIVACY_REMOVED = (
@@ -318,7 +322,7 @@ class TestNoShippedTextNamesIt:
         if name == "PRIVACY.md":
             assert text.count(PRIVACY_REMOVED) == 1
             text = text.replace(PRIVACY_REMOVED, "")
-        if name == "INSTALL.md":
+        if name == GUIDE:
             assert text.count(INSTALL_OLDER_ENTRY) == 1
             text = text.replace(INSTALL_OLDER_ENTRY, "")
         assert GONE not in text, name
@@ -326,34 +330,28 @@ class TestNoShippedTextNamesIt:
 
 class TestTheCount:
 
-    def test_full_has_79_tools_and_core_27(self):
-        """82 at this piece; 79 since v0.15.1 removed three tools, as
-        announced in 0.14 (tests/test_v0151_removed_tools.py); core 26
-        since v0.15.1, restore_backup joining it, and 27, search_memos
-        joining it (tests/test_v0151_search_memos_core.py)."""
-        assert (FULL_TOOLS, CORE_TOOLS) == (79, 27)
+    def test_each_set_lists_its_count(self):
+        """The counts are the snapshot's (tests/tool_counts.py)."""
         server._apply_toolset("full")
-        assert len(_listed()) == 79
+        assert len(_listed()) == FULL_TOOLS
         server._apply_toolset("core")
-        assert len(_listed()) == 27
+        assert len(_listed()) == CORE_TOOLS
 
 
 # ---------------------------------------------------------------------------
 # 9. The documents
 # ---------------------------------------------------------------------------
 
-def _rounded_full():
-    """`full`'s measured size as the documents round it, from the pin
-    test_toolset_modes.py holds to the measurement."""
-    sys.path.insert(0, str(Path(__file__).parent))
-    from test_toolset_modes import TestThePublishedSchemaBudget as Budget
-    return f"{round(Budget.FULL_MEASURED / 1000) * 1000:,}"
+# A figure as the documents write one, such as 200,000 or 51k: the
+# figures are held by tests/test_v0151_facts.py, within five per cent of
+# docs/snapshot/sizes.json (v0.15.2, the snapshot)
+FIGURE = r"\d[\d,]*k?"
 
 
 class TestInstall:
 
     def test_the_codex_recipe_has_no_table_for_the_tool(self):
-        raw = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        raw = (REPO / GUIDE).read_text(encoding="utf-8")
         block = raw[raw.index("```toml\n[mcp_servers.exegete]"):]
         block = block[:block.index("\n```", 4)]
         assert block.rstrip().endswith(
@@ -376,16 +374,17 @@ class TestInstall:
     def test_step_4_and_the_marks(self):
         install = _flat(_read("INSTALL.md"))
         assert ("for the tools that write, answer each time, since a "
-                "remembered answer lets later calls run unasked.") in install
-        assert ("Some tools also carry `anthropic/requiresUserInteraction`, "
-                "a mark Anthropic documents for Claude Code: "
-                "`import_documents`, and `save_names_list`, which changes "
-                "the names list every later import applies. From version "
-                "2.1.199, Claude Code asks before every call of such a tool "
-                "in every permission mode, auto and `bypassPermissions` "
-                "included, offers no \"don't ask again\", lets no allow rule "
-                "skip it, and in `dontAsk` refuses it. Earlier versions "
-                "ignore the mark.") in install
+                "remembered answer lets later calls run unasked."
+                ) in _flat(_read(GUIDE))
+        assert (("Two tools also carry `anthropic/requiresUserInteraction`, "
+                 "a mark Anthropic documents for Claude Code: "
+                 "`import_documents`, and `save_names_list`, which changes "
+                 "the names list every later import applies. From version "
+                 "2.1.199, Claude Code asks before every call of such a tool "
+                 "in every permission mode, auto and `bypassPermissions` "
+                 "included. It offers no \"don't ask again\", and lets no "
+                 "allow rule skip it. In `dontAsk` mode, it refuses the "
+                 "call. Earlier versions ignore the mark.")) in install
         assert ("`check_for_updates` is not marked read-only: it records "
                 "each check") in install
         assert ("(here, `import_documents` and `save_names_list`) is asked "
@@ -400,32 +399,30 @@ class TestInstall:
                 "0.15.0). Codex does not read the "
                 "`anthropic/requiresUserInteraction` mark that "
                 "`import_documents` and `save_names_list` carry.") in install
-        assert ("asks before every tool not marked read-only; the recipe "
-                "above sets it. The desktop app's") in install
+        assert ("as the Terminal guide's Codex recipe sets it, Codex asks "
+                "before every tool not marked read-only. The desktop app's"
+                ) in install
         assert "and \"Full access\" approves every call. None of" in install
         assert ("In an auto mode, a classifier, not you, decides on the "
-                "writing tools; in \"Skip all approvals\" or "
+                "writing tools. In \"Skip all approvals\" or "
                 "`bypassPermissions`, nothing is asked except, in Claude "
                 "Code 2.1.199 and later, `import_documents` and "
                 "`save_names_list`.") in install
 
     def test_the_counts(self):
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read(GUIDE))
         # v0.15.1: 79 tools since three were removed, as announced in
-        # 0.14, and the rounded figure held to the measured pin
-        # (test_toolset_modes.py): about 208,000 with create_backup
-        # accepted and ignored, then about 209,000 with audio and video
-        # left out of backups, as the small corrections leave it, then
-        # about 205,000 with the three tools removed, still about
-        # 205,000 with the restore's paragraph on its preview, and about
-        # 206,000 with its sentence on a stale lock file
-        assert "On Python 3.13, 4 of `full`'s 79 descriptions" in install
-        assert "`full` (default) registers 79 tools" in install
-        rounded = _rounded_full()
-        assert ("Exegete offers 79 tools by default, and the serialised "
-                f"tool definitions alone measure about {rounded} characters, "
-                "roughly 51k tokens") in install
-        assert f"(about {rounded} characters with `full`;" in install
+        # 0.14; v0.15.2: the counts are the snapshot's
+        # (tests/tool_counts.py), and the sizes any figure
+        assert (f"On Python 3.13, 4 of `full`'s {FULL_TOOLS} descriptions"
+                ) in install
+        assert f"`full` (default) registers {FULL_TOOLS} tools" in install
+        assert re.search(re.escape(
+            f"Exegete offers {FULL_TOOLS} tools by default, and the "
+            "serialised tool definitions alone measure about ") + FIGURE
+            + " characters, roughly " + FIGURE + " tokens", install)
+        assert re.search(r"\(about " + FIGURE + " characters with `full`;",
+                         install)
         server._apply_toolset("full")
         long = [t.name for t in _listed().values()
                 if len(t.description or "") > 4096]
@@ -437,27 +434,32 @@ class TestToolsReadmePrivacy:
 
     def test_tools(self):
         tools = _read("TOOLS.md")
-        # (79 since v0.15.1's removals)
+        # (79 since v0.15.1's removals; the snapshot's count since,
+        # 80 with v0.15.2's undo)
         assert ("extension and when you configure Exegete yourself) "
-                "registers 79 tools,") in tools
+                f"registers {FULL_TOOLS} tools,") in tools
         assert ("(`pseudonymise_source`): replace the names you list, or a "
                 "list you fill in on your own computer (`prepare_names_list`, "
                 "`save_names_list`), as whole words,") in tools
 
     def test_readme(self):
         readme = _read("README.md")
-        # (79 and 51k tokens since v0.15.1's removals)
-        assert ("| `full` | 79: all, creating a project and two renamed "
-                "tools' earlier names included | about "
-                f"{_rounded_full()} characters, 51k tokens |") in readme
-        assert ("with `pseudonymise_source` afterwards. The list can be one "
-                "you fill in on your own computer, in a file Exegete "
+        # the count is the snapshot's, and the size any figure
+        assert re.search(re.escape(
+            f"| `full` | {FULL_TOOLS}: every tool, creating a project and the "
+            "earlier names of two renamed tools included | about ") + FIGURE
+            + " characters, " + FIGURE + r" tokens \|", readme)
+        # (the readability reading: the list filled in by you, said so)
+        assert ("with the project's names list, or afterwards. You can fill "
+                "in the list on your own computer, in a file Exegete "
                 "prepares, so the names do not pass through the "
                 "conversation. Replacing names helps you manage what you "
                 "share with other people,") in readme
+        # (v0.15.2, the opening texts: the list's items end without a
+        # semicolon)
         assert ("- the files you fill in for a project, such as the names "
                 "file (`Names to replace.txt`, in the project's `Exegete` "
-                "folder), which Exegete never shows to the assistant;"
+                "folder), which Exegete never shows to the assistant"
                 ) in readme
 
     def test_privacy(self):
@@ -689,7 +691,7 @@ class TestFixRound1:
         assert "fills in the names file" not in note
 
     def test_install_says_an_older_codex_entry_can_drop_the_table(self):
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read(GUIDE))
         step_2 = install[install.index("**Step 2. Add Exegete to Codex's "
                                        "settings file.**"):
                          install.index("**Step 3. Give Codex a folder")]
@@ -719,7 +721,7 @@ class TestFixRound2:
     def test_install_speaks_of_one_approval_line(self):
         """The recipe's block has one approval line since the removed
         tool's table went, so "Other ways to add it" says "line"."""
-        install = _flat(_read("INSTALL.md"))
+        install = _flat(_read(GUIDE))
         other_ways = install[install.index("**Other ways to add it.**"):
                              install.index("**Step 3. Give Codex a folder")]
         assert ("OpenAI does not document that either writes the approval "
@@ -728,7 +730,7 @@ class TestFixRound2:
                 "on the line straight after `[mcp_servers.exegete]`;"
                 ) in other_ways
         assert "the approval lines" not in install
-        raw = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        raw = (REPO / GUIDE).read_text(encoding="utf-8")
         block = raw[raw.index("```toml\n[mcp_servers.exegete]"):]
         block = block[:block.index("\n```", 4)]
         assert block.count("approval_mode = ") == 1

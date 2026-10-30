@@ -43,23 +43,25 @@ Exegete searches these places by default:
   extension's default folder for projects, and its earlier default)
 - `~/Documents/`
 
-You'll get a list like:
+You'll get a list like this one, where the first project is in the
+desktop extension's folder and the second in one of QualCoder's, as it
+would be if you use QualCoder:
 
 ```json
 {
-  "project_count": 3,
+  "project_count": 2,
   "projects": [
     {
       "name": "Interview Study 2024",
-      "path": "/Users/you/Documents/QualCoder_projects/InterviewStudy2024/InterviewStudy2024.qda",
-      "directory": "/Users/you/Documents/QualCoder_projects/InterviewStudy2024",
+      "path": "/Users/you/Exegete projects/Interview Study 2024.qda",
+      "directory": "/Users/you/Exegete projects",
       "size_mb": 15.3,
       "modified": 1698765432.0
     },
     {
       "name": "Focus Groups",
-      "path": "/Users/you/Documents/QualCoder/FocusGroups/FocusGroups.qda",
-      "directory": "/Users/you/Documents/QualCoder/FocusGroups",
+      "path": "/Users/you/Documents/QualCoder/Focus Groups/Focus Groups.qda",
+      "directory": "/Users/you/Documents/QualCoder/Focus Groups",
       "size_mb": 8.7,
       "modified": 1698654321.0
     }
@@ -76,7 +78,7 @@ Select the "Interview Study 2024" project
 Or use the full path:
 
 ```
-Select the project at /Users/you/Documents/QualCoder_projects/InterviewStudy2024/InterviewStudy2024.qda
+Select the project at /Users/you/Exegete projects/Interview Study 2024.qda
 ```
 
 ### Switch Projects Anytime
@@ -112,12 +114,16 @@ In your `claude_desktop_config.json`:
       "command": "/Users/YOUR_USERNAME/Documents/exegete/venv/bin/python",
       "args": ["-m", "exegete.server"],
       "env": {
-        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/QualCoder_projects/MyProject/MyProject.qda"
+        "EXEGETE_PROJECT_PATH": "/Users/YOUR_USERNAME/Documents/Exegete projects/MyProject.qda"
       }
     }
   }
 }
 ```
+
+Give your own project's path. The example's is in
+`~/Documents/Exegete projects`, where Exegete makes new projects when it
+is set up this way, unless `EXEGETE_WORKSPACE` names another folder.
 
 ### Usage
 

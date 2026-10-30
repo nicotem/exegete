@@ -43,7 +43,7 @@ DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
              "CLAUDE.md", "packaging/pypi-old-name/README.md")
 
-# What 0.15.0 served, for the put-back the older tests use
+# What 0.15.0 served
 DEPRECATED_JOURNAL_ATTRIBUTES_0150 = (
     "Deprecated, removed in v0.15.1: attributes on journal entries, which "
     "Exegete can set but never reads back (QualCoder's Journals window, "
@@ -369,11 +369,13 @@ def test_the_readme_and_the_changelog_say_so():
     among what Exegete does not do; the CHANGELOG records both removals
     and says what to do instead."""
     readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
-    row = [line for line in readme.split("| Cases, attributes, memos, "
-                                         "annotations, journal | ")[1:]]
-    assert len(row) == 1
-    assert "setting an attribute on a journal entry" in \
-        row[0][:row[0].index("|", row[0].index("|") + 1)]
+    # (v0.15.2, the opening texts: the list of what is not in Exegete yet,
+    # which replaced the table)
+    missing = readme[readme.index("**Not in Exegete yet.**"):]
+    missing = missing[:missing.index("**The aim**")]
+    # (the readability reading: the list in sentences)
+    assert ("rename an attribute, change a journal entry or set an attribute "
+            "on one") in missing
     log = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
     unreleased = _flat(log[log.index("## [0.15.1-alpha]"):
                            log.index("## [0.15.0-alpha]")])
@@ -413,83 +415,3 @@ def test_the_check_finds_what_0150_said():
                  "a name the project's backups show is not looked for.",
                  "Define a new attribute for cases or files."):
         assert not _current_claims(said), said
-
-
-# ---------------------------------------------------------------------------
-# The put-back the older tests use
-# ---------------------------------------------------------------------------
-
-def before_the_journal_and_rename_back(name, description):
-    """`name`'s description as served before this part, on any
-    interpreter: for the three tools, the deprecation sentence and the
-    texts that said what went put back."""
-    from test_v0151_ignored_argument import _swap_lines
-    from test_v0151_removed_arguments import _replace_once, _sentence_before
-    if name == "create_attribute_type":
-        description = _replace_once(
-            description, "Define a new attribute for cases or files.",
-            "Define a new attribute for cases, files or journals.")
-        description = _swap_lines(description, (
-            "applies_to: 'case' or 'file' ('journal', QualCoder's third",
-            "domain, is refused: Exegete no longer sets attributes",
-            "on journal entries)"), (
-            "applies_to: 'case', 'file' or 'journal' (QualCoder's real "
-            "domain",
-            "set; there is no 'both')"), name)
-        return _sentence_before(description,
-                                DEPRECATED_JOURNAL_ATTRIBUTES_0150)
-    if name == "set_attribute":
-        description = _replace_once(
-            description,
-            "Set (or clear) an attribute value on a case or a file.",
-            "Set (or clear) an attribute value on a case, file or journal.")
-        description = _swap_lines(description, (
-            "target_type: 'case' or 'file'",
-            "target_id: The case ID or file ID"), (
-            "target_type: 'case', 'file' or 'journal'",
-            "target_id: The case ID, file ID or journal ID"), name)
-        return _sentence_before(description,
-                                DEPRECATED_JOURNAL_ATTRIBUTES_0150)
-    if name == "rename_file":
-        description = _swap_lines(description, (
-            "('Thomas.Jones' to 'P01'). An ending the name of its stored "
-            "file has",
-            "may be put back, except a transcript losing both endings or a "
-            "media",
-            "file its extension; a name the project's backups show is not "
-            "looked",
-            "for."), (
-            "('Thomas.Jones' to 'P01'). A rename back is not refused: an "
-            "ending",
-            "the file had before (its stored file's own name, or a project "
-            "backup",
-            "showing this entry, same id and date) may be restored, except a",
-            "transcript losing both endings or a media file its extension; "
-            "a text",
-            "with no stored file may take back its documents copy under a "
-            "name",
-            "such a backup shows, with the same text."), name)
-        return _sentence_before(description, DEPRECATED_RENAME_BACK_0150,
-                                before="The result carries")
-    return description
-
-
-def test_the_descriptions_put_back_are_as_served_before():
-    """A guard for the put-back: with it, the three descriptions this
-    part changed are as served before it, on any interpreter
-    (tests/test_v0142_description_cut.py), and each differs from now."""
-    import sys
-    from test_v0142_description_cut import (CHANGED_0151,
-                                            JOURNAL_RENAME_0151,
-                                            _fingerprint)
-    server._apply_toolset("full")
-    assert set(JOURNAL_RENAME_0151) == {"create_attribute_type",
-                                        "set_attribute", "rename_file"}
-    for name in JOURNAL_RENAME_0151:
-        now = server.mcp.original_descriptions[name]
-        then = before_the_journal_and_rename_back(name, now)
-        assert then != now, name
-        got = _fingerprint(then)
-        assert got[1:] == CHANGED_0151[name][1:], name
-        if sys.version_info[:2] == (3, 13):
-            assert got[0] == CHANGED_0151[name][0], name

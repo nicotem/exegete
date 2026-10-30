@@ -396,14 +396,25 @@ class TestTheTexts:
 
     def test_the_readme(self):
         readme = _doc("README.md")
+        # (v0.15.2, the opening texts: the comparison table that said it a
+        # second time gave way to the list of what is not in Exegete yet;
+        # the owner's word of 29 October 2026 brought it back, its import
+        # row saying it again)
         assert readme.count("PDF and EPUB with the optional part, which "
                             "the extension has") == 2
-        assert "read by Exegete on your computer" in readme
-        assert "on Windows 11, Copy as path" in readme
+        # (v0.15.2, the readability reading: Exegete the subject, and the
+        # Windows step a sentence of its own)
+        assert "Exegete reads them on your computer" in readme
+        assert "On Windows 11, choose Copy as path." in readme
         assert ("an EPUB opened in Apple Books joins its library, and "
                 "iCloud if Books syncs") in readme
-        # v0.15.0, the release review: the stamp names 0.15.0's column
-        assert ("as checked on 10 October 2026, beside Exegete 0.15.1"
+        # v0.15.0, the release review: the stamp named the comparison's
+        # column; v0.15.2, the opening texts: the comparison gave way to
+        # the list of what is not in Exegete yet, which needs no stamp;
+        # the owner's word of 29 October 2026: the comparison back, its
+        # stamp naming the release it describes
+        assert "**Not in Exegete yet.**" in readme
+        assert ("as checked on 10 October 2026, beside Exegete 0.15.2."
                 in readme)
 
     def test_the_small_wording_points(self):
@@ -427,17 +438,22 @@ class TestTheTexts:
             "after reading this preview, which keeps you asked each time.")
 
     def test_install_points_to_the_section_and_gives_windows_form(self):
-        install = _doc("INSTALL.md")
-        # (the staleness audit of 20 October 2026: the section gives pip,
-        # pipx and uv tool; a copy of the source and uvx are named here)
-        assert ("\"PDF and EPUB: the optional part\", above, says how to add "
-                "it with pip, pipx and uv tool; for a copy of the source, "
-                "\"Step 5: Install the Package\" does; for uvx, the entry "
-                "becomes `uvx --from \"exegete[pdf-epub]\" exegete`") \
-            in install
+        # (v0.15.2: the Terminal guide installs the part: its section gives
+        # pip, pipx and uv tool, with PowerShell's form; a copy of the
+        # source and uvx name it where they are installed and updated)
+        install = _doc("docs/installing-from-the-terminal.md")
+        section = install[install.index("### PDF and EPUB: the optional "
+                                        "part"):]
+        section = section[:section.index("## Installing from the source")]
+        for command in ('pip install "exegete[pdf-epub]"',
+                        'pipx install --force "exegete[pdf-epub]"',
+                        'uv tool install "exegete[pdf-epub]"',
+                        '$HOME\\exegete-venv\\Scripts\\pip install '
+                        '"exegete[pdf-epub]"'):
+            assert command in section, command
+        assert 'pip install -e ".[pdf-epub]"' in install
+        assert '`uvx --from "exegete[pdf-epub]" exegete`' in install
         assert '(`pip install "exegete[pdf-epub]"` adds it)' not in install
-        assert ('$HOME\\exegete-venv\\Scripts\\pip install '
-                '"exegete[pdf-epub]"') in install
 
     def test_notice_names_the_maintainer(self):
         for name in ("NOTICE", "packaging/pypi-old-name/NOTICE"):

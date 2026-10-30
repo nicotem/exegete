@@ -61,7 +61,8 @@ def test_no_text_sends_documents_or_whole_files_to_qualcoder():
 
 def test_tools_md_names_both_ways_in_and_the_reading_page():
     tools = _read("TOOLS.md")
-    assert ("- **Bring in documents** from the computer (v0.14.3: Word, "
+    # (v0.15.2: without the release number)
+    assert ("- **Bring in documents** from the computer (Word, "
             "OpenDocument, RTF, plain text, Markdown, web pages and "
             "subtitle files, and PDF and EPUB with the optional part) and "
             "**transcripts** through the conversation") in tools
@@ -76,11 +77,13 @@ def test_tools_md_names_both_ways_in_and_the_reading_page():
 
 def test_the_coding_guide_offers_the_reading_page():
     guide = _read("AI_CODING_GUIDE.md")
-    assert ("**You** read the coded passages back in the conversation, ask "
-            "Claude to open the file for reading (a page in your browser "
-            "shows them highlighted in the text, which stays off the "
-            "conversation), or open the project in QualCoder to see them "
-            "there") in guide
+    # (v0.15.2: the assistant, and QualCoder only for those who use it)
+    assert ("**You** read the coded passages back in the conversation. Or "
+            "you ask the assistant to open the file for reading: a page in "
+            "your browser shows them highlighted in the text, and the text "
+            "does not pass through the conversation. If you use QualCoder, "
+            "opening the project there shows them too") in " ".join(
+                guide.split())
 
 
 def test_the_extension_says_documents_come_in():

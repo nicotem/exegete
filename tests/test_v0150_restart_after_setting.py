@@ -45,13 +45,14 @@ def test_the_page_says_it_once_in_the_first_setting():
 def test_install_says_it_once_in_step_4_with_the_reason():
     install = _flat(_read("INSTALL.md"))
     assert install.count(SENTENCE) == 1
-    step = install[install.index("4. **Look at its settings**"):
-                   install.index("5. **Check it works**")]
+    # (v0.15.2: INSTALL.md's section "The settings page")
+    step = install[install.index("## The settings page"):
+                   install.index("## The first start")]
     assert (f"**{SENTENCE}** Exegete reads its settings when Claude Desktop "
             f"starts it, so a change reaches Exegete only at its next "
             f"start. Until then Exegete works with the settings it started "
-            f"with: a coder name filled in just now is not yet given to a "
-            f"new project, for example.") in step
+            f"with: a coder name filled in a moment ago is not yet given "
+            f"to a new project, for example.") in step
 
 
 def test_the_changelog_s_upgrading_says_it_once():
@@ -73,5 +74,5 @@ def test_tools_says_it_beside_the_coder_names():
     assert ("In the extension, after changing a setting, quit Claude "
             "Desktop and open it again: a change reaches Exegete only at "
             "its next start.") in tools
-    assert ("in the extension, a changed setting reaches Exegete once "
+    assert ("In the extension, a changed setting reaches Exegete once "
             "Claude Desktop has been quit and opened again") in tools

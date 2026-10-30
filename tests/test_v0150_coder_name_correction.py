@@ -41,7 +41,7 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server                       # noqa: E402
-from tool_counts import FULL_TOOLS  # noqa: E402
+from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 from exegete import database, names                  # noqa: E402
 
 OLD, NEW = "NT", "Niccolò Tempini"
@@ -916,9 +916,10 @@ class TestTheNotesAfterTheChange:
     def test_the_answers_fields(self, tmp_path):
         _make(tmp_path)
         answer = _change(NEW)
+        # undo_receipt, beside the backup's name, since v0.15.2
         assert list(answer) == ["success", "coder_name",
                                 "previous_coder_name", "coder_list",
-                                "backup_path", "notes"]
+                                "backup_path", "undo_receipt", "notes"]
 
     def test_a_setting_that_differs_is_named_and_not_changed(
             self, tmp_path, monkeypatch):
@@ -1136,8 +1137,10 @@ class TestTheTool:
         assert "Exegete cannot change it" not in tools
         # 83 since save_names_list (the files design, piece 4), 82 since
         # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        assert "registers 79 tools" in tools
+        # removed three tools, as announced in 0.14, and the snapshot's
+        # count since (tests/tool_counts.py; 80 with v0.15.2's undo)
+        from tool_counts import FULL_TOOLS
+        assert f"registers {FULL_TOOLS} tools" in tools
 
     def test_the_changelog_says_what_was_added(self):
         log = _flat((REPO / "CHANGELOG.md").read_text(
@@ -1170,4 +1173,4 @@ class TestTheTool:
 
     def test_the_counts(self):
         assert len(server.STANDARD_TOOL_NAMES) == FULL_TOOLS
-        assert len(server.CORE_TOOLSET) == 27   # restore_backup and search_memos (v0.15.1)
+        assert len(server.CORE_TOOLSET) == CORE_TOOLS

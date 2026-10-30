@@ -40,6 +40,8 @@ sys.path.insert(0, str(REPO / "src"))
 
 import exegete.server as server  # noqa: E402
 from tool_counts import FULL_TOOLS  # noqa: E402
+# the documents round a size to two significant figures (v0.15.2)
+from test_v0151_facts import SIZE_TOLERANCE  # noqa: E402
 
 # Every deprecation sentence Exegete serves
 DEPRECATIONS = sorted(name for name in dir(server)
@@ -132,24 +134,34 @@ class TestTheRemovalsInV0151:
         found = [m.group(0) for m in BARE_V015.finditer(_read(name))]
         assert found == [], name
 
-    def test_what_comes_next_lists_v0151_to_v0153(self):
+    def test_what_comes_next_lists_v0152_to_v0154(self):
         """The owner's decisions of 20 October 2026 (ruling 85): the
         safety net in two releases, undo in the second (the sprint moved
-        it whole to v0.15.2), method in v0.15.3 with the earlier tool
-        names and the ignored backup option; the REFI-QDA export kept."""
+        it whole to v0.15.2), method with the earlier tool names and the
+        ignored backup option; the REFI-QDA export kept. His form of 27
+        October (ruling 105): coding sessions kept with their project in
+        a v0.15.3 of their own, method in v0.15.4 (the releases
+        themselves are held to scripts/release_plan.py by the facts
+        check)."""
         readme = _flat(_read("README.md"))
         nxt = readme[readme.index("## What comes next"):]
         nxt = nxt[:nxt.index("## ", 5)]
-        items = {item.split(",")[0]: item for item in nxt.split(" - ")[1:]}
+        items = {item.split(",")[0].split(":")[0]: item
+                 for item in nxt.split(" - ")[1:]}
         # v0.15.1's release preparation: its own item goes once it is
-        # released; what it brought is in the CHANGELOG's entry
-        assert list(items)[:3] == ["v0.15.2", "v0.15.3", "v0.16"]
-        assert "undo a session's changes" in items["v0.15.2"]
-        assert "choose which mentions to keep" in items["v0.15.2"]
-        assert "method" in items["v0.15.3"]
+        # released; what it brought is in the CHANGELOG's entry. So does
+        # v0.15.2's, whose preparation moved the occurrences choice, the
+        # REFI-QDA fix and Apple silicon to v0.15.3, the week having no
+        # room for them
+        assert list(items)[:4] == ["v0.15.3", "v0.15.4", "v0.16", "v0.17"]
+        assert "choose which mentions to keep" in items["v0.15.3"]
+        assert "the REFI-QDA export fixed" in items["v0.15.3"]
+        assert "on Apple silicon Macs" in items["v0.15.3"]
+        assert "coding sessions kept with their project" in items["v0.15.3"]
+        assert "method" in items["v0.15.4"]
         assert "the earlier names of the two renamed tools" \
-            in items["v0.15.3"]
-        assert "backup option" in items["v0.15.3"]
+            in items["v0.15.4"]
+        assert "backup option" in items["v0.15.4"]
         # the REFI-QDA export is kept (ruling 85, item 2): no removal
         # announced for it anywhere in the README
         assert "removed in 0.15" not in readme
@@ -167,20 +179,10 @@ NAMES_LIST = (
     "it.")
 
 
-# The sentence before this round, for the tests that compare a
-# description with what an earlier piece pinned
+# The sentence before this round
 OLD_NAMES_LIST = (
     "Deprecated, removed in v0.15: QualCoder's Pseudonyms dialog (the "
     "button in Manage Files) shows this list without sending it anywhere.")
-
-
-def before_the_review(description):
-    """A served description with this round's two changes put back: the
-    names list's deprecation as it was, and "removed in v0.15" for
-    "removed in v0.15.1", so that a test of an earlier piece still
-    compares with what that piece pinned."""
-    return description.replace(NAMES_LIST, OLD_NAMES_LIST).replace(
-        "removed in v0.15.1:", "removed in v0.15:")
 
 
 class TestTheNamesListsDeprecation:
@@ -213,7 +215,8 @@ class TestTheNamesListsDeprecation:
 class TestClaudeCodesLimits:
 
     def test_install_says_them(self):
-        install = _flat(_read("INSTALL.md"))
+        # (v0.15.2: the Terminal guide's)
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
         assert ("Claude Code shows it (and keeps the first 4,096 characters "
                 "of a server's opening text, 2,048 before its version "
                 f"2.1.296; this one is {len(server.BRIEF_SHORT):,})"
@@ -239,15 +242,25 @@ class TestClaudeCodesLimits:
         over = sorted(((len(d), name) for name, d in served.items()
                        if len(d) > 4096), reverse=True)
         assert len(served) == FULL_TOOLS
-        said = "; ".join(f"`{name}`, {length:,}" for length, name in over)
-        install = _flat(_read("INSTALL.md"))
-        assert (f"{len(over)} of `full`'s {len(served)} descriptions are "
-                f"longer than 4,096 characters ({said})") in install
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
+        found = re.search(rf"{len(over)} of `full`'s {len(served)} "
+                          rf"descriptions are longer than 4,096 characters "
+                          rf"\(([^)]*)\)", install)
+        assert found, install
+        # v0.15.2: each rounded, within five per cent of its length; the
+        # exact lengths are in docs/snapshot/sizes.json
+        said = {name: int(figure.replace(",", "")) for name, figure
+                in re.findall(r"`(\w+)`, about ([\d,]+)", found.group(1))}
+        lengths = {name: length for length, name in over}
+        assert set(said) == set(lengths)
+        for name, stated in said.items():
+            assert abs(stated - lengths[name]) <= SIZE_TOLERANCE * lengths[
+                name], (name, stated, lengths[name])
         longest, name = over[0]
         assert [n for length, n in over if length > 16384] == [name]
-        assert (f"`{name}` is longer than 16,384, so its last "
-                f"{longest - 16384:,} characters are cut even through tool "
-                f"search") in install
+        assert (f"`{name}` is longer than 16,384, so its last part, its "
+                f"sentence on the lock file included, is cut even through "
+                f"tool search") in install
 
     def test_claude_md_and_the_cut_s_comment(self):
         claude = _flat(_read("CLAUDE.md"))
@@ -344,7 +357,10 @@ class TestTheEntryIsOneAccount:
         # (82) since read_pseudonym_list was removed (piece 5)
         assert "80 tools (82 with the earlier names" in entry
         sizes = re.findall(r"about (1[23],\d00) characters", entry)
-        assert sizes == [f"{round(len(server.BRIEF_FULL), -2):,}"]
+        # (0.15.0's figure, history: v0.15.2's opening texts, then the
+        # brief's lines on undoing a change, took the brief further; TOOLS.md
+        # gives the current figure)
+        assert sizes == ["13,200"]
         assert "12,500" not in entry and "12,900" not in entry
 
     def test_the_maintainer_s_decisions(self):
@@ -393,9 +409,10 @@ class TestTheDocumentsOtherPoints:
         readme = _flat(_read("README.md"))
         assert ("**One program at a time.** If you also use QualCoder, close "
                 "the project there before the assistant changes it.") in readme
-        assert ("refuses while the project's lock file is active (QualCoder "
-                "3.8.2 has the project open, or another conversation using "
-                "Exegete is writing to it)") in readme
+        # (v0.15.2, the opening texts: the same two holders, reworded)
+        assert ("refuses while the project's lock file is active, as it is "
+                "while QualCoder 3.8.2 has the project open or another "
+                "conversation using Exegete is writing to it") in readme
         tools = _flat(_read("TOOLS.md"))
         assert ("**writes are refused while the project's lock file is "
                 "active** (QualCoder 3.8.2 has the project open, or another "
@@ -408,10 +425,12 @@ class TestTheDocumentsOtherPoints:
 
     def test_the_brief_s_two_steps_and_its_literature(self):
         brief = _flat(server.BRIEF_FULL)
-        # v0.15.0, the files design, piece 4: and saving the names list
-        assert ("restoring or pruning backups, pseudonymising a file, "
-                "importing documents, saving the names list and correcting "
-                "the researcher's coder name take two steps") in brief
+        # v0.15.0, the files design, piece 4: and saving the names list;
+        # v0.15.2: and undoing a change
+        assert ("restoring or pruning backups, undoing a change, "
+                "pseudonymising a file, importing documents, saving the "
+                "names list and correcting the researcher's coder name take "
+                "two steps") in brief
         assert ("gives the methods notes and approaches to prompting (two "
                 "published)") in brief
         assert "some published approaches" not in brief
@@ -420,19 +439,37 @@ class TestTheDocumentsOtherPoints:
         readme = _flat(_read("README.md"))
         stays = readme[readme.index("**What stays on your computer**"):]
         stays = stays[:stays.index("## Start here")]
-        assert ("- the texts an import's preview read, kept in Exegete's own "
-                "folder until the import (PRIVACY.md says for how long);"
-                ) in stays
+        # (v0.15.2, the opening texts: the list's items end without a
+        # semicolon)
+        # (the readability reading: how long, said in words: until the
+        # import, or a while if none follows, PRIVACY.md giving the time)
+        # (the fix round: the whole texts, names not yet replaced, and how
+        # long, since "a while" can be days: the first start or import
+        # after their hour, kept_texts.ENTRY_LIFETIME, in
+        # tests/test_v0152_opening_texts.py)
+        # (the second fix round: the time given exactly, 65 minutes, as
+        # the reader acts on it; that test holds it to the constant)
+        assert ("- the whole texts an import's preview read, before names "
+                "are replaced, kept in Exegete's own folder until the "
+                "import, or else until Exegete starts or imports again "
+                "after 65 minutes, which can be days") in stays
 
     def test_where_the_settings_are(self):
         # v0.15.1, the small corrections: the restart a change there needs
         # sits between the two places (tests/test_v0151_small_corrections.py)
         readme = _flat(_read("README.md"))
-        assert ("Both names, and whether you also use QualCoder on this "
-                "computer, are set in Claude Desktop's Settings, Extensions, "
-                "Exegete (") in readme
-        assert ("or elsewhere as INSTALL.md's [Environment variables the "
-                "server reads]") in readme
+        # (v0.15.2, the opening texts: the switch by its title, and the
+        # restart said between the two places)
+        # (the readability reading: the restart and the other routes a
+        # sentence each)
+        assert ("In Claude Desktop, both names and the switch \"I use "
+                "QualCoder on this computer\" are in Settings, Extensions, "
+                "Exegete. After changing one, quit Claude Desktop and open it "
+                "again. Elsewhere, see [the Terminal guide](https://github."
+                "com/nicotem/exegete/blob/main/docs/installing-from-the-"
+                "terminal.md#environment-variables-exegete-reads)") in readme
+        # (v0.15.2, the merge onto the integration branch: the variables
+        # that set the two names elsewhere are the Terminal guide's)
 
     def test_the_hidden_name_s_departure_is_named(self):
         tools = _flat(_read("TOOLS.md"))

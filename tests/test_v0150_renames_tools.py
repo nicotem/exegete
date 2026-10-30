@@ -20,7 +20,6 @@ and the reworded texts; and the documents.
 """
 
 import asyncio
-import hashlib
 import json
 import logging
 import os
@@ -37,13 +36,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import exegete.server as server  # noqa: E402
 from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).parent))
-from test_v0150_qualcoder_texts_5 import (  # noqa: E402
-    LOCK_PARAGRAPH_BEFORE, put_back_the_lock_paragraph)
-from test_v0150_qualcoder_texts_13 import (  # noqa: E402
-    put_back_the_four_outcomes)
-from test_v0150_lock_wording import (  # noqa: E402
-    put_back_the_lock_wording)
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -77,61 +69,19 @@ def _listed(mode):
     return {t.name: t for t in asyncio.run(server.mcp.list_tools())}
 
 
-def _fingerprint(description):
-    """As tests/test_v0142_description_cut.py takes it: length, characters
-    that are not white space, and the digest of the sorted words."""
-    words = description.split()
-    return (len(description), len("".join(words)),
-            hashlib.sha256(" ".join(sorted(words)).encode()).hexdigest()[:16])
-
-
-# ---------------------------------------------------------------------------
-# The registry
-# ---------------------------------------------------------------------------
-
-# Each description that names one of the two tools, as Exegete served it
-# before they were renamed (tests/test_v0142_description_cut.py's
-# fingerprint), under the tool's name now. Put back the earlier names,
-# word for word, and each is that description again.
-BEFORE_THE_RENAME = {
-    "start_coding_session": (6098, 4956, "552625d8365c92bd"),
-    "read_file_with_codings": (2293, 1878, "892912ccbe8f76ac"),
-    "compare_coders": (3006, 2460, "765d945ba6b6883d"),
-    "delete_coding": (2994, 2422, "962d9d72f5644a1d"),
-    "edit_suggestion": (3385, 2717, "b13c5dd2091df330"),
-    "propose_codes": (2692, 2141, "8ad7a5689cff30b5"),
-    "record_suggestions": (4447, 3566, "0f2d93c94c263b3d"),
-    "review_suggestions": (1325, 1091, "b2fdf147231e0eee"),
-    "search_files": (4802, 3796, "ce6edca1ab903ed5"),
-    "update_annotation": (2054, 1711, "152afc076a1be138"),
-    "update_suggestion_status": (1535, 1261, "650e200880ca4dcd"),
-    # and the example dropped from its list (a help topic of that name
-    # stays, deprecated, but the tool's new name is not one)
-    "explain_ai_coding_tools": (672, 545, "cf35605c177bddf7"),
-}
+# The descriptions that named one of the two tools before the rename,
+# under the tool's name now
+NAMED_THE_TWO = (
+    "start_coding_session", "read_file_with_codings", "compare_coders",
+    "delete_coding", "edit_suggestion", "propose_codes",
+    "record_suggestions", "review_suggestions", "search_files",
+    "update_annotation", "update_suggestion_status",
+    # and the one whose list of examples the earlier name left (a help
+    # topic of that name stays, deprecated, but the tool's new name is
+    # not one)
+    "explain_ai_coding_tools",
+)
 DROPPED_EXAMPLE = '"How do I use analyze_for_coding?"'
-
-
-def _put_back(text):
-    for old, new in RENAMED.items():
-        text = re.sub(rf"\b{new}\b", old, text)
-    # The whole-branch review of v0.15.0, round 1, moved the removals
-    # announced for v0.15 to v0.15.1 (ruling 70): put back the release the
-    # rename's descriptions named, so that what the rename changed is
-    # still checked to be the names alone
-    return text.replace("removed in v0.15.1:", "removed in v0.15:")
-
-
-# A later v0.15.0 piece that rewords one of the descriptions above:
-# not presuming QualCoder, piece 5 (tests/test_v0150_qualcoder_texts_5.py)
-# made the write tools' closing paragraph one sentence, in delete_coding
-# and update_annotation among others. The paragraph as it stood before,
-# as Python 3.13 serves it, is put back too, so that what the rename
-# changed is still checked to be the names alone. Piece 13
-# (tests/test_v0150_qualcoder_texts_13.py) took the attribution to
-# QualCoder 4.0's assistant out of the four outcomes' sentence in the
-# text start_coding_session's description shares; that sentence is put
-# back the same way.
 
 
 class TestTheRegistry:
@@ -179,37 +129,16 @@ class TestTheRegistry:
         assert names[-3:] == ["check_for_updates", "analyze_for_coding",
                               "analyze_file_with_coding"]
 
-    def test_the_descriptions_changed_only_by_the_names(self):
+    def test_no_description_uses_an_earlier_name(self):
+        """Every description names the two tools by their new names alone
+        (v0.15.2, the snapshot: the fingerprints of the descriptions as
+        they were before the rename are retired; docs/snapshot/ holds
+        every description as Exegete serves it)."""
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
-        exact = sys.version_info[:2] == (3, 13)
-        # v0.15.1's ignored create_backup and removals: put back first
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        from test_v0151_removed_tools import before_the_removals
-        for name, (length, solid, digest) in BEFORE_THE_RENAME.items():
-            text = before_the_ignored_argument(name, registered[name])
-            # (v0.15.1: explain_ai_coding_tools' notice, which named the
-            # deprecated topic, went with the topics; put back below)
-            assert not EARLIER.search(_flat(text)), name
-            text = before_the_removals(name, text)
-            if name in LOCK_PARAGRAPH_BEFORE:
-                text = put_back_the_lock_paragraph(name, text)
-            if name == "start_coding_session":
-                # and the fourth reading of the documents' paragraph on
-                # the lock file (tests/test_v0150_lock_wording.py)
-                text = put_back_the_four_outcomes(
-                    put_back_the_lock_wording(name, text))
-            text = _put_back(text)
-            dropped = name == "explain_ai_coding_tools"
-            if dropped:
-                # the words only: the line's indentation is the
-                # interpreter's
-                assert DROPPED_EXAMPLE not in text
-                text += " " + DROPPED_EXAMPLE
-            got = _fingerprint(text)
-            assert got[1:] == (solid, digest), name
-            if exact and not dropped:
-                assert got[0] == length, name
+        assert set(NAMED_THE_TWO) <= set(registered)
+        for name, description in registered.items():
+            assert not EARLIER.search(_flat(description)), name
 
 
 # ---------------------------------------------------------------------------
@@ -695,7 +624,7 @@ def _planned_release_of_the_earlier_names():
 PLANNED = _planned_release_of_the_earlier_names()
 
 EARLIER_NAMES_SECTION = (
-    "## Earlier names\n\nTwo tools were renamed in 0.15.0. Their earlier "
+    "## Earlier names\n\nTwo tools have been renamed. Their earlier "
     "names are still listed, and do exactly what the new ones do, until "
     f"a later release (planned as {PLANNED}) removes them: "
     "`analyze_for_coding` is now `start_coding_session`, and "
@@ -739,54 +668,72 @@ class TestTheDocuments:
         assert " ".join(section.split()) == " ".join(
             EARLIER_NAMES_SECTION.split())
         # after "Available Tools", where every other tool has its entry
-        assert tools.index("## Available Tools") < tools.index(
-            "## Earlier names") < tools.index("## Available Prompts")
-        entries = _section(tools, "## Available Tools")
+        assert tools.index("## Available tools") < tools.index(
+            "## Earlier names") < tools.index("## Available prompts")
+        entries = _section(tools, "## Available tools")
         for new in RENAMED.values():
             assert f"- `{new}(" in entries, new
 
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
-        # 83 since save_names_list (the files design, piece 4), 82 since
-        # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        assert ("registers 79 tools, two of them the earlier names of two "
-                "renamed tools (see \"Earlier names\" below)") in tools
-        # 26 since restore_backup joined `core` (v0.15.1), 27 since
-        # search_memos did (v0.15.1)
-        assert ("only the 27-tool supervised coding set is registered: "
-                "read_brief,") in tools.replace("> ", "")
+        # the counts are the snapshot's (tests/tool_counts.py)
+        assert (f"registers {FULL_TOOLS} tools, two of them the earlier "
+                "names of two renamed tools (see \"Earlier names\" below)"
+                ) in tools
+        assert (f"only the {CORE_TOOLS}-tool supervised coding set is "
+                "registered: read_brief,") in tools.replace("> ", "")
         assert ("search_files, read_file_with_codings, search_memos, "
                 "open_file_for_reading,") in tools.replace("> ", "")
+        # (v0.15.2: and undo_changes)
         assert ("copy_project_to_workspace, delete_coding, list_backups, "
-                "restore_backup, and the two earlier names below."
-                ) in tools.replace("> ", "")
-        install = _flat(_read("INSTALL.md"))
-        assert "`full` (default) registers 79 tools, every tool," in install
+                "restore_backup, undo_changes, and the two earlier names "
+                "below.") in tools.replace("> ", "")
+        # v0.15.2: the variables and the Terminal recipes are the Terminal
+        # guide's
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
+        assert (f"`full` (default) registers {FULL_TOOLS} tools, every "
+                "tool,") in install
         assert ("two of them are the earlier names of two renamed tools "
                 "(TOOLS.md, \"Earlier names\")") in install
-        assert "`core` registers the 27-tool supervised coding set" in install
-        assert "Exegete offers 79 tools by default" in install
-        assert "register only the 27-tool supervised coding set" in install
+        assert (f"`core` registers the {CORE_TOOLS}-tool supervised coding "
+                "set") in install
+        assert f"Exegete offers {FULL_TOOLS} tools by default" in install
+        assert f"for the {CORE_TOOLS} tools of `core`" in install
+        assert ("`EXEGETE_TOOLSET=core`, in the entry of step 5, gives only "
+                "the smaller set.") in install
         readme = _read("README.md")
-        assert ("| `full` | 79: all, creating a project and two renamed "
-                "tools' earlier names included |") in readme
-        assert "| `core` | 27: the coding loop and its safety tools |" \
-            in readme
+        # (v0.15.2, the opening texts: the rows in a researcher's words)
+        assert (f"| `full` | {FULL_TOOLS}: every tool, creating a project and "
+                "the earlier names of two renamed tools included |") in readme
+        # (v0.15.2, undo: undoing changes among what core is for)
+        assert (f"| `core` | {CORE_TOOLS}: reading, searching, coding with "
+                "your approval, memos, backups and undoing changes, "
+                "without creating a project or bringing documents in |"
+                ) in readme
         for name in DOCUMENTS:
             flat = _flat(_read(name))
             for stale in ("78 tools", "23-tool", "registers 78", "| 78:",
                           "| 23:"):
                 assert stale not in flat, (name, stale)
 
-    def test_the_figures_are_the_pinned_ones(self):
+    def test_each_document_gives_both_sizes(self):
+        # v0.15.2, the snapshot: the figures are held by
+        # tests/test_v0151_facts.py, within five per cent of
+        # docs/snapshot/sizes.json, in the sentences its patterns read;
+        # here, each document gives both sets' sizes in one of them
         sys.path.insert(0, str(Path(__file__).parent))
-        from test_toolset_modes import TestThePublishedSchemaBudget as pins
-        readme, install = _read("README.md"), _flat(_read("INSTALL.md"))
-        tools = _flat(_read("TOOLS.md").replace("\n>", " "))
-        for text in (readme, install, tools):
-            assert f"about {pins.FULL_ROUNDED} characters" in text
-            assert f"about {pins.CORE_ROUNDED} characters" in text
+        from test_v0151_facts import SIZE_PATTERNS
+        # (v0.15.2: the sizes matter on the Terminal routes, a local
+        # model's among them, so the Terminal guide gives them, not
+        # INSTALL.md, whose extension offers the default set)
+        for name in ("README.md", "docs/installing-from-the-terminal.md",
+                     "TOOLS.md"):
+            text = _read(name).replace("\n>", " ")
+            given = {quantity for pattern, groups in SIZE_PATTERNS
+                     if re.search(pattern, text)
+                     for quantities in groups.values()
+                     for quantity in quantities}
+            assert {"full characters", "core characters"} <= given, name
 
     def test_contributing_keeps_its_other_examples(self):
         # The examples of names kept as written, neither of them a renamed
@@ -881,26 +828,26 @@ class TestTheDocuments:
             encoding="utf-8")
         assert flat.index("Two tools were renamed in 0.15.0") < \
             flat.index("## How your data flows")
+        # v0.15.2: PRIVACY.md points to TOOLS.md's list of the tools that
+        # report the signs, which tests/test_qc40_gui_detection.py holds
         listing = flat[flat.index("**Process listing.**"):]
-        assert ("(today: select_project, get_current_project, "
-                "start_coding_session, also under its earlier name, and the "
-                "restore_backup, import_documents and save_names_list "
-                "previews, each the call without a preview_token)") in \
-            listing[:400]
+        assert "TOOLS.md names these tools, and when each one looks." \
+            in listing[:700]
 
     def test_a_coding_session_by_one_name(self):
         """The tool starts a coding session: the documents call it that,
         beside its new name, not an "analysis session" (fix round 1)."""
         for name in DOCUMENTS:
             assert "analysis session" not in _read(name).lower(), name
-        assert "- Start a coding session (`start_coding_session`)" in \
+        assert "- Starts a coding session (`start_coding_session`)" in \
             _read("TOOLS.md")
         assert ("| `start_coding_session(file_ids, code_names, "
                 "instruction)` | Start a coding session |") in \
             _read("AI_CODING_GUIDE.md")
         workflow = _read("AI_CODING_WORKFLOW.md")
-        assert "### Step 2: Start a Coding Session" in workflow
-        assert ("2. Starts a new coding session with unique ID "
+        # (v0.15.2: the heading in sentence case)
+        assert "### Step 2: Start a coding session" in workflow
+        assert ("2. Starts a new coding session with its own ID "
                 "(`start_coding_session`),") in workflow
 
 

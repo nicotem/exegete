@@ -5,16 +5,20 @@ advertising features present and future, and the table about different
 model configuration. And it's wordy.").
 
 Pinned here: the length the rewrite reached, so that the README cannot
-grow back; the three diagrams and the example (their width, and only
-characters that render one column wide on GitHub and on PyPI); the
-architecture diagram's labels and borders; the path of a coding, each
-step a behaviour of the server; the example's steps, in order, each one
-the software takes; the assistants table against PRIVACY.md's verdicts,
+grow back; the limits of an undo in "Go back", against the code; the
+example, the two diagrams and the map (their width, and
+only characters that render one column wide on GitHub and on PyPI; prose
+and links in v0.15.2's opening texts, back by the owner's word of 29
+October 2026);
+the architecture diagram's labels and borders, and the path of a coding,
+each step a behaviour of the server; the example's steps, in order, each one the
+software takes; the assistants table against PRIVACY.md's verdicts,
 with the paragraph before it and the sentence after it; the tool-set table against the server's
 tool sets and the CHANGELOG's measurement; the advanced section's tool
 names and arguments against the server; how it is tested, against the CI
-workflow; the map against the files; "What comes next" as plans; and the
-two badges, with no test badge.
+workflow; the map against the files, naming every document the page
+links, each one linked from the page; "What
+comes next" as plans; and the two badges, with no test badge.
 """
 
 import asyncio
@@ -31,6 +35,7 @@ except ModuleNotFoundError:          # Python 3.10
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "src"))
+sys.path.insert(0, str(REPO / "scripts"))
 
 import exegete.server as server                   # noqa: E402
 from exegete import names                         # noqa: E402
@@ -61,6 +66,9 @@ def _blocks(text):
 def _words(block):
     """A diagram's words, its drawing characters left out."""
     return " ".join("".join(c for c in block if c not in DRAWING).split())
+
+
+
 
 
 def _tools(mode="full"):
@@ -296,11 +304,127 @@ def _tools(mode="full"):
 # short" says that on Windows x64 that library reports its use, with
 # nothing from the projects, pointing to PRIVACY.md. That takes 138
 # characters, and the limit is raised by that and no more: 40,977.
-README_LIMIT = 40_977
+# v0.15.2, the snapshot's fix round 1: the sentence on docs/snapshot/
+# says that it holds what Exegete sends the assistant before a project
+# is open, with the brief, and that the tools' answers, which carry the
+# project's texts, are not in it. That takes 104 characters, and the
+# limit is raised by that and no more: 41,081.
+# v0.15.2, the opening texts: the README rewritten to the writing
+# checklist within its budget of 500 lines, 32,239 characters, which is
+# the limit now; a sentence added later raises it by its own length.
+# The readability reading of 28 October: the same facts one to a sentence,
+# and the tools, a file's location and what the figures do not measure
+# said in words, 378 characters more within the same 500 lines
+# The fix round after the fact and privacy readers (28 October): the
+# backups beside a project keep the text from before names were replaced;
+# how long a preview's texts stay; reading in the browser keeps a file's
+# text out of the conversation; what INSTALL.md's table of routes and
+# its recipes hold; the REFI-QDA fix without media; the untrue clause on
+# QualCoder's coder name gone. That takes 165 characters more within
+# the same 500 lines: 32,782.
+# The second fix round (28 October): how long a preview's texts stay,
+# given exactly, "after 65 minutes" for "after an hour"
+# (kept_texts.ENTRY_LIFETIME), since the reader acts on that time.
+# That takes 3 characters more within the same 500 lines: 32,785.
+# The merge onto the integration branch (28 October): the Terminal
+# routes moved from INSTALL.md to their own guide,
+# docs/installing-from-the-terminal.md, so each pointer to what moved
+# names that guide and links to its own section: the table of routes,
+# OpenAI's steps, LM Studio's recipe and its first project, the
+# environment variables, updating and the earlier name on the Terminal
+# route, keeping QualCoder 4.0's server apart, and Claude Code's figures.
+# The guide's longer path and name take 311 characters more within the
+# same 500 lines: 33,096.
+# The owner's word of 29 October 2026: the drawings, the table, the map
+# and the groups back; about 600 lines. The README's length is no strict
+# cap: each block restored raises the figures by what it takes.
+# The two drawings in "How it works", the architecture after the two
+# sentences it had before it and a coding's path after "When anything is
+# written", take 1,857 characters and 47 lines: 34,953 in 547 lines.
+# The comparison table, with its introduction, in "Exegete and QualCoder",
+# takes 2,429 characters and 21 lines: 37,382 in 568 lines.
+# The map of the repository, brought up to date (every document the page
+# links, the seven modules of the code), and the links to the two
+# documents linked nowhere else on the page, take 1,503 characters and 33
+# lines: 38,885 in 601 lines.
+# The groups under "Beyond the basics" (coding with your approval, large
+# projects, QualCoder's conventions, analysis, documents in, resources)
+# around the two the rewrite kept, take 1,462 characters and 24 lines:
+# 40,347 in 625 lines.
+# The lead's reading of 29 October 2026: the same facts in plainer
+# words. The drawing says "the project's database" and leaves "MCP"
+# to "For advanced users", which explains it (one line more); the
+# symmetry paragraph keeps its commitment without a second aim; the
+# exchange paragraph points at the table's row for the REFI-QDA
+# export's faults (one line less); the map says the snapshot is what
+# Exegete sends before a project opens; the paragraph on practising
+# gives its facts in short sentences (one line less); and the five
+# checks help keep files out of Claude's reach (one line more). The
+# figures are the README's own: 40,246 in 625 lines. The list of
+# projects tells an assistant where each listed project is, as
+# QUICKSTART's readers found the list reads its usual places, not the
+# whole computer: 7 characters more, 40,253 in 625 lines.
+# v0.15.2, undo: undo_changes in core (its count and size, and undoing
+# changes among what core is for) and among the guarded changes,
+# undoing a change among the changes that show a preview first, and
+# one sentence in "Go back" on undoing a change alone, take 192
+# characters and 4 lines: 40,445 in 629 lines.
+# The fix round after the review of undo's rebase (29 October 2026):
+# "Go back" gives the limits of an undo, as the code sets them: later
+# work in the way, any later change to the database for a replacement
+# of names, old backups cleared, and a restore or an undo that cannot be
+# undone (test_go_back_gives_the_limits_of_an_undo). That takes 213
+# characters and 3 lines: 40,658 in 632 lines.
+# Release preparation left the README 110 characters and a line under
+# these figures (the plan's and the version's commits). The release day
+# (30 October 2026, ruling 112): one sentence under the map says that
+# it is a selection, the documents this page links and the main code
+# files, and that the map in CONTRIBUTING.md, under "Project
+# structure", lists every module and script. It takes 262 characters
+# and 4 lines. The owner's reading of 30 October: two headings without
+# their flourish. "Claude Desktop, with one click" became "One click
+# in Claude Desktop" (3 characters fewer), and the lead-in "Symmetry:
+# the same work in either program, as a commitment" became "The same
+# work in either program", the commitment said in the sentence after
+# it (2 characters more, in the same lines). The README's own figures,
+# held exactly: 40,809 in 635 lines.
+README_LIMIT = 40_809
+README_LINES = 635
 
 
 def test_the_readme_stays_short():
-    assert len(_read("README.md")) <= README_LIMIT
+    readme = _read("README.md")
+    assert len(readme) <= README_LIMIT
+    assert readme.count("\n") <= README_LINES
+
+
+def test_go_back_gives_the_limits_of_an_undo():
+    """v0.15.2, undo's rebase, fix round 1 (its review's finding 13): "Go
+    back" gave one limit of an undo, later work that depends on the
+    change, while two others meet ordinary use. A replacement of names is
+    undone only while the database is as the run left it, and an undo
+    that needs the change's backup is refused once that backup is
+    cleared. The sentences give the limits the code sets, as the tool's
+    description, TOOLS.md and PRIVACY.md do. Restoring a backup and
+    undoing a change keep no record: test_v0152_undo_tool.py holds that
+    every other tool that writes a project can be undone (UNDO_CASES)."""
+    from exegete import change_record, undo
+    go_back = _flat(_section("What you can do", "How it works"))
+    # a day: the record's age past which undo refuses (undo.TOO_OLD)
+    assert change_record.KEEP_SECONDS == 24 * 60 * 60
+    # a run refused once the database is written since; a change whose
+    # backup is cleared, refused
+    assert {undo.TOO_OLD, undo.WRITTEN_SINCE, undo.BACKUP_GONE} <= set(
+        server.UNDO_REFUSAL_TEXTS)
+    for sentence in (
+            "For a day after a change to the database, Exegete can also "
+            "undo that change alone, unless later work stands in the way.",
+            "Any later change to the database stands in the way of "
+            "undoing a replacement of names.",
+            "Clearing old backups can also rule out an undo.",
+            "Restoring a backup and undoing a change cannot themselves be "
+            "undone."):
+        assert sentence in go_back, sentence
 
 
 # ---------------------------------------------------------------------------
@@ -332,6 +456,11 @@ def test_the_blocks_render_alike_everywhere():
     # the architecture, a coding's path and the map (v0.14.2, the README's
     # first round of checks: the example is a block quote, which wraps on
     # a phone, where a code block shows about 32 characters of each line)
+    # v0.15.2, the opening texts: the three diagrams gave way to prose
+    # within the README's 500 lines ("How it works", and links to the
+    # documents); the owner's word of 29 October 2026 brought them back,
+    # the architecture and a coding's path in "How it works", the map at
+    # the end of "For advanced users"
     assert len(blocks) == 3
     for block in blocks:
         assert _diagram_faults(block) == []
@@ -350,28 +479,45 @@ def test_the_diagram_check_would_notice():
 
 
 def test_the_architecture_diagram():
+    """v0.15.2, the opening texts: the diagram gave way to prose within
+    the README's 500 lines; what it drew is said in words, each still
+    true of the code. The owner's word of 29 October 2026 brought the
+    diagram back in "How it works", in the writing checklist's words:
+    the AI provider, QualCoder as a choice, the database the backup
+    covers."""
     section = _section("How it works", "Where your data goes")
-    # one plain sentence before it says the same in words
+    # the two sentences it had before it
     before = _flat(section[:section.index("```text")])
-    assert ("It has no AI of its own. The AI model behind your assistant, "
-            "which reads and suggests, runs on its maker's computers unless "
-            "it is a local one.") in before
+    assert before == ("## How it works Exegete runs on your computer. It has "
+                      "no AI of its own.")
     block = _blocks(section)[0]
     flat = _words(block)
     # v0.14.2, the README's first round of checks: the technical labels
     # 0.14.0's diagram had, and a pointer to the assistants that open
     # files by themselves
+    # (v0.15.2, the lead's reading of 29 October: "MCP" is explained in
+    # "For advanced users", after the drawing, so the drawing says where
+    # the tools run without it; and the database the backup covers is
+    # the project's, not one of Exegete's own)
     for label in ("Your computer", "You ask Assistant app",
-                  "uses Exegete's tools (MCP, over stdio)",
+                  "uses Exegete's tools (on this computer)",
                   "Exegete (no AI of its own)",
-                  "reads (read-only) and writes (after a backup)",
+                  # the two writes outside the database take no backup
+                  # ("Go back", below)
+                  "reads (read-only) and changes the project's database "
+                  "only after a backup",
                   "Your project, in QualCoder's format",
-                  "one program at a time", "QualCoder (optional)",
-                  "The AI model, on its maker's computers",
+                  "one program at a time", "QualCoder, if you use it",
+                  "The AI model, on the AI provider's computers",
                   "(or yours, if local): what the assistant reads through "
                   "Exegete goes there. Some assistants also open files by "
                   "themselves: see below."):
         assert label in flat, label
+    assert "MCP" not in flat
+    assert "Model Context Protocol (MCP)" in _section(
+        "For advanced users", "What comes next")
+    assert ("Setting the AI coder name and preparing the names file take "
+            "none.") in _flat(_section("What you can do", "How it works"))
     lines = block.splitlines()
     # the box closes, its right border in one column
     column = lines[0].index("┐")
@@ -379,33 +525,81 @@ def test_the_architecture_diagram():
     for line in lines[1:bottom + 1]:
         assert line[column] in "│┼┘", line
     # no arrow from Exegete to the AI: Exegete sends nothing itself; the
-    # line to the AI leaves from the assistant app's row only
+    # line to the AI leaves from the assistant app's row only, and reaches
+    # the AI's row in one column
     assistant = next(line for line in lines if "Assistant app" in line)
     assert assistant.endswith("┼─┐")
+    connector = len(assistant) - 1
+    for line in lines[1:bottom + 2]:
+        assert line[connector] in "┐│┘", line
     assert sum(line.rstrip().endswith("┐") for line in lines) == 2
     exegete = next(line for line in lines if "Exegete (no AI" in line)
     assert not set("◄►") & set(exegete)
+    readme = _flat(_read("README.md"))
+    opening = readme[:readme.index("## What you can do")]
+    # (v0.15.2, the readability reading: a sentence to each fact)
+    for words in ("runs on your computer, with no window and no AI of its "
+                  "own. Your assistant, such as Claude Desktop, starts it",
+                  "What the assistant reads goes to the AI provider, the "
+                  "company that runs its AI model, unless that model runs on "
+                  "your own computer. Some assistants also open files by "
+                  "themselves",
+                  "Your project is kept in QualCoder's format"):
+        assert words in opening, words
+    # no arrow from Exegete to the AI: Exegete sends nothing of the
+    # project itself, and its one request is the check for new versions
+    data = _flat(_section("Where your data goes", "Start here"))
+    assert ("Exegete has no online service. The one request it sends "
+            "itself asks for a small file that says whether a newer version "
+            "exists, and carries nothing from your projects.") in data
+    # reads read-only, writes after a backup, one program at a time
+    advanced = _flat(_section("For advanced users", "What comes next"))
+    assert ("It reads a project's SQLite database read-only. Each tool that "
+            "writes to the database opens its own connection, after a backup "
+            "Exegete takes itself") in advanced
+    assert "**One program at a time.**" in readme
+    assert "?mode=ro" in _read("src/exegete/database.py")
 
 
 def test_the_path_of_a_coding():
-    section = _section("How it works", "Where your data goes")
-    block = _blocks(section)[1]
+    # v0.15.2, the opening texts: the path drawn as a diagram is said in
+    # "How it works", each step a behaviour of the server; the owner's
+    # word of 29 October 2026 brought the drawing back after "When
+    # anything is written", led by a sentence of its own
+    raw = _section("How it works", "Where your data goes")
+    block = _blocks(raw)[1]
+    assert raw.index("**When anything is written.**") < raw.index(
+        "\nA suggested coding takes this path:\n\n```text\n") < raw.index(
+        block)
     steps = [re.split(r"\s{2,}", line)[0] for line in block.splitlines()
              if line and not line.startswith(" ")]
     assert steps == ["You ask", "The assistant", "Review list",
                      "You decide", "Apply", "Your project"]
-    flat = _words(block)
-    for words in ("reads the file through Exegete and suggests; Exegete "
+    drawn = _words(block)
+    for words in ("reads the file through Exegete and suggests. Exegete "
                   "checks each quote is the file's own words",
-                  "outside your project, not yet written; the assistant is "
-                  "told to show each passage with its reading and its "
+                  "outside your project, not yet written. The assistant is "
+                  "told to show you each passage with its label and its "
                   "reason",
-                  "approve, reject or reopen, in the conversation; the "
+                  "approve, reject or reopen, in the conversation. The "
                   "assistant passes it on: check the counts",
                   "Exegete checks again, takes a backup, then writes every "
                   "approved coding, or none",
                   "the codings, under the AI coder name you chose"):
-        assert words in flat, words
+        assert words in drawn, words
+    section = _flat(raw)
+    # (v0.15.2, the readability reading: one step to a sentence)
+    for words in ("Suggested codings and proposed codes wait in a review "
+                  "list outside the project. The assistant is told to show "
+                  "you each passage with its label and its reason.",
+                  "Once you approve them, Exegete checks them again and takes "
+                  "a backup. Then it writes every approved coding, or none, "
+                  "under the AI coder name you chose.",
+                  "check that the counts (approved, rejected, pending) match "
+                  "what you said"):
+        assert words in section, words
+    assert "quotes the text word for word, which Exegete checks" in \
+        _flat(_section("What you can do", "How it works"))
     # each step a behaviour of the server
     status = inspect.signature(server.update_suggestion_status).parameters
     assert {"approve", "reject", "reopen"} <= set(status)
@@ -419,50 +613,71 @@ def test_the_path_of_a_coding():
     assert "single all-or-nothing transaction" in doc
 
 
+# What the map says each module of the code is, in the words of the
+# module's own opening docstring
+ROLES = {"server.py": "Model Context Protocol server",
+         "database.py": "Qualcoder .qda files",
+         "sessions.py": "AI coding suggestions",
+         "pseudonymise.py": "pseudonymisation engine",
+         "coder_comparison.py": "Coder-comparison statistics",
+         "memo_privacy.py": "'#####' personal-note convention",
+         "preview_tokens.py": "a preview"}
+
+
 def test_the_map_names_files_that_exist():
+    """v0.15.2, the opening texts: the map of the repository gave way to
+    links in the prose, within the README's 500 lines. The owner's word of
+    29 October 2026 brought it back at the end of "For advanced users",
+    brought up to date: every document the page links, and the seven
+    modules of the code, each where the map puts it."""
     section = _section("For advanced users", "What comes next")
     block = _blocks(section)[-1]
     lines = block.splitlines()
     assert lines[0] == "github.com/nicotem/exegete"
-    folder = REPO
-    named = []
+    folders, named = [], []
     for line in lines[1:]:
-        match = re.match(r"( *)[├└]── (\S+)", line)
+        match = re.match(r"((?:[│ ]   )*)[├└]── (\S+)", line)
         assert match, line
-        indent, name = match.groups()
+        depth, name = len(match.group(1)) // 4, match.group(2)
+        del folders[depth:]
+        path = "/".join(folders + [name.rstrip("/")])
         if name.endswith("/"):
-            folder = REPO / name
-            assert folder.is_dir(), name
-            continue
-        path = (folder if indent else REPO) / name
-        assert path.is_file(), name
-        named.append(name)
-    for name in ("README.md", "PRIVACY.md", "INSTALL.md", "TOOLS.md",
-                 "CONTRIBUTING.md", "NOTICE", "server.py", "database.py"):
-        assert name in named, name
-    # v0.14.2, the README's second round of checks: QualCoder's figure is
-    # not Cohen's kappa (coder_comparison.py says so), so the map does not
-    # call both "kappas"; and the descriptions of the code line up
-    assert "coder_comparison.py agreement, both coefficients" in block
-    assert "kappa" not in block
-    assert "is NOT Cohen's kappa" in _read("src/exegete/coder_comparison.py")
+            assert (REPO / path).is_dir(), path
+            folders.append(name.rstrip("/"))
+        else:
+            assert (REPO / path).is_file(), path
+        named.append(path)
+    # the code: the seven modules, each with the role the map gives it
+    for module, words in ROLES.items():
+        assert f"src/exegete/{module}" in named, module
+        opening = " ".join(_read(f"src/exegete/{module}")[:1500].split())
+        assert words in opening, module
+    # led as the other parts of the section are, saying what the reader
+    # gets from it
+    readme = _read("README.md")
+    assert ("\n**The repository**, each document linked from this page:\n"
+            "\n```text\ngithub.com/nicotem/exegete\n") in readme
+    # the map is a code block, so nothing in it can be clicked, and PyPI
+    # has no file list: every document it names is a link somewhere on the
+    # page, and every document the page links is in the map
+    linked = set(re.findall(r"\]\(https://github\.com/nicotem/exegete/"
+                            r"(?:blob|tree)/main/([^)#\s]+)", readme))
+    documents = {path for path in named if not path.startswith("src/")
+                 and path not in ("README.md", "docs", "legal")}
+    assert linked == documents
+    # v0.14.2, the README's second round of checks: the descriptions of
+    # the code line up, and the map does not call both figures "kappas"
     code = [line for line in lines if line.startswith("    ")]
     assert len({len(re.match(r" *[├└]── \S+ +", line).group(0))
                 for line in code}) == 1
-    # led as the other parts of the section are, saying what the reader
-    # gets from it
-    assert ("\n**The repository**, each document linked from this page:\n"
-            "\n```text\ngithub.com/nicotem/exegete\n") in _read("README.md")
-    # the map is a code block, so nothing in it can be clicked, and PyPI
-    # has no file list: every document it names is a link somewhere on the
-    # page (v0.14.2, the README's first round of checks)
-    readme = _read("README.md")
-    for line in lines[1:]:
-        name = re.match(r" *[├└]── (\S+)", line).group(1)
-        if line.startswith(("├", "└")) and not name.endswith("/") \
-                and name != "README.md":
-            assert f"](https://github.com/nicotem/exegete/blob/main/{name}" \
-                in readme, name
+    assert "coder_comparison.py two coders compared, both figures" in block
+    assert "kappa" not in block
+    # QualCoder's figure is not Cohen's kappa (coder_comparison.py says
+    # so), so the page does not call both "kappas"
+    # (the readability reading: Cohen's kappa beside QualCoder's figure)
+    assert ("with Cohen's kappa beside the figure QualCoder labels "
+            "Kappa") in _flat(readme)
+    assert "is NOT Cohen's kappa" in _read("src/exegete/coder_comparison.py")
 
 
 # ---------------------------------------------------------------------------
@@ -524,9 +739,11 @@ def test_the_example_shows_the_steps_the_software_takes():
         server.import_text_file)
     # the two labels say what they mean where the reader meets the list
     # of features (the definitions of 27 September, the server's own)
-    assert ("with the assistant's reading: explicit (the passage states what "
-            "the code names) or interpretive (the code rests on what it "
-            "implies).") in _flat(readme)
+    # (v0.15.2, the readability reading: the label in a sentence, in the
+    # server's own words for each)
+    assert ("The assistant labels it explicit, when the passage states what "
+            "the code names, or interpretive, when the code rests on what "
+            "the passage implies.") in _flat(readme)
     grounding = " ".join(inspect.getsource(server).split())
     assert "where the passage states what the code names" in grounding
     assert ("where the code rests on what the passage implies rather than "
@@ -565,7 +782,8 @@ def test_the_assistants_table():
     # on a phone may no longer see the suggestion beside the name). Its
     # review removed a claim the first draft added and put back
     # PRIVACY.md's wording where the first draft had shortened it.
-    assert ("| Assistant | Opens files by itself, outside Exegete? | "
+    # (v0.15.2, the opening texts: a column's name, not a question)
+    assert ("| Assistant | Opens files by itself, outside Exegete | "
             "Where the conversation goes | For participants' data, this "
             "project suggests |") in section
     rows = _rows(section, "| **")
@@ -629,9 +847,22 @@ def test_the_assistants_table():
     assert ("For unambiguous commercial-terms coverage, use a Console "
             "account created for the institution or research group") \
         in privacy
-    install = _flat(_read("INSTALL.md"))
-    assert "local models are markedly weaker on many-tool work" in install
-    assert "Requires the reduced core toolset." in install
+    # (ruling 108, 27 October 2026: an expected drop of unknown size, in
+    # the Terminal guide's table of routes, where the routes moved)
+    install = _flat(_read("docs/installing-from-the-terminal.md"))
+    assert ("We expect a local model to do the analysis less well than the "
+            "hosted models, and do not know by how much, since we have "
+            "evaluated neither.") in install
+    assert "local models are markedly weaker on many-tool work" not in \
+        install
+    # (the readers of the routes' move, 28 October 2026: the table says
+    # which set Exegete offers a local host, as the code and the LM
+    # Studio recipe have it, rather than that `core` is required)
+    assert ("Exegete offers its full tool set unless the host's entry asks "
+            "for the smaller one, `core`. The recipe asks for `core`, which "
+            "takes less of a local model's room than the full set.") \
+        in install
+    assert "Requires the reduced core toolset." not in install
     assert cells["Claude Desktop's chat"][VERDICT] == \
         "**This one**, set up as below"
     # (the owner, 1 October 2026: warn, don't prescribe; each verdict
@@ -640,10 +871,11 @@ def test_the_assistants_table():
     # (the review of the redraft: "Claude Desktop's chat" in full, since
     # in the ChatGPT row "the chat" could be ChatGPT's; and for Cowork
     # PRIVACY.md's three conditions, not one)
+    # (v0.15.2, the opening texts: a suggestion, not an order)
     assert cells["Claude's Cowork"][VERDICT] == (
-        "Claude Desktop's chat instead. If you use Cowork, keep projects "
-        "and transcripts out of the folders you connect, with computer use "
-        "off and no other extension that reads files")
+        "Claude Desktop's chat instead. If you use Cowork, you could keep "
+        "projects and transcripts out of the folders you connect, with "
+        "computer use off and no other extension that reads files")
     assert ("projects kept out of those folders, with computer use off and "
             "no other extension that reads files, stay out of its reach") \
         in hosts
@@ -658,12 +890,23 @@ def test_the_assistants_table():
         "Claude Desktop's chat instead"
     # (the review of the redraft: "server or plugin", as PRIVACY.md says,
     # since in LM Studio an MCP server is the usual way to add file access)
+    # (ruling 108, the owner, 27 October 2026: a local model keeps the
+    # data on the computer, is expected to do the analysis less well, by
+    # an amount no one has measured, and is a route to consider for
+    # particular uses, not a suggestion for participants' data as such)
     assert cells["LM Studio"][VERDICT] == (
-        "**This one too**, with no other server or plugin that reads files. "
-        "Choose the `core` tool set, since local models cope less well with "
-        "many tools. No local model has been evaluated with Exegete yet")
-    assert ("LM Studio's chat with Exegete and no other server or plugin "
-            "that reads files") in privacy
+        "A route to consider for particular uses, such as a first pass over "
+        "sensitive material, or work an agreement confines to one computer. "
+        "We expect a local model to do the analysis less well than the "
+        "hosted models. We do not know by how much, since we have evaluated "
+        "neither with Exegete. Its recipe uses the `core` tool set, since "
+        "local models cope less well with many tools, and adds no other "
+        "server or plugin that reads files")
+    assert "**This one too**" not in section
+    # (ruling 108: LM Studio's chat opens no file by itself, and a local
+    # model is a route for particular uses, not a blanket suggestion)
+    assert ("LM Studio's chat, with Exegete and no other server or plugin "
+            "that reads files, opens no file by itself either") in privacy
     # the Experimental routes say so, and why (for LM Studio, in the
     # suggestion's cell since the redraft)
     assert "(Experimental)" in cells["ChatGPT's desktop app and Codex"][0]
@@ -674,14 +917,15 @@ def test_the_assistants_table():
     # Exegete's answers hold back; its review: the assistant chooses what
     # to ask for, so Exegete's answers, not Exegete, hold things back)
     flat = _flat(section)
-    assert ("**Assistants that open files by themselves.** Exegete's answers "
-            "hold some things back from the assistant, such as the private "
-            "part of a memo (the `#####` mark below). Some assistants can "
-            "also open files on your computer by themselves, outside "
-            "Exegete. What they read that way goes to their AI's maker in "
-            "full: Exegete cannot see such a read or stop it, and its "
-            "protections (that mark, your approval before codings are "
-            "written, the backups) do not apply to it.") in flat
+    # (v0.15.2, the opening texts: "the AI provider", explained once in
+    # the opening; the protections named in the sentence that says they
+    # do not apply)
+    assert ("**Assistants that open files by themselves.** Some assistants "
+            "can open files on your computer by themselves, outside "
+            "Exegete. What they read that way goes to their AI provider in "
+            "full. Exegete cannot see such a read or stop it, and its "
+            "protections (the private part of a memo, your approval before "
+            "codings are written, the backups) do not apply to it.") in flat
     assert flat.index("**Assistants that open files by themselves.**") < \
         flat.index("| Assistant |")
     # (the review of the redraft: the real names behind pseudonyms were
@@ -696,22 +940,39 @@ def test_the_assistants_table():
         "| Assistant |")
     # (and the sentence after the table keeps its reason)
     assert ("Exegete's own answers also tell the assistant where your "
-            "project is, so one that opens files by itself can find it") \
-        in flat
+            "project is ([PRIVACY.md](https://github.com/nicotem/exegete/"
+            "blob/main/PRIVACY.md#assistants-that-open-files-by-themselves))"
+            ".") in flat
     assert "Exegete's own answers tell the assistant where a project is" \
         in hosts
     # and the terms, which the account sets, with 0.14.0's table of routes
     # (INSTALL.md, "Choosing your AI host") one link away
     # (the second round: the routes are in the table's column on where
     # the conversation goes now, so the sentence no longer lists them)
-    assert ("Which terms apply is set by your account, not by Exegete; "
-            "institutions should prefer organisational accounts ([INSTALL.md, "
-            "\"Choosing your AI host\"](https://github.com/nicotem/exegete/"
-            "blob/main/INSTALL.md#choosing-your-ai-host-data-governance-"
-            "options-experimental)).") in flat
+    # (ruling 108: the sentence on organisational accounts stays, with
+    # its reason; INSTALL.md's table of routes is linked from "What it
+    # costs")
+    # (v0.15.2, the readability reading: the same sentence and reason,
+    # each clause a sentence, the owner's words kept)
+    assert ("4. **Your account, not Exegete, sets the terms.** An "
+            "institution's agreement with the AI provider sets the terms for "
+            "its data, and a personal account comes under the consumer "
+            "terms. So institutions should prefer organisational "
+            "accounts.") in flat
+    # (v0.15.2, the merge onto the integration branch: the table of
+    # routes moved to the Terminal guide, which the link names by its
+    # title)
+    assert ("[Installing Exegete from the Terminal, \"Choosing your AI "
+            "host\"](https://github.com/nicotem/exegete/blob/main/docs/"
+            "installing-from-the-terminal.md#choosing-your-ai-host-"
+            "data-governance-options-experimental)") in _flat(_read("README.md"))
+    # (v0.15.2, the Terminal guide's table: the sentence on organisational
+    # accounts gives its reason, as ruling 108 has the README's do)
     assert ("| **Anthropic commercial-terms routes** (Claude Code with a "
-            "Console API key; Team/Enterprise accounts) |") in install
-    assert "Institutions should prefer organisational accounts." in install
+            "Console API key; Team or Enterprise accounts) |") in install
+    assert ("An institution's agreement sets the terms for its data, and a "
+            "personal account the consumer terms, which is why "
+            "organisational accounts suit institutions.") in install
 
 
 # ---------------------------------------------------------------------------
@@ -719,22 +980,12 @@ def test_the_assistants_table():
 # ---------------------------------------------------------------------------
 
 def _measured():
-    # v0.15.0 moves the figures (one set, `full`), so the Unreleased entry
-    # carries them (test_toolset_modes.py pins them); v0.15.1 moves them
-    # again (create_backup accepted and ignored), so they are in the
-    # Unreleased part above 0.15.0's
-    changelog = _read("CHANGELOG.md")
-    entry = _flat(_between(changelog, "## [0.15.1-alpha]",
-                           "## [0.15.0-alpha]"))
-    measured = entry[entry.index("### Measured"):]
-    found = re.search(r"full = ([\d,]+) characters .*? core = ([\d,]+) ",
-                      measured)
-    full, core = (int(n.replace(",", "")) for n in found.groups())
-    # the 3.11 figures follow the environment named in brackets
-    later = re.search(r"on Python 3\.11\.13 \([^)]*\), ([\d,]+) and",
-                      measured)
-    return ({"full": full, "core": core},
-            int(later.group(1).replace(",", "")))
+    """Each set's tool count, as docs/snapshot/sizes.json gives it
+    (v0.15.2, the snapshot: the sizes in the table are held by
+    tests/test_v0151_facts.py, and the per cent on Python 3.11 and 3.12
+    by tests/test_served_texts.py)."""
+    sizes = json.loads(_read("docs/snapshot/sizes.json"))
+    return {mode: sizes[mode]["tool_count"] for mode in ("full", "core")}
 
 
 def test_the_tool_set_table():
@@ -747,13 +998,13 @@ def test_the_tool_set_table():
             for row in _rows(section, "| `")}
     # v0.15.0: one set, `full`, every tool; `lifecycle` is its earlier name
     assert list(rows) == ["full", "core"]
-    sizes, full_on_311 = _measured()
+    counts = _measured()
     for mode, cells in rows.items():
         count = len(_tools(mode))
+        assert count == counts[mode], mode
         assert cells[1].startswith(f"{count}: "), mode
-        size = sizes[mode]
-        assert cells[2] == (f"about {round(size / 1000) * 1000:,} "
-                            f"characters, {round(size / 4000)}k tokens"), mode
+        assert re.fullmatch(r"about \d[\d,]* characters, \d+k tokens",
+                            cells[2]), mode
     assert "create_project" in _tools("full")
     assert "create_project" not in _tools("core")
     # the defaults: the extension's manifest, the server's own, and none
@@ -773,23 +1024,34 @@ def test_the_tool_set_table():
     assert rows["core"][4].startswith("none: set `EXEGETE_TOOLSET=core`")
     assert manifest["user_config"]["small_toolset"]["title"] in \
         rows["core"][4]
-    assert "at least 32k for the core toolset" in _flat(_read("INSTALL.md"))
+    assert "at least 32k for the core toolset" in _flat(_read(
+        "docs/installing-from-the-terminal.md"))
     # the sentence under it, with the interpreters and the per cent
     # (v0.14.2, the README's second round of checks: shorter, the same
-    # facts)
+    # facts; v0.15.2: Python 3.11 or newer)
     flat = _flat(section)
-    assert ("That is how much of a model's context a host uses when it "
-            "sends every tool's definition (name, description and "
-            "arguments) with each request: measured on Python 3.13, at four "
-            "characters a token; about five per cent more on 3.10 to "
-            "3.12.") in flat
-    assert round(100 * (full_on_311 / sizes["full"] - 1)) == 5
+    # (v0.15.2, the opening texts: the host the subject)
+    # (the readability reading: what is measured a sentence of its own)
+    assert ("A host sends every tool's definition (name, description and "
+            "arguments) with each request, using that much of a model's "
+            "context. The figures were measured on Python 3.13 with the "
+            "libraries in `uv.lock`, at four characters a token, and are "
+            "about five per cent more on 3.11 and 3.12.") in flat
+    # and where the exact figures are (v0.15.2, the snapshot)
+    # (its fix round 1: what the folder holds is bounded, and the
+    # answers, which carry the project's texts, are said not to be in it)
+    assert ("[docs/snapshot/](https://github.com/nicotem/exegete/tree/main/"
+            "docs/snapshot) gives the exact figures, and what Exegete sends "
+            "the assistant before a project is open, the brief included. It "
+            "leaves out the tools' answers, which carry your project's "
+            "texts.") in flat
 
 
 # ---------------------------------------------------------------------------
 # The advanced section, against the code
 # ---------------------------------------------------------------------------
 
+# The arguments the list names, each a parameter of its tool
 ARGUMENTS = {"get_coded_segments": ("cursor", "strategy", "max_chars",
                                     "coder"),
              "search_files": ("cursor", "exclude_code_ids"),
@@ -800,7 +1062,9 @@ GUARDED = ("merge_codes", "merge_category", "delete_code", "delete_category",
            "pseudonymise_source", "restore_backup", "prune_backups",
            # (the staleness audit of 20 October 2026: the names list's
            # save previews first too)
-           "set_project_coder_name", "save_names_list")
+           "set_project_coder_name", "save_names_list",
+           # (v0.15.2, undo: undoing a change previews first too)
+           "undo_changes")
 
 
 def test_the_advanced_section_rests_on_the_code():
@@ -813,36 +1077,38 @@ def test_the_advanced_section_rests_on_the_code():
     # v0.15.1, PyMuPDF 2 with its runtime (ruling 96): no telemetry of
     # Exegete's own, but on Windows x64 onnxruntime, which PyMuPDF 2
     # loads, reports once for each PDF read
-    for words in ("in Python 3.10 or newer, with no online service and no "
+    # v0.15.2: Python 3.11 or newer (the owner's ruling of 27 October);
+    # the opening texts: the same facts, one to a sentence
+    for words in ("in Python 3.11 or newer, with no online service and no "
                   "telemetry of its own (on Windows x64, a library it "
                   "installs for PDFs reports its use: PRIVACY.md, \"How "
-                  "your data flows\"); its one request of its own is the "
-                  "check for new versions (\"Updating\", above). What the "
-                  "assistant "
-                  "reads through it goes to "
-                  "the maker of the AI behind it ([Where your data goes]"
-                  "(https://github.com/nicotem/exegete#where-your-data-goes))",
+                  "your data flows\"). Its one request of its own is the "
+                  "check for new versions (\"Updating\", above), and what "
+                  "the assistant reads through it goes to the AI provider "
+                  "(\"Where your data goes\", above).",
                   # v0.14.2, the README's first round of checks: what a
                   # backup is (backup_project, below)
                   # v0.15.1: but its audio and video folders
-                  "Each backup copies the project folder, except its audio "
-                  "and video folders (a restore keeps the project's), next "
-                  "to the project; `prune_backups` clears old ones.",
+                  "Each backup, kept next to the project, copies its folder "
+                  "without the audio and video folders, which a restore "
+                  "leaves as they are. `prune_backups` clears old backups.",
                   # (v0.15.1, the backup's moment: Exegete takes the
                   # backup itself, whatever the call asks)
-                  "It reads a project's SQLite database read-only; each "
-                  "tool that writes opens its own connection, after a "
-                  "backup Exegete takes itself, and refuses while the "
-                  "project's lock file is active (QualCoder 3.8.2 has the "
-                  "project open, or another conversation using Exegete is "
-                  "writing to it).",
+                  # (v0.15.2, the readability reading: the refusal a
+                  # sentence of its own)
+                  "It reads a project's SQLite database read-only. Each tool "
+                  "that writes to the database opens its own connection, "
+                  "after a backup Exegete takes itself. It refuses while the "
+                  "project's lock file is active, as it is while QualCoder "
+                  "3.8.2 has the project open or another conversation using "
+                  "Exegete is writing to it.",
                   # (the staleness audit of 20 October 2026: the command
                   # carries the optional part, pyproject's extra)
                   "`pipx install \"exegete[pdf-epub]\"`"):
         assert words in opening, words
     with open(REPO / "pyproject.toml", "rb") as handle:
         project = tomllib.load(handle)["project"]
-    assert project["requires-python"] == ">=3.10"
+    assert project["requires-python"] == ">=3.11"
     database = _read("src/exegete/database.py")
     assert "?mode=ro" in database
     assert "The whole project tree is copied" in database
@@ -861,30 +1127,56 @@ def test_the_advanced_section_rests_on_the_code():
         assert f"`{tool}`" in beyond, tool
         assert "preview_token" in inspect.signature(
             getattr(server, tool)).parameters, tool
+    # v0.15.2, the opening texts: the families of tools the list named
+    # (coding, large projects, QualCoder's conventions, analysis,
+    # resources) were left to TOOLS.md, linked above the list, within the
+    # README's 500 lines; the owner's word of 29 October 2026 brought them
+    # back, in their old order, around the two the rewrite kept
+    assert ("**Beyond the basics**, each tool described in [TOOLS.md]"
+            "(https://github.com/nicotem/exegete/blob/main/TOOLS.md"
+            "#available-tools):") in beyond
+    leads = ("**Coding with your approval**, the path drawn above:",
+             "**Large projects**, larger than a model's context",
+             "**QualCoder's conventions**", "**Analysis**",
+             "**Guarded changes**", "**Documents in, whole files read**",
+             "**The brief**", "**Resources**")
+    positions = [beyond.index(lead) for lead in leads]
+    assert positions == sorted(positions)
     assert f"`{names.RESOURCE_SCHEME}://...`" in beyond
+    assert f"`{names.RESOURCE_SCHEME}://" in _read("TOOLS.md")
     assert asyncio.run(server.mcp.list_prompts())
     assert "\"--check-transition\"" in inspect.getsource(server)
-    # v0.14.2, the README's first round of checks: what each family is for,
-    # in bold; the brief's item in plain words; which previews say whose
-    # work is affected (the four codebook cascades and the name
-    # replacement build owner counts; restoring and pruning backups do not)
-    # (the second round: the coding family led by what it gives, as the
-    # others are, not by a term a methodologist reads as machine learning)
-    for lead in ("**Coding with your approval**, the path drawn above:",
-                 "**Large projects**, larger than a model's context", "**QualCoder's conventions**",
-                 "**Analysis**", "**Guarded changes**", "**The brief**",
-                 "**Resources**"):
-        assert lead in beyond, lead
-    # Claude Code's limits as they are since its version 2.1.296
-    # (whole-branch review, round 1), the default, tool search, first
-    # (round 2; tests/test_v0150_wb_fix_r2.py pins the long description)
-    assert ("Claude Code keeps the first 16,384 characters of a tool's "
-            "description when it finds the tool through its tool search, "
-            "as it does by default, and the first 4,096 when it loads the "
-            "tool at the start (2,048 before its version 2.1.296). So the "
-            "rules that matter come first in each description, within "
-            "2,048 characters, a few named exceptions apart; the rest "
-            "reach the model through `read_brief` or the answers.") in beyond
+    # QualCoder's conventions: reads hide what a project hides, and a
+    # coder argument reads that coder's rows in full
+    assert ("reads leave out the work of coders a project hides. A "
+            "`coder` argument reads one coder's work in full.") in beyond
+    for tool in ("get_coded_segments", "search_coded_text",
+                 "find_cooccurring_codes"):
+        doc = " ".join(getattr(server, tool).__doc__.split())
+        assert "bypassing the visibility filter" in doc, tool
+    # (v0.15.2, undo: undoing a change is on the branch now, among the
+    # guarded changes, which GUARDED holds to the code)
+    assert "`undo_changes` (undoing a change)" in beyond
+    # Claude Code's limits, whose figures are the Terminal guide's (its
+    # version 2.1.296 and after; tests/test_v0150_wb_fix_r2.py pins the
+    # long description), and what follows from them
+    # (the readability reading: the reason first, then the rule)
+    # (v0.15.2, the merge onto the integration branch: Claude Code's
+    # section moved from INSTALL.md to the Terminal guide, which the
+    # sentence names and the bullet links to)
+    assert ("A host may keep only the start of a description, so the rules "
+            "that matter come within its first 2,048 characters, a few named "
+            "exceptions apart (the Terminal guide gives Claude Code's "
+            "figures).") in beyond
+    assert ("[the guide's section on Claude Code](https://github.com/nicotem/"
+            "exegete/blob/main/docs/installing-from-the-terminal.md"
+            "#claude-code) says how to let it through whole.") in beyond
+    guide = _read("docs/installing-from-the-terminal.md")
+    start = guide.index("\n## Claude Code\n")
+    claude_code = _flat(guide[start:guide.index("\n## ", start + 1)])
+    for figure in ("16,384", "4,096", "2.1.296",
+                   "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH"):
+        assert figure in claude_code, figure
     # (the staleness audit of 20 October 2026: the exceptions are named,
     # tests/test_v0142_description_cut.py, LEFT_PAST_THE_CUT)
     import test_v0142_description_cut as cut
@@ -894,8 +1186,6 @@ def test_the_advanced_section_rests_on_the_code():
     assert ("`pseudonymise_source` (these five also say whose work is "
             "affected), `restore_backup`, `prune_backups`") in beyond
     assert "def _pseudonymise_by_owner" in database
-    assert ("per-coder visibility (reads hide what QualCoder hides; a "
-            "`coder` argument reads one coder in full)") in beyond
     # (the second round: nor in the `core` row, "the coding loop")
     assert "upervised" not in flat
     # nothing removed in v0.15 is advertised
@@ -906,13 +1196,17 @@ def test_the_advanced_section_rests_on_the_code():
 def test_how_it_is_tested_matches_the_workflow():
     flat = _flat(_section("For advanced users", "What comes next"))
     # (the whole-branch review of v0.15.0, round 2: both suites pass more
-    # than 8,300)
+    # than 8,300; v0.15.2, the two tiers of CI: the full matrix runs on
+    # the integration branch and main, which every change reaches before
+    # a release, tests/test_v0152_ci_tier.py)
     assert ("More than 8,000 automated tests run on Windows, macOS and "
-            "Linux, with Python 3.10 and 3.13, on every change pushed; they "
-            "test Exegete, not a researcher's use of it") in flat
+            "Linux, with Python 3.11 and 3.13 (and 3.14 on Linux), on every "
+            "change before it is released. They test Exegete, not a "
+            "researcher's use of it") in flat
     workflow = _read(".github/workflows/ci.yml")
     assert "os: [ubuntu-latest, windows-latest, macos-latest]" in workflow
-    assert "python-version: [\"3.10\", \"3.13\"]" in workflow
+    # 3.14 on Ubuntu alone (tests/test_v0152_ci_tier.py)
+    assert "python-version: [\"3.11\", \"3.13\", \"3.14\"]" in workflow
     triggers = workflow[workflow.index("\non:\n"):workflow.index("\njobs:")]
     assert "push:\n    branches: [\"**\"]" in triggers
 
@@ -933,14 +1227,16 @@ def test_what_comes_next_is_plans():
     # owner's decisions of 20 October 2026, ruling 85, item 1: the safety
     # net in two releases, v0.15.1 and v0.15.2, with undo in the second,
     # and method in v0.15.3; v0.15.1's release preparation takes its own
-    # item out, as 0.14.3's did)
+    # item out, as 0.14.3's did; the owner's form of 27 October, ruling
+    # 105: coding sessions kept with their project in v0.15.3, method in
+    # v0.15.4)
+    # (v0.15.2's release preparation takes its own item out too)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15.2", "v0.15.3", "v0.16", "v0.17", "Later"]
+        "v0.15.3", "v0.15.4", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
-    for words in ("undo a session's changes",
-                  "when replacing names, choose which mentions to keep",
+    for words in ("when replacing names, choose which mentions to keep",
                   "more of the analysis shown in the conversation, as tables",
                   # v0.14.2, the README's second round of checks: the rest
                   # in the reader's terms too (the roadmap's "What it is

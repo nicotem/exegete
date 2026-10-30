@@ -12,15 +12,18 @@ of a project from the conversation. It runs as an MCP server.
 
 ## Commands
 
-- **Install for development** (Python 3.10 or newer) from the lock,
+- **Install for development** (Python 3.11 or newer) from the lock,
   the releases CI tests with:
   `uv sync --frozen --extra dev --extra pdf-epub`, which makes `.venv`
   in the repository and installs the package there, editable.
   `pip install -e ".[dev]"` takes the newest releases `pyproject.toml`
   allows instead, as an install from PyPI does.
 - **Tests:** `python -m pytest -q` from the repository root. The full
-  suite takes about twelve minutes on a Mac, longer on Windows CI; CI
-  runs it on Ubuntu, Windows and macOS with Python 3.10 and 3.13. Every behaviour change needs a test that
+  suite takes about twenty minutes on a Mac, longer on Windows CI; CI
+  runs it on Ubuntu, Windows and macOS with Python 3.11 and 3.13, and
+  on Ubuntu with 3.14, on `main` and the integration branches
+  (`feat/*`), and on Ubuntu with 3.13 alone on other branches
+  (CONTRIBUTING.md, item 5). Every behaviour change needs a test that
   fails without it.
 - **Dependencies:** after changing `pyproject.toml`, run `uv lock`, and
   check with `uv lock --check`.
@@ -88,11 +91,16 @@ of a project from the conversation. It runs as an MCP server.
 - **Never touch a real QualCoder installation, a real project or any AI
   assistant's configuration.** Tests use fixtures and synthetic data
   only.
-- **Tool descriptions are measured.** Tests pin the size sent with every
-  request. Rules a model must not miss sit within a description's first
-  2,048 characters: Claude Code cut there before its version 2.1.296; it
-  now keeps 4,096 (16,384 through tool search), and 2,048 is kept as a
-  margin. The few left past it, each with its reason, are listed in
+- **What the assistant receives before a project is open, and the
+  brief, are kept in `docs/snapshot/`**, with their sizes (the tools'
+  answers are not): when a description, a tool's arguments or another
+  of these texts changes, write it again with
+  `python scripts/served_texts.py write` on Python 3.13 and review the
+  diff; a test fails until then. Rules a model must not miss sit within
+  a description's first 2,048 characters: Claude Code cut there before
+  its version 2.1.296; it now keeps 4,096 (16,384 through tool search),
+  and 2,048 is kept as a margin. The few left past it, each with its
+  reason, are listed in
   `LEFT_PAST_THE_CUT` in `tests/test_v0142_description_cut.py`.
 - **Documents:** plain UK English, no em dashes. Many sentences in the
   documents are pinned by tests, so move the pin with its sentence.

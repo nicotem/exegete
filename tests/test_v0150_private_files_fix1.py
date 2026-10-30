@@ -163,8 +163,9 @@ class TestThePlacesAndTheTable:
 
     def test_the_earlier_names_in_sentences_of_their_own(self):
         section = _files_section()
-        assert ("Some of these had other names in earlier versions. The "
-                "state folder was `~/.qualcoder_mcp` before 0.14.1: since "
+        assert ("Some of these had other names in earlier versions. "
+                "Exegete's own folder was `~/.qualcoder_mcp` before 0.14.1: "
+                "since "
                 "then Exegete keeps a link under that name pointing at "
                 "`~/.exegete`, as \"How your data flows\" says.") in section
         # the maintainer's sitting of 19 October 2026: the update moved a
@@ -195,8 +196,10 @@ class TestThePlacesAndTheTable:
         section = _files_section()
         assert ("| Exegete's working state | `~/.exegete`, hidden on macOS "
                 "and Linux |") in section
+        # v0.15.2: and the records of changes once a day old
         assert ("| Exegete removes the texts an import's preview read, as "
-                "\"How your data flows\" says; coding sessions go at your "
+                "\"How your data flows\" says, and a change's record once it "
+                "is a day old; coding sessions go at your "
                 "word (`delete_coding_session`); the "
                 "rest stays until you delete it.") in section
         # (v0.15.1: cleanup_old_sessions removed, as announced in 0.14)

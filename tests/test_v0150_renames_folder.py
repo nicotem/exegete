@@ -44,9 +44,12 @@ DESCRIPTION_LINES = (
 # What the extension's description says, as facts (after 0.15.1 the page's
 # descriptions were cut to plain statements, the earlier default left to
 # the CHANGELOG: tests/test_v0151_settings_page.py)
+# v0.15.2, the opening texts: the sync service as a warning, and the
+# empty setting's effect, in the writing checklist's voice
 SETTING_DESCRIPTION = ("Exegete projects in your home folder",
-                       "no sync service",
-                       "Leaving it empty stops the extension from starting")
+                       "sync service",
+                       "copies your projects off this computer",
+                       "With this empty, Exegete does not start")
 
 MANIFEST = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))
@@ -351,8 +354,8 @@ class TestTheDocuments:
 
     def test_installs_list_of_usual_places_is_the_codes(self):
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-        start = text.index("### \"No projects found in the usual places\"")
-        section = text[start:text.index("\n### ", start + 4)]
+        start = text.index("#### \"No projects found in the usual places\"")
+        section = text[start:text.index("\n#### ", start + 4)]
         items = [b for b in _blocks(section) if b.startswith("- ")]
         assert "at its top level only, unless it is one of the places " \
                "below" in items[0]
@@ -371,23 +374,27 @@ class TestTheDocuments:
         workspace is one of the usual places, as the extension's default
         folder is; a folder chosen elsewhere keeps the top-level rule
         (fix round 1)."""
-        flat = " ".join((REPO / "INSTALL.md").read_text(
-            encoding="utf-8").split())
+        # (v0.15.2: the variables are the Terminal guide's)
+        flat = " ".join((REPO / "docs/installing-from-the-terminal.md"
+                         ).read_text(encoding="utf-8").split())
         item = flat[flat.index("- `EXEGETE_WORKSPACE` (v0.14):"):]
         item = item[:item.index(" - `", 4)]
         assert ("`list_available_projects` also searches its top level, or "
                 "three levels deep when it is one of the usual places, as "
-                "the extension's default folder is (the usual places are "
-                "listed under \"No projects found in the usual places\", "
-                "below).") in item
+                "the extension's default folder is (INSTALL.md's "
+                "troubleshooting lists the usual places).") in item
 
     def test_the_extension_step_in_install(self):
         flat = " ".join((REPO / "INSTALL.md").read_text(
             encoding="utf-8").split())
         item = flat[flat.index("- **Folder for projects**"):]
-        item = item[:item.index("- **Tell me when a new version is out**")]
-        assert ("The default, `~/Exegete projects` (a folder called "
-                "\"Exegete projects\" in your home folder)") in item
+        item = item[:item.index("- **Your coder name**")]
+        assert (("The default is `~/Exegete projects`, a folder called "
+                 "\"Exegete projects\" in your home folder")) in item
+        # v0.15.2: the account of the update is told once, in "Updating"
+        item = flat[flat.index("- On the maintainer's Mac on 19 October "
+                               "2026"):]
+        item = item[:item.index("- Up to 0.15.1")]
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
         # folder chosen by hand not yet checked (the staleness audit of 20
@@ -400,7 +407,7 @@ class TestTheDocuments:
         for folder in (names.EXTENSION_WORKSPACE_FOLDER,
                        names.OLD_EXTENSION_WORKSPACE_FOLDER):
             assert "~/" + folder in server._USUAL_SEARCH_PLACES, folder
-        for words in (f"a setting left at the earlier default, {earlier}",
+        for words in (f"had been left at the earlier default, {earlier}",
                       "No project is moved", "both folders are searched",
                       f"set it back to {earlier}"):
             assert words in item, words
@@ -408,7 +415,8 @@ class TestTheDocuments:
         assert "it keeps working" not in item
 
     def test_the_codex_recipe_names_the_new_folder(self):
-        install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
+        install = (REPO / "docs/installing-from-the-terminal.md").read_text(
+            encoding="utf-8")
         assert 'EXEGETE_WORKSPACE = "~/Exegete projects"' in install
         assert '--env "EXEGETE_WORKSPACE=~/Exegete projects"' in install
         assert "QualCoder projects\"" not in install
@@ -442,14 +450,16 @@ class TestTheDocuments:
                 "earlier default)") in items
 
     def test_the_ai_coding_guide_names_the_new_folder_only(self):
-        """Its nine mentions of the extension's folder, in the two forms
+        """Its seven mentions of the extension's folder, in the two forms
         they take (`~/Exegete projects/` and the full path under
         `/Users/YOUR_NAME/`), not counting the Terminal routes' folder
-        in Documents (fix round 1: that one was counted too)."""
+        in Documents (fix round 1: that one was counted too). Nine until
+        v0.15.2, when the workflow told the folders once, in "The
+        workspace", and pointed there."""
         guide = (REPO / "AI_CODING_WORKFLOW.md").read_text(encoding="utf-8")
         home_level = re.findall(r"(?:~|/Users/YOUR_NAME)/Exegete projects/",
                                 guide)
-        assert len(home_level) == 9
+        assert len(home_level) == 7
         assert "QualCoder projects" not in guide
 
     def test_the_readmes_first_session_says_by_default(self):
@@ -460,9 +470,10 @@ class TestTheDocuments:
             encoding="utf-8").split())
         first = flat[flat.index("### A first session"):
                      flat.index("### Other assistants, and updates")]
+        # (v0.15.2, the opening texts: the same fact, reworded)
         assert ("With the extension or OpenAI's steps, the project is made, "
                 "by default, in \"Exegete projects\", in your home folder "
-                "(the assistant's answer gives the full path):") in first
+                "(the answer gives the full path).") in first
 
     def test_the_changelog_says_it(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

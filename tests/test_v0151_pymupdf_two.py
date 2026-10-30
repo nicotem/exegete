@@ -153,8 +153,10 @@ class TestTheTwoLines:
 
 class TestTheLockAgrees:
 
-    @pytest.mark.parametrize("python", ["3.10", "3.11", "3.12", "3.13",
-                                        "3.14"])
+    # Each Python the lock is made for: from 0.15.2, 3.11 or newer
+    # (pyproject.toml's requires-python), so the lock holds no walk for
+    # 3.10, which the markers above still give a line of its own.
+    @pytest.mark.parametrize("python", ["3.11", "3.12", "3.13", "3.14"])
     def test_the_walk_reaches_the_release_each_line_names(self, python):
         lock = _lock()
         for system, machine in ENVIRONMENTS:
@@ -393,13 +395,36 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     data; and the four passages that say nothing else leaves point to
     it."""
     flows = _flat_section("PRIVACY.md", "## How your data flows")
+    # (v0.15.2, the lead's reading: the section's first paragraph names the
+    # systems the summary names, Windows x64, where the library reports,
+    # and Linux, where Exegete's setting stops it before it starts)
     assert ("no telemetry, no analytics, and no separate cloud path** of "
-            "its own. One library it installs to read PDFs on Windows x64 "
-            "and Linux reports on its own use to Microsoft unless it is "
-            "switched off") in flows
-    assert ("on Windows a few reports still go to Windows' diagnostic data "
-            "each time a PDF is read, with nothing from your documents") \
-        in flows
+            "its own. On Windows x64, a library Exegete installs to read "
+            "PDFs reports its use to Windows' diagnostic data each time a "
+            "PDF is read, with nothing from your documents.") in flows
+    assert ("Exegete switches its reports off: on Linux before the library "
+            "starts, so it reports nothing there, and on Windows once it "
+            "has loaded, after its first few reports") in flows
+    # (the fix round: "nothing there" holds for the release the lock
+    # gives, so the pointer names the switch's limits, which say so)
+    assert ("\"A library's usage reports\", below, says what they hold, "
+            "the switch's limits, and what you can do.") in flows
+    assert ("Another release of onnxruntime, installed other than through "
+            "Exegete's lock, may treat the setting and the switch "
+            "differently.") in flows
+    summary = _flat_section("PRIVACY.md", "## Where your data goes, in "
+                            "short")
+    assert ("**On Windows x64**, a library Exegete installs to read PDFs "
+            "reports its use to Windows' diagnostic data each time a PDF "
+            "is read, with nothing from your documents") in summary
+    assert "Linux reports" not in flows and "Linux reports" not in summary
+    # the two switches those sentences describe: the setting in the
+    # reading process's environment, before onnxruntime loads, and
+    # onnxruntime's own switch once it has loaded
+    import inspect
+    assert env_settings.READER_SETTINGS == {"ORT_DISABLE_TELEMETRY": "1"}
+    assert "disable_telemetry_events()" in inspect.getsource(
+        import_reading._onnxruntime_reports_off)
     start = flows.index("**A library's usage reports (what Microsoft can "
                         "learn about the library being used on this "
                         "computer, with no participant data).**")
@@ -439,17 +464,32 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     # the passages that say what else leaves the computer point to the part
     pointer = "a library Exegete installs for PDFs also reports its use"
     assert pointer in " ".join(flows.split())
+    # (the fix round: the checklist's question on what Exegete connects
+    # to, which says what a data-management plan can state, names them)
+    checklist = _flat_section("PRIVACY.md",
+                              "## Before you use real participant data")
+    connects = checklist[checklist.index("**What Exegete itself connects "
+                                         "to.**"):]
+    connects = connects[:connects.index(" - **")]
+    assert ("On Windows x64, " + pointer + " to Windows' diagnostic data, "
+            "with nothing from your documents (\"A library's usage "
+            "reports\", under \"How your data flows\").") in connects
+    assert connects.index("Windows' diagnostic data") < connects.index(
+        "it can say this")
     governance = _flat_section("PRIVACY.md", "## Your governance options")
     assert ("though on Windows x64 a library it installs for PDFs reports "
             "its use to Windows") in governance
-    install = " ".join((REPO / "INSTALL.md").read_text(
-        encoding="utf-8").split())
+    # (v0.15.2: the LM Studio recipe is the Terminal guide's)
+    install = " ".join((REPO / "docs/installing-from-the-terminal.md"
+                        ).read_text(encoding="utf-8").split())
     assert install.count("library it installs for PDFs reports its use") \
         + install.count("library Exegete installs for PDFs reports its use") \
         == 2
     readme = " ".join((REPO / "README.md").read_text(encoding="utf-8").split())
-    assert ("On Windows x64, a library it installs for PDFs also reports its "
-            "use, with nothing from your projects") in readme
+    # (v0.15.2, the readability reading: Exegete named, after a sentence
+    # whose subject is the check)
+    assert ("On Windows x64, a library Exegete installs for PDFs also reports "
+            "its use, with nothing from your projects") in readme
     assert "\"A library's usage reports\", under \"How your data flows\"" \
         in reading
 

@@ -25,7 +25,7 @@ refusals too, so the question for the coder name carries it) give it as
 `projects_folder`, and create_project, copy_project_to_workspace and
 import_text_file name "the folder set for projects" rather than a
 default, each description no longer than before
-(tests/test_v0142_description_cut.py pins their words).
+(docs/snapshot/ holds their words).
 
 The reviews of those fixes (12 October 2026) found four things more.
 projects_folder is the folder that is set, so a refusal for a project
@@ -297,8 +297,10 @@ class TestTheReviewsOfTheSittingWording:
             self):
         readme = _flat(_repo_text("README.md"))
         assert "Not using QualCoder, or no coder name? Say so." not in readme
-        assert ("Not using QualCoder? Any name you choose will do. Do not "
-                "know yours? Say so.") in readme
+        # (v0.15.2, the opening texts: statements, not questions)
+        assert ("Any name you choose will do, and if you do not know yours, "
+                "say so.") in readme
+        assert "Not using QualCoder?" not in readme
 
     def test_tools_md_says_the_same(self):
         tools = _flat(_repo_text("TOOLS.md"))

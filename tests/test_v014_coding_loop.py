@@ -912,7 +912,9 @@ class TestComparingCodersSaysWhatItCannotShow:
         ai_note = next(n for n in out["notes"] if "One coder is the AI" in n)
         assert "the suggestions the person approved" in ai_note
         assert "every visible coder's codings" in ai_note
-        assert "intercoder reliability" in ai_note
+        # the warning with its negation: the phrase alone would hold a
+        # note that told the assistant to report it as such
+        assert "do not report it as intercoder reliability" in ai_note
 
     def test_narrowed_to_one_file_only_that_file_is_named(
             self, setup_server, qualcoder_db_path):
@@ -944,11 +946,15 @@ class TestComparingCodersSaysWhatItCannotShow:
                         .description.split())
         help_ = json.loads(server.explain_ai_coding_tools())[
             "comparing_coders"]
-        for text in (desc, help_):
+        # each warning with its negation, in its own words
+        for text, warning in (
+                (desc, "is not intercoder reliability"),
+                (help_, "never report that agreement as intercoder "
+                        "reliability")):
             assert "approved" in text
             assert "every visible coder's codings" in text
             assert "not a decision" in text
-            assert "intercoder reliability" in text
+            assert warning in text
 
 
 # =============================================================================

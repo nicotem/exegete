@@ -21,7 +21,10 @@ in the tests is the 4.0 release's (tag 4.0, commit b95e021):
     python scripts/qualcoder_parity.py --qualcoder <tree> --check <json>
 
 `--check` compares a fresh run with a recorded one and lists any file
-whose outcome changed (the CI watch on QualCoder's newest code).
+whose outcome changed (the weekly watch on QualCoder's newest code,
+.github/workflows/qualcoder-watch.yml). Under GitHub Actions it also
+writes the comparison to the step summary: QualCoder's commit, when
+`--commit` names it, the count and each file whose outcome changed.
 """
 
 import argparse
@@ -269,6 +272,17 @@ def run(tree: Path) -> dict:
             "files": files}
 
 
+def write_check_summary(path: str, line: str, changed, commit: str) -> None:
+    """The comparison, in the job's step summary."""
+    out = ["### What QualCoder's code stores, against the record", ""]
+    if commit:
+        out += [f"QualCoder's source at commit {commit}.", ""]
+    out += [line, ""]
+    out += [f"- {name}" for name in changed]
+    with open(path, "a", encoding="utf-8") as summary:
+        summary.write("\n".join(out) + "\n")
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--qualcoder", required=True, type=Path)
@@ -289,10 +303,14 @@ def main(argv=None) -> int:
         recorded = json.loads(args.check.read_text(encoding="utf-8"))
         changed = sorted(name for name, outcome in result["files"].items()
                          if recorded["files"].get(name) != outcome)
+        line = (f"{len(changed)} of {len(result['files'])} outcomes changed "
+                f"since the recorded run")
         for name in changed:
             print(f"changed: {name}")
-        print(f"{len(changed)} of {len(result['files'])} outcomes changed "
-              f"since the recorded run")
+        print(line)
+        if os.environ.get("GITHUB_STEP_SUMMARY"):
+            write_check_summary(os.environ["GITHUB_STEP_SUMMARY"], line,
+                                changed, args.commit)
         return 1 if changed else 0
     return 0
 

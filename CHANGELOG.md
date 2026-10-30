@@ -7,7 +7,573 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-Nothing yet.
+The changes since the last release are added here when the next
+release is prepared.
+
+## [0.15.2-alpha] - 2026-10-30
+
+This release brings undo. Most changes Exegete makes to a project can
+now be undone for a day afterwards, whole or not at all. The assistant
+first shows you a preview of what would be taken back, and asks Exegete
+to undo the change only on your word. One Ctrl+C now stops Exegete when
+you start it by hand in a terminal. The main documents are rewritten in
+plainer words: INSTALL.md is now the guide to the desktop extension
+alone, and the ways of installing from the Terminal have a guide of
+their own. Exegete now needs Python 3.11 or newer.
+
+Three things planned for this release move to v0.15.3, because there
+was not enough time to build them: choosing which mentions to keep when
+replacing names, the fix of the REFI-QDA export, and PyMuPDF 2.0 on
+Apple silicon Macs. "Upgrading from 0.15.1-alpha.1" comes first and says
+what changes for you. The account then follows undo, the other changes,
+the fix, the documents and the known limits, then a part for
+contributors and the measurements.
+
+### Upgrading from 0.15.1-alpha.1
+
+Coming from a release before 0.15.1-alpha.1, read the "Upgrading" part
+of each release in between as well, below.
+
+Your projects and their backups are untouched, and the settings you
+chose stay as they were. After updating, quit your AI app and open it
+again, so that it loads the new tool list.
+
+- **Undo, and the receipts it works from.** Most changes Exegete makes
+  to a project now answer with an undo receipt. The new tool
+  `undo_changes`, in both tool sets, takes a change back with its
+  receipt, after a preview. Each such change also leaves a record in
+  Exegete's own folder, which undo reads. "Added: undoing a change
+  Exegete made", below, says which changes have no receipt and what undo
+  refuses. `restore_backup` works as before.
+- **One Ctrl+C stops Exegete started by hand in a terminal.** It prints
+  `Stopped by Ctrl+C` and ends ("Fixed", below). In the Windows console
+  this has not yet been tried ("Known limits", below). Nothing changes
+  for an app that stops Exegete by closing its input or ending the
+  process.
+- **INSTALL.md is now the guide to the desktop extension alone.** If you
+  installed Exegete from the Terminal, its steps are in a guide of their
+  own, `docs/installing-from-the-terminal.md`, and INSTALL.md points to
+  it where the moved sections were.
+- **The main documents are rewritten** ("Documents", below). PRIVACY.md
+  opens with where your data goes, in short, followed by the checklist
+  to read before using real participants' data. README.md and
+  QUICKSTART.md use plainer words. TOOLS.md and the two coding
+  guides were read against the code and rewritten.
+- **Python 3.10 is no longer supported.** Exegete needs Python 3.11 or
+  newer, and is tested with Python 3.11 and 3.13 on macOS, Windows and
+  Ubuntu, and with 3.14 on Ubuntu. On Python 3.10, pip and pipx keep the
+  last release that supported it, 0.15.1-alpha.1, even when Exegete
+  tells you that a newer one is out. To update, install Exegete again
+  with Python 3.11 or newer. The Claude Desktop extension is not
+  affected: it runs on the Python 3.13 it installs.
+- **What moved to v0.15.3.** Choosing which mentions to keep when
+  replacing names, the fix of the REFI-QDA export, and PyMuPDF 2.0 on
+  Apple silicon Macs were planned for this release, and come in v0.15.3
+  (README.md, "What comes next"). Until then, the REFI-QDA export keeps
+  the three known faults that TOOLS.md gives, and every Mac reads PDFs
+  with PyMuPDF 1.x.
+- **Contributors meet three changes.** CI runs in two tiers, the texts
+  check runs on every push, and a change describes itself in a file of
+  its own under `changelog.d/` instead of editing CHANGELOG.md ("For
+  contributors", below).
+
+### Added: undoing a change Exegete made
+
+- **`undo_changes` takes back a change Exegete made.** Most changes
+  Exegete makes to a project answer with a receipt, `undo_receipt`. For
+  a day after a change, the assistant can take it back with its receipt,
+  on the project it was made in, whole or not at all. Called with no
+  receipts, `undo_changes` lists the changes Exegete has made to the
+  project since it last started, so that a receipt the assistant no
+  longer has can be found again.
+- **The preview comes first.** Called with receipts, `undo_changes`
+  shows what undoing them would remove, put back or set back, by table
+  and by coder, and changes nothing. The assistant shows you that
+  preview, and calls again with the preview's token only on your word.
+  Exegete then takes a backup and writes the old rows back from the
+  change's own backup, each value exactly as it was stored, and checks
+  every row it wrote before it saves.
+- **The record of a change.** Each change that answers a receipt leaves
+  a record, a file of its own in Exegete's own folder, which undo works
+  from. The record lists the rows the change touched, by table and key,
+  with a digest of each row before and after the change. Exegete makes
+  the digests with a key it keeps in its own folder. A record holds ids
+  and digests, never a name, a text, a note or a path. Whoever holds the
+  whole folder can still test a digest of a single value, such as a
+  coder's name, against a guess, since the key is kept there too. A
+  record is removed once it is a day old, at Exegete's next start or its
+  next record of a change to the same project, so the record of a
+  project that is not changed again stays until Exegete's next start.
+  Triggers that live on Exegete's own connection for the length of the
+  change find the rows, so nothing is added to the project's file or
+  folder.
+- **Some tools keep no record, and their answers say nothing of one.**
+  `restore_backup` and `undo_changes` keep none, so a restore or an undo
+  cannot itself be undone: the way back from either is the backup it
+  takes first. `set_project_ai_coder_name` and `prepare_names_list` keep
+  none either. They write files in the project's folder without writing
+  the project: the AI coder name kept with the project, and the names
+  file you fill in. A call that changes nothing keeps no record.
+- **When any other change's record cannot be kept, the change stands as
+  made.** Its answer says that no receipt was kept, and that
+  `restore_backup` with the change's backup is the way back, which also
+  takes back everything done after that backup. For example, no record
+  is kept for a project holding triggers of its own, or one whose schema
+  names the function the record is made with, or with a version of
+  SQLite older than 3.31. Nor is one kept when a row has no key that a
+  record can keep, when the record's file cannot be written, or when the
+  key Exegete keeps for its records cannot be read.
+- **What undo refuses.** Exegete refuses to undo a change when a row the
+  change touched has been changed since, by anyone, or when later work
+  depends on it, such as a coding, or a coding suggestion in a session,
+  that uses a code the change made. It also refuses when a row it would
+  put back no longer fits: another code has taken its name, or the
+  category it was in has been deleted, even when a category made since
+  has taken that category's number. It refuses when the change's backup
+  has gone, unless the change only added rows, and when that backup
+  cannot be read. Each refusal gives its reason and what to do.
+- **A pseudonymisation run can be undone.** For a day after a run,
+  `undo_changes` can take it back, in a call of its own, while nothing
+  has been written to the project since. The file's text comes back as
+  it was before the run, real names included. So do the public parts of
+  the notes and journal entries the run rewrote, if it rewrote any.
+  Every table returns to how it was before the run, with two exceptions.
+  The run's journal entry is kept, with a line saying that the run was
+  undone, and so are the entries of later runs undone before it, so that
+  runs made one after another can be undone, newest first. If you use
+  QualCoder, what it writes when it opens a project, such as a coder
+  name it adds, stays as it is. The run record in Exegete's own folder
+  and the project's names list stay as the run left them. The preview
+  says all this before you agree.
+- **An import can be undone.** For a day after an import, `undo_changes`
+  removes the files' entries and the originals Exegete stored for them
+  in the project's `documents` folder. It removes an original only if it
+  is still the file the import stored, and it refuses the undo when one
+  has changed since. An undo that goes ahead can still leave originals
+  in the `documents` folder with no entry. It leaves them all when that
+  folder is a link, or not an ordinary folder inside the project.
+  Otherwise it leaves an original that it finds changed or cannot read
+  just before removing it, one it cannot remove, and one whose stored
+  name cannot be a file's name. The answer counts them in
+  `originals_kept`. Such a file travels with the project, into its later
+  backups and copies, and holds back a new import under its name, until
+  it is moved out of the `documents` folder. Copies stay elsewhere. The
+  backups taken since the import, and the backup the undo takes first,
+  keep the files until `prune_backups` removes them. Coding sessions
+  that hold passages of the files keep them until
+  `delete_coding_session` removes them. The preview and the answer count
+  these copies. If you use QualCoder, they also name its own files that
+  may hold the text, when the project has them.
+- **A correction of your coder name can be undone,** unless work has
+  been recorded under the name it set, or the project's coder name has
+  changed since. QualCoder 3.8.2 writes the coder name it is set to use
+  each time it opens a project, as 4.0 does.
+- **A save of the names list can be undone.** `save_names_list` now
+  answers an undo receipt. `undo_changes` brings back the list as it was
+  before the save, byte for byte, from the save's own backup, or removes
+  the list if the save made it. The names file stays as it is, so it
+  still holds the list that was taken back: correct it before you save
+  the list again if you want to keep the earlier list.
+- **Coding sessions follow the undo.** Undoing `apply_codings` returns
+  its suggestions to approved, so the next `apply_codings` on that
+  session writes them again unless you reject them first. Undoing
+  `create_proposed_codes` returns its proposals to approved, and undoing
+  `delete_coding` marks its suggestion applied again. A code or a file
+  that an undo removes leaves every session's list of what may be coded.
+- **`prune_backups` counts the changes it would stop you undoing.** Its
+  preview gives how many changes need a backup it would remove
+  (`changes_losing_undo`).
+
+### Changed
+
+- **The desktop extension's description and its six settings are
+  rewritten.** Each setting says what it does and its default, within
+  about forty-five words, and refers to any other setting by its title.
+- **What the assistant is told first says what QualCoder is.** The
+  opening text and the brief describe the project as kept in the format
+  of QualCoder, "a free qualitative analysis program". The opening text
+  now says documents, where it said documents and transcripts. The
+  opening text is 2,042 characters, within the 2,048 that Claude Code
+  kept before its version 2.1.296, and the full brief about 13,700. The
+  brief now says that the backup comes before every change to the
+  project's database, and that setting the AI coder name and preparing
+  the names file take none. Where `select_project`'s answer tells the
+  assistant to ask or check, it says "the researcher".
+
+### Fixed
+
+- **One Ctrl+C stops Exegete started by hand in a terminal**, as the
+  guide to installing from the Terminal, QUICKSTART and Exegete's own
+  note say. Exegete prints one line, `Stopped by Ctrl+C`. Before, it
+  kept running after a Ctrl+C until Enter was pressed or the terminal
+  was closed, and Enter or a second Ctrl+C printed an error report from
+  Python. An interrupt can also reach Exegete while an app is using it,
+  sent by the app or by a Ctrl+C in a terminal the two share. A change
+  Exegete is making at that moment is finished first, but the app may
+  not receive Exegete's answer, so the assistant may not know that the
+  change was made. Before asking for the same change again, you could
+  look at the project to see whether it is there. Nothing changes for an
+  app that stops Exegete by closing its input or ending the process.
+
+### Documents
+
+- **INSTALL.md is now the guide to the desktop extension alone**
+  ([INSTALL.md](https://github.com/nicotem/exegete/blob/main/INSTALL.md)):
+  what you need, installing it, the settings page, the first start,
+  updating, going back to an earlier release, uninstalling and getting
+  help, in that order. "Going back" says that installing an older
+  extension over a newer one can clear its settings, so that they are
+  worth checking afterwards.
+- **The ways of installing from the Terminal have a guide of their own**
+  ([Installing Exegete from the Terminal](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md)):
+  PyPI and the source, Claude Desktop set up by hand, Claude Code, LM
+  Studio, ChatGPT's desktop app and Codex, the environment variables,
+  updating, coming from qualcoder-mcp and uninstalling, moved from
+  INSTALL.md whole. INSTALL.md keeps a pointer for each moved section
+  that a text in the repository, or in a release since 0.14.1, links to
+  or names, so a link to one of those sections still arrives and is led
+  on to the guide. A link to a smaller section of the earlier
+  INSTALL.md, such as "Python Not Found", now arrives at the top of the
+  page.
+- **PRIVACY.md opens with where your data goes, in short**, followed by
+  the checklist to read before using real participants' data, which
+  moved up
+  ([PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md)).
+  A fact told in several sections is now told once, and the others point
+  to it. The clause about the SQLite of Python 3.10 went, since Exegete
+  needs Python 3.11 or newer, and the tools that look at the programs
+  running on the computer are now listed in TOOLS.md alone.
+- **The routes table, the LM Studio recipe and PRIVACY.md's fourth rung
+  say the same of a local model.** It keeps the data on your computer.
+  We expect it to do the analysis less well than the hosted models, and
+  do not know by how much, since we have evaluated neither. It is a
+  route to consider for particular uses, not a general suggestion.
+- **README.md is plainer and a little shorter**: 631 lines, from 678, in
+  the voice of the writing guide. It mentions QualCoder only where a
+  sentence is about QualCoder or offers it as a choice. It explains "the
+  AI provider" once, and gives its warnings as what could happen and
+  what you could do. It says that the desktop extension works on
+  Claude's Free plan, as Claude's pricing page listed it on 28 October
+  2026, and presents a local model as a route to consider for particular
+  uses. The drawings, the table of the two programs, the groups of tools
+  and the map stay, rewritten, and the map names the new documents.
+  Claude Code's figures are in the guide to installing from the
+  Terminal. Before that guide's steps for OpenAI's apps, the README
+  gives the training switch, and where it sends Claude Code's users it
+  says that Claude Code opens files by itself.
+- **QUICKSTART.md** is rewritten in the same voice, within 250 lines.
+- **The update page** is rewritten in the same voice, and says that on
+  Python 3.10 the steps cannot install a version after 0.15.1-alpha.1.
+- **The writing guide**, `docs/WRITING.md`, says who reads Exegete's
+  texts and how to write them. CONTRIBUTING.md's style rules point to
+  it.
+- **TOOLS.md and the two coding guides were read against the code.**
+  Every claim was checked against what Exegete does now. TOOLS.md no
+  longer says that a backup is checked against QualCoder's format, since
+  nothing checks it. Exegete compares code, category and case names
+  ignoring letter case, spacing and Unicode form, where QualCoder's own
+  dialogs compare them exactly, and TOOLS.md now says so. A project made
+  under Exegete's earlier name keeps the "about" line it was given,
+  `qualcoder-mcp <version> ...`. The citations of QualCoder's code give
+  the commit they were read at, and the promise of a later reading is
+  gone. Wherever the REFI-QDA export is named, all three of its known
+  faults are given.
+- **TOOLS.md and the two coding guides explain Exegete on its own
+  terms.** They mention QualCoder for its format and its own behaviour,
+  or as a choice if you use it, and say once what QualCoder is. A
+  project made in Exegete needs no copy before coding. A project made in
+  another program, or one you want kept as it is, is safest worked on as
+  a copy, and the documents now suggest this rather than require it.
+- **The coding guides tell the method as the assistant is told it.** The
+  assistant suggests, you decide on each suggestion, and Exegete writes
+  only what you approved, after a backup. A count of codings is not a
+  count of participants. What an interpretive reading may draw on is
+  told once, in AI_CODING_GUIDE.md. The guides call the assistant the
+  assistant, wherever a sentence is not about Claude itself.
+- **The guides say where real names stay.** The coding guide's answer on
+  pseudonymisation explains the names file, which you fill in on your
+  own computer so that the names list does not pass through the
+  conversation. It says that the names list and each
+  backup taken before a run lead back to the real names on their own.
+  The guides say that a session file holds each suggested passage word
+  for word until it is deleted, that the REFI-QDA file keeps memos in
+  full, private parts included, and that a sync service that keeps your
+  Documents folder keeps the workspace there too. TOOLS.md says that a
+  hidden coder's name still shows as the owner of codes, files and
+  cases. It no longer makes an exception of a project that gains coder
+  visibility while Exegete is connected, since every read checks for it.
+- **TOOLS.md and the two coding guides read as a newcomer reads them.**
+  Long sentences are split, one idea to a sentence, and lists that were
+  joined by semicolons are set out as lists. Words such as backup, lock
+  file, workspace and host are explained where a guide first uses them.
+  The coding guides give the three questions, the folders and the
+  backups once each, and point to them elsewhere. Each refusal of
+  `delete_coding` now comes with its own condition: a coding with a
+  private note is refused on any project, and a hidden coder's coding on
+  a project that can hide coders.
+
+### Known limits
+
+- **One Ctrl+C in the Windows console has not been tried.** That it
+  stops Exegete there is reasoned from how Python handles Ctrl+C on
+  Windows, not measured. On a Windows computer, you could start
+  `exegete` in a terminal, press Ctrl+C once, and check that the line
+  `Stopped by Ctrl+C` appears and the prompt comes back.
+- **On Windows, two copies of Exegete working on one project can block
+  each other's writes.** When another copy of Exegete has the project
+  open, a copy sometimes cannot delete the project's lock file after its
+  write. Exegete then refuses every write to the project until the file
+  reads as left over, after 30 seconds. Two copies run when two apps
+  each start Exegete, or when an app that starts a copy for each
+  session, such as Claude Code, has two sessions open. Working on a
+  project from one app at a time, and in such an app from one session at
+  a time, avoids this.
+- **A record of one of the largest changes can pass 1 MB.** Deleting a
+  code with 20,000 codings left a record of 1.8 MB in Exegete's own
+  folder, and merging codes over 20,000 codings one of 2.4 MB. Each
+  record is removed after it is a day old, as "The record of a change"
+  says.
+- **An import's undo leaves the project's bookmarks as they are.** If
+  you use QualCoder and its bookmark is on a file the import brought in,
+  the bookmark stays after the undo, as it does when QualCoder 4.0
+  deletes a file itself. A file imported later can take the removed
+  file's number, and the bookmark then opens that file.
+- **A copy of the names list can be left in the project's folder.**
+  Exegete writes `pseudonyms.json`, the project's names list, to a
+  temporary file beside it first, then puts that file in its place: when
+  the list is saved, when a save is undone, and when a run saves a list
+  you typed. If Exegete is ended in that moment, as when an app stops it
+  at once, the temporary file can stay, named `pseudonyms.json.` with a
+  random ending and `.tmp`. It holds the real names in plain text. Later
+  backups copy it, and Exegete does not remove it. If you find one, you
+  can delete it: the project does not read it.
+
+### For contributors
+
+- **CI runs in two tiers.** Its first job, `tier`
+  (`scripts/ci_tier.py`), chooses. A push to `main` or to an integration
+  branch, `feat/<name>`, a pull request and a run started by hand take
+  the full tier, the twenty-two jobs. A push to any other branch takes
+  the fast tier: the suite once, on Ubuntu with Python 3.13, and the
+  documents job, with the desktop extension's jobs only when the branch
+  changed the packaging, the lock or a script they run. Only an explicit
+  fast answer narrows a run, so a fault in the choice runs every job.
+  The weekly link check also reads the newest integration branch.
+- On the fast tier, a branch that moves or renames a file the desktop
+  extension's jobs build or run now starts them, as one that changes it
+  does. The weekly link check no longer asks the two addresses of the
+  repository's earlier name, which the history keeps (`KNOWN_GONE` in
+  `scripts/check_links.py`).
+- **The suite runs on Python 3.11 and 3.13 on every system, and on 3.14
+  on Ubuntu**, in place of 3.10 and 3.13. `uv.lock` was made again for
+  the new floor: every release in it stays as it was, and only what
+  Python 3.10 alone needed has left it (tomli, exceptiongroup,
+  backports-asyncio-runner and rpds-py 0.30.0).
+- **Two timing tests allow for the platform**, and still fail on what
+  they are there to catch. The test that the count of names left in a
+  file's text costs a small multiple of one plain pass of the detector's
+  pattern now allows twelve times that pass, where it allowed five:
+  Windows with Python 3.11 read 5.4 to 6.3, and a count that matches
+  with one capture group per surface form, the slow shape the test
+  guards against, reads about 26 on macOS with Python 3.13. The test of
+  the lock file's format accepts a time up to a hundredth of a second
+  ahead of the clock: the lock writes the time rounded to six decimals,
+  and on Windows before Python 3.13 the clock moves in steps of 15.6 ms,
+  so a current lock read in the same step can be a fraction of a
+  microsecond ahead.
+- **The documents' commands run in CI.** A new job on the full tier runs
+  the commands that a document marks for it. A mark is an HTML comment
+  beside the command, which GitHub does not show, and
+  `scripts/doc_commands.py` says how to write one. Each set of marked
+  commands runs on Ubuntu in a new, empty home folder and installs the
+  commit being tested. What each command prints is compared with what
+  its document says. The first marks cover the development install in
+  CONTRIBUTING.md, the source install and its example paths in
+  QUICKSTART.md, and the three installs from PyPI in the Terminal guide,
+  `docs/installing-from-the-terminal.md`, each with its `--version`. The
+  job installs the newest library releases from PyPI, as the documents
+  tell readers to, so it may fail and only reports.
+- **The watch on QualCoder's newest code runs once a week**, on Mondays,
+  in a workflow of its own, `qualcoder-watch.yml`. It is red when that
+  code stores a different text from Exegete's import, and its summary
+  lists the documents concerned and the commit it read. On every full
+  run, CI compares the import's text with the text QualCoder 4.0 stores,
+  and no longer with the newest code.
+- **The weekly advisory check also asks about the official validator's
+  libraries**
+  (`packaging/desktop-extension/validator/package-lock.json`, from npm),
+  in the same request as `uv.lock`'s. The four advisories OSV gave for
+  them on 27 October 2026 (node-forge, tmp twice, zod) are accepted with
+  their date and reason: CI alone installs those libraries, with their
+  install scripts off, to check the extension's manifest.
+- **The check of the workflows' actions reads the change log's current
+  entry**: the newest entry that mentions an action must give the
+  version the workflows run, so a new version is recorded once, where
+  the change is described, and a released entry is never edited.
+- **The facts check reads versions, counts, lists and examples too**
+  (`tests/test_v0151_facts.py`). It compares the releases of libraries
+  that a document gives with `uv.lock`, and a requirement with
+  `pyproject.toml`. It checks the counts a document gives of the tools
+  that preview first and of the libraries Exegete needs to run. It
+  checks the number of routes with Claude against the table of routes.
+  It checks README's list of the tools that preview first, and
+  TOOLS.md's list of the tools that report whether QualCoder may have
+  the project open, against the code. Where PRIVACY.md and INSTALL.md
+  say what Exegete keeps on the computer, it checks that they mention
+  Exegete's own folder and the reading folder. It compares
+  CONTRIBUTING.md's map of the clone with the files git tracks, and
+  seven scripts were added to the map. It checks the paths given for the
+  reading folder, and it reads a full example path, such as
+  `/Users/YOUR_NAME/Exegete projects`, as a folder for projects. An
+  example in a folder where projects made in QualCoder are usually kept
+  must have "if you use QualCoder" in its paragraph. QUICKSTART.md and
+  PROJECT_SELECTION_GUIDE.md now give Exegete's folders first.
+- **What comes in which release is one table, and the texts are held to
+  it** (`scripts/release_plan.py`, read by `tests/test_v0151_facts.py`).
+  When a document or a text in the code names a release to come, its
+  sentence must name something the plan gives that release, and README's
+  "What comes next" keeps no release already made. The code's texts (the
+  tools' descriptions, notes, refusals, help topics and log lines) are
+  read from the source by `scripts/code_texts.py`, which imports nothing
+  from the package. The plan gives coding sessions kept with their
+  project and the housekeeping that touches data a release of their own,
+  v0.15.3, and the release on method becomes v0.15.4. README.md,
+  PRIVACY.md and TOOLS.md now give these releases where they name them.
+- **The facts check reads a planned item with its paragraph.** When the
+  sentence about a planned item gives no release, the releases its
+  paragraph gives are read for it, so a note that says "until the
+  release on method removes it" is held to its item's release. The case
+  that moves a row of the plan now moves the first row some text states,
+  so that it still holds at a release's preparation.
+- **The texts are checked on every push** (`scripts/check_texts.py`, in
+  the documents job): the documents, the update site, the extension's
+  settings and the texts in the code. The check looks for sentences
+  written as if the researcher uses QualCoder, and for the plainest
+  habits of style to leave out, such as capitals for emphasis or a word
+  of our own work. A sentence that a reader judges right as it stands
+  passes once they accept it with a reason in
+  `scripts/check_texts_ledger.tsv`, as CONTRIBUTING.md's style rules
+  describe. The ledger starts with 1,391 lines marked as seeded: they
+  hold the sentences found when the check was added, which no reader has
+  read yet. At release preparation, `--release` fails while a seeded
+  line is left in the README, QUICKSTART, the update page or the
+  extension's manifest. The job's summary also gives each document's
+  readability, which never fails: long sentences, semicolons, brackets,
+  passives, a reading grade and the words of our own work found. The
+  request check of `tests/test_v0150_lock_wording.py` moved into the
+  script.
+- The texts check and the facts check read the Terminal guide, and
+  CONTRIBUTING.md's map of the clone names it. The texts check's ledger
+  holds no seeded line for README.md, QUICKSTART.md, the update page,
+  the extension's manifest, INSTALL.md, PRIVACY.md, the Terminal guide,
+  TOOLS.md and the two coding guides: each sentence it holds for them
+  has a reason.
+- The tests that held the changed sentences word for word now hold the
+  new ones, or their facts where they can: both causes of the write
+  refusal wherever it is given, the commit the citations give, the
+  export's three faults, and older projects explained once, in TOOLS.md.
+  A document may say that an argument "has been removed" as well as
+  "removed in 0.15.1". The tests that compared a released entry's
+  figures with today's sizes read those figures as history.
+- `tests/test_v0152_tools_guides.py` holds two facts against the code as
+  well as the documents: a backup taken before a pseudonymisation run
+  holds every real name, and a project that gains coder visibility while
+  Exegete is connected is read through it from the next read. Every line
+  TOOLS.md cites from QualCoder's code is checked for the commit, or the
+  release, beside it.
+- **What Exegete sends the assistant before a project is open is kept in
+  `docs/snapshot/`, with the brief**: for each tool set, the opening
+  text, every tool's entry as a host receives it (its description, the
+  schemas of its arguments and of its answer, its annotations), the
+  prompts, the resources and `read_brief`'s answer, with their sizes in
+  `sizes.json`. The other tools' answers, which carry the project's
+  texts, are not in it. `python scripts/served_texts.py write`, on
+  Python 3.13 with the libraries in `uv.lock`, writes it again, and a
+  change to any of these texts is reviewed as a diff of those files.
+  `tests/test_served_texts.py` fails when the code and the snapshot
+  differ. README.md, the Terminal guide
+  (`docs/installing-from-the-terminal.md`) and TOOLS.md give the sizes
+  rounded and point there for the exact figures, which the facts check
+  holds them to within five per cent. The exact sizes kept by hand in
+  `tests/test_toolset_modes.py` and `tests/test_v0142_brief.py` are
+  gone, and so are the tests that compared each description with a
+  fingerprint of its earlier words.
+- **A paragraph that several tool descriptions share is written once**,
+  as a constant in `src/exegete/server.py`: the refusal while the
+  project's lock file is active, the two steps of a preview and its
+  token, the full memos on export, and the counts under coder
+  visibility. `_with_paragraphs` puts each back where it stood, so a
+  rewording is made in one place. No description changes: the snapshot
+  in `docs/snapshot/` holds every description as it was.
+- **The descriptions' lengths are the snapshot's alone.** The tests that
+  held descriptions to the lengths of earlier releases, each change that
+  lengthened one named by hand, are retired: `docs/snapshot/` holds
+  every description and its length, and a change is read there as a
+  diff. The tools that carry the lock file's sentence are read from the
+  `_with_paragraphs` lines in `server.py`, so that a tool added with
+  that paragraph is counted.
+- `compare_coders`' warning that a person and the AI are not independent
+  coders is held with its negation in the note, the description and the
+  help topic. The file-text count's absolute timing guard allows four
+  seconds, between the count's slowest reading on Windows and the slow
+  shape it guards against. `scripts/code_texts.py` refuses a folder
+  without `src/exegete`.
+- **A release's entry in the CHANGELOG is written from one file per
+  change.** A change adds its own file to `changelog.d/`, named after
+  its branch, with its sections under the CHANGELOG's headings, instead
+  of editing `CHANGELOG.md`, so that two changes never edit the same
+  lines. The measurement of what a host is sent is one file they share,
+  `changelog.d/measured.md`. When a release is prepared,
+  `scripts/assemble_changelog.py` writes the entry from these files and
+  deletes them (CONTRIBUTING.md, step 6). `tests/test_v0151_facts.py`
+  reads them for wrong values, as it read the `[Unreleased]` part. The
+  three tests that compared the size of what a host is sent with the
+  newest measurement now read `docs/snapshot/sizes.json` or the code,
+  and 0.15.1's measured figures stay in its entry as history.
+- **A table of the code's structure is kept for each release**
+  (`scripts/structure_table.py`, writing `docs/structure/<version>.md`):
+  the ten largest Python files and the ten most complex functions of
+  `src/` and of `tests/`, how many functions each grade holds, and the
+  suite's and CI's times, measured from one commit read through git,
+  with the standard library alone. The first tables are those of
+  0.14.3-alpha, 0.15.0-alpha and 0.15.1-alpha.1. With `--functions` the
+  script lists the functions of grade D or worse, or of over 200 code
+  lines, for comparing two commits.
+- **The structural table keeps what it was given.** Run again on the
+  commit a table was made from, `scripts/structure_table.py` will not
+  write that table's suite and CI lines as "not given" when their inputs
+  are left out (status 2; `--replace` writes over it). It also refuses a
+  pytest log of part of the suite: tests deselected or marked as
+  expected to fail, a log without pytest's "collected" line, or a
+  summary that does not account for every test collected. The tables say
+  "Python files" where they count them; the three release tables change
+  in those two lines alone.
+
+### Measured
+
+What a host is sent with every request, beside 0.15.1's published
+figures, in characters (the tool sets' names, descriptions and input
+schemas together; the brief as `read_brief` returns it), measured on
+Python 3.13.5 with the libraries in `uv.lock`:
+
+| | 0.15.2, Python 3.13.5 | 0.15.1, Python 3.13.5 |
+|---|---|---|
+| `full` (80 tools; 79 in 0.15.1) | 204,793 | 202,814 |
+| `core` (28 tools; 27 in 0.15.1) | 75,947 | 73,968 |
+| The opening text | 2,042 | 2,034 |
+| The full brief | 13,721 | 13,211 |
+| The brief in `core` | 1,923 | 1,915 |
+
+- `undo_changes` joins both sets, 1,977 characters in each.
+- The opening text is 8 characters longer. The rewrite of the opening
+  texts added 12. Rule 8 now names undoing a change, as one instruction
+  4 characters shorter, so that the text stays within 2,048
+  characters. The brief in `core`, which is the opening text's rules,
+  changes by the same 8.
+- The full brief is 510 characters longer. The rewrite of the opening
+  texts added 184. The lines on undoing a change added 326: how a
+  change is undone, and that an undone pseudonymisation run brings the
+  real names back and an undone import leaves copies of its files.
 
 ## [0.15.1-alpha.1] - 2026-10-23
 

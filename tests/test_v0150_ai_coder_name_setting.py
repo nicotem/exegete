@@ -137,9 +137,11 @@ STORED_STEP = (
 
 # What the extension's description says, as facts (after 0.15.1 the page's
 # descriptions were cut to plain statements: tests/test_v0151_settings_page.py)
+# (v0.15.2, the readability reading: the same facts in one sentence)
 AI_DESCRIPTION_SAYS = ("kept apart from yours",
-                       "given to each project Exegete creates",
-                       "Claude asks the first time a project needs it")
+                       "Each project Exegete creates gets it",
+                       "Claude asks for it when a project first needs one",
+                       "If it is empty, the default,")
 
 ASK_WITH_SETTING = (
     "No AI coder name is set for this project yet, so nothing was written. "
@@ -249,10 +251,12 @@ class TestTheWords:
     def test_the_briefs_two_lines(self):
         for brief in (server.BRIEF_FULL, server.read_brief()):
             flat = _flat(brief)
+            # (v0.15.2, the readability reading: the instruction a
+            # sentence of its own)
             assert ("- Rows you write carry the project's AI coder name, "
                     "which the researcher chooses, in Exegete's settings or "
-                    "when Exegete asks: relay Exegete's question; never "
-                    "choose it yourself.") in flat
+                    "when Exegete asks. Relay Exegete's question, and never "
+                    "choose the name yourself.") in flat
             assert "; and when Exegete asks for the AI coder name." in flat
             assert "when the AI coder name is needed" not in flat
 
@@ -589,16 +593,20 @@ class TestTheSpellingInUse:
 class TestTheDocuments:
 
     def test_install(self):
-        text = _doc("INSTALL.md")
-        assert ("**AI coder name**: empty by default. It is the name "
-                "Claude's work in your projects is stored under, so that it "
-                "stays apart from yours; a model's name lets codings by "
-                "different models be compared later. Filled in, Exegete "
-                "gives it to each project it creates, without asking, and "
-                "says so, and offers it first when another project needs "
-                "one; left empty, Claude asks the first time a project "
-                "needs it. A project that already has an AI coder name "
-                "keeps it, and Claude asks you once whether to switch.") \
+        # (v0.15.2: the extension's setting in INSTALL.md, the variable in
+        # the Terminal guide)
+        text = _doc("INSTALL.md") + " " + _doc(
+            "docs/installing-from-the-terminal.md")
+        assert (("**AI coder name**: empty by default. It is the name "
+                 "Claude's work in your projects is stored under, so that it "
+                 "stays apart from yours. If you use a model's name, codings "
+                 "by different models can be compared later. If you fill it "
+                 "in, Exegete gives it to each project it creates, without "
+                 "asking, and tells you. When any other project needs an AI "
+                 "coder name, Exegete offers this one first. If you leave it "
+                 "empty, Claude asks the first time a project needs one. A "
+                 "project that already has an AI coder name keeps it, and "
+                 "Claude asks you once whether to switch.")) \
             in text
         assert ("- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's "
                 "settings. The name that rows actually carry is each "
@@ -626,22 +634,25 @@ class TestTheDocuments:
                 "the desktop extension's \"AI coder name\", or "
                 "`EXEGETE_AI_CODER_NAME` in Exegete's `env` block on any "
                 "other route:") in text
-        assert ("Filled in, Exegete gives it to each project it creates, "
-                "without asking, and `create_project`'s answer says so "
-                "(`ai_coder_name`, with the source `settings`)") in text
-        assert ("A project that already has an AI coder name keeps it: if "
-                "it differs from the setting, the next write asks once which "
-                "of the two to use rather than re-attributing anything") \
-            in text
+        # (v0.15.2: the setting's two states, each said in full)
+        assert ("When the setting is filled in, Exegete gives it to each "
+                "project it creates, without asking, and `create_project`'s "
+                "answer says so (`ai_coder_name`, with the source "
+                "`settings`)") in text
+        assert ("A project that already has an AI coder name keeps it. If "
+                "that name differs from the setting, the next write asks "
+                "once which of the two to use, rather than re-attributing "
+                "anything") in text
         assert ("stores the AI coder name in Exegete's settings with the "
                 "new project when it is filled in, without asking, and says "
                 "so (`ai_coder_name`, and the first of the next steps), so "
                 "the project folder then also holds `exegete.json` and the "
                 "earlier file `qualcoder_mcp.json`, written already marked "
                 "as moved so that copies of Exegete from before its rename "
-                "(0.12 to 0.14) refuse to write the project; QualCoder reads "
-                "neither;") in text
-        assert "Left empty, each project is asked." in text
+                "refuse to write the project; QualCoder reads neither;") \
+            in text
+        assert "When the setting is left empty, each project is asked." \
+            in text
         assert ("with the note \"Taken from Exegete's settings when the "
                 "project was created.\" A project made another way") in text
         assert "DECLARATION by this host" not in text
@@ -671,19 +682,25 @@ class TestTheDocuments:
         assert "setting declares a name" not in text
 
     def test_readme_and_the_guides(self):
-        assert ("Before its first write, it asks for the AI coder name, kept "
-                "per project, under which Exegete writes what is done "
-                "through the conversation, unless the project was made while "
-                "it was filled in Exegete's settings.") in _doc("README.md")
+        # (v0.15.2, the opening texts: the same fact, reworded)
+        # (the readability reading: who asks, and when; the exception a
+        # sentence of its own)
+        assert ("Before Exegete first writes to the project, the assistant "
+                "asks for the AI coder name, kept per project, under which "
+                "Exegete writes what is done through the conversation. It "
+                "does not ask if the project was made with that name in "
+                "Exegete's settings.") in _doc("README.md")
         guide = _doc("AI_CODING_GUIDE.md")
-        assert ("which you choose: in Exegete's settings (\"AI coder name\" "
-                "in the extension, `EXEGETE_AI_CODER_NAME` on other routes), "
-                "which give it to each project Exegete creates, without "
-                "asking, and say so;") in guide
+        # (v0.15.2: the two ways of choosing it, one to an item)
+        assert ("which you choose in one of two ways: - in Exegete's "
+                "settings: \"AI coder name\" in the extension, or "
+                "`EXEGETE_AI_CODER_NAME` on other routes. Exegete gives that "
+                "name to each project it creates, without asking, and says "
+                "so;") in guide
         assert "only declares a name to offer first" not in guide
-        assert ("which the researcher chooses in Exegete's settings, for "
-                "the projects Exegete creates, or the first time a write "
-                "needs it") in _doc("AI_CODING_WORKFLOW.md")
+        assert ("You choose that name in Exegete's settings, for the "
+                "projects Exegete creates, or the first time a write needs "
+                "it") in _doc("AI_CODING_WORKFLOW.md")
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

@@ -489,8 +489,8 @@ def test_the_workflow_guides_rule_is_the_lock_file():
     called "One program at a time" (tests/test_v0150_lock_wording.py)."""
     guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
         encoding="utf-8"))
-    assert ("**every write operation is refused while the project's lock "
-            "file is active**. The refusal names both causes and the way "
+    assert ("**Every write operation is refused while the project's lock "
+            "file is active.** The refusal gives both causes and the way "
             "through for each") in guide
 
 
@@ -510,16 +510,12 @@ class TestTheMemoIsNotSaidToBeSeeded:
         assert topic["framework"] == FRAMEWORK
 
 
-# The three descriptions item 4 changes, as 0.14.3 served them
-# (tests/test_v0142_description_cut.py pins the first two figures): the
-# length on 3.13, the characters that are not white space, and the
-# length on 3.10 to 3.12, which keep a docstring's indentation. The third,
-# read_pseudonym_list's, went with the tool, removed in v0.15.0 (the files
-# design, piece 5).
-BEFORE = {
-    "get_current_project": (1921, 1571, 2053),
-    "pseudonymise_source": (17353, 12719, 18437),
-}
+# The three descriptions item 4 changes, and what each now says. The
+# third, read_pseudonym_list's, went with the tool, removed in v0.15.0
+# (the files design, piece 5). (v0.15.2, the snapshot: their lengths as
+# 0.14.3 served them, which this piece held them to, are retired with
+# the other description fingerprints; docs/snapshot/ holds each
+# description as Exegete serves it.)
 REMOVED = "read_pseudonym_list"
 NEW_WORDS = {
     "get_current_project": "the project's pseudonyms.json (its names "
@@ -535,51 +531,12 @@ NEW_WORDS = {
 
 class TestTheThreeDescriptions:
 
-    def test_each_says_the_projects_list_and_none_grew(self):
-        from test_v0142_description_cut import CHANGED_0150, WORDS
+    def test_each_says_the_projects_list(self):
         descriptions = served_descriptions()
         raw = server.mcp.original_descriptions
-        exact = sys.version_info[:2] == (3, 13)
-        indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
-        # pseudonymise_source then gains a paragraph on what
-        # pseudonymisation is for (piece 2,
-        # tests/test_v0150_qualcoder_texts_2.py, which pins it): this
-        # piece's change is still held to 0.14.3's length, measured
-        # with that paragraph taken out
-        from test_v0150_qualcoder_texts_2 import without_the_paragraph
-        # and the whole-branch review's round 1 rewords read_pseudonym_list's
-        # deprecation and moves the removals to v0.15.1: put back too
-        from test_v0150_wb_fix_r1 import before_the_review
-        # and the files design, piece 1, gives get_current_project a
-        # paragraph on the files Exegete keeps for the project
-        # (tests/test_v0150_private_files.py, which pins it): taken out too
-        from test_v0150_private_files import without_the_files_paragraph
-        # and v0.15.1's ignored create_backup changes pseudonymise_source's
-        # sentence on its backup: put back too
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        from test_v0142_description_cut import (CHANGED_0151,
-                                                ONE_POLICY_0151)
         assert REMOVED not in descriptions and REMOVED not in raw
-        for name, (length, solid, length_311) in BEFORE.items():
-            assert NEW_WORDS[name] in descriptions[name], name
-            text = before_the_review(before_the_ignored_argument(
-                name, raw[name]))
-            if name == "get_current_project":
-                text = without_the_files_paragraph(text)
-                assert text != raw[name], name
-            if name == "pseudonymise_source":
-                text = without_the_paragraph(text)
-                assert text != raw[name], name
-            assert len("".join(text.split())) <= solid, name
-            if exact:
-                assert len(text) <= length, name
-            if indented:
-                assert len(text) <= length_311, name
-            # (v0.15.1's removal of qualcoder_edit_parity changed
-            # pseudonymise_source again: its line, ONE_POLICY_0151)
-            assert name in CHANGED_0150 and WORDS[name] == {
-                **CHANGED_0151, **ONE_POLICY_0151}.get(
-                    name, CHANGED_0150[name]), name
+        for name, words in NEW_WORDS.items():
+            assert words in descriptions[name], name
 
 
 # ---------------------------------------------------------------------------

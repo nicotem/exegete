@@ -54,8 +54,9 @@ KINDS = {"files": ["source"], "codes": ["code_name"],
          "journal_entries": ["journal"]}
 
 
-# The paragraph this piece adds to restore_backup's description, and the
-# put-back the earlier pieces' tests use to compare with what they served
+# The paragraph this piece adds to restore_backup's description, and a
+# function that takes it out, which shows that the paragraph alone names
+# backup_taken
 PREVIEW_PARAGRAPH = (
     "The preview gives when the backup was taken (backup_taken), how many "
     "files, codes, codings and the rest the project has now and the backup "

@@ -123,13 +123,16 @@ def _nothing_made(tmp_path):
 # cut to plain statements: tests/test_v0151_settings_page.py)
 CODER_DESCRIPTION = ("kept apart from the AI's",
                      "Exegete gives it to each project it creates",
-                     "Empty, the default: Claude asks for it",
+                     "the default, Claude asks for it",
                      "It must differ from the AI coder name")
 # The coder names, piece 3: the AI coder name in the settings is given
 # to each project Exegete creates (tests/test_v0150_ai_coder_name_setting.py)
+# (v0.15.2, the readability reading: the empty default and the question
+# in one sentence, as the coder name's own description says them)
 AI_DESCRIPTION = ("kept apart from yours",
-                  "given to each project Exegete creates",
-                  "Empty, the default: Claude asks the first time")
+                  "Each project Exegete creates gets it",
+                  "Claude asks for it when a project first needs one",
+                  "If it is empty, the default,")
 
 
 class TestTheExtensionsSettings:
@@ -163,12 +166,11 @@ class TestTheExtensionsSettings:
         assert env[AI] == env[AI_OLD] == "${user_config.ai_coder_name}"
 
     def test_the_long_description_names_them(self):
-        assert TEMPLATE["long_description"].endswith(
-            "The settings choose the tool set (every tool, or a smaller set "
-            "for local models), the folder where new projects and working "
-            "copies are kept, your coder name and the AI coder name, "
-            "whether you also use QualCoder on this computer, and "
-            "whether Exegete tells you when a new version is out.")
+        # v0.15.2, the opening texts: each setting by its title, as the
+        # settings page shows it
+        for option in TEMPLATE["user_config"].values():
+            title = option["title"]
+            assert f'"{title}"' in TEMPLATE["long_description"], title
 
 
 class TestTheSettingsTable:
@@ -665,8 +667,9 @@ def _notes_of_both(path):
 
 # v0.15.0, the coder names, piece 2: the first two end with what
 # set_project_coder_name does (tests/test_v0150_coder_name_correction.py)
+# (v0.15.2, the readability reading: each fact a sentence of its own)
 DIFFERS = (
-    "This project's own coder name is \"Bea Kim\"; the researcher's own "
+    "This project's own coder name is \"Bea Kim\". The researcher's own "
     "coder name in Exegete's settings is \"Ann Lee\", which Exegete gives "
     "only to the projects it creates from now on. A project's own coder "
     "name is never changed without the researcher's word. "
@@ -674,16 +677,16 @@ DIFFERS = (
     "it.")
 NONE_RECORDED = (
     "This project records no coder name for the researcher, so the check "
-    "of the AI coder name against the project's own coder name is off; the "
+    "of the AI coder name against the project's own coder name is off. The "
     "researcher's own coder name in Exegete's settings, \"Ann Lee\", is "
-    "still refused as the AI coder name, and Exegete gives it only to the "
+    "still refused as the AI coder name. Exegete gives it only to the "
     "projects it creates from now on. set_project_coder_name can give this "
     "project one.")
 AI_IS_SETTING = (
     "This project's AI coder name is \"Ann Lee\", which is also the "
     "researcher's own coder name in Exegete's settings, so AI codings "
     "stored under it could not be told apart from theirs. Ask the "
-    "researcher whether to change it with set_project_ai_coder_name; it "
+    "researcher whether to change it with set_project_ai_coder_name. It "
     "is never changed without their word.")
 
 
@@ -725,7 +728,7 @@ class TestTheSelectionNotes:
         monkeypatch.setenv(CODER, "Ann Lee")
         monkeypatch.setenv(AI, "Ann Lee")
         equal = ("The researcher's own coder name and the AI coder name in "
-                 "Exegete's settings are both \"Ann Lee\"; they must differ, "
+                 "Exegete's settings are both \"Ann Lee\". They must differ, "
                  "so a new project is refused until one is changed "
                  f"({places['both']}).")
         assert _notes_of_both(path) == ([DIFFERS, equal], [DIFFERS, equal])
@@ -778,14 +781,15 @@ class TestTheDocuments:
 
     def test_install_the_extensions_settings(self):
         install = _doc("INSTALL.md")
-        assert "4. **Look at its settings** (Settings, Extensions, " \
-               "Exegete)." in install
+        # (v0.15.2: a section of its own, "The settings page")
+        assert ("In Claude, go to Settings, Extensions, Exegete. **Look at "
+                "its settings** before your first conversation.") in install
         assert "Look at its three settings" not in install
-        assert ("- **Your coder name**: empty by default. It is the name "
-                "your own codings carry in a project, kept apart from the "
-                "AI's. Filled in, Exegete gives it to each new project it "
-                "makes, without asking, and says so; left empty, Claude asks "
-                "for it each time.") in install
+        assert (("- **Your coder name**: empty by default. It is the name "
+                 "your own codings carry in a project, kept apart from the "
+                 "AI's. If you fill it in, Exegete gives it to each new "
+                 "project it makes, without asking, and tells you. If you "
+                 "leave it empty, Claude asks for it each time.")) in install
         # the coder names, piece 3: what the AI setting now does
         # (tests/test_v0150_ai_coder_name_setting.py)
         assert ("- **AI coder name**: empty by default. It is the name "
@@ -794,14 +798,16 @@ class TestTheDocuments:
                        install.index("- **AI coder name**: empty")]
         assert ("Projects that already exist keep their coder name, or "
                 "their lack of one.") in step
-        assert ("At most 80 characters; a line break or tab, an invisible "
-                "formatting character (the joiners some scripts need are "
-                "allowed) or `#####` stops the extension from starting.") \
+        assert (("The name can be at most 80 characters long. A line break, "
+                 "a tab, an invisible formatting character or `#####` in it "
+                 "stops the extension from starting. The invisible joining "
+                 "characters that some writing systems need are allowed.")) \
             in step
         assert "already has a coder name keeps it" not in install
 
     def test_install_the_variables(self):
-        install = _doc("INSTALL.md")
+        # (v0.15.2: the variables are the Terminal guide's)
+        install = _doc("docs/installing-from-the-terminal.md")
         # after 0.15.1 the tool set is no longer one of them
         assert ("The desktop extension sets both spellings of three of "
                 "these settings itself (the two for the workspace and the "
@@ -878,8 +884,9 @@ class TestTheDocuments:
                 "the one in Exegete's settings)") in tools
 
     def test_readme_and_privacy(self):
+        # (v0.15.2, the opening texts: the same fact, reworded)
         assert ("the assistant asks for your own coder name, unless you have "
-                "filled it in Exegete's settings;") in _doc("README.md")
+                "filled it in Exegete's settings.") in _doc("README.md")
         privacy = _doc("PRIVACY.md")
         item = privacy[privacy.index("- **Creating a project** "
                                      "(`create_project`"):]
@@ -913,15 +920,19 @@ class TestTheDocuments:
     def test_quickstart(self):
         # v0.15.1, the small corrections: the restart the setting needs is
         # said after it (tests/test_v0151_small_corrections.py)
+        # (v0.15.2, the opening texts: the same facts, in sentences)
         quick = _doc("QUICKSTART.md")
-        assert ("Exegete asks the assistant to check your coder name with "
-                "you first (the name your own codings will carry) and to say "
-                "where the project will be made, unless your coder name is "
-                "already set (`EXEGETE_CODER_NAME` in the `env` section "
-                "above, or \"Your coder name\" in the extension's settings")\
+        # (the readability reading: the coder name explained in step 3,
+        # where the reader first types it)
+        assert ("`Your name` with your own coder name, the name your codings "
+                "will carry.") in quick
+        assert ("Exegete first asks the assistant to check your coder name "
+                "with you and to say where the project will be made.") in quick
+        assert ("If your coder name is already set, the project is made "
+                "with that name at once, and the answer says where. You set "
+                "it with `EXEGETE_CODER_NAME` in the `env` section above, or "
+                "with \"Your coder name\" in the extension's settings") \
             in quick
-        assert ("then the project is made with that name at once, and the "
-                "answer says where.") in quick
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

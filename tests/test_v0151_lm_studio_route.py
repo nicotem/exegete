@@ -19,7 +19,8 @@ needs for PDF and EPUB, in both of its forms; Step 5's example project
 is where Exegete's own folder for projects is, named as create_project
 names a project; the first project's paragraph rests on what `core`
 leaves out; Step 3 states its sizes in one sentence. The sizes
-themselves are held to the measurement in tests/test_toolset_modes.py.
+themselves are held, within five per cent, to docs/snapshot/sizes.json
+by tests/test_v0151_facts.py.
 """
 
 import importlib.util
@@ -32,6 +33,8 @@ REPO = Path(__file__).resolve().parent.parent
 HEADING = "## LM Studio (fully local) (Experimental)"
 ANCHOR = "lm-studio-fully-local-experimental"
 INSTALL_ON_MAIN = "https://github.com/nicotem/exegete/blob/main/INSTALL.md"
+GUIDE_ON_MAIN = ("https://github.com/nicotem/exegete/blob/main/"
+                 "docs/installing-from-the-terminal.md")
 
 
 def _read(name):
@@ -47,8 +50,13 @@ def _between(text, start, end):
     return text[first:text.index(end, first + len(start))]
 
 
+# v0.15.2: the recipe moved, whole, to the Terminal guide, and INSTALL.md
+# keeps its anchor as a pointer to it
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _recipe():
-    return _between(_read("INSTALL.md"), HEADING,
+    return _between(_read(GUIDE), HEADING,
                     "## ChatGPT's desktop app and Codex (Experimental)")
 
 
@@ -67,8 +75,12 @@ def test_the_readme_links_straight_to_the_recipe():
                      "**Updating.**")
     # quoted as INSTALL's heading reads, so a search for it finds it
     # (test_v0150_renames_sets.py)
-    assert (f"[INSTALL.md, \"LM Studio (fully local) (Experimental)\"]"
-            f"({INSTALL_ON_MAIN}#{ANCHOR})") in other
+    # (v0.15.2, the merge onto the integration branch: the recipe is the
+    # Terminal guide's, linked by its own anchor, and quoted as the
+    # guide's heading reads)
+    assert (f"[the Terminal guide, \"LM Studio (fully local) "
+            f"(Experimental)\"]({GUIDE_ON_MAIN}#{ANCHOR})") in other
+    assert f"{INSTALL_ON_MAIN}#{ANCHOR}" not in other
     assert "has a recipe of its own in seven steps, with the `core` tool " \
            "set" in other
     # the paragraph still opens as it did (test_v0142_owner_decisions.py)
@@ -79,7 +91,8 @@ def test_the_readme_links_straight_to_the_recipe():
 def test_install_carries_that_anchor():
     links = _links()
     assert ANCHOR in links.anchors_of(_read("INSTALL.md"))
-    assert _read("INSTALL.md").count(f"\n{HEADING}\n") == 1
+    assert ANCHOR in links.anchors_of(_read(GUIDE))
+    assert _read(GUIDE).count(f"\n{HEADING}\n") == 1
 
 
 def test_the_recipe_has_the_seven_steps_the_readme_counts():
@@ -88,7 +101,7 @@ def test_the_recipe_has_the_seven_steps_the_readme_counts():
 
 
 def test_the_route_table_no_longer_asks_for_a_guide_for_lm_studio():
-    install = _flat(_read("INSTALL.md"))
+    install = _flat(_read(GUIDE))
     # (the staleness audit of 20 October 2026, with the sprint's deferred
     # table: the API-key recipe for Claude Code has numbered steps too, so
     # no guide for it is "considered on request")
@@ -98,10 +111,10 @@ def test_the_route_table_no_longer_asks_for_a_guide_for_lm_studio():
     assert sentence == ("The recipes for OpenAI's apps, for LM Studio and "
                         "for Claude Code with an Anthropic API key go step "
                         "by step; Claude Code signed in with a Pro or Max "
-                        "plan follows \"Alternative: Claude Code and other "
-                        "MCP clients\". For another host, ask in [")
+                        "plan follows \"Claude Code\", below. For another "
+                        "host, ask in [")
     assert "## Claude Code with an Anthropic API key (Experimental)" in \
-        _read("INSTALL.md")
+        _read(GUIDE)
 
 
 def test_step_1_installs_the_part_for_pdf_and_epub():
@@ -123,7 +136,7 @@ def test_step_1_installs_the_part_for_pdf_and_epub():
     assert "cannot read PDF and EPUB files yet" in \
         import_words.FILE_REFUSALS["optional_missing"]
     # the section it points to is there
-    assert "\n### PDF and EPUB: the optional part\n" in _read("INSTALL.md")
+    assert "\n### PDF and EPUB: the optional part\n" in _read(GUIDE)
 
 
 def test_step_5s_example_is_in_exegetes_folder_for_projects():
@@ -173,7 +186,7 @@ def test_step_3_states_its_sizes_in_one_sentence():
     recipe = _flat(_recipe())
     step = recipe[recipe.index("**Step 3."):recipe.index("**Step 4.")]
     sizes = step[step.index("Exegete offers"):
-                 step.index("The full set exceeds")]
+                 step.index("The full set fills")]
     assert sizes.count(". ") == 1 and sizes.rstrip().endswith(".")
     for gone in ("the 0.12 flagship", "accounts for about",
                  "novelty-filter", "idempotency", "docstring",

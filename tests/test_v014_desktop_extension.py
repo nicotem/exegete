@@ -202,7 +202,8 @@ class TestTheSettings:
         and blank used to mean ~/Documents. The manifest's marker makes a
         blank folder stop the server, and the setting says so."""
         option = TEMPLATE["user_config"]["projects_folder"]
-        assert "Leaving it empty stops the extension from starting" in \
+        # (v0.15.2, the opening texts: in the writing checklist's voice)
+        assert "With this empty, Exegete does not start" in \
             option["description"]
         for name, value in TEMPLATE["server"]["mcp_config"]["env"].items():
             if "${" not in value:
@@ -216,9 +217,10 @@ class TestTheSettings:
         option = TEMPLATE["user_config"]["update_check"]
         assert option["type"] == "boolean" and option["default"] is True
         assert option["title"] == "Tell me when a new version is out"
-        for words in ("which GitHub hosts", "once a week at most",
+        # (v0.15.2, the opening texts: the same facts, reworded)
+        for words in ("which hosts the website", "once a week at most",
                       "Nothing from your projects is sent",
-                      "GitHub records your computer's internet address",
+                      "records your computer's internet address",
                       "Exegete itself makes no connection"):
             assert words in option["description"], words
         assert TEMPLATE["privacy_policies"] == [
@@ -854,12 +856,13 @@ def _section(text, heading):
 class TestTheDocuments:
 
     def test_install_starts_with_the_extension(self):
+        # v0.15.2: INSTALL.md is the extension's, from what you need to
+        # getting help; the Terminal routes are the Terminal guide's
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         headings = re.findall(r"^## (.+)$", text, flags=re.M)
-        assert headings[0] == "Claude Desktop: the one-click extension " \
-                              "(recommended)"
-        section = " ".join(_section(
-            text, "## Claude Desktop: the one-click extension").split())
+        assert headings[:2] == ["What you need", "Installing the extension"]
+        section = " ".join(text[:text.index(
+            "\n## What hosts do with the tools'")].split())
         option = TEMPLATE["user_config"]
         # after 0.15.1 the switch's bullet names both sets
         switch = section[section.index(
@@ -871,7 +874,7 @@ class TestTheDocuments:
         assert f"`{option['projects_folder']['default']}`" in section
         assert "double-click the file" in section
         assert "This extension isn't signed" in section
-        assert "the Terminal route" in section
+        assert "installed from the Terminal" in section
 
     def test_install_documents_every_variable_the_server_reads(self):
         # v0.14.1: every setting is read through one table, under both
@@ -881,8 +884,9 @@ class TestTheDocuments:
         # and those with one spelling only (the check for new versions,
         # the time per import call)
         read |= set(names.NEW_ONLY_SETTINGS.values())
-        text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-        section = _section(text, "## Environment variables the server reads")
+        text = (REPO / "docs/installing-from-the-terminal.md").read_text(
+            encoding="utf-8")
+        section = _section(text, "## Environment variables Exegete reads")
         documented = set(re.findall(r"^- `(EXEGETE_[A-Z_]+)`", section,
                                     flags=re.M))
         assert documented == read
@@ -895,9 +899,10 @@ class TestTheDocuments:
         the Terminal route, and links INSTALL.md's section for it."""
         text = (REPO / "README.md").read_text(encoding="utf-8")
         start = _section(text, "## Start here")
-        one_click = _section(start, "### Claude Desktop, with one click")
+        # (the owner's reading of 30 October: the heading without its flourish)
+        one_click = _section(start, "### One click in Claude Desktop")
         one_click = one_click[:one_click.index("### ChatGPT's desktop app")]
-        assert start.index("### Claude Desktop, with one click") \
+        assert start.index("### One click in Claude Desktop") \
             < start.index("**Other assistants.**")
         assert ("INSTALL.md#claude-desktop-the-one-click-extension-"
                 "recommended") in one_click

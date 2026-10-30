@@ -1305,8 +1305,10 @@ class TestTheSave:
         assert answer["note"] == NOTE
         assert re.fullmatch(r"\d{4}-\d\d-\d\d \d\d:\d\d:\d\d",
                             answer["saved_at"])
+        # v0.15.2: the save keeps a record for undo, and answers its
+        # receipt last
         assert list(answer) == ["success", "entries", "backup", "saved_at",
-                                "note"]
+                                "note", "undo_receipt"]
         assert _backups(selected) == [answer["backup"]]
         # the backup holds the list as it was
         assert (selected.parent / answer["backup"] / "pseudonyms.json"
@@ -2026,7 +2028,7 @@ class TestTheSharedParts:
 # ---------------------------------------------------------------------------
 
 TOOLS_ENTRY = (
-    "- `save_names_list(preview_token)` - **WRITES TO THE PROJECT** - Checks "
+    "- `save_names_list(preview_token)` - **Writes to the project** - Checks "
     "the names file and saves it as `pseudonyms.json`: a preview of counts "
     "and line numbers, never a name, then the save, after a backup. In the "
     "full tool set, not in core")
@@ -2041,9 +2043,11 @@ class TestTheDocuments:
         assert lines[at - 1].startswith("- `prepare_names_list()` - ")
         assert lines[at + 1].startswith("- `create_project(")
         # 82 since read_pseudonym_list was removed (the files design,
-        # piece 5), 79 since v0.15.1 removed three tools, as announced
-        assert "registers 79 tools, two of them the earlier names" in \
-            _flat(tools)
+        # piece 5), 79 since v0.15.1 removed three tools, as announced,
+        # and the snapshot's count since (80 with v0.15.2's undo)
+        from tool_counts import FULL_TOOLS
+        assert (f"registers {FULL_TOOLS} tools, two of them the earlier "
+                "names") in _flat(tools)
 
     def test_the_changelog_says_what_was_added(self):
         log = _read("CHANGELOG.md")
@@ -2120,6 +2124,10 @@ class TestTheDocuments:
                 "researcher's coder name among") in brief
 
     def test_the_measurement_names_its_entry(self):
+        """The CHANGELOG's "Measured" of 0.15.0 gives the tool's entry as
+        measured then. v0.15.2, the small corrections: those figures are
+        history, and the entry as it is now, written from the code, is in
+        docs/snapshot/sizes.json, held by tests/test_served_texts.py."""
         log = _flat(_read("CHANGELOG.md"))
         # 0.15.0's Measured (v0.15.1 has one of its own, above it)
         release = log[log.index("## [0.15.0-alpha]"):]
@@ -2133,16 +2141,6 @@ class TestTheDocuments:
         assert measured.count("No other tool's entry changed.") == 1
         # nineteen since read_pseudonym_list was removed (piece 5)
         assert "nineteen changes moved them" in measured
-        server._apply_toolset("full")
-        tool = next(t for t in asyncio.run(server.mcp.list_tools())
-                    if t.name == "save_names_list")
-        entry = len(json.dumps({"name": tool.name,
-                                "description": tool.description or "",
-                                "inputSchema": tool.inputSchema}))
-        if sys.version_info[:2] == (3, 13):
-            assert entry + len(", ") == 1294
-        elif sys.version_info[:2] == (3, 11):
-            assert entry + len(", ") == 1358
         # 0.15.0's brief, history since v0.15.1's took out "unless the
         # researcher asks for none" (its own Measured gives 13,211)
         assert "the full brief 13,225." in measured

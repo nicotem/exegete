@@ -616,7 +616,11 @@ def _tools_running_the_process_scan():
 # failed switch leaves the previous project selected)
 _TOOL_OF_HELPER = {"_select_project": "select_project",
                    # 0.14.3: the import's preview passes the signs on
-                   "_import_documents_preview": "import_documents"}
+                   "_import_documents_preview": "import_documents",
+                   # v0.15.2: and undo's preview, as the restore's does,
+                   # the names list's undo with its own
+                   "_undo_preview": "undo_changes",
+                   "_undo_names_list": "undo_changes"}
 
 
 def _paragraph_after(text, marker):
@@ -641,7 +645,9 @@ class TestProcessScanCallersAreDocumented:
                 # v0.15.0, the names list's save (its fix round 1): the
                 # preview, the call without a token, passes on the signs
                 # as restore_backup's and import_documents' do
-                "save_names_list"}
+                "save_names_list",
+                # v0.15.2: undo's preview, the same
+                "undo_changes"}
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's
@@ -654,13 +660,26 @@ class TestProcessScanCallersAreDocumented:
         assert _tools_running_the_process_scan() == self.EXPECTED
 
     def test_privacy_doc_names_every_caller(self):
+        # v0.15.2: PRIVACY.md names the callers once, by pointing to
+        # TOOLS.md's list, which the next test holds to the code (the
+        # staleness audit's row on PRIVACY's list of them)
         privacy = (_ROOT / "PRIVACY.md").read_text(encoding="utf-8")
-        bullet = _paragraph_after(privacy, "**Process listing.**")
-        for tool in _tools_running_the_process_scan():
-            assert tool in bullet, tool
-        # and says the preview is the call WITHOUT a token, so nobody is
-        # surprised (v0.12 replaced confirm with the preview token)
-        assert "without a preview_token" in bullet
+        bullet = " ".join(_paragraph_after(
+            privacy, "**Process listing.**").split())
+        # (the readers, 28 October 2026: create_project reports the
+        # field without the scan, and five tools scan only when they work
+        # out the project's history, so the pointer says which, and that
+        # only a count reaches the conversation)
+        assert ("Most of the tools that report a `qualcoder_gui_signals` "
+                "field look at it, but `create_project` reports the field "
+                "without looking.") in bullet
+        assert ("A few other tools look at it only when they work out the "
+                "project's history with QualCoder.") in bullet
+        assert "TOOLS.md names these tools, and when each one looks." \
+            in bullet
+        assert ("Whichever tool looks, only the number of matches is "
+                "reported into the conversation.") in bullet
+        assert "(today:" not in bullet
 
     def test_tools_md_names_every_caller(self):
         # v0.14.1: the paragraph moved from README.md to TOOLS.md

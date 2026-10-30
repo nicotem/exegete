@@ -134,6 +134,8 @@ EXPECTED_HINTS = {
     # v0.15.0: replaces the project's pseudonyms.json with the names file
     # (the files design, piece 4)
     "save_names_list": C,
+    # v0.15.2: removes, puts back or sets back rows a change wrote
+    "undo_changes": C,
     # the earlier names of the two tools renamed in 0.15.0, with the new
     # tools' hints
     "analyze_for_coding": A, "analyze_file_with_coding": R,
@@ -196,7 +198,9 @@ class TestToolAnnotations:
             "pseudonymise_source", "restore_backup",
             # v0.15.0: correcting the researcher's own coder name, and
             # saving the names list
-            "set_project_coder_name", "save_names_list"])
+            "set_project_coder_name", "save_names_list",
+            # v0.15.2: undoing a change
+            "undo_changes"])
         for name in gated:
             if name == "import_documents":
                 # 0.14.3: a preview first for the researcher's approval of
@@ -448,6 +452,11 @@ NOT_TOOLS = {
                              "create_backup, which Exegete ignores",
     "search_memo": "search_files' argument removed in 0.15.1, which the "
                    "refusal of a call passing it names (REMOVED_ARGUMENTS)",
+    "undo_receipt": "the key of a change's answer, and a line of "
+                    "apply_codings' answer, that names the change's record "
+                    "(v0.15.2)",
+    "set_back": "a key of undo_changes' preview and answer: the rows an "
+                "undo sets back to their values before the change (v0.15.2)",
 }
 
 
@@ -938,7 +947,9 @@ async def call_every_tool(client, root, lock_check=False):
                                 "parent_category": "Feelings"})
     await run("rename_case", {"case_id": 1, "new_name": "P01"})
     await run("rename_file", {"file_id": 2, "new_name": "int2b.txt"})
-    await run("delete_coding", {"coding_id": coding_id})
+    deleted = await run("delete_coding", {"coding_id": coding_id})
+    # v0.15.2: the change just made, previewed for its undo
+    await run("undo_changes", {"receipts": [deleted["undo_receipt"]]})
     # the two-step tools: the first call is the preview
     await run("merge_codes", {"from_code_id": 3, "into_code_id": 1})
     await run("delete_code", {"code_id": 3})
@@ -1134,11 +1145,13 @@ class TestTextsThatSentTheAssistantNowhere:
         missing = " ".join(host_json("list_available_projects", {
             "search_directories": [str(tmp_path / "Nowhere")]})[
                 "message"].split())
-        for name, suffix in (("INSTALL.md", " (Option A)"),
-                             ("PROJECT_SELECTION_GUIDE.md", "")):
+        # (v0.15.2: INSTALL.md's are headings of its "Troubleshooting",
+        # one level down, with no "(Option A)")
+        for name, level in (("INSTALL.md", "####"),
+                            ("PROJECT_SELECTION_GUIDE.md", "###")):
             text = (root / name).read_text(encoding="utf-8")
-            headings = re.findall(r'^### "(No projects found[^"]*)"'
-                                  + re.escape(suffix) + r"$", text, re.M)
+            headings = re.findall("^" + level + r' "(No projects found[^"]*)"$',
+                                  text, re.M)
             assert len(headings) == 2, (name, headings)
             for heading in headings:
                 assert given.startswith(heading) or \
@@ -1146,8 +1159,8 @@ class TestTextsThatSentTheAssistantNowhere:
             assert any(given.startswith(h) for h in headings), name
             assert any(usual.startswith(h) for h in headings), name
             heading = next(h for h in headings if given.startswith(h))
-            start = text.index(f'### "{heading}"')
-            section = " ".join(text[start:text.index("\n### ", start + 4)]
+            start = text.index(f'{level} "{heading}"')
+            section = " ".join(text[start:text.index(f"\n{level} ", start + 4)]
                                .split()).lower()
             assert "three levels deep" in section, name
             assert "not the usual places" in section, name
@@ -1955,7 +1968,7 @@ class TestHiddenCodersOnTheCodebook:
                      "the answer of `create_code`, `create_category` or "
                      "`create_case` when the name already exists"):
             assert tool in privacy, tool
-        assert "its `file_info` still names the file's owner" in privacy
+        assert "its `file_info` still gives the file's owner" in privacy
 
     def test_the_other_rows_a_hidden_coder_owns_name_them(self, tmp_path):
         """Fix round 1: a file, a case and a journal entry owned by the
@@ -2308,7 +2321,11 @@ def _core_reachable_texts():
                # (`_token_error(reason, tool)`), save_names_list and
                # pseudonymise_source, which core does not register, and
                # KEYED_BIND is a set of names that is never served
-               "TOKEN_ERROR_TEXTS_BY_TOOL", "KEYED_BIND"}
+               "TOKEN_ERROR_TEXTS_BY_TOOL", "KEYED_BIND",
+               # v0.15.2, undo_changes in core: tools' names compared with
+               # the name a change's record keeps, never served
+               "OWN_ROUTES", "FILES_TOOLS", "CODER_NAME_TOOLS",
+               "SESSION_MARKS"}
 
     def refs(node):
         out = set()

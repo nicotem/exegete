@@ -1,6 +1,6 @@
 [project]
 name = "exegete"
-version = "0.15.1-alpha.1"
+version = "0.15.2-alpha"
 description = "Exegete: a qualitative analysis application you use in conversation with an AI assistant, compatible with QualCoder. An MCP server, formerly qualcoder-mcp."
 authors = [{name = "Niccolò Tempini", email = "n.tempini@exeter.ac.uk"}]
 # PEP 639 SPDX licence expression (setuptools >= 77). LGPL-3.0-or-later
@@ -16,7 +16,9 @@ authors = [{name = "Niccolò Tempini", email = "n.tempini@exeter.ac.uk"}]
 license = "LGPL-3.0-or-later"
 license-files = ["COPYING.LESSER", "legal/GPL-3.0.txt", "NOTICE"]
 readme = "README.md"
-requires-python = ">=3.10"
+# 3.11 or newer from 0.15.2 (the owner's ruling of 27 October 2026): CI
+# tests 3.11 and 3.13 on every system, and 3.14 on Ubuntu.
+requires-python = ">=3.11"
 keywords = [
     "qualitative research",
     "qualitative data analysis",
@@ -33,10 +35,10 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering",
 ]
@@ -105,7 +107,9 @@ Privacy = "https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
 # 2.x where it and the libraries it brings (onnxruntime, numpy) have
 # ready-made packages, Windows x64 and Linux on x86-64 and Arm with
 # Python 3.11 to 3.14; 1.x everywhere else: Python 3.10, which 2.0 does
-# not support; Python 3.15 and later, where onnxruntime has no package
+# not support (and Exegete no longer supports from 0.15.2; the clause
+# stays, harmless, so the two lines still divide every Python between
+# them); Python 3.15 and later, where onnxruntime has no package
 # yet; Windows on Arm; and every Mac for now, since onnxruntime needs
 # macOS 14 on Apple silicon and no marker tells macOS releases apart
 # safely. The first line is the exact complement of the second (markers

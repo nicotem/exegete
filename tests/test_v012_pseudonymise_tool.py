@@ -8803,8 +8803,13 @@ class TestTheDocumentsTellTheTruth:
         "`overlap_policy` takes one value, `snap_to_pseudonym`, the "
         "default: a coding that cut into a name grows to contain the whole "
         "pseudonym, and nothing is deleted.",
-        "PRIVACY.md's \"Coder visibility\" section says what is and is not "
-        "re-read",
+        # (v0.15.2, the readers' fix round: no exception for a project
+        # that gains coder visibility while Exegete is connected, since
+        # every read checks for it; tests/test_v0152_tools_guides.py
+        # holds the fact against the code)
+        "Exegete checks for the setting at every read, so a project that "
+        "gains it while Exegete is connected is read the same way from "
+        "the next read on.",
         # v0.13, Brief 1.
         "Every `residue` count is two readings, `{\"wide\": N, "
         "\"whole_word\": M}`",
@@ -8860,7 +8865,7 @@ class TestTheDocumentsTellTheTruth:
     @pytest.mark.parametrize("sentence", [
         # B3: the promise, scoped to what re-reads; v0.14 closes the
         # residual (every read re-reads).
-        "as every decision that puts a coder's NAME into a result already "
+        "as every decision that puts a coder's name into a result already "
         "did",
         "Since v0.14 every read re-reads the declaration from the project "
         "when it is made",
@@ -8889,7 +8894,7 @@ class TestTheDocumentsTellTheTruth:
         # The merge fix (M3): what a restore and a prune do to it.
         "The restore result says so when the file appears, disappears or "
         "changes, and the one the project had stays in the pre-restore "
-        "safety backup, which `prune_backups` can remove; its preview names "
+        "safety backup, which `prune_backups` can remove; its preview lists "
         "any backup it would remove that holds a `pseudonyms.json` which "
         "neither the project nor a backup Exegete keeps holds, byte for "
         "byte, as the only lasting copy Exegete knows of.",
@@ -8897,7 +8902,7 @@ class TestTheDocumentsTellTheTruth:
         "QualCoder's own `_BKUP_` backups do not count as keeping a copy, "
         "because QualCoder deletes them past its `backup_num` when a project "
         "closes, so a copy in one of them does not stop a backup being "
-        "named;",
+        "listed;",
         "The approval token signs that set of only copies, so a prune whose "
         "set changed after its preview (the project's own file removed "
         "outside Exegete, for example) is refused as a changed project "
@@ -8991,12 +8996,13 @@ class TestTheDocumentsTellTheTruth:
         "On a mapping you type, it also lists the longer words a name sits "
         "inside (`Thomas_P01`, `Thomasson`), which are words of the file "
         "text, so an exact entry can be added for one; on the "
-        "`use_project_pseudonyms` path it lists none and names no form.",
+        "`use_project_pseudonyms` path it lists none and shows no form of "
+        "a name.",
         "Four things are still returned as they stand, because a preview "
         "whose files cannot be named cannot be relayed: the project path, "
         "each file's own name (including every file the residue's "
-        "file-text block names), the backup path and the note that names "
-        "the backup",
+        "file-text block lists), the backup path and the note that gives "
+        "the backup's name",
         # Fix round 5: the lead's four rules, as PRIVACY.md states them.
         "The count has fixed budgets, and everything it spends is charged "
         "to them, a count that stops part-way too, so its time is bounded.",

@@ -31,28 +31,45 @@ def _between(text: str, start: str, end: str) -> str:
 def test_the_readmes_features_name_importing_and_reading():
     features = _between(_flat("README.md"), "## What you can do",
                         "## How it works")
-    assert "**Bring in transcripts** as documents from your computer" \
-        in features
-    assert "or by you on a page in your browser." in features
+    # (v0.15.2, the opening texts: documents, transcripts among them)
+    # (the readability reading: the kinds of document, then where they
+    # are read)
+    assert "**Bring in documents**: Word, OpenDocument" in features
+    assert "Exegete reads them on your computer" in features
+    # (the fix round: in the browser, the file's text stays out of the
+    # conversation, as open_file_for_reading answers with the page's
+    # place and counts: tests/test_v0152_opening_texts.py)
+    assert ("in the conversation or, keeping its text out of it, in your "
+            "browser.") in features
 
 
 def test_start_here_names_importing_a_file_and_reading_it():
     start = _between(_flat("README.md"), "## Start here",
-                     "## Three commitments")
-    assert ("then bring in your page: paste it, as in the example, or save "
-            "it as a Word or text file and give the assistant its place, "
-            "which keeps its text off the conversation (on a Mac, hold "
-            "Option, right-click it and choose Copy as Pathname; on "
-            "Windows 11, Copy as path).") in start
+                     "## Exegete and QualCoder")
+    # (v0.15.2, the opening texts: "out of the conversation")
+    # (the readability reading: the file's location, and how to copy it
+    # on each system, a sentence each)
+    assert ("Then bring in your page: paste it, or save it as a Word or text "
+            "file and give the assistant its location, which keeps its text "
+            "out of the conversation. On a Mac, hold Option, right-click the "
+            "file and choose Copy as Pathname. On Windows 11, choose Copy as "
+            "path.") in start
     assert "ask to open a file for reading" in start
-    assert "Exegete opens a file for you to read with its coding " \
-        "highlighted" in start
+    features = _between(_flat("README.md"), "## What you can do",
+                        "## How it works")
+    # (the fix round: in the browser, its text stays out of the
+    # conversation)
+    assert ("read a transcript with its codings in the conversation or, "
+            "keeping its text out of it, in your browser") in features
 
 
 def test_install_says_which_formats_need_the_optional_part():
+    # v0.15.2: the Terminal guide installs the part, and INSTALL.md, the
+    # desktop extension's, says what it is
     install = _flat("INSTALL.md")
-    section = _between(install, "### PDF and EPUB: the optional part",
-                       "The step-by-step install below")
+    section = _between(_flat("docs/installing-from-the-terminal.md"),
+                       "### PDF and EPUB: the optional part",
+                       "## Installing from the source")
     assert "PDF and EPUB need an optional part, `pdf-epub`" in section
     assert ("The Claude Desktop extension switches it on by itself."
             ) in section
@@ -63,16 +80,16 @@ def test_install_says_which_formats_need_the_optional_part():
     # pipx leaves an installed package as it is unless told to replace it
     assert 'pipx install "exegete[pdf-epub]"' not in section
     # the extension's own section points there
-    extension = _between(install, "## Claude Desktop: the one-click",
-                         "## Choosing your AI host")
-    assert ("The extension switches on the optional part that reads PDF "
-            "and EPUB documents") in extension
+    extension = _between(install, "## PDF and EPUB: the optional part",
+                         "## Updating")
+    assert ("PDF and EPUB need an optional part, and the extension always "
+            "has this part.") in extension
 
 
 def test_install_gives_the_parts_licence_as_pyproject_and_notice_do():
     section = _between(_flat("INSTALL.md"),
-                       "### PDF and EPUB: the optional part",
-                       "The step-by-step install below")
+                       "## PDF and EPUB: the optional part",
+                       "## Updating")
     assert ("PyMuPDF and EbookLib are under the GNU Affero General Public "
             "License, version 3 (AGPL-3.0), so an install with this part "
             "is, taken as a whole, under the AGPL's terms") in section

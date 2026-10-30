@@ -87,15 +87,13 @@ COMPUTER = (
     "tell whether it has this project open; if the researcher may have it "
     "open there, ask them to close it before any write.")
 NEW_TEXTS = (PROJECT, LEFTOVER_LOCK, SAID_YES, COMPUTER)
-# fix round 1: the sentence names the setting "yes" too, keeps the
-# design's comma, and keeps the description's length exactly (2,415
-# characters on 3.13, 2,579 on 3.11)
+# fix round 1: the sentence names the setting "yes" too and keeps the
+# design's comma (v0.15.2, the snapshot: the description's length,
+# which this piece held to its length before, is no longer pinned here;
+# docs/snapshot/ holds the description as Exegete serves it)
 DESCRIPTION_SENTENCE = (
     "When none are present, it warns only if this project or computer "
     "shows QualCoder or the setting says yes.")
-# its length before, on 3.13 and on 3.10 to 3.12, which keep a
-# docstring's indentation alike
-DESCRIPTION_BEFORE = (2415, 2579)
 NEW_LAST_SENTENCE = ("If the researcher opens it in QualCoder, suggest "
                      "4.0, which avoids these changes.")
 ONE_LINE = ("The project is in QualCoder's format, so QualCoder 4.0 can "
@@ -250,14 +248,9 @@ class TestSelectProjectsWarning:
             assert text not in out["warning"]
 
     def test_the_description_says_when_a_warning_comes(self):
-        from test_v0142_description_cut import CHANGED_0150, _fingerprint
         server._apply_toolset("full")
         text = server.mcp.original_descriptions["select_project"]
         assert DESCRIPTION_SENTENCE in _flat(text)
-        before = DESCRIPTION_BEFORE[
-            0 if sys.version_info[:2] >= (3, 13) else 1]
-        assert len(text) <= before
-        assert CHANGED_0150["select_project"][1:] == _fingerprint(text)[1:]
 
 
 # fix round 1: a lock file left in the project, alone or beside another

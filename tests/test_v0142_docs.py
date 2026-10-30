@@ -55,12 +55,22 @@ def _install_part(start, end):
     return _between(_read("INSTALL.md"), start, end)
 
 
-CLAUDE_CODE = ("## Alternative: Claude Code and other MCP clients",
-               "## Environment variables the server reads")
+# v0.15.2: INSTALL.md is the desktop extension's; every Terminal route
+# moved, whole, to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
+def _guide_part(start, end):
+    return _between(_read(GUIDE), start, end)
+
+
+CLAUDE_CODE = ("\n## Claude Code\n",
+               "## Claude Code with an Anthropic API key (Experimental)")
 RECIPE = ("## Claude Code with an Anthropic API key (Experimental)",
           "## LM Studio (fully local) (Experimental)")
 OPENAI = ("## ChatGPT's desktop app and Codex (Experimental)",
-          "\n## What hosts do with the tools' read and write marks")
+          "\n## Other MCP hosts")
+EXTENSION = ("## Installing the extension", "## The settings page")
 
 FOLDER_BASH = "mkdir -p ~/claude-exegete && cd ~/claude-exegete"
 FOLDER_PS = r"mkdir -Force $HOME\claude-exegete; cd $HOME\claude-exegete"
@@ -90,17 +100,17 @@ def test_the_download_step_survives_an_early_build():
     cannot help either. Both documents say which release to take."""
     # v0.14.2, the README rewritten to persuade: the README's step is
     # shorter; why (the Pre-release mark, the early build) is INSTALL's
-    readme = _between(_flat("README.md"), "### Claude Desktop, with one "
-                      "click", "### ChatGPT's desktop app and Codex")
+    # (the owner's reading of 30 October: the heading without its flourish)
+    readme = _between(_flat("README.md"), "### One click in Claude Desktop",
+                      "### ChatGPT's desktop app and Codex")
     assert ("take the file whose name starts with `exegete-` and ends in "
             "`.mcpb` from the newest release that has one under its "
             "Assets.") in readme
-    install = " ".join(_install_part(
-        "## Claude Desktop: the one-click extension",
-        "**Approvals.**").split())
-    assert ("take the newest release that has such a file under its Assets "
-            "(every release of this alpha is marked Pre-release; an early "
-            "build marked \"not a release\" has none).") in install
+    install = " ".join(_install_part(*EXTENSION).split())
+    assert (("Take the newest release that has such a file under its Assets. "
+             "Every release of this alpha is marked Pre-release, since "
+             "Exegete is still in early testing. An early build marked \"not "
+             "a release\" has no such file.")) in install
     for text in (readme, install):
         assert "the release at the top" not in text
         assert "latest release" not in text
@@ -116,7 +126,7 @@ def test_the_recipe_sets_the_key_registers_and_starts_in_one_window():
     started in another runs on a personal login (consumer terms) or asks
     for one (code.claude.com/docs/en/authentication, read 30 September
     2026)."""
-    recipe = _install_part(*RECIPE)
+    recipe = _guide_part(*RECIPE)
     bash = _blocks(recipe, "bash")
     assert bash[0].splitlines() == [FOLDER_BASH, READ_KEY_BASH]
     assert bash[1].splitlines() == SERVER_AND_START
@@ -124,14 +134,14 @@ def test_the_recipe_sets_the_key_registers_and_starts_in_one_window():
     assert powershell[0].splitlines() == [FOLDER_PS, READ_KEY_PS]
     assert powershell[1].splitlines() == SERVER_AND_START
     flat = " ".join(recipe.split())
-    for words in ("**2. In one Terminal window: a folder of its own, the "
-                  "key, the server, then Claude Code.**",
+    for words in ("**2. In one Terminal window: an empty folder, the key, "
+                  "then Exegete and Claude Code.**",
                   "The key is set only in that window, and only until you "
                   "close it. Claude Code started in another window, or "
                   "after a restart, has no key: it runs on your Pro or Max "
                   "login if you have one, under the consumer terms, or "
                   "asks you to sign in.",
-                  "**3. Check the key and the server.**",
+                  "**3. Check the key and Exegete.**",
                   "`Remove-Item Env:ANTHROPIC_API_KEY`"):
         assert words in flat, words
     for gone in ("second Terminal window", "`claude` again"):
@@ -150,14 +160,14 @@ def test_the_key_is_read_not_typed_into_a_command():
     PowerShell's `Read-Host`), so no command holds it."""
     for name in _shipped_markdown():
         assert not TYPED_KEY.search(_read(name)), name
-    flat = " ".join(_install_part(*RECIPE).split())
+    flat = " ".join(_guide_part(*RECIPE).split())
     for words in ("make an empty folder for Claude Code and set the key "
                   "there:",
                   "The second line waits for your key: paste it and press "
-                  "Return. Nothing shows as you paste. Do not type the key "
-                  "into a command instead: the Terminal keeps every command "
-                  "you type, in plain text, in a file in your home folder, "
-                  "which assistants that open files by themselves can read.",
+                  "Return. Nothing shows as you paste. A key typed into a "
+                  "command instead would stay in plain text in the "
+                  "Terminal's history, a file in your home folder that "
+                  "assistants that open files by themselves can read.",
                   "In PowerShell on Windows, the same steps (the second "
                   "line asks for the key and shows it as stars):",
                   "set the key again the same way, and start `claude` "
@@ -216,7 +226,7 @@ def test_the_recipes_key_line_keeps_the_key_out_of_the_history(shell,
     not in the file. The line it replaced puts the key in the file."""
     fake = "sk-ant-TEST-ONLY-not-a-key"
     probe = "echo length:$(printenv ANTHROPIC_API_KEY | wc -c | tr -d ' ')"
-    key_line = _blocks(_install_part(*RECIPE), "bash")[0].splitlines()[1]
+    key_line = _blocks(_guide_part(*RECIPE), "bash")[0].splitlines()[1]
     printed, saved = _interactive(shell, tmp_path / "recipe",
                                   [key_line, fake, probe])
     assert f"length:{len(fake) + 1}" in printed, printed
@@ -230,15 +240,17 @@ def test_the_recipes_key_line_keeps_the_key_out_of_the_history(shell,
 
 
 def test_the_claude_code_folder_line_has_a_windows_form():
-    section = _install_part(*CLAUDE_CODE)
-    assert FOLDER_BASH in _blocks(section, "bash")
-    assert FOLDER_PS in _blocks(section, "powershell")
-    assert section.index(FOLDER_PS) < \
-        section.index("claude mcp add exegete -- exegete")
+    # v0.15.2: one block makes the folder and adds Exegete there; the
+    # PowerShell form of its first line follows it
+    section = _guide_part(*CLAUDE_CODE)
+    block = _blocks(section, "bash")[0].splitlines()
+    assert block == [FOLDER_BASH, "claude mcp add exegete -- exegete"]
+    assert ("In PowerShell, the first line is `" + FOLDER_PS + "`") in \
+        " ".join(section.split())
 
 
 def test_the_older_claude_mcp_lines_say_which_folder():
-    install = _flat("INSTALL.md")
+    install = _flat(GUIDE)
     toolset = _between(install, "- `EXEGETE_TOOLSET`:",
                        "- `EXEGETE_WORKSPACE` (v0.14)")
     # (the judge, 6 October 2026, after the owner's "warn, don't
@@ -248,13 +260,13 @@ def test_the_older_claude_mcp_lines_say_which_folder():
     # and with it its folder warning; Path B's, below, stays
     assert "claude mcp add" not in toolset
     assert "EXEGETE_TOOLSET=lifecycle" not in toolset
-    path_b = _between(install, "### Path B: switch to the PyPI install",
-                      "claude mcp remove qualcoder")
-    assert ("so run `claude mcp remove` in the folder where you added it, "
-            "and `claude mcp add` in the folder you start Claude Code in "
-            "(started in your home folder, it could read any study kept "
-            "there without asking: \"Alternative: Claude Code and other MCP "
-            "clients\", above, says more):") in path_b
+    path_b = _between(install, "**Moving to an install from PyPI**",
+                      "**Reusing the old environment instead**")
+    assert ("run `claude mcp remove qualcoder` in the folder where you "
+            "added it, then `claude mcp add qualcoder -- "
+            "~/exegete-venv/bin/exegete` in the folder you start Claude "
+            "Code in (started in your home folder, it could read any study "
+            'kept there without asking: "Claude Code", above, says more).') in path_b
     for text in (toolset, path_b):
         assert "never your home folder" not in text
     uninstall = _between(install, "## Uninstalling", "2. **Remove the "
@@ -270,16 +282,15 @@ def test_claude_codes_file_tools_in_auto_mode_are_named():
     (code.claude.com/docs/en/permission-modes, quoted in PRIVACY.md)."""
     assert ("\"file reads run without a prompt in auto mode, including "
             "reads outside the working directories\"") in _flat("PRIVACY.md")
-    section = " ".join(_install_part(*CLAUDE_CODE).split())
+    section = " ".join(_guide_part(*CLAUDE_CODE).split())
     assert ("In auto mode, the mode it starts in, its own file tools read "
             "outside that folder as well, after one question the first "
             "time they do.") in section
-    recipe = " ".join(_install_part(*RECIPE).split())
-    assert ("its read-only commands read outside it too, as do its file "
-            "tools in auto mode, the mode it starts in") in recipe
-    for text in (section, recipe):
-        assert ("it does not stop its read-only commands reading them, or "
-                "its file tools in auto mode.") in text
+    recipe = " ".join(_guide_part(*RECIPE).split())
+    assert ("Claude Code opens files by itself, outside Exegete, whichever "
+            "way you sign in") in recipe
+    assert ("it does not stop its read-only commands reading them, or its "
+            "file tools in auto mode.") in section
     hosts = _between(_flat("PRIVACY.md"), "## Assistants that open files "
                      "by themselves", "## Keeping notes private")
     assert ("but does not stop its read-only commands reading them, or its "
@@ -292,30 +303,30 @@ def test_claude_codes_file_tools_in_auto_mode_are_named():
 # ---------------------------------------------------------------------------
 
 def _chat_suggestions():
-    install = _flat("INSTALL.md")
     privacy = _flat("PRIVACY.md")
     return {
         "README, where your data goes": _between(
             _flat("README.md"), "Before you use participants' data with "
             "Claude Desktop's chat", "**Private notes and names.**"),
-        "INSTALL, the table, consumer plans": _between(
-            _read("INSTALL.md"), "| **Claude consumer plans**", "\n"),
-        "INSTALL, Claude Code": " ".join(_install_part(*CLAUDE_CODE)
-                                         .split()),
-        "INSTALL, the API-key recipe": " ".join(_install_part(*RECIPE)
-                                                .split()),
-        "INSTALL, OpenAI's step 3": _between(
-            install, "**Step 3. Give Codex a folder of its own",
+        "the Terminal guide, the table, consumer plans": _between(
+            _read(GUIDE), "| **Claude consumer plans**", "\n"),
+        "the Terminal guide, Claude Code": " ".join(
+            _guide_part(*CLAUDE_CODE).split()),
+        "the Terminal guide, the API-key recipe": " ".join(
+            _guide_part(*RECIPE).split()),
+        "the Terminal guide, OpenAI's step 3": _between(
+            _flat(GUIDE), "**Step 3. Give Codex a folder of its own",
             "**Step 4. Keep it asking.**"),
         "PRIVACY, the summary of assistants": _between(
             privacy, "**For participants' data**, this project suggests",
             "## Keeping notes private"),
         "PRIVACY, the checklist": _between(
             privacy, "## Before you use real participant data, check "
-            "these", "## Practical mitigations"),
-        "QUICKSTART, what you need": _between(
-            _flat("QUICKSTART.md"), "## Prerequisites Checklist",
-            "## Installation Steps"),
+            "these", "## How your data flows"),
+        "QUICKSTART, Claude Code": _between(
+            _flat("QUICKSTART.md"),
+            "### Claude Code instead of Claude Desktop",
+            "## Installation steps"),
         "PRIVACY, practical mitigations": _between(
             privacy, "- **An assistant that opens files by itself can read "
             "a project whole**", "- **Consult your institution's"),
@@ -341,13 +352,17 @@ def test_the_chats_three_conditions_travel_with_it():
             in text, where
         assert "transcripts" in text, where
     for where, text in _chat_set_up().items():
-        assert "1. Keep computer use off" in text, where
+        # v0.15.2, the opening texts: each check says what the setting
+        # does, then what the researcher could do (the writing guide:
+        # warn, then leave the decision to the reader)
+        assert ("1. **Computer use** lets Claude see your screen and use "
+                "other apps. You can keep computer use off") in text, where
         assert "add no other extension that reads files" in text, where
         assert "transcripts" in text, where
     # and the other routes point to them
     rung_two = _between(_flat("PRIVACY.md"), "### Rung 2:", "### Rung 3:")
-    assert ("on a Team or Enterprise account (rung 3), set up as "
-            "\"Assistants that open files by themselves\", above, says.") \
+    assert ("for participants' data under commercial terms, rung 3 says "
+            "what this project suggests.") \
         in rung_two
     # (the owner, 1 October 2026: warn, don't prescribe. The README's
     # "Other assistants" no longer says "never start it"; the table says
@@ -361,8 +376,8 @@ def test_the_chats_three_conditions_travel_with_it():
     assert ("started in your home folder (where a new Terminal window "
             "opens), Documents, your projects folder or a study's folder, "
             "it reads that study without asking.") in \
-        " ".join(_read("INSTALL.md").split())
-    row = _between(_read("INSTALL.md"),
+        " ".join(_read(GUIDE).split())
+    row = _between(_read(GUIDE),
                    "| **Anthropic commercial-terms routes**", "\n")
     assert "on a Team or Enterprise account, set up as in the row above" \
         in row
@@ -408,21 +423,29 @@ def test_the_check_after_installing_is_a_short_list():
     Manual setting where Claude asks, and a pointer to the one list of
     checks before participants' data (v0.14.2, the README rewritten to
     persuade: the three checks joined the list where the reader decides)."""
-    one_click = _between(_flat("README.md"), "### Claude Desktop, with one "
-                         "click", "### ChatGPT's desktop app and Codex")
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click = _between(_flat("README.md"), "### One click in Claude Desktop",
+                         "### ChatGPT's desktop app and Codex")
     # v0.14.2, the README's first round of checks: a short list after one
     # sentence, the five checks linked last, with why Manual is not enough
-    check = _between(one_click, "To check,", "**QualCoder, if you want it.**")
+    # v0.15.2, the opening texts: one paragraph in place of the list, the
+    # same four facts, the five checks linked last
+    check = one_click[one_click.index("To check,"):].strip()
     assert check.startswith("To check, click \"+\" in a new conversation, "
-                            "then Connectors: Exegete is listed. Then: - "
-                            "When Claude asks to use a tool, choose \"Allow "
-                            "once\": it keeps Claude asking. - "), check
-    assert check.endswith("- Before participants' data, go through [the "
-                          "five checks](https://github.com/nicotem/exegete"
-                          "#where-your-data-goes): Manual keeps Claude "
-                          "asking; the checks keep your files out of its "
-                          "reach and switch training off. "), check
-    assert check.count(" - ") == 3
+                            "then Connectors: Exegete is listed. When Claude "
+                            "asks to use a tool, \"Allow once\" keeps it "
+                            "asking. "), check
+    # (v0.15.2, the readability reading: the setting and Auto a sentence
+    # each, and the step before participants' data with its verb)
+    assert ("That conversation's permission setting comes as Manual. On "
+            "Auto, Claude does not ask.") in check
+    # (the lead's reading of 29 October: the checks help keep the files
+    # out of Claude's reach, and switch training off)
+    assert check.endswith("Before you use participants' data, go through "
+                          "[the five checks](https://github.com/nicotem/"
+                          "exegete#where-your-data-goes), which help keep "
+                          "your files out of Claude's reach and switch "
+                          "training off."), check
     assert not re.findall(r"(?<![\w.])(\d)\. ", check)
     data = _between(_flat("README.md"), "Before you use participants' data "
                     "with Claude Desktop's chat", "**Private notes and "
@@ -437,34 +460,41 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     read and how to tell: keep its permission setting on Manual; the
     folders and computer use are what keep projects out of reach."""
     readme = _flat("README.md")
-    one_click = _between(readme, "### Claude Desktop, with one click",
+    # (the owner's reading of 30 October: the heading without its flourish)
+    one_click = _between(readme, "### One click in Claude Desktop",
                          "### ChatGPT's desktop app and Codex (OpenAI)")
     # v0.14.2, the README rewritten to persuade: in fewer words, still
     # once, with the date and how to tell
     # v0.14.2, the README's first round of checks: a bullet of its own
-    assert ("- If your message box offers no choice between \"Chat\" and "
-            "\"Cowork\", the two are one conversation (Pro and Max plans; "
+    # v0.15.2, the opening texts: a sentence of the check's paragraph,
+    # which says what the setting comes as and what Auto does
+    # (the readability reading: the plans, the page's date and the
+    # setting a sentence each)
+    assert ("If your message box offers no choice between \"Chat\" and "
+            "\"Cowork\", the two are one conversation, on Pro and Max plans. "
             "Anthropic's page, read on 1 October 2026, says this is reaching "
-            "accounts gradually). Keep its permission setting on Manual, its "
-            "default: on Auto, Claude does not ask.") in one_click
+            "accounts gradually. That conversation's permission setting "
+            "comes as Manual. On Auto, Claude does not ask.") in one_click
     # explained once
     assert readme.count("no choice between \"Chat\" and \"Cowork\"") == 1
     assert readme.count("1 October 2026, says this is reaching accounts") \
         == 1
     data = _between(readme, "## Where your data goes", "## Start here")
-    assert ("Before you use participants' data with Claude Desktop's chat "
-            "(also where chat and Cowork are one conversation, below):") \
-        in data
-    assert "connected folders may be listed under \"Trusted folders\"" \
+    # (the readability reading: the aside said in the sentence)
+    assert ("Before you use participants' data with Claude Desktop's chat, "
+            "also where chat and Cowork are one conversation, go through "
+            "five checks:") in data
+    assert "Connected folders may be listed under \"Trusted folders\"" \
         in data
     # v0.14.2, the README's first round of checks: the Manual setting is
     # explained once, after installing; the approval paragraph names the
     # choice in each app
-    assert ("\"Allow once\" in Claude, each prompt answered in Codex.") \
-        in readme
-    assert readme.count("permission setting on Manual") == 1
-    approvals = _between(_flat("INSTALL.md"), "**Approvals.**",
-                         "**Not signed.**")
+    assert ("In Claude, choose \"Allow once\" each time it asks. In Codex, "
+            "answer each prompt.") in readme
+    assert readme.count("permission setting comes as Manual") == 1
+    approvals = _between(_flat("INSTALL.md"),
+                         "**Claude's questions before a tool runs.**",
+                         "**Switch training off**")
     for words in (ONE_CLAUDE,
                   "In the version of Claude where chat and Cowork are one "
                   "conversation, which Anthropic is rolling out to Pro and "
@@ -476,7 +506,8 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
                   "about each step, and automated safety checks run before "
                   "it takes an action.\"",
                   HOW_TO_TELL,
-                  "Keep the setting on Manual."):
+                  "On Manual, Claude keeps asking you, which suits work on "
+                  "real data."):
         assert words in approvals, words
     assert HOW_TO_TELL in _flat("PRIVACY.md")
 
@@ -524,7 +555,8 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
     # goes, the suggestion last, with PRIVACY.md's three conditions)
     assert ("| **Claude's Cowork** | Yes, in the folders you connect to it "
             "| Anthropic | Claude Desktop's chat instead. If you use Cowork, "
-            "keep projects and transcripts out of the folders you connect, "
+            "you could keep projects and transcripts out of the folders you "
+            "connect, "
             "with computer use off and no other extension that reads "
             "files |") in data
     assert "Cowork is a part of Claude Desktop." not in data
@@ -532,9 +564,10 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
         _flat("PRIVACY.md")
     # the account's terms, in the list before participants' data (the
     # owner, 1 October 2026: the same training advice for both makers)
-    assert ("3. **Switch training off** before participants' data: while "
-            "it is on, Anthropic may use your conversations to train its "
-            "models. On a personal plan (Free, Pro or Max) it is the Model "
+    # v0.15.2, the opening texts: the risk, then the switch
+    assert ("3. **Training.** While training is on, Anthropic may use your "
+            "conversations, with the participants' data in them, to train "
+            "its models. On a personal plan (Free, Pro or Max), the Model "
             "Improvement setting") in data
     assert "the newer Claude app" not in _flat("README.md")
     # Anthropic's words for the rollout, as PRIVACY.md quotes the page
@@ -546,7 +579,7 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
 # ---------------------------------------------------------------------------
 
 def test_install_turns_training_off_first_in_the_readmes_words():
-    install = " ".join(_install_part(*OPENAI).split())
+    install = " ".join(_guide_part(*OPENAI).split())
     first = _between(install, "**First, switch training off**",
                      "**Step 1. Install Exegete.**")
     # v0.14.2, the README rewritten to persuade: the README gives the step
@@ -554,8 +587,11 @@ def test_install_turns_training_off_first_in_the_readmes_words():
     # "Include environments". The owner, 1 October 2026: the same advice
     # for both makers, before participants' data ("practice included"
     # went: the warning about practising carries its reason)
-    readme = _between(_flat("README.md"), "1. **Switch training off**",
-                      "Then follow")
+    # v0.15.2, the opening texts: the README gives the risk, then both
+    # switches, in the words its list before participants' data uses for
+    # Anthropic; INSTALL.md keeps its own words for the same facts
+    readme = _between(_flat("README.md"), "**Training.** While training is "
+                      "on, OpenAI", "### A first session")
     for words in ("before participants' data: while it is on, OpenAI may "
                   "use your conversations to train its models.",
                   "\"Improve the model for everyone\" in ChatGPT's "
@@ -563,6 +599,13 @@ def test_install_turns_training_off_first_in_the_readmes_words():
                   "Rating a reply (thumbs up or down) can still let OpenAI "
                   "train on that conversation."):
         assert words in first, words
+    for words in ("While training is on, OpenAI may use your conversations, "
+                  "with the participants' data in them, to train its models.",
+                  "\"Improve the model for everyone\" in ChatGPT's "
+                  "Settings, Data controls, and with Codex's separate "
+                  "\"Include environments\".",
+                  "Rating a reply, with a thumbs up or down, can still let "
+                  "OpenAI train on that conversation."):
         assert words in readme, words
     assert "practice included" not in first + readme
     for words in ("choose \"Do not train on my content\" in OpenAI's "
@@ -576,8 +619,10 @@ def test_install_turns_training_off_first_in_the_readmes_words():
     assert steps == ["1", "2", "3", "4"]
     assert install.index("**First, switch training off**") < \
         install.index("**Step 1. Install Exegete.**")
-    assert ("INSTALL.md#chatgpts-desktop-app-and-codex-experimental"
-            in _flat("README.md"))
+    # (v0.15.2, the merge onto the integration branch: the README links
+    # to the recipe in the Terminal guide, where it moved)
+    assert ("installing-from-the-terminal.md#chatgpts-desktop-app-and-"
+            "codex-experimental" in _flat("README.md"))
 
 
 # ---------------------------------------------------------------------------
@@ -590,10 +635,10 @@ def test_deleting_the_name_file_says_its_exception():
     question, as the server's own warning says (removing_alone_warning)."""
     privacy = _flat("PRIVACY.md")
     assert ("Deleting it makes the next AI write ask for the name again, "
-            "unless the earlier `qualcoder_mcp.json` beside it could not be "
-            "marked as moved and still holds a name (Exegete says so while "
-            "it stays unmarked): that name would then come back without a "
-            "question, so remove both files.") in privacy
+            "unless the earlier `qualcoder_mcp.json` beside it could not "
+            "be marked as moved and still holds a name (Exegete says so "
+            "while it stays unmarked): that name would then come back "
+            "without a question, so remove both files.") in privacy
     assert "Deleting it makes the next AI write ask for the name again." \
         not in privacy
     warning = project_settings.removing_alone_warning("Claude")
@@ -602,14 +647,18 @@ def test_deleting_the_name_file_says_its_exception():
 
 
 def test_the_team_and_enterprise_rung_names_claude_codes_reading():
+    # v0.15.2: what Claude Code reads is said once, for every rung, at the
+    # top of the governance options
+    intro = _between(_flat("PRIVACY.md"), "## Your governance options",
+                     "### Rung 1:")
+    assert ("On every rung, Claude Code opens files by itself, outside "
+            "Exegete, and the terms do not change what it reads "
+            "(\"Assistants that open files by themselves\").") in intro
     rung = _between(_flat("PRIVACY.md"), "### Rung 3:", "### Rung 4:")
-    for words in ("The terms do not change what Claude Code reads: on this "
-                  "rung as on the others, Claude Code opens files by "
-                  "itself, outside Exegete (\"Assistants that open files "
-                  "by themselves\", above).",
+    for words in (
                   "For participants' data, this project suggests Claude "
                   "Desktop's chat with Exegete under that account, set up "
-                  "as that section says."):
+                  'as "Assistants that open files by themselves" says.'):
         assert words in rung, words
 
 
@@ -638,8 +687,10 @@ def test_computer_use_sees_the_screen():
     # v0.14.2, the README's first round of checks: the README says once,
     # where the reader meets the setting, what computer use is
     readme = _flat("README.md")
-    assert ("1. Keep computer use off (Settings, General): it lets Claude "
-            "see your screen and use other apps.") in readme
+    # v0.15.2, the opening texts: what it does first, then the switch
+    assert ("1. **Computer use** lets Claude see your screen and use other "
+            "apps. You can keep computer use off, in Settings, General.") \
+        in readme
     assert "Claude can use apps on your computer directly" in privacy
 
 
@@ -653,7 +704,7 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
     assert readme.count(anchor) == 1
     checklist = _between(_flat("PRIVACY.md"), "## Before you use real "
                          "participant data, check these",
-                         "## Practical mitigations")
+                         "## How your data flows")
     for words in (
             "- **Which assistant, and whether it opens files by itself.** "
             "Codex, Claude Code and Claude's Cowork can open files on your "
@@ -688,14 +739,15 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "and when you will delete them."):
         assert words in checklist, words
     # the ten questions, in that order: terms first, as before, then
-    # training with either maker (the owner, 1 October 2026); the check
+    # training with either AI provider (the owner, 1 October 2026; "AI
+    # provider", the one term, since v0.15.2); the check
     # for new versions adds what Exegete itself connects to, before the
     # last two (pull request #11, the owner's ruling 60 of 6 October 2026)
     questions = re.findall(r"- \*\*([^*]+)\*\*", checklist)
     assert len(questions) == 10
     assert questions[-3] == "What Exegete itself connects to."
     assert questions[0].startswith("Your Claude plan's terms differ")
-    assert questions[1] == "Training, with either maker."
+    assert questions[1] == "Training, with either AI provider."
     assert questions[-2:] == ["Which assistant, and whether it opens files "
                               "by itself.", "What stays on the computer, "
                               "and for how long."]
@@ -711,8 +763,8 @@ def test_the_check_paragraph_says_what_the_check_now_says():
     what 0.14.2's check adds."""
     import json
     import exegete.server as server
-    paragraph = _between(_flat("INSTALL.md"), "**Afterwards, the transition "
-                         "check.**", "## Upgrading from an earlier")
+    paragraph = _between(_flat(GUIDE), "**Afterwards, the transition "
+                         "check.**", "## A copy of the source made before")
     topic = " ".join(json.loads(server.explain_ai_coding_tools(
         "moving_from_qualcoder_mcp"))["desktop_extension"].split())
     for words in (
@@ -722,8 +774,8 @@ def test_the_check_paragraph_says_what_the_check_now_says():
             "where a host's entry starts an `exegete` command that is no "
             "longer there, how to put it back",
             "where uv tool installed it with `--with-executables-from "
-            "exegete`, followed by the command that installs Exegete's "
-            "command again, since uv's uninstall takes it too",
+            "exegete`, the command that puts Exegete's command back, since "
+            "uv's uninstall takes it too",
             "On Windows it also looks for Claude Desktop's files in the "
             "folder Windows keeps for its app package (under "
             "`%LOCALAPPDATA%\\Packages`), as well as in `%APPDATA%\\Claude`.",
@@ -731,7 +783,8 @@ def test_the_check_paragraph_says_what_the_check_now_says():
             "Once `--tidy` has removed the link, the check prints the one "
             "command that puts it back"):
         assert words in paragraph, words
-    assert "`uvx exegete --check-transition`" not in _flat("INSTALL.md")
+    for name in ("INSTALL.md", GUIDE):
+        assert "`uvx exegete --check-transition`" not in _flat(name), name
     assert "`uvx exegete@latest --check-transition`" in topic
 
 
@@ -741,13 +794,46 @@ def test_the_check_paragraph_says_what_the_check_now_says():
 # ---------------------------------------------------------------------------
 
 def test_quickstart_sends_a_newcomer_to_the_one_click_start():
+    # (v0.15.2, the opening texts: after the paragraph that says what the
+    # guide and Exegete are, before anything to install)
     quickstart = _read("QUICKSTART.md")
-    first = quickstart[:quickstart.index("This guide will get you")]
-    assert ("**New to Exegete?** Start with the README's one-click "
-            "extension for Claude Desktop instead:") in " ".join(first.split())
-    assert "https://github.com/nicotem/exegete#claude-desktop-with-one-click" \
+    first = quickstart[:quickstart.index("## What you need")]
+    assert ("If you are new to Exegete, the one-click extension for Claude "
+            "Desktop needs no typed commands:") in " ".join(first.split())
+    # (the owner's reading of 30 October: the heading without its flourish,
+    # its anchor with it)
+    assert "https://github.com/nicotem/exegete#one-click-in-claude-desktop" \
         in first
-    assert "\n### Claude Desktop, with one click\n" in _read("README.md")
+    assert "\n### One click in Claude Desktop\n" in _read("README.md")
+
+
+def test_quickstart_spells_the_version_as_pypi_does():
+    """v0.15.2, the lead's reading of 29 October: "Updating later" says
+    that both commands print the version as PyPI spells it, and gives an
+    example in that spelling (refreshed at each release's preparation)."""
+    from packaging.version import Version
+    import exegete
+    try:
+        import tomllib
+    except ModuleNotFoundError:          # Python 3.10
+        import tomli as tomllib
+    later = _between(_flat("QUICKSTART.md"), "## Updating later",
+                     "## Troubleshooting")
+    found = re.search(r"Both spell it as PyPI does, with an a for alpha: "
+                      r"`([^`]+)` for `([^`]+)`\.", later)
+    assert found, later
+    spelt, name = found.groups()
+    assert str(Version(name)) == spelt and "alpha" in name, found.groups()
+    # what `--version` and pip print: the installed version, so spelt
+    release = tomllib.loads(_read("pyproject.toml"))["project"]["version"]
+    assert exegete.__version__ == str(Version(release))
+
+
+def test_quickstart_stays_within_its_budget():
+    """v0.15.2, the opening texts: QUICKSTART rewritten to the writing
+    checklist within 250 lines, the documents' commands marks included
+    (the README's budget is tests/test_v0142_readme_persuasive.py's)."""
+    assert _read("QUICKSTART.md").count("\n") <= 250
 
 
 def test_a_first_session_says_what_to_do_next():
@@ -767,27 +853,32 @@ def test_a_first_session_says_what_to_do_next():
     # page can come in from a file, its text off the conversation
     # v0.15.0: the extension's folder is "Exegete projects", by default,
     # and the answer gives the full path (tests/test_v0150_renames_folder.py)
-    assert ("then bring in your page: paste it, as in the example, or save "
-            "it as a Word or text file and give the assistant its place, "
-            "which keeps its text off the conversation (on a Mac, hold "
-            "Option, right-click it and choose Copy as Pathname; on "
-            "Windows 11, Copy as path). With the extension "
-            "or OpenAI's steps, the project is made, by default, in "
-            "\"Exegete projects\", in your home folder (the assistant's "
-            "answer gives the full path): ask to open a file for "
-            "reading, or open the project in QualCoder (Project, Open "
-            "Project), to see your coding in the text.") in first
+    # v0.15.2, the opening texts: QualCoder as a choice, for a researcher
+    # who uses it (ruling 102)
+    # v0.15.2, the readability reading: where the project is made comes
+    # first, then the page, its location and how to copy it, a step to
+    # each sentence
+    assert ("With the extension or OpenAI's steps, the project is made, by "
+            "default, in \"Exegete projects\", in your home folder (the "
+            "answer gives the full path). Then bring in your page: paste "
+            "it, or save it as a Word or text file and give the assistant "
+            "its location, which keeps its text out of the conversation. On "
+            "a Mac, hold Option, right-click the file and choose Copy as "
+            "Pathname. On Windows 11, choose Copy as path. To see your "
+            "coding in the text, ask to open a file for reading, or open the "
+            "project in QualCoder, if you use it (Project, Open Project).") \
+        in first
     # (the staleness audit of 20 October 2026: on `core`, as LM Studio's
     # recipe sets it, neither step works, CORE_TOOLSET; INSTALL's recipe
     # says how to make the project once)
-    assert ("In LM Studio, with the `core` tool set, Exegete can neither "
-            "create a project nor bring documents in: \"A first project\", "
-            "in INSTALL.md's recipe for LM Studio, says how to do both "
-            "once. [More requests to try](https://github.com/nicotem/"
-            "exegete/blob/main/TOOLS.md#example-requests).") in first
+    # (v0.15.2, the merge onto the integration branch: the recipe is the
+    # Terminal guide's)
+    assert ("LM Studio's `core` tool set cannot create a project or bring "
+            "documents in: \"A first project\", in the Terminal guide's "
+            "recipe, says how to do both once.") in first
     for tool in ("create_project", "import_documents", "import_text_file"):
         assert tool not in server.CORE_TOOLSET, tool
-    assert "**A first project.**" in _flat("INSTALL.md")
+    assert "**A first project.**" in _flat(GUIDE)
     import json
     manifest = json.loads(_read("packaging/desktop-extension/"
                                 "manifest.in.json"))
@@ -797,11 +888,11 @@ def test_a_first_session_says_what_to_do_next():
     assert "_resolve_write_owner" in inspect.getsource(
         server.import_text_file)
     # OpenAI's steps set the same folder (INSTALL.md's settings lines)
-    openai = _flat("INSTALL.md")
+    openai = _flat(GUIDE)
     assert "EXEGETE_WORKSPACE = \"~/Exegete projects\"" in openai
-    assert ("`EXEGETE_WORKSPACE`: where new projects and working copies go; "
-            "here, as in the extension, a folder called \"Exegete "
-            "projects\" in your home folder") in openai
+    assert ("`EXEGETE_WORKSPACE`: where new projects and working copies "
+            'go; here, as in the extension, a folder called "Exegete '
+            'projects" in your home folder') in openai
 
 
 def test_the_terminal_route_says_where_projects_go():
@@ -821,11 +912,16 @@ def test_the_terminal_route_says_where_projects_go():
     assert ("There, new projects and copies go to `~/Documents/Exegete "
             "projects`,") in other
     # the sync caveat, and the setting that moves it
+    # (v0.15.2, the merge onto the integration branch: the link goes to
+    # the Terminal guide's list of settings, where the section moved)
     assert ("which iCloud or OneDrive may sync, unless [`EXEGETE_WORKSPACE`]"
-            "(https://github.com/nicotem/exegete/blob/main/INSTALL.md"
-            "#environment-variables-the-server-reads) names another "
-            "folder.") in other
-    assert "\n## Environment variables the server reads\n" in \
+            "(https://github.com/nicotem/exegete/blob/main/docs/installing-"
+            "from-the-terminal.md#environment-variables-exegete-reads) names "
+            "another folder.") in other
+    # v0.15.2: the section is the Terminal guide's, and INSTALL.md keeps
+    # the old anchor as a pointer to it
+    assert "\n## Environment variables Exegete reads\n" in _read(GUIDE)
+    assert '<a id="environment-variables-the-server-reads"></a>' in \
         _read("INSTALL.md")
     # the server's own: with no setting, the workspace is that folder
     # (compared by its parts below the home folder, so that no test builds
@@ -835,9 +931,10 @@ def test_the_terminal_route_says_where_projects_go():
         workspace = database.default_workspace()
     assert workspace.relative_to(Path.home()).parts == (
         "Documents", "Exegete projects")
-    # and INSTALL.md gives the same reason for keeping projects out of it
-    assert ("because iCloud (Desktop and Documents) and OneDrive may sync "
-            "`~/Documents`") in _flat("INSTALL.md")
+    # and the Terminal guide gives the same reason for keeping projects
+    # out of it
+    assert ("iCloud (Desktop and Documents) or OneDrive may sync "
+            "Documents") in _flat(GUIDE)
 
 
 # The release labels the owner asked to lose, in the opening of a guide:
@@ -852,16 +949,15 @@ RELEASE_LABEL = re.compile(r"\(v?\d+\.\d+\.\d+\+\)|\bin v?\d+\.\d+\.\d+\+|"
 def _openings():
     texts = {}
     # each guide's title, its first lines and its overview
-    for name, end in (("AI_CODING_GUIDE.md", "## How It Works"),
-                      ("AI_CODING_WORKFLOW.md", "## Safety First")):
+    for name, end in (("AI_CODING_GUIDE.md", "## How it works"),
+                      ("AI_CODING_WORKFLOW.md", "## Safety first")):
         text = _read(name)
         texts[name] = " ".join(text[:text.index("\n" + end)].split())
     texts["TOOLS.md, the brief"] = _between(
         _flat("TOOLS.md"), "## What the assistant is told: the brief",
         "Hosts differ in what they pass on")
-    texts["INSTALL.md, one click"] = " ".join(_install_part(
-        "## Claude Desktop: the one-click extension", "**Approvals.**")
-        .split())
+    texts["INSTALL.md, the extension"] = " ".join(_install_part(
+        *EXTENSION).split())
     return texts
 
 
@@ -890,7 +986,8 @@ def test_the_release_label_check_would_notice():
 # ---------------------------------------------------------------------------
 
 QC_DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "SUPPORT.md",
-                "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
+                "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
+                "docs/installing-from-the-terminal.md")
 # Said while 4.0 was a beta and wrong since its release; and "a released
 # QualCoder (3.x)" for the versions with a lock file, a group 4.0, released
 # and with none, would now seem to belong to
@@ -917,40 +1014,41 @@ BETA_AS_HISTORY = ("TOOLS.md",)
 
 def test_qualcoder_4_0_is_named_as_released():
     readme = _flat("README.md")
-    get = _between(readme, "**QualCoder, if you want it.**",
-                   "### ChatGPT's desktop app")
-    assert ("[download](https://github.com/ccbogel/QualCoder/releases) "
-            "3.8.2 or 4.0. Exegete works with both, but can tell for "
-            "certain that QualCoder has a project open only with 3.8.2; "
-            "with 4.0 it warns when it sees signs of an open window "
-            "(below). 3.8.2 is listed just below 4.0, the release marked "
-            "\"Latest\" when this was checked, on 6 October 2026.") in get
+    # v0.15.2, the opening texts (ruling 102): the README names QualCoder
+    # where a sentence is about it; where to download it, and which
+    # release was marked "Latest", are INSTALL.md's (below)
+    assert "[QualCoder](https://github.com/ccbogel/QualCoder)" in readme
     one = _between(readme, "**One program at a time.**",
                    "### Other assistants")
-    assert ("With QualCoder 3.8.2, an open project is detected and the "
-            "change refused. In QualCoder 4.0 it cannot be detected for "
-            "certain: Exegete warns when it sees signs of an open 4.0 "
-            "window, but only you can make sure;") in one
-    assert ("Exegete reads and writes projects in the formats of "
-            "QualCoder 3.8.2 to 4.0, reading what each supports") in readme
+    # (QualCoder 3.8.2's __main__.py writes a lock file with a heartbeat,
+    # create_lock_file; 4.0's, as released, writes none)
+    assert ("QualCoder 3.8.2 writes a lock file while it has a project "
+            "open, and Exegete refuses changes while the file is active. "
+            "QualCoder 4.0 writes no lock file. Exegete warns when it sees "
+            "signs of an open 4.0 window, but only you can make sure") in one
+    # (the readability reading: the newer format a sentence of its own,
+    # its subject named)
+    assert ("It reads and writes the formats of QualCoder 3.8.2 to 4.0. It "
+            "does not write to a project in a newer format until Exegete "
+            "has been checked against that format.") in readme
     install = _flat("INSTALL.md")
-    assert ("Projects in the formats of QualCoder 3.8.x and 4.0 work "
-            "(project schemas v14 through v17)") in install
-    assert ("4.0 is at the top of the page, the release marked \"Latest\" "
-            "when this was checked, on 6 October 2026, and 3.8.2 just below "
-            "it. Exegete works with both, but can tell that QualCoder has a "
-            "project open only with 3.8.2, whose lock file shows it.") \
+    assert ("Projects made in QualCoder 3.8 or 4.0 work (project schemas "
+            "v14 to v17;") in install
+    assert (("When this was checked, on 6 October 2026, 4.0 was at the top "
+             "of the page, marked \"Latest\", and 3.8.2 came next. Exegete "
+             "works with both. It can tell that QualCoder has a project open "
+             "only with 3.8.2, whose lock file shows it.")) \
         in install
-    assert ("for Windows, Linux and Macs with Apple Silicon (M1 or later): "
-            "QualCoder offers none for older Intel Macs") in install
+    assert (("for Windows, Linux and Macs with Apple Silicon (M1 or later). "
+             "QualCoder offers none for older Intel Macs")) in install
     tools = _flat("TOOLS.md")
     assert ("verified against QualCoder 4.0, released on 2 October 2026 "
             "(tag `4.0` at `b95e021`,") in tools
-    assert ("A full re-check against the release (6 October 2026) found "
+    assert ("A full check against the release, on 6 October 2026, found "
             "the same project schema (v17) and the same format for a new "
             "project") in tools
     assert ("QualCoder 3.8.2 signals \"project open\" through a lock file, "
-            "which Exegete honours; QualCoder 4.0 uses no lock file") \
+            "which Exegete honours. QualCoder 4.0 uses no lock file") \
         in tools
     assert "Analysis > Code retrieval in 4.0" in tools
     for name in QC_DOCUMENTS:
@@ -1033,10 +1131,11 @@ def test_privacy_on_the_check_claims_no_more_than_is_known():
 
 
 def test_install_on_the_check_names_the_computers_own_python():
-    install = _flat("INSTALL.md")
+    guide = _flat(GUIDE)
     assert ("If every check ends in \"certificate not trusted\", the Python "
-            "that runs Exegete may lack the certificates it needs") in install
-    assert "with its two settings" not in install
+            "that runs Exegete may lack the certificates it needs") in guide
+    for text in (guide, _flat("INSTALL.md")):
+        assert "with its two settings" not in text
 
 
 # ---------------------------------------------------------------------------

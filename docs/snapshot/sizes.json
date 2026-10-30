@@ -1,0 +1,452 @@
+{
+  "core": {
+    "brief_characters": 1923,
+    "opening_text_characters": 2042,
+    "tool_count": 28,
+    "tool_definitions_characters": 75947,
+    "tools": {
+      "analyze_file_with_coding": {
+        "definition_characters": 556,
+        "description_characters": 154
+      },
+      "analyze_for_coding": {
+        "definition_characters": 671,
+        "description_characters": 150
+      },
+      "apply_codings": {
+        "definition_characters": 2714,
+        "description_characters": 2285
+      },
+      "copy_project_to_workspace": {
+        "definition_characters": 2323,
+        "description_characters": 1909
+      },
+      "create_code": {
+        "definition_characters": 3680,
+        "description_characters": 2883
+      },
+      "delete_coding": {
+        "definition_characters": 3389,
+        "description_characters": 2772
+      },
+      "edit_suggestion": {
+        "definition_characters": 4568,
+        "description_characters": 3389
+      },
+      "get_coded_segments": {
+        "definition_characters": 3490,
+        "description_characters": 2621
+      },
+      "get_coding_frequencies": {
+        "definition_characters": 1279,
+        "description_characters": 982
+      },
+      "get_current_project": {
+        "definition_characters": 2281,
+        "description_characters": 2066
+      },
+      "get_project_summary": {
+        "definition_characters": 424,
+        "description_characters": 242
+      },
+      "list_available_projects": {
+        "definition_characters": 1256,
+        "description_characters": 904
+      },
+      "list_backups": {
+        "definition_characters": 2584,
+        "description_characters": 2381
+      },
+      "open_file_for_reading": {
+        "definition_characters": 1630,
+        "description_characters": 1187
+      },
+      "read_brief": {
+        "definition_characters": 451,
+        "description_characters": 294
+      },
+      "read_file_with_codings": {
+        "definition_characters": 2742,
+        "description_characters": 2293
+      },
+      "record_suggestions": {
+        "definition_characters": 5054,
+        "description_characters": 4455
+      },
+      "restore_backup": {
+        "definition_characters": 3806,
+        "description_characters": 3377
+      },
+      "review_suggestions": {
+        "definition_characters": 1866,
+        "description_characters": 1327
+      },
+      "search_coded_text": {
+        "definition_characters": 3675,
+        "description_characters": 2844
+      },
+      "search_files": {
+        "definition_characters": 5569,
+        "description_characters": 4537
+      },
+      "search_memos": {
+        "definition_characters": 2347,
+        "description_characters": 1992
+      },
+      "select_project": {
+        "definition_characters": 2708,
+        "description_characters": 2403
+      },
+      "set_memo": {
+        "definition_characters": 3270,
+        "description_characters": 2610
+      },
+      "set_project_ai_coder_name": {
+        "definition_characters": 2622,
+        "description_characters": 2151
+      },
+      "start_coding_session": {
+        "definition_characters": 6718,
+        "description_characters": 6071
+      },
+      "undo_changes": {
+        "definition_characters": 1977,
+        "description_characters": 1550
+      },
+      "update_suggestion_status": {
+        "definition_characters": 2241,
+        "description_characters": 1537
+      }
+    }
+  },
+  "counted": "Characters, as Python counts them. tool_definitions_characters: json.dumps, with Python's defaults, of the list of every tool's name, description and input schema, in the order tools/list gives (TOOLS.md, the tool sets); definition_characters: one tool's entry in that list, alone.",
+  "full": {
+    "brief_characters": 13721,
+    "opening_text_characters": 2042,
+    "tool_count": 80,
+    "tool_definitions_characters": 204793,
+    "tools": {
+      "add_annotation": {
+        "definition_characters": 2205,
+        "description_characters": 1635
+      },
+      "add_journal_entry": {
+        "definition_characters": 1506,
+        "description_characters": 1075
+      },
+      "analyze_file_with_coding": {
+        "definition_characters": 556,
+        "description_characters": 154
+      },
+      "analyze_for_coding": {
+        "definition_characters": 671,
+        "description_characters": 150
+      },
+      "apply_codings": {
+        "definition_characters": 2714,
+        "description_characters": 2285
+      },
+      "check_for_updates": {
+        "definition_characters": 903,
+        "description_characters": 732
+      },
+      "compare_coders": {
+        "definition_characters": 4072,
+        "description_characters": 3004
+      },
+      "copy_project_to_workspace": {
+        "definition_characters": 2323,
+        "description_characters": 1909
+      },
+      "create_attribute_type": {
+        "definition_characters": 2606,
+        "description_characters": 1963
+      },
+      "create_case": {
+        "definition_characters": 2111,
+        "description_characters": 1647
+      },
+      "create_category": {
+        "definition_characters": 2425,
+        "description_characters": 1839
+      },
+      "create_code": {
+        "definition_characters": 3680,
+        "description_characters": 2883
+      },
+      "create_project": {
+        "definition_characters": 3212,
+        "description_characters": 2613
+      },
+      "create_proposed_codes": {
+        "definition_characters": 2297,
+        "description_characters": 1867
+      },
+      "delete_annotation": {
+        "definition_characters": 2364,
+        "description_characters": 1747
+      },
+      "delete_category": {
+        "definition_characters": 2015,
+        "description_characters": 1619
+      },
+      "delete_code": {
+        "definition_characters": 2722,
+        "description_characters": 2244
+      },
+      "delete_coding": {
+        "definition_characters": 3389,
+        "description_characters": 2772
+      },
+      "delete_coding_session": {
+        "definition_characters": 525,
+        "description_characters": 228
+      },
+      "edit_suggestion": {
+        "definition_characters": 4568,
+        "description_characters": 3389
+      },
+      "explain_ai_coding_tools": {
+        "definition_characters": 775,
+        "description_characters": 471
+      },
+      "export_case_code_matrix_csv": {
+        "definition_characters": 1844,
+        "description_characters": 1372
+      },
+      "export_codebook": {
+        "definition_characters": 2570,
+        "description_characters": 1952
+      },
+      "export_coded_segments_report": {
+        "definition_characters": 4282,
+        "description_characters": 2972
+      },
+      "export_frequencies_csv": {
+        "definition_characters": 1751,
+        "description_characters": 1288
+      },
+      "export_refi_qda": {
+        "definition_characters": 2808,
+        "description_characters": 2312
+      },
+      "find_cooccurring_codes": {
+        "definition_characters": 3024,
+        "description_characters": 2538
+      },
+      "get_case_attributes": {
+        "definition_characters": 573,
+        "description_characters": 312
+      },
+      "get_case_code_matrix": {
+        "definition_characters": 1862,
+        "description_characters": 1549
+      },
+      "get_cases_by_code": {
+        "definition_characters": 1482,
+        "description_characters": 1113
+      },
+      "get_coded_segments": {
+        "definition_characters": 3490,
+        "description_characters": 2621
+      },
+      "get_codes_by_case": {
+        "definition_characters": 1512,
+        "description_characters": 1143
+      },
+      "get_coding_frequencies": {
+        "definition_characters": 1279,
+        "description_characters": 982
+      },
+      "get_coding_session_info": {
+        "definition_characters": 811,
+        "description_characters": 504
+      },
+      "get_current_project": {
+        "definition_characters": 2281,
+        "description_characters": 2066
+      },
+      "get_file_attributes": {
+        "definition_characters": 578,
+        "description_characters": 317
+      },
+      "get_project_summary": {
+        "definition_characters": 424,
+        "description_characters": 242
+      },
+      "import_documents": {
+        "definition_characters": 3124,
+        "description_characters": 1972
+      },
+      "import_text_file": {
+        "definition_characters": 4453,
+        "description_characters": 3688
+      },
+      "link_file_to_case": {
+        "definition_characters": 2392,
+        "description_characters": 1781
+      },
+      "list_attribute_types": {
+        "definition_characters": 603,
+        "description_characters": 415
+      },
+      "list_available_projects": {
+        "definition_characters": 1256,
+        "description_characters": 904
+      },
+      "list_backups": {
+        "definition_characters": 2551,
+        "description_characters": 2348
+      },
+      "list_coding_sessions": {
+        "definition_characters": 1023,
+        "description_characters": 645
+      },
+      "merge_category": {
+        "definition_characters": 2957,
+        "description_characters": 2423
+      },
+      "merge_codes": {
+        "definition_characters": 3328,
+        "description_characters": 2748
+      },
+      "move_category": {
+        "definition_characters": 1901,
+        "description_characters": 1398
+      },
+      "move_code_to_category": {
+        "definition_characters": 2236,
+        "description_characters": 1735
+      },
+      "open_file_for_reading": {
+        "definition_characters": 1630,
+        "description_characters": 1187
+      },
+      "prepare_names_list": {
+        "definition_characters": 897,
+        "description_characters": 713
+      },
+      "propose_codes": {
+        "definition_characters": 3383,
+        "description_characters": 2865
+      },
+      "prune_backups": {
+        "definition_characters": 3938,
+        "description_characters": 3380
+      },
+      "pseudonymise_source": {
+        "definition_characters": 19178,
+        "description_characters": 17138
+      },
+      "query_by_attribute": {
+        "definition_characters": 3268,
+        "description_characters": 2683
+      },
+      "read_brief": {
+        "definition_characters": 451,
+        "description_characters": 294
+      },
+      "read_file_with_codings": {
+        "definition_characters": 2742,
+        "description_characters": 2293
+      },
+      "recolor_code": {
+        "definition_characters": 1721,
+        "description_characters": 1293
+      },
+      "record_suggestions": {
+        "definition_characters": 5054,
+        "description_characters": 4455
+      },
+      "rename_case": {
+        "definition_characters": 2571,
+        "description_characters": 2124
+      },
+      "rename_category": {
+        "definition_characters": 1449,
+        "description_characters": 998
+      },
+      "rename_code": {
+        "definition_characters": 1399,
+        "description_characters": 968
+      },
+      "rename_file": {
+        "definition_characters": 3620,
+        "description_characters": 3148
+      },
+      "restore_backup": {
+        "definition_characters": 3806,
+        "description_characters": 3377
+      },
+      "review_proposals": {
+        "definition_characters": 907,
+        "description_characters": 401
+      },
+      "review_suggestions": {
+        "definition_characters": 1866,
+        "description_characters": 1327
+      },
+      "save_names_list": {
+        "definition_characters": 1292,
+        "description_characters": 999
+      },
+      "search_coded_text": {
+        "definition_characters": 3675,
+        "description_characters": 2844
+      },
+      "search_files": {
+        "definition_characters": 5569,
+        "description_characters": 4537
+      },
+      "search_memos": {
+        "definition_characters": 2314,
+        "description_characters": 1959
+      },
+      "select_project": {
+        "definition_characters": 2708,
+        "description_characters": 2403
+      },
+      "set_attribute": {
+        "definition_characters": 2156,
+        "description_characters": 1530
+      },
+      "set_memo": {
+        "definition_characters": 3270,
+        "description_characters": 2610
+      },
+      "set_project_ai_coder_name": {
+        "definition_characters": 2622,
+        "description_characters": 2151
+      },
+      "set_project_coder_name": {
+        "definition_characters": 1528,
+        "description_characters": 1152
+      },
+      "start_coding_session": {
+        "definition_characters": 6685,
+        "description_characters": 6038
+      },
+      "undo_changes": {
+        "definition_characters": 1977,
+        "description_characters": 1550
+      },
+      "update_annotation": {
+        "definition_characters": 2551,
+        "description_characters": 1990
+      },
+      "update_proposal": {
+        "definition_characters": 2763,
+        "description_characters": 1819
+      },
+      "update_proposal_status": {
+        "definition_characters": 1368,
+        "description_characters": 814
+      },
+      "update_suggestion_status": {
+        "definition_characters": 2241,
+        "description_characters": 1537
+      }
+    }
+  },
+  "measured_on": "Python 3.13, the libraries of uv.lock"
+}

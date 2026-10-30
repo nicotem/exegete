@@ -37,7 +37,7 @@ def _flat(text):
 
 def _served(mode):
     """The descriptions a host is sent in `mode`, the tools that mode
-    removes put back afterwards, as test_toolset_modes measures them."""
+    removes put back afterwards."""
     removed = server._apply_toolset(mode)
     try:
         return {t.name: t.description or ""
@@ -162,14 +162,16 @@ class TestTheRestartIsSaid:
         names = readme[readme.index("**Two coder names.**"):]
         names = names[:names.index("**A project you already have.**")]
         settings = names[names.index("Settings, Extensions, Exegete"):]
-        settings = settings[:settings.index("INSTALL.md")]
+        # (v0.15.2, the merge onto the integration branch: the pointer to
+        # the other routes names the Terminal guide)
+        settings = settings[:settings.index("Elsewhere, see")]
         assert "quit Claude Desktop and open it again" in settings
 
     def test_the_quick_start_says_it_where_the_coder_name_is_named(self):
         quick = _flat(_read("QUICKSTART.md"))
         said = quick[quick.index('"Your coder name" in the extension\'s '
                                  'settings'):]
-        said = said[:said.index("Then:")]
+        said = said[:said.index("Then try")]
         assert "Claude Desktop has been quit and opened again" in said
 
 
@@ -180,19 +182,24 @@ class TestTheRestartIsSaid:
 class TestTheMethodRelease:
 
     def test_no_text_plans_the_earlier_number(self):
-        assert _method_release() == "v0.15.3"
+        # the owner's form of 27 October (ruling 105): method is v0.15.4
+        assert _method_release() == "v0.15.4"
         sources = [str(p.relative_to(REPO)) for p in
                    sorted((REPO / "src" / "exegete").rglob("*.py"))]
         for name in DOCUMENTS + tuple(sources):
             text = _flat(_read(name))
-            assert "planned as v0.15.2" not in text, name
-            assert "v0.15.2, the method release" not in text, name
+            for earlier in ("v0.15.2", "v0.15.3"):
+                assert f"planned as {earlier}" not in text, name
+                assert f"{earlier}, the method release" not in text, name
 
-    def test_the_unreleased_entry_names_the_planned_release(self):
+    def test_the_released_entry_keeps_the_release_it_named(self):
+        """0.15.1-alpha's entry is a record of its release: it names the
+        method release as planned then (ruling 85), and the later move to
+        v0.15.4 (ruling 105) does not rewrite it."""
         entry = _flat(_unreleased())
         found = re.findall(r"until (v\d+\.\d+\.\d+), the method release",
                            entry)
-        assert found and set(found) == {_method_release()}, found
+        assert found and set(found) == {"v0.15.3"}, found
 
     def test_the_released_entry_keeps_its_history(self):
         text = _read("CHANGELOG.md")

@@ -1273,7 +1273,7 @@ class TestWhatItSays:
 
 # Fix round 2: a names file already there is kept
 TOOLS_ENTRY = (
-    "- `prepare_names_list()` - **WRITES A FILE ON YOUR COMPUTER** - Makes "
+    "- `prepare_names_list()` - **Writes a file on your computer** - Makes "
     "`Names to replace.txt` in the project's `Exegete` folder for you to "
     "fill in, with the project's names list in it when there is one, or "
     "keeps the one already there as it is, and shows and opens it; never "
@@ -1296,13 +1296,15 @@ class TestTheDocuments:
         # the files design, piece 4: the save comes next
         assert lines[at + 1].startswith("- `save_names_list(")
         assert lines[at + 2].startswith("- `create_project(")
-        assert tools.index("**Project Management:**") < tools.index(
+        assert tools.index("**Project management:**") < tools.index(
             TOOLS_ENTRY) < tools.index("**Keeping Exegete up to date:**")
         # 83 since save_names_list (the files design, piece 4), 82 since
         # read_pseudonym_list was removed (piece 5), 79 since v0.15.1
-        # removed three tools, as announced in 0.14
-        assert "registers 79 tools, two of them the earlier names" in \
-            _flat(tools)
+        # removed three tools, as announced in 0.14, and the snapshot's
+        # count since (tests/tool_counts.py; 80 with v0.15.2's undo)
+        from tool_counts import FULL_TOOLS
+        assert (f"registers {FULL_TOOLS} tools, two of them the earlier "
+                "names") in _flat(tools)
 
     def test_privacy_names_the_file_among_the_files_you_fill_in(self):
         privacy = _flat(_read("PRIVACY.md"))
@@ -1474,8 +1476,12 @@ class TestTheDocuments:
         assert "the server" not in part
 
     def test_the_measurement_names_the_tools_entry(self):
-        """The CHANGELOG's "Measured" gives the tool's entry, with its
-        separator, as measured on Python 3.13 and 3.11."""
+        """The CHANGELOG's "Measured" of 0.15.0 gives the tool's entry,
+        with its separator, as measured then on Python 3.13 and 3.11.
+        v0.15.2, the small corrections: that release's figures are
+        history, and the entry as it is now, written from the code, is in
+        docs/snapshot/sizes.json, held by tests/test_served_texts.py, so a
+        change to the description is read there as a diff."""
         log = _flat(_read("CHANGELOG.md"))
         measured = log[log.index("### Measured"):log.index(
             "## [0.14.3-alpha]")]
@@ -1486,14 +1492,3 @@ class TestTheDocuments:
                 "entry and its separator: 899 characters in `full`, 943 on "
                 "3.11, its pointer to `save_names_list` included; `core` "
                 "does not serve it.") in measured
-        server._apply_toolset("full")
-        import asyncio
-        tool = next(t for t in asyncio.run(server.mcp.list_tools())
-                    if t.name == "prepare_names_list")
-        entry = len(json.dumps({"name": tool.name,
-                                "description": tool.description or "",
-                                "inputSchema": tool.inputSchema}))
-        if sys.version_info[:2] == (3, 13):
-            assert entry + len(", ") == 899
-        elif sys.version_info[:2] == (3, 11):
-            assert entry + len(", ") == 943

@@ -152,94 +152,20 @@ REFUSED_LAST = (
     "if it will not open. While it will not open, no tool here can restore "
     "it: " + BY_HAND)
 
-# The 26 descriptions that end with the sentence, and their length
-# before this piece on Python 3.13 (tests/test_v0142_description_cut.py's
-# pins as they stood) and on 3.11 (3.10 to 3.12 keep a docstring's
-# indentation alike): each is shorter now. apply_codings and
-# restore_backup carry their own wordings and are held to theirs too.
-BEFORE = {
-    "add_annotation": (1697, 1781), "add_journal_entry": (1137, 1193),
-    "create_attribute_type": (2121, 2225), "create_case": (1709, 1797),
-    "create_category": (1901, 1997), "create_code": (2945, 3113),
-    "create_proposed_codes": (1929, 2025),
-    "delete_annotation": (1986, 2110), "delete_category": (1740, 1836),
-    "delete_code": (2640, 2784), "delete_coding": (2992, 3164),
-    "import_text_file": (4022, 4230), "link_file_to_case": (1846, 1950),
-    "merge_category": (2544, 2688), "merge_codes": (2869, 3033),
-    "move_category": (1460, 1540), "move_code_to_category": (1797, 1901),
-    "pseudonymise_source": (17910, 19030), "recolor_code": (1355, 1427),
-    "rename_case": (2197, 2309), "rename_category": (1060, 1116),
-    "rename_code": (1030, 1086), "rename_file": (3504, 3696),
-    "set_attribute": (1767, 1863), "set_memo": (2672, 2832),
-    "update_annotation": (2052, 2160),
-    "apply_codings": (2627, 2791), "restore_backup": (2796, 2988),
-}
-CARRIERS = set(BEFORE) - {"apply_codings", "restore_backup"}
+# The descriptions that end with the sentence: those whose
+# _with_paragraphs line in server.py passes the lock paragraph, read as
+# tests/test_served_texts.py reads them, so that a tool added with it is
+# held here too. apply_codings and restore_backup carry their own
+# wordings. (Until v0.15.2 each, those two included, was also held to its
+# length before this piece; docs/snapshot/ holds the descriptions'
+# lengths now, and a change to one is read there as a diff.)
+from test_served_texts import SERVER_TREE, _decorated  # noqa: E402
+CARRIERS = {tool for tool, names in _decorated(SERVER_TREE)
+            if "LOCK_REFUSED_PARAGRAPH" in names}
 # pseudonymise_source's ten rules do not all fit within the cut; the
 # refusal is among those left past it, with its reason, in
 # tests/test_v0142_description_cut.py (LEFT_PAST_THE_CUT)
 PAST_THE_CUT = {"pseudonymise_source"}
-
-# The paragraph the sentence replaces, as Python 3.13 served it, in the
-# three descriptions that other tests compare with a pin taken before
-# this piece: tests/test_v0150_renames_tools.py (delete_coding and
-# update_annotation, the rename's check) and
-# tests/test_v0150_qualcoder_texts_2.py (pseudonymise_source, its
-# paragraph's guard). Put back, each description is as it was.
-_LOCK_PARAGRAPH_REST = (
-    "get_current_project (qualcoder_open must be false), then retry. The "
-    "lock gate detects released QualCoder (3.x) only: QualCoder 4.0 builds "
-    "no longer use a lock file, so 4.0 detection is best-effort heuristics "
-    "(qualcoder_gui_signals in get_current_project); never write while any "
-    "QualCoder window has this project open.")
-_WRAPPED = ("Refused while QualCoder has the project open (heartbeat lock): "
-            "ask\nthe user to close the project in QualCoder, re-check "
-            "with\n" + _LOCK_PARAGRAPH_REST)
-LOCK_PARAGRAPH_BEFORE = {
-    "delete_coding": (
-        "Refused while QualCoder has the project open (its heartbeat "
-        "lock): ask the user to close the project in QualCoder, re-check "
-        "with " + _LOCK_PARAGRAPH_REST),
-    "update_annotation": _WRAPPED,
-    "pseudonymise_source": _WRAPPED,
-}
-
-
-def put_back_the_lock_paragraph(name, text):
-    """`text`, tool `name`'s description, with the sentence taken out and
-    the paragraph it replaced put back."""
-    words = r"\s+".join(map(re.escape, SENTENCE.split()))
-    found = re.search(words, text)
-    assert found, name
-    return (text[:found.start()] + LOCK_PARAGRAPH_BEFORE[name]
-            + text[found.end():])
-
-
-class TestThePutBack:
-
-    def test_the_paragraph_put_back_is_the_description_as_it_was(self):
-        """Each of the three is then as tests/test_v0142_description_cut.py
-        pinned it before this piece: the same words, and on 3.13 the same
-        length."""
-        from test_v0142_description_cut import _fingerprint
-        # the whole-branch review's round 1 moved the removals to v0.15.1:
-        # put back too
-        from test_v0150_wb_fix_r1 import before_the_review
-        # and v0.15.1's ignored create_backup: put back too
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        pinned = {"delete_coding": (2992, 2420, "11210044336ce58c"),
-                  "update_annotation": (2052, 1709, "32e8e8c22ca88105"),
-                  "pseudonymise_source": (17910, 13182, "ddaac1472f42ea9f")}
-        server._apply_toolset("full")
-        for name, (length, solid, digest) in pinned.items():
-            text = before_the_review(put_back_the_lock_paragraph(
-                name, before_the_ignored_argument(
-                    name, server.mcp.original_descriptions[name])))
-            got = _fingerprint(text)
-            assert got[1:] == (solid, digest), name
-            if sys.version_info[:2] == (3, 13):
-                assert got[0] == length, name
-
 
 # ---------------------------------------------------------------------------
 # The guard: each old phrase is gone
@@ -322,35 +248,9 @@ class TestTheWriteToolsSentence:
         served = _listed("full")
         carriers = {name for name, text in served.items()
                     if _spans(SENTENCE, text)}
-        assert carriers == CARRIERS | {"apply_codings"}
-
-    def test_each_description_is_shorter_than_before(self):
-        which = 0 if sys.version_info[:2] >= (3, 13) else 1
-        server._apply_toolset("full")
-        raw = dict(server.mcp.original_descriptions)
-        assert len(BEFORE) == 28 and set(BEFORE) <= set(raw)
-        # The whole-branch review's round 2 then gives import_text_file a
-        # paragraph on what pseudonymisation is for (ruling 74): this
-        # piece's change is still held to its own length, measured with
-        # that paragraph taken out
-        from test_v0150_wb_fix_r2 import without_the_pseudonyms_sentence
-        raw["import_text_file"] = without_the_pseudonyms_sentence(
-            raw["import_text_file"])
-        assert (raw["import_text_file"]
-                != server.mcp.original_descriptions["import_text_file"])
-        # And the files design, piece 2, gives restore_backup a paragraph
-        # on the project's Exegete folder, which a restore keeps: held to
-        # this piece's length likewise, with that paragraph taken out
-        from test_v0150_restore_keeps_folder import \
-            without_the_folder_paragraph
-        raw["restore_backup"] = without_the_folder_paragraph(
-            raw["restore_backup"])
-        assert (raw["restore_backup"]
-                != server.mcp.original_descriptions["restore_backup"])
-        longer = {name: (len(raw[name]), before[which])
-                  for name, before in BEFORE.items()
-                  if len(raw[name]) >= before[which]}
-        assert not longer, longer
+        # (v0.15.2: and undo_changes, a new tool, through the shared
+        # paragraph)
+        assert carriers == CARRIERS | {"apply_codings", "undo_changes"}
 
     def test_apply_codings_says_it_first_among_its_guarantees(self):
         for mode in TOOL_SETS:
@@ -403,10 +303,12 @@ class TestTheOpeningText:
         assert RULE_9 in short
         assert short.index(RULE_9) + len(RULE_9) <= CUT
         assert "9. If QualCoder may have the project open" not in short
-        # 1,988 characters before; the new rule takes it to 2,034, within
-        # Claude Code's cut, as the design says
-        assert len(short) == 2034
-        assert len(short.encode("utf-8")) == 2034
+        # 1,988 characters before; the new rule took it to 2,034, within
+        # Claude Code's cut, as the design says (v0.15.2: the opening texts
+        # took it to 2,046, saying once what QualCoder is, and rule 8, naming
+        # undoing a change, to 2,042; the exact figure is
+        # docs/snapshot/sizes.json's)
+        assert len(short) == len(short.encode("utf-8")) <= CUT
 
     @pytest.mark.parametrize("mode", TOOL_SETS)
     def test_the_instructions_carry_it_in_every_set(self, mode):
@@ -643,8 +545,10 @@ class TestFixRound1:
         comment = _comment_above(source, "SERVER_INSTRUCTIONS = BRIEF_SHORT")
         # (the whole-branch review, round 1: 2,048 now a margin, since
         # Claude Code keeps 4,096 from its version 2.1.296)
+        # (v0.15.2, the opening texts, then undo: the figure of the release
+        # that changed it last)
         found = re.search(r"within ([\d,]+) characters and bytes, now kept "
-                          r"as a margin \(([\d,]+) in v0\.15\.0\)", comment)
+                          r"as a margin \(([\d,]+) in v0\.15\.\d\)", comment)
         assert found, comment
         bound, now = (int(n.replace(",", "")) for n in found.groups())
         text = server.SERVER_INSTRUCTIONS

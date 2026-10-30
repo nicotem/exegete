@@ -24,6 +24,33 @@ def _flat(name):
     return " ".join(text.replace("\n>", " ").split())
 
 
+# v0.15.2: INSTALL.md is the desktop extension's, and every Terminal
+# route moved, whole, to the Terminal guide; PRIVACY.md's checklist moved
+# up, before "How your data flows"
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
+def _what_stays():
+    privacy = _flat("PRIVACY.md")
+    stays = privacy[privacy.index("**What stays on the computer"):]
+    return stays[:stays.index("## How your data flows")]
+
+
+def _extension_stays():
+    """INSTALL.md's uninstall: what stays after the extension goes."""
+    install = _flat("INSTALL.md")
+    stays = install[install.index("four more things stay"):]
+    return stays[:stays.index("The backups Exegete took sit beside")]
+
+
+def _guide_uninstall_step(number):
+    guide = _flat(GUIDE)
+    step = guide[guide.index("## Uninstalling"):]
+    step = step[step.index(f"{number}. **"):]
+    return step[:step.index(f"{number + 1}. **")] if number < 4 else \
+        step[:step.index("## Getting help")]
+
+
 def test_the_tools_that_preview_first_are_counted_from_the_registry():
     words = {9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
     count = words[len(preview_tokens.REGISTRY)]
@@ -40,24 +67,21 @@ def test_the_reading_folder_is_where_the_code_puts_it():
     said = ("`~/Library/Caches/Exegete/Reading.noindex`",
             "`%LOCALAPPDATA%\\Exegete\\Reading`",
             "`~/.cache/exegete/reading`")
-    privacy = _flat("PRIVACY.md")
-    stays = privacy[privacy.index("**What stays on the computer"):]
-    stays = stays[:stays.index("## Practical mitigations")]
-    install = _flat("INSTALL.md")
-    step = install[install.index("**Optionally remove the reading "
-                                 "folder**"):]
-    step = step[:step.index("Uninstalling does not touch")]
+    stays = _what_stays()
     for words in said:
         assert words in stays, words
+    # the extension runs on a Mac or Windows; Linux is the Terminal
+    # guide's
+    step = _extension_stays()
+    for words in said[:2]:
         assert words in step, words
+    assert said[2] in _guide_uninstall_step(4)
 
 
 def test_the_uninstall_names_codex_s_file_as_the_transition_check_does():
     source = Path(transition.__file__).read_text(encoding="utf-8")
     assert '("Codex", home / ".codex" / "config.toml")' in source
-    install = _flat("INSTALL.md")
-    step = install[install.index("1. **Remove it from your client**"):]
-    step = step[:step.index("2. **Remove the package**")]
+    step = _guide_uninstall_step(1)
     assert ("delete the `[mcp_servers.exegete]` table from "
             "`~/.codex/config.toml`") in step
 
@@ -70,9 +94,9 @@ def test_a_copy_of_the_source_is_updated_as_exegete_says(monkeypatch):
     joined = " ".join(steps)
     assert "git fetch --tags" in joined
     assert "git merge --ff-only v0.15.0-alpha" in joined
-    install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-    block = install[install.index("**Git (contributor) install**"):]
-    block = block[:block.index("Then **reopen your MCP client**")]
+    guide = (REPO / GUIDE).read_text(encoding="utf-8")
+    block = guide[guide.index("**A copy of the source**, with your host"):]
+    block = block[:block.index("\"Testing the install\", above, shows")]
     assert "git fetch --tags\ngit merge --ff-only v<version>\n" in block
     assert "\ngit pull\n" not in block
 
@@ -116,10 +140,6 @@ def test_prune_and_restore_read_a_fingerprint_of_the_names_file():
 # The fix round (the two readers of 20 October 2026): each corrected
 # sentence held to the fact it states.
 
-def _uninstall_step_one():
-    install = _flat("INSTALL.md")
-    step = install[install.index("1. **Remove it from your client**"):]
-    return step[:step.index("2. **Remove the package**")]
 
 
 def test_the_uninstall_says_claude_desktop_s_log_stays(tmp_path):
@@ -131,11 +151,10 @@ def test_the_uninstall_says_claude_desktop_s_log_stays(tmp_path):
     assert not transition.OLD_LOG.fullmatch("mcp-server-Exegete.log")
     assert (transition.claude_log_folders(tmp_path)[0]
             == tmp_path / "Library" / "Logs" / "Claude")
-    step = _uninstall_step_one()
-    stays = step[step.index("Four things stay"):]
-    stays = stays[:stays.index("- Claude Desktop configured by hand")]
-    for words in ("`~/.exegete` (step 3)", "its reading folder (step 4)",
-                  "Claude Desktop's log of the extension",
+    stays = _extension_stays()
+    for words in ("**Exegete's own folder**, `~/.exegete`",
+                  "**The reading folder**",
+                  "**Claude Desktop's log of the extension**",
                   "`mcp-server-Exegete.log` in `~/Library/Logs/Claude`",
                   "`mcp-server-qualcoder-mcp.log`",
                   "keeps every request and every answer in full",
@@ -144,10 +163,8 @@ def test_the_uninstall_says_claude_desktop_s_log_stays(tmp_path):
 
 
 def test_the_uninstall_says_the_hosts_records_stay_as_privacy_lists():
-    step = _uninstall_step_one()
-    privacy = _flat("PRIVACY.md")
-    listed = privacy[privacy.index("**What stays on the computer"):]
-    listed = listed[:listed.index("## Practical mitigations")]
+    step = _guide_uninstall_step(3)
+    listed = _what_stays()
     for place in ("`~/.claude/projects/`", "`~/.codex/sessions`"):
         assert place in step and place in listed, place
     assert "the host's to remove" in step
@@ -164,8 +181,9 @@ def test_the_find_command_reaches_as_deep_as_the_project_listing():
     deepest = max(len(Path(place[2:]).parts)
                   for place in server._USUAL_SEARCH_PLACES)
     command = f'find ~ -maxdepth {deepest + 3} -name "*.qda" -type d'
-    assert command in (REPO / "INSTALL.md").read_text(encoding="utf-8")
-    assert "takes in every place" not in _flat("INSTALL.md")
+    assert command in (REPO / GUIDE).read_text(encoding="utf-8")
+    for name in ("INSTALL.md", GUIDE):
+        assert "takes in every place" not in _flat(name), name
 
 
 def test_every_sentence_on_claude_code_s_import_says_dontask_refuses():
@@ -186,33 +204,30 @@ def test_every_sentence_on_claude_code_s_import_says_dontask_refuses():
 
 def test_the_path_check_lists_the_file():
     """`echo` prints a path whether or not a file is there; `ls` says."""
-    install = _flat("INSTALL.md")
-    check = install[install.index("1. **Check your paths**"):]
-    check = check[:check.index("2. **")]
+    guide = _flat(GUIDE)
+    check = guide[guide.index("**Exegete is not connected.**"):]
+    check = check[:check.index("quit the host fully and open it again")]
     assert "`ls ~/exegete-venv/bin/exegete`" in check
     assert "echo" not in check
 
 
 def test_the_old_venv_block_names_the_clone_as_the_entry_above_does():
-    install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-    path_b = install[install.index("### Path B: switch to the PyPI"):]
-    path_b = path_b[:path_b.index("## Uninstalling")]
-    entry = re.search(r'"command": "/Users/YOU/(Documents/[^/"]+)/venv/bin/'
-                      r'python"', path_b)
-    assert entry, "the entry before"
-    block = path_b[path_b.index("Reusing the old venv instead?"):]
-    block = block[:block.index("</details>")]
-    clone = "~/" + entry.group(1)
+    # v0.15.2: the block names the old copy's folder and says to put
+    # yours in its place
+    guide = (REPO / GUIDE).read_text(encoding="utf-8")
+    block = guide[guide.index("**Reusing the old environment instead**"):]
+    block = block[:block.index("## Uninstalling")]
+    clone = "~/Documents/qualcoder_mcp"
+    assert f"with your copy's folder in place of\n`{clone}`" in block
     assert f"{clone}/venv/bin/pip uninstall qualcoder-mcp" in block
-    assert f"{clone}/venv/bin/pip install exegete" in block
-    assert "your clone's folder" in " ".join(block.split())
+    assert f"{clone}/venv/bin/pip install \"exegete[pdf-epub]\"" in block
     assert "~/Documents/exegete/venv" not in block
 
 
 def test_readme_s_link_names_privacy_s_heading_for_exegete():
     readme = _flat("README.md")
-    cited = readme.split("project was built to leak it (PRIVACY.md, \"",
-                         1)[1]
+    cited = readme.split("project was built on purpose to leak it "
+                         "(PRIVACY.md, \"", 1)[1]
     cited = cited[:cited.index("\")")]
     assert f"**{cited}.**" in _flat("PRIVACY.md")
     assert "server" not in cited
@@ -236,8 +251,9 @@ def test_the_backup_before_a_database_change_is_never_copied_as_a_file():
     readme = _flat("README.md")
     # (the ignored argument, merged first: "every change", whatever
     # create_backup says)
-    assert ("a backup before every change to the project's database, taken "
-            "by Exegete itself") in readme
+    # (v0.15.2, the opening texts: the same fact, reworded)
+    assert ("before every change to the project's database, Exegete takes "
+            "a backup") in readme
 
 
 def test_the_answers_that_name_a_backup_are_said():
@@ -273,14 +289,7 @@ def test_the_linux_reading_folder_follows_xdg_cache_home(monkeypatch):
                         lambda: "/somewhere/cache")
     assert (reading_folder.root("linux", Path("/home/someone"))
             == Path("/somewhere/cache/exegete/reading"))
-    privacy = _flat("PRIVACY.md")
-    stays = privacy[privacy.index("**What stays on the computer"):]
-    stays = stays[:stays.index("## Practical mitigations")]
-    install = _flat("INSTALL.md")
-    step = install[install.index("**Optionally remove the reading "
-                                 "folder**"):]
-    step = step[:step.index("Uninstalling does not touch")]
-    for text in (stays, step):
+    for text in (_what_stays(), _guide_uninstall_step(4)):
         assert "`exegete/reading`" in text and "`$XDG_CACHE_HOME`" in text
 
 

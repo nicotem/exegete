@@ -526,16 +526,16 @@ def _flat(name):
 TOOLS_SAYS = (
     "A project from a QualCoder older than 3.8 is refused until QualCoder "
     "3.8 or newer has opened it once, which brings it up to date with no "
-    "need to save, and it is selected again in Exegete; Exegete cannot "
-    "bring it up to date itself (it cannot read the oldest formats at "
-    "all, and reads the others without writing to them). Whoever opens it "
+    "need to save, and it is selected again in Exegete. Exegete cannot "
+    "bring it up to date itself: it cannot read the oldest formats at "
+    "all, and reads the others without writing to them. Whoever opens it "
     "closes it again before Exegete changes it. Without QualCoder, "
     "someone who has it and is allowed to see the project's data can do "
     "this and send you the updated copy. QualCoder writes the coder name "
     "set in it into every project it opens, as the current coder and in "
-    "the list of coders, so that person's name is added to the project "
-    "unless they first set their coder name in QualCoder to yours (and "
-    "back afterwards). Once you have the copy, `set_project_coder_name` "
+    "the list of coders. So that person's name is added to the project, "
+    "unless they first set their coder name in QualCoder to yours, and "
+    "back afterwards. Once you have the copy, `set_project_coder_name` "
     "(not in `core`) can put your name in place of theirs while nothing "
     "is recorded under their name. Without QualCoder at all, a new "
     "project made in Exegete from the original documents is a way on, "
@@ -551,26 +551,29 @@ class TestTheDocuments:
         assert "Close the project in QualCoder again" not in tools
 
     def test_the_coding_guide(self):
+        # (v0.15.2: told once, in TOOLS.md, whose words test_tools_md
+        # holds, and pointed to from the guide, with the way without
+        # QualCoder named)
         guide = _flat("AI_CODING_GUIDE.md")
-        assert ("older projects are refused (until QualCoder 3.8 or newer "
-                "has opened them once, which brings them up to date with "
-                "no save, and they are selected again; Exegete cannot, but "
-                "someone with QualCoder who may see the data can do it and "
-                "send the updated copy, and without QualCoder at all a "
-                "new project made in Exegete from the original documents "
-                "is a way on, without the old coding)") in guide
+        assert ("An older project is refused; \"Supported QualCoder "
+                "versions\" in TOOLS.md says how to bring one up to date, "
+                "with QualCoder or without it") in guide
+        assert "## Supported QualCoder versions" in _flat("TOOLS.md")
         assert "open and save them in QualCoder 3.8" not in guide
 
     def test_the_readme(self):
         """QualCoder is not the only way through (gate review, documents,
         round 1)."""
         readme = _flat("README.md")
-        assert ("A project from before QualCoder 3.8 must first be opened "
-                "once in 3.8 or newer; without QualCoder, someone who has "
-                "it and may see the project's data can do this and send "
-                "you the updated copy. Without QualCoder at all, a new "
-                "project made in Exegete from the original documents is a "
-                "way on, without the old project's coding.") in readme
+        # (v0.15.2, the opening texts: the same two ways, reworded)
+        # (the readability reading: the two ways a sentence each, and
+        # "may see" said as allowed to see)
+        assert ("A project made in QualCoder before 3.8 must first be opened "
+                "once in QualCoder 3.8 or newer. Someone who has QualCoder, "
+                "and is allowed to see the project's data, can do this and "
+                "send you the updated copy. Otherwise, a new project made in "
+                "Exegete from the original documents is a way on, without "
+                "the old coding.") in readme
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

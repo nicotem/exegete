@@ -52,7 +52,7 @@ DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
 # The policy named in any spelling 0.15.0 used
 NAMES_THE_POLICY = re.compile(r"(?i)edit[_ -]parity")
 
-# What 0.15.0 served, for the put-back the older tests use
+# What 0.15.0 served
 DEPRECATED_EDIT_PARITY_0150 = (
     "Deprecated, removed in v0.15.1: overlap_policy qualcoder_edit_parity, "
     "which deletes codings on names and is not exact parity.")
@@ -298,40 +298,3 @@ def test_the_changelog_says_so():
     removed = removed[:removed.index("### ", 5)]
     assert "**`pseudonymise_source`'s overlap policy " \
            "`qualcoder_edit_parity`**" in removed
-
-
-# ---------------------------------------------------------------------------
-# The put-back the older tests use
-# ---------------------------------------------------------------------------
-
-def before_the_one_overlap_policy(name, description):
-    """`name`'s description as served before this part, on any
-    interpreter: for pseudonymise_source, the policy's paragraph among
-    the arguments and its deprecation sentence put back."""
-    if name != "pseudonymise_source":
-        return description
-    from test_v0151_removed_arguments import _lines_after, _sentence_before
-    last = "nothing is ever emptied or deleted."
-    description = _lines_after(
-        description, last,
-        [PARITY_ARGS_0150[0]] + [(0, line) for line in PARITY_ARGS_0150[1:]],
-        indent_of=last)
-    return _sentence_before(description, DEPRECATED_EDIT_PARITY_0150)
-
-
-def test_the_description_put_back_is_as_served_before():
-    """A guard for the put-back: with it, pseudonymise_source's
-    description is as served before this part, on any interpreter
-    (tests/test_v0142_description_cut.py), and differs from now."""
-    import sys
-    from test_v0142_description_cut import (CHANGED_0151, ONE_POLICY_0151,
-                                            _fingerprint)
-    server._apply_toolset("full")
-    assert set(ONE_POLICY_0151) == {"pseudonymise_source"}
-    now = server.mcp.original_descriptions["pseudonymise_source"]
-    then = before_the_one_overlap_policy("pseudonymise_source", now)
-    assert then != now
-    got = _fingerprint(then)
-    assert got[1:] == CHANGED_0151["pseudonymise_source"][1:]
-    if sys.version_info[:2] == (3, 13):
-        assert got[0] == CHANGED_0151["pseudonymise_source"][0]

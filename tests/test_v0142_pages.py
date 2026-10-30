@@ -96,8 +96,9 @@ def _edit(path, old, new):
     ("update/index.html", updates.spoken_date(RELEASE_DAY),
      "1 October 2026", "does not give the version"),
     # words of this release's summary (0.14.2's named QualCoder 4.0,
-    # 0.14.3's "Word, PDF and other", 0.15.0's "reads each document once")
-    ("update/index.html", "a restore's\npreview says", "a restore's\npreview",
+    # 0.14.3's "Word, PDF and other", 0.15.0's "reads each document once",
+    # 0.15.1's "a restore's preview says")
+    ("update/index.html", "showing first what it", "showing what it",
      "does not give the summary"),
     ("update/index.html", "/releases/download/v", "/releases/tag/v",
      "does not link the download link"),
@@ -294,8 +295,36 @@ def _words(text):
 def test_the_page_gives_the_checks_whole_rule():
     # The port's privacy check, round 1: "at most once a week" left out
     # the check made when the researcher asks
-    assert ("Exegete checks whether a newer version exists at most once a "
-            "week, and when you ask,") in _words(_page())
+    # (v0.15.2, the readability reading: the same rule, the note a
+    # sentence of its own)
+    assert ("Exegete checks for a newer version at most once a week, and "
+            "when you ask.") in _words(_page())
+
+
+def test_the_pdf_paragraph_links_where_each_thing_is_said():
+    """v0.15.2: the page said that the Terminal guide's section on the
+    optional part says what its licence means, which INSTALL.md's section
+    of the same name does. Each link now leads to the section that holds
+    what the page says it holds."""
+    paragraph = next(part for part in _page().split("<p>")
+                     if part.startswith("Bringing in PDF and EPUB files"))
+    links = re.findall(r'<a href="https://github\.com/nicotem/exegete/'
+                       r'blob/main/([^"#]+)#([^"]+)">', paragraph)
+    assert links == [("docs/installing-from-the-terminal.md",
+                      "pdf-and-epub-the-optional-part"),
+                     ("INSTALL.md", "pdf-and-epub-the-optional-part")], links
+    words = _words(paragraph)
+    assert "\"PDF and EPUB: the optional part\", says how to add it." in words
+    assert ("INSTALL.md's section of the same name says what its licence "
+            "means, under \"The part's licence\".") in words
+
+    def section(name):
+        text = (REPO / name).read_text(encoding="utf-8")
+        start = text.index("# PDF and EPUB: the optional part\n")
+        return " ".join(text[start:text.index("\n## ", start)].split())
+    assert "To add the part later:" in section(
+        "docs/installing-from-the-terminal.md")
+    assert "**The part's licence.**" in section("INSTALL.md")
 
 
 def _blocks():

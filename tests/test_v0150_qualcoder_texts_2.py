@@ -209,20 +209,30 @@ MITIGATION = (
     "The section \"What pseudonymisation is for\", above, says what it is "
     "for and suggests a safer way to keep names from the assistant.")
 README_SENTENCES = (
-    "Replacing names reduces the risk; it does not make anyone anonymous. "
-    "Exegete can replace them, with the project's names list as documents "
-    "come in or with `pseudonymise_source` afterwards. "
+    # (v0.15.2, the opening texts: one sentence, in the words of the
+    # writing checklist's table)
+    "Replacing names reduces the risk, and makes no one anonymous. "
+    # (v0.15.2, the readability reading: when Exegete replaces them, in
+    # words, the tool's name left to the section for advanced users)
+    "Exegete can replace them as documents come in, with the project's "
+    "names list, or afterwards. "
     # the files design, piece 5
-    "The list can be one you fill in on your own computer, in a file "
-    "Exegete prepares, so the names do not pass through the conversation. "
+    "You can fill in the list on your own computer, in a file Exegete "
+    "prepares, so the names do not pass through the conversation. "
     # and its fix round 1: the subject named, and the names file among
-    # what an assistant can reach
+    # what an assistant can reach (the readability reading: the documents'
+    # originals, and the warning said as a fact before its reasons)
     "Replacing names helps you "
     "manage what you share with other people, though the project's folder "
-    "still holds the originals and any names list. For what the assistant "
-    "reads, the replacement should not be trusted blindly: Exegete's tools "
-    "return the pseudonyms where names were replaced (PRIVACY.md says what "
-    "is not replaced), but an assistant that opens files by itself can "
+    "still holds the documents' originals and any names list. "
+    # (the opening texts' fix round: the backups beside the project, which
+    # copy all of it but its audio and video, the database from before the
+    # replacement included)
+    "Its backups, beside it, hold the same, with the text from before the "
+    "replacement. The "
+    "replacement alone does not keep names from the assistant. Exegete's "
+    "tools return the pseudonyms where names were replaced (PRIVACY.md says "
+    "what is not replaced), but an assistant that opens files by itself can "
     "reach the originals, and the names file, outside Exegete. To keep "
     "real names from the "
     "assistant altogether, a safer way is to replace them before the "
@@ -250,13 +260,6 @@ def _flat(text):
 
 def _doc(name):
     return (REPO / name).read_text(encoding="utf-8")
-
-
-def without_the_paragraph(description):
-    """The description with this piece's paragraph taken out, exactly as
-    it was before (on 3.10 to 3.12 the paragraph keeps its indentation)."""
-    return re.sub(r"[ ]*What it is for: .*?\"What pseudonymisation is "
-                  r"for\"\)\.\n\n", "", description, count=1, flags=re.S)
 
 
 def served(mode):
@@ -433,7 +436,7 @@ class TestPrivacy:
         readme = _flat(_doc("README.md"))
         paragraph = readme[readme.index("**Private notes and names.**"):]
         paragraph = paragraph[:paragraph.index("**What stays on your")]
-        assert "trusted blindly" in paragraph
+        assert "does not keep names from the assistant" in paragraph
         changelog = _flat(_doc("CHANGELOG.md"))
         entry = changelog[changelog.index(ENTRY):]
         entry = entry[:entry.index("### ", len(ENTRY))]
@@ -461,12 +464,12 @@ class TestReadme:
         paragraph = readme[readme.index("**Private notes and names.**"):]
         paragraph = paragraph[:paragraph.index("**What stays on your")]
         for phrase in (
-                "Exegete can replace them, with the project's names list "
-                "as documents come in or with `pseudonymise_source` "
-                "afterwards.",
-                "though the project's folder still holds the originals and "
-                "any names list",
-                "the replacement should not be trusted blindly",
+                "Exegete can replace them as documents come in, with the "
+                "project's names list, or afterwards.",
+                "though the project's folder still holds the documents' "
+                "originals and any names list",
+                "The replacement alone does not keep names from the "
+                "assistant.",
                 "Exegete's tools return the pseudonyms where names were "
                 "replaced (PRIVACY.md says what is not replaced)",
                 "before the documents reach the computer where the "
@@ -517,49 +520,6 @@ class TestTheDescription:
                 ONLY_WHERE_REPLACED), mode
             assert ("Exegete's answers then carry the pseudonyms, but"
                     not in flat), mode
-
-    def test_guard_nothing_else_in_it_moved(self):
-        """A guard: taken out again, the paragraph leaves the description exactly
-        as piece 1 pinned it: the same words and, on 3.13, the same
-        length, so every rule within the first 2,048 characters is where
-        it was."""
-        from test_v0142_description_cut import _fingerprint
-        # not presuming QualCoder, piece 5, made the write tools' closing
-        # paragraph one sentence; it is put back as it was, so that this
-        # still compares with piece 1's pin
-        from test_v0150_qualcoder_texts_5 import put_back_the_lock_paragraph
-        # and the whole-branch review's round 1 moved the removals to
-        # v0.15.1: put back too
-        from test_v0150_wb_fix_r1 import before_the_review
-        # and v0.15.1's ignored create_backup changed its sentence on
-        # the backup: put back too
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        server._apply_toolset("full")
-        before = before_the_review(without_the_paragraph(
-            put_back_the_lock_paragraph(
-                TOOL, before_the_ignored_argument(
-                    TOOL, server.mcp.original_descriptions[TOOL]))))
-        length, solid, digest = _fingerprint(before)
-        assert (solid, digest) == (12705, "b497f4c553410195")
-        if sys.version_info[:2] == (3, 13):
-            assert length == 17339
-
-    def test_its_line_in_changed_0150_is_what_is_served(self):
-        from test_v0142_description_cut import (CHANGED_0150,
-                                                ONE_POLICY_0151, WORDS,
-                                                _fingerprint)
-        # v0.15.1's ignored create_backup changed its sentence on the
-        # backup (its own line, CHANGED_0151), and its removal of the
-        # overlap policy qualcoder_edit_parity its arguments (its line,
-        # ONE_POLICY_0151): put back
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        server._apply_toolset("full")
-        length, solid, digest = _fingerprint(before_the_ignored_argument(
-            TOOL, server.mcp.original_descriptions[TOOL]))
-        assert CHANGED_0150[TOOL][1:] == (solid, digest)
-        assert WORDS[TOOL] == ONE_POLICY_0151[TOOL]
-        if sys.version_info[:2] == (3, 13):
-            assert CHANGED_0150[TOOL][0] == length
 
 
 def test_the_changelog_says_so():

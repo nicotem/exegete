@@ -25,12 +25,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import build_desktop_extension as build        # noqa: E402
 import exegete.server as server                # noqa: E402
-from tool_counts import FULL_TOOLS  # noqa: E402
+from tool_counts import CORE_TOOLS, FULL_TOOLS  # noqa: E402
 from exegete import env_settings, names        # noqa: E402
 
 from test_toolset_modes import (               # noqa: E402
-    EXPECTED_CORE, EXPECTED_FULL, TestThePublishedSchemaBudget as Budget,
-    _build_project, _server_env, _text_of)
+    EXPECTED_CORE, EXPECTED_FULL, _build_project, _server_env, _text_of)
 
 NEW, OLD = names.SETTINGS["toolset"]
 
@@ -46,8 +45,9 @@ NOTE = ("{setting} is set to lifecycle, the earlier name of the full tool "
         "instead.")
 
 
-SETTINGS_CLAUSE = ("The settings choose the tool set (every tool, or a "
-                   "smaller set for local models)")
+# v0.15.2, the opening texts: the long description names the tool set's
+# switch by its title
+SETTINGS_CLAUSE = '"Limit Exegete to its small tool set"'
 
 MANIFEST = json.loads((REPO / "packaging" / "desktop-extension" /
                        "manifest.in.json").read_text(encoding="utf-8"))
@@ -101,7 +101,7 @@ class TestTheSet:
         server._apply_toolset("core")
         registered = set(server.mcp._tool_manager._tools)
         assert registered == set(server.CORE_TOOLSET)
-        assert len(registered) == EXPECTED_CORE == 27   # the two earlier names (0.15.0), restore_backup and search_memos (v0.15.1)
+        assert len(registered) == EXPECTED_CORE == CORE_TOOLS
         assert "create_project" not in registered
 
 
@@ -422,9 +422,21 @@ def _blocks(text):
     return blocks
 
 
+# v0.15.2: INSTALL.md is the desktop extension's; every Terminal route
+# moved, whole, to the Terminal guide
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _flat(name):
     text = (REPO / name).read_text(encoding="utf-8")
     return " ".join(text.replace("\n>", " ").split())
+
+
+def _with_figures(sentence):
+    """`sentence` as a pattern, each FIGURE in it any figure as the
+    documents write one, such as 200,000 or 51k."""
+    return re.compile(re.escape(sentence).replace("FIGURE",
+                                                  r"\d[\d,]*k?"))
 
 
 def _strings(value):
@@ -463,95 +475,62 @@ class TestTheDocuments:
                           "the earlier name"]
 
     def test_install_terminal_route_warns_of_synced_folders(self):
-        flat = _flat("INSTALL.md")
-        item = flat[flat.index("- ✅ **A project, or a new one.**"):]
-        item = item[:item.index("- **QualCoder, optional.**")]
+        # v0.15.2: the Terminal routes are the Terminal guide's
+        flat = _flat(GUIDE)
+        item = flat[flat.index("- **A project, or none yet.**"):]
+        item = item[:item.index("## Installing from PyPI")]
         assert ("The default tool set, `full`, includes creating a "
                 "project: the assistant can start one in the conversation, "
                 "in a new folder, never changing an existing one.") in item
         assert "`EXEGETE_WORKSPACE`" in item
-        assert ("iCloud (Desktop and Documents) or OneDrive may sync "
-                "Documents, and a sync service can copy a project's "
-                "database and its journal separately: consider naming a "
-                "folder outside Documents, such as `~/Exegete projects`."
-                ) in item
-        assert "Or use an existing project (a folder ending in `.qda`," \
+        # (the privacy reader, 28 October 2026: both risks, as INSTALL.md
+        # gives them, the copies off the computer first)
+        assert (("iCloud (Desktop and Documents) or OneDrive may sync "
+                 "Documents. A sync service copies your projects off this "
+                 "computer, transcripts imported into them included. It can "
+                 "also copy a project's database and its journal "
+                 "separately, which can leave a damaged copy. So a folder "
+                 "outside Documents, such as `~/Exegete projects`, may suit "
+                 "you better.")) in item
+        assert "A project you have works too: a folder ending in `.qda`," \
             in item
 
-    def test_the_figures_quoted_are_the_pinned_ones(self):
-        rounded = f"{round(Budget.FULL_MEASURED / 1000) * 1000:,}"
-        tokens = f"{round(Budget.FULL_MEASURED / 4000)}k"
-        # v0.15.0, what pseudonymisation is for (not presuming
-        # QualCoder, piece 2): a paragraph in pseudonymise_source's
-        # description took `full` from 204,225 to 204,808 characters,
-        # and with the extension's folder for projects (the renames,
-        # piece 2) to 204,951
-        # and the two tools renamed (the renames, piece 3), their
-        # earlier names listed: 80 tools, 206,194; and the two coder
-        # names as settings (the coder names, piece 1), 206,569; and the
-        # tool that corrects the researcher's own coder name (the coder
-        # names, piece 2): 81 tools, 208,247; and the AI coder name in
-        # the settings given to each new project (the coder names, piece
-        # 3): 208,379; and the write tools' sentence (not presuming
-        # QualCoder, piece 5): 205,077; and the four outcomes without
-        # their attribution (not presuming QualCoder, piece 13): 205,022;
-        # and, after the whole-branch review, get_current_project's
-        # paragraph on the files Exegete keeps for the project (the files
-        # design, piece 1): 205,637; and restore_backup's sentence on the
-        # project's Exegete folder, which a restore keeps (the files
-        # design, piece 2): 205,788; and the descriptions that gave the
-        # lock file's refusal as QualCoder's alone (the fourth reading of
-        # the documents): 205,745, and its fix round 1 (the renames'
-        # "may miss a 4.0 window"): 205,741, about 206,000; and
-        # prepare_names_list (the files design, piece 3): 82 tools,
-        # 206,613, about 207,000; and save_names_list (piece 4): 83
-        # tools, 207,912, and its fix round 1, 207,934, about 208,000;
-        # and read_pseudonym_list removed (piece 5): 82 tools, 206,624,
-        # about 207,000; and v0.15.1's create_backup accepted and
-        # ignored, with the texts that offered to skip a backup: 208,201,
-        # and the REFI-QDA export's sentence on its known faults (the stale
-        # texts): 208,327, and the audio and video folders left out of
-        # backups: 208,427, about 208,000, and its fix round 2: 208,927,
-        # about 209,000; and the ai_data folder named in create_project's
-        # and copy_project_to_workspace's descriptions (the small
-        # corrections): 209,145, about 209,000; and v0.15.1's removals,
-        # three tools and four help topics, as announced in 0.14: 79
-        # tools, 205,044, about 205,000; and restore_backup's paragraph
-        # on its preview and its lock file (the restore): 205,443, still
-        # about 205,000, and its fix round 1 (over a stale lock file none
-        # is held): 205,516, about 206,000; and the arguments removed, as
-        # announced (cascade, owner and search_memo): 204,035, about
-        # 204,000; and attributes on journal entries and the rename back
-        # removed, as announced: 203,352, about 203,000; and the overlap
-        # policy qualcoder_edit_parity removed: 202,652, still about
-        # 203,000; and the encoding choice (character_sets): 202,814,
-        # still about 203,000
-        assert (rounded, tokens) == ("203,000", "51k")
+    def test_the_figures_sit_in_their_sentences(self):
+        # v0.15.2, the snapshot: the figures are held by
+        # tests/test_v0151_facts.py, within five per cent of
+        # docs/snapshot/sizes.json; the sentences around them are held
+        # here, each FIGURE any figure written as the documents write one
         readme = _flat("README.md")
-        assert (f"| `full` | {EXPECTED_FULL}: all, creating a project "
-                f"and two renamed tools' earlier names "
-                f"included | about {rounded} characters, "
-                f"{tokens} tokens | hosted models, such as Claude or "
-                f"OpenAI's | every route |") in readme
+        assert _with_figures(
+            f"| `full` | {EXPECTED_FULL}: every tool, creating a project and "
+            f"the earlier names of two renamed tools included | about FIGURE "
+            f"characters, FIGURE tokens | hosted models, such as Claude or "
+            f"OpenAI's | every route |").search(readme)
         # The design's "before 0.15.0" gives way to the README's own rule
         # (tests/test_v0142_readme.py: no release number outside the
         # sections where versions are the point)
         # after 0.15.1 the extension no longer passes a tool set
         assert ("`lifecycle`, the earlier name of `full`, is still accepted "
                 "in `EXEGETE_TOOLSET` and means `full`.") in readme
-        install = _flat("INSTALL.md")
-        assert f"`full` (default) registers {EXPECTED_FULL} tools" in install
-        assert (f"Exegete offers {EXPECTED_FULL} tools by default, and the "
-                f"serialised tool definitions alone measure about {rounded} "
-                f"characters, roughly {tokens} tokens") in install
-        assert f"(about {rounded} characters with `full`;" in install
-        # the LM Studio recipe's sentence (the names file's fix round 1)
-        assert (f"or 64k if you must run the full surface (its schema "
-                f"alone is about {tokens} tokens).") in install
+        # v0.15.2: the Terminal routes, and their figures, are the
+        # Terminal guide's
+        install = _flat(GUIDE)
+        assert (f"`full` (default) registers {EXPECTED_FULL} tools"
+                in install)
+        for sentence in (
+                f"Exegete offers {EXPECTED_FULL} tools by default, and the "
+                f"serialised tool definitions alone measure about FIGURE "
+                f"characters, roughly FIGURE tokens",
+                "(about FIGURE characters with `full`;",
+                # the LM Studio recipe's sentence (the names file's fix
+                # round 1)
+                "or 64k if you must run the full surface (its schema alone "
+                "is about FIGURE tokens)."):
+            assert _with_figures(sentence).search(install), sentence
         tools = _flat("TOOLS.md")
         assert f"registers {EXPECTED_FULL} tools" in tools
-        assert (f"about {rounded} characters for `full`, roughly {tokens} "
-                f"tokens") in tools
+        assert _with_figures("about FIGURE characters for `full`, roughly "
+                             "FIGURE tokens").search(tools)
 
     def test_quickstart_can_be_followed_without_a_project(self):
         """Fix round 1: the checklist offers starting with no project, so
@@ -560,18 +539,18 @@ class TestTheDocuments:
         flat = _flat("QUICKSTART.md")
         step2 = flat[flat.index("### 2. Find your project"):]
         step2 = step2[:step2.index("### 3.")]
-        assert ("**No project yet?** Skip this step: step 3 says what to "
-                "leave out, and in step 5 you can ask the assistant to "
-                "create one.") in step2
+        # (v0.15.2, the opening texts: a statement, not a question)
+        assert ("If you have no project yet, skip this step: step 3 says "
+                "what to leave out, and in step 5 you can ask the assistant "
+                "to create one.") in step2
         step3 = flat[flat.index("### 3. Configure Claude Desktop"):]
         step3 = step3[:step3.index("### 4.")]
         # The whole-branch review of v0.15.0, round 2: only the project's
         # line is left out, so the coder name the page added stays, and
         # the workspace is a line of the same block, never a second one
-        assert ("**No project yet?** Leave out the `EXEGETE_PROJECT_PATH` "
-                "line, as below: Exegete then starts with no project "
-                "selected, and in step 5 you can ask the assistant to "
-                "create one.") in step3
+        assert ("If you have no project yet, leave out the "
+                "`EXEGETE_PROJECT_PATH` line, as below. Exegete then starts "
+                "with no project selected.") in step3
         text = (REPO / "QUICKSTART.md").read_text(encoding="utf-8")
         blocks = re.findall(r"```json\n(.*?)```", text, re.S)
         configs = [json.loads(block) for block in blocks]
@@ -581,30 +560,36 @@ class TestTheDocuments:
             "command": "/Users/yourname/Documents/exegete/venv/bin/python",
             "args": ["-m", "exegete.server"],
             "env": {"EXEGETE_CODER_NAME": "Your name"}}}}]
-        assert ("On this setup a new project goes to `~/Documents/Exegete "
+        assert ("On this route, a new project goes to `~/Documents/Exegete "
                 "projects` unless `EXEGETE_WORKSPACE` names another folder. "
                 "iCloud (Desktop and Documents) or OneDrive may sync "
-                "Documents, and so copy the project, transcripts imported "
-                "into it included, off the computer; a sync service can "
-                "also copy a project's database and its journal separately. "
-                "Consider naming a folder outside Documents, such as "
-                "`~/Exegete projects`:") in step3
-        assert ("add `\"EXEGETE_WORKSPACE\": \"/Users/yourname/Exegete "
-                "projects\"` as a line of the `env` block, with a comma "
-                "after the line before it") in step3
+                "Documents, and so copy your projects, with their "
+                "transcripts, off the computer. A sync service can also copy "
+                "a project's database and the working file beside it, the "
+                "database's journal, at different moments, which can leave a "
+                "damaged copy. You could name a folder outside Documents, "
+                "such as `~/Exegete projects`.") in step3
+        # (v0.15.2, the readability reading: the database's journal said
+        # as its working file, not the research journal; the step a
+        # sentence of its own)
+        assert ("To do so, add `\"EXEGETE_WORKSPACE\": \"/Users/yourname/"
+                "Exegete projects\"` as a line of the `env` block, with a "
+                "comma after the line before it") in step3
         assert '`"env": {"EXEGETE_WORKSPACE"' not in step3
         # Fix round 2: INSTALL's heading in its own words
-        assert ("(INSTALL.md, \"What You'll Need\" and \"Environment "
-                "variables the server reads\")") in step3
-        step5 = flat[flat.index("### 5. Test It Out"):]
-        step5 = step5[:step5.index("## Updating Later")]
-        assert ("In Claude Desktop, try these prompts: the first only if "
-                "you have no project yet. ``` Create a new project in "
-                "Exegete called Practice ```") in step5
+        # (v0.15.2, the merge onto the integration branch: both sections
+        # are the Terminal guide's, named by its headings)
+        assert ("(the Terminal guide, \"What you need\" and \"Environment "
+                "variables Exegete reads\")") in step3
+        step5 = flat[flat.index("### 5. Try it"):]
+        step5 = step5[:step5.index("## Updating later")]
+        # (v0.15.2, the opening texts: the request in a sentence)
+        assert ("If you have no project yet, ask Claude to \"Create a new "
+                "project in Exegete called Practice\".") in step5
         assert "Can you give me a summary of my project?" in step5
 
     def test_install_says_exegete_names_it_in_its_log(self):
-        flat = _flat("INSTALL.md")
+        flat = _flat(GUIDE)
         item = flat[flat.index("- `EXEGETE_TOOLSET`: `full` (default)"):]
         item = item[:item.index("- `EXEGETE_WORKSPACE` (v0.14)")]
         assert ("is read as `full` until v1.0, and Exegete names it in its "
@@ -627,13 +612,14 @@ class TestTheDocuments:
                 "names another folder. iCloud (Desktop and Documents) or "
                 "OneDrive may sync Documents, and so copy the project, "
                 "imported originals included, off the computer: consider a "
-                "folder outside it (INSTALL.md, \"What You'll Need\").") in item
+                "folder outside it (the Terminal guide, \"What you need\").") \
+            in item
 
     def test_the_ai_coding_guide_on_every_route(self):
         flat = _flat("AI_CODING_GUIDE.md")
-        assert ("A project: a new one the assistant creates (in the "
-                "default tool set, `full`, on every route), or a copy of one "
-                "you have") in flat
+        # (v0.15.2: the sentence read plainly, its fact unchanged)
+        assert ("The assistant can create a new one, with a tool in the "
+                "default tool set, `full`, on every route") in flat
         assert "(the extension's default tool set)" not in flat
 
     def test_the_readme_sentences(self):
@@ -641,23 +627,46 @@ class TestTheDocuments:
         # v0.15.1: the switch, by its title, left off as it comes; the
         # smaller set, `core`, cannot create a project
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
-        assert (f"Leave its switch \"{switch}\" off, as it comes: the "
-                f"smaller set, `core`, cannot create a project") in readme
-        assert ("whose default tool set, `full`, can create a project "
-                "too.") in readme
-        assert "| Create a project | Yes | Yes |" in readme
-        assert "two tool sets, every tool" in readme
+        # (v0.15.2, the readability reading: the reason a sentence of its
+        # own)
+        assert (f"Leave its switch \"{switch}\" off, as it comes. The "
+                f"small set, `core`, cannot create a project") in readme
+        # (v0.15.2, the merge onto the integration branch: the Terminal
+        # route is the Terminal guide's)
+        assert ("whose default tool set, `full`, can create a project too "
+                "([the Terminal guide]") in readme
+        # (v0.15.2, the opening texts: the comparison table gave way, and
+        # the two sets are the table's rows)
+        # (v0.15.2, undo: the counts are the snapshot's,
+        # tests/tool_counts.py)
+        assert (f"| `full` | {FULL_TOOLS}: every tool, creating a "
+                "project") in readme
+        assert f"| `core` | {CORE_TOOLS}:" in readme
 
     # Fix round 2
 
     @staticmethod
     def _install_titles():
+        """INSTALL's headings, and (v0.15.2) the titles of the sections
+        that moved to the Terminal guide, each a row of INSTALL's table
+        "Sections now in the Terminal guide", where a reader who searches
+        INSTALL for the words finds the link."""
         install = (REPO / "INSTALL.md").read_text(encoding="utf-8")
-        return [re.sub(r"^#+\s*", "", line).strip()
-                for line in install.splitlines() if line.startswith("#")]
+        titles = [re.sub(r"^#+\s*", "", line).strip()
+                  for line in install.splitlines() if line.startswith("#")]
+        moved = install[install.index("## Sections now in the Terminal "
+                                      "guide"):]
+        titles += re.findall(r"(?m)^\| <a id=\"[^\"]+\"></a>([^|]+?) \|",
+                             moved)
+        return titles
 
     POINTER = re.compile(r"INSTALL(?:\.md)?(?:'s)?,?\s+"
                          r"((?:\"[^\"]+\"(?:,?\s+(?:and|or)\s+|,\s+)?)+)")
+    # (v0.15.2) The same, for the Terminal guide, by its short name or its
+    # title
+    GUIDE_POINTER = re.compile(
+        r"(?:[Tt]he Terminal guide|Installing Exegete from the Terminal)"
+        r"(?:'s)?,?\s+((?:\"[^\"]+\"(?:,?\s+(?:and|or)\s+|,\s+)?)+)")
 
     def _quoted_titles(self, flat):
         return [title for found in self.POINTER.finditer(flat)
@@ -687,18 +696,43 @@ class TestTheDocuments:
                    if title not in titles
                    and not any(h.startswith(title + ":") for h in titles)]
         assert unknown == []
-        # the three pointers to the advice on synced folders, by name
-        for where in ("QUICKSTART.md", "PRIVACY.md",
-                      "CHANGELOG.md, [0.15.0-alpha]"):
+        # the pointers to the advice on synced folders, by name (v0.15.2:
+        # PRIVACY.md's points to the Terminal guide's "What you need", and,
+        # since the merge onto the integration branch, QUICKSTART's too;
+        # the CHANGELOG's entry is a record)
+        for where in ("CHANGELOG.md, [0.15.0-alpha]",):
             assert "What You'll Need" in quoted[where], where
             assert "What you need" not in quoted[where], where
+        assert ("(the Terminal guide, \"What you need\")"
+                in texts["PRIVACY.md"])
+        assert ("(the Terminal guide, \"What you need\" and \"Environment "
+                "variables Exegete reads\")" in texts["QUICKSTART.md"])
+        # (v0.15.2, the merge onto the integration branch) A title quoted
+        # after the Terminal guide's name is one of the guide's headings,
+        # so a reader who searches the guide for the words finds them
+        guide = (REPO / "docs/installing-from-the-terminal.md").read_text(
+            encoding="utf-8")
+        headings = [re.sub(r"^#+\s*", "", line).strip()
+                    for line in guide.splitlines() if line.startswith("#")]
+        texts["docs/installing-from-the-terminal.md"] = " ".join(
+            guide.split())
+        named = [(where, title) for where, text in texts.items()
+                 for found in self.GUIDE_POINTER.finditer(text)
+                 for title in re.findall(r'"([^"]+)"', found.group(1))]
+        assert ("QUICKSTART.md", "Installing from PyPI") in named
+        wrong = [(where, title) for where, title in named
+                 if title not in headings
+                 and not any(h.startswith(title + ":") for h in headings)]
+        assert wrong == []
 
     def test_the_title_check_sees_a_wrong_title(self):
-        flat = ('see INSTALL.md, "What you need" and "Environment '
+        flat = ('see INSTALL.md, "What you will need" and "Environment '
                 'variables the server reads"')
         assert self._quoted_titles(flat) == [
-            "What you need", "Environment variables the server reads"]
-        assert "What you need" not in self._install_titles()
+            "What you will need", "Environment variables the server reads"]
+        assert "What you will need" not in self._install_titles()
+        assert "Environment variables the server reads" in \
+            self._install_titles()
 
     def test_the_changelog_names_the_bug_reports_option_as_the_form(self):
         form = (REPO / ".github" / "ISSUE_TEMPLATE" /
@@ -727,11 +761,12 @@ class TestTheDocuments:
     def test_quickstart_troubleshooting_without_a_project(self):
         flat = _flat("QUICKSTART.md")
         trouble = flat[flat.index("## Troubleshooting"):]
-        trouble = trouble[:trouble.index("### Common Errors")]
-        assert ("4. **Check .qda project** - make sure the folder exists: "
-                "`ls -ld /path/to/your/project.qda` (skip this if you have "
-                "no project yet)") in trouble
-        manual = trouble[trouble.index("### Test the Server Manually"):]
+        trouble = trouble[:trouble.index("### Common errors")]
+        # (v0.15.2, the opening texts: the checks in sentences)
+        assert ("3. **The project folder.** `ls -ld "
+                "/path/to/your/project.qda` shows whether it exists (skip "
+                "this if you have no project yet).") in trouble
+        manual = trouble[trouble.index("### Start Exegete by hand"):]
         assert manual.index("Leave out the `export` line if you have no "
                             "project yet.") < manual.index("```bash")
         assert "export EXEGETE_PROJECT_PATH=" in manual

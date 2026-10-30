@@ -16,7 +16,9 @@ wait a moment, or close the project in QualCoder. These tests hold:
 - the six descriptions that did the same (`get_current_project`,
   `select_project`, `start_coding_session`, `set_project_coder_name`,
   `import_documents`, and the paragraph `rename_case` and `rename_file`
-  share), each no longer than before;
+  share), each no longer than before (held here until v0.15.2, when the
+  snapshot in docs/snapshot/ took over the descriptions' lengths: a
+  change to one is read there as a diff);
 - one spelling, "QualCoder 3.8.2", for the lock file's cause, in what
   Exegete serves and in the documents;
 - the CHANGELOG's sentence on the documents, now true of each of them,
@@ -24,6 +26,7 @@ wait a moment, or close the project in QualCoder. These tests hold:
 """
 
 import asyncio
+import importlib.util
 import re
 import sys
 from pathlib import Path
@@ -92,16 +95,20 @@ class TestTheThreeTexts:
         assert "\n### One program at a time\n" in workflow
         assert "Close QualCoder First" not in workflow
         flat = _flat(workflow)
-        assert ("A project's lock file, `project_in_use.lock`, is active "
-                "while another conversation using Exegete is writing to the "
-                "project (Exegete writes the file during each of its own "
-                "writes) or while QualCoder 3.8.2 has the project open (it "
-                "keeps the file as a heartbeat), and **every write operation "
-                "is refused while the project's lock file is active**. The "
-                "refusal names both causes and the way through for each") \
+        # (v0.15.2: the lock file, each cause and the rule, one sentence
+        # each)
+        assert ("A project's lock file, `project_in_use.lock`, shows that "
+                "the project is in use. It is active while another "
+                "conversation using Exegete is writing to the project, since "
+                "Exegete writes the file during each of its own writes. It "
+                "is also active while QualCoder 3.8.2 has the project open, "
+                "since QualCoder keeps the file as a heartbeat, a sign that "
+                "it still has the project open. **Every write operation is "
+                "refused while the project's lock file is active.** The "
+                "refusal gives both causes and the way through for each") \
             in flat
-        assert ("so if you also use QualCoder, make sure yourself that no "
-                "window has the project open before writing.") in flat
+        assert ("if you also use QualCoder, make sure yourself that no "
+                "window has the project open before Exegete writes.") in flat
         assert "make sure yourself that no QualCoder window" not in flat
 
     def test_the_workflow_quotes_the_refusal_as_exegete_gives_it(self):
@@ -118,19 +125,6 @@ class TestTheThreeTexts:
 # ---------------------------------------------------------------------------
 # 2. The six descriptions
 # ---------------------------------------------------------------------------
-
-# Each tool's description on 0.15.0's branch before this change, in
-# characters as Exegete lists it in the full set: on Python 3.13 and
-# newer, and on 3.10 to 3.12 (where docstrings keep their indentation)
-BEFORE = {
-    "get_current_project": (2067, 2207),
-    "select_project": (2415, 2579),
-    "start_coding_session": (6042, 6286),
-    "set_project_coder_name": (1152, 1224),
-    "import_documents": (1976, 2032),
-    "rename_case": (2076, 2196),
-    "rename_file": (3421, 3621),
-}
 
 NEW_WORDS = {
     "get_current_project": (
@@ -175,39 +169,6 @@ NEW_WORDS = {
         "project there first."),
 }
 
-# For the tests that compare a description with a pin taken before this
-# change (tests/test_v0150_qualcoder_texts_13.py, test_v0150_renames_tools.py
-# and test_v0150_restore_keeps_folder.py): the words it replaced, as
-# Python 3.13 served them, so that a description put back is as it was
-OLD_START = (
-    "QUALCODER OPEN: if the result has `qualcoder_open: true`, STOP: ask\n"
-    "the user to close the project in QualCoder, re-check with\n"
-    "get_current_project, and go on only when it is false. QualCoder 4.0\n"
-    "writes no lock file: a `qualcoder_gui_hint` (best-effort signals)\n"
-    "means ask whether a window has the project open; an empty list is no\n"
-    "proof.")
-BLOCKS = {"start_coding_session": [(NEW_WORDS["start_coding_session"],
-                                    OLD_START)]}
-# the write tools' sentence and restore_backup's item 4, in place
-TOKENS = (
-    (r"(QualCoder\s+)3\.8\.2(\s+has\s+the\s+project\s+open,\s+or\s+another)",
-     r"\g<1>3.8\2"),
-    (r"(open\s+window,\s+and\s+)if(\s+there\s+are\s+some)", r"\1when\2"),
-)
-
-
-def put_back_the_lock_wording(name, text):
-    """`text`, tool `name`'s description, with this change's words taken
-    out and those they replaced put back."""
-    for new, old in BLOCKS.get(name, ()):
-        pattern = r"\s+".join(map(re.escape, new.split()))
-        text, count = re.subn(pattern, lambda found: old, text)
-        assert count == 1, (name, new[:40])
-    for pattern, old in TOKENS:
-        text = re.sub(pattern, old, text)
-    return text
-
-
 # What they said before, each gone
 OLD_WORDS = (
     "Also reports whether QualCoder currently has this project open",
@@ -225,58 +186,21 @@ OLD_WORDS = (
     "Exegete cannot see a 4.0 window",
 )
 
-# A request to close QualCoder, or a project in it, made only of those
-# who use it: "if you (also) use QualCoder" in the same sentence or
-# earlier in the same paragraph or list item, or "if they use it" in the
-# same sentence (an "it" further back may be another program); or a
-# refusal's own words, which offer waiting as well
-_IF_USED = r"\b[Ii]f (?:you|they|the researcher)(?: also)? uses? "
-CONDITION = re.compile(_IF_USED + r"QualCoder\b|, or wait a moment;")
-CONDITION_HERE = re.compile(_IF_USED + r"it\b")
-# Closing, quitting or exiting it, or making sure that it is closed or
-# not running
-REQUEST = re.compile(
-    r"\b(?:close|closed|closing|make sure|quit|quits|quitting|exit|exits"
-    r"|exiting|not (?:be )?running)\b", re.I)
-# Sentences about QualCoder itself, which ask nothing before a write
-ABOUT_QUALCODER = re.compile(
-    r"\bclos(?:e|ed|ing) and reopen|report the copy as not properly closed")
-# Quitting Claude Desktop, so that a change in the extension's settings
-# reaches Exegete, asks nothing of QualCoder (v0.15.1, the small
-# corrections: the README's sentence that names the settings, the
-# QualCoder one among them)
-QUITTING_CLAUDE_DESKTOP = re.compile(
-    r"\bquit Claude Desktop\b|\bClaude Desktop has been quit\b")
+def _texts_check():
+    spec = importlib.util.spec_from_file_location(
+        "check_texts", REPO / "scripts" / "check_texts.py")
+    module = importlib.util.module_from_spec(spec)
+    # registered first: its dataclasses look their module up by name
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
-def _blocks(text):
-    """Paragraphs and list items."""
-    return re.split(r"\n\s*\n|\n\s*(?=[-*] |\d+\. )", text)
-
-
-def _sentences(text):
-    """Sentences, cut where a full stop, a question mark or an
-    exclamation mark is followed by a space and a capital, a mark or a
-    list item, so that '3.8.2' stays whole."""
-    return re.split(r"(?<=[.!?])\s+(?=[-*#>A-Z`\"(\[])", _flat(text))
-
-
-def unconditional_requests(text):
-    """Each sentence that asks for QualCoder, or a project in it, to be
-    closed, of everyone."""
-    found = []
-    for block in _blocks(text):
-        asked_of_users = False
-        for sentence in _sentences(block):
-            if CONDITION.search(sentence):
-                asked_of_users = True
-            if asked_of_users or "QualCoder" not in sentence \
-                    or CONDITION_HERE.search(sentence):
-                continue
-            if REQUEST.search(QUITTING_CLAUDE_DESKTOP.sub("", sentence)) \
-                    and not ABOUT_QUALCODER.search(sentence):
-                found.append(sentence)
-    return found
+# A request to close QualCoder, or a project in it, made of everyone: the
+# check moved to scripts/check_texts.py in v0.15.2, which runs it over
+# every text it reads, with a ledger; here it holds the texts below with
+# none.
+unconditional_requests = _texts_check().unconditional_requests
 
 
 @pytest.fixture(scope="module")
@@ -296,16 +220,6 @@ class TestTheSixDescriptions:
         for words in OLD_WORDS:
             assert words not in text, (tool, words)
 
-    @pytest.mark.parametrize("tool", sorted(BEFORE))
-    def test_no_description_is_longer_than_before(self, served, tool):
-        # v0.15.1's ignored create_backup lengthens rename_case's and
-        # rename_file's line on it: put back, so that this change's own
-        # words are measured
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        before = BEFORE[tool][0 if sys.version_info >= (3, 13) else 1]
-        text = before_the_ignored_argument(tool, served[tool])
-        assert len(text) <= before, (tool, len(text))
-
     @pytest.mark.parametrize("tool", sorted(set(NEW_WORDS) - {
         "rename_case", "rename_file"}))
     def test_both_causes_where_the_lock_file_is_described(self, served,
@@ -318,33 +232,6 @@ class TestTheSixDescriptions:
     def test_closing_qualcoder_is_asked_only_of_those_who_use_it(
             self, served, tool):
         assert unconditional_requests(served[tool]) == [], tool
-
-    def test_put_back_each_is_as_it_was(self):
-        """A guard for the put-back the older tests use: with it, the
-        descriptions are as tests/test_v0142_description_cut.py pinned
-        them before this change."""
-        from test_v0142_description_cut import _fingerprint
-        # v0.15.1: restore_backup's sentence on the audio and video
-        # folders taken out too (tests/test_v0151_media_out.py)
-        from test_v0150_restore_keeps_folder import MEDIA_SENTENCE
-        before = {"start_coding_session": (6042, 4908, "662931b185aced31"),
-                  "restore_backup": (2877, 2367, "9014851203733822"),
-                  "delete_coding": (2867, 2307, "be5e2d1ea0338a1e")}
-        # and v0.15.1's ignored create_backup: put back first
-        from test_v0151_ignored_argument import before_the_ignored_argument
-        # and the restore piece's paragraph (tests/test_v0151_restore.py)
-        from test_v0151_restore import without_the_preview_paragraph
-        server._apply_toolset("full")
-        for name, (length, solid, digest) in before.items():
-            text = put_back_the_lock_wording(
-                name, before_the_ignored_argument(
-                    name, without_the_preview_paragraph(
-                        server.mcp.original_descriptions[name])).replace(
-                        " " + MEDIA_SENTENCE, ""))
-            got = _fingerprint(text)
-            assert got[1:] == (solid, digest), name
-            if sys.version_info[:2] == (3, 13):
-                assert got[0] == length, name
 
     def test_the_paragraph_the_renames_share(self):
         assert server._RENAME_QC40_PARAGRAPH.startswith(
@@ -365,10 +252,16 @@ class TestTheSixDescriptions:
             "and when there are some", "and if there are some")
         assert len(new) == len(old)
         descriptions = {name: _flat(text) for name, text in _served().items()}
-        carriers = [name for name, text in descriptions.items() if new in text]
-        # 26 descriptions close with it, and apply_codings' safety
-        # guarantees open with it
-        assert len(carriers) == 27
+        carriers = {name for name, text in descriptions.items() if new in text}
+        # The descriptions whose _with_paragraphs line passes the lock
+        # paragraph close with it, and apply_codings' safety guarantees
+        # open with it: read from server.py's decorator lines, as
+        # tests/test_served_texts.py reads them, so that a tool added with
+        # the paragraph is counted
+        from test_served_texts import ALSO_TYPED, SERVER_TREE, _decorated
+        given = {tool for tool, names in _decorated(SERVER_TREE)
+                 if "LOCK_REFUSED_PARAGRAPH" in names}
+        assert carriers == given | ALSO_TYPED["LOCK_REFUSED_PARAGRAPH"]
         assert not any(old in text for text in descriptions.values())
 
 
@@ -546,19 +439,32 @@ class TestTheChangelog:
     def test_install_s_figures_for_start_coding_session(self, served):
         """INSTALL.md gives the descriptions past 4,096 characters, on
         Python 3.13 and on 3.10 to 3.12; start_coding_session's moved."""
-        install = _flat(_read("INSTALL.md"))
-        length = f"{len(served['start_coding_session']):,}"
+        # v0.15.2, the snapshot: INSTALL rounds them, each held within
+        # five per cent of the length here (the exact lengths are in
+        # docs/snapshot/sizes.json)
+        from test_v0151_facts import SIZE_TOLERANCE
+        # (v0.15.2: the Terminal guide's paragraph on Claude Code's limits)
+        install = _flat(_read("docs/installing-from-the-terminal.md"))
+
+        def near(stated, name):
+            length = len(served[name])
+            return abs(int(stated.replace(",", "")) - length) \
+                <= SIZE_TOLERANCE * length
         if sys.version_info >= (3, 13):
-            assert f"`start_coding_session`, {length};" in install
+            found = re.search(r"`start_coding_session`, about ([\d,]+);",
+                              install)
+            assert found and near(found.group(1), "start_coding_session")
         else:
-            four = [f"{len(served[name]):,}" for name in (
-                "pseudonymise_source", "start_coding_session",
-                "search_files", "record_suggestions")]
             # v0.15.1, the removed arguments: import_text_file, without
             # owner, no longer passes 4,096 there, so the four are all
             # (tests/test_v0151_removed_arguments.py)
-            assert ("the same four are, at {}, {}, {} and {}.".format(*four)
-                    in install)
+            found = re.search(r"the same four are, at about ([\d,]+), "
+                              r"([\d,]+), ([\d,]+) and ([\d,]+)\.", install)
+            assert found
+            for stated, name in zip(found.groups(), (
+                    "pseudonymise_source", "start_coding_session",
+                    "search_files", "record_suggestions")):
+                assert near(stated, name), name
 
     def test_the_measurement(self):
         measured = _flat(_unreleased()[_unreleased().index("### Measured"):])

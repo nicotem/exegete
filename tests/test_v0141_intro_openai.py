@@ -45,7 +45,17 @@ CODEX_SETTING = ("OpenAI documents a setting, marked Beta, that can keep "
                  "works in; it has not been tested with Exegete")
 
 
+# v0.15.2: INSTALL.md is the desktop extension's; its Terminal routes,
+# OpenAI's among them, and the routes table moved, whole, to the Terminal
+# guide. What these tests read of "INSTALL" is the two together, the guide
+# first, where a section that moved is found.
+GUIDE = "docs/installing-from-the-terminal.md"
+
+
 def _read(name):
+    if name == "INSTALL.md":
+        return ((REPO / GUIDE).read_text(encoding="utf-8") + "\n\n"
+                + (REPO / name).read_text(encoding="utf-8"))
     return (REPO / name).read_text(encoding="utf-8")
 
 
@@ -106,17 +116,22 @@ class TestTheIntroduction:
         # October 2026): what you do in it first, then that it is built to
         # stay interoperable with QualCoder; "not an add-on or a remote
         # control" moved into "Three commitments"
-        assert ("Exegete (formerly qualcoder-mcp) is a qualitative analysis "
-                "application in its own right, with no window of its own: "
-                "your assistant, such as Claude Desktop, starts it, and you "
-                "work in the conversation, from starting a project to "
-                "exporting your codebook and coding. It is built to stay "
-                "interoperable with QualCoder: your project is a folder on "
-                "your computer, kept in QualCoder's format and conventions, "
-                "so you can work on it in either program, one at a time. You "
-                "do not need QualCoder to start, or running while you work, "
-                "though a few things are not in Exegete yet (listed "
-                "below).") in opening
+        # v0.15.2, the opening texts (ruling 102): where it runs and what
+        # it lacks first, then the commitment to QualCoder's format; "in
+        # its own right" went with the comparison it implied
+        # v0.15.2, the readability reading: the same facts, one to a
+        # sentence, with the tools named for what they are
+        assert ("Exegete (formerly qualcoder-mcp) runs on your computer, with "
+                "no window and no AI of its own. Your assistant, such as "
+                "Claude Desktop, starts it and uses its tools, the actions "
+                "Exegete offers it. You work in the conversation, from "
+                "starting a project to exporting your codebook and coding. "
+                "Exegete is built to stay interoperable with QualCoder. Your "
+                "project is a folder on your computer, kept in QualCoder's "
+                "format and conventions, so you can work on it in either "
+                "program, one at a time. You do not need QualCoder, either "
+                "to start or while you work, though a few things are not in "
+                "Exegete yet (listed below).") in opening
         assert ("Your project is kept in QualCoder's format, so it can "
                 "also be opened in [QualCoder](") in opening
         assert "**One program at a time.**" in _flat("README.md")
@@ -140,16 +155,19 @@ class TestTheIntroduction:
         # persuade: the requests lead the list of what you can do, in
         # substance, and the judgement closes the coding item
         can_do = _what_you_can_do()
-        for request in ("**Start a project**", "**Bring in transcripts**",
-                        "**Code the files you choose, with suggestions you "
-                        "approve**", "**Coder comparison**",
-                        "**Replace participants' names in text already "
-                        "coded**", "**Export** the codebook"):
+        # v0.15.2, the opening texts: documents, not transcripts alone,
+        # each item led by what you do; one idea to a sentence
+        # (the readability reading: the coding item a sentence of its own)
+        for request in ("**Start a project**", "**Bring in documents**",
+                        "**Code the documents you choose, with suggestions "
+                        "you approve.**", "**Compare two coders**",
+                        "**Replace participants' names**, even in coded "
+                        "text", "**Export** the codebook"):
             assert request in can_do, request
-        assert ("Whether a code fits the words, and what a coding means, "
-                "stays your judgement.") in can_do
-        assert ("You ask in your own words; the assistant reads, searches "
-                "and suggests; you decide.") in opening
+        assert ("Whether a code fits, and what a coding means, stays your "
+                "judgement.") in can_do
+        assert ("You ask in your own words. The assistant reads, searches "
+                "and suggests, and you decide.") in opening
         # Independence, and not a remote control. v0.14.2: "What it is
         # not" is split: the rest sits beside the compatibility
         # commitment, and the opening keeps "independently of QualCoder's
@@ -158,22 +176,25 @@ class TestTheIntroduction:
         # window of its own ("What it is not" was a second saying)
         # v0.14.2 (the owner's ruling of 7 October 2026): "not an add-on
         # or a remote control" is said where the commitments are
-        assert ("You do not need QualCoder to start, or running while you "
+        assert ("You do not need QualCoder, either to start or while you "
                 "work") in opening
         assert "not an add-on or a remote control" not in opening
         assert "**What it is not.**" not in _flat("README.md")
-        compatibility = _between(readme, "**Compatibility with QualCoder.**",
-                                 "**Symmetry:")
-        assert ("It is not QualCoder, nor an add-on or a remote control "
-                "for it, and it is not made or endorsed by QualCoder's "
-                "developers (QualCoder is free software by Colin Curtain and "
-                "contributors).") in compatibility
-        assert ("built by one researcher, independently of QualCoder's "
-                "developers") in opening
-        # The kappa headline
-        assert ("**Coder comparison**: per-code agreement between two "
-                "coders, with QualCoder's own coefficient and Cohen's kappa "
-                "side by side.") in readme
+        # v0.15.2, the opening texts (ruling 102): independence is said in
+        # the section on QualCoder, a separate program; who made QualCoder
+        # is in the acknowledgements
+        compatibility = _between(readme, "## Exegete and QualCoder",
+                                 "## For advanced users")
+        assert ("Exegete is a separate program that reads and writes "
+                "projects in QualCoder's format. QualCoder's developers did "
+                "not make it and have not endorsed it.") in compatibility
+        assert ("[QualCoder](https://github.com/ccbogel/QualCoder) by Dr "
+                "Colin Curtain and Dr Kai Dröge") in readme
+        assert "built by one researcher" in opening
+        # The kappa headline: QualCoder's figure is not Cohen's kappa
+        # (v0.15.2, the readability reading: Cohen's kappa beside it)
+        assert ("**Compare two coders**, code by code, with Cohen's kappa "
+                "beside the figure QualCoder labels Kappa.") in readme
 
     def test_what_it_covers_today_rests_on_the_tools(self):
         opening = _opening()
@@ -182,54 +203,56 @@ class TestTheIntroduction:
         covers = _what_you_can_do()
         tools = _full_tools()
         # Each item the list names, and the tools that carry it
+        # (v0.15.2, the opening texts: the same claims, each led by what
+        # you do; documents, not transcripts alone)
         claims = {
-            "**Start a project** in QualCoder's format, or work on": [
+            "**Start a project**, or work on a copy of one you have.": [
                 "create_project", "copy_project_to_workspace"],
-            "sort them into cases with attributes such as age, role or "
-            "site": ["create_case", "create_attribute_type",
-                     "set_attribute", "link_file_to_case"],
-            # v0.14.3: as documents from the computer too
-            "**Bring in transcripts** as documents from your computer": [
-                "import_documents"],
-            "or through the conversation; sort them into cases": [
-                "import_text_file"],
-            "**Code the files you choose, with suggestions you approve**": [
+            "Sort them into cases with attributes such as age, role or "
+            "site.": ["create_case", "create_attribute_type",
+                      "set_attribute", "link_file_to_case"],
+            # v0.14.3: as documents from the computer too (v0.15.2, the
+            # readability reading: the kinds first, then where they are read)
+            "Exegete reads them on your computer, without passing their "
+            "text through the conversation.": ["import_documents"],
+            "You can also paste text in.": ["import_text_file"],
+            "**Code the documents you choose, with suggestions you "
+            "approve.**": [
                 "start_coding_session", "record_suggestions",
                 "update_suggestion_status", "apply_codings"],
             # v0.14.2, the README's first round of checks: who proposes
             # the codes, and that they wait for approval
-            "**Grow the codebook**: new codes the assistant proposes from "
-            "your files, created once you approve them; rename, recolour, "
-            "move, merge and delete, with a preview before merging or "
-            "deleting": [
+            "**Grow the codebook** with codes the assistant proposes, "
+            "which Exegete creates once you approve them. Rename, recolour, "
+            "move, merge and delete codes, with a preview before a merge or "
+            "a deletion.": [
                 "propose_codes", "create_proposed_codes", "create_code",
                 "create_category", "rename_code", "rename_category",
                 "recolor_code", "move_code_to_category", "move_category",
                 "merge_codes", "merge_category", "delete_code",
                 "delete_category"],
-            "**Explore**: search texts, codings and memos; frequencies; "
-            "codes that occur together; a case-by-code matrix; cases and "
-            "files by attribute": [
+            "**Explore**: search documents, codings and memos, count "
+            "codings, find codes that occur together, see a case-by-code "
+            "matrix, list cases and files by attribute": [
                 "search_files", "search_coded_text", "search_memos",
                 "get_coding_frequencies", "find_cooccurring_codes",
                 "get_case_code_matrix", "query_by_attribute"],
             # v0.14.2, the README's first round of checks: what the
-            # assistant can already read, beside "What comes next"; the
-            # second round: who reads it, so that it is not taken for the
-            # reading of a whole file yourself, which is in development
-            "a whole transcript with its codings, read by the assistant": [
+            # assistant can already read; v0.14.3: and the researcher, on
+            # a page in the browser
+            # (v0.15.2, the opening texts' fix round: in the browser, its
+            # text stays out of the conversation)
+            "and read a transcript with its codings in the conversation": [
                 "read_file_with_codings"],
-            # v0.14.3: and by the researcher, on a page (no longer
-            # marked provisional once the owner decided the design)
-            "or by you on a page in your browser.": [
+            "keeping its text out of it, in your browser.": [
                 "open_file_for_reading"],
             "**Write** memos, annotations and a research journal": [
                 "set_memo", "add_annotation", "add_journal_entry"],
-            "**Coder comparison**": ["compare_coders"],
-            "**Replace participants' names in text already coded**": [
+            "**Compare two coders**": ["compare_coders"],
+            "**Replace participants' names**, even in coded text": [
                 "pseudonymise_source"],
-            "**Export** the codebook, a coding report, frequencies and the "
-            "case-by-code matrix as CSV, text or Markdown": [
+            "**Export** the codebook, a coding report, coding counts and the "
+            "case-by-code matrix, as CSV, text or Markdown": [
                 # the coding report is export_coded_segments_report's
                 # file (v0.15.1 removed export_code_report, as announced)
                 "export_codebook", "export_coded_segments_report",
@@ -237,8 +260,9 @@ class TestTheIntroduction:
             # v0.15.1: before every change, whatever create_backup says;
             # the backup's moment: Exegete takes it itself, before each
             # change to the project's database
-            "**Go back**: a backup before every change to the project's "
-            "database, taken by Exegete itself, and a way to restore one": [
+            "**Go back**: before every change to the project's database, "
+            "Exegete takes a backup, a copy of the project kept beside it, "
+            "and can restore one.": [
                 "list_backups", "restore_backup"],
         }
         for words, needed in claims.items():
@@ -254,40 +278,67 @@ class TestTheIntroduction:
         # sits after what you can do, with the download and its date
         # v0.14.2 (the owner's ruling of 7 October 2026): the gap is
         # Exegete's, and QualCoder is for a study that needs it now
-        needs = _between(_what_you_can_do(), "**Not in Exegete yet**",
+        needs = _between(_what_you_can_do(), "**Not in Exegete yet.**",
                          "**The aim**")
         # v0.14.3: documents come in through Exegete, and a
         # whole file opens for reading on the researcher's screen, so
         # neither is on the list any more
-        assert ("**Not in Exegete yet**, and done in QualCoder for now: "
-                "bringing in images, audio and video; coding by selecting "
-                "text yourself; coding images, audio, video or an area of a "
-                "PDF page; graphs; and QualCoder's Reports menu. If your "
-                "study needs any of these now, you may want QualCoder "
-                "from the start.") in needs
+        # v0.15.2, the opening texts: the list made whole against the
+        # tools (below), QualCoder offered as the choice for what Exegete
+        # does not do yet (ruling 102)
+        # v0.15.2, the readability reading: the same list, a sentence to
+        # each kind of thing, and QualCoder offered once, after it
+        assert ("**Not in Exegete yet.** It cannot bring in or code images, "
+                "audio and video, or code an area of a PDF page or text you "
+                "select yourself. It lacks graphs and most reports. It does "
+                "not import a REFI-QDA file from another program, or nest an "
+                "existing code under another code. It cannot delete a case, "
+                "an attribute or a journal entry, rename an attribute, "
+                "change a journal entry or set an attribute on one. Nor can "
+                "it link part of a file to a case, or take a file out of "
+                "one. QualCoder, if you use it, can do them. If your study "
+                "needs any of these now, you may want QualCoder from the "
+                "start.") in needs
         for gone in ("documents other than text", "Word, PDF",
                      "coding highlighted", "in development"):
             assert gone not in needs, gone
         assert "recommended from the start" not in needs
-        assert "You do not need QualCoder to start" in _opening()
+        assert "You do not need QualCoder, either to start" in _opening()
         assert "lists everything" not in needs
         # Text arrives as content in the call, never as a file path
         import inspect
         params = inspect.signature(server.import_text_file).parameters
         assert "content" in params and "path" not in params
         # No tool codes media or draws a graph
-        for name in _full_tools():
+        tools = _full_tools()
+        for name in tools:
             assert not re.search(r"image|audio|video|media|graph", name), name
+        # nor brings a REFI-QDA file in, nests a code under a code,
+        # deletes a case, an attribute or a journal entry, changes or sets
+        # an attribute on a journal entry, renames an attribute, or takes
+        # a file out of a case; a file is linked to a case whole
+        for name in tools:
+            assert not re.match(r"import_refi|nest_|delete_(case|attribute|"
+                                r"journal)|(update|edit)_journal|"
+                                r"rename_attribute|unlink", name), name
+        assert set(inspect.signature(server.link_file_to_case).parameters) \
+            <= {"file_id", "case_id", "case_name", "create_backup"}
+        assert "not on a journal entry" in _flat("TOOLS.md")
 
     def test_the_whole_life_of_a_project_is_the_aim(self):
         opening = _what_you_can_do()
-        assert ("**The aim** is the whole life of a project in Exegete, from "
-                "its creation to the finished analysis, without needing "
-                "QualCoder for any of it, while every project stays one "
-                "that QualCoder opens.") in opening
-        # Stated as an aim: the cooperative paragraph still says it is a
-        # direction, not yet a fact
-        assert "That is a direction, not yet a fact" in _flat("README.md")
+        # v0.15.2, the opening texts (ruling 102): the aim in Exegete's
+        # own terms; that every project stays one QualCoder opens is the
+        # commitment in the opening
+        aim = ("**The aim** is that you can run a whole project in Exegete, "
+               "from its creation to the finished analysis.")
+        assert aim in opening
+        # Stated as an aim, straight after the list of what Exegete does
+        # not do yet, so that it reads as a direction, not yet a fact
+        assert opening.index("**Not in Exegete yet.**") < opening.index(aim)
+        assert ("Your project is a folder on your computer, kept in "
+                "QualCoder's format and conventions, so you can work on it "
+                "in either program, one at a time") in _opening()
 
 
 # ---------------------------------------------------------------------------
@@ -309,10 +360,16 @@ class TestTheReadmesRoute:
         # and OpenAI's Remote are INSTALL.md's (pinned in
         # test_install_says_what_remote_needs_in_openais_words and
         # test_openais_words_for_choosing_codex)
-        assert ("These can start Exegete too (ChatGPT in a web browser "
-                "cannot)") in section
-        assert "INSTALL.md#chatgpts-desktop-app-and-codex-experimental" \
-            in section
+        # v0.15.2, the opening texts: the route named, and what it takes
+        # (the readability reading: the route said in words, then the
+        # browser, a sentence each)
+        assert ("These can start Exegete too, by the Terminal route: a few "
+                "commands typed in a Terminal window, with Python 3.11 or "
+                "newer. ChatGPT in a browser cannot.") in section
+        # (v0.15.2, the merge onto the integration branch: the recipe is
+        # the Terminal guide's, and the README links to it there)
+        assert ("installing-from-the-terminal.md#chatgpts-desktop-app-and-"
+                "codex-experimental") in section
         assert "cannot use such tools at all" not in section
         install = _install_openai_flat()
         assert "**ChatGPT on a phone**: it cannot start Exegete, but it can " \
@@ -342,36 +399,52 @@ class TestTheReadmesRoute:
         # (the judge, the same day: an alternative, not a purpose)
         # (ruling 85, item 4, 20 October 2026: the setting's test is
         # dropped, so it is named as untested, with no test promised)
+        # v0.15.2, the opening texts: training, the risk then the two
+        # switches, in the words the list before participants' data uses
+        # for Anthropic; then INSTALL.md's steps, whose step 3 gives Codex
+        # a folder of its own (TestCodexWorksInAFolderOfItsOwn, below)
         for words in ("Codex reads files by itself, so for participants' "
                       "data this project suggests an assistant with no file "
                       "access of its own, such as Claude Desktop's chat. "
                       + CODEX_SETTING,
-                      "1. **Switch training off** before participants' "
-                      "data: while it is on, OpenAI may use your "
-                      "conversations to train its models.",
-                      "they make the app ask before every change Exegete "
-                      "makes. 3. **Give Codex a folder of its own**",
-                      "INSTALL.md#chatgpts-desktop-app-and-codex-experimental",
-                      "Experimental: written from OpenAI's documentation, "
-                      "read on 30 September 2026, and not tried by this "
-                      "project."):
+                      "**Training.** While training is on, OpenAI may use "
+                      "your conversations, with the participants' data in "
+                      "them, to train its models.",
+                      # (v0.15.2, the merge onto the integration branch:
+                      # the steps are the Terminal guide's)
+                      "Then follow [the Terminal guide's steps](https://"
+                      "github.com/nicotem/exegete/blob/main/docs/installing-"
+                      "from-the-terminal.md#chatgpts-desktop-app-and-codex-"
+                      "experimental), which make the app ask before every "
+                      "change Exegete makes.",
+                      "This route is Experimental: we wrote it from "
+                      "OpenAI's documentation, read on 30 September 2026, and "
+                      "have not tried it."):
             assert words in section, words
         # It sits in "Start here", after the one-click route
         start = _between(_flat("README.md"), "## Start here",
-                         "## Three commitments")
-        assert start.index("### Claude Desktop, with one click") < \
+                         "## Exegete and QualCoder")
+        # (the owner's reading of 30 October: the heading without its flourish)
+        assert start.index("### One click in Claude Desktop") < \
             start.index("### ChatGPT's desktop app and Codex (OpenAI)")
         # training is turned off before anything is installed; the
         # settings lines' reason is INSTALL.md's, whose facts
         # test_without_it_the_adding_tools_run_unasked checks against the
         # tools' marks
-        assert section.index("**Switch training off**") < \
-            section.index("Then follow")
+        assert section.index("**Training.**") < section.index("Then follow")
 
     def test_where_your_data_goes_names_openai(self):
         data = _between(_flat("README.md"), "## Where your data goes",
                         "## Start here")
-        assert "OpenAI for ChatGPT's desktop app and Codex" in data
+        # (v0.15.2, the readability reading: "In short" no longer lists
+        # the providers, which the table under it gives for each
+        # assistant; the fact is the table's row)
+        assert ("| **ChatGPT's desktop app and Codex** (Experimental) |"
+                in data)
+        chatgpt_row = data[data.index("| **ChatGPT's desktop app and "
+                                      "Codex**"):]
+        chatgpt_row = chatgpt_row[:chatgpt_row.index(" | **LM Studio**")]
+        assert "| OpenAI |" in chatgpt_row
         # v0.14.2, the README review: the providers' words moved to
         # PRIVACY.md, which quotes them with their addresses; the README
         # keeps why the settings matter, in plain words, before them
@@ -384,9 +457,12 @@ class TestTheReadmesRoute:
         # switch is said where the reader acts on it: Anthropic's in the
         # list before participants' data, OpenAI's as the first step of
         # its route
-        assert "Anthropic may use your conversations to train its models" \
-            in data
-        assert "**Switch training off**" in _readme_openai()
+        # (v0.15.2, the opening texts: the risk, then the switch, in the
+        # same words for both)
+        for maker, text in (("Anthropic", data), ("OpenAI", _readme_openai())):
+            assert (f"While training is on, {maker} may use your "
+                    "conversations, with the participants' data in them, to "
+                    "train its models.") in text, maker
 
 
 # ---------------------------------------------------------------------------
@@ -596,7 +672,7 @@ class TestPrivacyQuotesOpenAI:
     def _section(self):
         return _between(_flat("PRIVACY.md"), "## OpenAI's apps: the ChatGPT "
                         "desktop app and Codex (Experimental)",
-                        "## What this means for research data")
+                        "## Practical mitigations")
 
     def test_each_quote_with_its_address_and_date(self):
         section = self._section()
@@ -723,7 +799,7 @@ ON_REQUEST_READS = ("\"With `on-request`, commands allowed by the sandbox "
 def _privacy_openai():
     return _between(_flat("PRIVACY.md"), "## OpenAI's apps: the ChatGPT "
                     "desktop app and Codex (Experimental)",
-                    "## What this means for research data")
+                    "## Practical mitigations")
 
 
 def _install_openai_flat():
@@ -831,9 +907,22 @@ class TestCodexWorksInAFolderOfItsOwn:
         section = _readme_openai()
         # v0.14.2, the README's first round of checks: the third of three
         # numbered steps
-        assert ("**Give Codex a folder of its own**, as those steps do: it "
-                "keeps your study's files out of the place Codex works in, "
-                "but does not stop Codex reading them.") in section
+        # v0.15.2, the opening texts: the README sends the reader to
+        # INSTALL.md's steps, whose third gives Codex its folder (the next
+        # test), and says once, where practising is, what a folder of its
+        # own does not do
+        # (v0.15.2, the merge onto the integration branch: the Terminal
+        # guide's steps)
+        assert ("installing-from-the-terminal.md#chatgpts-desktop-app-and-"
+                "codex-experimental") in section
+        assert "Codex reads files by itself" in section
+        first = _between(_flat("README.md"), "### A first session",
+                         "**Two coder names.**")
+        # (v0.15.2, the lead's reading of 29 October: the same fact in a
+        # short sentence, the study in reach wherever the practice
+        # projects are)
+        assert ("A study kept on the same computer is within their reach, "
+                "wherever your practice projects are") in first
 
     def test_install_step_three_has_the_folder_and_the_lines(self):
         section = _install_openai()
@@ -926,7 +1015,7 @@ class TestCodexWorksInAFolderOfItsOwn:
         # (below)
         data = _readme_data()
         for words in (
-                "Some assistants can also open files on your computer by "
+                "Some assistants can open files on your computer by "
                 "themselves, outside Exegete.",
                 # v0.14.2, the README's second round of checks put the
                 # verdict second; the redraft puts the reach second and
@@ -940,10 +1029,12 @@ class TestCodexWorksInAFolderOfItsOwn:
                 # wait for approval ("How it works" says what does not);
                 # the second round: one meaning for each "it"; the
                 # redraft names the mark first, then "that mark"
-                "the private part of a memo (the `#####` mark below)",
+                # v0.15.2, the opening texts: the protections named where
+                # they are said not to apply
                 "Exegete cannot see such a read or stop it, and its "
-                "protections (that mark, your approval before codings are "
-                "written, the backups) do not apply to it.",
+                "protections (the private part of a memo, your approval "
+                "before codings are written, the backups) do not apply to "
+                "it.",
                 "Exegete's own answers also tell the assistant where your "
                 "project is"):
             assert words in data, words
@@ -978,9 +1069,8 @@ class TestWhatCodexKeepsAndTheOptOut:
         # notes; its first round of checks: a list again, PRIVACY.md first
         data = _readme_data()
         stays = data[data.index("**What stays on your computer**"):]
-        assert ("([PRIVACY.md](https://github.com/nicotem/exegete/blob/main/"
-                "PRIVACY.md) says where):") in stays
-        assert "- Codex's session files, with what Codex read by itself." \
+        assert "copies its folder (PRIVACY.md says where):" in stays
+        assert "- Codex's session files, with what Codex read by itself" \
             in stays
         section = _privacy_openai()
         assert ("A session's transcript can hold what Exegete's tools "
@@ -1009,11 +1099,12 @@ class TestWhatCodexKeepsAndTheOptOut:
         # (test_install_turns_training_off_first_in_the_readmes_words)
         data = _readme_data()
         steps = _readme_openai()
-        first = _between(steps, "1. **Switch training off**",
-                         "Then follow")
-        for words in ("before participants' data",
+        # v0.15.2, the opening texts: the risk, then the switches, before
+        # the steps
+        first = _between(steps, "**Training.**", "Then follow")
+        for words in ("with the participants' data in them",
                       "\"Improve the model for everyone\" in ChatGPT's "
-                      "Settings, Data controls, and Codex's separate "
+                      "Settings, Data controls, and with Codex's separate "
                       "\"Include environments\"."):
             assert words in first, words
         # No OpenAI setting in the list before participants' data
@@ -1110,16 +1201,20 @@ class TestTheStepsANewcomerCanGetWrong:
         # route says it is the Terminal route. The check for new versions
         # (pull request #11): the Terminal route's check is off unless
         # switched on, and INSTALL.md has its steps, uvx's included
+        # (v0.15.2, the merge onto the integration branch: the Terminal
+        # route's steps are the Terminal guide's "Updating")
         assert ("On the Terminal route the check is off unless you set "
-                "`EXEGETE_UPDATE_CHECK=on`; [INSTALL.md has the steps]"
-                "(https://github.com/nicotem/exegete/blob/main/INSTALL.md"
-                "#updating-the-mcp-server)") in readme
-        assert ("2. **Then follow [INSTALL.md's steps]" in readme
+                "`EXEGETE_UPDATE_CHECK=on` ([the Terminal guide has the "
+                "steps](https://github.com/nicotem/exegete/blob/main/docs/"
+                "installing-from-the-terminal.md#updating)") in readme
+        assert ("Then follow [the Terminal guide's steps]" in readme
                 and "by the Terminal route" in _readme_openai())
-        updating = _between(_read("INSTALL.md"), "## Updating the MCP Server",
-                            "**Git (contributor) install**")
-        assert "$HOME\\exegete-venv\\Scripts\\pip install --upgrade exegete" \
-            in _blocks(updating, "powershell")[0]
+        # (v0.15.2: the Terminal guide's "Updating", which names the
+        # optional part for PDF and EPUB)
+        updating = _between(_read("INSTALL.md"), "## Updating\n",
+                            "**A copy of the source**")
+        assert ("`$HOME\\exegete-venv\\Scripts\\pip install --upgrade "
+                "\"exegete[pdf-epub]\"`") in updating
         assert ("the ChatGPT desktop app: quit it; Codex on the command "
                 "line: end the session") in " ".join(updating.split())
 
@@ -1130,8 +1225,10 @@ class TestTheStepsANewcomerCanGetWrong:
         # all; where the project is made, for each route, is TOOLS.md's.
         # The owner, 1 October 2026: the one exception is the warning
         # about practising, which names the two assistants it is about
-        warning = ("Codex and Claude Code can open files on your computer "
-                   "by themselves")
+        # (v0.15.2, the lead's reading of 29 October: the warning's facts
+        # in short sentences, the first naming the two assistants)
+        warning = ("Codex and Claude Code open files on your computer by "
+                   "themselves")
         assert warning in first
         steps = first.replace(warning, "")
         assert re.findall(r"\bClaude\b(?! Desktop)", steps) == []
@@ -1161,8 +1258,8 @@ class TestTheOtherFirstImpressions:
             "extension description": manifest["description"],
             "extension long description": manifest["long_description"],
             "citation abstract": citation,
-            "QUICKSTART": _between(_flat("QUICKSTART.md"), "# Quick Start",
-                                   "## Prerequisites"),
+            "QUICKSTART": _between(_flat("QUICKSTART.md"), "# Quick start",
+                                   "## What you need"),
         }
         for where, text in texts.items():
             assert re.search(r"qualitative (data )?analysis application",
@@ -1182,10 +1279,20 @@ class TestTheOtherFirstImpressions:
                         "projects"):
                 assert old not in text, (where, old)
         # v0.15.0: the default set creates a project on every route
-        assert ("- [ ] A project to work on (a `.qda` folder, in "
-                "QualCoder's format), or none: the default tool set, `full`, "
-                "can create one in the conversation (INSTALL.md says where "
-                "it goes)") in _flat("QUICKSTART.md")
+        # (v0.15.2, the opening texts: the same fact, the project kept in
+        # QualCoder's file format)
+        # (the readability reading: the project, if the reader has one,
+        # then what happens without one, a sentence each; the default set
+        # is what lets the assistant create it on this route)
+        # (v0.15.2, the merge onto the integration branch: QUICKSTART's
+        # own step 3 says where a new project goes on this route)
+        assert ("- A project, if you have one: a folder whose name ends in "
+                "`.qda`, kept in QualCoder's file format. If you have none, "
+                "the assistant can create one in the conversation (step 3 "
+                "says where it goes).") in _flat("QUICKSTART.md")
+        assert ("On this route, a new project goes to `~/Documents/Exegete "
+                "projects` unless `EXEGETE_WORKSPACE` names another "
+                "folder.") in _flat("QUICKSTART.md")
 
     def test_the_texts_the_first_pass_did_not_read(self):
         """v0.14.2 (the owner's ruling of 7 October 2026): the opening
@@ -1213,8 +1320,12 @@ class TestTheOtherFirstImpressions:
         for where in ("the command's help", "NOTICE's first line",
                       "the old name's page"):
             assert "compatible with QualCoder" in texts[where], where
-        assert "in QualCoder's format" in texts["opening text"]
-        assert "in QualCoder's format" in texts["brief's first paragraph"]
+        # (v0.15.2, the opening texts: QualCoder said once what it is)
+        assert ("in the format of QualCoder, a free qualitative analysis "
+                "program") in texts["opening text"]
+        assert ("in the format and conventions of QualCoder, a free "
+                "qualitative analysis program") in \
+            texts["brief's first paragraph"]
         import exegete
         with open(REPO / "pyproject.toml", "rb") as handle:
             summary = tomllib.load(handle)["project"]["description"]
@@ -1361,8 +1472,10 @@ class TestAssistantsOwnFileAccess:
             "README, where your data goes": (
                 _readme_data(), "Codex: yes, well beyond its folder, without "
                 "asking"),
+            # (v0.15.2, the opening texts: the steps are INSTALL.md's; the
+            # README's route says what Codex does)
             "README, the steps": (
-                steps, "does not stop Codex reading them"),
+                steps, "Codex reads files by itself"),
             "README, a project you already have": (
                 own, "though an assistant that opens files by itself, such "
                 "as Codex, can read it from the path you give"),
@@ -1420,14 +1533,21 @@ class TestAssistantsOwnFileAccess:
         # (the judge, 6 October 2026, after the owner's "warn, don't
         # prescribe": the second check gives its reason, as the first and
         # third do, instead of two bare "Do not"s)
-        for words in ("1. Keep computer use off (Settings, General)",
-                      "2. Keep folders that hold your projects or "
-                      "transcripts unconnected (your home folder, Documents "
-                      "or a whole drive included; connected folders may be "
-                      "listed under \"Trusted folders\"), and add no other "
-                      "extension that reads files: Claude reads a connected "
-                      "folder by itself, and such an extension can reach "
-                      "your project too."):
+        # (v0.15.2, the opening texts: what each setting does first, then
+        # what the researcher could do)
+        for words in ("1. **Computer use** lets Claude see your screen and "
+                      "use other apps. You can keep computer use off, in "
+                      "Settings, General.",
+                      # (the readability reading: the aside a sentence
+                      # of its own, and each suggestion one)
+                      "2. **Connected folders and extensions.** Claude reads "
+                      "a connected folder by itself, and another extension "
+                      "that reads files can reach your project too. You "
+                      "could leave unconnected any folder that holds your "
+                      "projects or transcripts, your home folder, Documents "
+                      "or a whole drive included. Connected folders may be "
+                      "listed under \"Trusted folders\". You could also add "
+                      "no other extension that reads files."):
             assert words in listed, words
         assert "Do not" not in listed
         assert ("| Codex: yes, well beyond its folder, without asking, "
@@ -1440,13 +1560,20 @@ class TestAssistantsOwnFileAccess:
         # chat is suggested (test_v0142_docs.py)
         # (the owner, 1 October 2026: after the warning about practising,
         # under a lead of its own)
+        # (ruling 108, 27 October 2026: a local model is a route to
+        # consider for particular uses, never a blanket suggestion for
+        # participants' data)
         assert ("**For participants' data**, this project suggests an "
                 "assistant with no file access of its own: Claude Desktop's "
                 "chat with the extension, with computer use off, no folder "
                 "that holds your projects or transcripts connected to it, "
-                "and no other extension that reads files, or LM Studio's "
-                "chat with Exegete and no other server or plugin that reads "
-                "files.") in _privacy_hosts()
+                "and no other extension that reads files, on whichever plan "
+                "or terms you use. LM Studio's chat, with Exegete and no "
+                "other server or plugin that reads files, opens no file by "
+                "itself either, and a local model is a route to consider "
+                "for particular uses") in _privacy_hosts()
+        assert ("or LM Studio's chat with Exegete and no other server or "
+                "plugin that reads files.") not in _privacy_hosts()
         # The older condition, which left out the folders that hold a study
         for name in ("README.md", "PRIVACY.md", "INSTALL.md"):
             assert "none of your study's folders connected" not in \
@@ -1527,9 +1654,8 @@ class TestAssistantsOwnFileAccess:
             assert name in _full_tools(), name
 
     def test_readme_links_to_the_hosts_section(self):
-        link = ("[PRIVACY.md, \"Assistants that open files by themselves\"]"
-                "(https://github.com/nicotem/exegete/blob/main/PRIVACY.md"
-                "#assistants-that-open-files-by-themselves)")
+        link = ("[PRIVACY.md](https://github.com/nicotem/exegete/blob/main/"
+                "PRIVACY.md#assistants-that-open-files-by-themselves)")
         assert link in _readme_data()
         assert "\n## Assistants that open files by themselves\n" in \
             _read("PRIVACY.md")
@@ -1564,8 +1690,8 @@ class TestAssistantsOwnFileAccess:
         assert "or on another computer paired with it" in _privacy_openai()
         # INSTALL quotes some of OpenAI's words and paraphrases others
         assert "in OpenAI's words" not in _flat("PRIVACY.md")
-        assert ("INSTALL.md lists what Remote needs, from OpenAI's pages"
-                in _privacy_openai())
+        assert ("the Terminal guide lists what Remote needs, from OpenAI's "
+                "pages" in _privacy_openai())
 
 
 # ---------------------------------------------------------------------------
@@ -1605,9 +1731,8 @@ def _unwarned_claude_code_routes(text):
 
 
 def _claude_code_section():
-    return _between(_read("INSTALL.md"),
-                    "## Alternative: Claude Code and other MCP clients",
-                    "## Environment variables the server reads")
+    return _between(_read("INSTALL.md"), "\n## Claude Code\n",
+                    "## Claude Code with an Anthropic API key (Experimental)")
 
 
 def _api_key_recipe():
@@ -1627,9 +1752,10 @@ def _claude_code_routes():
         "INSTALL, the API-key recipe": " ".join(_api_key_recipe().split()),
         "README, other assistants": _between(
             _flat("README.md"), "**Other assistants.**", "**Updating.**"),
-        "QUICKSTART, what you need": _between(
-            _flat("QUICKSTART.md"), "## Prerequisites Checklist",
-            "## Installation Steps"),
+        "QUICKSTART, Claude Code": _between(
+            _flat("QUICKSTART.md"),
+            "### Claude Code instead of Claude Desktop",
+            "## Installation steps"),
     }
 
 
@@ -1681,7 +1807,9 @@ class TestClaudeCodesRoutes:
     def test_the_steps_start_claude_code_in_a_folder_of_its_own(self):
         folder = "mkdir -p ~/claude-exegete && cd ~/claude-exegete"
         section = _claude_code_section()
-        assert folder in [b.strip() for b in _blocks(section, "bash")]
+        # (v0.15.2: one block makes the folder and adds Exegete there)
+        assert folder in [b.strip().splitlines()[0]
+                          for b in _blocks(section, "bash")]
         # made before Exegete is registered in it
         assert section.index(folder) < \
             section.index("claude mcp add exegete -- exegete")
@@ -1728,19 +1856,19 @@ class TestClaudeCodesRoutes:
 
     def test_privacy_says_the_terms_do_not_change_what_it_reads(self):
         privacy = _flat("PRIVACY.md")
+        # v0.15.2: told once, for every rung, at the top of the governance
+        # options, and pointed to from the rungs that suggest the chat
+        intro = _between(privacy, "## Your governance options",
+                         "### Rung 1:")
+        assert ("On every rung, Claude Code opens files by itself, outside "
+                "Exegete, and the terms do not change what it reads "
+                "(\"Assistants that open files by themselves\").") in intro
         rung_two = _between(privacy, "### Rung 2:", "### Rung 3:")
-        for words in ("The terms change what Anthropic may do with what it "
-                      "receives, not what Claude Code reads: Claude Code "
-                      "opens files by itself, outside Exegete",
-                      "Claude Desktop's chat with Exegete on a Team or "
-                      "Enterprise account (rung 3)"):
-            assert words in rung_two, words
-        assert CLAUDE_CODE_READS in _between(privacy, "### Rung 1:",
-                                             "### Rung 2:")
-        cautions = _between(privacy, "### Cross-rung cautions",
-                            "## OpenAI's apps")
-        assert "Claude Code opens files by itself, outside Exegete, on " \
-               "every rung" in cautions
+        assert ("for participants' data under commercial terms, rung 3 says "
+                "what this project suggests.") in rung_two
+        rung_three = _between(privacy, "### Rung 3:", "### Rung 4:")
+        assert ("Claude Desktop's chat with Exegete under that account"
+                in rung_three)
         hosts = _privacy_hosts()
         assert "With Claude Code or Cowork, keep your projects out of " \
                "their folders, as above." not in hosts
@@ -1791,11 +1919,14 @@ class TestTheSmallerPoints:
         # conditions in full, it gives PRIVACY.md's third one too, and
         # repeats the first two where the reader acts, at the one-click
         # check
-        assert ("and add no other extension that reads files: Claude reads "
-                "a connected folder by itself, and such an extension can "
-                "reach your project too.") in _readme_data()
+        assert ("Claude reads a connected folder by itself, and another "
+                "extension that reads files can reach your project too.") \
+            in _readme_data()
+        assert "You could also add no other extension that reads files." in \
+            _readme_data()
+        # (the owner's reading of 30 October: the heading without its flourish)
         one_click = _between(_flat("README.md"),
-                             "### Claude Desktop, with one click",
+                             "### One click in Claude Desktop",
                              "### ChatGPT's desktop app and Codex (OpenAI)")
         # v0.14.2, the README rewritten to persuade: the checks after
         # installing joined the one list before participants' data, which
@@ -1804,11 +1935,14 @@ class TestTheSmallerPoints:
         # (Anthropic's page, read 1 October 2026)
         # v0.14.2, the README's first round of checks: a link to the five
         # checks, as the last of the checks after installing
-        assert ("- Before participants' data, go through [the five checks]"
-                "(https://github.com/nicotem/exegete#where-your-data-goes)"
-                ": Manual keeps Claude asking; the checks keep your files "
-                "out of its reach and switch training off.") in one_click
-        assert ("connected folders may be listed under \"Trusted "
+        # v0.15.2, the opening texts: the check's paragraph ends with it
+        # (the lead's reading of 29 October: the checks help, as the
+        # assistants table's hedge says)
+        assert ("Before you use participants' data, go through [the five "
+                "checks](https://github.com/nicotem/exegete#where-your-data-"
+                "goes), which help keep your files out of Claude's reach and "
+                "switch training off.") in one_click
+        assert ("Connected folders may be listed under \"Trusted "
                 "folders\"") in _readme_data()
         assert "also check two things" not in one_click
         # "Trusted folders" is Anthropic's word, as PRIVACY.md quotes it
@@ -1820,9 +1954,14 @@ class TestTheSmallerPoints:
             assert not UNQUALIFIED_PRIVATE_PART.search(_flat(name)), name
         for name in ("TOOLS.md", "AI_CODING_GUIDE.md"):
             text = _flat(name)
-            assert ("never sent to the AI through Exegete (an assistant that "
-                    "opens a project's files by itself reads every memo "
-                    "whole:") in text, name
+            # (v0.15.2: the private part "never reaches the assistant",
+            # in each document's own grammar; then, in a sentence of its
+            # own, what an assistant that opens the files itself reads)
+            assert "never reaches the assistant through Exegete" in text, \
+                name
+            assert ("assistant that opens a project's files by itself"
+                    in text), name
+            assert "reads every memo whole" in text, name
             assert HOSTS_SECTION in text, name
 
     def test_the_private_part_check_would_notice(self):

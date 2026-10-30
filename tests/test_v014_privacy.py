@@ -733,8 +733,11 @@ class TestTheDocumentsSayTheRule:
         install = _flat("INSTALL.md")
         assert "closing that is on the list for v0.14" not in install
         assert "the SQLite error text" not in install
-        assert ("The lines the server writes carry no memo text, and "
-                "since v0.14 no SQLite message") in install
+        assert (("Exegete writes its own lines to the log, at the INFO level "
+                 "and above. They carry ids, counts and the kinds of errors. "
+                 "They name no project, file, code, category, case, journal "
+                 "entry or attribute, and no path. They hold no memo text "
+                 "and no SQLite message")) in install
 
 
 # =============================================================================
@@ -965,15 +968,15 @@ class TestTheDocumentsSayWhatTheLogCarries:
 
     def test_privacy_says_the_log_names_nothing(self):
         privacy = _flat("PRIVACY.md")
-        assert ("Since v0.14 the log also names no project, file, code, "
-                "category, case, journal entry or attribute, and carries no "
-                "path") in privacy
+        assert ("Since v0.14 the log also carries no name of a project, "
+                "file, code, category, case, journal entry or attribute, and "
+                "no path") in privacy
 
     def test_install_no_longer_says_the_log_carries_names(self):
         install = _flat("INSTALL.md")
         assert "It does carry project file names" not in install
         assert ("They name no project, file, code, category, case, journal "
-                "entry or attribute and no path") in install
+                "entry or attribute, and no path") in install
 
     def test_both_say_what_a_host_that_records_every_answer_keeps(self):
         """Fix round 1 (the refuter's widening of QA F1): the sentences
@@ -981,8 +984,8 @@ class TestTheDocumentsSayWhatTheLogCarries:
         records every request and answer beside them."""
         install = _flat("INSTALL.md")
         privacy = _flat("PRIVACY.md")
-        assert ("Claude Desktop's server log (the file Show Logs opens) "
-                "also records every request and every answer in full") \
+        assert ("Claude Desktop's log (the file Show Logs opens) also "
+                "records every request and every answer in full") \
             in install
         assert ("A host may record more in the same file: Claude "
                 "Desktop's server log") in privacy

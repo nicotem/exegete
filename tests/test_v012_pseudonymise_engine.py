@@ -3199,7 +3199,21 @@ class TestTheFileTextCountStaysCheap:
     printed in the run's summary (tests/conftest.py) so the six CI logs
     carry it for ruling 7's sanity check of the work budget."""
 
-    CEILING_SECONDS = 3.0
+    # The absolute guard's ceiling, in seconds, for one count of a
+    # quarter of a megabyte at 400 forms (and of the rate probe's
+    # megabyte at 100 forms, which it does not tell apart: about 1.0 s at
+    # most on CI, 2.4 s with the slow shape). On 27 October 2026 that
+    # count read 0.26 to 0.28 s on macOS with Python 3.13.5, and on
+    # Windows with Python 3.11.9 inside the suite 1.60 to 2.65 s as the
+    # best of three (the ratio test's count, in three full-tier runs),
+    # where one count reads up to 1.16 times its best of three: about 3.1
+    # s. With one capture group per alternative, the slow shape the guard
+    # is for (`capture_group_attribution` above), it read 5.08 to 5.48 s
+    # on macOS with Python 3.13.5, and longer on slower machines. The
+    # ceiling sits between: about 1.3 times the highest reading of the
+    # count as it is, and 0.79 of the lowest reading of the slow shape.
+    # The ratio guard below tells the two apart by a wider margin.
+    CEILING_SECONDS = 4.0
     CURLY_RATIO_CEILING = 2.8
     CURLY_PAIRS = 15
 
@@ -3524,7 +3538,15 @@ class TestTheFileTextCountStaysCheap:
         # it read 1.7 to 1.8 (3.13.5) and 2.0 to 2.2 (3.11.13) with the
         # character class, as on a quiet machine, and 4.0 to 4.6 and 2.9
         # to 3.1 with the table; best of five on the wall clock read up to
-        # 3.2 and 5.8 with the character class at the same load.
+        # 3.2 and 5.8 with the character class at the same load. On 27
+        # October 2026 the rate lines of the CI's jobs gave 1.55 to 2.09
+        # on the wall clock (Ubuntu, macOS and Windows; Python 3.11, 3.13
+        # and 3.14; Windows with 3.11.9 1.76 to 1.81, where the guard
+        # reads the wall clock too), and macOS with 3.13.5 read 1.69 to
+        # 1.73, and 3.98 to 4.04 with the table. The ceiling of 2.8 sits
+        # above every platform's reading and well below the table's on
+        # Python 3.13, which CI runs on every platform; on 3.11.13 the
+        # table's 2.9 to 3.1 leaves a thin margin.
         ratio = m["curly_ratio"]
         assert ratio < self.CURLY_RATIO_CEILING, (
             f"a curly-quoted megabyte costs {ratio:.1f} times a plain one "
@@ -3550,12 +3572,20 @@ class TestTheFileTextCountStaysCheap:
             f"{elapsed:.2f} s for a quarter of a megabyte at 400 forms: "
             f"the file-text count has lost its ungrouped pass")
 
-    # The ratio guard (fix round 1, QA-9): the count against a plain
-    # ungrouped `findall` of the same pattern over the same text, both in
-    # this process, so the margin does not depend on the machine. Measured
-    # at 400 forms: the count 1.3 times the plain pass on both
-    # interpreters, one capture group per alternative 27 times.
-    RATIO_CEILING = 5.0
+    # The ratio guard: the count against one plain ungrouped `findall` of
+    # the detector's pattern over the same text, both timed in this
+    # process, so a faster or slower machine cancels out; the platform
+    # can still move the ratio. At 400 forms the count read 1.3 times the
+    # plain pass when the guard was written; on 27 October 2026 it read
+    # 1.26 to 1.29 on macOS with Python 3.13.5, and 5.4 to 6.3 on
+    # Windows with Python 3.11.9 inside the suite (five readings in four
+    # full-tier runs), over the ceiling of 5 the guard had then. What the guard is for, a count whose direct
+    # pass has one capture group per alternative and takes the form from
+    # `lastindex` (`capture_group_attribution` above), read 27 times the
+    # plain pass then, and 25.8 to 26.2 on macOS with Python 3.13.5 on
+    # 27 October 2026. The ceiling is 1.9 times the highest reading of
+    # the count as it is, and under half the reading of that slow shape.
+    RATIO_CEILING = 12.0
 
     def test_the_count_is_a_small_multiple_of_one_plain_pass(self):
         mapping, text = self._corpus(forms=400, size=250_000)

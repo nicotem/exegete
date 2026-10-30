@@ -91,9 +91,8 @@ def _read(name):
 
 def without_the_files_paragraph(description):
     """get_current_project's description with this piece's paragraph
-    taken out, exactly as it was before (on 3.10 to 3.12 the paragraph
-    keeps its indentation), for the tests of earlier pieces that hold
-    the rest of it to their length."""
+    taken out (on 3.10 to 3.12 the paragraph keeps its indentation), so
+    that a test can see the field is named in that paragraph alone."""
     return re.sub(r"[ ]*Also lists the files Exegete keeps for this project "
                   r"in its Exegete\n.*?never their\n[ ]*contents\.\n\n", "",
                   description, count=1, flags=re.S)
@@ -692,13 +691,13 @@ class TestGetCurrentProject:
                 "date, never their contents.") in description
         assert description.index("as `pseudonyms_json`") < \
             description.index("(files_exegete_keeps)")
+        # the field is named in that paragraph alone (until v0.15.2 the
+        # paragraph's length was held here too: docs/snapshot/ holds the
+        # description now, and a change to it is read there as a diff)
         raw = server.mcp.original_descriptions["get_current_project"]
         taken_out = without_the_files_paragraph(raw)
+        assert taken_out != raw
         assert "files_exegete_keeps" not in taken_out
-        # 1,920 to 2,067 characters on 3.13, 2,048 to 2,207 on 3.10 to
-        # 3.12, which keep the docstring's indentation
-        indented = (3, 10) <= sys.version_info[:2] <= (3, 12)
-        assert len(raw) - len(taken_out) == (159 if indented else 147)
 
     def test_selecting_and_reporting_make_nothing(self, selected):
         json.loads(server.get_current_project())
@@ -1093,7 +1092,10 @@ class TestTheDocuments:
                 "the folder for projects, or the folder you named for a new "
                 "project; where you export; "
                 "`~/.exegete/pseudonymisation/` |",
-                "| you (`prune_backups` deletes backups at your word) |",
+                # v0.15.2: undo removes an import's originals, and a
+                # names list a save made, at the researcher's word
+                "| you (`prune_backups` deletes backups at your word). At "
+                "your word, `undo_changes` also removes",
                 "The files you fill in are never returned to the assistant",
                 # piece 2's fix round 2: backups leave out files by name
                 "They travel with the project into every backup (Exegete's, "

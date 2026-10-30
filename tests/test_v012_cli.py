@@ -141,7 +141,8 @@ class TestTtyNotice:
         server.main([])                       # returns: no exit, no exception
         err = capsys.readouterr().err
         assert err.count(server.TTY_NOTICE) == 1
-        assert "--version" in err and "INSTALL.md" in err
+        assert "--version" in err
+        assert "docs/installing-from-the-terminal.md" in err
         assert stub_run == [{"transport": "stdio"}]   # the server still starts
 
     def test_silent_when_stdin_is_a_pipe(self, monkeypatch, capsys, stub_run):
@@ -175,6 +176,36 @@ class TestTtyNotice:
             "Exegete is a qualitative analysis application that runs as an "
             "MCP server.")
         assert "\n" not in server.TTY_NOTICE   # one paragraph
+        # Exegete, never "the server" (v0.15.2)
+        assert "the server" not in server.TTY_NOTICE
+
+    def test_the_guide_the_notice_names_sets_up_each_host_it_names(self):
+        """v0.15.2: the hosts' configurations moved from INSTALL.md to
+        the Terminal guide; the note gives the guide's web address, since
+        an install from PyPI holds the package alone, with no docs folder
+        (pyproject.toml finds packages in src/ only). The address ends
+        the note, so a terminal's link takes nothing after it, and its
+        path is the guide's in this repository, with a section for each
+        host the note names."""
+        import re
+        repository = "https://github.com/nicotem/exegete/blob/main/"
+        addresses = re.findall(r"https?://\S+", server.TTY_NOTICE)
+        assert addresses == [repository
+                             + "docs/installing-from-the-terminal.md"], \
+            addresses
+        assert server.TTY_NOTICE.endswith(addresses[0])
+        assert re.findall(r"\b[\w/-]+\.md\b", server.TTY_NOTICE) == [
+            "com/nicotem/exegete/blob/main/docs/"
+            "installing-from-the-terminal.md"]     # no other document named
+        guide = (REPO / addresses[0][len(repository):]).read_text(
+            encoding="utf-8")
+        headings = re.findall(r"^## (.+)$", guide, re.M)
+        for host in ("Claude Desktop", "Claude Code", "LM Studio"):
+            assert host in server.TTY_NOTICE, host
+            assert any(heading.startswith(host) for heading in headings), \
+                host
+        # "another MCP client"
+        assert "Other MCP hosts" in headings, headings
 
     def test_registry_intact_after_main_in_process(self, monkeypatch, capsys, stub_run):
         monkeypatch.setattr(sys, "stdin", _FakeStdin(tty=False))

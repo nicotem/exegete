@@ -12,7 +12,7 @@ repository-code: "https://github.com/nicotem/exegete"
 doi: 10.5281/zenodo.23496246
 license: LGPL-3.0-or-later
 version: "0.15.2-alpha"
-date-released: '2026-11-02'
+date-released: '2026-10-30'
 keywords:
   - "qualitative research"
   - "qualitative data analysis"

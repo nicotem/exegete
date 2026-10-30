@@ -17,7 +17,7 @@ VERSION = "0.15.2-alpha"
 # The release date, as the CHANGELOG heading gives it (set again on the
 # day if the release moves: the CHANGELOG heading, CITATION.cff and the
 # update site's two files hold the same date)
-RELEASED = "2026-11-02"
+RELEASED = "2026-10-30"
 # One or two plain sentences: what is new for a researcher
 # (0.15.2's note after an update; undo's limits, the one Ctrl+C, Python
 # 3.11 as the oldest supported and what an update changes are in the

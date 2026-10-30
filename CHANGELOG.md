@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The changes since the last release are added here when the next
 release is prepared.
 
-## [0.15.2-alpha] - 2026-11-02
+## [0.15.2-alpha] - 2026-10-30
 
 This release brings undo. Most changes Exegete makes to a project can
 now be undone for a day afterwards, whole or not at all. The assistant

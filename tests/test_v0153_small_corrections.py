@@ -260,3 +260,116 @@ class TestTheSweep:
         assert f"once it is {hour} old" in passage, passage
         assert "pseudonymisation run" in passage, passage
         assert "every backup" in passage, passage
+
+
+# ---------------------------------------------------------------------------
+# The project's lock file at the end of a write
+# ---------------------------------------------------------------------------
+
+class LockRemoval:
+    """Removals of the project's lock file, counted, the first `refused`
+    refused with PermissionError as Windows refuses one while another
+    program has the file open; `then` runs at each refusal."""
+
+    def __init__(self, monkeypatch, refused, then=None, retried=True):
+        self.tries = 0
+        self.refused = refused
+        self.then = then
+        real = Path.unlink
+
+        def unlink(path, *args, **kwargs):
+            if path.name == database.QUALCODER_LOCK_FILENAME:
+                self.tries += 1
+                if self.tries <= self.refused:
+                    if self.then is not None:
+                        self.then(path)
+                    raise PermissionError(13, "in use")
+            return real(path, *args, **kwargs)
+        monkeypatch.setattr(Path, "unlink", unlink)
+        monkeypatch.setattr(database, "_RETRY_LOCK_REMOVAL", retried)
+        monkeypatch.setattr(database, "_RENAME_WAITS", (0.0,) * 5)
+
+
+def lock_warnings(caplog):
+    return [r.getMessage() for r in caplog.records
+            if r.name == "exegete.database" and r.levelno == logging.WARNING
+            and "lock file" in r.getMessage()]
+
+
+def a_write(name):
+    made = answer(server.create_code(name=name, color="#EB7333"))
+    assert "error" not in made, made
+    return made
+
+
+class TestTheLockFilesEnd:
+
+    def test_refused_twice_then_removed(self, project, monkeypatch,
+                                        caplog):
+        removal = LockRemoval(monkeypatch, refused=2)
+        caplog.set_level(logging.WARNING, logger="exegete.database")
+        a_write("First")
+        assert removal.tries == 3
+        assert not (project / database.QUALCODER_LOCK_FILENAME).exists()
+        assert lock_warnings(caplog) == []
+        a_write("Second")          # not refused as another's write
+
+    def test_refused_throughout_left_with_one_warning(self, project,
+                                                      monkeypatch, caplog):
+        removal = LockRemoval(monkeypatch, refused=100)
+        caplog.set_level(logging.WARNING, logger="exegete.database")
+        a_write("First")
+        assert removal.tries == len(database._RENAME_WAITS) + 1
+        assert (project / database.QUALCODER_LOCK_FILENAME).exists()
+        (line,) = lock_warnings(caplog)
+        assert line.startswith("Could not remove project lock file: "
+                               "PermissionError")
+
+    def test_another_programs_lines_between_two_tries_are_left(
+            self, project, monkeypatch, caplog):
+        def theirs(path):
+            path.write_text(f"someone else\n{time.time():.6f}",
+                            encoding="utf-8")
+        removal = LockRemoval(monkeypatch, refused=100, then=theirs)
+        caplog.set_level(logging.WARNING, logger="exegete.database")
+        a_write("First")
+        assert removal.tries == 1
+        lock = project / database.QUALCODER_LOCK_FILENAME
+        assert lock.read_text(encoding="utf-8").startswith("someone else\n")
+        (line,) = lock_warnings(caplog)
+        assert "another program's lines" in line
+
+    @pytest.mark.parametrize("reading", ["unreadable", "raising"])
+    def test_a_reread_that_fails_leaves_it_and_the_write_stands(
+            self, project, monkeypatch, caplog, reading):
+        failing = []
+        real = database.ProjectLock._whose
+
+        def whose(lock):
+            if failing:
+                if reading == "raising":
+                    raise RuntimeError("the read failed")
+                return "unreadable"
+            return real(lock)
+        monkeypatch.setattr(database.ProjectLock, "_whose", whose)
+        removal = LockRemoval(monkeypatch, refused=100,
+                              then=lambda path: failing.append(True))
+        caplog.set_level(logging.WARNING, logger="exegete.database")
+        a_write("First")           # answered as done, the change made
+        assert code_id(project, "First") is not None
+        assert removal.tries == 1
+        assert (project / database.QUALCODER_LOCK_FILENAME).exists()
+        (line,) = lock_warnings(caplog)
+        assert "could not be read" in line
+
+    def test_on_linux_and_macos_one_try(self, project, monkeypatch, caplog):
+        removal = LockRemoval(monkeypatch, refused=100, retried=False)
+        caplog.set_level(logging.WARNING, logger="exegete.database")
+        a_write("First")
+        assert removal.tries == 1
+        assert (project / database.QUALCODER_LOCK_FILENAME).exists()
+        (line,) = lock_warnings(caplog)
+        assert line.startswith("Could not remove project lock file: ")
+
+    def test_the_switch_is_windows_alone(self):
+        assert database._RETRY_LOCK_REMOVAL is (os.name == "nt")

@@ -6918,24 +6918,21 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
                     os.replace(str(tmp), str(folder / PSEUDONYMS_JSON_NAME))
                     tmp = None
             except Exception as e:                      # noqa: BLE001
-                if tmp is not None:
-                    try:
-                        tmp.unlink()
-                    except OSError:
-                        pass
                 logger.error("save_names_list did not save the names list: "
                              "%s", error_label(e))
                 return json.dumps({
                     "error": NAMES_LIST_NOT_WRITTEN.format(
                         kind=type(e).__name__, backup=backup.name),
                     "reason": "not_saved", **kept_backup}, indent=2)
+            finally:
+                # The copy holds real names: it goes on every way out but
+                # the replace, an interrupt included, which then goes on
+                # as it came (v0.15.3)
+                _remove_temporary_copy(tmp)
             if tmp is not None:
                 # The list changed during the backup: left as the other
-                # program wrote it, and the backup made first named
-                try:
-                    tmp.unlink()
-                except OSError:
-                    pass
+                # program wrote it, its copy removed above, and the backup
+                # made first named
                 return json.dumps({
                     "error": TOKEN_ERROR_TEXTS_BY_TOOL[(
                         "save_names_list", "project_changed")]
@@ -6959,6 +6956,18 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
         **({"undo_receipt": receipt} if receipt
            else {"no_undo_receipt": NO_UNDO_RECEIPT}),
     }, indent=2)
+
+
+def _remove_temporary_copy(tmp: Optional[Path]) -> None:
+    """Remove a names list's temporary copy, when there is one (v0.15.3).
+    A removal that fails is passed over: the copy then waits for the
+    sweep of a later backup (`database.sweep_names_list_leftovers`)."""
+    if tmp is None:
+        return
+    try:
+        tmp.unlink()
+    except OSError:
+        pass
 
 
 def _names_list_written(tmp: Path) -> Optional[str]:
@@ -15918,9 +15927,8 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
                     tmp = _write_names_list_back(folder, data, mode)
                 # The lock file does not keep every program from the
                 # list: one written since the backup is not written over
+                # (the copy removed below)
                 if pseudonyms_json_fingerprint(folder) != now:
-                    if tmp is not None:
-                        tmp.unlink()
                     return {"error": UNDO_NAMES_LIST_WRITTEN_DURING.format(
                         backup=made.name), "reason": "project_changed",
                         **kept}
@@ -15930,16 +15938,16 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
                 else:
                     os.unlink(str(target))
             except Exception as e:                      # noqa: BLE001
-                if tmp is not None:
-                    try:
-                        tmp.unlink()
-                    except OSError:
-                        pass
                 logger.error("An undo of the names list did not write it: "
                              "%s", error_label(e))
                 return {"error": UNDO_NAMES_LIST_NOT_WRITTEN.format(
                     kind=type(e).__name__, backup=made.name),
                     "reason": "not_saved", **kept}
+            finally:
+                # The copy holds real names: it goes on every way out but
+                # the replace, an interrupt included, which then goes on
+                # as it came (v0.15.3)
+                _remove_temporary_copy(tmp)
     except DatabaseLockedError as e:
         return {"error": f"{e} Nothing was undone.",
                 "reason": "project_locked", "nothing_changed": True}
@@ -19884,8 +19892,9 @@ def _write_pseudonyms_json_data_tmp(folder: Path, data: List[Any],
     a new file keeps mkstemp's 0600, and an existing file's permission
     bits (`existing_mode`) are put on it through the open descriptor.
     Factored out of `_write_pseudonyms_json_tmp` (v0.15.0, piece 4), whose
-    docstring gives the reasons, for save_names_list too. A failure
-    removes the temporary file and raises the error as it came."""
+    docstring gives the reasons, for save_names_list too. A failure, an
+    interrupt included (v0.15.3), removes the temporary file and raises
+    the error as it came."""
     tmp: Optional[Path] = None
     try:
         fd, tmp_name = tempfile.mkstemp(
@@ -19903,7 +19912,7 @@ def _write_pseudonyms_json_data_tmp(folder: Path, data: List[Any],
             if existing_mode is not None and os.name != "nt":
                 os.fchmod(f.fileno(), existing_mode)
         return tmp
-    except Exception:
+    except BaseException:
         if tmp is not None:
             try:
                 tmp.unlink()

@@ -885,7 +885,14 @@ backup that fails part-way is removed. A backup cut short, because
 Exegete's process ended during the copy (when the app quit, for
 example), stays beside the project under a hidden name, with whatever
 it had copied, the names file and `pseudonyms.json` among them. The
-next backup of the project removes it once it is an hour old. A copy
+next backup of the project removes it once it is an hour old. A save
+of the names list cut short the same way, or a pseudonymisation run
+ended before its mapping took its place, can leave a temporary copy of
+the list in the project's folder, with the real names in it: its name
+is `pseudonyms.json.`, eight letters, digits or underscores, then
+`.tmp`. The next backup of the project removes it once it is an hour
+old. Until then it goes into every backup made, as `pseudonyms.json`
+does, and a restore of one of those backups brings it back. A copy
 made with `copy_project_to_workspace` that fails part-way is removed
 too, unless that removal fails. A copy cut short, or one whose removal
 failed, stays in the folder for projects under its own name, with

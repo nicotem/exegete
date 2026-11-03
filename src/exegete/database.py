@@ -3604,6 +3604,59 @@ def sweep_partial_backups(project_path: Union[str, Path],
     return removed
 
 
+# The name of a temporary copy of the names list (v0.15.3): the copy a
+# save, its undo or a pseudonymisation run writes beside pseudonyms.json
+# (PSEUDONYMS_JSON_NAME) before renaming it into place, as tempfile names
+# it, its eight characters from tempfile's own alphabet. The name is
+# Exegete's alone: QualCoder writes pseudonyms.json in place, with no
+# temporary name (4.0, pseudonyms.py 92-93 and 111-112). Matched whole
+# and in lower case, so a file of another name, `.bak` after it say,
+# stays.
+_NAMES_LIST_LEFTOVER = re.compile(r"pseudonyms\.json\.[a-z0-9_]{8}\.tmp")
+
+
+def sweep_names_list_leftovers(project_path: Union[str, Path],
+                               now: Optional[float] = None) -> int:
+    """Remove, at the project folder's top, the temporary copies of the
+    names list that a process ended while writing one left behind (a
+    save, its undo or a pseudonymisation run: each removes its own on
+    every other way out), once last modified more than
+    BACKUP_LEFTOVER_SECONDS ago, never sooner, since another copy of
+    Exegete may still be writing one; return how many went (v0.15.3).
+
+    Only a regular file whose name is exactly a copy's goes: a link, a
+    folder and any other name stay. The age is the time since the epoch
+    less the file's own, never local times. Every failure (the folder
+    unreadable, a copy gone or held open meanwhile) is passed over, so
+    the sweep never raises and a leftover waits for the next backup. One
+    log line gives the count alone."""
+    folder = Path(project_path)
+    if folder.name == "data.qda":
+        folder = folder.parent
+    now = time.time() if now is None else now
+    removed = 0
+    try:
+        entries = list(os.scandir(folder))
+    except OSError:
+        return 0
+    for entry in entries:
+        if _NAMES_LIST_LEFTOVER.fullmatch(entry.name) is None:
+            continue
+        try:
+            found = entry.stat(follow_symlinks=False)
+            if not stat.S_ISREG(found.st_mode) \
+                    or now - found.st_mtime <= BACKUP_LEFTOVER_SECONDS:
+                continue
+            os.unlink(entry.path)
+        except OSError:
+            continue
+        removed += 1
+    if removed:
+        logger.info("Removed %d temporary copy file(s) of the names list "
+                    "left unfinished", removed)
+    return removed
+
+
 def _keep_folder_time(source: Path, dest: Path) -> None:
     """Give the backup's folder the project's times again, as the copy
     of the tree left them before the database was written into it (a
@@ -3727,7 +3780,9 @@ def start_backup(project_path: Union[str, Path],
     """The first of a backup's two steps (v0.15.1): claim a folder under
     a hidden name beside the project and copy into it everything
     `backup_project` copies but the database. Leftovers of earlier
-    backups are swept first.
+    backups are swept first, and the names list's temporary copies left
+    by a write that did not end (v0.15.3), so the backup holds none
+    over an hour old.
 
     Raises:
         FileNotFoundError: If project doesn't exist
@@ -3748,6 +3803,7 @@ def start_backup(project_path: Union[str, Path],
         raise ValueError(f"Project path must be a directory: {project_path}")
 
     sweep_partial_backups(project_path)
+    sweep_names_list_leftovers(project_path)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     partial = project_path.parent / (
         f".{project_path.stem}_backup_{timestamp}_partial_"

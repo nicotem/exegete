@@ -3666,11 +3666,12 @@ _NAMES_LIST_LEFTOVER = re.compile(r"pseudonyms\.json\.[a-z0-9_]{8}\.tmp")
 def sweep_names_list_leftovers(project_path: Union[str, Path],
                                now: Optional[float] = None) -> int:
     """Remove, at the project folder's top, the temporary copies of the
-    names list that a process ended while writing one left behind (a
-    save, its undo or a pseudonymisation run: each removes its own on
-    every other way out), once last modified more than
-    BACKUP_LEFTOVER_SECONDS ago, never sooner, since another copy of
-    Exegete may still be writing one; return how many went (v0.15.3).
+    names list left behind when a process ended while a save, its undo
+    or a pseudonymisation run had one (a pseudonymisation run's stays
+    too when it is stopped between its commit and its rename), once
+    last modified more than BACKUP_LEFTOVER_SECONDS ago, never sooner,
+    since another copy of Exegete may still be writing one; return how
+    many went (v0.15.3).
 
     Only a regular file whose name is exactly a copy's goes: a link, a
     folder and any other name stay. The age is the time since the epoch

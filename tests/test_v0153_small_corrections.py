@@ -473,3 +473,88 @@ def test_what_the_app_sent_stays_out_of_the_log(tmp_path):
         assert sentence in log, log[-3000:]
     assert "Processing request of type ListToolsRequest" in log
     assert FRONT not in log and BACK not in log, log[-3000:]
+
+
+# ---------------------------------------------------------------------------
+# A library that did not load is not a damaged file
+# ---------------------------------------------------------------------------
+
+def _not_loaded(error):
+    def read_document(*args, **kwargs):
+        raise error
+    return read_document
+
+
+class TestALibraryThatDidNotLoad:
+
+    @pytest.mark.parametrize("error", [
+        ImportError("cannot load pymupdf for Maria Brown"),
+        ModuleNotFoundError("No module named 'pymupdf'", name="pymupdf")],
+        ids=["ImportError", "ModuleNotFoundError"])
+    def test_the_reading_answers_reader_library_with_its_cause(
+            self, monkeypatch, error):
+        from exegete import doc_readers
+        monkeypatch.setattr(doc_readers, "read_document", _not_loaded(error))
+        answer_ = import_reading._read({"kind": "pdf"}, b"%PDF-1.4")
+        assert answer_["refusal"] == "reader_library", answer_
+        kind = type(error).__name__
+        assert answer_["cause"]["kind"] == kind
+        assert answer_["cause"]["library"] == "pymupdf"
+        assert "Maria" not in json.dumps(answer_)
+        with pytest.raises(import_reading.ReadFailed) as caught:
+            import_reading.checked_result(answer_, "pdf")
+        assert caught.value.code == "reader_library"
+        assert caught.value.cause == answer_["cause"]
+
+    def test_another_error_is_still_damaged(self, monkeypatch):
+        from exegete import doc_readers
+        monkeypatch.setattr(doc_readers, "read_document",
+                            _not_loaded(ValueError("broken")))
+        answer_ = import_reading._read({"kind": "pdf"}, b"%PDF-1.4")
+        assert answer_["refusal"] == "damaged"
+
+    @pytest.mark.usefixtures("_scratch_is_not_hidden")
+    def test_the_preview_says_the_file_is_not_at_fault(
+            self, setup_server, tmp_path, monkeypatch, caplog):
+        """The real reading process, its reader raising ImportError: the
+        file is refused in words that never send the researcher to save
+        a fresh copy, and Exegete's log names the kind of error and the
+        library's release, never the file."""
+        import import_fixtures
+        from test_v0151_reading_cause import _child
+        monkeypatch.setattr(import_reading, "reader_command", _child(
+            "def broken(*a, **k):\n"
+            "    raise ImportError('defusedxml did not load')"))
+        folder = tmp_path / "Interviews"
+        folder.mkdir()
+        name = "Maria Brown interview.docx"
+        (folder / name).write_bytes(import_fixtures.word(
+            "<w:p>" + import_fixtures._r("First interview.") + "</w:p>"))
+        caplog.set_level(logging.WARNING, logger="exegete.doc_import")
+        preview = answer(server.import_documents(paths=[str(folder)]))
+        (refused,) = preview["refused"]
+        assert refused["reason"] == \
+            import_words.FILE_REFUSALS["reader_library"]
+        assert "fresh copy" not in refused["reason"]
+        assert "damaged" not in refused["reason"]
+        (line,) = [r.getMessage() for r in caplog.records
+                   if r.name == "exegete.doc_import"
+                   and r.levelno == logging.WARNING]
+        assert "ImportError" in line and "defusedxml" in line, line
+        for private in ("Maria", "Brown", "interview", str(folder)):
+            assert private not in line, line
+
+
+@pytest.fixture
+def _scratch_is_not_hidden(tmp_path, monkeypatch):
+    """pytest's scratch folders lie under AppData on Windows, which the
+    system marks hidden; the rule is for the researcher's places."""
+    from exegete import import_paths
+    excused = {os.path.normcase(str(p)) for p in tmp_path.parents}
+    real = import_paths.hidden_step
+
+    def hidden_step(step, info):
+        if os.path.normcase(str(step)) in excused:
+            return False
+        return real(step, info)
+    monkeypatch.setattr(import_paths, "hidden_step", hidden_step)

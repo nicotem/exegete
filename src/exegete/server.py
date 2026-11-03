@@ -11545,6 +11545,20 @@ Use `apply_codings` with session ID `{session_id}` to write approved suggestions
 REASONING_NOT_TEXT = ("its reasoning is not text. Reject this suggestion "
                       "and record it again.")
 
+# A suggestion whose code no longer bears the name the session recorded
+# for it (v0.15.3): the code was deleted or renamed since, and a code
+# deleted can have its number given again to a new one, since SQLite
+# numbers QualCoder's codes with no AUTOINCREMENT. Refused before any
+# lock and again under SQLite's write lock, so nothing is ever written
+# under a code that cannot be matched; a code renamed since is refused
+# too. Names are compared exactly as the project stores them.
+CODE_NOT_AS_RECORDED = (
+    "code_id {code_id} is now called '{now}', not '{recorded}' as when "
+    "this suggestion was recorded: the code was deleted or renamed since, "
+    "so nothing is written under it. If the passage belongs under the "
+    "code as it is now, reject this suggestion and record the passage "
+    "again; edit_suggestion can move it to another code.")
+
 
 class _CodingsChecked(NamedTuple):
     """What apply_codings' checks found on one connection."""
@@ -11557,14 +11571,15 @@ class _CodingsChecked(NamedTuple):
 
 def _check_approved_codings(db_, approved, owner: str) -> _CodingsChecked:
     """apply_codings' checks, which only read: each approved suggestion
-    against the project (its reasoning text, the file, the code, the
-    positions and the text at them), each one's memo made, then the
-    codings already there. Run on the read-only connection before any
-    lock, and again on the write connection under SQLite's write lock,
-    before the backup's database is copied (v0.15.1), so what another
-    program changed meanwhile is refused, or found already there, with
-    no backup. The search runs only when nothing failed."""
-    codes_by_id = {c["id"] for c in db_.list_codes()}
+    against the project (its reasoning text, the file, the code and the
+    name it had when the suggestion was recorded, the positions and the
+    text at them), each one's memo made, then the codings already there.
+    Run on the read-only connection before any lock, and again on the
+    write connection under SQLite's write lock, before the backup's
+    database is copied (v0.15.1), so what another program changed
+    meanwhile is refused, or found already there, with no backup. The
+    search runs only when nothing failed."""
+    codes_by_id = {c["id"]: c["name"] for c in db_.list_codes()}
     file_cache: Dict[int, Optional[Dict[str, Any]]] = {}
     failures: List[Dict[str, Any]] = []
     memos: Dict[str, str] = {}
@@ -11591,6 +11606,10 @@ def _check_approved_codings(db_, approved, owner: str) -> _CodingsChecked:
                                  f"source; text codings require text content"}
         elif sugg.code_id not in codes_by_id:
             problem = {"reason": f"code_id {sugg.code_id} does not exist"}
+        elif codes_by_id[sugg.code_id] != sugg.code_name:
+            problem = {"reason": CODE_NOT_AS_RECORDED.format(
+                code_id=sugg.code_id, now=codes_by_id[sugg.code_id],
+                recorded=sugg.code_name)}
         elif not (isinstance(sugg.start_pos, int) and isinstance(sugg.end_pos, int)
                   and 0 <= sugg.start_pos < sugg.end_pos <= len(fulltext)):
             problem = {"reason": f"positions {sugg.start_pos}-{sugg.end_pos} are "

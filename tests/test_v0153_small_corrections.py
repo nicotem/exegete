@@ -558,3 +558,88 @@ def _scratch_is_not_hidden(tmp_path, monkeypatch):
             return False
         return real(step, info)
     monkeypatch.setattr(import_paths, "hidden_step", hidden_step)
+
+
+# ---------------------------------------------------------------------------
+# apply_codings and a code that no longer has the name the session recorded
+# ---------------------------------------------------------------------------
+
+def session_file(sid):
+    return server.session_manager.storage_dir / f"session_{sid}.json"
+
+
+def a_new_code_takes_the_number(project, cid, name="Later"):
+    """The code deleted by another program, as QualCoder 4.0 deletes one
+    (no lock file, no session read), and a new code made with the next
+    number SQLite gives, which is the deleted one's: QualCoder's codes
+    have no AUTOINCREMENT."""
+    execute(project, "delete from code_name where cid = ?", (cid,))
+    execute(project, "insert into code_name (name, owner, date, color) "
+                     "values (?, 'Researcher', '2026-11-03 10:00:00', "
+                     "'#EB7333')", (name,))
+    assert code_id(project, name) == cid
+
+
+def refused_unchanged(project, sid, guid, now, recorded):
+    """apply_codings refuses the suggestion naming both names, and
+    nothing changes: no coding, no backup, the session as it was."""
+    before = (rows(project), backups(project),
+              session_file(sid).read_bytes())
+    body = answer(server.apply_codings(coding_session_id=sid))
+    assert "error" in body, body
+    (failure,) = body["failures"]
+    assert failure["guid"] == guid
+    assert failure["reason"] == server.CODE_NOT_AS_RECORDED.format(
+        code_id=code_id(project, now), now=now, recorded=recorded)
+    assert (rows(project), backups(project),
+            session_file(sid).read_bytes()) == before
+
+
+class TestACodeThatIsNotTheOneRecorded:
+
+    def test_never_written_under_the_code_that_took_its_number(
+            self, project):
+        new_code("Newest")
+        cid = code_id(project, "Newest")
+        assert cid == max(r[0] for r in rows(project)["code_name"])
+        sid, (guid,) = a_session((("Newest", QUOTE),))
+        a_new_code_takes_the_number(project, cid)
+        refused_unchanged(project, sid, guid, now="Later",
+                          recorded="Newest")
+
+    def test_a_code_renamed_since_is_refused_too(self, project):
+        sid, (guid,) = a_session((("Doubt", QUOTE),))
+        cid = code_id(project, "Doubt")
+        execute(project, "update code_name set name = 'Uncertainty' "
+                         "where cid = ?", (cid,))
+        refused_unchanged(project, sid, guid, now="Uncertainty",
+                          recorded="Doubt")
+
+    def test_a_code_made_again_under_its_name_is_written(self, project):
+        new_code("Newest")
+        cid = code_id(project, "Newest")
+        sid, _ = a_session((("Newest", QUOTE),))
+        a_new_code_takes_the_number(project, cid, name="Newest")
+        body = server.apply_codings(coding_session_id=sid)
+        assert '"error"' not in body, body
+        assert any(row[1] == cid for row in rows(project)["code_text"])
+
+    def test_checked_again_under_the_write_lock(self, project, monkeypatch):
+        """The code deleted and its number given again after the first
+        check, before the lock: the check under SQLite's write lock
+        refuses it, with no backup named and nothing written."""
+        new_code("Newest")
+        cid = code_id(project, "Newest")
+        sid, (guid,) = a_session((("Newest", QUOTE),))
+        before = (rows(project), backups(project))
+        real = server._write_gate_error
+
+        def gate():
+            a_new_code_takes_the_number(project, cid)
+            return real()
+        monkeypatch.setattr(server, "_write_gate_error", gate)
+        body = answer(server.apply_codings(coding_session_id=sid))
+        assert body["failures"][0]["guid"] == guid, body
+        after = rows(project)
+        assert after["code_text"] == before[0]["code_text"]
+        assert backups(project) == before[1]

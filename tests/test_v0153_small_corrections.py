@@ -373,3 +373,103 @@ class TestTheLockFilesEnd:
 
     def test_the_switch_is_windows_alone(self):
         assert database._RETRY_LOCK_REMOVAL is (os.name == "nt")
+
+
+# ---------------------------------------------------------------------------
+# The MCP library's lines that quote what the app sent
+# ---------------------------------------------------------------------------
+
+FRONT, BACK = "Zebedee", "Quillfeather"
+SENT = FRONT + "x" * 200 + BACK      # pydantic quotes both ends of it
+
+
+def a_record(name, level, message, args=(), exc_info=None):
+    return logging.LogRecord(name, level, "library.py", 1, message, args,
+                             exc_info)
+
+
+def as_written(record):
+    return logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s").format(record)
+
+
+class TestTheFilter:
+
+    @pytest.mark.parametrize("shape", server._LIBRARY_LINES,
+                             ids=lambda shape: shape[2].split(":")[0])
+    def test_each_line_holds_its_fixed_sentence_alone(self, shape):
+        name, level, opening, sentence = shape
+        try:
+            raise ValueError(SENT)
+        except ValueError:
+            caught = sys.exc_info()
+        record = a_record(name, level, opening + SENT, exc_info=caught)
+        record.stack_info = SENT
+        assert server._LibraryLinesFilter().filter(record) is True
+        assert record.getMessage() == sentence
+        assert record.exc_info is None and record.exc_text is None
+        assert record.stack_info is None
+        written = as_written(record)
+        assert FRONT not in written and BACK not in written
+        assert len({s for *_, s in server._LIBRARY_LINES}) == 3
+
+    @pytest.mark.parametrize("record", [
+        a_record("exegete.server", logging.INFO, "Created code %d", (5,)),
+        a_record("mcp.server.lowlevel.server", logging.INFO,
+                 "Processing request of type %s", ("ListToolsRequest",)),
+        a_record("exegete.server", logging.WARNING,
+                 "Failed to validate request: " + SENT),
+        a_record("root", logging.ERROR,
+                 "Failed to validate notification: " + SENT),
+        a_record("root", logging.WARNING,
+                 ValueError("Failed to validate request: " + SENT)),
+        a_record("mcp.server.lowlevel.server", logging.ERROR,
+                 "Received %d from stream", ("not a number",)),
+    ], ids=["exegete", "library", "another logger", "another level",
+            "not text", "arguments that do not fit"])
+    def test_every_other_line_passes_as_it_came(self, record):
+        before = (record.msg, record.args, record.exc_info)
+        assert server._LibraryLinesFilter().filter(record) is True
+        assert (record.msg, record.args, record.exc_info) == before
+
+    def test_the_filter_is_on_the_handler_of_the_log(self):
+        assert isinstance(server._log_handler, logging.StreamHandler)
+        assert any(isinstance(f, server._LibraryLinesFilter)
+                   for f in server._log_handler.filters)
+
+
+def test_what_the_app_sent_stays_out_of_the_log(tmp_path):
+    """Exegete started over standard input in a home folder of its own,
+    sent a line that is not JSON, a call whose arguments are text and a
+    notification of no known kind, each holding text at both ends: it
+    goes on answering, and its standard error holds the three fixed
+    sentences and the library's other lines, never that text."""
+    from test_v0152_ctrl_c import INITIALIZE, INITIALIZED, _Started
+    started = _Started(tmp_path)
+    sentences = [s for *_, s in server._LIBRARY_LINES]
+    try:
+        started.send(INITIALIZE)
+        assert "result" in started.answer(1)
+        started.send(INITIALIZED)
+        started.proc.stdin.write(SENT.encode("ascii") + b"\n")
+        started.proc.stdin.flush()
+        started.send({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                      "params": {"name": "list_codes", "arguments": SENT}})
+        assert "error" in started.answer(2)
+        started.send({"jsonrpc": "2.0", "method": "notifications/" + SENT,
+                      "params": {"said": SENT}})
+        started.send({"jsonrpc": "2.0", "id": 3, "method": "tools/list"})
+        assert "result" in started.answer(3)
+        limit = time.monotonic() + 20
+        while time.monotonic() < limit:
+            log = started.log.read_bytes().decode("utf-8", "replace")
+            if all(s in log for s in sentences):
+                break
+            time.sleep(0.1)
+    finally:
+        started.stop()
+    log = started.log.read_bytes().decode("utf-8", "replace")
+    for sentence in sentences:
+        assert sentence in log, log[-3000:]
+    assert "Processing request of type ListToolsRequest" in log
+    assert FRONT not in log and BACK not in log, log[-3000:]

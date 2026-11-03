@@ -215,9 +215,64 @@ from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
 # argument have to answer on their own stream with nothing above them
 # (v0.12 fix round 1, F16), and argument parsing necessarily happens
 # after the module is imported.
+#
+# The MCP library (1.30.0) writes three lines that quote what the app sent,
+# and pydantic's error in each gives about 25 characters from each end of
+# every value it rejected, part of a memo say, in the log the host keeps:
+# a line that is not an MCP message (ERROR, `mcp.server.lowlevel.server`,
+# lowlevel/server.py 713), a request that does not fit the request types
+# (WARNING, the root logger, shared/session.py 383) and a notification it
+# cannot read, the message added whole (WARNING, the root logger, 430-432).
+# The handler below is the one `logging.basicConfig` would make, standard
+# error, and its filter sees every record that reaches it, whichever
+# logger made it (v0.15.3): each of the three, known by its logger, its
+# level and its opening words, gets a fixed sentence of its own, its
+# arguments and any exception cleared. Every other record passes as it
+# came. The filter never raises: the library logs these lines inside its
+# own `except` arms, where an error would end the loop that reads the
+# app's messages. It reads `record.msg` only when that is text and never
+# formats a record.
+_LIBRARY_LINES = (
+    ("mcp.server.lowlevel.server", logging.ERROR,
+     "Received exception from stream: ",
+     "A line the app sent is not an MCP message; Exegete leaves what it "
+     "held out of the log."),
+    ("root", logging.WARNING, "Failed to validate request: ",
+     "A request the app sent could not be read and was answered with an "
+     "error; Exegete leaves what it held out of the log."),
+    ("root", logging.WARNING, "Failed to validate notification: ",
+     "A notification the app sent could not be read; Exegete leaves what "
+     "it held out of the log."),
+)
+
+
+class _LibraryLinesFilter(logging.Filter):
+    """The MCP library's three lines that quote what the app sent, each
+    given a fixed sentence before it is written (`_LIBRARY_LINES`)."""
+
+    def filter(self, record):
+        try:
+            message = record.msg
+            if not isinstance(message, str):
+                return True
+            for name, level, opening, sentence in _LIBRARY_LINES:
+                if record.name == name and record.levelno == level \
+                        and message.startswith(opening):
+                    record.msg, record.args = sentence, ()
+                    record.exc_info = record.exc_text = None
+                    record.stack_info = None
+                    break
+        except Exception:
+            pass
+        return True
+
+
+_log_handler = logging.StreamHandler()
+_log_handler.addFilter(_LibraryLinesFilter())
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[_log_handler],
 )
 logger = logging.getLogger(__name__)
 

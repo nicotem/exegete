@@ -73,10 +73,12 @@ VERIFIED_TAGS = {
      "3d3c42e5aac5ba805825da76410c181273ba90b1"): "v7.0.1",
     ("actions/setup-python",
      "5fda3b95a4ea91299a34e894583c3862153e4b97"): "v7.0.0",
+    # v0.15.3, Dependabot's bump of 14 October made by hand: dereferenced
+    # on 2026-11-03 with the same commands, both lightweight tags
     ("actions/upload-artifact",
-     "043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"): "v7.0.1",
+     "cf430e030ddbb5b0abf93d22962f4752f3646cd9"): "v7.0.2",
     ("actions/download-artifact",
-     "3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c"): "v8.0.1",
+     "9000827ccba6bdab643e8b6fd33ac0654aef8333"): "v8.0.2",
     ("pypa/gh-action-pypi-publish",
      "dc37677b2e1c63e2034f94d8a5b11f265b73ba33"): "v1.14.2",
     ("pypa/gh-action-pypi-publish",

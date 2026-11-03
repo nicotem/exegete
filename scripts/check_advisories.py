@@ -134,8 +134,10 @@ VALIDATOR_ONLY = (
 
 # advisory id -> (library, releases, the date accepted, why), as KNOWN,
 # for packaging/desktop-extension/validator/package-lock.json: the four
-# OSV reported when that lock joined this check, on 27 October 2026. The
-# comment gives each one's subject and its first fixed release.
+# OSV reported when that lock joined this check, on 27 October 2026, and
+# the eleven on node-forge published on 30 October, accepted on 3
+# November 2026. The comment gives each one's subject and its first
+# fixed release.
 KNOWN_NPM: Dict[str, Tuple[str, Tuple[str, ...], str, str]] = {
     # RSA signatures forged (none fixed yet; 1.4.0 the last affected)
     "GHSA-86w9-cpqp-85rv": ("node-forge", ("1.4.0",), "2026-10-27",
@@ -148,6 +150,39 @@ KNOWN_NPM: Dict[str, Tuple[str, Tuple[str, ...], str, str]] = {
                             VALIDATOR_ONLY),
     # memory exhausted by oversized collections (4.6.6)
     "GHSA-mrhx-c7xc-m3w5": ("zod", ("3.25.76",), "2026-10-27",
+                            VALIDATOR_ONLY),
+    # trusted CA certificates removed from the store when a chain is checked (1.4.1)
+    "GHSA-4487-j8r4-4g2f": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # an object identifier's first arc truncated when encoded (1.4.1)
+    "GHSA-4642-5mcj-2rqw": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # a TLS client crash when the server sends no certificate (1.4.1)
+    "GHSA-525v-9gp9-w22h": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # AES-GCM authentication passed through an unchecked tag length (1.4.1)
+    "GHSA-5cwg-6vw7-rj6p": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # a certificate's basic constraints passed through deprecated extensions (1.4.1)
+    "GHSA-5x38-2vff-x55p": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # prototype pollution through a cookie's Set-Cookie header (1.4.1)
+    "GHSA-6wvx-3r32-xmcg": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # a regular expression's denial of service in PEM decoding (1.4.1)
+    "GHSA-7wch-p9px-956x": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # a TLS denial of service through an interleaved record (1.4.1)
+    "GHSA-8hrf-8g6f-7xwp": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # an endless loop in a big integer's inverse with a negative input (1.4.1)
+    "GHSA-h6cr-wjv9-3cpp": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # a TLS denial of service through the call stack's exhaustion (1.4.1)
+    "GHSA-hqq3-7jhf-c5jx": ("node-forge", ("1.4.0",), "2026-11-03",
+                            VALIDATOR_ONLY),
+    # a PKCS#12 MAC forged with an iteration count of zero (1.4.1)
+    "GHSA-jc66-7q78-782g": ("node-forge", ("1.4.0",), "2026-11-03",
                             VALIDATOR_ONLY),
 }
 

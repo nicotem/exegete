@@ -218,8 +218,8 @@ they chose on 3 November 2026:
   with the same four.
 - On macOS 13 with Python 3.14, and on macOS 11 or 12 with Python 3.13
   or 3.14: no onnxruntime suits, so the install stops before anything
-  is installed or removed, and an update that stops leaves the install
-  you had as it was.
+  is installed or removed; an update with pip or pipx that stops was
+  seen to leave the install you had as it was.
 
 An older onnxruntime may treat Exegete's switch for its usage reports
 differently (PRIVACY.md, "A library's usage reports"). If that matters,

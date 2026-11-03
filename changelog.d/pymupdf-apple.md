@@ -24,9 +24,9 @@
   to 3.13 takes onnxruntime 1.23.2, and macOS 11 or 12 with Python 3.11
   or 3.12 takes 1.19.2, older releases not tried with Exegete. On macOS
   13 with Python 3.14, and on macOS 11 or 12 with Python 3.13 or 3.14,
-  the install stops before anything is installed or removed, so an
-  update that stops leaves the install as it was. The Terminal guide
-  gives the ways round.
+  the install stops before anything is installed or removed, and an
+  update with pip or pipx that stops was seen to leave the install as
+  it was. The Terminal guide gives the ways round.
 
 ### Documents
 

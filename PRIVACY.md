@@ -74,7 +74,12 @@ officer will ask, and the summary above depends on them:
   review them. The answers differ between consumer plans (Free, Pro and
   Max) and Team, Enterprise and API terms. Existing participant consent
   would almost never cover inputs used for model training, and an ethics
-  board asks this first.
+  board asks this first. An account your university or employer provides
+  comes under the agreement it made with the AI provider, and such
+  agreements differ. Even so, that account is likely to give
+  participants' data more protection than a personal one ("Your
+  governance options", below, says why). Whoever manages that account
+  can give you the three answers.
 - **Training, with either AI provider.** Switch training off before
   participants' data: while it is on, the AI provider may use your
   conversations to train its models. With Anthropic it is the Model
@@ -1885,12 +1890,12 @@ The Consumer Terms' scope clause includes:
 > Anthropic Console, when used by individuals)"
 
 while the Commercial Terms state "Services under these Terms are not for
-consumer use." For unambiguous commercial-terms coverage, use a Console
-account created for the institution or research group, and let your data
-protection officer read the current versions of both pages. The Terminal
-guide's recipe "Claude Code with an Anthropic API key" gives the steps;
-for participants' data under commercial terms, rung 3 says what this
-project suggests.
+consumer use." For unambiguous commercial-terms coverage, you could use a
+Console account created for the institution or research group. You
+could also ask your data protection officer to read the current
+versions of both pages. The Terminal guide's recipe "Claude Code with
+an Anthropic API key" gives the steps; for participants' data under
+commercial terms, rung 3 says what this project suggests.
 
 ### Rung 3: Team/Enterprise (Claude for Work)
 
@@ -1906,9 +1911,14 @@ with semicolons) lists what the consumer training changes leave alone:
 
 If your institution has a Team or Enterprise deployment, using Exegete
 through Claude Desktop or Claude Code under that account is already
-under commercial terms, with no API key. For participants' data, this
-project suggests Claude Desktop's chat with Exegete under that account,
-set up as "Assistants that open files by themselves" says.
+under commercial terms, with no API key. Beyond that, what the account
+gives depends on the agreement your institution made with Anthropic,
+and such agreements differ. Even so, an institution's account is likely
+to give participants' data more protection than a personal one, since
+the institution agreed its terms with its own interests in mind. Whoever
+manages the account can tell you which terms apply. For participants'
+data, this project suggests Claude Desktop's chat with Exegete under
+that account, set up as "Assistants that open files by themselves" says.
 
 ### Rung 4: fully local models (Experimental)
 

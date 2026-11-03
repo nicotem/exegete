@@ -602,7 +602,7 @@ the smaller set.
 19,000 tokens of schema exceed the default context of 8k. In the model's
 load settings, or its default settings
 (<https://lmstudio.ai/docs/app/advanced/per-model>), set the context
-length to at least 32k for the core toolset (that leaves about 14k
+length to at least 32k for the core toolset (that leaves about 13k
 tokens for your transcript excerpts and conversation; 16k would not even
 hold the schema and is not workable), or 64k if you must run the full
 surface (its schema alone is about 50,000 tokens).

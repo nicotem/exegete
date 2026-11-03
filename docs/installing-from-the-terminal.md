@@ -1332,9 +1332,10 @@ virtual environment, `exegete --version` after pipx or uv tool, and
 `~/Documents/exegete/venv/bin/python -m exegete.server --version` for a
 copy of the source. The version `0.15.2-alpha` shows as `0.15.2a0`, its
 normalised form. Started without `--version`, Exegete prints its
-start-up lines and a paragraph saying that it expects an MCP host on
-its standard input and output, then waits: that is expected, not an
-error, and Ctrl+C stops it. In the host, "List my available projects",
+start-up lines and a short note: an app such as Claude Desktop
+normally starts it and talks to it, so started by hand it waits for an
+app that is not there. That is expected, not an error, and Ctrl+C
+stops it. In the host, "List my available projects",
 or, with `EXEGETE_PROJECT_PATH` set, "Give me a summary of my project",
 checks the rest ([TOOLS.md](../TOOLS.md#example-requests) has more
 requests).
@@ -1343,7 +1344,7 @@ requests).
 <!-- ci: run pipx, uv: exegete --version -->
 <!-- ci: expect venv, pipx, uv: exegete <version> -->
 <!-- ci: run venv waits: ~/exegete-venv/bin/exegete -->
-<!-- ci: expect venv: standard input and output -->
+<!-- ci: expect venv: prints its start-up lines and this note -->
 
 ## Troubleshooting
 

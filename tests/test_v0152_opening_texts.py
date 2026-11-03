@@ -101,7 +101,7 @@ def test_quickstart_says_no_app_uses_exegete_started_by_hand():
     # Started by hand, Exegete reads the Terminal's input, which no app
     # can reach, since each app starts a copy of its own: the note it
     # prints there says so
-    assert "host that is not there" in _flat(server.TTY_NOTICE)
+    assert "an app that is not there" in _flat(server.TTY_NOTICE)
     assert "wait for an app that is not there" in stop, stop
 
 

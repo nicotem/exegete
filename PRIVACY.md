@@ -173,7 +173,7 @@ officer will ask, and the summary above depends on them:
 
 The rest of this document gives the detail. Two tools were renamed in
 0.15.0, and their earlier names are still listed until a later release
-(planned as v0.15.4) removes them (TOOLS.md, "Earlier names"). What
+(planned as v0.15.5) removes them (TOOLS.md, "Earlier names"). What
 this document says of either tool holds under both its names.
 
 ## How your data flows

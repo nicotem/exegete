@@ -388,8 +388,11 @@ def _tools(mode="full"):
 # work in either program", the commitment said in the sentence after
 # it (2 characters more, in the same lines). The README's own figures,
 # held exactly: 40,809 in 635 lines.
-README_LIMIT = 40_809
-README_LINES = 635
+# The plan of 3 November (ruling 115): coding sessions kept with their
+# project in a v0.15.4 line of their own, and method in v0.15.5, take 10
+# characters and a line: 40,819 in 636 lines.
+README_LIMIT = 40_819
+README_LINES = 636
 
 
 def test_the_readme_stays_short():
@@ -1229,10 +1232,11 @@ def test_what_comes_next_is_plans():
     # and method in v0.15.3; v0.15.1's release preparation takes its own
     # item out, as 0.14.3's did; the owner's form of 27 October, ruling
     # 105: coding sessions kept with their project in v0.15.3, method in
-    # v0.15.4)
+    # v0.15.4; the plan of 3 November, ruling 115: coding sessions in
+    # v0.15.4, method in v0.15.5)
     # (v0.15.2's release preparation takes its own item out too)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15.3", "v0.15.4", "v0.16", "v0.17", "Later"]
+        "v0.15.3", "v0.15.4", "v0.15.5", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do

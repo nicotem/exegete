@@ -16,7 +16,7 @@ for researchers; this table is the one the checks read.
 
 # The releases to come that a text calls by a name, as "the release on
 # method"
-RELEASES = {"0.15.4": "method", "0.16": "chat-first"}
+RELEASES = {"0.15.5": "method", "0.16": "chat-first"}
 
 # One row for each thing that comes or goes: its kind (tool, argument,
 # earlier name or feature); its release, a version or "later" when none
@@ -34,30 +34,30 @@ PLANNED = {
         r"\bfix(?:es|ed)?\s+(?:to\s+)?(?:the\s+)?REFI-QDA\b"), "85, 105"),
     "PyMuPDF 2.0 on Apple silicon": ("feature", "0.15.3", (
         r"\bApple\s+silicon\b",), "98, 105, 111"),
-    "coding sessions kept with their project": ("feature", "0.15.3", (
+    "coding sessions kept with their project": ("feature", "0.15.4", (
         r"\bsessions\s+(?:are\s+)?kept\s+with\s+(?:their|the|its)\s+"
-        r"project",), "85, 105"),
+        r"project",), "85, 105, 115"),
     # README says it in a researcher's words: stricter checks on the
     # names of codes, categories and cases (the batch's look-alike names),
     # with other small corrections
     "the housekeeping that touches data": ("feature", "0.15.3", (
         r"\bhousekeeping\b", r"\bstricter\s+checks\s+on\s+the\s+names\b"),
         "85, 105"),
-    "the review of method": ("feature", "0.15.4", (
+    "the review of method": ("feature", "0.15.5", (
         r"\bsupports\s+a\s+study's\s+method\b", r"\breview\s+of\s+method\b"),
-        "85, 105"),
-    "shorter tool descriptions": ("feature", "0.15.4", (
-        r"\bshorte(?:r|ned)\s+(?:tool\s+)?descriptions\b",), "104, 105"),
+        "85, 105, 115"),
+    "shorter tool descriptions": ("feature", "0.15.5", (
+        r"\bshorte(?:r|ned)\s+(?:tool\s+)?descriptions\b",), "104, 105, 115"),
     # "their", "the tools'" or "of the two": the two tools' names, not
     # INSTALL's "the earlier names of two renamed tools" among the full
     # set's, nor the section "Earlier names" a sentence points to
-    "the two tools' earlier names": ("earlier name", "0.15.4", (
+    "the two tools' earlier names": ("earlier name", "0.15.5", (
         r"\b(?:their|the\s+tools')\s+earlier\s+names\b",
         r"\bearlier\s+names\s+of\s+the\s+two\b",
         r"\banalyze_for_coding\b", r"\banalyze_file_with_coding\b"),
-        "73, 85, 105"),
-    "create_backup": ("argument", "0.15.4", (
-        r"\bcreate_backup\b", r"\bbackup\s+option\b"), "85, 105"),
+        "73, 85, 105, 115"),
+    "create_backup": ("argument", "0.15.5", (
+        r"\bcreate_backup\b", r"\bbackup\s+option\b"), "85, 105, 115"),
     "the analysis shown in the conversation": ("feature", "0.16", (
         r"\bshown\s+in\s+the\s+conversation\b", r"\btables\s+and\s+graphs\b"),
         "roadmap"),

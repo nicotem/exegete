@@ -1864,7 +1864,8 @@ class TestClaudeCodesRoutes:
                 "Exegete, and the terms do not change what it reads "
                 "(\"Assistants that open files by themselves\").") in intro
         rung_two = _between(privacy, "### Rung 2:", "### Rung 3:")
-        assert ("for participants' data under commercial terms, rung 3 says "
+        # (v0.15.3, the readability reading: a sentence of its own)
+        assert ("For participants' data under commercial terms, rung 3 says "
                 "what this project suggests.") in rung_two
         rung_three = _between(privacy, "### Rung 3:", "### Rung 4:")
         assert ("Claude Desktop's chat with Exegete under that account"

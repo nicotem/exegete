@@ -22,8 +22,8 @@ Terminal.
 Exegete works with any app that can start a program on your computer
 and talk to it over standard input and output, as the Model Context
 Protocol (MCP) describes. Such an app is called an MCP host here.
-Which AI processes your data, and under which terms, is decided by the
-host you run and the account you sign into, not by Exegete. Your AI
+The host you run and the account you sign into decide which AI
+processes your data, and under which terms. Exegete does not. Your AI
 provider sets its terms by your account and the product you signed up
 for, not by which of its apps you use. The table gives two routes with
 Claude, one fully local route, and OpenAI's apps.
@@ -31,7 +31,7 @@ Claude, one fully local route, and OpenAI's apps.
 | Route | What it means | Where to read more |
 |---|---|---|
 | **Claude consumer plans** (claude.ai and Claude Desktop on a Free, Pro or Max plan; Claude Code with a Pro or Max login) | The plans most people start with. Switch training off before participants' data: while it is on, Anthropic may use your conversations to train its models. The switch is the Model Improvement setting, at [claude.ai/settings/data-privacy-controls](https://claude.ai/settings/data-privacy-controls), and its default is worth checking yourself. Claude Code opens files by itself, outside Exegete, and Cowork does in the folders you connect to it, so for participants' data this project suggests Claude Desktop's chat with the extension, with computer use off, no folder that holds your projects or transcripts connected to it, and no other extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](../PRIVACY.md#assistants-that-open-files-by-themselves)). | [PRIVACY.md](../PRIVACY.md), rung 1 |
-| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. An institution's agreement sets the terms for its data, and a personal account the consumer terms. Such agreements differ in what they let Anthropic do with the data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply. The terms do not change what Claude Code reads: Claude Code opens files by itself, outside Exegete, so for participants' data this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
+| **Anthropic commercial-terms routes** (Claude Code with a Console API key; Team or Enterprise accounts) | The same Claude, under other terms. A personal account comes under Anthropic's consumer terms. An account your university or employer provides comes under the agreement it made with Anthropic. Such agreements differ in what they let Anthropic do with your data. Even so, an institution's account is likely to give participants' data more protection than a personal one, since the institution agreed its terms with its own interests in mind. Whoever manages that account can tell you which terms apply. The terms do not change what Claude Code reads. Claude Code opens files by itself, outside Exegete. So for participants' data, this project suggests Claude Desktop's chat with Exegete on a Team or Enterprise account, set up as in the row above ([PRIVACY.md](../PRIVACY.md), "Assistants that open files by themselves"). | [PRIVACY.md](../PRIVACY.md), rungs 2 and 3; [the API-key recipe](#claude-code-with-an-anthropic-api-key-experimental) below |
 | **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. Not tried by this project. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
@@ -522,15 +522,17 @@ in sessions with participants' data this project suggests giving none.
 These settings close side channels; they do not change what Claude Code
 reads by itself (step 2).
 
-**5. An organisational account.** For commercial terms beyond doubt, the
-Console account can be your institution's rather than a personal one:
-[PRIVACY.md](../PRIVACY.md) quotes the two scope clauses that make the
-difference, without settling them for you. What an institution's
-account gives then depends on the agreement the institution made with
-Anthropic, which differs from one institution to another. The table under
-"Choosing your AI host", above, says why such an account is still likely
-to give participants' data more protection than a personal one. Whoever
-manages the account can tell you which terms apply.
+**5. An organisational account.** To be sure that the commercial terms
+cover your use, you could use a Console account that your institution
+provides, rather than a personal one. [PRIVACY.md](../PRIVACY.md)
+quotes the passages of Anthropic's two sets of terms that say whom each
+covers, and does not settle which covers a personal Console account.
+What your institution's account lets Anthropic do with your data
+depends on the agreement your institution made with Anthropic, and such
+agreements differ. The table under "Choosing your AI host", above, says
+why such an account is still likely to give participants' data more
+protection than a personal one. Whoever manages the account can tell
+you which terms apply.
 
 Working in the Terminal is less convenient than Claude Desktop, and
 claude.ai's connectors and the `/schedule` feature are not available
@@ -1192,7 +1194,7 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   asked for the name in each new project. The desktop extension sets it
   from its "Your coder name" setting.
 - `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's settings.
-  The name that rows actually carry is each PROJECT's own (see
+  The name that rows actually carry is each project's own (see
   "Choosing the AI coder name" in TOOLS.md). Set, it is given by
   `create_project` to each project it makes, without asking, and the
   answer says so (`ai_coder_name`, with the source `settings`); a

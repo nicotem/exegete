@@ -608,9 +608,11 @@ class TestTheDocuments:
                  "project that already has an AI coder name keeps it, and "
                  "Claude asks you once whether to switch.")) \
             in text
+        # (v0.15.3, the readability reading: "project's" without the
+        # capitals for emphasis)
         assert ("- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's "
                 "settings. The name that rows actually carry is each "
-                "PROJECT's own (see \"Choosing the AI coder name\" in "
+                "project's own (see \"Choosing the AI coder name\" in "
                 "TOOLS.md). Set, it is given by `create_project` to each "
                 "project it makes, without asking, and the answer says so "
                 "(`ai_coder_name`, with the source `settings`)") in text

@@ -994,7 +994,7 @@ def test_the_assistants_table():
                    "| **Fully local models**")
     step = _between(install, "**5. An organisational account.**",
                     "Working in the Terminal")
-    item = _between(privacy, "**Your Claude plan's terms differ",
+    item = _between(privacy, "**Your Claude plan's terms.**",
                     "**Training, with either AI provider.**")
     rung = _between(privacy, "### Rung 3", "### Rung 4")
     for passage in (row, step, item, rung):

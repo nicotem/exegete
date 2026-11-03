@@ -361,7 +361,8 @@ def test_the_chats_three_conditions_travel_with_it():
         assert "transcripts" in text, where
     # and the other routes point to them
     rung_two = _between(_flat("PRIVACY.md"), "### Rung 2:", "### Rung 3:")
-    assert ("for participants' data under commercial terms, rung 3 says "
+    # (v0.15.3, the readability reading: the pointer a sentence of its own)
+    assert ("For participants' data under commercial terms, rung 3 says "
             "what this project suggests.") \
         in rung_two
     # (the owner, 1 October 2026: warn, don't prescribe. The README's
@@ -746,7 +747,9 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
     questions = re.findall(r"- \*\*([^*]+)\*\*", checklist)
     assert len(questions) == 10
     assert questions[-3] == "What Exegete itself connects to."
-    assert questions[0].startswith("Your Claude plan's terms differ")
+    # (v0.15.3, the readability reading: the lead-in without its flourish,
+    # "differ, and they matter")
+    assert questions[0] == "Your Claude plan's terms."
     assert questions[1] == "Training, with either AI provider."
     assert questions[-2:] == ["Which assistant, and whether it opens files "
                               "by itself.", "What stays on the computer, "

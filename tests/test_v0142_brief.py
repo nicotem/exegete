@@ -216,7 +216,7 @@ class TestItSaysWhatTheToolsDo:
                 in _flat(server.BRIEF_FULL))
         search = _flat(server.mcp._tool_manager._tools["search_files"]
                        .description)
-        assert "ASK THE USER" in search
+        assert "Ask the researcher where to search" in search
         assert len(server.BRIEF_SHORT) <= 2048
 
 
@@ -322,9 +322,9 @@ class TestTheSharedRulesHaveOneSource:
             assert tool.description.count(rule) == 1
         served = _call("read_brief")
         for first, last in (
-                ("GROUNDING RULES (every analysis tool expects these):",
+                ("Grounding rules (every analysis tool expects these):",
                  "whatever it says."),
-                ("METHODOLOGICAL JUDGEMENT: before acting on a request",
+                ("Methodological judgement: before acting on a request",
                  "the researcher asks to see.")):
             def span(text):
                 start = text.index(first)
@@ -351,8 +351,8 @@ class TestTheSharedRulesHaveOneSource:
         assert {"GROUNDING_RULES", "METHODOLOGY_VOCABULARY"} <= named
         assert assigned["SERVER_INSTRUCTIONS"].id == "BRIEF_SHORT"
         package = REPO / "src" / "exegete"
-        for words in ("GROUNDING RULES (every analysis tool expects these)",
-                      "METHODOLOGICAL JUDGEMENT: before acting on a"):
+        for words in ("Grounding rules (every analysis tool expects these)",
+                      "Methodological judgement: before acting on a"):
             found = sum(p.read_text(encoding="utf-8").count(words)
                         for p in package.glob("*.py"))
             assert found == 1, words

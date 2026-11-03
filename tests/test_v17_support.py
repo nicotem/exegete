@@ -226,7 +226,7 @@ class TestT1ProbeGateMatrix:
         out = json.loads(server.set_memo("code", 1, "override write",
                                          create_backup=False))
         assert out.get("success") is True
-        assert "WARNING" in out["schema_warning"]
+        assert "Warning:" in out["schema_warning"]
         assert "v18" in out["schema_warning"]
         assert ("newer than the verified ceiling (v17, QualCoder 4.0)"
                 in out["schema_warning"])

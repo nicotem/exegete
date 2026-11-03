@@ -70,8 +70,8 @@ RULES = {
         "marker, is refused", None),
     "preview_then_confirm": ("approval", "Two-step by design.", None),
     "override_guards": (
-        "safety", "Two guards, each with an explicit override the user "
-        "must ask for:", "both refusals come back in one response."),
+        "safety", "Two guards, each with an explicit override the "
+        "researcher must ask for:", "both refusals come back in one response."),
     "hidden_coder_override": (
         "safety", "Coder visibility (projects with the coder-visibility "
         "capability that hide coders)", None),
@@ -82,53 +82,54 @@ RULES = {
         "safety", "contains `position_safety_warning`", "."),
     # Grounding and the judgement of requests
     "grounding_read": (
-        "grounding", "GROUNDING: when you report from or code this text",
+        "grounding", "Grounding: when you report from or code this text",
         None),
     "grounding_record": (
-        "grounding", "GROUNDING: reasoning states, in a sentence or two",
+        "grounding", "Grounding: reasoning states, in a sentence or two",
         None),
     "grounding_propose": ("grounding", "GROUNDING (inductive coding):",
                           None),
     "grounding_rules": (
-        "grounding", "GROUNDING RULES (every analysis tool expects these):",
+        "grounding", "Grounding rules (every analysis tool expects these):",
         "whatever it says."),
     "methodological_judgement": (
-        "judgement", "METHODOLOGICAL JUDGEMENT: before acting on a request",
+        "judgement", "Methodological judgement: before acting on a request",
         "the researcher asks to see."),
     "not_intercoder_reliability": (
-        "grounding", "COMPARING A PERSON WITH THE AI:", None),
-    "report_both_kappas": ("grounding", "TWO KAPPAS, both always present",
+        "grounding", "Comparing a person with the AI:", None),
+    "report_both_kappas": ("grounding", "Two kappas, both always present",
                            None),
     "not_qualcoder_cooccurrence": (
-        "grounding", "NOT QualCoder's co-occurrence matrix", None),
-    "reading_and_code": ("grounding", "READING AND CODE:", None),
+        "grounding", "Its counts differ from QualCoder's Code co-occurrence "
+        "report", None),
+    "reading_and_code": ("grounding", "Reading and code:", None),
     "reread_after_run": (
         "grounding", "After the run, re-read the file before any further "
         "coding", None),
     # The coding loop's approvals
     "three_questions": (
-        "approval", "BEFORE CALLING, ask the researcher three things", None),
+        "approval", "Before calling, ask the researcher three things", None),
     "coding_workflow_approval": (
-        "approval", "WORKFLOW: read each file and record suggestions", None),
-    "session_pairings": ("approval", "SPAN STYLE: as the instruction says",
+        "approval", "Workflow: read each file and record suggestions", None),
+    "session_pairings": ("approval", "Span style: as the instruction says",
                          None),
     "suggestion_pairings": (
-        "approval", "SPAN STYLE: as the session's instruction says", None),
+        "approval", "Span style: as the session's instruction says", None),
     "approved_only": (
         "approval", "THIS WRITES TO THE DATABASE. This is the final step",
         None),
-    "decide_again": ("approval", "Only PENDING suggestions are editable.",
+    "decide_again": ("approval", "Only pending suggestions are editable.",
                      None),
     "approve_on_the_users_word": (
-        "approval", "Use this to record the USER'S decisions", None),
+        "approval", "Use this to record the researcher's decisions", None),
     "proposal_workflow_approval": (
         "approval", "WORKFLOW: start_coding_session creates a session", None),
     "ask_for_the_coder_name": (
         "approval", "Covers codings, annotations, journal entries", None),
-    "researchers_coder_name": ("approval", "THE RESEARCHER'S CODER NAME:",
+    "researchers_coder_name": ("approval", "The researcher's coder name:",
                                None),
     # Writes, destructive tools and QualCoder being open
-    "qualcoder_open_stop": ("safety", "IN USE: if `qualcoder_open` is true",
+    "qualcoder_open_stop": ("safety", "In use: if `qualcoder_open` is true",
                             None),
     # apply_codings' own wording of the refusal ("Writes are refused
     # while QualCoder has the project open ... then retry.") became, in
@@ -138,28 +139,28 @@ RULES = {
         "refusal", "The session must belong to the CURRENTLY OPEN project",
         "is refused."),
     "relay_open_warning": (
-        "safety", "The result may include a `warning`; RELAY it.", None),
+        "safety", "The result may include a `warning`; relay it.", None),
     "where_the_next_write_lands": (
         "safety", "QualCoder 4.0 detection is best-effort", None),
     "open_signals": (
         "safety", "Also reports whether another program may have this "
         "project open", None),
     "work_on_a_copy": (
-        "safety", "IMPORTANT: work on a project in the workspace", None),
+        "safety", "Importing into a project in the workspace", None),
     "no_path_back_from_numeric": (
         "safety", "There is no path back from numeric data",
         "so choose carefully."),
     "sub_code_branch_approval": (
-        "approval", "SUB-CODES (projects with schema v16 or newer): "
+        "approval", "Sub-codes (projects with schema v16 or newer): "
         "deleting a code", "Review the preview before confirming."),
     "category_merge_destructive": (
-        "approval", "DESTRUCTIVE to the category: preview first, then "
+        "approval", "It deletes the source category: preview first, then "
         "confirm.", None),
     "prune_destructive": ("approval", "DESTRUCTIVE to your recovery points",
                           None),
     "prune_safety_rules": ("safety", "Safety rules:", None),
     "restore_replaces_state": (
-        "safety", "THIS REPLACES THE CURRENT PROJECT STATE", None),
+        "safety", "This replaces the project as it is now", None),
     # Pseudonymisation
     "rewrites_source_text": ("safety", "THIS REWRITES SOURCE TEXT", None),
     "relay_preview_residue": (
@@ -484,16 +485,16 @@ class TestWhatThisReleaseMoved:
         server._apply_toolset("full")
         registered = server.mcp.original_descriptions
         moved = {
-            "start_coding_session": ("METHODOLOGICAL JUDGEMENT",
+            "start_coding_session": ("Methodological judgement",
                                    "It reads no file"),
             "apply_codings": ("Text containing '#####'",
                               "Safety guarantees:"),
-            "compare_coders": ("TWO KAPPAS", "UNIT OF ANALYSIS"),
+            "compare_coders": ("Two kappas", "Unit of analysis"),
             "create_code": ("Text containing '#####'", "Colours are stored"),
-            "delete_code": ("Two-step by design.", "SUB-CODES"),
+            "delete_code": ("Two-step by design.", "Sub-codes"),
             # v0.15.1: "Exegete takes a backup first", in the same place
             "delete_coding": ("Two guards", "Exegete takes a backup first"),
-            "edit_suggestion": ("READING AND CODE", "Edits are not"),
+            "edit_suggestion": ("Reading and code", "Edits are not"),
             # v0.15.0: the refusal's paragraph is one sentence now (not
             # presuming QualCoder, piece 5), in the same place
             "merge_category": ("Refused while the project's lock file",
@@ -574,7 +575,7 @@ class TestTheOtherWaysInAreReal:
         warning = answer["position_safety_warning"]
         assert "emoji.txt" in warning
         assert warning.endswith(
-            "Relay this to the user before proceeding to approval.")
+            "Relay this to the researcher before proceeding to approval.")
         for (name, rule), reason in LEFT_PAST_THE_CUT.items():
             if rule == "relay_position_safety_warning":
                 assert "the warning in the answer says to relay it" \
@@ -584,8 +585,8 @@ class TestTheOtherWaysInAreReal:
         """One sentence of the grounding rules is in no shorter grounding
         text and not in the opening text: in Claude Code it arrives only
         with read_brief's answer, and the reason says so."""
-        sentence = ("Where the participant is unsure or contradicts "
-                    "themselves, say so rather than settle it.")
+        sentence = ("Where the person speaking or writing is unsure or "
+                    "contradicts themselves, say so rather than settle it.")
         assert sentence in " ".join(server.GROUNDING_RULES.split())
         assert sentence in " ".join(server.BRIEF_FULL.split())
         for mode, (tools, opening) in served.items():

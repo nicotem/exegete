@@ -233,7 +233,7 @@ class TestE1CodedSegments:
             str(tmp_path / "seg.csv"), case_names=["Case A"]))
         assert out["mode"] == "case"
         assert out["rows"] == 2                     # span 0-100 holds both
-        assert "CONTAINMENT" in out["counting_rule"]
+        assert "Containment:" in out["counting_rule"]
         rows = _read_csv(out["output_path"])
         assert rows[0][:2] == ["Case", "Filename"]
         # the narrow case (0-30) contains neither coding (24-55, 57-77)
@@ -356,7 +356,7 @@ class TestE3CaseCodeMatrix:
         matrix export must state which one it used."""
         out = json.loads(server.export_case_code_matrix_csv(
             str(tmp_path / "matrix.csv")))
-        assert "CONTAINMENT" in out["counting_rule"]
+        assert "Containment:" in out["counting_rule"]
         # v0.15.0, piece 12: the rule first, QualCoder's table compared
         assert "which counts by file linkage, the numbers can differ." \
             in out["counting_rule"]

@@ -219,6 +219,6 @@ class TestT17DocsPosture:
         # signals the appears-open warning replaces it. Either way the
         # heuristic posture and 4.0 are named, never certainty.
         assert ("leaves no lock file" in warning
-                or "APPEARS to be open" in warning)
+                or "appears to be open" in warning)
         assert "4.0" in warning
         assert "qualcoder_gui_signals" in out

@@ -378,7 +378,7 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
         out = jcall("start_coding_session", file_ids=[1, 999],
                     code_names=["Stress", "Nope"], instruction="test")
         assert out["not_found"] == {"file_ids": [999], "code_names": ["Nope"]}
-        assert "NOT FOUND" in out["instructions"]
+        assert "Not found (tell the researcher" in out["instructions"]
         session = server.session_manager.load_session(
             out["coding_session_id"])
         assert session.file_ids == [1]
@@ -669,7 +669,7 @@ class TestTheLoopsTextsSayWhatHappens:
     def test_edit_and_status_texts_give_the_working_advice(self):
         text = " ".join(self._desc("edit_suggestion").split())
         assert ("to change it, reopen it (update_suggestion_status "
-                "reopen=[guid]), edit it, and ask the user to decide "
+                "reopen=[guid]), edit it, and ask the researcher to decide "
                 "again") in text
         assert "then approve after editing" not in text
         assert "reopen" in self._desc("update_suggestion_status")
@@ -874,7 +874,7 @@ class TestAProposalsApprovalBindsIt:
         a, b = self._proposals(sid, "Isolation", "Mentoring")
         merged_as_in_0150(sid, b, a)
         out = call("review_proposals", coding_session_id=sid)
-        assert "Status: MERGED into 'Isolation'" in out
+        assert "Status: merged into 'Isolation'" in out
         tools = server.mcp._tool_manager._tools
         assert "merge_proposals" not in tools
         for name in ("create_proposed_codes", "update_proposal_status"):
@@ -1279,7 +1279,7 @@ class TestFixRoundSessionFilesHardened:
                         proposal_guid=b, memo="x")["error"]
         for text in (review, refusal):
             assert "IGNORE ALL" not in text and "‮" not in text
-        assert "MERGED into another proposal" in review
+        assert "merged into another proposal" in review
 
 
 class TestFixRoundPromisesNowPinned:
@@ -1357,7 +1357,7 @@ class TestFixRoundTextsTrue:
                     code_names=["STRESS", "Coping"], instruction="test")
         assert out["ambiguous_code_names"] == {"STRESS": ["Stress", "stress"]}
         assert "not_found" not in out
-        assert "AMBIGUOUS" in out["instructions"]
+        assert "Ambiguous (each matches" in out["instructions"]
         rec = record(new_session(), item(code="STRESS"))
         assert "matches 2 codes" in rec["rejected"][0]["reason"]
         assert "available_codes" not in rec["rejected"][0]
@@ -1426,7 +1426,7 @@ class TestFixRound2TheStudyAtTheStart:
         assert out["project_memo"] == ("Nurses' burnout, read through job "
                                        "demands and resources.")
         assert "doubts" not in json.dumps(out)
-        assert "IN THE RESEARCHER'S OWN WORDS" in out["instructions"]
+        assert "in the researcher's own words" in out["instructions"]
         assert "name the concept in the reason" in out["instructions"]
 
     @pytest.mark.parametrize("memo", ["", "#####all of it private", None])
@@ -1508,14 +1508,14 @@ class TestFixRound2WhatAReadingMayRestOn:
 
     def test_the_rule_in_every_place_it_is_given(self):
         rules = " ".join(server.GROUNDING_RULES.split())
-        for words in ("the same speaker in a group interview",
-                      "the interviewer's question, always",
+        for words in ("the same speaker in a group discussion",
+                      "in an interview, the question asked, always",
                       "other files of the same case, naming the file",
                       "quoting a few of those words in the reason",
                       "the study's framework as the researcher stated it "
                       "in the project memo, naming the concept",
                       "never on outside facts or assumptions about the "
-                      "participant, their group or what is typical",
+                      "person, their group or what is typical",
                       "unsure or contradicts themselves, say so rather "
                       "than settle it"):
             assert words in rules, words
@@ -1566,12 +1566,12 @@ class TestFixRound2StartingASession:
     def test_the_description_asks_the_three_questions(self):
         tool = server.mcp._tool_manager._tools["start_coding_session"]
         text = " ".join(tool.description.split())
-        for words in ("BEFORE CALLING, ask the researcher three things",
+        for words in ("Before calling, ask the researcher three things",
                       "their own codes, topics, people's own words, "
                       "actions, feelings or values, or other",
                       '"Shall I also point out passages no code fits?"',
                       "a phrase (exact, loses context), whole sentences "
-                      "(the default), or a whole answer",
+                      "(the default), or a whole paragraph or answer",
                       "a second code's reason says why both apply",
                       "offer a short pilot on a few passages, then ask "
                       "again",

@@ -288,9 +288,9 @@ class TestTheReviewsOfTheSittingWording:
 
     def test_import_text_files_rule_names_one_place(self):
         d = _flat(_descriptions()["import_text_file"])
-        assert ("IMPORTANT: work on a project in the workspace (the folder "
-                "set for projects: get_current_project gives it), or on a "
-                "copy there.") in d
+        assert ("Importing into a project in the workspace (the folder "
+                "set for projects: get_current_project gives it), or into a "
+                "copy there, leaves an original elsewhere as it is.") in d
         assert "workspace, the folder set for projects" not in d
 
     def test_the_readme_does_not_send_a_reader_without_qualcoder_to_the_flag(

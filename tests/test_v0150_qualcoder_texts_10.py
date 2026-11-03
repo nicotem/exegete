@@ -124,11 +124,11 @@ LONG = ("Windows line breaks or characters beyond U+FFFF (such as emoji), "
         "shown here. Reports and exports are unaffected.")
 READ = "This file contains " + LONG
 RECORD = ("File(s) ['emoji.txt'] contain " + LONG
-          + " Relay this to the user before proceeding to approval.")
+          + " Relay this to the researcher before proceeding to approval.")
 EDIT = ("File 'emoji.txt' contains Windows line breaks or characters "
         "beyond U+FFFF (such as emoji); if the project is opened in "
         "QualCoder, codings on it may show shifted in its editor. Relay "
-        "this to the user.")
+        "this to the researcher.")
 APPLY = ("position_safety_warning: file(s) ['emoji.txt'] contain Windows "
          "line breaks or characters beyond U+FFFF (such as emoji); if the "
          "project is opened in QualCoder, these codings may show shifted or "
@@ -141,7 +141,7 @@ EVIDENCE = ("Evidence file(s) ['emoji.txt'] contain Windows line breaks or "
 ANNOTATE = ("File 'emoji.txt' contains Windows line breaks or characters "
             "beyond U+FFFF (such as emoji); if the project is opened in "
             "QualCoder, this annotation's span may show shifted in its "
-            "editor. Relay this to the user.")
+            "editor. Relay this to the researcher.")
 PSEUDO_PREVIEW = (
     "Warning: file(s) [1] contain Windows line breaks or characters beyond "
     "U+FFFF (such as emoji), which QualCoder's editor counts differently "

@@ -241,8 +241,8 @@ class TestSelectProjectsWarning:
             con.close()
         out = json.loads(server.select_project(str(folder)))
         assert out["warning"].startswith(
-            "This database does not identify itself as a QualCoder "
-            "project")
+            "This database does not identify itself as a project in "
+            "QualCoder's format")
         assert " | " not in out["warning"]
         for text in NEW_TEXTS:
             assert text not in out["warning"]
@@ -322,7 +322,7 @@ class TestSelectProjectsGuards:
         if setting is not None:
             monkeypatch.setenv(SETTING, setting)
         out = json.loads(server.select_project(str(folder)))
-        assert "APPEARS to be open" in out["warning"]
+        assert "appears to be open" in out["warning"]
         for text in NEW_TEXTS:
             assert text not in out["warning"]
 
@@ -336,7 +336,7 @@ class TestSelectProjectsGuards:
             monkeypatch.setenv(SETTING, setting)
         out = json.loads(server.select_project(str(folder)))
         assert server._qualcoder_history().level == "computer"
-        assert "APPEARS to be open" in out["warning"]
+        assert "appears to be open" in out["warning"]
 
 
 # ---------------------------------------------------------------------------

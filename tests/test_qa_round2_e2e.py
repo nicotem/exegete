@@ -172,7 +172,7 @@ class TestEndToEndLoop:
         review = server.review_suggestions(sid, show_context=True)
         for guid in guids:
             assert guid in review
-        assert "PENDING" in review
+        assert "Status: pending" in review
 
         # 4. approve both
         upd = server.update_suggestion_status(sid, approve=guids)

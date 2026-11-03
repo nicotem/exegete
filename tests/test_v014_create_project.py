@@ -541,7 +541,7 @@ class TestAfterCreation:
 
     def test_no_process_scan_so_no_false_alarm(self, monkeypatch):
         """A machine where the scan would match: select_project warns
-        that the project APPEARS to be open; create_project never runs
+        that the project appears to be open; create_project never runs
         the scan for the project it has just made."""
         calls = []
 
@@ -556,7 +556,7 @@ class TestAfterCreation:
         assert answer["qualcoder_gui_signals"] == []
         assert "APPEARS" not in json.dumps(answer)
         selected = json.loads(server.select_project(answer["project_path"]))
-        assert "APPEARS to be open" in selected["warning"]
+        assert "appears to be open" in selected["warning"]
 
     def test_the_previous_project_is_named(self):
         server.db, server.current_project_path = None, None

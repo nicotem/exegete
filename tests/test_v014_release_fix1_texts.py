@@ -197,7 +197,9 @@ def test_the_changelog_says_what_the_assistant_is_told():
     assert "**What an interpretive reading may rest on.**" in entry
     assert ("never on outside facts or assumptions about the participant, "
             "their group or what is typical") in entry
-    assert ("never on outside facts or assumptions about the participant, "
+    # (0.15.3: the rule reads "the person" where 0.14's entry, above,
+    # says "the participant", so that it holds for any document)
+    assert ("never on outside facts or assumptions about the person, "
             "their group or what is typical") in _flat(server.GROUNDING_RULES)
     assert ("The review does not yet show a passage a reason draws on from "
             "elsewhere (planned for v0.15): open the file the reason "

@@ -71,7 +71,8 @@ OPENING = ("The project's pseudonyms.json (its list of real names and their "
 # or kept (and so perhaps older than it), and where the entries the file
 # cannot hold are seen
 NOTE_FULL = OPENING + (
-    "Its contents are the researcher's reverse key and are never returned. "
+    "It leads from each pseudonym to a real name, so its contents are "
+    "never returned. "
     "To see or change the list, the researcher uses the names file on "
     "their own computer: prepare_names_list makes it from the list (or "
     "keeps one already there, and says if the list holds entries it "
@@ -82,8 +83,8 @@ NOTE_FULL = OPENING + (
 # `core`, which serves neither names list tool: the words of 0.15.0 before
 # this piece, unchanged
 NOTE_CORE = OPENING + (
-    "Its contents are the researcher's reverse key and are not returned "
-    "here; the researcher can read the file in the project folder, or in "
+    "It leads from each pseudonym to a real name, so its contents are not "
+    "returned here; the researcher can read the file in the project folder, or in "
     "QualCoder's Pseudonyms dialog if they use QualCoder.")
 # Fix round 1 (the major): imports read pseudonyms.json, never the names
 # file, so the note names the save that makes the file the list

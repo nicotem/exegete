@@ -196,7 +196,7 @@ class TestProcessFilter:
         """v0.14, the create-project study's finding: the old filter
         counted any command line holding "qualcoder" once this server's
         own names were blanked, so shells, logs and test runs on the
-        machine made every selection say the project APPEARS to be open
+        machine made every selection say the project appears to be open
         in QualCoder. These are the lines measured on the developer's
         Mac and the kinds around them."""
         lines = [
@@ -331,7 +331,7 @@ class TestLadderWiring:
         out = json.loads(server.select_project(str(dest)))
         assert out["success"] is True
         assert out["qualcoder_gui_signals"]
-        assert "APPEARS to be open" in out["warning"]
+        assert "appears to be open" in out["warning"]
         assert "reopened" in out["warning"]  # the 4.0 refresh limitation
 
     def test_select_project_hot_journal_names_open_gui(
@@ -346,7 +346,7 @@ class TestLadderWiring:
         (dest / "data.qda-journal").write_bytes(b"j")
         out = json.loads(server.select_project(str(dest)))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert out["qualcoder_gui_signals"]
 
     def test_select_project_limitation_note_when_clean(
@@ -375,7 +375,7 @@ class TestLadderWiring:
         (ai / "chat_history.sqlite").write_bytes(b"c")
         out = json.loads(server.get_current_project())
         assert out["qualcoder_gui_signals"]
-        assert "APPEARS to be open" in out["qualcoder_gui_hint"]
+        assert "appears to be open" in out["qualcoder_gui_hint"]
         # Signals are WARN-level: the hard qualcoder_open stays false
         assert out["qualcoder_open"] is False
 
@@ -388,7 +388,7 @@ class TestLadderWiring:
         out = json.loads(server.start_coding_session([1], instruction="test"))
         assert out["qualcoder_open"] is False
         assert out["qualcoder_gui_signals"]
-        assert "ASK THE USER" in out["qualcoder_gui_hint"]
+        assert "ask the researcher" in out["qualcoder_gui_hint"]
 
     def test_restore_preview_reports_signals_and_asks(self, setup_server,
                                                       qualcoder_db_path,
@@ -408,8 +408,8 @@ class TestLadderWiring:
         out = json.loads(server.restore_backup(str(backup)))
         assert out["requires_confirmation"] is True
         assert out["qualcoder_gui_signals"]
-        assert "APPEARS to be open" in out["qualcoder_gui_hint"]
-        assert "ASK THE USER" in out["qualcoder_gui_hint"]
+        assert "appears to be open" in out["qualcoder_gui_hint"]
+        assert "ask the researcher" in out["qualcoder_gui_hint"]
 
     def test_signals_do_not_refuse_writes(self, setup_server,
                                           qualcoder_db_path,
@@ -480,7 +480,7 @@ class TestSelectProjectFailureWording:
         _old(wal)
         out = json.loads(server.select_project(str(proj)))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert "damaged database" in out["error"]
         assert "backup" in out["error"]
 
@@ -493,7 +493,7 @@ class TestSelectProjectFailureWording:
         (dest / "data.qda-journal").write_bytes(b"j")
         out = json.loads(server.select_project(str(dest)))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert "damaged database" in out["error"]
         assert out["qualcoder_gui_signals"]
 
@@ -562,7 +562,7 @@ class TestDatabaseOpenErrorIsGeneric:
         self._damage(qualcoder_db_path, "journal")
         out = json.loads(server.select_project(qualcoder_db_path))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert "sqlite" not in out["error"].lower()
         assert "readonly" not in out["error"].lower()
 

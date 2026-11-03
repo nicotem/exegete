@@ -363,7 +363,7 @@ class TestGuidanceEnvelope:
         assert payload.get("qualcoder_open", False) is False
         assert isinstance(payload["coding_session_id"], str) and payload["coding_session_id"]
         assert "session_id" not in payload  # deprecated duplicate removed in 0.12
-        assert "CODING SESSION STARTED" in payload["instructions"]
+        assert "Coding session started" in payload["instructions"]
         # prose still parseable the old way (back-compat pin)
         assert payload["coding_session_id"] == raw.split(
             "Session ID: `")[1].split("`")[0]
@@ -375,7 +375,8 @@ class TestGuidanceEnvelope:
             payload = json.loads(server.start_coding_session([1], instruction="test"))
             assert payload["qualcoder_open"] is True
             assert payload["action_required"] and "gui_user" in payload["action_required"]
-            assert "STOP" in payload["instructions"]
+            assert "**Stop: this project is in use by another program**" \
+                in payload["instructions"]
             assert "qualcoder_open: true" in payload["instructions"]
         finally:
             lock.unlink()

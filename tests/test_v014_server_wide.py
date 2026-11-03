@@ -1192,7 +1192,7 @@ class TestTextsThatSentTheAssistantNowhere:
                    for folder in answer["searched"]["folders"])
         doc = server.mcp._tool_manager._tools[
             "list_available_projects"].description
-        assert "INSTEAD of" in doc
+        assert "instead of" in doc
 
     def test_search_files_says_match_count_is_what_it_lists(
             self, setup_server, qualcoder_db_path):
@@ -1208,7 +1208,7 @@ class TestTextsThatSentTheAssistantNowhere:
         assert row["content_matches_found"] == 8
         assert row["content_matches_shown"] == 5
         doc = server.mcp._tool_manager._tools["search_files"].description
-        assert "The number of matches LISTED for this file" in doc
+        assert "The number of matches listed for this file" in doc
         assert "content_matches_found" in doc
 
     def test_the_methods_notes_say_the_memo_must_be_read(self):

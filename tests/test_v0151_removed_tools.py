@@ -199,7 +199,7 @@ class TestMergedProposalsStayMerged:
         assert session.get_proposal_by_guid(source).status == "merged"
         assert session.get_proposal_by_guid(source).merged_into == target
         review = server.review_proposals(sid, [source])
-        assert "MERGED into 'Deadline stress'" in review
+        assert "merged into 'Deadline stress'" in review
 
     def test_update_proposal_status_skips_it(self, merged_session):
         sid, source, _ = merged_session

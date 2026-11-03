@@ -130,14 +130,14 @@ def names_note(count, core=False):
         f"{count} entr(ies). ")
     if core:
         return opening + (
-            "Its contents are the researcher's reverse key and are not "
-            "returned here; the researcher can read the file in the "
+            "It leads from each pseudonym to a real name, so its contents "
+            "are not returned here; the researcher can read the file in the "
             "project folder, or in QualCoder's Pseudonyms dialog if they "
             "use QualCoder.")
     # the files design, piece 5, and its fix round 1
     return opening + (
-        "Its contents are the researcher's reverse key and are never "
-        "returned. To see or change the list, the researcher uses the "
+        "It leads from each pseudonym to a real name, so its contents are "
+        "never returned. To see or change the list, the researcher uses the "
         "names file on their own computer: prepare_names_list makes it "
         "from the list (or keeps one already there, and says if the list "
         "holds entries it lacks), shows and opens it, and save_names_list "
@@ -354,7 +354,7 @@ class TestTheActiveLockFile:
             "re-check via get_current_project (the `qualcoder_open` field "
             "must be false) and only then proceed with the coding "
             "workflow.")
-        assert ("**STOP: THIS PROJECT IS IN USE BY ANOTHER PROGRAM**"
+        assert ("**Stop: this project is in use by another program**"
                 in answer["instructions"])
 
 
@@ -519,8 +519,8 @@ class TestTheMemoIsNotSaidToBeSeeded:
 REMOVED = "read_pseudonym_list"
 NEW_WORDS = {
     "get_current_project": "the project's pseudonyms.json (its names "
-                           "list, applied at import; the researcher's "
-                           "reverse key)",
+                           "list of real names and their pseudonyms, "
+                           "applied at import)",
     # Fix round 1: "the project's" said once, not twice
     "pseudonymise_source": "the project's own pseudonyms.json instead (its "
                            "names list).",

@@ -105,10 +105,10 @@ REFUSAL_NOT_IN_FORM = (
     "schemas it is verified against (v14 through v17, up to QualCoder "
     "4.0). Writes are refused to protect the data. If the value was "
     "changed by mistake, a backup from before has it (list_backups, "
-    "restore_backup). Set EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 in the server "
+    "restore_backup). Set EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 in Exegete's "
     "environment to override at your own risk.")
 WARNING_NOT_IN_FORM = (
-    "WARNING: this project's database schema value is missing or not in "
+    "Warning: this project's database schema value is missing or not in "
     "QualCoder's form (`v` and up to four digits), so it is not repeated "
     "here, and Exegete cannot tell whether the project is within the "
     "verified ceiling (v17, QualCoder 4.0); writes proceeded only because "
@@ -354,7 +354,7 @@ class TestTheSchemaValue:
         assert out.get("success") is True, out
         warning = out["schema_warning"]
         assert warning == (
-            "WARNING: this project reports database schema 'v18', newer "
+            "Warning: this project reports database schema 'v18', newer "
             "than the verified ceiling (v17, QualCoder 4.0); writes "
             "proceeded only because EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 is set. "
             + VERIFY_IN_FORM)
@@ -401,7 +401,7 @@ class TestTheSchemaValue:
             "This project reports database schema 'v18', newer than the "
             "schemas Exegete is verified against (v14 through v17, up to "
             "QualCoder 4.0). Writes are refused to protect the data. Set "
-            "EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 in the server environment to "
+            "EXEGETE_ALLOW_UNKNOWN_SCHEMA=1 in Exegete's environment to "
             "override at your own risk.") in out["error"], out
         reason = json.loads(server.get_current_project())["schema"]["reason"]
         assert "'v18'" in reason and "cannot tell" not in reason

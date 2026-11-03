@@ -41,7 +41,7 @@ def test_the_help_asks_for_the_three_questions_first():
     # start_coding_session's description, removed as announced in 0.14;
     # the description says it)
     described = _description("start_coding_session")
-    assert "BEFORE CALLING, ask the researcher three things" in described
+    assert "Before calling, ask the researcher three things" in described
     assert ("Code names match exactly, else ignoring letter case, spacing "
             "and Unicode form") in described
 

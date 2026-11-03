@@ -1436,7 +1436,7 @@ class TestTheFixRoundDocuments:
         tools = asyncio.run(server.mcp.list_tools())
         copy = _flat(next(t.description for t in tools
                           if t.name == "copy_project_to_workspace"))
-        assert "QualCoder's own saves wait while it runs" in copy
+        assert "That program's saves wait while the copy runs" in copy
         for name, phrase in (
                 ("TOOLS.md", "QualCoder's own saves wait for it"),
                 ("PRIVACY.md", "QualCoder's own saves wait for it"),

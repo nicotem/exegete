@@ -307,7 +307,7 @@ class TestTheNotes:
         assert ("Exegete's own files there are listed by name; other_entries "
                 "counts everything else there but links (links_not_followed "
                 "counts those), hidden files the system keeps included, and "
-                "never names it.") in note
+                "never gives their names.") in note
         assert "These are the files the researcher keeps" not in note
         private_files.ensure_folder(project)
         (project / "Exegete" / ".DS_Store").write_bytes(b"\0")

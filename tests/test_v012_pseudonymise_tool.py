@@ -5373,7 +5373,7 @@ class TestTheMappingAcrossARestore:
         assert result["pseudonyms_json_note"] == (
             f"This project had a pseudonyms.json before the restore and the "
             f"backup restored has none, so the project no longer has one. "
-            f"That file may be the only record of a pseudonymisation mapping "
+            f"That file may be the only record of a names list "
             f"(a pseudonymise_source run's save writes one). The one the "
             f"project had is in the safety backup {safety.name}; keep that "
             f"backup, or copy the file back into the project folder, while "
@@ -5388,8 +5388,8 @@ class TestTheMappingAcrossARestore:
             "The backup restored carries a pseudonyms.json that this project "
             "did not have before the restore; its names are replaced on "
             "later text or transcript imports: by Exegete's import_documents "
-            "unless apply_project_pseudonyms is false, and by QualCoder on "
-            "every one (not a PDF).")
+            "unless apply_project_pseudonyms is false, and by QualCoder, if "
+            "the researcher uses it, on every one (not a PDF).")
 
     def test_a_restore_that_changes_the_file_says_so(self, project):
         _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"}])
@@ -5403,7 +5403,7 @@ class TestTheMappingAcrossARestore:
         assert result["pseudonyms_json_note"].startswith(
             "The backup restored carries a pseudonyms.json that differs from "
             "the one this project had before the restore, which may be the "
-            "only record of a pseudonymisation mapping. The one the project "
+            "only record of a names list. The one the project "
             f"had is in the safety backup {safety.name};")
 
     def test_no_note_when_the_file_is_the_same(self, project):
@@ -5817,8 +5817,8 @@ class TestTheInspectionRoutes:
             "note": (
                 "The project's pseudonyms.json (its list of real names and "
                 "their pseudonyms, applied when files are imported) is "
-                "present with 2 entr(ies). Its contents are the "
-                "researcher's reverse key and are never returned. To see "
+                "present with 2 entr(ies). It leads from each pseudonym "
+                "to a real name, so its contents are never returned. To see "
                 "or change the list, the researcher uses the names file on "
                 "their own computer: prepare_names_list makes it from the "
                 "list (or keeps one already there, and says if the list "

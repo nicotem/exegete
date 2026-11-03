@@ -142,11 +142,11 @@ class TestF1aEditCodeAndGates:
         guid = _record_one(sid)
         server.update_suggestion_status(sid, approve=[guid])
         out = json.loads(server.edit_suggestion(sid, guid, start_pos=24))
-        assert "APPROVED" in out["error"]
+        assert "this one is approved" in out["error"]
         assert "CODINGS APPLIED" in server.apply_codings(
             sid, create_backup=False)
         out = json.loads(server.edit_suggestion(sid, guid, start_pos=24))
-        assert "APPLIED" in out["error"]
+        assert "this one is applied" in out["error"]
         assert "delete_coding" in out["error"]
 
     def test_rejected_refused_with_hint(self, setup_server):
@@ -154,7 +154,7 @@ class TestF1aEditCodeAndGates:
         guid = _record_one(sid)
         server.update_suggestion_status(sid, reject=[guid])
         out = json.loads(server.edit_suggestion(sid, guid, start_pos=24))
-        assert "REJECTED" in out["error"]
+        assert "this one is rejected" in out["error"]
 
     def test_no_change_params(self, setup_server):
         sid = _make_session(setup_server)
@@ -265,7 +265,7 @@ class TestF1bF2Guidance:
         # the researcher's answers, asked at the start of the session
         for doc in (analyze_doc, record_doc):
             assert "whole sentences by default" in doc
-            assert "PAIRINGS" in doc
+            assert "Pairings:" in doc
         assert "only after they say yes" in record_doc
         assert "instruction" in analyze_doc          # span-style pattern
 
@@ -274,7 +274,8 @@ class TestF1bF2Guidance:
         # coding_style_guidance removed, as announced in 0.14: they
         # repeated these descriptions, which say it)
         tools = server.mcp._tool_manager._tools
-        assert "PENDING" in tools["edit_suggestion"].description
+        assert "Only pending suggestions are editable" in " ".join(
+            tools["edit_suggestion"].description.split())
         blob = " ".join(tools["start_coding_session"].description.split())
         assert "whole sentences (the default)" in blob
         assert "instruction" in blob

@@ -620,12 +620,14 @@ text the app sent in two cases:
 
 - for a prompt called with an argument it does not declare, that
   argument's value;
-- for a request the library cannot read (an address that is not a URL,
-  arguments that are not an object, a tool name Exegete does not list,
-  a line that is not JSON), what was sent.
+- for a call of a tool Exegete does not list, that tool's name.
 
 That text is what the app or the model sent, never anything read from
-the project, but it can hold a name the model wrote.
+the project, but it can hold a name the model wrote. When the library
+cannot read a line, a request or a notification the app sent (a line
+that is not JSON, an address that is not a URL, arguments that are not
+an object), its line about it holds a fixed sentence of Exegete's
+instead, and nothing of what was sent.
 
 Claude Desktop's log (the file Show Logs opens) also records every
 request and every answer in full. So it holds everything the tools

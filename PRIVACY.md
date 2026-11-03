@@ -1913,15 +1913,18 @@ alone. The page shows them as a list, joined here with semicolons:
 > plans; Our API, Amazon Bedrock, or Google Cloud's Vertex API; Claude
 > Gov and Claude for Education"
 
-If your institution has a Team or Enterprise plan, you can use Exegete
-on that account, through Claude Desktop or Claude Code. That use already
-comes under the Commercial Terms, with no API key. Beyond those terms, what
+If your institution has a Team or Enterprise plan, using Exegete on it,
+through Claude Desktop or Claude Code, already comes under the
+Commercial Terms, with no API key. Beyond those terms, what
 Anthropic may do with your data depends on the agreement your
 institution made with Anthropic, and such agreements differ. Even so,
 an institution's account is likely to give participants' data more
 protection than a personal one, since the institution agreed its terms
 with its own interests in mind. Whoever manages the account can tell
-you which terms apply. For participants' data, this project suggests
+you which terms apply. Exegete's extension is not signed, and an
+institution that manages your computer or your Claude account may block
+unsigned extensions, or extensions altogether (INSTALL.md, "Installing
+the extension"). For participants' data, this project suggests
 Claude Desktop's chat with Exegete under that account, set up as
 "Assistants that open files by themselves" says.
 

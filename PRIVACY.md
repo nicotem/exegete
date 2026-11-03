@@ -56,19 +56,20 @@ project is **your responsibility to decide**, and the answer belongs in:
   below).
 
 Anthropic's own privacy documentation, <https://www.anthropic.com/privacy>,
-says what Anthropic does with conversation content: how long it keeps
-it, how it processes it, and how the terms differ between consumer
-plans, the API and enterprise offerings. Those terms vary by product and
-change over time. So this document quotes them, with the date each was
-read, rather than describing them in its own words ("Your governance
-options"; "OpenAI's apps" for OpenAI's terms).
+says what Anthropic does with the content of conversations. It says how
+long Anthropic keeps that content, how it processes it, and how the
+terms differ between consumer plans, the API and enterprise offerings.
+Those terms vary by product and change over time. So this document
+quotes them, with the date each was read, rather than describing them in
+its own words ("Your governance options"; "OpenAI's apps" for OpenAI's
+terms).
 
 ## Before you use real participant data, check these
 
 These are the questions your ethics committee or data protection
 officer will ask, and the summary above depends on them:
 
-- **Your Claude plan's terms differ, and they matter.** For *your*
+- **Your Claude plan's terms.** For *your*
   account, check three things: whether your inputs may be used to train
   or improve models, how long they are kept, and whether people can
   review them. The answers differ between consumer plans (Free, Pro and
@@ -98,8 +99,8 @@ officer will ask, and the summary above depends on them:
   also needs a valid safeguard: the UK's international data transfer
   agreement (IDTA), standard contractual clauses (SCCs), or an adequacy
   or data-bridge decision. A personal or consumer account almost
-  certainly has **no such agreement**, so this is an institution-level
-  decision you cannot clear alone.
+  certainly has **no such agreement**. So the decision is your
+  institution's, not yours alone.
 - **Special-category data.** Interviews routinely carry health,
   sexuality, religion, ethnicity, political opinion and similar, often
   disclosed incidentally, which has a higher legal bar (GDPR Art. 9).
@@ -218,7 +219,7 @@ Exegete works with the assistant, and it has a consequence:
 > Claude hosts that provider is Anthropic; for OpenAI's apps (the
 > ChatGPT desktop app and Codex) it is OpenAI; with a fully local host
 > (rung 4 below) there is no external provider at all. Reading a
-> transcript through this tool sends the returned portions of that
+> transcript through Exegete sends the returned portions of that
 > transcript to that provider.
 
 **What the rules here protect.** Your AI provider has whatever you let
@@ -1830,8 +1831,8 @@ Two further rules touch files on your disk:
 
 ## Your governance options, from default to fully local (Experimental)
 
-Which terms govern the AI processing is decided by the host you run and
-the account you sign into, not by Exegete. The four options below,
+The host you run and the account you sign into decide which terms
+govern the AI's processing of your data. Exegete does not. The four options below,
 called rungs here, go from the default to a fully local model. Each says
 what changes and what to check. The official pages are quoted word for
 word with their addresses, never described in our own words. The terms
@@ -1877,48 +1878,52 @@ The commercial-products Privacy Center article
 (<https://privacy.claude.com/en/articles/7996885-how-do-you-use-personal-data-in-model-training>)
 states: "We will not use your chats or coding sessions to train our
 models, unless you choose to participate in our Development Partner
-Program." A Data Processing Addendum exists on the commercial side
-(<https://www.anthropic.com/legal/data-processing-addendum>, effective
-date shown: February 24, 2025): it is the instrument an institution's
-data protection officer will ask about.
+Program." On the commercial side, Anthropic also has a Data Processing
+Addendum (<https://www.anthropic.com/legal/data-processing-addendum>,
+effective date shown: February 24, 2025). It is the document an
+institution's data protection officer will ask about.
 
-**A question about individual accounts, set out without settling it.**
-The Consumer Terms' scope clause includes:
+**A question about individual accounts.** The Consumer Terms' scope
+clause, which says what they cover, includes:
 
 > "Claude.ai, Claude Pro, and other products and services that we may
 > offer for individuals (including any Anthropic API key and the
 > Anthropic Console, when used by individuals)"
 
 while the Commercial Terms state "Services under these Terms are not for
-consumer use." For unambiguous commercial-terms coverage, you could use a
-Console account created for the institution or research group. You
-could also ask your data protection officer to read the current
-versions of both pages. The Terminal guide's recipe "Claude Code with
-an Anthropic API key" gives the steps; for participants' data under
-commercial terms, rung 3 says what this project suggests.
+consumer use." Which of the two covers a Console account used by an
+individual is a question this document sets out without settling. To be
+sure that the Commercial Terms cover your use, you could use a Console
+account created for the institution or research group. You could also
+ask your data protection officer to read the current versions of both
+pages. The Terminal guide's recipe "Claude Code with an Anthropic API
+key" gives the steps. For participants' data under commercial terms,
+rung 3 says what this project suggests.
 
 ### Rung 3: Team/Enterprise (Claude for Work)
 
-The same commercial-terms footing. The August 2025 consumer
-announcement (<https://www.anthropic.com/news/updates-to-our-consumer-terms>,
-quoted 17 August 2026; the page shows the items as a list, joined here
-with semicolons) lists what the consumer training changes leave alone:
+Team and Enterprise plans also come under the Commercial Terms.
+Anthropic's announcement of August 2025 on its consumer terms
+(<https://www.anthropic.com/news/updates-to-our-consumer-terms>, quoted
+17 August 2026) says which services its changes on training leave
+alone. The page shows them as a list, joined here with semicolons:
 
 > "These updates do not apply to services under our Commercial Terms,
 > including: Claude for Work, which includes our Team and Enterprise
 > plans; Our API, Amazon Bedrock, or Google Cloud's Vertex API; Claude
 > Gov and Claude for Education"
 
-If your institution has a Team or Enterprise deployment, using Exegete
-through Claude Desktop or Claude Code under that account is already
-under commercial terms, with no API key. Beyond that, what the account
-gives depends on the agreement your institution made with Anthropic,
-and such agreements differ. Even so, an institution's account is likely
-to give participants' data more protection than a personal one, since
-the institution agreed its terms with its own interests in mind. Whoever
-manages the account can tell you which terms apply. For participants'
-data, this project suggests Claude Desktop's chat with Exegete under
-that account, set up as "Assistants that open files by themselves" says.
+If your institution has a Team or Enterprise plan, you can use Exegete
+on that account, through Claude Desktop or Claude Code. That use already
+comes under the Commercial Terms, with no API key. Beyond those terms, what
+Anthropic may do with your data depends on the agreement your
+institution made with Anthropic, and such agreements differ. Even so,
+an institution's account is likely to give participants' data more
+protection than a personal one, since the institution agreed its terms
+with its own interests in mind. Whoever manages the account can tell
+you which terms apply. For participants' data, this project suggests
+Claude Desktop's chat with Exegete under that account, set up as
+"Assistants that open files by themselves" says.
 
 ### Rung 4: fully local models (Experimental)
 
@@ -1975,10 +1980,9 @@ model's room than the full set, and gives the steps.
   `/feedback` retention, and local plaintext transcripts under
   `~/.claude/projects/`. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and
   `cleanupPeriodDays` narrow them (<https://code.claude.com/docs/en/data-usage>).
-- **Commercial terms are not GDPR compliance.** The Data Processing
-  Addendum (DPA) exists, but deciding who is controller and who is
-  processor, and signing or relying on the DPA, remain the
-  institution's work.
+- **Commercial terms are not GDPR compliance.** Anthropic has a Data
+  Processing Addendum (DPA), but it is for the institution to decide who
+  is controller and who is processor, and to sign or rely on the DPA.
 - The Privacy Center now lives at privacy.claude.com; older
   privacy.anthropic.com links lead there.
 

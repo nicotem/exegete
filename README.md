@@ -302,7 +302,8 @@ Their recipes there give OpenAI's plans and what LM Studio needs.
 ### One click in Claude Desktop
 
 1. **Get Claude Desktop** for macOS or Windows (not Claude in a
-   browser): https://claude.ai/download. Sign in.
+   browser): https://claude.ai/download. Sign in. On a Mac with Apple
+   silicon, the extension needs macOS 14 or later.
 2. **Download the extension**: on the
    [Releases page](https://github.com/nicotem/exegete/releases), take
    the file whose name starts with `exegete-` and ends in `.mcpb` from

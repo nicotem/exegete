@@ -408,9 +408,15 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
             "its own. On Windows x64, a library Exegete installs to read "
             "PDFs reports its use to Windows' diagnostic data each time a "
             "PDF is read, with nothing from your documents.") in flows
+    # (v0.15.3: the Mac with Apple silicon, switched off before the
+    # library starts, as on Linux; what was checked there is that a
+    # reading keeps nothing, its connections having been watched on Linux
+    # alone)
     assert ("Exegete switches its reports off: on Linux before the library "
-            "starts, so it reports nothing there, and on Windows once it "
-            "has loaded, after its first few reports") in flows
+            "starts, so it reports nothing there; on a Mac with Apple "
+            "silicon before it starts too, where it was checked to keep "
+            "nothing on the computer; and on Windows once it has loaded, "
+            "after its first few reports") in flows
     # (the fix round: "nothing there" holds for the release the lock
     # gives, so the pointer names the switch's limits, which say so)
     assert ("\"A library's usage reports\", below, says what they hold, "
@@ -456,7 +462,14 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
             "can switch its reports on again for that reading",
             "you could read no PDFs through Exegete on Windows",
             "what the computer's diagnostic data setting lets Windows "
-            "send"):
+            "send",
+            # (v0.15.3) the Mac with Apple silicon: the setting before
+            # onnxruntime loads, nothing kept, connections watched on
+            # Linux alone
+            "Exegete gives the setting there before onnxruntime loads",
+            "A reading was checked to keep nothing in a home folder of its "
+            "own",
+            "has been watched on Linux alone"):
         assert fact in part, fact
     # and where reading is, no longer "no network" alone
     reading = _flat_section("PRIVACY.md", "## Bringing documents in")
@@ -745,6 +758,14 @@ def test_notice_names_each_library_pymupdf_2_brings():
                       .split())
     for name, words in NOTICE_ENTRIES.items():
         assert words in notice, name
+    # the computers that take them, as the lines give them (v0.15.3: Macs
+    # with Apple silicon among them)
+    start = notice.index("With Python 3.11 to 3.14 on ")
+    computers = notice[start:notice.index("the part brings PyMuPDF 2",
+                                          start)]
+    for computer in ("Windows x64", "Linux (x86-64 and Arm)",
+                     "Macs with Apple silicon"):
+        assert computer in computers, computer
     assert ("under PyMuPDF's statement, \"Dual Licensed - GNU AFFERO GPL "
             "3.0 or Artifex Commercial License\"") in notice
     assert (REPO / "NOTICE").read_bytes() == \
@@ -756,7 +777,11 @@ def test_notice_names_what_numpys_packages_bundle_where_they_do():
     C++ runtime (numpy.libs/msvcp140-....dll) in every Windows package,
     though their LICENSE.txt does not name it; libquadmath in the Linux
     x86-64 packages alone (the Arm packages' LICENSE.txt names it, but
-    they hold no such file)."""
+    they hold no such file). v0.15.3: the packages for macOS 14 on Apple
+    silicon hold no bundled library at all (no numpy/.dylibs) and link
+    Apple's Accelerate framework, though their LICENSE.txt names OpenBLAS
+    and the GCC runtime (read in numpy 2.4.6's package for Python 3.11
+    and 2.5.4's for 3.13, 3 November 2026)."""
     notice = " ".join((REPO / "NOTICE").read_text(encoding="utf-8")
                       .split())
     start = notice.index("- numpy:")
@@ -765,6 +790,7 @@ def test_notice_names_what_numpys_packages_bundle_where_they_do():
         "library (msvcp140.dll)" in entry
     assert "on Linux x86-64 libquadmath (LGPL-2.1-or-later)" in entry
     assert "on Linux libquadmath" not in entry
+    assert "use Apple's Accelerate framework, part of macOS" in entry
 
 
 def test_the_advisory_check_asks_about_both_releases():

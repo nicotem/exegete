@@ -28,7 +28,14 @@ what changed.
 
 - **Claude Desktop**, the latest version, from
   https://claude.ai/download, and a Claude account to sign in with.
-- **A Mac or a Windows computer.** Claude Desktop runs on both.
+- **A Mac or a Windows computer.** Claude Desktop runs on both. On a
+  Mac, Anthropic's help page, read on 3 November 2026, asks for macOS 13
+  (Ventura) or later. On a Mac with Apple silicon (M1 or later), the
+  extension needs macOS 14 (Sonoma) or later, from 0.15.3: a library it
+  fetches to read PDFs has no package for earlier releases there. On
+  macOS 13 it does not start ("Troubleshooting", below, says what you
+  can do). On an Intel Mac, the extension needs no more than Claude
+  Desktop does.
 - **The internet when Exegete first starts**, and after each update.
   At those times Claude Desktop fetches a tool called uv, which fetches
   Python and the libraries Exegete needs, the ready-made code it builds
@@ -244,22 +251,26 @@ optional part, and the extension always has this part. The part is two
 libraries, PyMuPDF and EbookLib, with lxml, which EbookLib needs. They
 are the libraries QualCoder 4.0 reads these formats with.
 
-**Which PyMuPDF a computer takes.** On Windows x64, and on Linux on
-x86-64 and Arm, with Python 3.11 to 3.14, the part brings PyMuPDF 2.
-PyMuPDF 2 needs nine more libraries, which come with it: onnxruntime,
-numpy, networkx, protobuf, flatbuffers, psutil, PyYAML, tabulate and
-packaging. Everywhere else the part brings PyMuPDF 1.x: on Windows on
-Arm, with Python 3.15 and later, and on every Mac. Every Mac takes 1.x
-because onnxruntime needs macOS 14 on Apple silicon, and an install
-cannot tell macOS releases apart. The extension installs the releases
-the tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.20. Both
-releases of PyMuPDF read the test documents' PDFs to the same text, the
-text that QualCoder 4.0 stores.
+**Which PyMuPDF a computer takes.** On Windows x64, on Linux on x86-64
+and Arm, and on a Mac with Apple silicon, with Python 3.11 to 3.14, the
+part brings PyMuPDF 2. PyMuPDF 2 needs nine more libraries, which come
+with it: onnxruntime, numpy, networkx, protobuf, flatbuffers, psutil,
+PyYAML, tabulate and packaging. Everywhere else the part brings PyMuPDF
+1.x: on Intel Macs, on Windows on Arm, and with Python 3.15 and later.
+On a Mac with Apple silicon, the onnxruntime the extension installs has
+packages for macOS 14 or later alone, so there the extension needs
+macOS 14. An install cannot tell macOS releases apart, so on macOS 13
+or earlier it stops rather than take PyMuPDF 1.x ("Troubleshooting",
+below). The extension installs the releases the tests ran with: PyMuPDF
+2.0 or 1.28.2, and EbookLib 0.20. Both releases of PyMuPDF read the test
+documents' PDFs to the same text, the text that QualCoder 4.0 stores.
 
 **What PyMuPDF 2 costs.** At the first start, the part adds about 98 MB
 to download on Windows, and about 210 MB more on disk. On Linux it
-adds 114 to 118 MB to download, and 250 to 260 MB on disk. With PyMuPDF
-1.28.2, on a Mac or Windows on Arm, it adds about 24 to 33 MB to
+adds 114 to 118 MB to download, and 250 to 260 MB on disk. On a Mac
+with Apple silicon, measured with Python 3.13 on 3 November 2026, it
+adds about 105 MB to download, and about 240 MB on disk. With PyMuPDF
+1.28.2, on an Intel Mac or Windows on Arm, it adds about 24 to 33 MB to
 download, and 62 to 77 MB on disk. PyMuPDF 2 also takes 0.4 to 1 second
 more to start reading each PDF.
 
@@ -310,11 +321,16 @@ GitHub account, you can also be told of each release: on Exegete's
 page on GitHub, choose Watch, then Custom, then Releases.
 
 To update, download the newer `.mcpb` and install it the same way.
-Claude replaces the extension you have and keeps its settings. The
-first start after an update can take longer, and needs the internet,
-since Claude Desktop may fetch Exegete's libraries again. Your projects
-and their backups stay where they are, and so does Exegete's own
-folder, `~/.exegete`. An update from 0.14.0 or earlier moves that
+Claude replaces the extension you have and keeps its settings. The first
+start after an update can take longer, and needs the internet, since
+Claude Desktop may fetch Exegete's libraries again. On a Mac with Apple
+silicon, the update to 0.15.3 or later needs macOS 14 or later, and its
+first start downloads up to about 105 MB of libraries for reading PDFs,
+where 0.15.2 needed about 33 MB ("PDF and EPUB: the optional part",
+above). On macOS 13 or earlier the updated extension does not start: you
+could update macOS first, or keep the release you have until then. Your
+projects and their backups stay where they are, and so does Exegete's
+own folder, `~/.exegete`. An update from 0.14.0 or earlier moves that
 folder there once, from `~/.qualcoder_mcp`.
 
 After updating, look at the settings, since an update can change them:
@@ -498,6 +514,18 @@ how long".
   closing the window. Claude Desktop starts Exegete once, and reads its
   tools then, so this also brings in the tools after an update.
 - The first start needs the internet.
+- On a Mac with Apple silicon, from 0.15.3, the extension needs macOS
+  14 or later. On macOS 13 or earlier it stops before Exegete runs, so
+  Exegete cannot say why: Claude Desktop's log of the extension
+  ("Reading the server log", below) holds uv's message that a library,
+  onnxruntime, has no package for that macOS. Updating macOS to 14 or
+  later brings the extension back, and so does installing 0.15.2's
+  extension again ("Going back to an earlier version", below). While
+  Exegete cannot start, it removes nothing it keeps: the texts an
+  import's preview read, and the reading folder's pages and copies of
+  originals, stay where "Decide what to do with what stays", under
+  "Uninstalling", says. 0.15.2's extension, installed again, removes
+  them at its first start once their time has passed.
 - An empty "Folder for projects", or a coder name outside the rules
   under "The settings page", stops the extension from starting. The log
   says which setting is at fault, never its value ("Reading the server

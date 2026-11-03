@@ -184,11 +184,13 @@ or another). It adds **no telemetry, no analytics, and no separate cloud
 path** of its own. On Windows x64, a library Exegete installs to read
 PDFs reports its use to Windows' diagnostic data each time a PDF is
 read, with nothing from your documents. Left as it comes, that library
-would report on Linux too. Exegete switches its reports off: on Linux
-before the library starts, so it reports nothing there, and on Windows
-once it has loaded, after its first few reports. "A library's usage
-reports", below, says what they hold, the switch's limits, and what you
-can do.
+would report on Linux and on a Mac with Apple silicon too. Exegete
+switches its reports off: on Linux before the library starts, so it
+reports nothing there; on a Mac with Apple silicon before it starts
+too, where it was checked to keep nothing on the computer; and on
+Windows once it has loaded, after its first few reports. "A library's
+usage reports", below, says what they hold, the switch's limits, and
+what you can do.
 
 Exegete opens your project's database read-only by default. The one
 thing it fetches from the internet itself, while switched on, is a
@@ -256,9 +258,9 @@ protect three other things, each with its own readers:
 Where a rule below serves one of these three, it says which.
 
 **A library's usage reports (what Microsoft can learn about the library
-being used on this computer, with no participant data).** Where PDFs
-are read with PyMuPDF 2 (Windows x64 and Linux, with Python 3.11 to
-3.14, the desktop extension's Python among them;
+being used on this computer, with no participant data).** Where PDFs are
+read with PyMuPDF 2 (Windows x64, Linux and Macs with Apple silicon,
+with Python 3.11 to 3.14, the desktop extension's Python among them;
 INSTALL.md), PyMuPDF loads onnxruntime, Microsoft's library for running
 trained models. onnxruntime reports on its own use to Microsoft unless
 it is switched off. Its reports hold facts about the computer and the
@@ -269,10 +271,17 @@ committee or a data protection officer may want to know of them:
   events in your home folder, and send them to Microsoft over the
   internet. Exegete switches this off in the process that reads a
   document, before onnxruntime loads (with onnxruntime's own setting,
-  `ORT_DISABLE_TELEMETRY`), so nothing is kept and nothing is sent. On
-  a Mac, Exegete's installs keep PyMuPDF 1, which does not load
-  onnxruntime; should it load there, the setting switches it off in the
-  same way.
+  `ORT_DISABLE_TELEMETRY`), so nothing is kept and nothing is sent.
+- **On a Mac with Apple silicon**, from 0.15.3, onnxruntime would do the
+  same: the notes in the package Exegete installs (1.31.0) say it
+  reports over the internet on macOS too, and that this setting, given
+  before it starts, stops its device id, its events and its uploads.
+  Exegete gives the setting there before onnxruntime loads, as on
+  Linux. A reading was checked to keep nothing in a home folder of its
+  own; what a reading sends over the network has been watched on Linux
+  alone. On an Intel Mac, Exegete's installs keep PyMuPDF 1, which does
+  not load onnxruntime; should it load there, the setting switches it
+  off in the same way.
 - **On Windows**, onnxruntime does not read that setting: it reports
   through Windows' own diagnostic data, and its switch can be reached
   only once it has loaded, by which time it has made a few reports. So
@@ -300,7 +309,8 @@ What the switch cannot promise:
   and the Windows package Exegete installs (1.31.0). It has not been
   watched on a Windows computer, and which of Windows' settings keeps
   the reports back has not been checked. On Linux and on a Mac, readings
-  given a home folder of their own were checked to keep nothing there.
+  given a home folder of their own were checked to keep nothing there;
+  a reading's network connections were watched on Linux alone.
 - A program that starts or changes its listening to onnxruntime's
   events through Windows' event tracing while a PDF is read, Windows'
   own diagnostic service among them, can switch its reports on again
@@ -1533,16 +1543,18 @@ limit and a memory cap, handed the file's bytes rather than its path;
 it runs without a sandbox (one, where the system offers it, is on the
 list of later work, with no release set). Import and reading make no
 request over the network of their own. Where PDFs are read with
-PyMuPDF 2 (Windows x64 and Linux, with Python 3.11 to 3.14; INSTALL.md),
-PyMuPDF loads onnxruntime, Microsoft's library for running trained
-models, whose usage reports to Microsoft are on by default; Exegete
-switches them off in the reading process. On Linux they are off before
-onnxruntime starts, so it keeps nothing on the computer and sends
-nothing. On Windows, its switch can be reached only once it has loaded:
-by then it has made a few reports to Windows' diagnostic data, about
-the computer (the names and driver versions of its graphics adapters
-and of any NPU among them) and onnxruntime (that it registered its
-processor part, with any error), with nothing from your documents.
+PyMuPDF 2 (Windows x64, Linux and Macs with Apple silicon, with Python
+3.11 to 3.14; INSTALL.md), PyMuPDF loads onnxruntime, Microsoft's
+library for running trained models, whose usage reports to Microsoft
+are on by default; Exegete switches them off in the reading process. On
+Linux they are off before onnxruntime starts, so it keeps nothing on
+the computer and sends nothing. On a Mac with Apple silicon they are
+off before it starts too, and a reading was checked to keep nothing on
+the computer. On Windows, its switch can be reached only once it has
+loaded: by then it has made a few reports to Windows' diagnostic data,
+about the computer (the names and driver versions of its graphics
+adapters and of any NPU among them) and onnxruntime (that it registered
+its processor part, with any error), with nothing from your documents.
 Windows adds its own identifiers to what it sends, and passes the
 reports to Microsoft or not as the computer's diagnostic data setting
 says. Every later report is switched off ("A library's usage reports",
@@ -1716,6 +1728,12 @@ Two further rules touch files on your disk:
   - without psutil, a QualCoder run through Python, or one of
     QualCoder's Linux downloads, from a folder whose path holds a space
     is not counted as running;
+  - on a Mac with psutil, which comes with PyMuPDF 2 on Apple silicon
+    from 0.15.3, a QualCoder run through Python by another account on
+    the same Mac is not seen, since the command lines of another
+    account's programs cannot be read there; QualCoder's app is still
+    seen by its name, and the chat history's recent change is then still
+    given as a sign;
   - in a Linux sandbox whose process list holds only its own programs,
     such as a Flatpak app's or a container's, a QualCoder outside it is
     not seen, and with Exegete inside WSL (Windows Subsystem for Linux),

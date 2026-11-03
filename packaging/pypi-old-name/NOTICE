@@ -841,11 +841,11 @@ part on in the Claude Desktop extension). None of these libraries is
 contained in Exegete's package or its Claude Desktop extension file:
 they are fetched from PyPI on the researcher's computer.
 
-With Python 3.11 to 3.14 on Windows x64 and on Linux (x86-64 and Arm),
-the part brings PyMuPDF 2 (from v0.15.1), and with it nine libraries
-more, fetched from PyPI likewise, under these licences as the licence
-files and metadata inside the packages the lock gives those computers
-state them:
+With Python 3.11 to 3.14 on Windows x64, on Linux (x86-64 and Arm) and
+on Macs with Apple silicon, the part brings PyMuPDF 2 (from v0.15.1; on
+those Macs from v0.15.3), and with it nine libraries more, fetched from
+PyPI likewise, under these licences as the licence files and metadata
+inside the packages the lock gives those computers state them:
 
 - onnxruntime: MIT, Microsoft Corporation; its packages also carry
   Microsoft's notices for the third-party software they contain
@@ -858,7 +858,10 @@ state them:
   named in the package's LICENSE.txt; its packages for Windows also
   contain Microsoft's C++ runtime library (msvcp140.dll), Microsoft's
   redistributable code under Microsoft's own terms, which LICENSE.txt
-  does not name.
+  does not name. Its packages for Macs with Apple silicon at macOS 14,
+  which an install from the lock takes there, contain none of these
+  libraries and use Apple's Accelerate framework, part of macOS, though
+  their LICENSE.txt names OpenBLAS and the GCC runtime libraries too.
 - networkx: BSD-3-Clause, NetworkX Developers.
 - psutil: BSD-3-Clause, Jay Loden, Dave Daeschler and Giampaolo Rodola.
 - protobuf: BSD-3-Clause, Google Inc.
@@ -872,5 +875,5 @@ state them:
 Two packages more, pymupdf-layout and pymupdf4llm, are empty at 2.0:
 their code and its trained models are inside PyMuPDF's own package,
 under PyMuPDF's statement, "Dual Licensed - GNU AFFERO GPL 3.0 or
-Artifex Commercial License". Every other computer takes PyMuPDF 1.x and
-none of these.
+Artifex Commercial License". Every other computer, Intel Macs and
+Windows on Arm among them, takes PyMuPDF 1.x and none of these.

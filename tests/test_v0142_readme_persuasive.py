@@ -391,8 +391,11 @@ def _tools(mode="full"):
 # The plan of 3 November (ruling 115): coding sessions kept with their
 # project in a v0.15.4 line of their own, and method in v0.15.5, take 10
 # characters and a line: 40,819 in 636 lines.
-README_LIMIT = 40_819
-README_LINES = 636
+# PyMuPDF 2 on Apple silicon (v0.15.3): the one-click steps say that the
+# extension needs macOS 14 or later on such a Mac, 71 characters and a
+# line: 40,890 in 637 lines.
+README_LIMIT = 40_890
+README_LINES = 637
 
 
 def test_the_readme_stays_short():

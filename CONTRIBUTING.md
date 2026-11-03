@@ -181,7 +181,8 @@ is looked at first.
    releases of mcp and pydantic that `uv.lock` gives (the install of
    step 3 may take newer ones;
    `uv sync --frozen --extra dev --extra pdf-epub` installs the
-   lock's), and read its diff whole. Update `TOOLS.md`
+   lock's, and on a Mac with Apple silicon needs macOS 14 or later), and
+   read its diff whole. Update `TOOLS.md`
    (the tool reference), `README.md`, `INSTALL.md`, the Terminal guide
    (`docs/installing-from-the-terminal.md`) and `PRIVACY.md` where they
    describe the behaviour you changed; `PRIVACY.md` is the contract for
@@ -318,10 +319,10 @@ rather than fewer.
   meets a new major release only with a release of Exegete tried with
   it. Not bounded today: cryptography (never loaded by Exegete, held per
   computer by `[tool.uv]`), onnxruntime and numpy (which PyMuPDF 2
-  brings on Windows x64 and Linux; large, but loaded only inside the
-  reading process, never at Exegete's start, where Exegete's own code
-  imports onnxruntime only to switch its usage reports off; a new major
-  release of either could stop PDFs being read
+  brings on Windows x64, Linux and Macs with Apple silicon; large, but
+  loaded only inside the reading process, never at Exegete's start,
+  where Exegete's own code imports onnxruntime only to switch its usage
+  reports off; a new major release of either could stop PDFs being read
   there, which the `newest-libraries` job would show), pywin32
   (Windows only), uvicorn, python-multipart and sse-starlette (a limit
   at their next minor release would hold back routine fixes),

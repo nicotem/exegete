@@ -70,7 +70,10 @@ The brief is provisional: a later release may change it.
 
 - **Python 3.11 or newer**, on macOS, Windows or Linux. To check, type
   `python3 --version` in the Terminal. If it is missing,
-  https://www.python.org/downloads/ has it.
+  https://www.python.org/downloads/ has it. On a Mac with Apple silicon,
+  the optional part for PDF and EPUB installs as the tests ran it on
+  macOS 14 or later; on macOS 11 to 13 it brings older libraries, or
+  stops ("PDF and EPUB: the optional part", below, says which).
 - **An MCP host**: Claude Desktop set up by hand, Claude Code, LM
   Studio, or OpenAI's ChatGPT desktop app and Codex, each with its
   recipe below.
@@ -140,10 +143,10 @@ library, pydantic, anyio, PyMuPDF and lxml. Their next major release
 reaches you only with a release of Exegete tried with it. Others have no
 upper limit, among them EbookLib, Starlette (which the MCP library loads
 at every start), and onnxruntime and numpy (which the optional part
-brings on Windows x64 and Linux). A new release of one of them could
-stop Exegete from starting, or change what it reads from a document. A
-new major release of onnxruntime or numpy could stop PDFs being read at
-all, each then refused as damaged.
+brings on Windows x64, Linux and Macs with Apple silicon). A new
+release of one of them could stop Exegete from starting, or change what
+it reads from a document. A new major release of onnxruntime or numpy
+could stop PDFs being read at all, each then refused as damaged.
 
 If an update stops Exegete from starting, installing the release of
 that library you had before, in Exegete's own environment, can bring it
@@ -199,6 +202,30 @@ On Linux with a C library (glibc) older than 2.28, and with a
 free-threaded Python elsewhere, neither release has a ready-made
 package.
 
+**On a Mac with Apple silicon.** From 0.15.3 the part brings PyMuPDF 2
+there too, with onnxruntime, and pip, pipx, uv tool and uvx each choose
+the releases afresh from PyPI, by the Mac's macOS and the Python. What
+they chose on 3 November 2026:
+
+- On macOS 14 or later: PyMuPDF 2 with the newest onnxruntime.
+- On macOS 13 with Python 3.11, 3.12 or 3.13: the last onnxruntime
+  made for macOS 13, an older release that has not been tried with
+  Exegete, with four more libraries it needs (coloredlogs,
+  humanfriendly, sympy and mpmath).
+- On macOS 11 or 12 with Python 3.11 or 3.12: the last onnxruntime made
+  for those releases, older still and not tried with Exegete either,
+  with the same four.
+- On macOS 13 with Python 3.14, and on macOS 11 or 12 with Python 3.13
+  or 3.14: no onnxruntime suits, so the install stops before anything
+  is installed or removed, and an update that stops leaves the install
+  you had as it was.
+
+An older onnxruntime may treat Exegete's switch for its usage reports
+differently (PRIVACY.md, "A library's usage reports"). If that matters,
+or the install stops, you could update macOS to 14 or later, or install
+Exegete without the part and then its three libraries with PyMuPDF 1.x,
+which needs no onnxruntime, as in the two commands above.
+
 ## Installing from the source
 
 <a id="step-by-step-installation"></a>
@@ -233,7 +260,11 @@ python -m pytest
 
 Without `pdf-epub`, the tests of PDF and EPUB import are skipped. The
 automated checks install the releases in the repository's lock file,
-with both parts. [CONTRIBUTING.md](../CONTRIBUTING.md) says more.
+with both parts. [CONTRIBUTING.md](../CONTRIBUTING.md) says more. On a
+Mac with Apple silicon, the pip commands above choose the part's
+libraries as an install from PyPI does ("On a Mac with Apple silicon",
+under "PDF and EPUB: the optional part", above), and an install from
+the lock file needs macOS 14 or later.
 
 ## Claude Desktop set up by hand
 

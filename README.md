@@ -236,11 +236,14 @@ where chat and Cowork are one conversation, go through five checks:
    setting at https://claude.ai/settings/data-privacy-controls switches
    training off. Rating a reply, with a thumbs up or down, can still let
    Anthropic train on that conversation (PRIVACY.md quotes the terms).
-4. **Your account, not Exegete, sets the terms.** An institution's
-   agreement with the AI provider sets the terms for its data, and a
-   personal account comes under the consumer terms. So institutions
-   should prefer organisational accounts. Whoever manages an account
-   your university or employer provides can tell you which terms apply.
+4. **Your account, not Exegete, sets the terms.** A personal account
+   comes under the AI provider's consumer terms. An account your
+   university or employer provides comes under the agreement it made
+   with the provider. Such agreements differ in what they let the
+   provider do with your data. Even so, an institution's account is
+   likely to give participants' data more protection than a personal
+   one, since the institution agreed its terms with its own interests in
+   mind. Whoever manages that account can tell you which terms apply.
 5. **Your ethics committee or data protection officer** may want to see
    [PRIVACY.md's checklist](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#before-you-use-real-participant-data-check-these).
 

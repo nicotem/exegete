@@ -201,6 +201,15 @@ FILE_REFUSALS = {
                      "removed, needs less.",
     "reader_failed": "This file could not be read. Open it in its own app "
                      "and save a fresh copy, then import that.",
+    # v0.15.3: a library the readers import as they read did not load,
+    # so the file was never read and is not at fault. Installing again
+    # may help; it is not promised, since a library can fail to load on
+    # a system it does not support.
+    "reader_library": "The part of Exegete that reads this kind of file "
+                      "did not load on this computer, so the file was not "
+                      "read; the file itself is not at fault. Installing "
+                      "Exegete again, with its optional part for PDF and "
+                      "EPUB, may help.",
     "not_supported": "Exegete does not import this kind of file.",
 }
 

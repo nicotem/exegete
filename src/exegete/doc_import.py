@@ -1175,18 +1175,26 @@ def _time_for(limit: float, budget: float, started: float, first: bool,
     return min(limit, left)
 
 
-def _log_cause(cause: Optional[Dict[str, Any]]) -> None:
-    """One line for a file refused as damaged: the kind of error behind
-    it and the release of the library Exegete reads that kind of file
-    with, where there is one; never the file, its place, size or digest,
-    or the project. The cause stays out of the item's numbers, so no
-    answer, and nothing sent to the AI provider, carries it."""
+def _log_cause(cause: Optional[Dict[str, Any]],
+               code: str = "damaged") -> None:
+    """One line for a file refused as damaged, or because a library the
+    readers import did not load (`reader_library`, v0.15.3): the kind of
+    error behind it and the release of the library Exegete reads that
+    kind of file with, where there is one; never the file, its place,
+    size or digest, or the project. The cause stays out of the item's
+    numbers, so no answer, and nothing sent to the AI provider, carries
+    it."""
     if not cause:
         return
     library = ""
     if cause.get("library"):
         library = " (%s %s)" % (cause["library"],
                                 cause.get("version") or "unknown")
+    if code == "reader_library":
+        logger.warning("A file was not read: a library the reading needs "
+                       "did not load, raising %s%s.", cause["kind"],
+                       library)
+        return
     logger.warning("A file was refused as damaged: its reading raised "
                    "%s%s.", cause["kind"], library)
 
@@ -1206,8 +1214,8 @@ def _read_one(item: Item, data: bytes, ctx: Context,
         result = reader(item.kind, data, max_characters=ctx.max_characters,
                         timeout=timeout, **_chosen(item))
     except import_reading.ReadFailed as failed:
-        if failed.code == "damaged":
-            _log_cause(getattr(failed, "cause", None))
+        if failed.code in import_reading.CAUSED_REFUSALS:
+            _log_cause(getattr(failed, "cause", None), failed.code)
         if failed.code in HELD_WHEN_READ:
             item.status, item.code = "held", failed.code
             if failed.code == "not_utf8":

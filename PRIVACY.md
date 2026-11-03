@@ -1685,9 +1685,10 @@ Two further rules touch files on your disk:
   have a project open (4.0 writes no lock file), some tools look at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). Most of the tools that report a
-  `qualcoder_gui_signals` field look at it, but `create_project`
-  reports the field without looking. A few other tools look at it only
-  when they work out the project's history with QualCoder. TOOLS.md
+  `qualcoder_gui_signals` field look at it, but `create_project` and
+  the `undo_changes` previews report the field without looking. A few
+  other tools look at it only when they work out the project's history
+  with QualCoder. TOOLS.md
   names these tools, and when each one looks. Whichever tool looks, only
   the number of matches is reported into the conversation. The listing
   is filtered in memory for

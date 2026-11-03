@@ -92,9 +92,10 @@ You can work with the reading tools alone, or with the tools that write as well.
 > through a lock file, which Exegete honours. QualCoder 4.0 uses no lock
 > file, so there Exegete falls back on signs that may show an open
 > window, reported as `qualcoder_gui_signals` by `select_project`,
-> `get_current_project`, `start_coding_session`, `create_project`
-> (without the process scan) and the `restore_backup`,
-> `import_documents`, `save_names_list` and `undo_changes` previews:
+> `get_current_project`, `start_coding_session` and the
+> `restore_backup`, `import_documents` and `save_names_list` previews,
+> and without the process scan by `create_project` and the
+> `undo_changes` previews:
 >
 > - the database's write sidecars (`data.qda-journal`, `data.qda-wal`,
 >   `data.qda-shm`), files that sit beside it while it is being written;

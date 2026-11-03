@@ -618,7 +618,8 @@ _TOOL_OF_HELPER = {"_select_project": "select_project",
                    # 0.14.3: the import's preview passes the signs on
                    "_import_documents_preview": "import_documents",
                    # v0.15.2: and undo's preview, as the restore's does,
-                   # the names list's undo with its own
+                   # the names list's undo with its own (v0.15.3: both
+                   # without the scan, so neither is a caller)
                    "_undo_preview": "undo_changes",
                    "_undo_names_list": "undo_changes"}
 
@@ -645,9 +646,9 @@ class TestProcessScanCallersAreDocumented:
                 # v0.15.0, the names list's save (its fix round 1): the
                 # preview, the call without a token, passes on the signs
                 # as restore_backup's and import_documents' do
-                "save_names_list",
-                # v0.15.2: undo's preview, the same
-                "undo_changes"}
+                "save_names_list"}
+    # v0.15.3: undo's previews give the files' signs without the process
+    # scan (the owner, 3 November 2026), so undo_changes is not here
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's
@@ -671,8 +672,9 @@ class TestProcessScanCallersAreDocumented:
         # out the project's history, so the pointer says which, and that
         # only a count reaches the conversation)
         assert ("Most of the tools that report a `qualcoder_gui_signals` "
-                "field look at it, but `create_project` reports the field "
-                "without looking.") in bullet
+                "field look at it, but `create_project` and the "
+                "`undo_changes` previews report the field without "
+                "looking.") in bullet
         assert ("A few other tools look at it only when they work out the "
                 "project's history with QualCoder.") in bullet
         assert "TOOLS.md names these tools, and when each one looks." \

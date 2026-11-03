@@ -15223,7 +15223,10 @@ def _undo_preview(plan: undo.Plan, db_, readable: bool,
         preview.update(_undo_import_leaves(plan))
     if readable:
         preview["note"] = _mark_unregistered(UNDO_WAY_BACK)
-        signals = qualcoder_gui_signals(_current_project_folder())
+        # The files' signs alone: undo's preview runs no process scan
+        # (the owner, 3 November 2026)
+        signals = qualcoder_gui_signals(_current_project_folder(),
+                                        include_process_scan=False)
         preview["qualcoder_gui_signals"] = signals
         if signals:
             preview["qualcoder_gui_hint"] = UNDO_QUALCODER_HINT.format(
@@ -15864,7 +15867,7 @@ def _undo_names_list(change: undo.ChangePlan, receipts: Sequence[str],
     preview["note"] = _mark_unregistered(
         (UNDO_NAMES_LIST_BACK if restores else UNDO_NAMES_LIST_REMOVED)
         + " " + UNDO_NAMES_FILE_NOTE + " " + UNDO_WAY_BACK)
-    signals = qualcoder_gui_signals(folder)
+    signals = qualcoder_gui_signals(folder, include_process_scan=False)
     preview["qualcoder_gui_signals"] = signals
     if signals:
         preview["qualcoder_gui_hint"] = UNDO_QUALCODER_HINT.format(

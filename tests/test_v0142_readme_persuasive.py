@@ -394,8 +394,10 @@ def _tools(mode="full"):
 # PyMuPDF 2 on Apple silicon (v0.15.3): the one-click steps say that the
 # extension needs macOS 14 or later on such a Mac, 71 characters and a
 # line: 40,890 in 637 lines.
-README_LIMIT = 40_890
-README_LINES = 637
+# Institutional accounts in check 4 take 204 characters and 3 lines:
+# 41,094 in 640 lines.
+README_LIMIT = 41_094
+README_LINES = 640
 
 
 def test_the_readme_stays_short():
@@ -960,11 +962,19 @@ def test_the_assistants_table():
     # costs")
     # (v0.15.2, the readability reading: the same sentence and reason,
     # each clause a sentence, the owner's words kept)
-    assert ("4. **Your account, not Exegete, sets the terms.** An "
-            "institution's agreement with the AI provider sets the terms for "
-            "its data, and a personal account comes under the consumer "
-            "terms. So institutions should prefer organisational "
-            "accounts.") in flat
+    # (v0.15.3, the owner's point of 3 November 2026: an institution's
+    # account comes under its agreement with the provider, and such
+    # agreements differ; it is still likely to give participants' data
+    # more protection, since the institution agreed its terms with its
+    # own interests in mind; whoever manages it can say which terms
+    # apply. A warning and a suggestion in place of "should prefer")
+    check = _between(flat, "4. **Your account, not Exegete, sets the "
+                     "terms.**", "5. **")
+    for fact in ("personal account", "consumer terms",
+                 "university or employer", "agreement", "differ",
+                 "interests in mind", "Whoever manages"):
+        assert fact in check, fact
+    assert "should prefer" not in check
     # (v0.15.2, the merge onto the integration branch: the table of
     # routes moved to the Terminal guide, which the link names by its
     # title)

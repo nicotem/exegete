@@ -3,12 +3,13 @@
 ruling of 21 October 2026), with a larger memory cap for PDFs.
 
 - The optional part `pdf-epub` names PyMuPDF in two lines: 2.x on
-  Windows x64 and Linux (x86-64 and Arm) with Python 3.11 to 3.14, 1.x
-  everywhere else, each line the exact complement of the other, so every
-  computer takes one; neither reads the system's release.
+  Windows x64, Linux (x86-64 and Arm) and, from v0.15.3, Macs with Apple
+  silicon, with Python 3.11 to 3.14, 1.x everywhere else, each line the
+  exact complement of the other, so every computer takes one; neither
+  reads the system's release.
 - The lock agrees: its walk from the project with the part reaches 2.0
-  on those three computers and 1.28.2 on the other three, at each
-  Python; uv is told never to build PyMuPDF.
+  on those four computers and 1.28.2 on the other two (Intel Macs and
+  Windows on Arm), at each Python; uv is told never to build PyMuPDF.
 - A PDF's reading is given 2 GiB, every other kind 1 GiB, and a PDF
   refused for memory names the cap that applied. On Linux the reading
   process starts with three fixed settings, and a child started as it
@@ -70,8 +71,11 @@ PYTHONS = ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15")
 # Windows x64 twice: "AMD64" as Windows' own Python names its processor,
 # "x86_64" as uv does when asked about Windows x64 from another computer
 # (CI's dry run, whose table and wheel check must see what Windows sees).
+# A Mac with Apple silicon from v0.15.3, as "arm64" alone, which both
+# macOS's Python and uv's aarch64-apple-darwin say ("aarch64" on darwin
+# keeps 1.x).
 TWO_X = {("win32", "AMD64"), ("win32", "x86_64"), ("linux", "x86_64"),
-         ("linux", "aarch64")}
+         ("linux", "aarch64"), ("darwin", "arm64")}
 TWO_X_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 FIRST, SECOND = "1.28.2", "2.0"
 
@@ -167,7 +171,7 @@ class TestTheLockAgrees:
                 else FIRST
             assert reached["pymupdf"] == wanted, (system, machine, python)
 
-    def test_at_the_extensions_python_three_computers_each(self):
+    def test_at_the_extensions_python_four_computers_take_2(self):
         lock = _lock()
         found = {}
         for system, machine in ENVIRONMENTS:
@@ -175,10 +179,10 @@ class TestTheLockAgrees:
                 lock, ROOT, system, machine, root_extras=("pdf-epub",),
                 python="3.13")["pymupdf"]
         # the six computers by their own Pythons' names (Windows x64 as
-        # "AMD64")
+        # "AMD64"); from v0.15.3 the Apple silicon Mac among the four
         assert {k for k, v in found.items() if v == SECOND} \
             == TWO_X & set(ENVIRONMENTS)
-        assert sorted(found.values()) == [FIRST] * 3 + [SECOND] * 3
+        assert sorted(found.values()) == [FIRST] * 2 + [SECOND] * 4
 
     def test_the_locked_releases_are_exactly_the_two(self):
         assert sorted(p["version"] for p in _lock()["package"]
@@ -365,7 +369,9 @@ def test_onnxruntime_is_loaded_only_where_pymupdf_2_or_later_is(
 @pytest.mark.skipif(not OPTIONAL, reason="PyMuPDF needed")
 def test_the_installed_pymupdf_is_read_by_its_own_release():
     """The release read where the reading process looks it up is the one
-    that loads: 2.0 in CI's Ubuntu and Windows 3.13, 1.28.2 elsewhere."""
+    that loads: 2.0 in each of CI's suite jobs (Ubuntu, Windows x64 and,
+    from v0.15.3, macOS on Apple silicon), 1.28.2 on Intel Macs and
+    Windows on Arm."""
     import pymupdf
     major = int(pymupdf.__version__.split(".", 1)[0])
     assert import_reading._pymupdf_loads_onnxruntime() is (major >= 2)

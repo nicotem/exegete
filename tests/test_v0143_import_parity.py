@@ -296,8 +296,9 @@ def _same_library(name: str) -> bool:
     """Whether the installed release of the library that reads `name` is
     the one the record was made with, or one the record lists as giving
     QualCoder's functions the same text (`same_text_with`, v0.15.1:
-    PyMuPDF 2.0, which the extension installs on Windows x64 and Linux
-    from Python 3.11, beside 1.28.2 elsewhere)."""
+    PyMuPDF 2.0, which the extension installs on Windows x64, Linux and,
+    from v0.15.3, Macs with Apple silicon, from Python 3.11, beside
+    1.28.2 elsewhere)."""
     library = DEPENDS_ON.get(name)
     if library is None:
         return True

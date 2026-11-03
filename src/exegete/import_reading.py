@@ -71,10 +71,11 @@ from typing import Any, Dict, Optional, Tuple
 # gives a file a margin over it.
 READ_TIMEOUT_SECONDS = 30.0
 MEMORY_CAP_BYTES = 1024 * 1024 * 1024
-# A PDF's reading is given more (v0.15.1): PyMuPDF 2.0, which Windows x64
-# and Linux read PDFs with from Python 3.11, loads onnxruntime and numpy,
-# whose address space reached 1,242 MiB on Linux in the trial of 21
-# October 2026, where 1 GiB stopped it; 2 GiB keeps a PDF's own content
+# A PDF's reading is given more (v0.15.1): PyMuPDF 2.0, which Windows x64,
+# Linux and (from v0.15.3) Macs with Apple silicon read PDFs with from
+# Python 3.11, loads onnxruntime and numpy, whose address space reached
+# 1,242 MiB on Linux in the trial of 21 October 2026, where 1 GiB
+# stopped it; 2 GiB keeps a PDF's own content
 # about the room 1.x has under 1 GiB. One figure for PDFs on every
 # system, whichever release reads them; every other kind keeps 1 GiB.
 PDF_MEMORY_CAP_BYTES = 2 * 1024 * 1024 * 1024

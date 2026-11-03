@@ -307,6 +307,14 @@ jobs:
       # report is also kept, for the table below; uv writes it, the
       # `+ name==version` lines included, to standard error, and bash runs
       # this with pipefail, so a failing uv still fails the step.
+      # v0.15.3: a Mac with Apple silicon takes PyMuPDF 2, whose
+      # onnxruntime (1.31.0 in the lock) has packages for macOS 14 or
+      # later alone there. uv 0.9.7 asks about a Mac at macOS 13.0 unless
+      # MACOSX_DEPLOYMENT_TARGET says otherwise, and stops on that
+      # computer with "no binary distribution"; so the Apple silicon Mac
+      # is asked at 14.0, the floor INSTALL.md states, and every other
+      # computer at uv's own default, the Intel Mac included. A lock that
+      # needed macOS 15 there would still turn this step red.
       - name: Check the lock has a wheel for every computer
         if: runner.os == 'Linux'
         shell: bash
@@ -315,6 +323,7 @@ jobs:
           cd dist/mcpb/exegete-*/
           for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             echo "== $target"
+            if [ "$target" = aarch64-apple-darwin ]; then export MACOSX_DEPLOYMENT_TARGET=14.0; else unset MACOSX_DEPLOYMENT_TARGET; fi
             uv sync --frozen --dry-run --no-install-project --no-build --extra pdf-epub --python "$(cat .python-version)" --python-platform "$target" 2>&1 | tee "$RUNNER_TEMP/dry-run/$target.txt"
           done
 
@@ -324,8 +333,9 @@ jobs:
       # the release commit's table under "What the extension installs".
       # --check-pymupdf: it also fails when a computer's report does not
       # install the PyMuPDF pyproject.toml gives it (2.x with onnxruntime
-      # on Windows x64 and Linux, 1.x elsewhere), since uv evaluates
-      # markers for a computer it is asked about, not the one it runs on.
+      # on Windows x64, Linux and Macs with Apple silicon, 1.x elsewhere),
+      # since uv evaluates markers for a computer it is asked about, not
+      # the one it runs on.
       - name: List what the extension installs
         if: runner.os == 'Linux'
         shell: bash

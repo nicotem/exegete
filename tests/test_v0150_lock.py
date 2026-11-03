@@ -34,6 +34,7 @@ import json
 import os
 import subprocess
 import sys
+from importlib import metadata
 from pathlib import Path
 
 import pytest
@@ -309,12 +310,20 @@ class TestStartingLoadsNeitherLibrary:
         assert {"jwt", "cryptography"} <= installed
         # PyMuPDF wherever the optional part is installed, and the
         # libraries PyMuPDF 2 brings wherever its line applies, so that
-        # the check is not empty there (on Python 3.10 and on Macs,
-        # PyMuPDF alone is checked)
+        # the check is not empty there (on Python 3.10, on Intel Macs and
+        # on Windows on Arm, PyMuPDF alone is checked). v0.15.3: the
+        # release installed is the one the lines give this computer, 2
+        # exactly where the second line applies (on a Mac with Apple
+        # silicon too). CI's macOS jobs install with pip from uv's export
+        # of the lock, so there this holds that their suite runs with
+        # PyMuPDF 2.
         if import_fixtures.optional_part_installed():
             assert "pymupdf" in installed
-            if _extra_pymupdf()[1].marker.evaluate():
+            two = _extra_pymupdf()[1].marker.evaluate()
+            if two:
                 assert {"onnxruntime", "numpy"} <= installed
+            assert Version(metadata.version("pymupdf")).major == \
+                (2 if two else 1)
         assert answer["loaded"] == [], proc.stderr
 
     def test_every_mode_is_covered(self):

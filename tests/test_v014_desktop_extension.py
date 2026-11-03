@@ -464,6 +464,16 @@ ENVIRONMENTS = {
     ("linux", "aarch64"): ("manylinux", ("_aarch64",)),
 }
 
+# The oldest macOS each Mac's install from the lock may need (v0.15.3), as
+# (major, minor). On Apple silicon, 14.0: PyMuPDF 2 brings onnxruntime,
+# whose packages in the lock (1.31.0) need macOS 14 there, the floor
+# INSTALL.md states. On an Intel Mac, 10.15, the floor its walk has had
+# since 0.15.0, which no document states; uv asks about a Mac at 13.0 by
+# default, which is no floor Exegete holds, so a lock that raised the
+# Intel Mac's to it would pass a dry run unseen, but not this.
+MAC_FLOORS = {("darwin", "arm64"): (14, 0), ("darwin", "x86_64"): (10, 15)}
+MACOS_TAG = re.compile(r"macosx_(\d+)_(\d+)_")
+
 
 def _marker_environment(system, machine, python=build.PYTHON_VERSION):
     return {
@@ -482,8 +492,12 @@ def _marker_environment(system, machine, python=build.PYTHON_VERSION):
 EXTENSION_EXTRAS = ("pdf-epub",)
 
 
-def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION):
-    """Whether a wheel's tags suit CPython `python` on that computer."""
+def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION,
+                floor=None):
+    """Whether a wheel's tags suit CPython `python` on that computer; on a
+    Mac, at the macOS release `floor`, (major, minor), by default the
+    computer's in MAC_FLOORS, so that a wheel made for a later macOS
+    does not fit (v0.15.3)."""
     stem = filename[:-len(".whl")]
     pythons, abi, platforms = stem.split("-")[-3:]
     minor = int(python.split(".")[1])
@@ -501,9 +515,20 @@ def _wheel_fits(filename, system, machine, python=build.PYTHON_VERSION):
     if abi not in ("none", "abi3", f"cp3{minor}"):
         return False
     start, ends = ENVIRONMENTS[(system, machine)]
-    return any(p == "any" or (p.startswith(start) and
-                              any(p.endswith(e) for e in ends))
-               for p in platforms.split("."))
+    if floor is None:
+        floor = MAC_FLOORS.get((system, machine))
+
+    def platform_fits(tag):
+        if tag == "any":
+            return True
+        if not (tag.startswith(start) and any(tag.endswith(e)
+                                              for e in ends)):
+            return False
+        macos = MACOS_TAG.match(tag)
+        return floor is None or macos is None or (
+            int(macos.group(1)), int(macos.group(2))) <= floor
+
+    return any(platform_fits(p) for p in platforms.split("."))
 
 
 def _lock_walk(lock, root, system, machine, root_extras=(),
@@ -547,16 +572,18 @@ def _lock_walk(lock, root, system, machine, root_extras=(),
 
 
 def lock_wheel_gaps(lock, root, system, machine, root_extras=(),
-                    python=build.PYTHON_VERSION):
+                    python=build.PYTHON_VERSION, floor=None):
     """(package, version) the lock would install for `root` (with
     `root_extras`) on that computer, with CPython `python`, with no
-    wheel that fits it."""
+    wheel that fits it (on a Mac, at macOS `floor`, by default the
+    computer's in MAC_FLOORS)."""
     gaps = []
     for (name, version), package in _lock_walk(
             lock, root, system, machine, root_extras, python).items():
         wheels = [w["url"].rsplit("/", 1)[1]
                   for w in package.get("wheels", [])]
-        if not any(_wheel_fits(w, system, machine, python) for w in wheels):
+        if not any(_wheel_fits(w, system, machine, python, floor)
+                   for w in wheels):
             gaps.append((name, version))
     return sorted(set(gaps))
 
@@ -674,6 +701,26 @@ class TestAWheelForEveryComputer:
                     "manylinux2014_x86_64.whl", "linux", "x86_64")
         assert not fits("a-1-cp313-cp313-musllinux_1_2_x86_64.whl",
                         "linux", "x86_64")
+        # v0.15.3: a Mac's wheel fits at its floor and below, by default
+        # the computer's (MAC_FLOORS), never above
+        assert MAC_FLOORS == {("darwin", "arm64"): (14, 0),
+                              ("darwin", "x86_64"): (10, 15)}
+        assert fits("a-1-cp313-cp313-macosx_14_0_arm64.whl",
+                    "darwin", "arm64")
+        assert not fits("a-1-cp313-cp313-macosx_15_0_arm64.whl",
+                        "darwin", "arm64")
+        assert not fits("a-1-cp313-cp313-macosx_14_0_arm64.whl",
+                        "darwin", "arm64", floor=(13, 0))
+        assert fits("a-1-cp313-cp313-macosx_13_0_arm64.whl",
+                    "darwin", "arm64", floor=(13, 0))
+        assert fits("a-1-cp313-cp313-macosx_10_15_x86_64.whl",
+                    "darwin", "x86_64")
+        assert fits("a-1-cp311-abi3-macosx_10_9_universal2.whl",
+                    "darwin", "arm64")
+        assert not fits("a-1-cp313-cp313-macosx_11_0_x86_64.whl",
+                        "darwin", "x86_64")
+        assert not fits("a-1-cp313-cp313-macosx_10_16_universal2.whl",
+                        "darwin", "x86_64")
 
 
 class TestReadingARelease:
@@ -805,9 +852,21 @@ class TestCiBuildsIt:
             "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"}
         assert len(loop) == len(ENVIRONMENTS)
         # with the optional part the manifest switches on (0.14.3)
-        assert ('uv sync --frozen --dry-run --no-install-project --no-build '
+        sync = ('uv sync --frozen --dry-run --no-install-project --no-build '
                 '--extra pdf-epub --python "$(cat .python-version)" '
-                '--python-platform "$target"') in job
+                '--python-platform "$target"')
+        assert sync in job
+        # v0.15.3: the Apple silicon Mac asked at its floor, which uv
+        # reads from MACOSX_DEPLOYMENT_TARGET, and every other computer
+        # at uv's own default, the setting cleared before each, inside
+        # the loop and before the `uv sync` line
+        floor = ".".join(str(n) for n in MAC_FLOORS[("darwin", "arm64")])
+        setting = ('if [ "$target" = aarch64-apple-darwin ]; then export '
+                   f'MACOSX_DEPLOYMENT_TARGET={floor}; else unset '
+                   'MACOSX_DEPLOYMENT_TARGET; fi')
+        assert job.count("MACOSX_DEPLOYMENT_TARGET=") == 1
+        assert job.index("for target in ") < job.index(setting) \
+            < job.index(sync) < job.index("done", job.index(sync))
 
     def test_the_official_validator_checks_the_manifest(self):
         job = self._job("desktop-extension")

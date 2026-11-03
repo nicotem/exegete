@@ -1286,8 +1286,8 @@ class _ExegeteMCP(FastMCP):
         """The library's run, ended by an interrupt with one line.
 
         An interrupt, such as one Ctrl+C in the terminal Exegete was
-        started in, makes asyncio cancel the running loop; a call that is
-        running finishes first, since tools run on the loop. The
+        started in, makes asyncio's runner cancel the main task; a call
+        that is running finishes first, since tools run on the loop. The
         KeyboardInterrupt that asyncio then raises ends Exegete here with
         one line and status 130, the number a shell gives for Ctrl+C,
         through the interpreter's normal exit. That exit waits for the
@@ -25354,28 +25354,38 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
     return removed
 
 
-# One paragraph for a researcher who starts Exegete by hand in a terminal
-# (v0.12). An MCP host never presents a TTY on stdin, so the notice only
-# ever appears in that situation; it goes to stderr (stdout is the MCP
-# transport) and Exegete keeps waiting as before. The hosts' configurations
-# are in the Terminal guide (v0.15.2), which the notice gives by its web
-# address: an install from PyPI holds the package alone, with no docs
-# folder (private_files.PRIVACY_ADDRESS is given the same way). The
-# address ends the notice, so that a terminal's link takes nothing after it.
-TTY_NOTICE = (
+# The note for a researcher who starts Exegete by hand in a terminal
+# (v0.12): short sentences, one to a line, no line but the address over
+# 80 characters (v0.15.3, as the owner read it at the sitting). An MCP
+# host never presents a TTY on stdin, so the note only ever appears in
+# that situation; it goes to stderr (stdout is the MCP transport) and
+# Exegete keeps waiting as before. The hosts' configurations are in the
+# Terminal guide (v0.15.2), which the note gives by its web address: an
+# install from PyPI holds the package alone, with no docs folder
+# (private_files.PRIVACY_ADDRESS is given the same way). The address ends
+# the note, so that a terminal's link takes nothing after it. The words
+# the documents' commands expect Exegete to print, QUICKSTART's "that is
+# not there" and the Terminal guide's "prints its start-up lines and this
+# note", each stay whole on one line, since those checks read the lines
+# as printed.
+TTY_NOTICE = "\n".join((
     f"{names.SERVER_NAME} is a qualitative analysis application that runs "
-    "as an MCP server. It is normally started by an MCP host "
-    "(Claude Desktop, Claude Code, LM Studio or another MCP client) and speaks "
-    "JSON-RPC over standard input and output, so when it is started by hand in "
-    "a terminal it prints its start-up lines and this note, then waits for a "
-    "host that is not there. To "
-    f"check that the installation works, run '{names.COMMAND} --version' (or "
-    f"'python -m {names.PACKAGE}.server --version'). Press Ctrl+C to stop "
-    f"this process. To use {names.SERVER_NAME}, add it to your host's MCP "
-    f"configuration, as the Terminal guide on {names.SERVER_NAME}'s page "
-    "describes: https://github.com/nicotem/exegete/blob/main/docs/"
-    "installing-from-the-terminal.md"
-)
+    "as an MCP server.",
+    f"Normally an app starts {names.SERVER_NAME} and talks to it.",
+    "That app can be Claude Desktop, Claude Code, LM Studio or another MCP "
+    "client.",
+    "Started by hand in a terminal, it prints its start-up lines and this "
+    "note.",
+    "Then it waits for an app that is not there.",
+    f"To check that the installation works, run '{names.COMMAND} "
+    "--version'.",
+    f"Or run 'python -m {names.PACKAGE}.server --version'.",
+    "Press Ctrl+C to stop this process.",
+    f"To use {names.SERVER_NAME}, add it to your app's MCP configuration.",
+    f"The Terminal guide on {names.SERVER_NAME}'s page says how:",
+    "https://github.com/nicotem/exegete/blob/main/docs/"
+    "installing-from-the-terminal.md",
+))
 
 
 # v0.14.1, the rename: started through the old name (the `qualcoder-mcp`

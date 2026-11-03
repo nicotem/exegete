@@ -407,19 +407,22 @@ def test_exegete_started_by_hand_is_marked_to_stop_with_one_ctrl_c():
     "Testing the install" each end a session with Exegete started by
     hand, which the commands job starts in a terminal and stops with one
     Ctrl+C. What each expects it to print is in the note Exegete prints
-    there, so a change to the note shows here as well as in that job."""
+    there, so a change to the note shows here as well as in that job.
+    Each expected phrase is whole on one of the note's lines (v0.15.3,
+    the note in short sentences), since the job reads the lines as
+    printed."""
     from exegete import server
     sessions, bad = doc_commands.read_all(REPO)
     assert not bad, bad
     found = {(session.file, session.name): session for session in sessions}
-    note = " ".join(server.TTY_NOTICE.split())
+    lines = server.TTY_NOTICE.splitlines()
     for (file, name), (command, words) in {
             ("QUICKSTART.md", "source"): (
                 "python -m exegete.server", "that is not there"),
             ("docs/installing-from-the-terminal.md", "venv"): (
                 "~/exegete-venv/bin/exegete",
-                "standard input and output")}.items():
+                "prints its start-up lines and this note")}.items():
         last = found[(file, name)].steps[-1]
         assert last.waits and last.command == command, (file, last)
         assert [text for _, text in last.expects] == [words], (file, last)
-        assert words in note, (words, note)
+        assert any(words in line for line in lines), (words, lines)

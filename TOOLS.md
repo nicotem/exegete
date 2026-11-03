@@ -657,7 +657,13 @@ Apply the approved codings to the project
 
 When the assistant calls `apply_codings`, Exegete:
 - Checks every approved suggestion against the project (right project,
-  files and codes exist, text matches positions)
+  files and codes exist, text matches positions). Each code must still
+  have the name it had when the suggestion was recorded. A suggestion
+  is refused when its code was renamed since, or deleted and its number
+  given to a new code of another name, so nothing is written under a
+  code the suggestion was not made for. The refusal gives both names,
+  so you can look at the code before rejecting the suggestion or moving
+  it to another code
 - Takes a backup first, as before every change
 - Writes the approved codings to the database (all or nothing)
 - Reports the new codings' ids, and the backup it took
@@ -1158,7 +1164,7 @@ answer is a finding.
 - `review_suggestions(coding_session_id, suggestion_guids, show_context)` - Show each suggestion in the order a researcher reads it: the nearest earlier turn by another speaker, found by speaker labels (a name of a few words and a colon starting a paragraph, compared by name, and counted only when that name opens more than one paragraph; an unbracketed time after the name, as in Otter's "Name  0:03", is not read; nothing is shown otherwise), whatever it says; a turn of three words or fewer with no question mark is shown with the one before it, and the turns and paragraphs left out between are counted, then the passage in its paragraph or speaker turn, then the code, the reading and the reason; the surrounding text, and that of any shorter or longer span offered, is read from the file each time and never stored
 - `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` - Adjust a pending suggestion's span, code or reading before approval (session-only; shorter and longer alternatives that Exegete works out). Moving it to another code without a new `reading` clears the reading, which was given for the old code
 - `update_suggestion_status(coding_session_id, approve, reject, reopen)` - Approve, reject or reopen (back to pending) suggestions by GUID; GUIDs not in the session are listed, and a GUID in two lists is refused
-- `apply_codings(coding_session_id, create_backup)` - **Writes to the database** - Apply approved suggestions (bound to the session's project, validated before backup, all-or-nothing; a suggestion whose identical coding is already in the project is reported as already existing and skipped, not written twice)
+- `apply_codings(coding_session_id, create_backup)` - **Writes to the database** - Apply approved suggestions (bound to the session's project, validated before backup, all-or-nothing; a suggestion whose code no longer has the name it had when the suggestion was recorded (renamed since, or deleted and its number given to a new code of another name) is refused; a suggestion whose identical coding is already in the project is reported as already existing and skipped, not written twice)
 - `get_coding_session_info(coding_session_id)` - View all details of a coding session
 - `list_coding_sessions(project_path, days_old)` - List the saved coding sessions changed in the last `days_old` days (30 by default), optionally for one project
 - `delete_coding_session(coding_session_id)` - Delete a saved session file (not the codings)

@@ -72,9 +72,9 @@ The brief is provisional: a later release may change it.
   `python3 --version` in the Terminal. If it is missing,
   https://www.python.org/downloads/ has it. On a Mac with Apple silicon,
   the optional part for PDF and EPUB brings the same libraries as on
-  Windows and Linux on macOS 14 or later; on macOS 11 to 13 it brings an
-  older onnxruntime, or stops ("PDF and EPUB: the optional part", below,
-  says which).
+  Windows x64 and Linux on macOS 14 or later; on macOS 11 to 13 it
+  brings an older onnxruntime, or stops ("PDF and EPUB: the optional
+  part", below, says which).
 - **An MCP host**: Claude Desktop set up by hand, Claude Code, LM
   Studio, or OpenAI's ChatGPT desktop app and Codex, each with its
   recipe below.

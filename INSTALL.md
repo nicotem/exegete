@@ -259,11 +259,13 @@ PyYAML, tabulate and packaging. Everywhere else the part brings PyMuPDF
 1.x: on Intel Macs, on Windows on Arm, and with Python 3.15 and later.
 On a Mac with Apple silicon, the onnxruntime the extension installs has
 packages for macOS 14 or later alone, so there the extension needs
-macOS 14. An install cannot tell macOS releases apart, so on macOS 13
-or earlier it stops rather than take PyMuPDF 1.x ("Troubleshooting",
-below). The extension installs the releases the tests ran with: PyMuPDF
-2.0 or 1.28.2, and EbookLib 0.20. Both releases of PyMuPDF read the test
-documents' PDFs to the same text, the text that QualCoder 4.0 stores.
+macOS 14. The choice between PyMuPDF 2 and 1.x goes by the kind of
+computer and the Python, never by the macOS release, so on macOS 13 or
+earlier the extension's install stops rather than take PyMuPDF 1.x
+("Troubleshooting", below). The extension installs the releases the
+tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.20. Both releases
+of PyMuPDF read the test documents' PDFs to the same text, the text that
+QualCoder 4.0 stores.
 
 **What PyMuPDF 2 costs.** At the first start, the part adds about 98 MB
 to download on Windows, and about 210 MB more on disk. On Linux it
@@ -272,7 +274,9 @@ with Apple silicon, measured with Python 3.13 on 3 November 2026, it
 adds about 105 MB to download, and about 240 MB on disk. With PyMuPDF
 1.28.2, on an Intel Mac or Windows on Arm, it adds about 24 to 33 MB to
 download, and 62 to 77 MB on disk. PyMuPDF 2 also takes 0.4 to 1 second
-more to start reading each PDF.
+more to start reading each PDF on Windows and Linux. On one Mac with
+Apple silicon, measured on 3 November 2026, it took at most about 0.2
+seconds more.
 
 With PyMuPDF 2 comes onnxruntime, Microsoft's library for running
 trained models. On Windows, onnxruntime reports its use to Windows'

@@ -151,8 +151,10 @@ LISTS = {
 
 # Where a text says what a Mac needs: each to state the floor
 FLOORS = {
-    "INSTALL.md, what you need": lambda: _section(
-        "INSTALL.md", "## What you need"),
+    # the extension's own sentence: the section also gives Claude
+    # Desktop's floor, so two figures swapped would pass the section
+    "INSTALL.md, what you need": lambda: _sentence_with(
+        _section("INSTALL.md", "## What you need"), "the extension needs"),
     "INSTALL.md, updating": lambda: _section("INSTALL.md", "## Updating"),
     "INSTALL.md, troubleshooting": lambda: _section(
         "INSTALL.md", "### Troubleshooting"),
@@ -181,8 +183,8 @@ def test_each_text_names_the_mac_and_its_floor(where):
     else:
         # the sentence the extension's page shows (chosen on 3 November
         # 2026), read whole before a release
-        assert (f"On a Mac with Apple silicon, it needs {FLOOR} or later."
-                in _manifest_description())
+        assert (f"On a Mac with Apple silicon, Exegete needs {FLOOR} or "
+                "later." in _manifest_description())
     # TOOLS.md: Intel Macs keep 1.28.2, by name
     if where == "TOOLS.md, a PDF's text":
         assert "Intel" in _between(_flat(_read("TOOLS.md")),

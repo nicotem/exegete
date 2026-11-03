@@ -413,17 +413,26 @@ class TestSessionInteraction:
         assert "not found" in rec["rejected"][0]["reason"]
         assert "available_codes" in rec["rejected"][0]
 
-    def test_rename_between_record_and_apply_is_harmless(
+    def test_rename_between_record_and_apply_is_refused(
             self, setup_server, qualcoder_db_path):
-        """Suggestions bind by code_id: renaming the code must not break an
-        approved suggestion (it applies under the new name)."""
+        """Suggestions bind by code_id and, since v0.15.3, by the name
+        recorded with them: a code renamed between record and apply no
+        longer bears that name, so the suggestion is refused with
+        nothing written and no backup, as one whose code number SQLite
+        gave to a new code is. Refusing a renamed code keeps to the safe
+        side; before, the suggestion applied under the new name."""
         sid, guid = self._pending_approved_suggestion()
         assert json.loads(server.rename_code(1, "Strain"))["success"]
-        result = server.apply_codings(sid)
-        assert "CODINGS APPLIED" in result
+        n_backups = len(_backups(qualcoder_db_path))
+        before = _one(qualcoder_db_path, "SELECT COUNT(*) FROM code_text")[0]
+        out = json.loads(server.apply_codings(sid))
+        assert "error" in out and out["failures"][0]["guid"] == guid
+        assert out["failures"][0]["reason"] == \
+            server.CODE_NOT_AS_RECORDED.format(code_id=1, now="Strain",
+                                               recorded="Stress")
         assert _one(qualcoder_db_path,
-                    "SELECT COUNT(*) FROM code_text WHERE cid = 1 "
-                    "AND owner = 'AI Coding Assistant'")[0] == 1
+                    "SELECT COUNT(*) FROM code_text")[0] == before
+        assert len(_backups(qualcoder_db_path)) == n_backups
 
 
 # =============================================================================

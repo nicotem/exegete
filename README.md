@@ -238,7 +238,7 @@ where chat and Cowork are one conversation, go through five checks:
    Anthropic train on that conversation (PRIVACY.md quotes the terms).
 4. **Your account, not Exegete, sets the terms.** A personal account
    comes under the AI provider's consumer terms. An account your
-   university or employer provides comes under the agreement it made
+   university or employer manages comes under the agreement it made
    with the provider. Such agreements differ in what they let the
    provider do with your data. Even so, an institution's account is
    likely to give participants' data more protection than a personal

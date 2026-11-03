@@ -389,7 +389,8 @@ def _tools(mode="full"):
 # it (2 characters more, in the same lines). The README's own figures,
 # held exactly: 40,809 in 635 lines.
 # Institutional accounts in check 4 take 204 characters and 3 lines.
-README_LIMIT = 41_013
+# Their fix round: "manages" for "provides", one character fewer.
+README_LIMIT = 41_012
 README_LINES = 638
 
 
@@ -964,8 +965,11 @@ def test_the_assistants_table():
     # apply. A warning and a suggestion in place of "should prefer")
     check = _between(flat, "4. **Your account, not Exegete, sets the "
                      "terms.**", "5. **")
+    # (v0.15.3, the readers of check 4: an account the institution
+    # manages, since a personal plan that an employer only pays for stays
+    # under the consumer terms)
     for fact in ("personal account", "consumer terms",
-                 "university or employer", "agreement", "differ",
+                 "university or employer manages", "agreement", "differ",
                  "interests in mind", "Whoever manages"):
         assert fact in check, fact
     assert "should prefer" not in check
@@ -996,6 +1000,17 @@ def test_the_assistants_table():
     for passage in (row, rung):
         assert "interests in mind" in passage, passage[:50]
     assert "suit institutions" not in row
+    # (v0.15.3, the readers of these passages: the account an institution
+    # manages, in the row, the recipe's step and the checklist as in check
+    # 4; the row names the personal plans, since it lists Claude Code with
+    # a Console key, and which terms cover an individual's Console key is
+    # the question PRIVACY.md's rung 2 leaves open)
+    for passage in (row, step, item):
+        assert "manages, rather than" in passage or \
+            "employer manages" in passage, passage[:50]
+    assert "A personal plan (Free, Pro or Max) comes under Anthropic's " \
+        "consumer terms." in row
+    assert "personal account comes under" not in row
 
 
 # ---------------------------------------------------------------------------

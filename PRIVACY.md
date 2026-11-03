@@ -75,7 +75,7 @@ officer will ask, and the summary above depends on them:
   review them. The answers differ between consumer plans (Free, Pro and
   Max) and Team, Enterprise and API terms. Existing participant consent
   would almost never cover inputs used for model training, and an ethics
-  board asks this first. An account your university or employer provides
+  board asks this first. An account your university or employer manages
   comes under the agreement it made with the AI provider, and such
   agreements differ. Even so, that account is likely to give
   participants' data more protection than a personal one ("Your

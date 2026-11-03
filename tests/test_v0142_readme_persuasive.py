@@ -1018,6 +1018,23 @@ def test_the_assistants_table():
     assert "A personal plan (Free, Pro or Max) comes under Anthropic's " \
         "consumer terms." in row
     assert "personal account comes under" not in row
+    # (v0.15.3, the fact reader of these passages: Exegete's extension is
+    # not signed, and a computer or Claude account that a university or
+    # employer manages may block unsigned extensions, as INSTALL.md says,
+    # so rung 3 gives the terms of Exegete on an institution's plan without
+    # saying that the plan allows it, and warns before it suggests the chat
+    # on that account)
+    extension = _between(_flat(_read("INSTALL.md")),
+                         "## Installing the extension", "## The settings page")
+    assert "**The extension is not signed.**" in extension
+    assert "may block unsigned extensions, or extensions altogether" \
+        in extension
+    assert "can use Exegete" not in rung
+    assert "Exegete's extension is not signed" in rung
+    warning = rung.index("may block unsigned extensions, or extensions "
+                         "altogether (INSTALL.md, \"Installing the "
+                         "extension\")")
+    assert warning < rung.index("this project suggests")
 
 
 # ---------------------------------------------------------------------------

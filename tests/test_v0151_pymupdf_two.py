@@ -414,9 +414,9 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     # alone)
     assert ("Exegete switches its reports off: on Linux before the library "
             "starts, so it reports nothing there; on a Mac with Apple "
-            "silicon before it starts too, where it was checked to keep "
-            "nothing on the computer; and on Windows once it has loaded, "
-            "after its first few reports") in flows
+            "silicon before it starts too, where a reading was checked to "
+            "keep nothing in a home folder of its own; and on Windows once "
+            "it has loaded, after its first few reports") in flows
     # (the fix round: "nothing there" holds for the release the lock
     # gives, so the pointer names the switch's limits, which say so)
     assert ("\"A library's usage reports\", below, says what they hold, "

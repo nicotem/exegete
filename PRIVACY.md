@@ -187,10 +187,10 @@ read, with nothing from your documents. Left as it comes, that library
 would report on Linux and on a Mac with Apple silicon too. Exegete
 switches its reports off: on Linux before the library starts, so it
 reports nothing there; on a Mac with Apple silicon before it starts
-too, where it was checked to keep nothing on the computer; and on
-Windows once it has loaded, after its first few reports. "A library's
-usage reports", below, says what they hold, the switch's limits, and
-what you can do.
+too, where a reading was checked to keep nothing in a home folder of
+its own; and on Windows once it has loaded, after its first few
+reports. "A library's usage reports", below, says what they hold, the
+switch's limits, and what you can do.
 
 Exegete opens your project's database read-only by default. The one
 thing it fetches from the internet itself, while switched on, is a
@@ -1549,17 +1549,17 @@ library for running trained models, whose usage reports to Microsoft
 are on by default; Exegete switches them off in the reading process. On
 Linux they are off before onnxruntime starts, so it keeps nothing on
 the computer and sends nothing. On a Mac with Apple silicon they are
-off before it starts too, and a reading was checked to keep nothing on
-the computer. On Windows, its switch can be reached only once it has
-loaded: by then it has made a few reports to Windows' diagnostic data,
-about the computer (the names and driver versions of its graphics
-adapters and of any NPU among them) and onnxruntime (that it registered
-its processor part, with any error), with nothing from your documents.
-Windows adds its own identifiers to what it sends, and passes the
-reports to Microsoft or not as the computer's diagnostic data setting
-says. Every later report is switched off ("A library's usage reports",
-under "How your data flows", says what the reports hold, the switch's
-limits, and what you can do). A document converted with
+off before it starts too, and a reading was checked to keep nothing in
+a home folder of its own. On Windows, its switch can be reached only
+once it has loaded: by then it has made a few reports to Windows'
+diagnostic data, about the computer (the names and driver versions of
+its graphics adapters and of any NPU among them) and onnxruntime (that
+it registered its processor part, with any error), with nothing from
+your documents. Windows adds its own identifiers to what it sends, and
+passes the reports to Microsoft or not as the computer's diagnostic
+data setting says. Every later report is switched off ("A library's
+usage reports", under "How your data flows", says what the reports
+hold, the switch's limits, and what you can do). A document converted with
 another tool, such as a pandoc server, should be converted file to
 file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).

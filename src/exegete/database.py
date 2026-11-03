@@ -1454,9 +1454,11 @@ class ProjectLock:
     Departures from QualCoder's heartbeat (3.8.2 `__main__.py` 151 to
     159, and its removal, 2552 to 2560), named: QualCoder opens the file
     with "w" and writes `str(time.time())`, and removes whatever file is
-    there; Exegete opens it with "r+", never creating or emptying it,
-    writes the time to six decimals (which QualCoder's `float()` reads,
-    2643), and never writes over, or removes, another program's lines.
+    there, once; Exegete opens it with "r+", never creating or emptying
+    it, writes the time to six decimals (which QualCoder's `float()`
+    reads, 2643), never writes over, or removes, another program's
+    lines, and on Windows tries a refused removal again for about a
+    second (v0.15.3, `end`).
     """
 
     def __init__(self, path: Union[str, Path]):
@@ -1650,48 +1652,87 @@ class ProjectLock:
 
     def end(self) -> None:
         """Stop the refresh, then remove the file only if it still reads
-        as Exegete's; otherwise leave it, with one log line by kind."""
+        as Exegete's; otherwise leave it, with one log line by kind.
+
+        On Windows a removal refused with PermissionError, as it is while
+        another copy of Exegete reads the file, is tried again after each
+        of `_RENAME_WAITS`, about a second in all, the file read again
+        before each try and removed only while it still reads as
+        Exegete's (v0.15.3); gone meanwhile, the end is quiet. Nothing but
+        an interrupt leaves this method: it runs once the write has
+        committed."""
         self.stop()
         # Without the mutex if it is not taken: a stuck refresh never
         # creates the file, so the read before the removal still holds
         got = self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS)
         try:
-            try:
-                whose = self._whose()
-                if whose == "unreadable":
-                    time.sleep(0.5)
-                    whose = self._whose()
-            except _LockNotAFile as e:
-                # A named pipe, say, put at the name during the write:
-                # never waited on, never removed (v0.15.1). The kind is
-                # one of `kind_word`'s fixed words, never a path
-                kind = e.kind
-                logger.warning("The project lock file %s; it was left in "
-                               "place at the end of a write", is_kind(kind))
-                return
-            if whose == "unreadable":
-                logger.warning("The project lock file could not be read at "
-                               "the end of a write; it was left in place")
-            elif whose == "another":
-                logger.warning("The project lock file holds another "
-                               "program's lines at the end of a write; it "
-                               "was left in place")
-            elif whose == "gone":
-                logger.warning("The project lock file was already gone at "
-                               "the end of a write")
-            else:
-                # The read above has closed its file, so that on Windows
-                # the removal is not refused by Exegete's own handle
-                try:
-                    self.path.unlink()
-                except OSError as e:
-                    # The kind only (v0.14): the error's text is the lock
-                    # file's path, the project folder's name in it.
-                    logger.warning("Could not remove project lock file: %s",
-                                   error_label(e))
+            if self._reads_as_ours_at_end(again_if_unreadable=True,
+                                          gone_said=True):
+                self._remove_at_end()
         finally:
             if got:
                 self._mutex.release()
+
+    def _reads_as_ours_at_end(self, again_if_unreadable: bool,
+                              gone_said: bool) -> bool:
+        """Whether the file still reads as Exegete's at the end of a
+        write; when it does not, the one log line by kind (a file gone,
+        only when `gone_said`). Never raises but for an interrupt."""
+        try:
+            whose = self._whose()
+            if whose == "unreadable" and again_if_unreadable:
+                time.sleep(0.5)
+                whose = self._whose()
+        except _LockNotAFile as e:
+            # A named pipe, say, put at the name during the write:
+            # never waited on, never removed (v0.15.1). The kind is
+            # one of `kind_word`'s fixed words, never a path
+            kind = e.kind
+            logger.warning("The project lock file %s; it was left in "
+                           "place at the end of a write", is_kind(kind))
+            return False
+        except Exception:
+            whose = "unreadable"
+        if whose == "unreadable":
+            logger.warning("The project lock file could not be read at "
+                           "the end of a write; it was left in place")
+        elif whose == "another":
+            logger.warning("The project lock file holds another "
+                           "program's lines at the end of a write; it "
+                           "was left in place")
+        elif whose == "gone" and gone_said:
+            logger.warning("The project lock file was already gone at "
+                           "the end of a write")
+        return whose == "ours"
+
+    def _remove_at_end(self) -> None:
+        """The removal, once the file reads as Exegete's: tried again on
+        Windows alone (`_RETRY_LOCK_REMOVAL`), where a refusal while
+        another program reads the file passes in moments. On Linux and
+        macOS a refused removal comes from the folder's permissions or a
+        flag, which a second of tries would not change: one warning, at
+        once, as before."""
+        for wait in _RENAME_WAITS + (None,):
+            # The read before has closed its file, so that on Windows
+            # the removal is not refused by Exegete's own handle
+            try:
+                self.path.unlink()
+                return
+            except PermissionError as e:
+                refused = e
+                if wait is None or not _RETRY_LOCK_REMOVAL:
+                    break
+            except OSError as e:
+                refused = e
+                break
+            time.sleep(wait)
+            if not self._reads_as_ours_at_end(again_if_unreadable=False,
+                                              gone_said=False):
+                return
+        # The kind only (v0.14): the error's text is the lock file's
+        # path, the project folder's name in it.
+        logger.warning("Could not remove project lock file: %s",
+                       error_label(refused))
 
 
 @contextmanager
@@ -3556,6 +3597,13 @@ _PARTIAL_BACKUP_REST = re.compile(
 # reading a file just written) cannot be renamed for a moment: the waits
 # before each new try, about a second in all.
 _RENAME_WAITS = (0.05, 0.1, 0.2, 0.25, 0.4)
+# The same waits before each new try to remove the project's lock file
+# at the end of a write, on Windows alone (v0.15.3, `ProjectLock.end`):
+# there a removal is refused while another program, a second copy of
+# Exegete say, has the file open, which passes in moments. On Linux and
+# macOS a refused removal comes from the folder's permissions or a
+# flag, which waiting would not change. A switch the tests set.
+_RETRY_LOCK_REMOVAL = os.name == "nt"
 _BACKUP_NAME_TRIES = 1000
 
 

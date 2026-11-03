@@ -527,10 +527,11 @@ class TestExegeteNotTheServer:
         blocks = out[0] if isinstance(out, tuple) else out
         text = json.loads("".join(getattr(b, "text", "")
                                   for b in blocks))["instructions"]
-        for_the_user = _flat(text[text.index("**FOR THE USER:**"):])
-        assert ("record your decision on each one: Exegete writes only what "
-                "is marked approved, and cannot tell who approved it, so "
-                "check the counts it reports against what you said"
+        for_the_user = _flat(text[text.index("**For the researcher:**"):])
+        assert ("decide on each one, which you record with "
+                "`update_suggestion_status`: Exegete writes only what is "
+                "marked approved, and cannot tell who approved it, so they "
+                "can check the counts it reports against what they said"
                 ) in for_the_user
 
 

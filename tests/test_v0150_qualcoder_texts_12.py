@@ -182,13 +182,13 @@ SAFE_CELLS = ("formulas sanitised for spreadsheet safety: cells starting "
 COMPARED = ("If compared with QualCoder's comparison table, which counts "
             "by file linkage, the numbers can differ.")
 SEGMENTS_RULE = (
-    "CONTAINMENT: a coding belongs to a case iff its span lies fully "
+    "Containment: a coding belongs to a case only if its span lies fully "
     "inside one of the case's text spans on the same file (the same rule "
     "as QualCoder's coding report). " + COMPARED + " Whole-file links made "
     "in QualCoder end at len-1 or len depending on the dialog, which can "
     "exclude a coding touching the file end.")
 MATRIX_RULE = (
-    "CONTAINMENT: a coding counts for a case iff fully inside one of the "
+    "Containment: a coding counts for a case only if fully inside one of the "
     "case's text spans on the same file (text codings on existing files; "
     "the same rule as QualCoder's coding report). " + COMPARED)
 FOOTER = ("on this computer (its layout follows QualCoder's export of a "
@@ -208,7 +208,7 @@ HIDDEN_BYPASSED = (
 
 ASK_HEAD = (
     "No AI coder name is set for this project yet, so nothing was written. "
-    "Ask the user which coder name this project's AI codings and other AI "
+    "Ask the researcher which coder name this project's AI codings and other AI "
     "writes should be stored under, then call set_project_ai_coder_name "
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "

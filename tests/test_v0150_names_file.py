@@ -932,7 +932,7 @@ class TestListedAndLogged:
 
 EXPORT_REFUSAL = (
     "This is a project's Exegete folder, or is in one. That folder holds "
-    "files you fill in for the project; Exegete does not write exports "
+    "files the researcher fills in for the project; Exegete does not write exports "
     "there. Choose a location outside it. Nothing was written.")
 
 # Each export tool given a file name, a place for it and its suffix

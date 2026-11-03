@@ -511,7 +511,7 @@ class TestTheTexts:
     def test_the_listings_note_on_links(self, project, tmp_path):
         assert ("other_entries counts everything else there but links "
                 "(links_not_followed counts those), hidden files the system "
-                "keeps included, and never names it.") in \
+                "keeps included, and never gives their names.") in \
             private_files.FOLDER_NOTE
         top = private_files.ensure_folder(project)
         (top / f"{TOKEN}.txt").write_bytes(b"x")

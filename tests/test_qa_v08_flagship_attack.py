@@ -356,7 +356,8 @@ class TestEditSuggestionContract:
         out = json.loads(server.edit_suggestion(sid, r3["guid"],
                                                 segment_text="This is"))
         assert "error" in out
-        assert "APPLIED" in out["error"] and "delete_coding" in out["error"]
+        assert "this one is applied" in out["error"] \
+            and "delete_coding" in out["error"]
 
     def test_mutual_exclusion_and_miss_contract(self, setup_server):
         sid = _sid()

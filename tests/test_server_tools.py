@@ -390,7 +390,7 @@ class TestAnalyzeForCoding:
             instruction="Find stress indicators"
         )
         # Returns formatted text
-        assert "SESSION STARTED" in result
+        assert "Coding session started" in result
         assert "Session ID" in result
 
     def test_invalid_file_ids(self, setup_server):
@@ -409,7 +409,7 @@ class TestAnalyzeForCoding:
 
     def test_all_codes_when_none_specified(self, setup_server):
         result = server.start_coding_session(file_ids=[1], instruction="test")
-        assert "SESSION STARTED" in result
+        assert "Coding session started" in result
         # Should use all available codes
         assert "2 codes" in result
 

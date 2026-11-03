@@ -782,7 +782,8 @@ class TestStrategies:
     def test_recent_first_documents_the_heuristic(self):
         doc = " ".join((server.get_coded_segments.__doc__ or "").split())
         assert "compared as stored text" in doc
-        assert "heuristic" in doc
+        # (0.15.3: "a heuristic for a hand-edited value" said plainly)
+        assert "a guess for a value edited by hand" in doc
 
     def test_diverse_takes_one_per_file_before_a_second(self,
                                                         paging_project):
@@ -1206,6 +1207,6 @@ class TestTheTwoStepParagraphClaimsOnlyWhatTheMacCovers:
             self):
         paragraph = server.TWO_STEP_PARAGRAPH
         assert "the preview the user saw" not in paragraph
-        assert "Show the user the preview" in paragraph
+        assert "Show the researcher the preview" in paragraph
         assert "ask whether to proceed" in paragraph
         assert "Only if they agree" in paragraph

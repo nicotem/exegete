@@ -401,7 +401,8 @@ class TestARestoreThatBringsBackAList:
             f"project did not have before the restore; its names are "
             f"replaced on later text or transcript imports: by Exegete's "
             f"import_documents unless apply_project_pseudonyms is false, "
-            f"and by QualCoder on every one (not a PDF). The safety backup "
+            f"and by QualCoder, if the researcher uses it, on every one "
+            f"(not a PDF). The safety backup "
             f"{safety.name} holds the project as it was, without one.")
         _before_qualcoder(note, "Exegete's import_documents")
 

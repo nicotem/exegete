@@ -145,7 +145,7 @@ AI_DESCRIPTION_SAYS = ("kept apart from yours",
 
 ASK_WITH_SETTING = (
     "No AI coder name is set for this project yet, so nothing was written. "
-    "Ask the user which coder name this project's AI codings and other AI "
+    "Ask the researcher which coder name this project's AI codings and other AI "
     "writes should be stored under, then call set_project_ai_coder_name "
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
@@ -170,11 +170,11 @@ def _mismatch(declared, current, place):
 
 
 HELP_TOPIC = (
-    "Rows Exegete writes carry the PROJECT's AI coder name, which the "
+    "Rows Exegete writes carry the project's AI coder name, which the "
     "researcher chooses: in Exegete's settings, which give it to each "
     "project Exegete creates, or, in another project, when a write first "
     "needs it: that write stops and asks; relay the question, and call "
-    "set_project_ai_coder_name with the user's answer. A model name is a "
+    "set_project_ai_coder_name with the researcher's answer. A model name is a "
     "good answer, because codings by different models can then be compared "
     "later with compare_coders. Never pick the name yourself.")
 

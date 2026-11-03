@@ -429,12 +429,12 @@ class TestNeverLifted:
         (ai_data / "search.sqlite-wal").write_bytes(b"w")
         selected = json.loads(server.select_project(qualcoder_db_path))
         assert selected["qualcoder_history"]["setting"] == answer
-        assert "APPEARS to be open" in selected["warning"]
+        assert "appears to be open" in selected["warning"]
         assert selected["qualcoder_gui_signals"]
         now = json.loads(server.get_current_project())
         assert now["qualcoder_history"]["setting"] == answer
         assert now["qualcoder_gui_hint"].startswith(
-            "This project APPEARS to be open in QualCoder (")
+            "This project appears to be open in QualCoder (")
         place = tmp_path / "Interviews"
         place.mkdir()
         (place / "P01.txt").write_bytes(b"Words.\n")

@@ -359,7 +359,7 @@ class TestUpstreamParity:
 
 EXPECTED_ASK = (
     "No AI coder name is set for this project yet, so nothing was written. "
-    "Ask the user which coder name this project's AI codings and other AI "
+    "Ask the researcher which coder name this project's AI codings and other AI "
     "writes should be stored under, then call set_project_ai_coder_name "
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
@@ -771,7 +771,7 @@ class TestSetterValidation:
             f"\"{HIDDEN}\" is a coder currently hidden in QualCoder; rows "
             f"written under it would not be shown in QualCoder or in "
             f"Exegete's default reads. Pass allow_hidden_coder=true to "
-            f"store it anyway, or ask the user to unhide the coder in "
+            f"store it anyway, or ask the researcher to unhide the coder in "
             f"QualCoder. Nothing was changed.")
         assert read_sidecar(qualcoder_db_path).name == DEFAULT_AI_CODER_NAME
 
@@ -1646,6 +1646,6 @@ class TestSurfacePins:
         _house_rules(texts, labels)
 
     def test_the_setter_docstring_states_the_exact_comparison_rule(self):
-        doc = server.set_project_ai_coder_name.__doc__ or ""
+        doc = " ".join((server.set_project_ai_coder_name.__doc__ or "").split())
         assert "compared exactly" in doc
         assert "never case-insensitively" in doc

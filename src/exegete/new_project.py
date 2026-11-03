@@ -484,8 +484,8 @@ _PROJECT_NAME_TEXT = {
     "surrogate": ("A project name must not contain an unpaired surrogate "
                   "character."),
     "path": ("A project name must not contain '/', '\\', '..' or ':': it "
-             "names one folder. To create the project somewhere else, "
-             "name that folder in `directory`."),
+             "becomes the name of one folder. To create the project "
+             "somewhere else, name that folder in `directory`."),
     "windows_characters": (
         "A project name must not contain < > ? * or \" (Windows cannot "
         "store them in a folder name, and a project may be moved to "
@@ -662,7 +662,7 @@ def resolve_parent_folder(directory: Optional[str],
         # relative to that drive's working folder, and "\x" to the drive.
         raise Refusal(
             f"'{directory}' is a relative path, which would be read from "
-            f"the server's own working folder. Give the folder's full path, "
+            f"Exegete's own working folder. Give the folder's full path, "
             f"or one starting with ~ (the home folder).")
     try:
         return given.resolve(), False

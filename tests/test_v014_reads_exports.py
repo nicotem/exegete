@@ -1363,13 +1363,15 @@ class TestTheTextsSayWhatHappens:
 
     def test_co_occurrence_names_the_two_reports(self):
         text = _described("find_cooccurring_codes")
-        assert "co-occurrence report's overlap" in text
+        assert "the overlaps that QualCoder's co-occurrence report counts" \
+            in text
         assert "Code relations report" in text
         assert "overlap and proximity" not in text
 
     def test_search_memos_says_saved_graphs_are_not_searched(self):
         text = _described("search_memos")
-        assert "outside QualCoder's saved graphs" in text
+        assert "except the text on saved graphs" in text
+        assert "The text typed on graphs made in QualCoder" in text
         assert "every kind of note" not in text
 
     def test_a_character_attribute_note_does_not_speak_of_zero(

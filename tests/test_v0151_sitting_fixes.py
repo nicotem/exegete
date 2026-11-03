@@ -137,8 +137,8 @@ def test_the_switch_on_note_asks_nothing_and_its_checks_hold(
     ai_data.mkdir(exist_ok=True)
     (ai_data / "search.sqlite-wal").write_bytes(b"w")
     again = json.loads(server.select_project(qualcoder_db_path))
-    assert "APPEARS to be open" in again["warning"]
+    assert "appears to be open" in again["warning"]
     assert note not in again["warning"]
     now = json.loads(server.get_current_project())
     assert now["qualcoder_gui_hint"].startswith(
-        "This project APPEARS to be open in QualCoder (")
+        "This project appears to be open in QualCoder (")

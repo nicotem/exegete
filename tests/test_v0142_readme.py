@@ -395,8 +395,8 @@ def test_the_approval_steps_are_named_where_the_readme_points():
         assert words in approval, words
     status = " ".join(inspect.getsource(server.update_suggestion_status)
                       .split())
-    assert "the counts this returns are what the user checks against what " \
-        "they said" in status
+    assert "the counts this returns are what the researcher checks " \
+        "against what they said" in status
     # what the assistant is told to bring, said as an instruction (the
     # diagram of a coding's path)
     assert "The assistant is told to show you each passage with" in readme

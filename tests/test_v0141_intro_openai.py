@@ -759,8 +759,8 @@ class TestServedTextsAreHostNeutral:
         overview = json.loads(server.explain_ai_coding_tools())
         assert overview["title"] == "AI-assisted coding in Exegete"
         assert overview["description"].startswith(
-            "Use an AI assistant to help code your qualitative data. The "
-            "assistant can analyse")
+            "The assistant reads the researcher's documents and suggests "
+            "codings")
         assert overview["workflow"]["step_2"].startswith(
             "The assistant reads the files")
         topics = json.loads(server.explain_ai_coding_tools(
@@ -777,8 +777,9 @@ class TestServedTextsAreHostNeutral:
         text = json.loads("".join(getattr(b, "text", "")
                                   for b in blocks))["instructions"]
         assert "Claude" not in text
-        assert "Now YOU, the assistant, need to:" in " ".join(text.split())
-        assert "Once the assistant records and presents suggestions" in text
+        assert "Now you, the assistant, need to:" in " ".join(text.split())
+        assert ("Once you have recorded and presented the suggestions, the "
+                "researcher can") in text
 
 
 # ---------------------------------------------------------------------------

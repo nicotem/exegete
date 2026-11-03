@@ -1958,7 +1958,7 @@ def workspace_setting_problem() -> Optional[str]:
     if not given.is_absolute():
         return (f"{name} must be a full path or one starting "
                 f"with ~ (the home folder); a relative path would be read "
-                f"from the server's own working folder. Check the folder "
+                f"from Exegete's own working folder. Check the folder "
                 f"in the host's configuration.")
     return None
 
@@ -4214,7 +4214,8 @@ def hidden_coder_refusal(kind: str, row_id: int,
     """
     return (f"{kind} {row_id} belongs to a coder currently hidden in "
             f"QualCoder; nothing was changed. Pass {override}=true to change "
-            f"it anyway, or ask the user to unhide the coder in QualCoder.")
+            f"it anyway, or ask the researcher to unhide the coder in "
+            f"QualCoder.")
 
 
 def private_note_refusal(kind: str, row_id: int,
@@ -5099,7 +5100,7 @@ class QualcoderDatabase:
             return (False,
                     said +
                     "Writes are refused to protect the data. " + safer +
-                    f"Set {ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
+                    f"Set {ALLOW_UNKNOWN_SCHEMA_ENV}=1 in Exegete's "
                     f"environment to override at your own risk.",
                     False)
         return (True, None, False)
@@ -5110,14 +5111,14 @@ class QualcoderDatabase:
         if version is not None:
             # A schema newer than v17 is a sign: only a newer QualCoder
             # writes one (not presuming QualCoder, piece 7).
-            return (f"WARNING: this project reports database schema "
+            return (f"Warning: this project reports database schema "
                     f"'{version}', newer than the verified ceiling "
                     f"(v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); "
                     f"writes proceeded only because {variable}=1 is set. "
                     f"Verify results (in the newer QualCoder that upgraded "
                     f"the project, for example) and keep backups.")
         # A value not in QualCoder's form is no sign of a newer QualCoder.
-        return (f"WARNING: this project's database schema value is missing "
+        return (f"Warning: this project's database schema value is missing "
                 f"or not in QualCoder's form (`v` and up to four digits), "
                 f"so it is not repeated here, and Exegete cannot tell "
                 f"whether the project is within the verified ceiling "
@@ -11517,10 +11518,10 @@ class QualcoderDatabase:
             # S-P2 (c): the only row removed is the category itself
             "private_notes_affected": self._count_private_notes(
                 "code_cat", "catid = ?", (category_id,)),
-            "note": "Deleting a category is SHALLOW: its codes and direct "
-                    "sub-categories move to the top level (never deleted, "
-                    "never reparented to a grandparent). Coded data is "
-                    "untouched.",
+            "note": "Deleting a category removes the category alone: "
+                    "its codes and direct sub-categories move to the top "
+                    "level (never deleted, never reparented to a "
+                    "grandparent). Coded data is untouched.",
         }
         graphs = self._saved_graph_preview(category_id)
         if graphs is not None:

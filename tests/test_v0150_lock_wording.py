@@ -135,13 +135,13 @@ NEW_WORDS = {
         "moment), or QualCoder 3.8.2 has it open (if the researcher uses "
         "it, ask them to close it there). Go on only when it is false."),
     "select_project": (
-        "The result may include a `warning`; RELAY it. While the lock file "
+        "The result may include a `warning`; relay it. While the lock file "
         "is active, every write is refused: another conversation using "
         "Exegete is writing (wait a moment), or QualCoder 3.8.2 has the "
         "project open (if the researcher uses it, ask them to close it "
         "there); re-check with get_current_project."),
     "start_coding_session": (
-        "IN USE: if `qualcoder_open` is true, STOP: wait a moment (another "
+        "In use: if `qualcoder_open` is true, stop: wait a moment (another "
         "conversation using Exegete is writing) or, if the researcher uses "
         "QualCoder 3.8.2, ask them to close it there; re-check with "
         "get_current_project. QualCoder 4.0 writes no lock file: a "

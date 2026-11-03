@@ -852,8 +852,9 @@ def test_the_assistants_table():
         "Nowhere outside your computer: the model runs on it"]
     assert ("For participants' data, this project suggests Claude Desktop's "
             "chat with Exegete under that account") in privacy
-    assert ("For unambiguous commercial-terms coverage, use a Console "
-            "account created for the institution or research group") \
+    # (v0.15.3: rung 2 offers the institution's Console account, as a
+    # suggestion)
+    assert "Console account created for the institution or research group" \
         in privacy
     # (ruling 108, 27 October 2026: an expected drop of unknown size, in
     # the Terminal guide's table of routes, where the routes moved)
@@ -986,9 +987,22 @@ def test_the_assistants_table():
     # accounts gives its reason, as ruling 108 has the README's do)
     assert ("| **Anthropic commercial-terms routes** (Claude Code with a "
             "Console API key; Team or Enterprise accounts) |") in install
-    assert ("An institution's agreement sets the terms for its data, and a "
-            "personal account the consumer terms, which is why "
-            "organisational accounts suit institutions.") in install
+    # (v0.15.3: the README check's facts in the guide's row and in PRIVACY's
+    # rung 3, with the reason; the recipe's step 5 and PRIVACY's checklist
+    # point to them for it; all four say who can tell the researcher)
+    row = _between(install, "| **Anthropic commercial-terms routes**",
+                   "| **Fully local models**")
+    step = _between(install, "**5. An organisational account.**",
+                    "Working in the Terminal")
+    item = _between(privacy, "**Your Claude plan's terms differ",
+                    "**Training, with either AI provider.**")
+    rung = _between(privacy, "### Rung 3", "### Rung 4")
+    for passage in (row, step, item, rung):
+        for fact in ("agreement", "differ", "Whoever manages"):
+            assert fact in passage, (fact, passage[:50])
+    for passage in (row, rung):
+        assert "interests in mind" in passage, passage[:50]
+    assert "suit institutions" not in row
 
 
 # ---------------------------------------------------------------------------

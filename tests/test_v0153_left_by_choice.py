@@ -256,6 +256,31 @@ class TestTheWarnings:
         assert COUNTED not in left_warning(out)
 
 
+    def test_the_readings_dividing_differently_keep_their_sentence(self):
+        """Where the whole-word count is above the wide one, the file-text
+        sentence says why, so it is given even when every occurrence
+        counted is one left by choice, and the warning on the occurrences
+        left then gives no count. Read from a preview's own shape."""
+        totals = {"occurrences": {"wide": 2, "whole_word": 3},
+                  "by_reason": {"left_by_choice": 2},
+                  "files_showing_a_name": 1,
+                  "files_whole_word_above_wide": 1}
+        preview = {"totals": {"replacements": 1},
+                   "files": [{"occurrences": {"left": 2}, "codings": {}}],
+                   "residue": {"file_text": {"totals": totals}}}
+        warnings = server._pseudonymise_warnings(preview)
+        text = [warning for warning in warnings
+                if "In 1 of those file(s)" in warning]
+        assert len(text) == 1 and CHOSEN in text[0]
+        assert warnings[-1].startswith("Warning: 2 occurrence(s) ")
+        assert COUNTED not in warnings[-1]
+        totals["files_whole_word_above_wide"] = 0
+        totals["occurrences"]["whole_word"] = 2
+        warnings = server._pseudonymise_warnings(preview)
+        assert not any(CHOSEN in warning for warning in warnings)
+        assert f"{COUNTED} 2 of them under left_by_choice" in warnings[-1]
+
+
 class TestThroughMarkers:
 
     def test_left_after_a_comment_in_a_word_file(self, tmp_path):

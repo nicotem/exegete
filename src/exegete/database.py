@@ -13862,7 +13862,9 @@ class QualcoderDatabase:
         "are joined. The whole-word count beside it is what this run's "
         "own rule matched, so on the file this run rewrote it is normally "
         "zero and the difference between the two numbers is the whole of "
-        "what the rewrite deliberately does not touch. by_reason says "
+        "what the rewrite deliberately does not touch. Occurrences chosen "
+        "to be left as they were are in both counts, under left_by_choice. "
+        "by_reason says "
         "which kind each occurrence is; the split is a heuristic and the "
         "total is not, and so is the charging of an occurrence to one "
         "entry where two entries could claim it (the occurrence is "
@@ -14074,6 +14076,15 @@ class QualcoderDatabase:
         `preview["files"][].name` always was. `scanned.characters` holds
         the rewritten file's new length, so the preview takes it out
         where it leaves that length out (v0.15.3).
+
+        The occurrences a run leaves by a list (the plan's
+        `left_new_spans`, v0.15.3) are passed to the count of the file it
+        rewrites, mapped through the import's markers where its text is
+        read without them, and counted under `left_by_choice`. On the
+        `use_project_pseudonyms` path the rows per entry keep them out
+        and each full file row gives their number once, as
+        `left_by_choice`: beside the entries' pseudonyms, a row per entry
+        counting a left occurrence would tell which name it is.
         """
         from . import pseudonymise as engine
 
@@ -14082,6 +14093,10 @@ class QualcoderDatabase:
             "ORDER BY id").fetchall()
         rewritten = ({item["file_id"]: item["new_text"]
                       for item in plan["files"]} if plan else {})
+        # Where each occurrence the run leaves stands in the new text
+        left = ({item["file_id"]: item["left_new_spans"]
+                 for item in plan["files"] if item.get("left_new_spans")}
+                if plan else {})
         chosen = (plan["eligible"][0][0]
                   if plan and plan.get("eligible") else None)
         sources = []
@@ -14096,6 +14111,12 @@ class QualcoderDatabase:
                 # Word, OpenDocument or RTF file's names are counted with
                 # the markers taken out (0.14.3).
                 if fid in rewritten:
+                    if fid in left:
+                        # The places of the occurrences left move with the
+                        # markers before them, read over the same new text
+                        left[fid] = engine.spans_without_markers(
+                            rewritten[fid], left[fid],
+                            doc_readers.NOTE_MARKER)
                     rewritten[fid] = engine.without_markers(
                         rewritten[fid], doc_readers.NOTE_MARKER)
                 text = engine.without_markers(text, doc_readers.NOTE_MARKER)
@@ -14204,7 +14225,8 @@ class QualcoderDatabase:
                     max_matches=matches_left,
                     max_extra_work=(engine.MAX_RESIDUE_SCAN_WORK
                                     - work_done - work),
-                    stopped=stop)
+                    stopped=stop,
+                    left_spans=left.get(fid, ()) if reason is None else ())
                 # Everything spent is charged (rule 1), a count that
                 # stopped part-way as fully as one that finished.
                 spent = found if found is not None else stop
@@ -14235,8 +14257,14 @@ class QualcoderDatabase:
                         case_variants = found["case_variants_seen"]
                         spellings = found["normalisation_variants_seen"]
                     else:
-                        entries = self._pseudonymise_without_forms(
-                            found["entries"])
+                        # The occurrences left by choice, out of the rows
+                        # per entry and counted once for the file
+                        row_out["left_by_choice"] = sum(
+                            entry["left_by_choice"]
+                            for entry in found["entries"])
+                        entries = self._pseudonymise_entries_without_left(
+                            self._pseudonymise_without_forms(
+                                found["entries"]))
                         case_variants = self._pseudonymise_without_forms(
                             found["case_variants_seen"])
                         spellings = self._pseudonymise_without_forms(
@@ -14745,6 +14773,40 @@ class QualcoderDatabase:
         """
         return [{key: value for key, value in item.items() if key != "form"}
                 for item in items]
+
+    @staticmethod
+    def _pseudonymise_entries_without_left(entries: Sequence[Dict[str, Any]]
+                                           ) -> List[Dict[str, Any]]:
+        """The residue's rows per entry on the `use_project_pseudonyms`
+        path (v0.15.3), the occurrences left by choice taken out.
+
+        Each row's `left_by_choice` comes out of both its counts and the
+        key goes; a row left with nothing is dropped, and the rest are
+        put back in `names_left_in_text`'s order, most first. Beside the
+        entries' pseudonyms and a text the assistant has read, a row per
+        entry counting a left occurrence would tell which name that
+        occurrence is, and with it the pseudonym (ruling 94); the file's
+        row gives their number instead. The kinds that remain still add
+        up to each row's wide count.
+        """
+        kept = []
+        for entry in entries:
+            left = entry.get("left_by_choice", 0)
+            row = {key: value for key, value in entry.items()
+                   if key != "left_by_choice"}
+            if left:
+                row["occurrences"] = {
+                    **entry["occurrences"],
+                    "wide": entry["occurrences"]["wide"] - left,
+                    "whole_word": entry["occurrences"]["whole_word"] - left}
+                if not (row["occurrences"]["wide"]
+                        or row["occurrences"]["whole_word"]):
+                    continue
+            kept.append(row)
+        kept.sort(key=lambda row: (-row["occurrences"]["wide"],
+                                   -row["occurrences"]["whole_word"],
+                                   row["entry"]))
+        return kept
 
     @staticmethod
     def _pseudonymise_entries_only(conflicts: Sequence[Dict[str, Any]]

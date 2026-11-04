@@ -19832,6 +19832,23 @@ _EVERY_OCCURRENCE_LEFT = (
 _EVERY_OCCURRENCE_WAS_LEFT = (
     "Every occurrence of the mapping's names in this file was left as it "
     "is, by choice, so nothing was rewritten and no backup was taken.")
+# The occurrences a list leaves, in the preview's warnings (v0.15.3): real
+# names, said on every path, the file counted or not. Where every
+# occurrence is left, the sentence above has said that it is by choice
+# and that nothing would be rewritten, so the warning gives only their
+# number and what they are. The clause is said where every occurrence
+# the file-text count found is one left by choice: that count's own
+# sentence would only say this one again, and is left out
+_OCCURRENCES_LEFT_WARNING = (
+    "Warning: {left} occurrence(s) of names from this mapping are left as "
+    "they were, by choice: they are real names, and stay in the file's text "
+    "after this run.")
+_EVERY_OCCURRENCE_LEFT_WARNING = (
+    "Warning: the {left} occurrence(s) left are real names, and stay in "
+    "the file's text.")
+_OCCURRENCES_LEFT_COUNTED = (
+    " residue.file_text counts {counted} of them under left_by_choice, a "
+    "heuristic; the number left is exact.")
 
 
 class _OccurrencesRefused(Exception):
@@ -20229,6 +20246,7 @@ _FILE_TEXT_WARNING_KINDS = (
      "normalisation", "are"),
     ("put_back_by_a_pseudonym", "a name that one of your pseudonyms puts "
      "back", "are"),
+    ("left_by_choice", "occurrences chosen to be left as they were", "are"),
     ("unattributed", "could not be charged to an entry", None),
     ("whole_word_in_a_file_not_rewritten",
      "whole words in files this run did not rewrite (a PDF source, or a "
@@ -20236,7 +20254,8 @@ _FILE_TEXT_WARNING_KINDS = (
 )
 
 
-def _pseudonymise_file_text_warning(file_text: Dict[str, Any]
+def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
+                                    chosen_said: bool = False
                                     ) -> Optional[str]:
     """The second residue warning: occurrences in the file text.
 
@@ -20253,12 +20272,20 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any]
     default and capped in any case, and a warning built from them could
     be silenced by folding them (fix round 1: the owner's "compact by
     default" ruling; QA-2).
+
+    Occurrences left by a list (v0.15.3) are in the wide count, and its
+    sentence gives them their own reason, by the totals' left_by_choice:
+    beside the rewrite's when some are left, alone when all are. With
+    `chosen_said` that sentence is not given: every occurrence counted is
+    one left by choice, which the preview's warning on the occurrences
+    left says, with this count.
     """
     totals = file_text.get("totals") or {}
     occurrences = totals.get("occurrences") or {}
     wide = occurrences.get("wide", 0)
     whole_word = occurrences.get("whole_word", 0)
     reasons = totals.get("by_reason") or {}
+    chosen = reasons.get("left_by_choice", 0)
     uncounted_showing = totals.get("files_showing_a_name_not_counted", 0)
     in_part = totals.get("files_counted_in_part", 0)
     counted_showing = totals.get("files_showing_a_name", 0) \
@@ -20266,11 +20293,17 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any]
     above = totals.get("files_whole_word_above_wide", 0)
     unchecked = totals.get("files_not_checked", 0)
     sentences: List[str] = []
-    if wide:
+    if wide and chosen_said:
+        # Every occurrence counted is one left by choice, which the
+        # warning on the occurrences left says, with this count
+        pass
+    elif wide:
         clauses = []
         for key, text, verb in _FILE_TEXT_WARNING_KINDS:
             count = reasons.get(key, 0)
-            if not count:
+            if not count or (key == "left_by_choice" and count == wide):
+                # Every one of them left by choice is the sentence's own
+                # reason, below, and is not said again as a kind
                 continue
             of_those = "" if clauses else " of those"
             clauses.append(f"{count}{of_those} "
@@ -20279,11 +20312,18 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any]
             listed = ", ".join(clauses[:-1]) + ", and " + clauses[-1]
         else:
             listed = " and ".join(clauses)
+        # The reason is the rewrite's own rule, for every occurrence but
+        # those left by a list (v0.15.3), which were chosen
+        because = ("because the rewrite replaces whole words only and in "
+                   "one file per call")
+        if chosen == wide:
+            because = "all of them chosen to be left as they were"
+        elif chosen:
+            because += ", and because some were chosen to be left as they were"
         sentences.append(
             f"Warning: after this run, {wide} occurrence(s) of these names "
             f"would still be in the text of {counted_showing} file(s), "
-            f"because the rewrite replaces whole words only and in one "
-            f"file per call.")
+            f"{because}.")
         # Every kind can be zero when the wide occurrences are the ones
         # no entry could be charged to; the clause list is left out then
         # rather than said empty (fix round 2, CORR-2).
@@ -20619,8 +20659,23 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"look-alike letter from another script is not caught. See "
             f"residue, and tell the user which fields to check.")
     file_text = residue.get("file_text")
+    # The occurrences a list leaves (v0.15.3), from each file's own
+    # block, which a preview given a list carries whether or not the file
+    # was counted, and how many of them the file-text count charged to
+    # left_by_choice, which it does only where it counted the file
+    left = sum((item.get("occurrences") or {}).get("left", 0)
+               for item in preview.get("files", []))
+    text_totals = (file_text or {}).get("totals") or {}
+    counted_left = (text_totals.get("by_reason") or {}).get(
+        "left_by_choice", 0)
+    chosen_alone = bool(
+        left and counted_left
+        and counted_left == (text_totals.get("occurrences") or {}).get(
+            "wide", 0)
+        and not text_totals.get("files_whole_word_above_wide"))
     if file_text:
-        text_warning = _pseudonymise_file_text_warning(file_text)
+        text_warning = _pseudonymise_file_text_warning(file_text,
+                                                       chosen_alone)
         if text_warning:
             warnings.append(text_warning)
     unreadable = residue.get("unreadable") or []
@@ -20838,6 +20893,16 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
                 "None of the names in this mapping occurs in this file or "
                 "in any note or journal entry, so an execute would rewrite "
                 "nothing." + no_save)
+    if left:
+        # Last, after the sentence that says, where every occurrence is
+        # left, that it is by choice (v0.15.3). The put-back warning above
+        # reads a count that no longer holds them
+        warning = (_EVERY_OCCURRENCE_LEFT_WARNING
+                   if not totals.get("replacements")
+                   else _OCCURRENCES_LEFT_WARNING).format(left=left)
+        if chosen_alone:
+            warning += _OCCURRENCES_LEFT_COUNTED.format(counted=counted_left)
+        warnings.append(warning)
     return warnings
 
 

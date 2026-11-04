@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """The short ids that name each occurrence of a name in a pseudonymisation
-preview (v0.15.3).
+preview, and the page on which the researcher chooses among them
+(v0.15.3).
 
 With `choose_occurrences`, the preview lists every occurrence of a name
 the run would replace as a short id, beside its line number when the
@@ -24,15 +25,36 @@ Without the secret, an id says nothing about where it points.
 A full id is 26 characters of Crockford's base 32 in lower case (no i,
 l, o or u). The preview shows each cut to one length, the shortest from
 five characters at which the file's ids are all distinct, and an id
-given back names the one occurrence whose full id it begins. Standard
-library only.
+given back names the one occurrence whose full id it begins. The ids
+are made with the standard library alone.
+
+The same preview writes a page for the researcher (`build_page`): the
+file's whole text as stored, one paragraph per stored line, each
+numbered as the preview numbers it, every occurrence marked with its id
+after it and, with a list to leave, those left marked in a second style,
+labelled "left as it is". It shows no pseudonym, no entry number and
+nothing else of the mapping. Exegete writes it into the file's folder in
+the reading folder (`reading_folder.occurrences_folder`, where pages are
+private to this account, not synced and not indexed) and opens it in the
+researcher's browser; the answer gives whether it opened and counts,
+never the text, and the page's place only when it did not open. The page
+goes at Exegete's first tidy of the reading folder once it is an hour
+old, or sooner, when Exegete changes the file's text or name. It is safe
+by structure, as the reading copy is: the text goes only into HTML text,
+every character escaped and control characters shown as their visible
+pictures; the head allows no script, no fetch, no form and no base
+address; nothing links outside the page.
 """
 
 import bisect
 import hashlib
 import hmac
 import re
-from typing import Dict, List, Optional, Sequence, Tuple
+from datetime import datetime
+from typing import Any, Collection, Dict, List, Optional, Sequence, Tuple
+
+from .reading_copy import BASE_STYLE, POLICY, esc
+from .reading_folder import PAGE_MARK
 
 # How many occurrences one preview lists, in text order; past it the
 # preview says how many more there are
@@ -209,3 +231,165 @@ def line_numbers(text: str, starts: Sequence[int]) -> List[int]:
     feed alone, as the reading copy divides a text."""
     line_starts = [0] + [found.end() for found in _LINE_BREAK.finditer(text)]
     return [bisect.bisect_right(line_starts, start) for start in starts]
+
+# --------------------------------------------------------------------------
+# The page for choosing (v0.15.3)
+# --------------------------------------------------------------------------
+
+# One page per file, the next preview's taking its place
+PAGE_NAME = "choose-occurrences.html"
+# The page's own words to the researcher, at its head
+PAGE_FOR_YOU = (
+    "This page is for you. To leave an occurrence as it is, tell the "
+    "assistant its id. Words you copy from this page into the conversation "
+    "go to the AI provider, names included, unless the model runs on your "
+    "own computer. It is not meant to be read by an AI assistant.")
+# Said in the preview's answer, its first sentence the import page's
+# (import_page.FOR_THE_ASSISTANT): one rule in one wording
+PAGE_FOR_THE_ASSISTANT = (
+    "This page is for the researcher: do not open it, read it or look at "
+    "it with any tool, browser or screenshot. Ask them which ids to leave.")
+# The label after an occurrence left by the list the preview was given
+LEFT_LABEL = "left as it is"
+# The page's own rules beside the reading copy's (reading_copy.BASE_STYLE):
+# each line's number in a margin of its own, which copying leaves out, the
+# occurrences marked, and each id in a label after its occurrence
+PAGE_STYLE = """
+#text p{padding-left:4.25em;text-indent:-4.25em}
+.n{display:inline-block;width:3.5em;margin-right:.75em;text-indent:0;
+text-align:right;color:var(--quiet);font-variant-numeric:tabular-nums;
+-webkit-user-select:none;user-select:none}
+mark.occ{background:#ffe08a;color:#1f1f1f;border-radius:2px;
+outline:2px solid #b8860b}
+mark.occ.left{background:#d6e4f5;outline:2px dashed #3d6cb3}
+.id{font-size:.8em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
+monospace;margin:0 .2em 0 .3em;padding:0 .3em;border:1px solid var(--line);
+border-radius:.3em;background:var(--panel);color:var(--fg);
+white-space:nowrap}
+.id.left{border-style:dashed}
+"""
+
+
+def _when(moment: datetime) -> str:
+    return f"{moment:%H:%M} on {moment.day} {moment:%B %Y}"
+
+
+def _plural(count: int, one: str, many: str) -> str:
+    return f"{count} {one if count == 1 else many}"
+
+
+def _lines(text: str) -> List[Tuple[int, int]]:
+    """Each stored line's start and end, the line break left out."""
+    spans = []
+    at = 0
+    for found in _LINE_BREAK.finditer(text):
+        spans.append((at, found.start()))
+        at = found.end()
+    spans.append((at, len(text)))
+    return spans
+
+
+def _label(shown_id: str, left: bool) -> str:
+    """An occurrence's id, after it: text to copy, and a screen reader's
+    words before it."""
+    words = f"{esc(shown_id)}, {LEFT_LABEL}" if left else esc(shown_id)
+    return (f'<span class="id{" left" if left else ""}">'
+            f'<span class="sr">occurrence id </span>{words}</span>')
+
+
+def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
+                left: Collection[int]) -> str:
+    """The text as paragraphs, one per stored line, each after its number;
+    each occurrence in a mark, its id after its end. An occurrence never
+    crosses a line break (the rewrite matches nothing across one); were
+    one to, it is marked on each line it covers and labelled once, after
+    its last part."""
+    lines = _lines(text)
+    starts = [start for start, _end in lines]
+    # Each line's marked stretches: start, end, the occurrence's position
+    # in `marks` and whether its id follows
+    pieces: List[List[Tuple[int, int, int, bool]]] = [[] for _ in lines]
+    for index, (begin, finish, _shown) in sorted(
+            enumerate(marks), key=lambda item: item[1][0]):
+        line = max(0, bisect.bisect_right(starts, begin) - 1)
+        stretches = []
+        while line < len(lines) and lines[line][0] < finish:
+            cut_start = max(begin, lines[line][0])
+            cut_end = min(finish, lines[line][1])
+            if cut_start < cut_end:
+                stretches.append((line, cut_start, cut_end))
+            line += 1
+        for place, (line, cut_start, cut_end) in enumerate(stretches):
+            pieces[line].append((cut_start, cut_end, index,
+                                 place == len(stretches) - 1))
+    out: List[str] = []
+    for number, ((start, end), marked) in enumerate(zip(lines, pieces),
+                                                    start=1):
+        parts = [f'<p><span class="n">{number}</span>']
+        at = start
+        for cut_start, cut_end, index, last in marked:
+            cut_start = max(cut_start, at)
+            parts.append(esc(text[at:cut_start]))
+            kind = "occ left" if index in left else "occ"
+            parts.append(f'<mark class="{kind}">'
+                         f"{esc(text[cut_start:cut_end])}</mark>")
+            if last:
+                parts.append(_label(marks[index][2], index in left))
+            at = max(at, cut_end)
+        parts.append(esc(text[at:end]))
+        parts.append("</p>")
+        out.append("".join(parts))
+    return "\n".join(out)
+
+
+def build_page(*, project_name: str, file_id: int, file_name: str,
+               text: str, marks: Sequence[Tuple[int, int, str]],
+               left: Collection[int], written_at: datetime,
+               version: str = "") -> Tuple[str, Dict[str, Any]]:
+    """The page, and the counts the preview's answer gives.
+
+    `marks` holds each occurrence's start and end in `text` and the id
+    the preview shows for it, in text order; `left` the positions in
+    `marks` of the occurrences the list given leaves as they are."""
+    left = set(left)
+    lines = len(_lines(text))
+    counts = {"occurrences": len(marks), "left": len(left), "lines": lines}
+    facts = [
+        f"Written at {_when(written_at)}, by a pseudonymisation preview. It "
+        f"goes at Exegete's first tidy once it is an hour old, or sooner, "
+        f"when Exegete changes this file's text or name.",
+        "Each occurrence of a name the run would replace is marked, with "
+        "its id after it. The lines are numbered as the preview numbers "
+        "them."]
+    if left:
+        facts.append(
+            f"{_plural(len(left), 'occurrence is', 'occurrences are')} "
+            f"marked as left as they are, by the list of ids the preview "
+            f"was given: check that they are the ones you meant.")
+    title = f"{esc(file_name)} (choosing occurrences)"
+    parts = [
+        "<!DOCTYPE html>\n" + PAGE_MARK,
+        '<html lang="en-GB"><head><meta charset="utf-8">',
+        f'<meta http-equiv="Content-Security-Policy" content="{POLICY}">',
+        '<meta name="referrer" content="no-referrer">',
+        # so that a phone's browser lays the page out at its own width
+        '<meta name="viewport" content="width=device-width, '
+        'initial-scale=1">',
+        f"<title>{title}</title>",
+        f"<style>{BASE_STYLE}\n{PAGE_STYLE}\n</style></head><body>",
+        '<a class="skip" href="#text">Skip to the text</a>',
+        f"<header><h1><bdi>{esc(file_name)}</bdi></h1>",
+        f"<p>Project: <bdi>{esc(project_name)}</bdi>. File {int(file_id)}, "
+        f"{_plural(len(marks), 'occurrence', 'occurrences')}"
+        + (f", {len(left)} left as "
+           f"{'it is' if len(left) == 1 else 'they are'}" if left else "")
+        + ".</p>",
+        '<ul class="facts">' + "".join(f"<li>{fact}</li>" for fact in facts)
+        + "</ul>",
+        f'<p class="for-you">{PAGE_FOR_YOU}</p></header>',
+        f'<main id="text">{_paragraphs(text, marks, left)}</main>',
+        f"<footer><p>Written by Exegete {esc(version)} on this computer. A "
+        "page for choosing: changes to it go nowhere.</p></footer>",
+        "</body></html>\n",
+    ]
+    return "\n".join(parts), counts

@@ -175,9 +175,11 @@ officer will ask, and the summary above depends on them:
   - Claude Desktop's log of the extension, which keeps every request and
     answer, names and quoted text included (INSTALL.md, "Reading the
     server log");
-  - Codex's session files (`~/.codex/sessions`) and its two databases
+  - Codex's session files (`~/.codex/sessions`), its two databases
     of conversations, `~/.codex/thread_history_1.sqlite` and
-    `~/.codex/state_5.sqlite` ("OpenAI's apps", below);
+    `~/.codex/state_5.sqlite`, the text you typed,
+    `~/.codex/history.jsonl`, and its log database,
+    `~/.codex/logs_2.sqlite` ("OpenAI's apps", below);
   - Claude Code's transcripts (`~/.claude/projects/`).
 
   Say where each is kept, whether a sync or backup service copies it,
@@ -2352,10 +2354,19 @@ name does it for another. OpenAI's page on these commands,
 <https://learn.chatgpt.com/docs/cli/slash-commands> (read 4 November
 2026), describes `/delete` as "Permanently delete the current session."
 and `/archive` as removing a session from the lists "without deleting
-its transcript." So, after any work on study data, you could delete its
-conversations that way, and keep `~/.codex` out of folders that a sync
-or backup service copies. These files are part of what stays on the
-computer ("How your data flows").
+its transcript." Codex's source shows two files that this deletion
+leaves. `~/.codex/history.jsonl` keeps the text you typed, unless
+`history.persistence` is set to `"none"`. In the command line, Codex's
+log database, `~/.codex/logs_2.sqlite`, keeps pieces of the assistant's
+latest answers, word for word, and those answers can quote
+participants. These pieces belong to no conversation, so deleting a
+conversation leaves them. Codex removes log entries once they are ten
+days old, but only while it runs. So, after any work on study data, you
+could delete its conversations that way, and keep `~/.codex` out of
+folders that a sync or backup service copies. With Codex quit, you could
+also delete `history.jsonl` and the files whose names begin
+`logs_2.sqlite`. Codex makes them again when it needs them. These files
+are part of what stays on the computer ("How your data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:

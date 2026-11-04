@@ -1153,6 +1153,42 @@ class TestWhatCodexKeepsAndTheOptOut:
                          "`~/.codex/state_5.sqlite`"):
                 assert name in text, name
 
+    def test_what_codex_s_deletion_leaves_is_named(self):
+        # v0.15.3, its second fix round: Codex's source at rust-v0.166.0.
+        # The command line traces each streamed piece of an answer with its
+        # words (tui/src/markdown_stream.rs 78) into the log database
+        # (tui/src/startup_orchestration.rs 974-979), whose filter keeps
+        # that target at TRACE (state/src/log_db.rs 61-90), in ~/.codex
+        # unless set otherwise (state/src/sqlite.rs 48; core/src/config/
+        # mod.rs 4329-4344). No conversation's id goes with it (log_db.rs
+        # 334-337, 425-443), and deletion removes log rows by that id
+        # alone (state/src/runtime/threads.rs 1202-1205); old rows go only
+        # while Codex runs (state/src/runtime/logs_maintenance.rs 10,
+        # 14-24; runtime.rs 290). history.jsonl is kept by default
+        # (config/src/types.rs 237-243; message-history/src/lib.rs 113-116)
+        section = _privacy_openai()
+        leaves = section[section.index("\"without deleting its "
+                                       "transcript.\""):]
+        leaves = leaves[:leaves.index("**The UK, the EEA and "
+                                      "Switzerland.**")]
+        for words in ("two files that this deletion leaves",
+                      "`~/.codex/history.jsonl` keeps the text you typed",
+                      "`~/.codex/logs_2.sqlite`, keeps pieces of the "
+                      "assistant's latest answers",
+                      "deleting a conversation leaves them",
+                      "ten days old, but only while it runs"):
+            assert words in leaves, words
+        # and both lists of what stays name the two files
+        checklist = _between(_flat("PRIVACY.md"), "**What stays on the "
+                             "computer, and for how long.**",
+                             "## How your data flows")
+        guide = _between(_flat("INSTALL.md"), "3. **Look at what the hosts "
+                         "keep.**", "4. **Exegete's own folder")
+        for text in (checklist, guide):
+            for name in ("`~/.codex/history.jsonl`",
+                         "`~/.codex/logs_2.sqlite`"):
+                assert name in text, name
+
     def test_readme_gives_openai_users_the_opt_out_and_a_deadline(self):
         """v0.14.2, the README review: the switch is the first of OpenAI's
         own steps (the owner, 1 October 2026: before participants' data,

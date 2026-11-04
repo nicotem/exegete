@@ -26,9 +26,12 @@
   a database in `~/.codex` as well as into its session files, and keeps
   the conversation's title and first message in a second one. So
   deleting the session files by hand leaves participants' words on the
-  computer. PRIVACY.md, the README and the Terminal guide now name both
-  databases, and PRIVACY.md suggests Codex's own command for deleting a
-  conversation, which removes its files and its rows in both.
+  computer. PRIVACY.md and the Terminal guide now name both databases,
+  and the README mentions them. PRIVACY.md suggests Codex's own command
+  for deleting a conversation, which removes its files and its rows in
+  both. It also names two files that this command leaves: the text you
+  typed, and, from Codex's command line, pieces of the assistant's
+  answers in Codex's log database.
 - Five claims about a named release of another program now name that
   release instead of a day. The writing guide, docs/WRITING.md, says in
   what form to write the day a claim was checked, and when a release's

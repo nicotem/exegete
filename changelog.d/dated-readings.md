@@ -1,10 +1,10 @@
 ### Documents
 
-- The other programs' pages and releases that the documents quote were
-  read again, most of them on 4 November 2026, and each reading gives
-  its day. A page that refuses automated reading is quoted from the
-  Internet Archive's newest capture, with the day of that capture.
-  Where a page had changed, the documents now say what it says.
+- Most of the other programs' pages and releases that the documents
+  quote were read again on 4 November 2026, and each reading now gives
+  its day in one form. A page that refuses automated reading is quoted
+  from the Internet Archive's newest capture, with the day of that
+  capture. Where a page had changed, the documents now say what it says.
 - In the version of Claude where chat and Cowork are one conversation,
   the permission setting now starts on Auto on Pro, Max, Ultra and Team
   plans, and on Manual only on Enterprise plans. On Auto, Claude does not

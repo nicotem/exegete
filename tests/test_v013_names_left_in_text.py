@@ -2539,12 +2539,22 @@ class TestALargeFileUnderALargeMapping:
         assert row["checked"] is False and "shows_a_name" not in row
         assert row["too_large_for_this_mapping"] is True
         assert row["rewritten_by_this_run"] is left
-        assert _file_text_warning(out).startswith(
-            "Warning: the file this call rewrites is too large to count in "
-            "full with this many names, or to check whether a name would "
-            "still show in it after this run. The rewrite still applies to "
-            "it, and fewer names would let it be counted (see "
-            "files_too_large_for_this_mapping).")
+        if left:
+            assert _file_text_warning(out).startswith(
+                "Warning: the file this call rewrites is too large to count "
+                "in full with this many names, or to check whether a name "
+                "would still show in it after this run. The rewrite still "
+                "applies to it, and fewer names would let it be counted (see "
+                "files_too_large_for_this_mapping).")
+        else:
+            # No name of the mapping in it: the preview says that an
+            # execute would rewrite nothing, so this warning speaks of no
+            # run (v0.15.3)
+            assert _file_text_warning(out).startswith(
+                "Warning: the file this call names is too large to count in "
+                "full with this many names, or to check whether a name would "
+                "still show in it, and fewer names would let it be counted "
+                "(see files_too_large_for_this_mapping).")
         assert "preview them one at a time" not in _file_text_warning(out)
         assert "1 other file(s)" not in _file_text_warning(out)
         note = block["files_too_large_note"]
@@ -2616,9 +2626,12 @@ class TestALargeFileUnderALargeMapping:
         assert block["totals"]["files_showing_a_name"] == 1
         assert block["totals"]["named_file_too_large"] is False
         warning = _file_text_warning(out)
+        # No name of the mapping in file 1, the file named, so an execute
+        # would rewrite nothing and no run is spoken of (v0.15.3)
+        assert out["preview"]["totals"]["replacements"] == 0
         assert warning.startswith(
-            "Warning: after this run, 1 occurrence(s) of these names would "
-            "still be in the text of 1 file(s)")
+            "Warning: 1 occurrence(s) of these names would still be in the "
+            "text of 1 file(s)")
         # Fix round 5 (CORR3-1): the clause "and previewing one on its own
         # checks it" was false for this file (its question passes the
         # question's budget alone, named or not) and is gone.

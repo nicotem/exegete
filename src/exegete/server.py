@@ -20283,9 +20283,11 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
     `chosen_said` that sentence is not given: every occurrence counted is
     one left by choice, which the preview's warning on the occurrences
     left says, with this count, and the sentences after it call no files
-    "further". With `run` false, where a list leaves every occurrence and
-    an execute would rewrite nothing, no sentence says that a run happens
-    or that the rewrite applies to the file (fix round 1).
+    "further". With `run` false, where an execute would rewrite nothing
+    (no name of the mapping in the file this call names, or a list that
+    leaves every occurrence, and no note to rewrite), no sentence says
+    that a run happens or that the rewrite applies to the file (fix
+    round 1; v0.15.3 for a file with no name).
     """
     totals = file_text.get("totals") or {}
     occurrences = totals.get("occurrences") or {}
@@ -20674,12 +20676,14 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     file_text = residue.get("file_text")
     left, counted_left, chosen_alone = _occurrences_left(preview, file_text)
     if file_text:
-        # A list that leaves every occurrence rewrites nothing, as the
-        # preview says below, so no run is spoken of (fix round 1)
+        # An execute that would rewrite nothing, as the preview says below
+        # (no name in this file, or every occurrence left by a list, and
+        # no note to rewrite), runs nothing, so no run is spoken of
+        rewrites_notes = (memo_block or {}).get("totals", {}).get("rows", 0)
         text_warning = _pseudonymise_file_text_warning(
             file_text, chosen_alone,
-            run=not (left and not preview.get("totals", {}).get(
-                "replacements")))
+            run=bool(preview.get("totals", {}).get("replacements")
+                     or rewrites_notes))
         if text_warning:
             warnings.append(text_warning)
     unreadable = residue.get("unreadable") or []

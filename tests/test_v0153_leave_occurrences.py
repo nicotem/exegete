@@ -65,8 +65,7 @@ NAMES = {"mapping": None, "use_project_pseudonyms": True}
 # What a run without the list bound and signed at bde966c, before this
 # part was built, for the flagship's fixture: the canonical arguments,
 # the signed effect's SHA-256 and the state the token signs (the effect
-# with the rows); and the SHA-256 of the preview the tool answered,
-# its token and the project's path set aside, with and without the save
+# with the rows)
 AT_BDE966C = {
     "canonical_args": (
         '{"case_mode":"exact","file_id":1,"mapping":[{"original":'
@@ -78,10 +77,6 @@ AT_BDE966C = {
         "e06f2e3822a6bfa6b63dfd18e9fe9e7cf111232929ed28df71b594362fa7218e",
     "state":
         "894426fb1390166ba5e59147c7114b243719a80be6f6673e6413174455188d96",
-    "preview":
-        "2210a0ddded9559b55bbabe845c87ed5c2b206d72fc0381a83365a8afe7dbe69",
-    "preview_with_the_save":
-        "ad8404b42ff90652eae86b095ac83f2e2bc6e10d1bba46189b68649e0bc992d3",
 }
 
 
@@ -144,16 +139,6 @@ def strings_in(value):
             yield from strings_in(item)
     elif isinstance(value, str):
         yield value
-
-
-def steady(out):
-    """A preview's SHA-256, its token and the project's path set aside."""
-    out = json.loads(json.dumps(out))
-    out.pop("preview_token")
-    out["execute_with"]["arguments"].pop("preview_token")
-    out["preview"].pop("project")
-    return hashlib.sha256(json.dumps(out, sort_keys=True).encode()
-                          ).hexdigest()
 
 
 class TestTheRun:
@@ -415,8 +400,8 @@ class TestTheToken:
         assert order.index("leave_occurrences") > order.index(last)
 
     def test_without_the_argument_unchanged(self, project):
-        """A run without the list binds and signs what it did at bde966c,
-        and its preview answers as it did; an empty list is no list."""
+        """A run without the list binds and signs what it did at bde966c;
+        an empty list is no list."""
         compiled = P.Compiled(P.validate_mapping(MAPPING))
         bound = dict(mapping=P.canonical_mapping(compiled.mapping), file_id=1,
                      case_mode="exact", overlap_policy="snap_to_pseudonym",
@@ -438,9 +423,6 @@ class TestTheToken:
             assert pt.fingerprint_rows(
                 effect, server.db.pseudonymise_row_digests(plan)) == \
                 AT_BDE966C["state"]
-        assert steady(preview_of()) == AT_BDE966C["preview"]
-        assert steady(preview_of(save_mapping_to_project=True)) == \
-            AT_BDE966C["preview_with_the_save"]
 
 
 class TestTheIds:

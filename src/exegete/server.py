@@ -216,16 +216,21 @@ from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
 # (v0.12 fix round 1, F16), and argument parsing necessarily happens
 # after the module is imported.
 #
-# The MCP library (1.30.0) writes three lines that quote what the app sent,
-# and pydantic's error in each gives about 25 characters from each end of
-# every value it rejected, part of a memo say, in the log the host keeps:
-# a line that is not an MCP message (ERROR, `mcp.server.lowlevel.server`,
-# lowlevel/server.py 713), a request that does not fit the request types
-# (WARNING, the root logger, shared/session.py 383) and a notification it
-# cannot read, the message added whole (WARNING, the root logger, 430-432).
+# The MCP library (1.30.0) writes four lines that quote what the app sent,
+# and pydantic's error in the first three gives about 25 characters from
+# each end of every value it rejected, part of a memo say, in the log the
+# host keeps: a line it does not take, one that is not an MCP message or
+# a response to no request made (ERROR, `mcp.server.lowlevel.server`,
+# lowlevel/server.py 713, from shared/session.py 359 and 518), a request
+# it answers with an error, one that does not fit the request types or
+# came before the session was started (WARNING, the root logger,
+# shared/session.py 383, server/session.py 204-205), a notification it
+# does not take, for the same two reasons, the message added whole
+# (WARNING, the root logger, 430-432), and a response whose id is text
+# that is not a number, the id given (WARNING, the root logger, 478).
 # The handler below is the one `logging.basicConfig` would make, standard
 # error, and its filter sees every record that reaches it, whichever
-# logger made it (v0.15.3): each of the three, known by its logger, its
+# logger made it (v0.15.3): each of the four, known by its logger, its
 # level and its opening words, gets a fixed sentence of its own, its
 # arguments and any exception cleared. Every other record passes as it
 # came. The filter never raises: the library logs these lines inside its
@@ -235,19 +240,25 @@ from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
 _LIBRARY_LINES = (
     ("mcp.server.lowlevel.server", logging.ERROR,
      "Received exception from stream: ",
-     "A line the app sent is not an MCP message; Exegete leaves what it "
-     "held out of the log."),
+     "A line the app sent was not taken: it is not an MCP message, or it "
+     "answers no request that was made. Exegete leaves what it held out "
+     "of the log."),
     ("root", logging.WARNING, "Failed to validate request: ",
-     "A request the app sent could not be read and was answered with an "
-     "error; Exegete leaves what it held out of the log."),
+     "A request the app sent was answered with an error: it does not fit "
+     "MCP's request types, or it came before the app had finished "
+     "starting the session. Exegete leaves what it held out of the log."),
     ("root", logging.WARNING, "Failed to validate notification: ",
-     "A notification the app sent could not be read; Exegete leaves what "
-     "it held out of the log."),
+     "A notification the app sent was not taken: it does not fit MCP's "
+     "notification types, or it came before the app had finished "
+     "starting the session. Exegete leaves what it held out of the log."),
+    ("root", logging.WARNING, "Response ID ",
+     "A response the app sent has an id that is not a number; Exegete "
+     "leaves the id out of the log."),
 )
 
 
 class _LibraryLinesFilter(logging.Filter):
-    """The MCP library's three lines that quote what the app sent, each
+    """The MCP library's four lines that quote what the app sent, each
     given a fixed sentence before it is written (`_LIBRARY_LINES`)."""
 
     def filter(self, record):

@@ -1,0 +1,606 @@
+# SPDX-License-Identifier: LGPL-3.0-or-later
+"""v0.15.3, the occurrences choice, fourth part: the page for choosing
+(rulings 94, 106 and 116).
+
+With `choose_occurrences`, a pseudonymisation preview also writes a page
+into the file's folder in the reading folder and opens it in the
+researcher's browser: the file's whole text, each line numbered as the
+preview numbers it, every occurrence marked with the id the preview shows
+for it, and, with a list, those left marked as left; no pseudonym, entry
+number or anything else of the mapping. The answer's `occurrences_page`
+gives whether it opened, its counts and the note for the assistant, and
+the page's place only when it did not open; on the names list's path that
+place, and the words of an error that gives one, are withheld where they
+carry a name from the mapping. The brief's privacy line names the page;
+the reading folder's note names it and when it goes, and is written again
+where an earlier release left other words; the sweep removes it once it
+is an hour old. The block's next note names the page where one was
+written, and a preview that would rewrite nothing speaks of no run in the
+file-text warning.
+
+The fixtures and helpers are the flagship's own
+(`test_v012_pseudonymise_tool.py`) and the first part's
+(`test_v0153_occurrence_ids.py`). Every test keeps the suite's opener,
+which opens no window (tests/conftest.py); where a page must be seen to
+open, `opener.open_file` is replaced by a recorder that opens nothing.
+"""
+
+import errno
+import html
+import json
+import logging
+import os
+import re
+import sqlite3
+import sys
+import time
+from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent))
+
+import exegete.server as server  # noqa: E402
+from exegete import import_page, occurrences  # noqa: E402
+from exegete import opener, reading_folder  # noqa: E402
+from exegete import preview_tokens as pt  # noqa: E402
+from exegete import pseudonymise as P  # noqa: E402
+from exegete.database import QualcoderDatabase  # noqa: E402
+from exegete.reading_copy import POLICY  # noqa: E402
+from track5_helpers import write_fixture_sidecar  # noqa: E402
+import test_v012_pseudonymise_tool as flagship  # noqa: E402
+from test_v012_pseudonymise_tool import (  # noqa: E402
+    DECLARED_ROUTES, MAPPING, PARTICIPANT, build_project, call,
+    execute_from, preview_of, routes_carrying, wired)
+from test_v0153_occurrence_ids import block, names_list  # noqa: E402
+
+# The study's first case: the manager's two Toms, then the son's two
+TOMS = ("My manager Tom called me in.\n"
+        "Tom said the plant would close.\n"
+        "At home my son Tom was waiting.\n"
+        "Tom asked what had happened.\n")
+TOM = [{"original": "Tom", "pseudonym": "Alex"}]
+# More occurrences than a preview lists (161, two on each of 80 lines
+# and one on the last), the lines ended in each of the three ways the
+# reading copy reads a line break
+BREAKS = ("\r\n", "\r", "\n")
+MANY = "".join("Line %d: Tom met Tom.%s" % (number, BREAKS[number % 3])
+               for number in range(80)) + "And Tom, at the end."
+# A name no path holds by chance, for the tests that read a place as it
+# stands on the names list's path
+ZEB = [{"original": "Zebedee", "pseudonym": "Robin"}]
+ZEB_TEXT = ("Zebedee walked to the quarry.\n"
+            "Ottoline stayed behind, and Zebedee came back.\n")
+# The safety sentences, word for word (the one page's exception to pinning
+# no phrasing)
+HEAD = ("This page is for you. To leave an occurrence as it is, tell the "
+        "assistant its id. Words you copy from this page into the "
+        "conversation go to the AI provider, names included, unless the "
+        "model runs on your own computer. It is not meant to be read by an "
+        "AI assistant.")
+NOTE = ("This page is for the researcher: do not open it, read it or look "
+        "at it with any tool, browser or screenshot. Ask them which ids to "
+        "leave.")
+# What `occurrences_page` may hold, and nothing else
+ANSWER_KEYS = {"opened", "counts", "note", "location", "not_opened_because",
+               "withheld_note", "not_written_because"}
+
+# The page's marks and labels, as occurrences.build_page draws them
+MARK = r'<mark class="occ( left)?">([^<]*)</mark>'
+LABEL = (r'<span class="id( left)?"><span class="sr">occurrence id </span>'
+         r'([0-9a-z]+)(, left as it is)?</span>')
+TOKEN = re.compile(MARK + "|" + LABEL)
+PARAGRAPH = re.compile(r'<p><span class="n">(\d+)</span>(.*?)</p>', re.DOTALL)
+LINE_BREAK = re.compile("\r\n|\r|\n")
+# The flagship's walk of every string, whose project is named after its
+# participant (taken through the module, so that it is not collected here)
+WALK = flagship.TestEveryStringOfEverySinkOnAProjectNamedAfterTheParticipant
+
+
+@contextmanager
+def fresh(tmp_path, text, name="study.qda"):
+    """A selected project whose file 1 holds `text`."""
+    folder = build_project(tmp_path / name, text)
+    write_fixture_sidecar(str(folder))
+    with wired(folder):
+        yield folder
+
+
+def page_at(folder, fid=1):
+    """Where the page for file `fid` is written."""
+    return (reading_folder.root() / reading_folder.project_key(folder)
+            / f"file-{fid}" / reading_folder.OCCURRENCES
+            / occurrences.PAGE_NAME)
+
+
+def page_of(folder, fid=1):
+    return page_at(folder, fid).read_text(encoding="utf-8")
+
+
+def block_the_reading_folder(folder):
+    """A file where the reading folder goes, so that it cannot be made;
+    the file, to take away again."""
+    reading_folder.forget_project(folder)
+    top = reading_folder.root()
+    (top / reading_folder.NOTE_NAME).unlink()
+    top.rmdir()
+    top.write_text("not a folder", encoding="utf-8")
+    return top
+
+
+def opened_as(monkeypatch):
+    """Report every page as opened, opening nothing; the paths asked."""
+    asked = []
+
+    def open_file(path, own_page=False, platform=None, within=None):
+        asked.append(Path(path))
+        return opener.Outcome(True)
+    monkeypatch.setattr(opener, "open_file", open_file)
+    return asked
+
+
+def marked(page):
+    """Each occurrence the page marks, in page order, as (line, offset in
+    the line, its words, its id, marked left, labelled left), and each
+    line's words as the page gives them, labels left out."""
+    main = page[page.index('<main id="text">'):page.index("</main>")]
+    found, lines = [], {}
+    for number, body in PARAGRAPH.findall(main):
+        words, cursor, mark = "", 0, None
+        for token in TOKEN.finditer(body):
+            words += html.unescape(body[cursor:token.start()])
+            if token.group(0).startswith("<mark"):
+                mark = (int(number), len(words), html.unescape(
+                    token.group(2)), bool(token.group(1)))
+                words += mark[2]
+            else:
+                assert mark is not None, body
+                found.append((mark[0], mark[1], mark[2], token.group(4),
+                              mark[3], bool(token.group(3))
+                              and bool(token.group(5))))
+                mark = None
+            cursor = token.end()
+        words += html.unescape(body[cursor:])
+        lines[int(number)] = words
+    return found, lines
+
+
+def expected(text, mapping, left=()):
+    """Each occurrence as the page should mark it, from the plan the tool
+    builds, with the key made as the tool makes it."""
+    key = occurrences.id_key(pt.load_secret(), server._token_project())
+    plan = server.db.pseudonymise_plan(
+        P.Compiled(P.validate_mapping(mapping)), "snap_to_pseudonym", [1],
+        occurrence_key=key)
+    item = plan["files"][0]
+    shown = occurrences.shown_ids(item["occurrence_ids"])
+    starts = [0] + [found.end() for found in LINE_BREAK.finditer(text)]
+    rows = []
+    for place, (found, one) in enumerate(zip(item["found"], shown)):
+        line = occurrences.line_numbers(text, [found.start])[0]
+        rows.append((line, found.start - starts[line - 1],
+                     text[found.start:found.end], one, place in left,
+                     place in left))
+    return rows
+
+
+def stored_lines(text):
+    return {number: words for number, words in
+            enumerate(LINE_BREAK.split(text), start=1)}
+
+
+class TestThePage:
+    def test_page_marks_every_id(self, tmp_path):
+        """Every id issued, listed in the preview or past its listing, is
+        on the page at its place in the stored text, after its line
+        number, as the preview's listing numbers it; with a list, the
+        ones left, past the listing too, are marked as left."""
+        with fresh(tmp_path, MANY) as folder:
+            out = preview_of(mapping=TOM, choose_occurrences=True)
+            listed = block(out)["listed"]
+            assert len(listed) == occurrences.OCCURRENCES_LISTED
+            assert block(out)["more"] == 11
+            found, lines = marked(page_of(folder))
+            assert found == expected(MANY, TOM)
+            assert len(found) == 161
+            assert lines == stored_lines(MANY)
+            for row, mark in zip(listed, found):
+                assert (row["id"], row["line"]) == (mark[3], mark[0])
+            assert out["occurrences_page"]["counts"] == {
+                "occurrences": 161, "left": 0, "lines": 81}
+            ids = [mark[3] for mark in found]
+            out = preview_of(mapping=TOM, choose_occurrences=True,
+                             leave_occurrences=[ids[0], ids[155]])
+            assert "preview_token" in out, out
+            found, _ = marked(page_of(folder))
+            assert found == expected(MANY, TOM, left={0, 155})
+            assert out["occurrences_page"]["counts"]["left"] == 2
+
+    def test_page_carries_no_key(self, tmp_path):
+        """No pseudonym and no entry number on the page, on either path:
+        the mapping's pseudonyms occur nowhere in the text, so any on the
+        page would be the mapping's."""
+        assert "Alex" not in flagship.TEXT and "Sam" not in flagship.TEXT
+        with fresh(tmp_path, flagship.TEXT) as folder:
+            for source in ("typed", "names list"):
+                if source == "typed":
+                    out = preview_of(choose_occurrences=True)
+                else:
+                    names_list(folder, [
+                        {"original": "Thomas", "pseudonym": "Alex"},
+                        {"original": "Tom", "pseudonym": "Alex"},
+                        {"original": "Mary Ann", "pseudonym": "Sam"}])
+                    out = call(mapping=None, use_project_pseudonyms=True,
+                               choose_occurrences=True)
+                page = page_of(folder)
+                assert out["occurrences_page"]["counts"]["occurrences"] == 5
+                for word in ("alex", "sam", "entry", "entries"):
+                    assert word not in page.lower(), (source, word)
+
+    def test_page_escaped(self, tmp_path):
+        """A text and a file name holding markup stay text, and the head
+        carries the policy that allows no script."""
+        text = ('Tom wrote <script>alert("x")</script> & \'quoted\' '
+                '<b>Tom</b>.\n')
+        with fresh(tmp_path, text) as folder:
+            con = sqlite3.connect(str(folder / "data.qda"))
+            con.execute("UPDATE source SET name=? WHERE id=1",
+                        ('<img src=x onerror="y">.txt',))
+            con.commit()
+            con.close()
+            preview_of(mapping=TOM, choose_occurrences=True)
+            page = page_of(folder)
+            assert page.startswith("<!DOCTYPE html>\n"
+                                   + reading_folder.PAGE_MARK)
+            assert (f'<meta http-equiv="Content-Security-Policy" '
+                    f'content="{POLICY}">') in page
+            assert "<script" not in page and "<img" not in page
+            assert "<b>" not in page
+            assert "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; " \
+                   "&amp; &#x27;quoted&#x27; &lt;b&gt;" in page
+            found, lines = marked(page)
+            assert lines[1] == text.rstrip("\n")
+            assert [mark[2] for mark in found] == ["Tom", "Tom"]
+
+    def test_left_marked(self, tmp_path):
+        """With a list, those left in the second style, labelled as left,
+        and counted."""
+        with fresh(tmp_path, TOMS) as folder:
+            ids = [row["id"] for row in block(preview_of(
+                mapping=TOM, choose_occurrences=True))["listed"]]
+            out = preview_of(mapping=TOM, choose_occurrences=True,
+                             leave_occurrences=ids[2:])
+            found, _ = marked(page_of(folder))
+            assert [(mark[3], mark[4], mark[5]) for mark in found] == [
+                (ids[0], False, False), (ids[1], False, False),
+                (ids[2], True, True), (ids[3], True, True)]
+            assert out["occurrences_page"]["counts"] == {
+                "occurrences": 4, "left": 2, "lines": 5}
+            assert "2 occurrences are marked as left" in page_of(folder)
+
+    def test_all_left(self, tmp_path):
+        """A list that leaves every occurrence: a page with every one
+        marked as left, beside the preview's own sentence."""
+        with fresh(tmp_path, TOMS) as folder:
+            ids = [row["id"] for row in block(preview_of(
+                mapping=TOM, choose_occurrences=True))["listed"]]
+            out = preview_of(mapping=TOM, choose_occurrences=True,
+                             leave_occurrences=ids)
+            assert server._EVERY_OCCURRENCE_LEFT in out["warnings"]
+            found, _ = marked(page_of(folder))
+            assert [mark[4] and mark[5] for mark in found] == [True] * 4
+            assert out["occurrences_page"]["counts"]["left"] == 4
+
+    def test_no_occurrence_no_page(self, tmp_path):
+        """No name of the mapping in the file: no page, one sentence."""
+        with fresh(tmp_path, TOMS) as folder:
+            out = preview_of(mapping=ZEB, choose_occurrences=True)
+            assert "preview_token" in out, out
+            assert out["occurrences_page"] == \
+                server._OCCURRENCES_PAGE_NONE
+            assert not page_at(folder).exists()
+
+    def test_an_occurrence_across_a_line_break(self):
+        """Were an occurrence to cross a line break, which the rewrite
+        never matches, it is marked on each line and labelled once."""
+        page, counts = occurrences.build_page(
+            project_name="p", file_id=1, file_name="f.txt",
+            text="Mary\nAnn and Tom.", marks=[(0, 8, "aaaaa"),
+                                              (13, 16, "bbbbb")],
+            left={0}, written_at=datetime(2026, 11, 4, 9, 30))
+        found, lines = marked(page)
+        assert lines == {1: "Mary", 2: "Ann and Tom."}
+        assert found == [(2, 0, "Ann", "aaaaa", True, True),
+                         (2, 8, "Tom", "bbbbb", False, False)]
+        assert page.count('<mark class="occ left">') == 2
+        assert counts == {"occurrences": 2, "left": 1, "lines": 2}
+
+
+class TestTheAnswer:
+    def test_the_safety_sentences(self, tmp_path):
+        """The page's head and the answer's note, whose first sentence is
+        the import page's, word for word."""
+        with fresh(tmp_path, TOMS) as folder:
+            out = preview_of(mapping=TOM, choose_occurrences=True)
+            page = " ".join(page_of(folder).split())
+            assert f'<p class="for-you">{HEAD}</p>' in page
+            assert out["occurrences_page"]["note"] == NOTE
+            first = import_page.FOR_THE_ASSISTANT.split(". ")[0]
+            assert NOTE.startswith(first + ". ")
+
+    def test_location_only_when_not_opened(self, tmp_path, monkeypatch):
+        """On the typed path: opened, no place; not opened, the place and
+        the opener's reason, as they stand."""
+        with fresh(tmp_path, TOMS) as folder:
+            out = preview_of(mapping=TOM, choose_occurrences=True)
+            answer = out["occurrences_page"]
+            assert answer["opened"] is False
+            assert answer["location"] == str(page_at(folder))
+            assert answer["not_opened_because"] == opener.open_file(
+                page_at(folder), own_page=True).reason
+            assert "withheld_note" not in answer
+            asked = opened_as(monkeypatch)
+            out = preview_of(mapping=TOM, choose_occurrences=True)
+            answer = out["occurrences_page"]
+            assert answer["opened"] is True
+            assert set(answer) == {"opened", "counts", "note"}
+            assert asked == [page_at(folder)]
+
+    def test_answer_holds_no_text(self, tmp_path, monkeypatch, caplog):
+        """`occurrences_page` holds a flag, counts, the note and at most a
+        place and a reason; a folder that cannot be written gives
+        `not_written_because`, and the preview stands."""
+        with fresh(tmp_path, ZEB_TEXT) as folder:
+            out = preview_of(mapping=ZEB, choose_occurrences=True)
+            answer = out["occurrences_page"]
+            assert set(answer) <= ANSWER_KEYS
+            said = json.dumps(answer)
+            for word in ("Zebedee", "Robin", "walked", "quarry",
+                         "Ottoline"):
+                assert word not in said, word
+            assert page_at(folder).is_file()
+            # The reading folder cannot be made: a file stands there
+            top = block_the_reading_folder(folder)
+            out = preview_of(mapping=ZEB, choose_occurrences=True)
+            assert "preview_token" in out, out
+            assert out["occurrences_page"] == {
+                "opened": False, "not_written_because":
+                    out["occurrences_page"]["not_written_because"]}
+            assert out["occurrences_page"]["not_written_because"].startswith(
+                "Exegete could not make its reading folder on this computer")
+            # Any other error by its kind alone, in the answer and the log:
+            # its message names the file
+            top.unlink()
+
+            def refuse(folder_, name, page):
+                raise PermissionError(errno.EACCES, "Permission denied",
+                                      str(Path(folder_) / "Zebedee" / name))
+            monkeypatch.setattr(reading_folder, "write_page", refuse)
+            caplog.set_level(logging.DEBUG)
+            out = preview_of(mapping=ZEB, choose_occurrences=True)
+            assert "preview_token" in out, out
+            assert out["occurrences_page"] == {
+                "opened": False,
+                "not_written_because": "PermissionError EACCES"}
+            logged = "\n".join(record.getMessage()
+                               for record in caplog.records)
+            assert "PermissionError EACCES" in logged
+            assert "Zebedee" not in logged
+
+class TestTheNamesListsPath:
+    def test_the_walk_with_choose_occurrences(self, tmp_path):
+        """The walk's project, named after its participant, previewed
+        from its names list with choose_occurrences under the suite's
+        opener, which never opens: no string carries the name outside the
+        declared routes; the page's place, which runs through the project
+        folder's name, is null with its note; and a file Exegete did not
+        write at the page's place gives withheld words while the preview
+        stands."""
+        folder = WALK()._build(tmp_path, collide=False)
+        with wired(folder):
+            out = call(mapping=None, use_project_pseudonyms=True,
+                       choose_occurrences=True)
+            assert "preview_token" in out, out
+            assert routes_carrying(out, PARTICIPANT, DECLARED_ROUTES) == []
+            answer = out["occurrences_page"]
+            assert answer["opened"] is False
+            assert answer["location"] is None
+            assert answer["withheld_note"] == \
+                server._OCCURRENCES_PAGE_WITHHELD.format(file_id=1)
+            # The route is really taken: the page is there, at a place
+            # that carries the name
+            where = page_at(folder)
+            assert where.is_file() and PARTICIPANT in str(where)
+            where.unlink()
+            where.write_text("the researcher's own notes", encoding="utf-8")
+            again = call(mapping=None, use_project_pseudonyms=True,
+                         choose_occurrences=True)
+            assert "preview_token" in again, again
+            assert routes_carrying(again, PARTICIPANT, DECLARED_ROUTES) == []
+            answer = again["occurrences_page"]
+            assert answer == {"opened": False, "not_written_because": None,
+                              "withheld_note": server.
+                              _OCCURRENCES_PAGE_WITHHELD.format(file_id=1)}
+            assert where.read_text(encoding="utf-8") == \
+                "the researcher's own notes"
+
+    def test_a_place_without_a_name_is_given(self, tmp_path):
+        """On the names list's path, a place that carries no name from the
+        mapping is given as it stands, and so are a reading folder error's
+        words."""
+        with fresh(tmp_path, ZEB_TEXT) as folder:
+            names_list(folder, ZEB)
+            out = call(mapping=None, use_project_pseudonyms=True,
+                       choose_occurrences=True)
+            answer = out["occurrences_page"]
+            assert answer["location"] == str(page_at(folder))
+            assert "withheld_note" not in answer
+            where = page_at(folder)
+            where.unlink()
+            where.write_text("the researcher's own notes", encoding="utf-8")
+            out = call(mapping=None, use_project_pseudonyms=True,
+                       choose_occurrences=True)
+            assert out["occurrences_page"]["not_written_because"] == (
+                f"A file Exegete did not write is in its reading folder at "
+                f"{where}. Remove it, then ask again.")
+
+
+class TestTheNextNote:
+    def test_the_next_note_names_the_page(self, tmp_path, monkeypatch):
+        """The block's next note names the page that opened, or the one
+        whose place the answer gives, on both paths; where no page was
+        written it names none."""
+        with fresh(tmp_path, ZEB_TEXT) as folder:
+            names_list(folder, ZEB)
+            for typed in (True, False):
+                arguments = ({"mapping": ZEB} if typed else
+                             {"mapping": None, "use_project_pseudonyms": True})
+                out = call(choose_occurrences=True, **arguments)
+                assert block(out)["next"] == server._OCCURRENCES_NEXT_TO_OPEN
+                assert "occurrences_page" in block(out)["next"]
+                assert out["occurrences_page"]["location"]
+            top = block_the_reading_folder(folder)
+            for typed in (True, False):
+                arguments = ({"mapping": ZEB} if typed else
+                             {"mapping": None, "use_project_pseudonyms": True})
+                out = call(choose_occurrences=True, **arguments)
+                assert "not_written_because" in out["occurrences_page"]
+                assert block(out)["next"] == \
+                    QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_NEXT
+                assert "page" not in block(out)["next"]
+            top.unlink()
+            opened_as(monkeypatch)
+            for typed in (True, False):
+                arguments = ({"mapping": ZEB} if typed else
+                             {"mapping": None, "use_project_pseudonyms": True})
+                out = call(choose_occurrences=True, **arguments)
+                assert out["occurrences_page"]["opened"] is True
+                assert block(out)["next"] == server._OCCURRENCES_NEXT_OPENED
+                assert "the page that opened in their browser" in \
+                    block(out)["next"]
+            # With a list the block says what is left, and no next note
+            ids = [row["id"] for row in block(out)["listed"]]
+            out = call(mapping=ZEB, choose_occurrences=True,
+                       leave_occurrences=ids[:1])
+            assert "next" not in block(out) and block(out)["left"] == 1
+
+
+class TestWhereThePageGoes:
+    def test_page_survives_a_reading_copy(self, tmp_path):
+        with fresh(tmp_path, TOMS) as folder:
+            preview_of(mapping=TOM, choose_occurrences=True)
+            before = page_of(folder)
+            shown = json.loads(server.open_file_for_reading(1))
+            assert shown["shown"] == "reading_copy", shown
+            assert Path(shown["location"]).parent == page_at(folder).parent \
+                .parent
+            assert page_of(folder) == before
+
+    def test_page_gone_after_the_run(self, tmp_path):
+        """The page is found first, then gone with the file's reading
+        folder once the run changes the text; the execute writes none,
+        even when asked to choose."""
+        with fresh(tmp_path, TOMS) as folder:
+            out = preview_of(mapping=TOM, choose_occurrences=True)
+            assert page_at(folder).is_file()
+            result = execute_from(out, mapping=TOM, choose_occurrences=True)
+            assert result.get("success") is True, result
+            assert "occurrences_page" not in result
+            assert not page_at(folder).exists()
+            assert not page_at(folder).parent.parent.exists()
+
+    def test_page_swept_after_an_hour(self, tmp_path):
+        """The sweep removes the page once it is an hour old, and a
+        temporary file beside it after ten minutes; younger ones stay."""
+        with fresh(tmp_path, TOMS) as folder:
+            preview_of(mapping=TOM, choose_occurrences=True)
+            page = page_at(folder)
+            now = time.time()
+            stale = page.parent / f"{reading_folder.TEMP_PREFIX}1-1"
+            fresh_temp = page.parent / f"{reading_folder.TEMP_PREFIX}1-2"
+            for path in (stale, fresh_temp):
+                path.write_bytes(b"part of a page")
+            os.utime(stale, (now - reading_folder.TEMP_LIFETIME - 5,) * 2)
+            os.utime(fresh_temp, (now - 60,) * 2)
+            os.utime(page, (now - reading_folder.PREVIEW_LIFETIME + 60,) * 2)
+            reading_folder.sweep(now)
+            assert page.is_file() and fresh_temp.exists()
+            assert not stale.exists()
+            os.utime(page, (now - reading_folder.PREVIEW_LIFETIME - 5,) * 2)
+            reading_folder.sweep(now)
+            assert not page.exists() and fresh_temp.exists()
+
+
+class TestTheFoldersNote:
+    def test_the_folder_note_written_again(self, tmp_path, monkeypatch):
+        """An earlier note becomes this release's at the next write there,
+        once in a process; the note names the page and when it goes."""
+        note = " ".join(reading_folder.NOTE.split())
+        assert ("When a pseudonymisation preview is asked to list the "
+                "occurrences of names, Exegete also writes a page on which "
+                "you choose the occurrences to leave as they are.") in note
+        assert ("a page for choosing occurrences, also at the first tidy "
+                "once it is an hour old") in note
+        top = reading_folder.ensure_root()
+        written = top / reading_folder.NOTE_NAME
+        assert written.read_text(encoding="utf-8") == reading_folder.NOTE
+        earlier = b"About this folder\n\nAn earlier release's words.\n"
+        written.write_bytes(earlier)
+        monkeypatch.setattr(reading_folder, "_note_checked", False)
+        with fresh(tmp_path, TOMS):
+            preview_of(mapping=TOM, choose_occurrences=True)
+        assert written.read_text(encoding="utf-8") == reading_folder.NOTE
+        # Once in a process: the words a researcher puts there later stay
+        written.write_bytes(earlier)
+        reading_folder.ensure_root()
+        assert written.read_bytes() == earlier
+
+    @flagship.POSIX_ONLY
+    def test_a_link_at_the_notes_place_is_not_followed(self, tmp_path,
+                                                       monkeypatch):
+        top = reading_folder.ensure_root()
+        written = top / reading_folder.NOTE_NAME
+        elsewhere = tmp_path / "elsewhere.txt"
+        elsewhere.write_bytes(b"someone else's file")
+        written.unlink()
+        os.symlink(str(elsewhere), str(written))
+        monkeypatch.setattr(reading_folder, "_note_checked", False)
+        reading_folder.ensure_root()
+        assert written.is_symlink()
+        assert elsewhere.read_bytes() == b"someone else's file"
+
+
+class TestNoRunSpokenOf:
+    def test_no_run_spoken_of_where_no_name_is_in_the_file(self, tmp_path):
+        """A preview given no list, of a file where no name of the mapping
+        occurs, with a name in another file: the file-text warning speaks
+        of no run, as where a list leaves every occurrence. With a note to
+        rewrite, a run happens, and the warning says so."""
+        with fresh(tmp_path, "Nobody is named in this one.\n") as folder:
+            con = sqlite3.connect(str(folder / "data.qda"))
+            con.execute("UPDATE source SET fulltext=? WHERE id=4",
+                        ("Thomas wrote this.",))
+            con.execute("UPDATE source SET memo=? WHERE id=1",
+                        ("Thomas called back.",))
+            con.commit()
+            con.close()
+            server.db.close()
+            server.db = QualcoderDatabase(str(folder))
+            out = preview_of(mapping=MAPPING)
+            warnings = out["warnings"]
+            assert ("None of the names in this mapping occurs in this file, "
+                    "so an execute would rewrite nothing.") in warnings
+            text = [w for w in warnings if "would still be in the text" in w]
+            assert len(text) == 1, warnings
+            assert text[0].startswith("Warning: 1 occurrence(s) of these "
+                                      "names would still be in the text of "
+                                      "1 file(s)")
+            assert not any("after this run" in w for w in warnings), warnings
+            out = preview_of(mapping=MAPPING, rewrite_memos=True)
+            text = [w for w in out["warnings"]
+                    if "would still be in the text" in w]
+            assert text[0].startswith("Warning: after this run, 1 "
+                                      "occurrence(s)"), out["warnings"]

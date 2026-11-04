@@ -19892,6 +19892,130 @@ def _refuse_occurrences_not_placed(plan: Dict[str, Any]) -> None:
                                    "ambiguous": ambiguous})
 
 
+# The page for choosing occurrences (v0.15.3), in a preview's answer: none
+# where no name of the mapping occurs in the file
+_OCCURRENCES_PAGE_NONE = (
+    "No name of this mapping occurs in this file, so no page was written.")
+# With the names list, the page's place, or the words that say why it could
+# not be written, withheld where they carry a name from the mapping: they
+# run through the project folder's own name
+_OCCURRENCES_PAGE_WITHHELD = (
+    "Withheld (null): a reader of it would see a name from this mapping. "
+    "The page's place is in Exegete's reading folder, in this project's "
+    "folder, under file-{file_id}.")
+# The occurrences block's next note where a page shows the researcher each
+# id, opened or written for them to open: without a page, the ids alone
+# leave them to count occurrences in text order. Where none was written,
+# the block's own note stands (QualcoderDatabase.
+# PSEUDONYMISE_OCCURRENCES_NEXT)
+_OCCURRENCES_NEXT_THEN = (
+    "Then preview again with choose_occurrences and leave_occurrences "
+    "listing their ids: that preview marks the ones left, for the "
+    "researcher to check, and its token is the one the run needs.")
+_OCCURRENCES_NEXT_OPENED = (
+    "To leave some of these, ask the researcher which: the page that "
+    "opened in their browser shows each id where it stands in the text. "
+    + _OCCURRENCES_NEXT_THEN)
+_OCCURRENCES_NEXT_TO_OPEN = (
+    "To leave some of these, ask the researcher which: the page written "
+    "for them shows each id where it stands in the text, and "
+    "occurrences_page says where it is, since it did not open. "
+    + _OCCURRENCES_NEXT_THEN)
+
+
+def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
+                      compiled) -> Any:
+    """Write and open the page for choosing occurrences (v0.15.3), from
+    the plan the preview was built from, so with its ids; what the
+    preview's answer says of it. It never fails the preview and never
+    gives the text.
+
+    The page shows every occurrence as found (the plan's `found`, each
+    at its place in the stored text) with the id the preview shows for
+    it (its `occurrence_ids`, cut as the block cuts them), and those a
+    list leaves (`left_at`) marked as left. The answer gives whether it
+    opened, the page's counts and the note for the assistant; the page's
+    place only when it did not open, beside the opener's reason, which
+    names no file; and `not_written_because` when it could not be
+    written: a reading folder error's own words, any other error by its
+    kind alone, since its message names the file. With the names list
+    (`typed` false) the place and those words are withheld where they
+    carry a name from the mapping, as a skipped link's name is, with
+    `withheld_note`. A file with no occurrence has no page, and one
+    sentence says so."""
+    item = next((entry for entry in (plan or {}).get("files", ())
+                 if entry.get("found")), None)
+    if item is None:
+        return _OCCURRENCES_PAGE_NONE
+    file_id = int(item["file_id"])
+    answer: Dict[str, Any] = {"opened": False}
+    withheld = []
+
+    def said(words: str) -> Optional[str]:
+        if typed:
+            return words
+        safe = _pseudonymise_safe_name(words, compiled)
+        if safe is None:
+            withheld.append(True)
+        return safe
+
+    try:
+        shown = occurrence_ids.shown_ids(item["occurrence_ids"])
+        html, counts = occurrence_ids.build_page(
+            project_name=project_display_name(current_project_path),
+            file_id=file_id, file_name=item["name"] or f"file {file_id}",
+            text=item["old_text"],
+            marks=[(found.start, found.end, one)
+                   for found, one in zip(item["found"], shown)],
+            left=item.get("left_at", ()), written_at=reading.now(),
+            version=_package_version)
+        path = reading_folder.write_page(
+            reading_folder.occurrences_folder(_current_project_folder(),
+                                              file_id),
+            occurrence_ids.PAGE_NAME, html)
+    except reading_folder.ReadingFolderError as e:
+        answer["not_written_because"] = said(str(e))
+    except Exception as e:
+        # Its message can name the file, and the file the project folder
+        logger.warning("Could not write the page for choosing "
+                       "occurrences: %s", error_label(e))
+        answer["not_written_because"] = error_label(e)
+    else:
+        answer["counts"] = counts
+        try:
+            outcome = reading.present(path, "open", own_page=True)
+        except reading.ReadingRefusal as e:
+            outcome = {"opened": False, "not_opened_because": str(e)}
+        except Exception as e:
+            outcome = {"opened": False, "not_opened_because": error_label(e)}
+        answer["opened"] = bool(outcome.get("opened"))
+        if not answer["opened"]:
+            answer["location"] = said(str(path))
+            answer["not_opened_because"] = outcome.get("not_opened_because")
+        answer["note"] = occurrence_ids.PAGE_FOR_THE_ASSISTANT
+    if withheld:
+        answer["withheld_note"] = _OCCURRENCES_PAGE_WITHHELD.format(
+            file_id=file_id)
+    return answer
+
+
+def _occurrences_next(preview: Dict[str, Any], page: Any) -> None:
+    """The occurrences block's next note, naming the page that shows the
+    researcher each id where one was written: the one that opened, or
+    the one whose place the answer gives for them to open. On the names
+    list's path the ids come alone, so without the page the researcher
+    could choose only by counting occurrences in text order. Where none
+    was written the block's own note, which names no page, stands."""
+    if not isinstance(page, dict) or "note" not in page:
+        return
+    words = (_OCCURRENCES_NEXT_OPENED if page.get("opened")
+             else _OCCURRENCES_NEXT_TO_OPEN)
+    for item in preview.get("files", []):
+        block = item.get("occurrences")
+        if isinstance(block, dict) and "next" in block:
+            block["next"] = words
+
+
 def _after_a_colon(text: str) -> str:
     """A sentence set after a colon: its first letter in lower case."""
     return text[:1].lower() + text[1:]
@@ -22449,6 +22573,20 @@ def pseudonymise_source(
         preview = result.get("preview")
         if isinstance(preview, dict):
             preview.pop("_effect", None)
+        if choose_occurrences and preview_token is None and \
+                isinstance(preview, dict) and "preview_token" in result:
+            # The page for choosing (v0.15.3), on a preview alone, written
+            # from the plan the preview was built from, so with its ids,
+            # and said beside the preview
+            page = _occurrences_page(read_phase.get("plan"), typed,
+                                     compiled)
+            _occurrences_next(preview, page)
+            answer: Dict[str, Any] = {}
+            for key, value in result.items():
+                answer[key] = value
+                if key == "preview":
+                    answer["occurrences_page"] = page
+            result = answer
         if typed and not save and not keeps and "execute_with" in result:
             # Ruling 14a: the preview says which is needed, and the model
             # finds the two ways forward where it finds the recipe.

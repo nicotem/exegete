@@ -3,7 +3,7 @@
 their own computer (v0.14.3; the import and reading design,
 decision 6).
 
-Three kinds of file go here, never into the project (exports are refused
+Four kinds of file go here, never into the project (exports are refused
 inside it, and every backup copies the whole project folder):
 
 - reading copies: a web page with a file's whole text and its codings;
@@ -11,7 +11,11 @@ inside it, and every backup copies the whole project folder):
   so that the project's own copy is never opened in an editor;
 - preview pages, on which the researcher checks letters that look
   garbled before deciding whether a file comes in (the import's
-  `show_text` writes them through `previews_folder`; `import_page`).
+  `show_text` writes them through `previews_folder`; `import_page`);
+- pages for choosing occurrences, on which the researcher chooses the
+  occurrences of a name a pseudonymisation run leaves as they are (a
+  preview with `choose_occurrences` writes one per file through
+  `occurrences_folder`; `occurrences.build_page`, v0.15.3).
 
 The folder is private to Exegete and to this account, out of iCloud and
 OneDrive, and not indexed by the computer's search:
@@ -30,16 +34,19 @@ of the document and media types QualCoder imports are copied
 shortcut acting when opened.
 One subfolder per project, named from the project's name and a digest of
 where it is; in it, one folder per file (`file-<id>`, the copy of its
-original in `original` inside, so it never shares a name with the page)
-and `previews`.
+original in `original` inside, so it never shares a name with the page,
+and the page for choosing occurrences in `occurrences`) and `previews`.
 
 Tidying: preview pages go after the import, or once they are an hour
 old, when Exegete next tidies the folder (at most every five minutes
-while it writes here, and at each start); a file's folder goes whenever Exegete changes that file's text
+while it writes here, and at each start); a page for choosing
+occurrences goes once it is an hour old, at the same tidy, since it
+marks which words are names; a file's folder goes whenever Exegete changes that file's text
 or name; a project's whole subfolder goes when a backup is restored over
 it; and anything older than a week goes at the first tidy after that. A
 short note at the top says what the pages are and that they can be
-deleted at any time.
+deleted at any time; Exegete writes it again when its words there are
+not this release's.
 
 Nothing here follows a link: the folders are checked not to be links,
 and every removal works only inside this folder.
@@ -68,6 +75,9 @@ TEMP_LIFETIME = 10 * 60
 NOTE_NAME = "About this folder.txt"
 PREVIEWS = "previews"
 ORIGINAL = "original"
+# The folder, inside a file's folder, for its page for choosing
+# occurrences (v0.15.3)
+OCCURRENCES = "occurrences"
 # The first line of every page Exegete writes here; a page is replaced
 # only when it carries it (an existing file without it is not Exegete's).
 PAGE_MARK = "<!-- Written by Exegete for reading on this computer. -->"
@@ -81,15 +91,19 @@ About this folder
 Exegete writes pages here so that you can read your project's files in
 your own browser, read-only copies of the documents it opens for you,
 and, when an import's preview is asked for one, a page on which to
-check letters that look garbled before a file comes in. They are
-copies: deleting them changes nothing in any project, and you can
-delete this whole folder at any time.
+check letters that look garbled before a file comes in. When a
+pseudonymisation preview is asked to list the occurrences of names,
+Exegete also writes a page on which you choose the occurrences to leave
+as they are. They are copies: deleting them changes nothing in any
+project, and you can delete this whole folder at any time.
 
-Exegete also deletes them itself: a file's page and copy, when Exegete
-changes that file's text or name; a page for checking letters, after
-the import or at the first tidy once it is an hour old; everything here,
-at the first tidy once it is a week old. Exegete tidies this folder when
-it starts, and at most every five minutes while it writes here.
+Exegete also deletes them itself: a file's pages and copy, when Exegete
+changes that file's text or name; a page for choosing occurrences, also
+at the first tidy once it is an hour old; a page for checking letters,
+after the import or at the first tidy once it is an hour old;
+everything here, at the first tidy once it is a week old. Exegete
+tidies this folder when it starts, and at most every five minutes while
+it writes here.
 
 This folder is not synced and is not indexed by the computer's search.
 A page holds a whole file's text: to keep one, save it elsewhere from
@@ -250,12 +264,33 @@ def _make(path: Path) -> Path:
 
 
 _last_sweep = 0.0
+# Whether this process has read the folder's note, to write it again when
+# its words are not this release's (v0.15.3)
+_note_checked = False
+
+
+def _note_differs(note: Path, wanted: bytes) -> bool:
+    """Whether the note at `note` is an ordinary file whose bytes are not
+    `wanted`. Read without following a link; a link, a folder or a note
+    that cannot be read is left as it is (False)."""
+    try:
+        if not stat.S_ISREG(os.lstat(note).st_mode):
+            return False
+        flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0)
+                 | getattr(os, "O_NOFOLLOW", 0))
+        with os.fdopen(os.open(note, flags), "rb") as handle:
+            return handle.read(len(wanted) + 1) != wanted
+    except OSError:
+        return False
 
 
 def ensure_root(now: Optional[float] = None) -> Path:
     """The reading folder, made if missing, checked, with its note; a
-    sweep of stale files at most once every five minutes."""
-    global _last_sweep
+    sweep of stale files at most once every five minutes. The note is
+    written when missing, and once in each process again when it is an
+    ordinary file whose words are not this release's (v0.15.3), so a
+    folder made by an earlier release names every page written here."""
+    global _last_sweep, _note_checked
     top = root()
     try:
         top.parent.mkdir(parents=True, exist_ok=True)
@@ -265,10 +300,18 @@ def ensure_root(now: Optional[float] = None) -> Path:
             f"({exc.strerror or 'it cannot be written'}).") from None
     _make(top)
     note = top / NOTE_NAME
+    note_bytes = NOTE.encode("utf-8")
     if not os.path.lexists(note):
-        note_bytes = NOTE.encode("utf-8")
         _write_file(top, NOTE_NAME, 0o600,
                     lambda out: out.write(note_bytes))
+    elif not _note_checked and _note_differs(note, note_bytes):
+        try:
+            _write_file(top, NOTE_NAME, 0o600,
+                        lambda out: out.write(note_bytes))
+        except (OSError, ReadingFolderError):
+            # The note is a courtesy: the earlier words stay
+            pass
+    _note_checked = True
     now = time.time() if now is None else now
     if now - _last_sweep > 300:
         _last_sweep = now
@@ -310,6 +353,15 @@ def original_folder(project, file_id: int) -> Path:
     own folder: a copy keeps the original's name, so in a folder of its
     own it can never take the place of the reading copy's page."""
     return _make(file_folder(project, file_id) / ORIGINAL)
+
+
+def occurrences_folder(project, file_id: int) -> Path:
+    """The folder for one file's page for choosing occurrences (v0.15.3),
+    inside the file's own folder, as the copy of its original is: a
+    reading copy written later keeps it (`remove_others` passes over
+    folders), and the file's folder goes with it when Exegete changes the
+    file's text or name (`forget_file`)."""
+    return _make(file_folder(project, file_id) / OCCURRENCES)
 
 
 def previews_folder(project) -> Path:
@@ -388,9 +440,10 @@ def forget_previews(project) -> int:
 
 
 def sweep(now: Optional[float] = None) -> int:
-    """Remove preview pages older than an hour, temporary files left by
-    an interrupted write, anything older than a week, and project
-    folders left empty. Returns how many entries went."""
+    """Remove preview pages and pages for choosing occurrences older than
+    an hour, temporary files left by an interrupted write, anything older
+    than a week, and project folders left empty. Returns how many
+    entries went."""
     now = time.time() if now is None else now
     top = root()
     removed = 0
@@ -440,6 +493,21 @@ def sweep(now: Optional[float] = None) -> int:
                             if copy.name.startswith(TEMP_PREFIX):
                                 removed += _remove_if_older(
                                     Path(copy.path), now, TEMP_LIFETIME)
+                    elif (item.name == OCCURRENCES
+                          and item.is_dir(follow_symlinks=False)):
+                        # The page for choosing occurrences marks which
+                        # words are names, so it goes after an hour, as a
+                        # preview page does (v0.15.3); an interrupted
+                        # write's file after ten minutes
+                        try:
+                            pages = list(os.scandir(item.path))
+                        except OSError:
+                            pages = []
+                        for page in pages:
+                            removed += _remove_if_older(
+                                Path(page.path), now,
+                                TEMP_LIFETIME if page.name.startswith(
+                                    TEMP_PREFIX) else PREVIEW_LIFETIME)
                 removed += _remove_if_older(path, now, LIFETIME,
                                             newest_inside=True)
                 continue

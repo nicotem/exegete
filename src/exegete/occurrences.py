@@ -11,9 +11,10 @@ assistant sends back ids alone.
 An id is a keyed digest. The key is HMAC-SHA256 under the preview-token
 secret over a label of its own and the project the token binds; each
 occurrence's id is HMAC-SHA256 under that key over the file's id, the
-SHA-256 of the file's text and the occurrence's start and end. So the
-same text in the same project gives the same ids on every preview; a
-copy of the project in another folder gives other ids; any change to
+SHA-256 of the file's text and the occurrence's start and end. So, under
+one secret, the same text in the same project gives the same full ids on
+every preview; another secret (another account's, or one made anew) or
+a copy of the project in another folder gives other ids; any change to
 the text gives every occurrence another id; and a change of mapping
 keeps the id of each occurrence whose span it keeps. Without the secret,
 an id says nothing about where it points.
@@ -108,8 +109,11 @@ def match(given: object, full: Sequence[str],
     exactly one. It is read as Crockford's decoding reads it: in either
     case, with i and l as 1 and o as 0, and white space around it set
     aside. So an id shown earlier still names its occurrence after more
-    occurrences lengthen the ids shown, and one whose occurrence moved
-    or went names nothing.
+    occurrences lengthen the ids shown, unless one of them has a full id
+    that begins as that id does: the id then begins two full ids and
+    names nothing, never the other occurrence (about one chance in 33
+    million for each occurrence added, at five characters). One whose
+    occurrence moved or went names nothing.
     """
     if not isinstance(given, str):
         return None

@@ -8,10 +8,12 @@ number, in text order, in each file's `occurrences` block, and nothing
 else: no name, pseudonym, entry number, span or word of the text, on
 either mapping path. An id is keyed with the preview-token secret and
 the project, and made from the file, its text and the occurrence's span,
-so it holds while those hold and an id shown earlier still names its
-occurrence when more occurrences lengthen the ids shown. On the names
-list's path no match position comes back at all, beside a pseudonym in
-an entry's block or in the overlap diagnostic. The choice is refused
+so it holds while those hold, and an id shown earlier names its
+occurrence, or none, when more occurrences lengthen the ids shown. On
+the names list's path no match's span comes back, beside a pseudonym in
+an entry's block or in the overlap diagnostic; with the flag each
+occurrence's line does, beside the entries' pseudonyms and counts, and
+the changelog says what those lines can tell. The choice is refused
 with `rewrite_memos` before anything is read, and it binds nothing.
 
 The fixture and helpers are the flagship's own
@@ -52,6 +54,23 @@ NAMES_AND_PSEUDONYMS = ("Thomas", "THOMAS", "thomas", "Tom", "Mary Ann",
 NAMES_LIST = [{"original": "Thomas", "pseudonym": "Alex"},
               {"original": "Tom", "pseudonym": "Alex"},
               {"original": "Mary Ann", "pseudonym": "Sam"}]
+# A short interview: "Maria" on lines 2, 4 (twice) and 6
+INTERVIEW = ("Interviewer: thank you for coming.\n"
+             "Maria: I grew up near the river.\n"
+             "Interviewer: and your brother?\n"
+             "Maria: John left early. Maria stayed.\n"
+             "Interviewer: what did John do?\n"
+             "Maria: he worked at the mill.\n")
+# The set's changelog fragment, whose words a release moves into the
+# CHANGELOG's entry for it (scripts/assemble_changelog.py)
+REPO = Path(__file__).resolve().parents[1]
+CHANGELOG_TEXTS = (REPO / "changelog.d" / "occurrences.md",
+                   REPO / "CHANGELOG.md")
+# The safety sentence on the names list's path, and the claim it replaced
+LINES_CAN_PAIR = ("In a text the assistant has read, those lines can show "
+                  "which name each pseudonym replaces.")
+NO_POSITION_CLAIMED = ("the preview no longer says where in the file each "
+                       "name was found")
 
 
 def block(out):
@@ -91,6 +110,14 @@ def full_ids_of(mapping):
         P.Compiled(P.validate_mapping(mapping)), "snap_to_pseudonym", [1],
         occurrence_key=key)
     return plan["files"][0]["occurrence_ids"]
+
+
+def changelog_words():
+    """The fragment and the CHANGELOG as they stand, each with its white
+    space read as single spaces, so that a sentence is found however it
+    wraps and in whichever of the two the release has left it."""
+    return [" ".join(path.read_text(encoding="utf-8").split())
+            for path in CHANGELOG_TEXTS if path.exists()]
 
 
 # The fixture's text: Thomas, Tom, Mary Ann, Thomas, Thomas, on one line
@@ -222,6 +249,30 @@ class TestAnIdShownEarlier:
         assert occurrences.match(before[0], after) is None
         assert occurrences.match(before[0], full) == 0
 
+    def test_an_earlier_id_names_nothing_when_a_new_id_begins_as_it_did(
+            self):
+        """The exception `match` states: an occurrence added later whose
+        full id begins as an id shown earlier makes that id name nothing,
+        never the other occurrence. Shown from two characters, so that
+        such an occurrence is found within a few thousand spans; at five,
+        about one in 33 million per occurrence added."""
+        key = occurrences.id_key("d" * 64, "/p/data.qda")
+        sha = "e" * 64
+        first = occurrences.full_ids(key, 1, sha, [(0, 6)])
+        shown = occurrences.shown_ids(first, shortest=2)[0]
+        assert len(shown) == 2
+        added = next(
+            one for n in range(1, 50000)
+            for one in occurrences.full_ids(key, 1, sha,
+                                            [(10 * n, 10 * n + 6)])
+            if one.startswith(shown))
+        full = first + [added]
+        assert occurrences.match(shown, full, shortest=2) is None
+        longer = occurrences.shown_ids(full, shortest=2)
+        assert len(longer[0]) > len(shown)
+        assert occurrences.match(longer[0], full, shortest=2) == 0
+        assert occurrences.match(longer[1], full, shortest=2) == 1
+
     def test_matching_by_a_shown_id(self):
         """With one key, everything is fixed: an id shown at five
         characters still names its occurrence beside forty more, and an
@@ -311,6 +362,36 @@ class TestWhatTheBlockHolds:
         assert all("spans" in entry for entry in typed["replacements"])
         assert any(entry.get("spans_truncated")
                    for entry in typed["replacements"])
+
+    def test_the_lines_on_the_names_list_path_and_what_the_changelog_says(
+            self, project):
+        """With the flag, the names list's path gives each occurrence's
+        line beside the entries' pseudonyms and counts, so in a text the
+        assistant has read the lines can show which name a pseudonym
+        replaces. The changelog's sentence on that path is a safety
+        sentence: it says so, where it once said that the preview there
+        no longer says where in the file each name was found. Red when
+        the fragment's words go back to that claim, and when the lines
+        stop coming on that path, so that the sentence changes with
+        them."""
+        set_text(project, INTERVIEW)
+        names_list(project, [{"original": "Maria",
+                              "pseudonym": "Participant A"}])
+        out = preview_of(mapping=None, use_project_pseudonyms=True,
+                         choose_occurrences=True)
+        assert out["preview"]["files"][0]["replacements"] == [
+            {"entry": 0, "pseudonym": "Participant A", "count": 4}]
+        lines = [line for _, line in listed(out)]
+        assert lines == [2, 4, 4, 6]
+        # The one capitalised word on every listed line is the name
+        rows = INTERVIEW.split("\n")
+        assert set.intersection(*(
+            set(re.findall(r"[A-Z][a-z]+", rows[line - 1]))
+            for line in lines)) == {"Maria"}
+        said = changelog_words()
+        assert said
+        assert any(LINES_CAN_PAIR in text for text in said)
+        assert not any(NO_POSITION_CLAIMED in text for text in said)
 
     def test_the_overlap_diagnostic_keeps_its_entries_alone(self, project):
         """The lead's call on the overlap diagnostic: on the names list's

@@ -983,7 +983,6 @@ b196356792227b0e	src/exegete/server.py	served	voice	seeded 27 October, to be rea
 a0c492c4d38e4e8b	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The exported FILE is unaffected: it carries every coder's counts, as QualCoder's
 a0c492c4d38e4e8b	src/exegete/server.py	path	voice	seeded 27 October, to be read	The exported FILE is unaffected: it carries every coder's counts, as QualCoder's
 9189d56ff787906f	src/exegete/server.py	served	voice	seeded 27 October, to be read	The file-text count has fixed budgets, and all it spends is charged to them: pas
-b27d71be9161d17b	src/exegete/server.py	served	voice	seeded 27 October, to be read	The last five arguments, record_in_journal and researcher_keeps_mapping are NOT 
 3c9aec7afa79a7d3	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The mapping cannot be saved into this project's pseudonyms.json: entry {} maps a
 190395c26c42b471	src/exegete/server.py	path	voice	seeded 27 October, to be read	The names file there could not be read just now (it changed or went while Exeget
 a73e1a2ed86cfd4f	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The note must be non-empty: the note IS the annotation, and clearing it later (u

@@ -13229,7 +13229,8 @@ class QualcoderDatabase:
     PSEUDONYMISE_HIDEABLE = ("code_text", "annotation")
 
     def pseudonymise_plan(self, compiled, overlap_policy: str,
-                          file_ids: Optional[Sequence[int]] = None
+                          file_ids: Optional[Sequence[int]] = None,
+                          occurrence_key: Optional[bytes] = None
                           ) -> Dict[str, Any]:
         """Everything one run would do, computed without writing anything.
 
@@ -13240,7 +13241,14 @@ class QualcoderDatabase:
         It is deliberately NOT cached between those calls: a cached plan
         is a plan computed against text that may have moved, which is the
         one failure this tool cannot afford.
+
+        With `occurrence_key` (occurrences.id_key, v0.15.3) each file
+        gains `occurrence_ids`: each replacement's full id, in the order
+        of `replacements`, from the file's id, its text's SHA-256 and the
+        span, so every phase that builds the plan from the same text gives
+        the same ids. Nothing signed reads them.
         """
+        from . import occurrences
         from . import pseudonymise as engine
 
         eligible, skipped = self.pseudonymise_sources(file_ids)
@@ -13291,6 +13299,10 @@ class QualcoderDatabase:
                 "collisions": self._pseudonymise_collisions(
                     source["file_id"], rows),
             })
+            if occurrence_key is not None:
+                files[-1]["occurrence_ids"] = occurrences.full_ids(
+                    occurrence_key, source["file_id"], sha,
+                    [(item.start, item.end) for item in replacements])
         return {"eligible": digest_files, "skipped": skipped, "files": files,
                 "overlap_policy": overlap_policy,
                 "case_mode": compiled.case_mode,
@@ -14681,6 +14693,48 @@ class QualcoderDatabase:
         return [{key: value for key, value in item.items() if key != "form"}
                 for item in items]
 
+    @staticmethod
+    def _pseudonymise_entries_only(conflicts: Sequence[Dict[str, Any]]
+                                   ) -> List[Dict[str, Any]]:
+        """The overlap diagnostic on the `use_project_pseudonyms` path
+        (v0.15.3): each conflict's two entries, one row a conflict, so the
+        count stands. Its form is a name, and its two spans, beside the
+        entries' pseudonyms and a text the assistant has read, would pair
+        names with their pseudonyms."""
+        return [{"entry": conflict["entry"],
+                 "loses_to_entry": conflict["loses_to_entry"]}
+                for conflict in conflicts]
+
+    @staticmethod
+    def _pseudonymise_occurrences(item: Dict[str, Any]) -> Dict[str, Any]:
+        """A file's `occurrences` block (`choose_occurrences`, v0.15.3).
+
+        `count`, and in text order up to OCCURRENCES_LISTED rows of the
+        short id and the line number; past it `listed_in_part` and how
+        many `more`. No name, pseudonym, entry number, span or word of the
+        text, on either path. The ids are shown at one length, the
+        shortest at which all the file's ids are distinct, the ones not
+        listed included.
+        """
+        from . import occurrences
+        full = item.get("occurrence_ids")
+        if full is None:
+            raise ValueError("choose_occurrences needs a plan made with an "
+                             "occurrence key")
+        shown = occurrences.shown_ids(full)[:occurrences.OCCURRENCES_LISTED]
+        lines = occurrences.line_numbers(
+            item["old_text"],
+            [replacement.start for replacement
+             in item["replacements"][:len(shown)]])
+        block: Dict[str, Any] = {
+            "count": len(full),
+            "listed": [{"id": one, "line": line}
+                       for one, line in zip(shown, lines)]}
+        if len(full) > len(shown):
+            block["listed_in_part"] = True
+            block["more"] = len(full) - len(shown)
+        return block
+
     def pseudonymise_preview(self, plan: Dict[str, Any],
                              ai_coder_names: Sequence[str],
                              include_context: bool = False,
@@ -14689,7 +14743,8 @@ class QualcoderDatabase:
                              max_spans_per_entry: int = 50,
                              may_echo_names: bool = True,
                              residue_detail: str = "file",
-                             memo_plan: Optional[Dict[str, Any]] = None
+                             memo_plan: Optional[Dict[str, Any]] = None,
+                             choose_occurrences: bool = False
                              ) -> Dict[str, Any]:
         """What the researcher is shown before approving a run (D1 3.5).
 
@@ -14698,6 +14753,11 @@ class QualcoderDatabase:
         is scanned, because it says what the run would DO; counts, the
         caller's entry indices and pseudonyms only, never note text and
         never a row key.
+
+        With `choose_occurrences` (v0.15.3) each file gains an
+        `occurrences` block (`_pseudonymise_occurrences`): short ids and
+        line numbers, from a plan built with an occurrence key. Without
+        it the block is absent and the preview is as before.
 
         Read-only, and everything in it is a count, a span or a name the
         caller already supplied. The only file CONTENT it can return is
@@ -14708,6 +14768,12 @@ class QualcoderDatabase:
         project's own `pseudonyms.json` rather than supplied by the
         caller: the two diagnostics that carry a surface form then carry
         the entry index alone, and `include_context` returns nothing.
+        Nor does any match position come back on that path (v0.15.3,
+        ruling 94): the entries' blocks keep `entry`, `pseudonym` and
+        `count`, and the overlap diagnostic its two entries. Beside a text
+        the assistant has read, a match's span and its entry's pseudonym
+        pair a name with its pseudonym, and the occurrence ids, listed in
+        text order, would line up with the spans.
         A context window is a slice of the file text around a match, so
         by construction it contains the name that matched: on this path
         that is the researcher's reverse key going into the conversation
@@ -14763,10 +14829,12 @@ class QualcoderDatabase:
                     "entry": index,
                     "pseudonym": pseudonym_of(index),
                     "count": len(spans),
-                    "spans": [[s.start, s.end] for s in shown],
                 }
-                if len(spans) > len(shown):
-                    block["spans_truncated"] = True
+                if may_echo_names:
+                    # The typed path only: the caller typed the pairs
+                    block["spans"] = [[s.start, s.end] for s in shown]
+                    if len(spans) > len(shown):
+                        block["spans_truncated"] = True
                 if include_context:
                     windows = []
                     for span in shown:
@@ -14825,7 +14893,7 @@ class QualcoderDatabase:
                         compiled, text, max_spans_per_entry)],
                 "overlap_conflicts": (
                     item["overlap_conflicts"] if may_echo_names else
-                    self._pseudonymise_without_forms(
+                    self._pseudonymise_entries_only(
                         item["overlap_conflicts"])),
                 "overlap_conflicts_truncated":
                     item["overlap_conflicts_truncated"],
@@ -14844,6 +14912,9 @@ class QualcoderDatabase:
                 "null_position_rows": self._pseudonymise_null_rows(item),
                 "unique_constraint_collisions": collisions,
             })
+            if choose_occurrences:
+                files[-1]["occurrences"] = self._pseudonymise_occurrences(
+                    item)
 
         preview: Dict[str, Any] = {
             "project": str(self.db_path),

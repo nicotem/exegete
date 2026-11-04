@@ -71,3 +71,13 @@
   preview's residue leaves out its count of the characters it read,
   which holds that length; the journal entry names the pseudonyms of
   the names found without counting them.
+
+### Fixed
+
+- **A pseudonymisation preview that would rewrite nothing no longer
+  speaks of a run in its warning on the names left in the file text.**
+  Where no name of the mapping occurs in the file the preview names and
+  no note is to be rewritten, that warning, which counts the names in
+  the other files' text, no longer opens "after this run", as where a
+  list leaves every occurrence: the preview says that an execute would
+  rewrite nothing.

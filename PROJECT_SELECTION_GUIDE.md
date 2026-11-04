@@ -146,7 +146,11 @@ In your `claude_desktop_config.json`:
 Give your own project's path: its folder, ending in `.qda`, or the
 `data.qda` file inside it. The example's project is in
 `~/Documents/Exegete projects`. Exegete makes new projects in that
-folder, unless the setting `EXEGETE_WORKSPACE` gives another.
+folder, unless the setting `EXEGETE_WORKSPACE` gives another. iCloud
+or OneDrive may sync Documents, and so copy your projects off this
+computer. The Terminal guide's
+["What you need"](docs/installing-from-the-terminal.md#what-you-need)
+says more, and suggests a folder outside Documents.
 
 ### Usage
 
@@ -217,23 +221,18 @@ never selects the project by itself.
 
 ### A project is missing from the list
 
-Ask the assistant to list every project it can find:
+The list gives the projects Exegete finds in the places it searches by
+default, listed above, or in the folders you name. A project in another
+folder, or deeper than the search goes, is not in it. You can select it
+by its path:
 
 ```
-List all my projects
+Select the project at /full/path/to/project.qda
 ```
 
-Then select one by its name or its path:
-
-```
-Select "MyProjectName"
-```
-
-If several have similar names, give the path:
-
-```
-Select the project in /full/path/to/project.qda
-```
+Or ask the assistant to search the folder that holds it ("Searching
+other folders", above). If several projects have similar names, give
+the path.
 
 ## The three tools
 
@@ -259,8 +258,10 @@ The answer includes `qualcoder_gui_signals`: the signs Exegete finds
 that QualCoder 4.0 may have the project open. QualCoder 3.8.2 shows
 that it has the project open with a lock file, a small file it writes
 in the project's folder. Exegete records the selection as the
-last project used on this computer. A selection that fails changes
-nothing: the project selected before stays selected.
+last project used on this computer. A selection that fails leaves the
+project selected before still selected. If no project was selected and
+one is set in the configuration, a selection that fails opens that
+project. The next tool would open it anyway, and the answer says so.
 
 ### 3. `get_current_project`
 Shows which project is selected, and whether something else may be

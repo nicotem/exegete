@@ -7,16 +7,20 @@ After a preview given a list of occurrences to leave, the count of the
 names left in the file text charges the occurrences left to a kind of
 their own, `left_by_choice`, out of the share that would otherwise read
 as put back by a pseudonym, in Word, OpenDocument and RTF files too,
-whose text is counted without the import's markers. A warning, given
-whether or not the file was counted, says how many were left and that
-they are real names; the file-text warning gives them their own reason.
-With the second part's words for a file whose every occurrence is left,
-these say nothing twice: where every occurrence the count found is one
-left by choice, the file-text warning's sentence on it is left out and
-the warning on the occurrences left gives the count. On the names list's
-path the residue's rows per entry keep the occurrences left out, and the
-file's row gives their number. The refusal of ids that name nothing
-names a change of case_mode among its causes.
+whose text is counted without the import's markers. Only those its
+reading reads as the rewrite matched them are charged so: one read as
+another kind stays in that kind and takes no put-back's place (fix
+round 1, the review's finding 1). A warning, given whether or not the
+file was counted, says how many were left and that they are real
+names; the file-text warning gives them their own reason. With the
+second part's words for a file whose every occurrence is left, these
+say nothing twice: where every occurrence the count found is one left
+by choice, the file-text warning's sentence on it is left out and the
+warning on the occurrences left gives the count. On the names list's
+path the residue's rows per entry keep out the occurrences counted
+under left_by_choice, and the file's row gives their number. The
+refusal of ids that name nothing names a change of case_mode among its
+causes.
 
 The engine's property with random sets left is beside the other
 properties of the count, in `test_v012_pseudonymise_engine.py`. The
@@ -228,14 +232,16 @@ class TestTheCount:
 
     def test_the_note_counts_the_left_in_both(self, toms):
         """The block's note says that occurrences left are in both counts,
-        under left_by_choice; it is still the one constant, which the
-        sink walk admits only verbatim."""
+        under left_by_choice or, where the wide count reads one
+        differently, another kind (fix round 1); it is still the one
+        constant, which the sink walk admits only verbatim."""
         out = preview_of(mapping=TOM,
                          leave_occurrences=choose(mapping=TOM)[2:])
         note = text_block(out)["reading_note"]
         assert note == QualcoderDatabase.PSEUDONYMISE_FILE_TEXT_NOTE
         assert ("Occurrences chosen to be left as they were are in both "
-                "counts, under left_by_choice.") in note
+                "counts, under left_by_choice, or under another kind where "
+                "the wide count reads one differently") in note
 
 
 class TestWhereTheReaderReadsThem:
@@ -457,6 +463,54 @@ class TestTheWarnings:
         assert RULE in first and CHOSEN in first
         assert COUNTED not in left_warning(out)
 
+
+    def test_further_only_after_a_count(self, toms, monkeypatch):
+        """Fix round 1 (the review's finding 4): where the file-text
+        sentence is left out, every occurrence counted being one left by
+        choice, a file past the budget is not called a further one, since
+        no count stands before it in that warning. The son's two Toms
+        left, and ten Toms in another file, past a budget of 12 matches
+        and counted in part under one of 18."""
+        sons = choose(mapping=TOM)[2:]
+        _set_text(toms, 4, "Tom said. " * 10)
+        for budget, kind in ((12, "files_showing_a_name_not_counted"),
+                             (18, "files_counted_in_part")):
+            monkeypatch.setattr(P, "MAX_RESIDUE_SCAN_MATCHES", budget)
+            out = preview_of(mapping=TOM, leave_occurrences=sons)
+            totals = text_block(out)["totals"]
+            assert totals["by_reason"]["left_by_choice"] == 2
+            assert totals["occurrences"]["wide"] == 2
+            assert totals[kind] == 1, kind
+            warning = _file_text_warning(out)
+            assert warning.startswith("Warning: after this run, 1 file(s) ")
+            assert "further" not in warning
+            assert f"{COUNTED} 2 of them under left_by_choice" in (
+                left_warning(out))
+
+    def test_no_run_spoken_of_where_every_occurrence_is_left(
+            self, toms, monkeypatch):
+        """Fix round 1 (the review's finding 5): where the list leaves
+        every occurrence, beside the second part's sentence that an
+        execute would rewrite nothing, no warning says "after this run"
+        or that the rewrite still applies to the file: with a name in
+        another file and the save asked, and with the file too large to
+        count."""
+        everyone = choose(mapping=TOM)
+        _set_text(toms, 4, "Tom wrote this.")
+        out = preview_of(mapping=TOM, leave_occurrences=everyone,
+                         save_mapping_to_project=True)
+        said = " ".join(out["warnings"])
+        assert "rewrite nothing" in said and "after this run" not in said
+        assert _file_text_warning(out).startswith(
+            "Warning: 5 occurrence(s) of these names would still be in the "
+            "text of 2 file(s), ")
+        monkeypatch.setattr(P, "MAX_RESIDUE_SCAN_WORK", 0)
+        out = preview_of(mapping=TOM, leave_occurrences=everyone)
+        assert text_block(out)["totals"]["named_file_too_large"] is True
+        said = " ".join(out["warnings"])
+        assert "rewrite nothing" in said and "after this run" not in said
+        assert "rewrite still applies" not in said
+        assert "file this call names is too large" in said
 
     def test_the_readings_dividing_differently_keep_their_sentence(self):
         """Where the whole-word count is above the wide one, the file-text

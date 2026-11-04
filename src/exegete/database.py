@@ -13863,7 +13863,9 @@ class QualcoderDatabase:
         "own rule matched, so on the file this run rewrote it is normally "
         "zero and the difference between the two numbers is the whole of "
         "what the rewrite deliberately does not touch. Occurrences chosen "
-        "to be left as they were are in both counts, under left_by_choice. "
+        "to be left as they were are in both counts, under left_by_choice, "
+        "or under another kind where the wide count reads one differently "
+        "(joined to the next word by an invisible character, say). "
         "by_reason says "
         "which kind each occurrence is; the split is a heuristic and the "
         "total is not, and so is the charging of an occurrence to one "
@@ -14080,11 +14082,13 @@ class QualcoderDatabase:
         The occurrences a run leaves by a list (the plan's
         `left_new_spans`, v0.15.3) are passed to the count of the file it
         rewrites, mapped through the import's markers where its text is
-        read without them, and counted under `left_by_choice`. On the
-        `use_project_pseudonyms` path the rows per entry keep them out
-        and each full file row gives their number once, as
-        `left_by_choice`: beside the entries' pseudonyms, a row per entry
-        counting a left occurrence would tell which name it is.
+        read without them, and counted under `left_by_choice` where the
+        reader's reading reads them as the rewrite matched them
+        (`names_left_in_text`). On the `use_project_pseudonyms` path the
+        rows per entry keep those out and each full file row gives their
+        number once, as `left_by_choice`: beside the entries' pseudonyms,
+        a row per entry counting a left occurrence would tell which name
+        it is.
         """
         from . import pseudonymise as engine
 
@@ -14775,8 +14779,8 @@ class QualcoderDatabase:
                                            ) -> Tuple[List[Dict[str, Any]],
                                                       int]:
         """The residue's rows per entry on the `use_project_pseudonyms`
-        path (v0.15.3), the occurrences left by choice taken out, and
-        their number, for the file's row.
+        path (v0.15.3), the occurrences counted under `left_by_choice`
+        taken out, and their number, for the file's row.
 
         Each row's `left_by_choice` comes out of both its counts and the
         key goes; a row left with nothing is dropped, and the rest are
@@ -14785,7 +14789,8 @@ class QualcoderDatabase:
         entry counting a left occurrence would tell which name that
         occurrence is, and with it the pseudonym (ruling 94); the file's
         row gives their number instead. The kinds that remain still add
-        up to each row's wide count.
+        up to each row's wide count. An occurrence left that the count
+        reads as another kind stays in its row under that kind.
         """
         kept = []
         total = 0

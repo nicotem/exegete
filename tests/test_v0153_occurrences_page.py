@@ -417,15 +417,13 @@ class TestRightToLeft:
         id stands after its own occurrence, not after the next."""
         pymupdf = pytest.importorskip("pymupdf")
 
-        def laid_out(page):
+        def laid_out(body):
             """Each line's letters as laid out, left to right, without
             spaces, in compatibility form (MuPDF gives Arabic letters in
             their shaped forms)."""
-            main = page[page.index('<main id="text">'):
-                        page.index("</main>") + len("</main>")]
             story = pymupdf.Story(
                 html="<html><head><style>.sr{display:none}</style></head>"
-                     f"<body>{main}</body></html>")
+                     f"<body>{body}</body></html>")
             path = tmp_path / "laid-out.pdf"
             writer = pymupdf.DocumentWriter(str(path))
             more = True
@@ -448,11 +446,16 @@ class TestRightToLeft:
                     "NFKC", "".join(c for _x, c in letters)))
             return lines
 
-        plain = "".join(laid_out(_page_for("אמר משה", ["משה"])))
-        if "אמר" not in plain[::-1]:
-            pytest.skip("this MuPDF lays out no Hebrew letters")
+        # Markup of the test's own, apart from the page: a line of Hebrew
+        # with dir="auto" is laid out right to left only by an engine that
+        # has the letters and reads the attribute
+        if laid_out('<p dir="auto">אמר abc משה</p>') != ["השמabcרמא"]:
+            pytest.skip("this MuPDF does not lay out a line of Hebrew by "
+                        "its own direction")
         for case, (text, names, rtl) in RIGHT_TO_LEFT.items():
-            [line] = laid_out(_page_for(text, names))
+            page = _page_for(text, names)
+            [line] = laid_out(page[page.index('<main id="text">'):
+                                   page.index("</main>") + len("</main>")])
             for name, one, left in zip(names, RTL_IDS, (False, True)):
                 label = one + (",leftasitis" if left else "")
                 # A right-to-left name is laid out from right to left

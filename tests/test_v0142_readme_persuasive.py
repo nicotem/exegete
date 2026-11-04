@@ -1215,7 +1215,9 @@ def test_the_advanced_section_rests_on_the_code():
     for tool in ("get_coded_segments", "search_coded_text",
                  "find_cooccurring_codes"):
         doc = " ".join(getattr(server, tool).__doc__.split())
-        assert "bypassing the visibility filter" in doc, tool
+        # (the readability reading of v0.15.3: the same rule, said as
+        # whether the project hides that coder's codings or not)
+        assert "whether the project hides them or not" in doc, tool
     # (v0.15.2, undo: undoing a change is on the branch now, among the
     # guarded changes, which GUARDED holds to the code)
     assert "`undo_changes` (undoing a change)" in beyond

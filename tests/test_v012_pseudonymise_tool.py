@@ -868,7 +868,9 @@ class TestToken:
         refused = execute_from(out)
         assert refused["reason"] in ("token_other_operation",
                                      "project_changed")
-        assert "rotat" in refused["error"]
+        # (v0.15.3, the readability reading: "replaced", the word the
+        # undo's refusals use, for "rotated")
+        assert "secret has been replaced" in refused["error"]
 
     def test_an_unusable_state_home_refuses_rather_than_writing(
             self, project, monkeypatch):

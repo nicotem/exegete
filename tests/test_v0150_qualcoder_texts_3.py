@@ -314,7 +314,7 @@ class TestTheClosingWrite:
         _scan_gives(monkeypatch, A_HIT)
         signals = qualcoder_gui_signals(folder)
         assert [s[:len(CHAT_SIGN)] for s in signals[:1]] == [CHAT_SIGN]
-        assert signals[1] == (f"{PROCESS_SIGN} on this machine "
+        assert signals[1] == (f"{PROCESS_SIGN} on this computer "
                               f"(1 match(es))")
         assert len(signals) == 2
 

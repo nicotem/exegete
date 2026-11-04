@@ -1391,7 +1391,7 @@ class TestFixRoundTextsTrue:
         assert "ignoring letter case, spacing and Unicode form" in afc
         cc = self._desc("compare_coders")
         assert "files_coded_by_neither" in cc
-        assert "is told to read each file" in cc
+        assert "was also told to read each file" in cc
         assert "saw every" not in cc
         readme = " ".join((Path(__file__).parent.parent / "TOOLS.md")
                           .read_text(encoding="utf-8").split())
@@ -1875,10 +1875,11 @@ class TestFixRound2TheTextAroundAPassage:
     def test_the_texts_say_it_is_read_not_stored(self):
         tools = server.mcp._tool_manager._tools
         review = " ".join(tools["review_suggestions"].description.split())
-        assert "the nearest earlier turn by another speaker (found by " \
-            "speaker labels, so none where the file has none; a short turn " \
-            "with no question mark comes with the one before it), then the " \
-            "paragraph or turn holding the passage" in review
+        assert "First comes the nearest earlier turn by another speaker, " \
+            "found by speaker labels, so none where the file has none; a " \
+            "short turn with no question mark comes with the one before " \
+            "it. Then come the paragraph or turn holding the passage" \
+            in review
         assert "read from the file now, never stored" in review
         edit = " ".join(tools["edit_suggestion"].description.split())
         assert "context shown by review_suggestions is refreshed" not in edit

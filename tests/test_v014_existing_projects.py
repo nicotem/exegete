@@ -1332,7 +1332,7 @@ class TestTheSmallerFixes:
         database.backup_project(folder, report=report)
         assert server._skipped_symlinks_line(report).startswith(
             "backup_database_copied_as_file: DatabaseError SQLITE_NOTADB. ")
-        assert "may not be one committed state" in \
+        assert "may hold a write that was not finished" in \
             server._skipped_symlinks_line(report)
         copy = json.loads(server.copy_project_to_workspace(
             str(folder), new_name="Copy"))

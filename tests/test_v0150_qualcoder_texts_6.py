@@ -92,8 +92,9 @@ NEW_TEXTS = (PROJECT, LEFTOVER_LOCK, SAID_YES, COMPUTER)
 # which this piece held to its length before, is no longer pinned here;
 # docs/snapshot/ holds the description as Exegete serves it)
 DESCRIPTION_SENTENCE = (
-    "When none are present, it warns only if this project or computer "
-    "shows QualCoder or the setting says yes.")
+    "When none are present, it warns only if this project or this "
+    "computer shows signs of QualCoder, or the researcher's setting says "
+    "they use it.")
 NEW_LAST_SENTENCE = ("If the researcher opens it in QualCoder, suggest "
                      "4.0, which avoids these changes.")
 ONE_LINE = ("The project is in QualCoder's format, so QualCoder 4.0 can "

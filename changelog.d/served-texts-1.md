@@ -24,3 +24,7 @@
 - Capitals for emphasis, emoji and phrases such as "Perfect for" are
   gone, and the texts call the person whose study it is "the
   researcher" throughout.
+- Sentences that packed several facts together were split, one idea
+  at a time, and words from Exegete's own code, such as "base tables",
+  "echo" and "reparent", gave way to plain ones. The rules the texts
+  state are the same.

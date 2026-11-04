@@ -554,7 +554,7 @@ class TestAfterCreation:
         answer = create("Quiet")
         assert calls == []
         assert answer["qualcoder_gui_signals"] == []
-        assert "APPEARS" not in json.dumps(answer)
+        assert "appears to be open" not in json.dumps(answer)
         selected = json.loads(server.select_project(answer["project_path"]))
         assert "appears to be open" in selected["warning"]
 
@@ -926,7 +926,8 @@ class TestRoundTrip:
             lambda: database.ProcessScan(("/usr/bin/python3 -m qualcoder",),
                                          True))
         made = create("Round trip", coder_name="carol")
-        assert made["selected"] and "APPEARS" not in json.dumps(made)
+        assert made["selected"]
+        assert "appears to be open" not in json.dumps(made)
         folder = Path(made["project_path"])
         # the first write asks for the AI coder name, as on any project
         asked = json.loads(server.create_code("Coping"))

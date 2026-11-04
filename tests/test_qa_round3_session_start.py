@@ -71,7 +71,7 @@ class TestSessionStartCraftedLocks:
             env = json.loads(out)
             assert env["qualcoder_open"] is False
             assert "action_required" not in env
-            assert "STOP" not in out
+            assert "Stop: this project is in use" not in out
             assert "Session ID: `" in out          # session created normally
             cur = json.loads(server.get_current_project())
             assert cur["qualcoder_open"] is False
@@ -84,7 +84,7 @@ class TestSessionStartCraftedLocks:
         _lock(qualcoder_db_path).write_bytes(b"\xff\xfe\x00garbage\x9c\n\xba\xdd")
         try:
             out = server.start_coding_session([1], instruction="test")   # must not raise
-            assert "STOP" not in out
+            assert "Stop: this project is in use" not in out
             cur = json.loads(server.get_current_project())
             assert cur["qualcoder_open"] is False
         finally:
@@ -133,7 +133,7 @@ class TestSessionStartCraftedLocks:
             t0 = time.perf_counter()
             out = server.start_coding_session([1], instruction="test")
             elapsed = time.perf_counter() - t0
-            assert "STOP" not in out
+            assert "Stop: this project is in use" not in out
             assert "Session ID: `" in out
             cap = database.LOCK_READ_MAX_BYTES
             assert reads, "the lock was not read"
@@ -175,7 +175,7 @@ class TestSessionStartCraftedLocks:
         os.symlink(tmp_path / "ghost.lock", _lock(qualcoder_db_path))
         try:
             out = server.start_coding_session([1], instruction="test")
-            assert "STOP" not in out
+            assert "Stop: this project is in use" not in out
             cur = json.loads(server.get_current_project())
             assert cur["qualcoder_open"] is False
             assert "qualcoder_lock" not in cur      # absent, no noise

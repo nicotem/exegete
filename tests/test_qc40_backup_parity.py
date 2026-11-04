@@ -94,6 +94,40 @@ class TestIgnoreSetPinned:
             ("*.lock",) + QUALCODER_BACKUP_IGNORE_PATTERNS)
 
 
+class TestTheDatabaseSideFilesAreADeparture:
+    """The served texts, first batch, fix round 1 (the fact reader): the
+    set above matches the side files of `*.sqlite` files, never the
+    database's, `data.qda-journal`, `-wal` and `-shm`, so QualCoder's own
+    backups copy those with the database, as a file. Exegete's backups
+    copy the database with SQLite's online backup and never copy them
+    (tests/test_v014_existing_projects.py): list_backups' description
+    says so as a departure, and never that QualCoder's backups leave the
+    database's side files out."""
+
+    def test_qualcoder_set_never_matches_the_databases_side_files(self):
+        from fnmatch import fnmatch
+        from exegete.database import DATABASE_SIDE_FILES
+        assert DATABASE_SIDE_FILES
+        for name in DATABASE_SIDE_FILES:
+            assert not any(fnmatch(name, pattern) for pattern
+                           in QUALCODER_BACKUP_IGNORE_PATTERNS), name
+
+    def test_list_backups_names_the_departure(self):
+        import re
+        text = " ".join((server.mcp._tool_manager._tools["list_backups"]
+                         .description or "").split())
+        assert "QualCoder's own backups copy the database as a file." \
+            in text
+        assert "the database's journal and WAL files are never copied" \
+            in text
+        sentences = re.split(r"(?<=\.) (?=[A-Z])", text)
+        alike = [s for s in sentences if "like qualcoder" in s.lower()
+                 and "unlike" not in s.lower()]
+        assert alike, "the sentence on what QualCoder 4.0 leaves out"
+        for sentence in alike:
+            assert "database" not in sentence, sentence
+
+
 class TestBackupIncludesAiData:
 
     def test_backup_project_parity(self, qualcoder_db_path):

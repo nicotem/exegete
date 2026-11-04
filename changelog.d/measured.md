@@ -7,14 +7,18 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 205,138 | 204,793 |
-| `core` (28 tools) | 76,133 | 75,947 |
+| `full` (80 tools) | 205,456 | 204,793 |
+| `core` (28 tools) | 76,139 | 75,947 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 13,750 | 13,721 |
+| The full brief | 13,784 | 13,721 |
 | The brief in `core` | 1,923 | 1,923 |
 
-- The reading of the texts Exegete gives the assistant adds 345
-  characters to `full` and 186 to `core`. Most of it comes from calling
-  the person whose study it is "the researcher" throughout, and from the
-  rules on evidence, written for any document rather than for interviews
-  alone. The full brief is 29 characters longer, from those rules.
+- The reading of the texts Exegete gives the assistant adds 663
+  characters to `full` and 192 to `core`. In `core`, most of it comes
+  from calling the person whose study it is "the researcher"; in
+  `full`, about a third does. The rest comes from sentences corrected or
+  split in two, most of all in export_coded_segments_report,
+  restore_backup, merge_category, list_backups and merge_codes. The full
+  brief is 63 characters longer, from the rules on evidence, written for
+  any document rather than for interviews alone, and the title of its
+  last section.

@@ -104,7 +104,9 @@ at first.
    - One checks the documents: their links (`scripts/check_links.py`),
      their texts (`scripts/check_texts.py`, under Style rules), the
      facts they repeat (`tests/test_v0151_facts.py`, below) and the
-     snapshot (`tests/test_served_texts.py`, step 6). Their links to
+     snapshot (`tests/test_served_texts.py`, step 6). Its summary also
+     lists the documents' promises and dated readings
+     (`scripts/check_promises.py`, step 6). Their links to
      other sites are checked once a week instead, by a workflow of its
      own, `external-links.yml`. There, a page that is gone fails, and a
      site that turns robots away or answers slowly is a notice.
@@ -275,6 +277,24 @@ at first.
    release leave the plan. When you remove a tool or an argument, add
    it, with the release, to the test's `RETIRED` table. When you add a
    module or a script, add it to the map.
+
+   Every push also lists the documents' promises and their dated
+   readings of other programs, in the documents job's summary
+   (`scripts/check_promises.py`). A promise says that something is
+   still to come, in words such as `not yet` or `is planned`. The list
+   gives each promise's line, the day that line was written, as
+   `git blame` gives it, and the row of the plan that its sentence or
+   paragraph names. A dated reading gives the day a claim about another
+   program was checked, in the form [docs/WRITING.md](docs/WRITING.md)
+   gives, and the list gives its age in days. At release preparation,
+   `python scripts/check_promises.py --release`, run in a full clone,
+   fails on a promise whose line is older than the script's
+   `MAX_AGE_DAYS` and that names no row of the plan, and on a reading
+   older than `MAX_AGE_DAYS`. Write what is missing as what Exegete
+   does not do, or give it a row in the plan. A sentence that uses a
+   promise's words for a state, such as
+   `a change previewed but not yet made`, goes into the script's
+   `NOT_PROMISES`, with its reason.
 
 ## Review before merge
 
@@ -507,6 +527,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)
 │   ├── check_texts.py          # Checks the texts for mentions of QualCoder and for the voice
 │   ├── check_texts_ledger.tsv  # The sentences a reader has accepted as they stand
+│   ├── check_promises.py       # Lists the documents' promises and dated readings, and refuses old ones at release preparation
 │   ├── doc_commands.py         # Runs the commands the documents mark, and checks what they print
 │   ├── release_plan.py         # What comes in which release: the table the texts are held to
 │   ├── code_texts.py           # The texts the package's code holds, read without running it

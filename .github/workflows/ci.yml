@@ -584,6 +584,10 @@ jobs:
   # close it, or a plain breach of the writing conventions fails unless
   # a reader has accepted its sentence in scripts/check_texts_ledger.tsv;
   # the summary adds each document's readability, which never fails.
+  # v0.15.3: then the documents' promises and dated readings
+  # (scripts/check_promises.py), listed in the summary with the day each
+  # promise's line was written and each reading's age; on a push it
+  # never fails, and release preparation runs it with --release.
   # Then the facts the documents repeat (tests/test_v0151_facts.py): the
   # folders, the time per import call and the tool counts, held to the
   # code's constants, which needs the package; the answer comes in about
@@ -599,6 +603,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          # The whole history: git blame gives the day each promise's
+          # line was written.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Python 3.13
@@ -611,6 +618,11 @@ jobs:
 
       - name: Mentions of QualCoder and the voice in the texts
         run: python scripts/check_texts.py
+
+      # Standard library only, before the install; the script writes the
+      # summary itself, so no pipe can lose its exit code.
+      - name: Promises and dated readings (a report)
+        run: python scripts/check_promises.py
 
       # From the lock, as the libraries' install does: uv, at the version
       # the extension job uses, in an environment of its own, so it never

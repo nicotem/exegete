@@ -321,13 +321,15 @@ Their recipes there give OpenAI's plans and what LM Studio needs.
 
 To check, click "+" in a new conversation, then Connectors: Exegete is
 listed. When Claude asks to use a tool, "Allow once" keeps it asking. If
-your message box offers no choice between "Chat" and "Cowork", the two
-are one conversation. Anthropic's page, read on 4 November 2026, says
-this is reaching Pro, Max and Ultra plans gradually, and Team and
-Enterprise plans where it is turned on. Its permission setting comes as
-Auto, but as Manual on Enterprise. On Auto, Claude does not ask:
-automated safety checks decide instead, so for participants' data you
-could set it to Manual. Before you use participants' data, go through
+your message box offers no choice between "Chat" and "Cowork", you have
+the version of Claude in which the two are one conversation. Anthropic's
+page, read on 4 November 2026, says that this version is reaching Pro,
+Max and Ultra plans gradually, and Team and Enterprise plans where it is
+turned on. Its permission setting, in the message box, starts on Auto,
+except on Enterprise plans, where it starts on Manual. On Auto, Claude
+does not stop to ask you before it uses a tool: automated safety checks
+run instead. For participants' data, you could set it to Manual. Before
+you use participants' data, go through
 [the five checks](https://github.com/nicotem/exegete#where-your-data-goes),
 which help keep your files out of Claude's reach and switch
 training off.

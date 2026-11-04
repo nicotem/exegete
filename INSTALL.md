@@ -199,9 +199,9 @@ on where you use Exegete:
   is, such as a tool that only reads. Claude Desktop 2.9939.2 was seen
   to pass on the mark of a tool that only reads (26 September 2026),
   and what the chat then does with it is not known.
-- **Chat and Cowork as one conversation.** In the version of Claude
-  where chat and Cowork are one conversation, which Anthropic is
-  rolling out to Pro, Max and Ultra plans first, a permission setting
+- **Chat and Cowork as one conversation.** In one version of Claude,
+  chat and Cowork are one conversation. Anthropic is rolling it out to
+  Pro, Max and Ultra plans first. In that version, a permission setting
   in the message box has two modes. Anthropic's page
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
   read 4 November 2026) describes them: "**Auto (default on Pro, Max,
@@ -214,8 +214,8 @@ on where you use Exegete:
   shows "Chat" and "Cowork" options, you don't have it yet."
 
 On Manual, Claude keeps asking you, which suits work on real data. On
-Auto, where such a conversation starts on Pro, Max, Ultra and Team
-plans, Claude does not stop to ask you before it uses Exegete's tools,
+Pro, Max, Ultra and Team plans, such a conversation starts on Auto. On
+Auto, Claude does not stop to ask you before it uses Exegete's tools,
 so you could switch it to Manual before you use participants' data.
 ["What hosts do with the tools' read and write marks"](#what-hosts-do-with-the-tools-read-and-write-marks),
 below, says what each host does, from Anthropic's pages.
@@ -428,8 +428,8 @@ describes it.
 If a new version causes a problem, you can install an earlier release's
 `.mcpb`, from https://github.com/nicotem/exegete/releases, the same way.
 On the maintainer's computer, checked on 23 October 2026, installing an
-older extension over a newer one cleared its settings: 0.15.0 over a
-newer test build. A cleared setting goes back to its default. So after
+older extension, 0.15.0, over a newer test build cleared the
+extension's settings. A cleared setting goes back to its default. So after
 going back, look at each setting, and set again any you had changed.
 The settings this guide describes go back to these defaults:
 
@@ -708,31 +708,32 @@ What each host does, from Anthropic's pages as read on 4 November 2026
 - **Claude Code.** In **Manual** mode (its setting is `default`) it asks
   before a call unless you allowed the tool. In **auto** mode, read-only
   actions are approved, and everything else goes to a classifier: a
-  second model that approves or blocks the call instead of you. Auto is
-  the starting mode for interactive sessions from version 2.1.283, and
-  was before that on Pro, Max, Ultra and Team plans.
-  `bypassPermissions` runs everything, and `dontAsk` refuses anything
+  second model that approves or blocks the call instead of you. From
+  version 2.1.283, an interactive session starts in auto mode. Before
+  that version, it started in auto mode on Pro, Max, Ultra and Team
+  plans. `bypassPermissions` runs everything, and `dontAsk` refuses anything
   that would ask. A tool marked `anthropic/requiresUserInteraction`
   (here, `import_documents` and `save_names_list`) is asked about in
   every one of these modes but `dontAsk`, which refuses it.
 - **Cowork.** Each connector tool has its own setting (always allow,
-  needs approval, blocked). In **Manual** mode a tool that needs
-  approval is asked about. In **Auto**, a tool set to always allow
-  is approved if it is read-only. Otherwise it is left to Claude's
-  safety review, and so is a tool that needs approval: you are not
-  asked. **Skip all approvals** runs every tool that is not blocked. The
+  needs approval, blocked). In **Manual** mode, Claude asks you before
+  it uses a tool that needs approval. In **Auto**, a tool set to always
+  allow is approved if it is read-only. Any other tool set to always
+  allow, and any tool that needs approval, goes to Claude's safety
+  review instead of to you. **Skip all approvals** runs every tool that
+  is not blocked. The
   page does not say how a local server's tools are sorted into
   read-only and write or delete, nor whether Cowork honours
   `anthropic/requiresUserInteraction`.
-- **Claude, where chat and Cowork are one conversation** (rolling out
-  to Pro, Max and Ultra plans first; "Claude Cowork and chat are one
-  Claude" on support.claude.com, read 4 November 2026): a permission
-  setting in the message box has two modes, **Auto**, the default on
-  Pro, Max, Ultra and Team plans, in which automated safety checks run
-  instead of asking, and **Manual**, the default on Enterprise plans,
-  in which Claude asks before it takes actions ("The first start",
-  above, quotes the page). The page does not say what either does with
-  the marks.
+- **Chat and Cowork as one conversation.** Anthropic is rolling this
+  version of Claude out to Pro, Max and Ultra plans first ("Claude
+  Cowork and chat are one Claude" on support.claude.com, read 4 November
+  2026). A permission setting in the message box has two modes. In
+  **Auto**, the default on Pro, Max, Ultra and Team plans, automated
+  safety checks run instead of asking you. In **Manual**, the default on
+  Enterprise plans, Claude asks before it takes actions. "The first
+  start", above, quotes the page. The page does not say what either
+  mode does with the marks.
 - **Claude Desktop's chat.** Anthropic's pages do not say what it does
   with the marks. Claude Desktop 2.9939.2 was seen to pass the
   read-only mark on with each tool (26 September 2026, below); what

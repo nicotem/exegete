@@ -714,9 +714,12 @@ class TestPrivacyQuotesOpenAI:
                         "<https://privacy.openai.com/>"):
             assert address in section, address
         # Where it was read from, and the rule
-        assert ("never characterised in our own voice, and the linked "
-                "pages govern") in section
-        assert "open the live page before you rely on it" in section
+        # (v0.15.3, the readability reading: in the words of the rungs'
+        # rule, and the suggestion with its reason)
+        assert ("never described in our own words, and the linked pages "
+                "govern") in section
+        assert ("The live page may have changed since, so you could open it "
+                "before you rely on the quote.") in section
 
     def test_the_flow_names_openai(self):
         flow = _between(_flat("PRIVACY.md"), "## How your data flows",
@@ -1089,14 +1092,16 @@ class TestWhatCodexKeepsAndTheOptOut:
         assert ("A session's transcript can hold what Exegete's tools "
                 "returned in it, and what Codex's own commands read, "
                 "participants' words included") in section
+        # (v0.15.3, the readability reading: the source's account in
+        # sentences of its own, and the advice a suggestion)
         for words in ("`history.persistence` governs only "
                       "`~/.codex/history.jsonl`",
-                      "every session is also written in full, tool results "
+                      "Every session is also written in full, tool results "
                       "included, under `~/.codex/sessions`, and later "
                       "`~/.codex/archived_sessions`",
-                      "So delete those session files after any work on "
-                      "study data, and keep `~/.codex` out of folders "
-                      "that a sync or backup service copies."):
+                      "So you could delete those session files after any "
+                      "work on study data, and keep `~/.codex` out of "
+                      "folders that a sync or backup service copies."):
             assert words in section, words
 
     def test_readme_gives_openai_users_the_opt_out_and_a_deadline(self):
@@ -1515,10 +1520,12 @@ class TestAssistantsOwnFileAccess:
                 "outside the folder and going online, not reading."),
             "PRIVACY, the hosts": (
                 _privacy_hosts(), "**yes, without asking**"),
+            # (v0.15.3, the readability reading: what the folder does and
+            # does not do a sentence each, as the guide's step 3 says it)
             "PRIVACY, OpenAI's apps": (
-                _privacy_openai(), "which keeps a study's files out of the "
+                _privacy_openai(), "That keeps a study's files out of the "
                 "place Codex works in, so that it does not change them "
-                "without asking, and does not keep Codex from reading them, "
+                "without asking. It does not keep Codex from reading them, "
                 "or from searching other folders for them."),
             "CHANGELOG": (
                 entry_0141, "can read files well beyond the folder it works "

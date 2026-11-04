@@ -178,8 +178,10 @@ class TestThePlacesAndTheTable:
         from exegete import names
         earlier = f"`~/{names.OLD_EXTENSION_WORKSPACE_FOLDER}`"
         now = f"`~/{names.EXTENSION_WORKSPACE_FOLDER}`"
+        # (v0.15.3, the readability reading: each earlier folder a sentence
+        # of its own)
         account = section[section.index(
-            f"the extension's was {earlier} before 0.15.0"):]
+            f"The extension's was {earlier} before 0.15.0."):]
         account = account[:account.index("| Kind |")]
         _says_the_account(account)
         assert now in account

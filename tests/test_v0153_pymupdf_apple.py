@@ -145,8 +145,10 @@ LISTS = {
         "1.28.2"),
     "the Terminal guide, the libraries you get": lambda: _between(
         _flat(_read(GUIDE)), "(which the optional part brings on", ")"),
+    # v0.15.3: CONTRIBUTING, read in full, lists the libraries not bounded
     "CONTRIBUTING.md, runtime dependencies": lambda: _between(
-        _flat(_read("CONTRIBUTING.md")), "(which PyMuPDF 2 brings on", ";"),
+        _flat(_read("CONTRIBUTING.md")),
+        "onnxruntime and numpy, which PyMuPDF 2 brings on", "."),
 }
 
 # Where a text says what a Mac needs: each to state the floor

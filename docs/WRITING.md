@@ -86,10 +86,15 @@ plans. Do not promise how long a step will take: that depends on the
 reader's computer, the project and the AI provider.
 
 Date every claim about another program, or about a provider's terms and
-prices, with the day it was checked. Give rounded counts and sizes in
-prose and leave exact figures to a table, unless the reader acts on one,
-such as a time limit. A script writes the exact size of everything the
-assistant receives from Exegete into `docs/snapshot/`, in characters.
+prices, with the day it was checked. Write that day in the form the
+checks read, "read on 3 November 2026" (or checked, verified, quoted or
+measured), or, for a page read in the Internet Archive, "Archive capture
+of" and the capture's day. A claim about a named release of another
+program, which no longer changes, may name that release instead. Give
+rounded counts and sizes in prose and leave exact figures to a table,
+unless the reader acts on one, such as a time limit. A script writes
+the exact size of everything the assistant receives from Exegete into
+`docs/snapshot/`, in characters.
 The size matters because each text uses part of what the assistant can
 take in at once. The documents give rounded figures and point there.
 

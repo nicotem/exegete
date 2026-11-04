@@ -54,15 +54,17 @@ that licence.
 
 How to read an entry. "Here" is the file in this repository and the
 functions, classes or names that carry the item. "From" is the
-QualCoder file and lines, under src/qualcoder/ in QualCoder's master
-branch at commit 9bddf17f86aa457aff72c3a38dbc10a37f296ad2 unless marked
-3.8.2 (the release tag), given as at the 4.0 tag (the release of 2
-October 2026), or given as at the root of QualCoder's repository. "Author", where given, is what QualCoder's file header or
-git history records for those lines; how a git identity maps to a
-person is for the QualCoder project to confirm. "Why" is the reason the
-item was copied. An entry marked withdrawn keeps its number, so that the
-entries' references to each other stay true; the code it described is no
-longer in Exegete.
+QualCoder file and lines. Unless the entry says otherwise, the file is
+under src/qualcoder/ in QualCoder's master branch at commit
+9bddf17f86aa457aff72c3a38dbc10a37f296ad2. An entry may instead give the
+file at the 3.8.2 release tag (marked 3.8.2), at the 4.0 tag (the
+release of 2 October 2026), or from the root of QualCoder's repository.
+"Author", where given, is what QualCoder's file header or git history
+records for those lines; how a git identity maps to a person is for the
+QualCoder project to confirm. "Why" is the reason the item was copied.
+An entry marked withdrawn keeps its number, so that the entries'
+references to each other stay true; the code it described is no longer
+in Exegete.
 
 
 Routines in the package
@@ -76,7 +78,7 @@ Routines in the package
    Author: Kai Dröge (ai_memo.py's header; QualCoder's git history
    records all 32 lines under his identity kaixxx).
    Why: to honour QualCoder 4.0's '#####' private-memo convention on
-   every memo this server reads or writes, exactly as QualCoder does.
+   every memo Exegete reads or writes, exactly as QualCoder does.
 
 2. QualCoder's "Kappa" value (copied verbatim)
    Here: src/exegete/coder_comparison.py, kappa_qualcoder.
@@ -100,7 +102,7 @@ Routines in the package
    From: reports.py, lines 1061-1115.
    Why: to state exactly what QualCoder's report would show when one
    coder's segments of a code overlap, where QualCoder counts
-   differently from this server; it is a disclosure, never the headline
+   differently from Exegete; it is a disclosure, never the headline
    number.
 
 5. QualCoder's palette matcher (closely ported)
@@ -108,9 +110,9 @@ Routines in the package
    From: color_selector.py, lines 144-162 (color_matcher).
    Author: recorded in QualCoder's git history under the identity
    "QualCoder Developer".
-   Why: a colour the AI supplies snaps to the colour QualCoder itself
-   would choose, ties included, which needs QualCoder's metric and its
-   scan in its order.
+   Why: a colour the assistant gives snaps to the colour QualCoder
+   itself would choose, ties included, which needs QualCoder's metric and
+   its scan in its order.
 
 6. QualCoder's coding editor span walk (closely ported) (withdrawn)
    Withdrawn in 0.15.1: the code it described was removed.
@@ -158,17 +160,17 @@ Routines in the package
     (tone and proactiveness).
     Author: kaixxx (a git identity in QualCoder's history, which
     ai_memo.py's header gives as Kai Dröge's).
-    Why: to offer the model QualCoder 4.0's four-way methodological gate
-    (allow, allow_with_caveat, reframe_and_ask, refuse) in QualCoder's
-    terms; the four labels are QualCoder's and their definitions a close
-    paraphrase of its prompt. The brief's sections 2 (principles), 12
-    (when to ask and when to act), 10 (finding one's way in the data)
-    and 13 (reporting to the researcher) follow those four sections of
-    QualCoder's brief for its own assistant, in order and in idea, in
-    this project's own words: no run of more than four words is shared
-    with QualCoder's file, and where this program differs by design (the
-    approval of each item, working only through the tools) the brief
-    says so.
+    Why: to offer the assistant QualCoder 4.0's four-way methodological
+    gate (allow, allow_with_caveat, reframe_and_ask, refuse) in
+    QualCoder's terms; the four labels are QualCoder's and their
+    definitions a close paraphrase of its prompt. The brief's sections 2
+    (principles), 12 (when to ask and when to act), 10 (finding your way
+    in the data) and 13 (reporting to the researcher) follow those four
+    sections of QualCoder's brief for its own assistant, in order and in
+    idea. They are in this project's own words: no run of more than four
+    words is shared with QualCoder's file. Where Exegete differs by
+    design (the approval of each item, working only through the tools),
+    the brief says so.
 
 12. QualCoder's journal-name loop (closely ported)
     Here: src/exegete/server.py, _pseudonymise_journal_attempt.
@@ -183,10 +185,10 @@ Routines in the package
     and 3492).
     Author: recorded in QualCoder's git history under the identity
     "QualCoder Developer".
-    Why: a file name QualCoder 4.0 treats as invalid (empty, spaces only
-    or dots only), and renames every time Manage Files opens, is refused
-    here by QualCoder's own test, so the two programs agree on which
-    names those are.
+    Why: QualCoder 4.0 treats a file name as invalid when it is empty or
+    holds only spaces or only dots, and renames such a file every time
+    Manage Files opens. Exegete refuses such a name by QualCoder's own
+    test, so the two programs agree on which file names are invalid.
 
 14. QualCoder's REFI-QDA file type for a text with no stored file
     (closely ported)
@@ -226,7 +228,7 @@ Values in the package
     From: pseudonyms.py, lines 72 and 76.
     Why: the same minimum lengths as QualCoder's pseudonym dialog.
 
-19. The owner strings QualCoder writes
+19. The coder names QualCoder writes as the owner of a row
     Here: src/exegete/database.py, KNOWN_AI_ASSISTANT_OWNER.
     Here: src/exegete/new_project.py, SPEAKER_CODER_NAME.
     Here: src/exegete/server.py, SPEAKER_SYSTEM_CODER.
@@ -311,8 +313,7 @@ Values in the package
     Why: to point the researcher to QualCoder's own commands, "Rename
     database entry" and "Import linked file", by the words on its menu.
 
-30. Labels of QualCoder's menus and buttons named in this server's
-    answers
+30. Labels of QualCoder's menus and buttons named in Exegete's answers
     Here: src/exegete/database.py, PDF_PROBLEM_MESSAGES and
     QualcoderDatabase.search_files.
     Here: src/exegete/server.py, REFI_EXPORT_KNOWN_FAULTS,
@@ -340,7 +341,7 @@ Facts of QualCoder's file format in the package
 These are facts of QualCoder's file format restated so projects stay
 compatible: the table and column layouts, file names, conventions and
 rules that a program must follow for QualCoder to open, read and trust
-a project this server has written. They are restated in this project's
+a project Exegete has written. They are restated in this project's
 own code; where the statement is a table or column list, it is the one
 the format dictates.
 
@@ -517,7 +518,7 @@ the format dictates.
     creation_statements, table_statement and view_statement.
     From: __main__.py, lines 1787-1867; app.py, lines 1448-1561;
     speakers.py, line 47.
-    Why: a project this server creates must be, in everything QualCoder
+    Why: a project Exegete creates must be, in everything QualCoder
     reads, the project QualCoder 4.0's own New Project creates. The
     table statements are generated from this project's own column
     table, not copied: QualCoder never reads a table's stored text, and
@@ -531,16 +532,16 @@ Tests and fixtures
 ------------------
 
 These are in the repository only; no package contains them. The test
-oracles carry QualCoder's code so that the tests compare this server's
-code with QualCoder's own, rather than with a restatement of it; the
-fixtures restate QualCoder's schema so that test projects are real
-QualCoder projects.
+oracles carry QualCoder's code, so that the tests compare Exegete's code
+with QualCoder's own rather than with a restatement of it. The fixtures
+restate QualCoder's schema, so that the test projects are in QualCoder's
+own format.
 
-50. The palette, pinned to QualCoder's (copied values)
+50. The palette, held to QualCoder's (copied values)
     Here: tests/test_v012_palette_idempotent.py, UPSTREAM_COLORS and
     TestPaletteParity.test_palette_identical_to_pinned_upstream.
     From: color_selector.py, lines 52-65.
-    Why: to pin item 15 to QualCoder's palette.
+    Why: to hold item 15 to QualCoder's palette.
 
 51. The palette matcher oracle (copied verbatim)
     Here: tests/test_v012_palette_idempotent.py, upstream_color_matcher.
@@ -552,7 +553,8 @@ QualCoder projects.
     TestPaletteParity.test_named_cases.
     From: the results of color_selector.py, lines 144-162, on lines
     52-65.
-    Why: named parity cases, computed with QualCoder's function.
+    Why: named cases, each with the colour QualCoder's own function
+    gives.
 
 53. The editor walk oracle (copied verbatim) (withdrawn)
     Withdrawn in 0.15.1: the code it described was removed.
@@ -570,7 +572,8 @@ QualCoder projects.
 55. The coder-name harvest statement (copied verbatim)
     Here: tests/test_v012_ai_coder_setting.py, TestUpstreamParity.HARVEST_SQL.
     From: app.py, lines 1479-1495.
-    Why: parity tests run QualCoder's own harvest.
+    Why: the tests run QualCoder's own harvest of coder names, rather
+    than a restatement of it.
 
 56. The open-time repair statements (copied verbatim)
     Here: tests/test_v17_support.py, replay_master_open_repair.
@@ -661,7 +664,8 @@ QualCoder projects.
     From: 3.8.2 __main__.py, lines 2347-2417; app.py, lines 1470-1473;
     and, at the root of QualCoder's repository, tests/test_qualcoder.py,
     lines 47-107.
-    Why: each of these builds its own QualCoder project fixture.
+    Why: each of these builds its own project fixture in QualCoder's
+    format.
 
 68. A project QualCoder 4.0 created, as an oracle (file-format facts)
     Here: tests/fixtures/qc40_new_project.json.
@@ -673,8 +677,8 @@ QualCoder projects.
     return); it holds no QualCoder source text. The test pins the
     fixture's counts and its project row, whose about value QualCoder
     takes from app.py, line 119 at the same tag.
-    Why: the format tests compare every project this server creates
-    with it.
+    Why: the format tests compare every project Exegete creates with
+    it.
 
 69. Planted rows and old-version markers (file-format facts)
     Here: tests/test_v012_pseudonymise_tool.py.
@@ -703,13 +707,13 @@ QualCoder projects.
     writes them, and backup folders under QualCoder's names; similar
     one-line statements occur elsewhere in tests/.
 
-70. The backup and merge-label pins (copied values)
+70. The backup and merge-label checks (copied values)
     Here: tests/test_qc40_backup_parity.py,
     TestIgnoreSetPinned.test_qualcoder_set_is_byte_exact_with_upstream.
     Here: tests/test_qc40_memo_privacy.py,
     TestMergeCategoryProvenance.test_source_memo_carried_with_parity_recipe.
     From: app.py, lines 1619-1625; code_tree.py, lines 1413-1417.
-    Why: to pin items 16 and 10 to QualCoder's.
+    Why: to hold items 16 and 10 to QualCoder's.
 
 71. The Manage Cases name-edit oracle (copied verbatim)
     Here: tests/test_v013_rename_tools.py, upstream_manage_cases.
@@ -749,15 +753,15 @@ QualCoder projects.
     TestSavingTheMappingIntoPseudonymsJson.test_qualcoder_applying_the_written_file_gives_this_runs_text.
     From: manage_files.py, lines 2510-2512 and 3344-3349.
     Why: to test that QualCoder's own application of the pseudonyms.json
-    this server saves, one entry at a time in file order, gives the text
-    this server's run gave, rather than a restatement of that loop.
+    Exegete saves, one entry at a time in file order, gives the text
+    Exegete's run gave, rather than a restatement of that loop.
 
 75. QualCoder's pseudonyms.json write statement (file-format facts)
     Here: tests/test_v012_pseudonymise_tool.py,
     TestSavingTheMappingIntoPseudonymsJson.test_pseudonyms_json_is_byte_identical_to_qualcoders_own_write.
     From: pseudonyms.py, lines 92-93.
-    Why: to test that the file this server saves is, byte for byte, the
-    file QualCoder's own statement writes from the same list.
+    Why: to test that the file Exegete saves is, byte for byte, the file
+    QualCoder's own statement writes from the same list.
 
 The REFI-QDA schema in tests/fixtures/refi_qda/Project.xsd is not
 QualCoder's: it is the REFI-QDA standard's own, copyright 2019 REFI
@@ -833,13 +837,14 @@ Libraries for document import
 Every install fetches defusedxml (Python Software Foundation licence)
 and striprtf (BSD-3-Clause) from PyPI. The optional part `pdf-epub`
 adds PyMuPDF and EbookLib, both under the GNU Affero General Public
-License, version 3, and lxml (BSD-3-Clause), which EbookLib needs; an
-install with that part is, taken as a whole, under the AGPL's terms, as
-QualCoder's own installs are, while Exegete's own code stays under the
-LGPL (the maintainer's decision of 6 October 2026, which also switches the
-part on in the Claude Desktop extension). None of these libraries is
-contained in Exegete's package or its Claude Desktop extension file:
-they are fetched from PyPI on the researcher's computer.
+License, version 3, and the two libraries EbookLib needs, lxml
+(BSD-3-Clause) and six (MIT). An install with that part is, taken as a
+whole, under the AGPL's terms, as QualCoder 4.0's own installs are.
+Exegete's own code stays under the LGPL (the maintainer's decision of
+6 October 2026, which also switches the part on in the Claude Desktop
+extension). None of these libraries is contained in Exegete's package
+or its Claude Desktop extension file: they are fetched from PyPI on the
+researcher's computer.
 
 With Python 3.11 to 3.14 on Windows x64, on Linux (x86-64 and Arm) and
 on Macs with Apple silicon, the part brings PyMuPDF 2 (from v0.15.1; on

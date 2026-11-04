@@ -43,9 +43,9 @@ List my available projects
 ```
 
 Exegete searches these places by default:
-- the folder `EXEGETE_WORKSPACE` names, when it is set. With the
-  desktop extension, that is its setting "Folder for projects", by
-  default `~/Exegete projects/`. Exegete searches that folder at its
+- the folder given in the setting `EXEGETE_WORKSPACE`, when it is set.
+  With the desktop extension, that is its setting "Folder for projects",
+  by default `~/Exegete projects/`. Exegete searches that folder at its
   top level only, unless it is one of the places below
 - `~/Documents/QualCoder_projects/`
 - `~/Documents/QualCoder/`
@@ -54,15 +54,16 @@ Exegete searches these places by default:
   extension's default folder for projects, and its earlier default)
 - `~/Documents/`
 
+Each project is a folder whose name ends in `.qda`.
 The answer lists each project with its path, its name, the folder it is
 in, and when the project's own folder last changed, the most recently
 changed first. It also gives the project selected, if any, the folder
 where new projects go and the folders searched. The size it gives,
 `size_mb`, leaves out the files inside the project's folder, so it does
-not show how large the project is. In
-this example, the first project is in the desktop extension's folder and
-the second in one of QualCoder's, as it would be if you use QualCoder.
-The answer begins like this:
+not show how large the project is. In this example, the first project
+is in the desktop extension's folder and the second in one of
+QualCoder's, as it would be if you use QualCoder. The answer begins
+like this:
 
 ```json
 {
@@ -110,12 +111,14 @@ Which project am I working with?
 
 ### Searching other folders
 
-If your projects are somewhere else, name the folder. Exegete then
-searches that folder alone, three levels deep:
+If your projects are somewhere else, name the folder:
 
 ```
 Search for projects in /Volumes/External/Research/Projects
 ```
+
+Exegete then searches that folder alone, three levels deep: the folder
+itself, the folders inside it, and the folders inside those.
 
 ## One project set in the configuration
 
@@ -142,8 +145,8 @@ In your `claude_desktop_config.json`:
 
 Give your own project's path: its folder, ending in `.qda`, or the
 `data.qda` file inside it. The example's project is in
-`~/Documents/Exegete projects`, where Exegete makes new projects when it
-is set up this way, unless `EXEGETE_WORKSPACE` names another folder.
+`~/Documents/Exegete projects`. Exegete makes new projects in that
+folder, unless the setting `EXEGETE_WORKSPACE` gives another.
 
 ### Usage
 
@@ -165,7 +168,7 @@ What are my most used codes?
 | | Choosing in the conversation | One project in the configuration |
 |---------|---------------|---------------|
 | **Setup** | No path to set | The project's full path |
-| **Several projects** | Switch at any time | Switch at any time too: `select_project` still works, and the setting only chooses the project Exegete starts with |
+| **Several projects** | Switch at any time | Switch at any time too, since the setting chooses only the project Exegete starts with |
 | **First use** | Ask the assistant to select a project | The project opens with the first tool that needs it |
 | **Suits** | Work across several projects | Work on one project |
 
@@ -208,9 +211,9 @@ Select the first project
 
 When a project was selected or created before on this computer, and
 still exists, the answer also gives its path. To go back to that
-project, ask the assistant to select it: one `select_project` call with
-that path is enough. Exegete keeps that path in
-`~/.exegete/mru_project.json`, and never selects the project by itself.
+project, ask the assistant to select it. The assistant needs only that
+path. Exegete keeps the path in `~/.exegete/mru_project.json`, and
+never selects the project by itself.
 
 ### A project is missing from the list
 
@@ -305,7 +308,8 @@ Assistant: Focus Groups is now selected.
 
 Choosing in the conversation works with one project or many, and needs
 no path in the configuration. Setting one project saves selecting it at
-each start, and `select_project` still switches to another. To change
+each start, and the assistant can still switch to another. To change
 the configuration later, edit `claude_desktop_config.json` again, then
-quit Claude Desktop fully and open it again ("Claude Desktop set up by
-hand", in the Terminal guide, says how).
+quit Claude Desktop fully and open it again. The Terminal guide says
+how, in
+["Claude Desktop set up by hand"](docs/installing-from-the-terminal.md#claude-desktop-set-up-by-hand).

@@ -535,11 +535,12 @@ is the one the format dictates.
 Tests and fixtures
 ------------------
 
-These are in the repository only; no package contains them. The test
-oracles carry QualCoder's code, so that the tests compare Exegete's code
-with QualCoder's own rather than with a restatement of it. The fixtures
-restate QualCoder's schema, so that the test projects are in QualCoder's
-own format.
+These are in the repository only; no package contains them. A test's
+oracle is what the test takes as the right result. The oracles here
+carry QualCoder's code, so that the tests compare Exegete's code with
+QualCoder's own rather than with a restatement of it. A fixture is the
+data a test starts from. The fixtures here restate QualCoder's schema,
+so that the test projects are in QualCoder's own format.
 
 50. The palette, held to QualCoder's (copied values)
     Here: tests/test_v012_palette_idempotent.py, UPSTREAM_COLORS and
@@ -854,9 +855,9 @@ fetched from PyPI on the researcher's computer.
 With Python 3.11 to 3.14 on Windows x64, on Linux (x86-64 and Arm) and
 on Macs with Apple silicon, the part brings PyMuPDF 2: from v0.15.1 on
 Windows x64 and Linux, and from v0.15.3 on those Macs. With PyMuPDF 2
-come nine more libraries, also fetched from PyPI. Their licences are
-these, as the licence files and metadata inside the packages that the
-lock gives those computers state them:
+come nine more libraries, also fetched from PyPI. The licence files and
+metadata inside the packages that the lock gives those computers state
+these licences:
 
 - onnxruntime: MIT, Microsoft Corporation; its packages also carry
   Microsoft's notices for the third-party software they contain

@@ -439,8 +439,11 @@ class TestTheDocuments:
         section = text[start:text.index("The answer lists each project",
                                         start)]
         items = [b for b in _blocks(section) if b.startswith("- ")]
+        # (v0.15.3, the readability reading: "given in the setting", not
+        # the setting "names", which reads as a noun)
         assert items[0].startswith(
-            "- the folder `EXEGETE_WORKSPACE` names, when it is set")
+            "- the folder given in the setting `EXEGETE_WORKSPACE`, when "
+            "it is set")
         assert items[0].endswith(
             "at its top level only, unless it is one of the places below")
         listed = [p.rstrip("/") for item in items[1:]

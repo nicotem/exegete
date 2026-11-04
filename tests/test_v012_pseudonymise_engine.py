@@ -2141,6 +2141,26 @@ def _residue_case_with_left(draw):
     return compiled, P.apply_replacements(text, replacements), places
 
 
+def _joined_to_a_letter(text, start, end):
+    """Whether the generator's invisible characters (a soft hyphen, a
+    zero-width space) join the span to a letter on either side, so that
+    the reader reads it inside a longer word (v0.15.3, fix round 1). Not
+    said of a span a combining mark follows, which the mark may join to
+    its last letter, hiding it from the reader's reading: such a whole
+    word is the rewriter's alone, in the share whatever stands around
+    it."""
+    invisible = "­​"
+    if end < len(text) and text[end] in "̀́̈":
+        return False
+    after, before = end, start
+    while after < len(text) and text[after] in invisible:
+        after += 1
+    while before > 0 and text[before - 1] in invisible:
+        before -= 1
+    return ((end < after < len(text) and P._is_word_char(text[after]))
+            or (0 < before < start and P._is_word_char(text[before - 1])))
+
+
 def _compiled_again(compiled):
     """The same mapping compiled afresh. A count keeps what it learns of
     each spelling on the compiled mapping and spends less the next time,
@@ -2814,12 +2834,19 @@ class TestNamesLeftInText:
         It comes out of the put-back share alone: every other kind, both
         counts and the budget spent are what the same text gives counted
         without the places, and a file the run did not rewrite charges
-        nothing to it."""
+        nothing to it. No occurrence left that an invisible character
+        joins to a letter, which the reader reads inside a longer word, is
+        charged to it, so none takes a put-back's place (fix round 1)."""
         compiled, text, left = case
         found = P.names_left_in_text(compiled, text, True, True,
                                      left_spans=left)
         plain = P.names_left_in_text(_compiled_again(compiled), text, True,
                                      True)
+        readable = {}
+        for start, end in left:
+            if not _joined_to_a_letter(text, start, end):
+                index = compiled.entry_for(text[start:end])
+                readable[index] = readable.get(index, 0) + 1
         total = found["unattributed"]
         chosen = 0
         for entry, before in zip(found["entries"], plain["entries"]):
@@ -2827,6 +2854,8 @@ class TestNamesLeftInText:
             kinds = sum(entry[kind] for kind in P.TEXT_RESIDUE_REASONS)
             assert kinds == entry["occurrences"]["wide"], entry
             assert all(entry[kind] >= 0 for kind in P.TEXT_RESIDUE_REASONS)
+            assert entry["left_by_choice"] <= readable.get(
+                entry["entry"], 0), (text, left, entry)
             total += kinds
             chosen += entry["left_by_choice"]
             assert (entry["put_back_by_a_pseudonym"] + entry["left_by_choice"]

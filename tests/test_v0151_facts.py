@@ -64,7 +64,7 @@ except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
     import tomli as tomllib
 
 from exegete import (doc_import, env_settings, import_reading, names,
-                     preview_tokens, reading_folder, server)
+                     occurrences, preview_tokens, reading_folder, server)
 
 REPO = Path(__file__).resolve().parents[1]
 GB = 1024 * 1024 * 1024
@@ -101,8 +101,9 @@ FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN, SIZES)
 # to docs/history/ with them, is read there by the first five facts
 # alone: it names the state folder. The texts Exegete's code holds (its
 # tools' descriptions, its brief, its notes, refusals, help topics and
-# log lines, in every module of src/exegete) are read by one fact
-# alone, the releases to come (v0.15.2), through scripts/code_texts.py:
+# log lines, in every module of src/exegete) are read by the facts that
+# say so, the releases to come (v0.15.2) and the occurrences a preview
+# lists (v0.15.3), through scripts/code_texts.py:
 # each text is a document of its own, named by its module and the line
 # it starts on. Read besides, by the first five facts and for wrong
 # values alone: the CHANGELOG's `[Unreleased]` part and the fragments
@@ -183,6 +184,9 @@ class Facts:
     # docs/snapshot/sizes.json's tool_definitions_characters
     full_characters: int
     core_characters: int
+    # v0.15.3: how many occurrences a pseudonymisation preview lists
+    # (occurrences.py)
+    occurrences_listed: int
 
 
 def _pdf_epub_extra(project: dict) -> str:
@@ -422,7 +426,8 @@ def facts_from_the_code(root: Path = REPO,
             _, release, words, _) in plan.PLANNED.items()},
         releases=dict(plan.RELEASES),
         full_characters=sizes["full"]["tool_definitions_characters"],
-        core_characters=sizes["core"]["tool_definitions_characters"])
+        core_characters=sizes["core"]["tool_definitions_characters"],
+        occurrences_listed=occurrences.OCCURRENCES_LISTED)
 
 
 # The counts the documents give, each with the constants it is held to.
@@ -438,6 +443,8 @@ QUANTITIES: Dict[str, Tuple[Tuple[str, ...], Callable[[Facts], float]]] = {
     "preview tools": (("preview_tools",), lambda f: len(f.preview_tools)),
     "runtime dependencies": (("runtime_dependencies",),
                              lambda f: len(f.runtime_dependencies)),
+    "occurrences listed": (("occurrences_listed",),
+                           lambda f: f.occurrences_listed),
 }
 for _field in ("extension_call_seconds", "terminal_call_seconds",
                "call_seconds_least", "call_seconds_most",
@@ -527,6 +534,12 @@ MEMORY_PATTERNS = (
     (r"\b(?P<n>\d+)\s+GB\s+of\s+memory\s+to\s+read\s+a\s+file"
      r"\s+\((?P<m>\d+)\s+GB\s+for\s+a\s+PDF\)",
      {"n": ("memory_cap_bytes",), "m": ("pdf_memory_cap_bytes",)}),
+)
+# How many occurrences of a name a pseudonymisation preview lists
+# (v0.15.3): "lists the first 150", in the tool's description
+OCCURRENCE_PATTERNS = (
+    (r"\blists\s+the\s+first\s+(?P<n>\d+)\b",
+     {"n": ("occurrences listed",)}),
 )
 # The size of each set's tool definitions, as the documents round it
 # (v0.15.2): a figure passes within SIZE_TOLERANCE of the snapshot's,
@@ -901,6 +914,11 @@ FACTS: Dict[str, Fact] = {
                    "packaging/pypi-old-name/README.md", UPDATE_PAGE,
                    SERVER_SOURCE, "src/exegete/updates.py"),
         patterns=RELEASE_NAMED + (VERSION_NAMED, NAMES_EXEGETE, ADDRESS),
+        code_texts=True),
+    "the occurrences listed": Fact(
+        code="occurrences.py: OCCURRENCES_LISTED",
+        documents=(SERVER_SOURCE,),
+        patterns=tuple(p for p, _ in OCCURRENCE_PATTERNS),
         code_texts=True),
 }
 # The version and its date are held already: tests/test_updates.py and
@@ -2230,6 +2248,8 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the reading folder": check_reading_folder,
     "QualCoder's folders": check_qualcoder_folders,
     "the releases to come": check_future_releases,
+    "the occurrences listed": lambda facts, document: _check_numbers(
+        "the occurrences listed", OCCURRENCE_PATTERNS, facts, document),
 }
 
 
@@ -2400,6 +2420,8 @@ CHANGES = (
     # v0.15.2: each set's tool definitions a tenth larger
     ("full_characters", lambda f: round(f.full_characters * 1.1)),
     ("core_characters", lambda f: round(f.core_characters * 1.1)),
+    # v0.15.3: the occurrences a preview lists, fifty more
+    ("occurrences_listed", lambda f: f.occurrences_listed + 50),
 )
 
 
@@ -2793,6 +2815,7 @@ SOURCES = {
     "prompts": (server.mcp._prompt_manager, "_prompts"),
     "tool_arguments": (server.mcp._tool_manager, "_tools"),
     "preview_tools": (preview_tokens, "REGISTRY"),
+    "occurrences_listed": (occurrences, "OCCURRENCES_LISTED"),
 }
 
 

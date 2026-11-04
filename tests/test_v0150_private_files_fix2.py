@@ -279,8 +279,10 @@ class TestHowFarAFolderOfItsOwnGoes:
                                     "themselves"))
         assert ("runs them without a permission prompt in every mode"
                 ) in assistants
-        assert ("file reads run without a prompt in auto mode, including "
-                "reads outside the working directories") in assistants
+        # (v0.15.3: Anthropic's page, read again, sets network paths aside)
+        assert ("file reads other than reads from network paths run without "
+                "a prompt in auto mode, including reads outside the working "
+                "directories") in assistants
         assert "Claude can see any information visible on your screen" in \
             assistants
 

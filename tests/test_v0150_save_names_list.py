@@ -2168,7 +2168,9 @@ class TestTheDocuments:
         # Codex asking before the save, which changes what exists
         # (and no longer read_pseudonym_list, removed: the files design,
         # piece 5)
-        assert ("a tool marked `anthropic/requiresUserInteraction` (here, "
+        # (v0.15.3: the hosts' list, read again, begins the sentence with
+        # the mark, since Anthropic's page no longer gives the version)
+        assert ("A tool marked `anthropic/requiresUserInteraction` (here, "
                 "`import_documents` and `save_names_list`) is asked about in "
                 "every one of these modes but `dontAsk`, which refuses it."
                 ) in install

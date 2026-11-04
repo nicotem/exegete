@@ -1090,6 +1090,106 @@ def _reader_sees(value: str) -> str:
     return _strip_unseen(unicodedata.normalize("NFKC", _ordered_runs(value)))
 
 
+# How far beyond an end of an occurrence a run leaves `_reader_sees_at`
+# looks for a point to cut the reading (v0.15.3, fix round 1): further
+# than the run of marks after a name in any text but a crafted one, and
+# near enough that each place costs a few short readings at most. A
+# place with no such point is not found, and its occurrence is not
+# charged to the choice: a put-back may then be reported where there is
+# none, never the reverse.
+_CUT_REACH = 64
+
+
+def _cut_before(char: str) -> bool:
+    """Whether the reader's reading can be cut before `char` (v0.15.3, fix
+    round 1): the readings of the text before it and of the text from it,
+    put end to end, are the reading of the whole.
+
+    True where `char`'s compatibility decomposition begins with a
+    character that NFKC composes onto nothing before it: neither a
+    combining mark (category M, whatever its combining class, so the
+    spacing vowel signs that compose, as in Oriya, too) nor a Hangul
+    jamo, the one kind of letter composed onto the letter before it.
+    Canonical reordering moves the marks with a combining class only, and
+    `_ordered_runs` too, and neither crosses such a character; the
+    characters a reader does not see are removed one by one. Every ASCII
+    character qualifies.
+    """
+    if char < "\x80":
+        return True
+    first = unicodedata.normalize("NFKD", char)[0]
+    point = ord(first)
+    return not (unicodedata.category(first)[0] == "M"
+                or unicodedata.combining(first)
+                or 0x1100 <= point <= 0x11FF or 0xA960 <= point <= 0xA97F
+                or 0xD7B0 <= point <= 0xD7FF)
+
+
+def _reader_sees_at(text: str, places: Sequence[Tuple[int, int]]
+                    ) -> Tuple[str, Dict[Tuple[int, int], Tuple[int, int]]]:
+    """`_reader_sees(text)`, and where in it each of `places` (spans of
+    `text`) stands (v0.15.3, fix round 1).
+
+    The text is read once, in pieces cut where `_cut_before` allows: at
+    each place's two ends, or, where an end cannot be cut, at the
+    nearest point beyond it within `_CUT_REACH` characters; the pieces'
+    readings put end to end are the text's reading. A place cut at its
+    own ends stands between the readings of the pieces around it. One
+    cut beyond an end is read in three parts within its stretch (before
+    it, itself, after it) and placed only where those three readings put
+    end to end are the stretch's reading, which they are not where the
+    reading joins a character inside the place to one outside it. A
+    place with no cut within reach is not placed either. ASCII text is
+    its own reading, and every place stands where it is.
+    """
+    if text.isascii():
+        return text, {(int(start), int(end)): (int(start), int(end))
+                      for start, end in places}
+    length = len(text)
+
+    def beyond(position: int, step: int) -> Optional[int]:
+        # The nearest point at or beyond `position`, by `step`, where the
+        # reading can be cut; the text's two ends always can
+        for _ in range(_CUT_REACH + 1):
+            if position in (0, length) or _cut_before(text[position]):
+                return position
+            position += step
+        return None
+
+    stretches: Dict[Tuple[int, int], Tuple[int, int]] = {}
+    cuts = {0, length}
+    for start, end in places:
+        start, end = int(start), int(end)
+        if not 0 <= start <= end <= length:
+            continue
+        low, high = beyond(start, -1), beyond(end, 1)
+        if low is not None and high is not None:
+            stretches[(start, end)] = (low, high)
+            cuts.update((low, high))
+    at: Dict[int, int] = {}
+    pieces: List[str] = []
+    reached = 0
+    ordered = sorted(cuts)
+    for low, high in zip(ordered, ordered[1:]):
+        at[low] = reached
+        pieces.append(_reader_sees(text[low:high]))
+        reached += len(pieces[-1])
+    at[length] = reached
+    seen = "".join(pieces)
+    placed: Dict[Tuple[int, int], Tuple[int, int]] = {}
+    for (start, end), (low, high) in stretches.items():
+        if (low, high) == (start, end):
+            placed[(start, end)] = (at[start], at[end])
+            continue
+        before = _reader_sees(text[low:start])
+        itself = _reader_sees(text[start:end])
+        if (before + itself + _reader_sees(text[end:high])
+                == seen[at[low]:at[high]]):
+            begin = at[low] + len(before)
+            placed[(start, end)] = (begin, begin + len(itself))
+    return seen, placed
+
+
 def _detector_parts(form: str) -> List[str]:
     """The words of one surface form, as a reader sees them.
 
@@ -2316,15 +2416,18 @@ def names_left_in_text(compiled: "Compiled", text: str,
     put_back_by_a_pseudonym and the rest to normalisation_variants; on
     every other row nothing was put back by this run, so the same share
     is charged to whole_word_in_a_file_not_rewritten instead. On the
-    file this run rewrote, the whole words at `left_spans` are counted in
-    the same pass over the raw text, and up to that share's size are
+    file this run rewrote, a whole word at one of `left_spans` is
     charged to left_by_choice rather than to put_back_by_a_pseudonym
-    (v0.15.3). A left occurrence the share does not reach, one the
-    reader's reading sees as another kind, stays in that kind, never in
-    put_back_by_a_pseudonym. The `min` and `max` and the charge to
-    left_by_choice are a declared HEURISTIC about which cause an
-    occurrence is charged to when more than one is present; their sum
-    is exact.
+    where the reader's reading reads it whole there, as the form the
+    rewriter matched, or does not see it at all (v0.15.3): the reading is
+    made in pieces that find each place in it (`_reader_sees_at`), and
+    each pass looks its places up. A left occurrence the reading reads
+    as another kind (an invisible character joining it to the next
+    letter, a longer name read across it) stays in that kind, never in
+    put_back_by_a_pseudonym, and takes no put-back's place in the share
+    (fix round 1). The `min` and `max` and the charge to left_by_choice
+    are a declared HEURISTIC about which cause an occurrence is charged
+    to when more than one is present; their sum is exact.
 
     `max_matches` bounds the work a hostile text can cost: every match of
     the three passes counts against it, the first sight of each spelling
@@ -2363,9 +2466,17 @@ def names_left_in_text(compiled: "Compiled", text: str,
     limit = max_matches if max_matches is not None else -1
     extra_work = 0
     extra_limit = max_extra_work if max_extra_work is not None else -1
-    seen = _reader_sees(text)
     left_places = frozenset((int(start), int(end))
                             for start, end in left_spans)
+    if left_places:
+        # The same reading, made in pieces, so that each occurrence left
+        # is found where the reading puts it (fix round 1)
+        seen, left_seen = _reader_sees_at(text, sorted(left_places))
+    else:
+        seen, left_seen = _reader_sees(text), {}
+    left_read = frozenset(left_seen.values())
+    # Each occurrence left that the reader reads whole, with its form
+    read_whole: Dict[Tuple[int, int], Tuple[int, str]] = {}
     rows: Dict[Tuple[int, str], Dict[str, Any]] = {}
     direct_total = 0
     folded_seen = 0
@@ -2427,6 +2538,8 @@ def names_left_in_text(compiled: "Compiled", text: str,
             row["case_only"] += 1
         else:
             row["left_whole"] += 1
+            if (start, end) in left_read:
+                read_whole[(start, end)] = (index, form)
 
     # The casefolded second reading, which `NameDetector.contains` makes
     # too: `re.IGNORECASE` and `str.casefold` disagree on some code
@@ -2496,10 +2609,6 @@ def names_left_in_text(compiled: "Compiled", text: str,
         key = _rewriter_form(compiled, lookup, matched)
         row = row_for(key)
         row["whole_word"] += 1
-        if match.span() in left_places:
-            # An occurrence the run leaves by a list: a look-up in the
-            # same pass, so the count spends nothing more for it
-            row["left"] += 1
         snippet = _with_trailing_marks(text, match.start(), match.end())
         seen_alone = detector_sees.get(snippet)
         if seen_alone is None:
@@ -2519,6 +2628,15 @@ def names_left_in_text(compiled: "Compiled", text: str,
         if not seen_alone:
             row["rewriter_only"] += 1
             only_seen += 1
+        if match.span() in left_places and (
+                not seen_alone
+                or read_whole.get(left_seen.get(match.span())) == key):
+            # An occurrence the run leaves by a list, in the share below:
+            # one the reader reads whole there, as this form, or does not
+            # see at all. One read as another kind is not, and takes no
+            # put-back's place (fix round 1). Look-ups in the same
+            # passes, so the count's budgets spend nothing more for it
+            row["left"] += 1
 
     entries: Dict[int, Dict[str, Any]] = {}
     case_variants: List[Dict[str, Any]] = []

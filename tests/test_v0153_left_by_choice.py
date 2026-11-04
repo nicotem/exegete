@@ -25,7 +25,12 @@ part's and the residue's own (`test_v013_names_left_in_text.py`).
 """
 
 import sys
+import unicodedata
 from pathlib import Path
+
+import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
@@ -64,6 +69,39 @@ def left_warning(out):
     found = [warning for warning in out.get("warnings", []) if REAL in warning]
     assert len(found) <= 1, found
     return found[0] if found else None
+
+
+# The review's probe (fix round 1): "Smyth" made "Lee" after "Ann" puts
+# "Ann Lee" back
+ANN_LEE = [{"original": "Ann Lee", "pseudonym": "Pat Doe"},
+           {"original": "Smyth", "pseudonym": "Lee"}]
+LATER = "Later Ann Smyth spoke.\n"
+
+
+def counted(mapping, text, leave, mode="exact"):
+    """The count of the names left after a run over `text` that leaves
+    the occurrences found at the indexes in `leave`, given their places
+    in the text after the run, by entry."""
+    compiled = P.Compiled(P.validate_mapping(mapping, mode))
+    found = P.find_replacements(compiled, text)
+    replacements = [item for index, item in enumerate(found)
+                    if index not in leave]
+    mapper = P.SpanMapper(replacements, len(text))
+    places = [(mapper.map_start(item.start), mapper.map_end(item.end))
+              for index, item in enumerate(found) if index in leave]
+    assert len(places) == len(leave)
+    result = P.names_left_in_text(
+        P.Compiled(P.validate_mapping(mapping, mode)),
+        P.apply_replacements(text, replacements), False, True,
+        left_spans=places)
+    return {entry["entry"]: entry for entry in result["entries"]}
+
+
+def charged(entry):
+    """What a row charges to the share's two kinds and to the kind of a
+    name inside a longer word."""
+    return {kind: entry[kind] for kind in (
+        "inside_a_longer_word", "put_back_by_a_pseudonym", "left_by_choice")}
 
 
 class TestTheCount:
@@ -198,6 +236,169 @@ class TestTheCount:
         assert note == QualcoderDatabase.PSEUDONYMISE_FILE_TEXT_NOTE
         assert ("Occurrences chosen to be left as they were are in both "
                 "counts, under left_by_choice.") in note
+
+
+class TestWhereTheReaderReadsThem:
+    """Fix round 1 (the review's finding 1): an occurrence left is charged
+    to left_by_choice only where the reader's reading reads it whole, as
+    the form the rewrite matched and at its own place, or does not see
+    it at all. One the reading reads as another kind stays in that kind
+    and takes no put-back's place in the share."""
+
+    def test_the_review_probe(self, tmp_path):
+        """"Ann Lee" left before a soft hyphen and "son", which the reader
+        reads as one longer word, and "Smyth" made "Lee" after "Ann",
+        which puts "Ann Lee" back. Red when every left place found by the
+        rewrite is charged: left_by_choice 1, no put-back, no put-back
+        warning, and the choice given as the name's reason."""
+        text = "Ann Lee­son spoke first.\n" + LATER
+        with fresh(tmp_path, text):
+            ids = choose(mapping=ANN_LEE)
+            assert len(ids) == 2
+            out = preview_of(mapping=ANN_LEE, leave_occurrences=ids[:1])
+            assert block(out)["left"] == 1
+            assert charged(by_reason(out)) == {
+                "inside_a_longer_word": 1, "put_back_by_a_pseudonym": 1,
+                "left_by_choice": 0}
+            said = " ".join(out["warnings"])
+            assert PUT_BACK in said
+            assert CHOSEN not in said
+            assert left_warning(out).startswith("Warning: 1 occurrence(s) ")
+            assert COUNTED not in left_warning(out)
+
+    @pytest.mark.parametrize("joiner", ["­", "​", "⁠",
+                                        "﻿"],
+                             ids=["soft-hyphen", "zero-width-space",
+                                  "word-joiner", "zero-width-no-break-space"])
+    def test_joined_to_the_next_word_by_an_invisible_character(self, joiner):
+        """The probe's join by each invisible character a text from a PDF,
+        Word or a web page brings: the left name is inside a longer word,
+        and the put-back beside it is counted as one. Without the join
+        the same left name is charged to the choice."""
+        joined = counted(ANN_LEE, f"Ann Lee{joiner}son spoke first.\n"
+                         + LATER, {0})
+        assert charged(joined[0]) == {"inside_a_longer_word": 1,
+                                      "put_back_by_a_pseudonym": 1,
+                                      "left_by_choice": 0}
+        plain = counted(ANN_LEE, "Ann Lee spoke first.\n" + LATER, {0})
+        assert charged(plain[0]) == {"inside_a_longer_word": 0,
+                                     "put_back_by_a_pseudonym": 1,
+                                     "left_by_choice": 1}
+
+    def test_a_longer_name_read_across_a_left_one(self):
+        """"Lee" left after "Ann" and a line break, which the reading
+        reads as the longer name "Ann Lee": not read as "Lee", so not
+        charged, and the "Lee" that "Smyth", made "Pat Lee", puts back
+        stays put back."""
+        mapping = [{"original": "Lee", "pseudonym": "Kim"},
+                   {"original": "Ann Lee", "pseudonym": "Pat Doe"},
+                   {"original": "Smyth", "pseudonym": "Pat Lee"}]
+        entries = counted(mapping, "Ann\nLee spoke first.\n"
+                          "Later Smyth spoke.\n", {0})
+        assert (entries[0]["put_back_by_a_pseudonym"],
+                entries[0]["left_by_choice"]) == (1, 0)
+
+    def test_read_whole_as_another_form(self):
+        """"Ａnn" (a fullwidth A) left, which the reading reads whole as
+        "Ann", another entry's name, beside "Smyth" made "Pat Ａnn" before
+        an accent that hides that put-back from the reading. The place is
+        read whole, but not as the form the rewrite matched there, so it
+        is not charged to the choice and the put-back stays one."""
+        mapping = [{"original": "Ann", "pseudonym": "Kim"},
+                   {"original": "Ａnn", "pseudonym": "Sue"},
+                   {"original": "Smyth", "pseudonym": "Pat Ａnn"}]
+        entries = counted(mapping, "Ａnn spoke first.\n"
+                          "Later Smyth́ spoke.\n", {0})
+        assert (entries[1]["put_back_by_a_pseudonym"],
+                entries[1]["left_by_choice"]) == (1, 0)
+        assert entries[0]["normalisation_variants"] == 1
+
+    def test_found_where_the_reading_moves_it(self):
+        """Before the name left, characters the reading makes longer or
+        shorter (an accent written apart, an ellipsis, a ligature, a soft
+        hyphen): it is found where the reading puts it, and charged, and
+        the put-back beside it is counted as one. Red when the places are
+        looked for where they stand in the stored text."""
+        text = ("Café… ﬁne ­Ann Lee spoke first.\n"
+                + LATER)
+        assert len(P._reader_sees(text)) != len(text)
+        entries = counted(ANN_LEE, text, {0})
+        assert charged(entries[0]) == {"inside_a_longer_word": 0,
+                                       "put_back_by_a_pseudonym": 1,
+                                       "left_by_choice": 1}
+
+    def test_marks_after_a_left_name(self):
+        """A mark after the left name that joins no letter (a macron below
+        an e) leaves it read whole there; one that joins the last letter
+        (an acute: "Leé") hides it from the reading, so the rewrite alone
+        sees it, and it is charged. Each beside a put-back, which stays
+        one."""
+        for mark in ("̱", "́"):
+            entries = counted(ANN_LEE, f"Ann Lee{mark} spoke first.\n"
+                              + LATER, {0})
+            assert charged(entries[0]) == {"inside_a_longer_word": 0,
+                                           "put_back_by_a_pseudonym": 1,
+                                           "left_by_choice": 1}, mark
+
+
+class TestTheReadingInPieces:
+    """Fix round 1: the reading made in pieces where it can be cut, so
+    that each occurrence left is found where the reading puts it, is the
+    reading of the whole text, and each place is where the reading of
+    the text before it ends."""
+
+    # Characters the reading changes: marks that join a letter before
+    # them and marks that do not, a spacing mark that joins (Oriya), the
+    # Hangul letters that join, invisible characters, compatibility
+    # forms one or many characters long, and a character outside the
+    # first plane; and pairs whose second joins the first, drawn whole
+    # so that a place often ends between them
+    ALPHABET = ("a", "e", "B", " ", "­", "​", "⁠", " ",
+                "́",
+                "̈", "̱", "ͅ", "ϊ", "ẛ", "େ",
+                "ା", "ᄀ", "ᅡ", "ᆨ", "가", "ㄱ",
+                "ㅏ", "ﾞ", "…", "ﬁ", "Ａ", "ﷺ",
+                "㌖", "ཱི", "\U0001d400", "\U0001f600",
+                "á", "ୋ", "가", "각",
+                "ㄱㅏ")
+
+    @settings(max_examples=400, deadline=None,
+              suppress_health_check=[HealthCheck.too_slow])
+    @given(data=st.data())
+    def test_every_place_where_the_reading_puts_it(self, data):
+        pieces = data.draw(st.lists(st.sampled_from(self.ALPHABET),
+                                    max_size=24))
+        text = "".join(pieces)
+        cuts = sorted(data.draw(st.lists(
+            st.integers(0, len(text)), max_size=8)))
+        places = [(cuts[index], cuts[index + 1])
+                  for index in range(0, len(cuts) - 1, 2)]
+        whole = P._reader_sees(text)
+        seen, placed = P._reader_sees_at(text, places)
+        assert seen == whole
+        for start, end in places:
+            head = P._reader_sees(text[:start])
+            name = P._reader_sees(text[start:end])
+            plain = head + name + P._reader_sees(text[end:]) == whole
+            if plain:
+                assert placed.get((start, end)) == (
+                    len(head), len(head) + len(name)), (text, start, end)
+            else:
+                assert (start, end) not in placed, (text, start, end)
+
+    def test_no_cut_before_a_character_that_joins_one_before_it(self):
+        """Every character a canonical composition puts after another (the
+        Unicode data's second parts, and the Hangul vowels and final
+        consonants) is one the reading is never cut before."""
+        for code_point in range(0x110000):
+            parts = unicodedata.decomposition(chr(code_point))
+            if not parts or parts.startswith("<") or " " not in parts:
+                continue
+            for part in parts.split()[1:]:
+                assert not P._cut_before(chr(int(part, 16))), hex(
+                    code_point)
+        for code_point in [*range(0x1161, 0x1176), *range(0x11A8, 0x11C3)]:
+            assert not P._cut_before(chr(code_point))
 
 
 class TestTheWarnings:

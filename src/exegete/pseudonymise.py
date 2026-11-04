@@ -858,6 +858,13 @@ _NON_STARTER_RANGES: Optional[List[List[int]]] = None
 _READING_EXTRA: Optional[Dict[int, int]] = None
 _READING_EXTRA_PATTERN: Optional["re.Pattern[str]"] = None
 
+# The code points a canonical decomposition puts after its first part
+# (v0.15.3, fix round 1): those NFKC may compose onto the character
+# before them, marks for the most part, but letters too in the Unicode
+# data of some interpreters (the Kirat Rai vowel signs of Unicode 16).
+# Found in the same one sweep, for `_cut_before`.
+_SECOND_PARTS: Optional[frozenset] = None
+
 
 def _add_to_ranges(ranges: List[List[int]], code_point: int) -> None:
     """Append `code_point` to sorted `ranges`, merging a neighbour."""
@@ -869,16 +876,19 @@ def _add_to_ranges(ranges: List[List[int]], code_point: int) -> None:
 
 def _sweep_code_points() -> None:
     """One pass over every code point: the Cf characters for the unseen
-    table, the combining marks for `_mark_run_pattern`, and the
-    non-starters for `_ordered_runs`. About a tenth of a second once per
+    table, the combining marks for `_mark_run_pattern`, the
+    non-starters for `_ordered_runs`, and the second parts of canonical
+    decompositions for `_cut_before`. About a tenth of a second once per
     process, paid on the first text that is not ASCII and never at
     import."""
     global _UNSEEN_TABLE, _MARK_RANGES, _NON_STARTER_RANGES, _READING_EXTRA
+    global _SECOND_PARTS
     table = dict.fromkeys(_DEFAULT_IGNORABLE)
     marks: List[List[int]] = []
     non_starters: List[List[int]] = []
     readings: Dict[int, str] = {}
     deficit: Dict[str, int] = {}
+    second: set = set()
     category = unicodedata.category
     combining = unicodedata.combining
     decomposition = unicodedata.decomposition
@@ -909,6 +919,7 @@ def _sweep_code_points() -> None:
                                                for piece in pieces)
             if short > 0:
                 deficit[pieces[0]] = max(deficit.get(pieces[0], 0), short)
+            second.update(ord(piece) for piece in pieces[1:])
     extra: Dict[int, int] = {}
     for code_point, reading in readings.items():
         added = len(reading) - 1 + (deficit.get(reading[-1], 0)
@@ -918,6 +929,7 @@ def _sweep_code_points() -> None:
     _MARK_RANGES = marks
     _NON_STARTER_RANGES = non_starters
     _READING_EXTRA = extra
+    _SECOND_PARTS = frozenset(second)
     _UNSEEN_TABLE = table
 
 
@@ -1105,22 +1117,26 @@ def _cut_before(char: str) -> bool:
     round 1): the readings of the text before it and of the text from it,
     put end to end, are the reading of the whole.
 
-    True where `char`'s compatibility decomposition begins with a
-    character that NFKC composes onto nothing before it: neither a
-    combining mark (category M, whatever its combining class, so the
-    spacing vowel signs that compose, as in Oriya, too) nor a Hangul
-    jamo, the one kind of letter composed onto the letter before it.
-    Canonical reordering moves the marks with a combining class only, and
-    `_ordered_runs` too, and neither crosses such a character; the
-    characters a reader does not see are removed one by one. Every ASCII
-    character qualifies.
+    True where neither `char` nor the first character of its
+    compatibility decomposition is one NFKC can compose onto a character
+    before it: a combining mark (category M, whatever its combining
+    class), a Hangul jamo, which composes by rule, or any other code
+    point the interpreter's Unicode data puts after the first part of a
+    canonical decomposition (`_SECOND_PARTS`: letters too, in some
+    versions). Canonical reordering moves the marks with a combining
+    class only, and `_ordered_runs` too, and neither crosses such a
+    character; the characters a reader does not see are removed one by
+    one. Every ASCII character qualifies.
     """
     if char < "\x80":
         return True
+    if _SECOND_PARTS is None:
+        _sweep_code_points()
     first = unicodedata.normalize("NFKD", char)[0]
     point = ord(first)
     return not (unicodedata.category(first)[0] == "M"
                 or unicodedata.combining(first)
+                or point in _SECOND_PARTS or ord(char) in _SECOND_PARTS
                 or 0x1100 <= point <= 0x11FF or 0xA960 <= point <= 0xA97F
                 or 0xD7B0 <= point <= 0xD7FF)
 

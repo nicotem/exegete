@@ -358,7 +358,8 @@ class TestTheReadingInPieces:
     # Hangul letters that join, invisible characters, compatibility
     # forms one or many characters long, and a character outside the
     # first plane; and pairs whose second joins the first, drawn whole
-    # so that a place often ends between them
+    # so that a place often ends between them (the last, Kirat Rai, joins
+    # where the interpreter's Unicode data is version 16 or later)
     ALPHABET = ("a", "e", "B", " ", "­", "​", "⁠", " ",
                 "́",
                 "̈", "̱", "ͅ", "ϊ", "ẛ", "େ",
@@ -366,7 +367,7 @@ class TestTheReadingInPieces:
                 "ㅏ", "ﾞ", "…", "ﬁ", "Ａ", "ﷺ",
                 "㌖", "ཱི", "\U0001d400", "\U0001f600",
                 "á", "ୋ", "가", "각",
-                "ㄱㅏ")
+                "ㄱㅏ", "\U00016d63\U00016d67")
 
     @settings(max_examples=400, deadline=None,
               suppress_health_check=[HealthCheck.too_slow])
@@ -405,6 +406,17 @@ class TestTheReadingInPieces:
                     code_point)
         for code_point in [*range(0x1161, 0x1176), *range(0x11A8, 0x11C3)]:
             assert not P._cut_before(chr(code_point))
+
+    def test_a_letter_the_data_composes_is_refused(self, monkeypatch):
+        """A letter the interpreter's Unicode data puts after the first
+        part of a canonical decomposition is refused like a mark, as the
+        Kirat Rai vowel signs of Unicode 16 are. Shown with a letter put
+        in that set by hand, which no version's data puts there."""
+        assert P._cut_before("一")
+        assert P._SECOND_PARTS is not None
+        monkeypatch.setattr(P, "_SECOND_PARTS",
+                            P._SECOND_PARTS | {0x4E00})
+        assert not P._cut_before("一")
 
 
 class TestTheWarnings:

@@ -397,8 +397,9 @@ def _tools(mode="full"):
 # Institutional accounts in check 4 take 204 characters and 3 lines:
 # 41,094 in 640 lines.
 # Their fix round: "manages" for "provides", one character fewer.
-README_LIMIT = 41_093
-README_LINES = 640
+# The readings read again (v0.15.3), 247 characters, 4 lines: 41,340 in 644.
+README_LIMIT = 41_340
+README_LINES = 644
 
 
 def test_the_readme_stays_short():

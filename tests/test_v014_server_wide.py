@@ -9,6 +9,7 @@ hints other than the table's, fails.
 
 import asyncio
 import json
+import re
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -264,10 +265,13 @@ class TestToolAnnotations:
         section = install.split(
             "## What hosts do with the tools' read and write marks")[1] \
             .split("## Other MCP hosts")[0]
+        # (v0.15.3: Anthropic's pages read again; the day is held by its
+        # form, the dates check's)
+        assert re.search(r"What each host does, from Anthropic's pages as "
+                         r"read on \d{1,2} [A-Z][a-z]+ 20\d\d", section)
         for needed in ("anthropic/requiresUserInteraction", "2.1.199",
                        "a classifier", "`bypassPermissions`",
                        "Skip all approvals", "2.1.283",
-                       "read on 27 September 2026",
                        # fix round 2: dontAsk refuses; the version
                        "in every one of these modes but `dontAsk`, which "
                        "refuses it",

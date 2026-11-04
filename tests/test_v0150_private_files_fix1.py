@@ -170,7 +170,7 @@ class TestThePlacesAndTheTable:
                 "`~/.exegete`, as \"How your data flows\" says.") in section
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
-        # folder chosen by hand not yet checked (the staleness audit of 20
+        # folder chosen by hand said to be unchecked (the staleness audit of 20
         # October 2026: one account in every document, held by its parts
         # in tests/test_v0150_last_blockers.py; its fix round: the folders
         # by their names in the code, both among the usual places)

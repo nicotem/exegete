@@ -397,7 +397,7 @@ class TestTheDocuments:
         item = item[:item.index("- Up to 0.15.1")]
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
-        # folder chosen by hand not yet checked (the staleness audit of 20
+        # folder chosen by hand said to be unchecked (the staleness audit of 20
         # October 2026; tests/test_v0150_last_blockers.py holds the account
         # in every place that tells it; its fix round: here, the folders by
         # their names in the code, both among the usual places)

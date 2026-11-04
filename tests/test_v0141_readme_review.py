@@ -274,9 +274,12 @@ def test_the_upstream_server_is_stated_as_dated_fact():
     # (v0.15.2, the opening texts: the README dates its sentence and points
     # to TOOLS.md, which gives the facts)
     # (the readability reading: the pointer a sentence of its own)
-    assert "as checked on 6 October 2026. TOOLS.md gives the facts" in readme
+    # (v0.15.3: the facts named by the release they are true of, QualCoder
+    # 4.0, which no longer changes, as docs/WRITING.md allows)
+    assert "Exegete's former name. TOOLS.md gives the facts" in readme
     for text in (tools,):
-        assert "(checked 6 October 2026)" in text
+        assert "Four facts about how the tools relate, as the 4.0 release " \
+            "has them." in text
         assert "[#1571](https://github.com/ccbogel/QualCoder/pull/1571)" \
             in text
         assert "10 September 2026" in text

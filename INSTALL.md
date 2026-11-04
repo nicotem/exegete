@@ -56,8 +56,8 @@ what changed.
   Exegete brings in documents itself with `import_documents`, PDF and
   EPUB among them ("PDF and EPUB: the optional part", below).
   QualCoder's releases are at
-  https://github.com/ccbogel/QualCoder/releases. When this was checked,
-  on 6 October 2026, 4.0 was at the top of the page, marked "Latest",
+  https://github.com/ccbogel/QualCoder/releases. When this was checked
+  on 4 November 2026, 4.0 was at the top of the page, marked "Latest",
   and 3.8.2 came next. Exegete works with both. It can tell that
   QualCoder has a project open only with 3.8.2, whose lock file shows
   it. Each release's downloads are under its notes, in Assets, for
@@ -201,18 +201,22 @@ on where you use Exegete:
   and what the chat then does with it is not known.
 - **Chat and Cowork as one conversation.** In the version of Claude
   where chat and Cowork are one conversation, which Anthropic is
-  rolling out to Pro and Max plans first, a permission setting in the
-  message box has two modes. Anthropic's page
+  rolling out to Pro, Max and Ultra plans first, a permission setting
+  in the message box has two modes. Anthropic's page
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
-  read 1 October 2026) describes them: "**Manual (default):** Claude
+  read 4 November 2026) describes them: "**Auto (default on Pro, Max,
+  Ultra, and Team plans):** Claude keeps working without stopping to
+  ask about each step, and automated safety checks run before it takes
+  an action." and "**Manual (default on Enterprise plans):** Claude
   asks before it takes actions, and you choose whether to allow each
-  one." and "**Auto:** Claude keeps working without stopping to ask
-  about each step, and automated safety checks run before it takes an
-  action." The same page says how to tell whether you have that
-  version: "If you're on a Pro or Max plan and your message box still
+  one." The same page says how to tell whether you have that version:
+  "If you're on a Pro, Max, or Ultra plan and your message box still
   shows "Chat" and "Cowork" options, you don't have it yet."
 
-On Manual, Claude keeps asking you, which suits work on real data.
+On Manual, Claude keeps asking you, which suits work on real data. On
+Auto, where such a conversation starts on Pro, Max, Ultra and Team
+plans, Claude does not stop to ask you before it uses Exegete's tools,
+so you could switch it to Manual before you use participants' data.
 ["What hosts do with the tools' read and write marks"](#what-hosts-do-with-the-tools-read-and-write-marks),
 below, says what each host does, from Anthropic's pages.
 
@@ -347,9 +351,9 @@ After updating, look at the settings, since an update can change them:
 - On the maintainer's Mac on 19 October 2026, the update to 0.15.0
   changed "Folder for projects". The setting had been left at the
   earlier default, `~/QualCoder projects`, and the update set it to
-  `~/Exegete projects`. A folder chosen by hand should be kept, but this
-  is not yet checked, so after updating, look at the setting. No project
-  is moved, and both folders are searched, so the projects in the
+  `~/Exegete projects`. Whether the update keeps a folder chosen by
+  hand has not been checked, so after updating, look at the setting. No
+  project is moved, and both folders are searched, so the projects in the
   earlier folder are still found. To keep new projects beside the
   earlier ones, set it back to `~/QualCoder projects`.
 - Up to 0.15.1 the extension had two text boxes, "Tool set" and "Do you
@@ -423,9 +427,9 @@ describes it.
 
 If a new version causes a problem, you can install an earlier release's
 `.mcpb`, from https://github.com/nicotem/exegete/releases, the same way.
-On the maintainer's computer, installing an older extension over a
-newer one cleared its settings: 0.15.0 over a newer test build, on
-23 October 2026. A cleared setting goes back to its default. So after
+On the maintainer's computer, checked on 23 October 2026, installing an
+older extension over a newer one cleared its settings: 0.15.0 over a
+newer test build. A cleared setting goes back to its default. So after
 going back, look at each setting, and set again any you had changed.
 The settings this guide describes go back to these defaults:
 
@@ -697,8 +701,8 @@ Exegete's own folder, so a host that asks before a tool runs asks
 before it. It is in the `full` tool set, the default on every route,
 not in `core`.
 
-What each host does, from Anthropic's pages as read on 27 September
-2026 ("Choose a permission mode" and the MCP page on code.claude.com;
+What each host does, from Anthropic's pages as read on 4 November 2026
+("Choose a permission mode" and the MCP page on code.claude.com;
 "Get started with Claude Cowork" on support.claude.com):
 
 - **Claude Code.** In **Manual** mode (its setting is `default`) it asks
@@ -706,14 +710,14 @@ What each host does, from Anthropic's pages as read on 27 September
   actions are approved, and everything else goes to a classifier: a
   second model that approves or blocks the call instead of you. Auto is
   the starting mode for interactive sessions from version 2.1.283, and
-  was before that on Pro, Max and Team plans. `bypassPermissions` runs
-  everything, and `dontAsk` refuses anything that would ask. From
-  2.1.199, a tool marked `anthropic/requiresUserInteraction` (here,
-  `import_documents` and `save_names_list`) is asked about in every one
-  of these modes but `dontAsk`, which refuses it.
+  was before that on Pro, Max, Ultra and Team plans.
+  `bypassPermissions` runs everything, and `dontAsk` refuses anything
+  that would ask. A tool marked `anthropic/requiresUserInteraction`
+  (here, `import_documents` and `save_names_list`) is asked about in
+  every one of these modes but `dontAsk`, which refuses it.
 - **Cowork.** Each connector tool has its own setting (always allow,
-  needs approval, blocked). In **Manual** mode, the default, a tool that
-  needs approval is asked about. In **Auto**, a tool set to always allow
+  needs approval, blocked). In **Manual** mode a tool that needs
+  approval is asked about. In **Auto**, a tool set to always allow
   is approved if it is read-only. Otherwise it is left to Claude's
   safety review, and so is a tool that needs approval: you are not
   asked. **Skip all approvals** runs every tool that is not blocked. The
@@ -721,13 +725,14 @@ What each host does, from Anthropic's pages as read on 27 September
   read-only and write or delete, nor whether Cowork honours
   `anthropic/requiresUserInteraction`.
 - **Claude, where chat and Cowork are one conversation** (rolling out
-  to Pro and Max plans first; "Claude Cowork and chat are one Claude"
-  on support.claude.com, read 1 October 2026): a permission setting in
-  the message box has two modes, **Manual**, the default, in which
-  Claude asks before it takes actions, and **Auto**, in which automated
-  safety checks run instead of asking ("The first start", above,
-  quotes the page). The page does not say what either does with the
-  marks.
+  to Pro, Max and Ultra plans first; "Claude Cowork and chat are one
+  Claude" on support.claude.com, read 4 November 2026): a permission
+  setting in the message box has two modes, **Auto**, the default on
+  Pro, Max, Ultra and Team plans, in which automated safety checks run
+  instead of asking, and **Manual**, the default on Enterprise plans,
+  in which Claude asks before it takes actions ("The first start",
+  above, quotes the page). The page does not say what either does with
+  the marks.
 - **Claude Desktop's chat.** Anthropic's pages do not say what it does
   with the marks. Claude Desktop 2.9939.2 was seen to pass the
   read-only mark on with each tool (26 September 2026, below); what
@@ -750,8 +755,8 @@ What the programs on the maintainer's computer did, read from them on
   asked, with no option to always allow.
 
 **Codex** (the ChatGPT desktop app, and Codex's command line and editor
-extension), from OpenAI's pages and Codex's source code as read on 30
-September 2026. OpenAI's page,
+extension), from OpenAI's pages and Codex's source code (release
+0.166.0) as read on 4 November 2026. OpenAI's page,
 <https://learn.chatgpt.com/docs/agent-approvals-security>, says:
 "Destructive app/MCP tool calls always require approval when the tool
 advertises a destructive annotation (unless the tool advertises a read

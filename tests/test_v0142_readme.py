@@ -451,8 +451,10 @@ def test_latest_carries_the_date_it_was_checked():
     word of 29 October 2026 brought the table back, with its date.)"""
     readme = _readme()
     assert "\"Latest\"" not in readme
+    # (v0.15.3: a claim about a named release, which no longer changes,
+    # names that release instead of a day, as docs/WRITING.md allows)
     assert "QualCoder 4.0's own MCP server calls itself \"qualcoder-mcp\", " \
-        "Exegete's former name, as checked on 6 October 2026" in readme
+        "Exegete's former name." in readme
     # v0.15.0, the release review: QualCoder's side as checked, beside
     # the Exegete the table's column describes
     # (v0.15.2's release preparation: the stamp may end the sentence)

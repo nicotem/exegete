@@ -50,6 +50,13 @@ CODEX_SETTING = ("OpenAI documents a setting, marked Beta, that can keep "
 # guide. What these tests read of "INSTALL" is the two together, the guide
 # first, where a section that moved is found.
 GUIDE = "docs/installing-from-the-terminal.md"
+# A page read again carries the day of that reading, in the form the dates
+# check reads (docs/WRITING.md): the tests hold the form, never the day
+READ_ON = (r"(?:read|checked|quoted)(?: again)?,? (?:on )?\d{1,2} "
+           r"(?:January|February|March|April|May|June|July|August|September"
+           r"|October|November|December) 20\d\d")
+CAPTURE = (r"Archive capture of \d{1,2} (?:January|February|March|April|May"
+           r"|June|July|August|September|October|November|December) 20\d\d")
 
 
 def _read(name):
@@ -416,11 +423,13 @@ class TestTheReadmesRoute:
                       "github.com/nicotem/exegete/blob/main/docs/installing-"
                       "from-the-terminal.md#chatgpts-desktop-app-and-codex-"
                       "experimental), which make the app ask before every "
-                      "change Exegete makes.",
-                      "This route is Experimental: we wrote it from "
-                      "OpenAI's documentation, read on 30 September 2026, and "
-                      "have not tried it."):
+                      "change Exegete makes."):
             assert words in section, words
+        # (v0.15.3, the dated readings brought up to date: the route says
+        # when its pages were read, in the form the dates check reads)
+        assert re.search(r"This route is Experimental: we wrote it from "
+                         r"OpenAI's documentation, " + READ_ON
+                         + r", and have not tried it\.", section)
         # It sits in "Start here", after the one-click route
         start = _between(_flat("README.md"), "## Start here",
                          "## Exegete and QualCoder")
@@ -448,9 +457,9 @@ class TestTheReadmesRoute:
         # v0.14.2, the README review: the providers' words moved to
         # PRIVACY.md, which quotes them with their addresses; the README
         # keeps why the settings matter, in plain words, before them
-        quote = ("When you use our services for individuals, such as "
-                 "ChatGPT and Codex, we may use your content to train our "
-                 "models.")
+        # (v0.15.3: the page, read again, names the plans it means)
+        quote = ("When you use our services for individuals (Free, Plus, "
+                 "Pro), we may use your content to train our models.")
         assert quote not in data
         assert quote in _flat("PRIVACY.md")
         # v0.14.2, the README rewritten to persuade: each maker's training
@@ -656,8 +665,8 @@ class TestCodexAsksBeforeEveryChange:
                       "**Full access** runs every tool call without asking",
                       # v0.15.0: no exception for the removed tool
                       "for the tools that write, answer each time",
-                      "This project has not yet run Exegete in any OpenAI "
-                      "app",
+                      # (v0.15.3: said as a fact, with no promise)
+                      "This project has not run Exegete in any OpenAI app",
                       "This project does not recommend it for a project "
                       "with participants' data, and gives no steps for it."):
             assert words in section, words
@@ -676,10 +685,10 @@ class TestPrivacyQuotesOpenAI:
 
     def test_each_quote_with_its_address_and_date(self):
         section = self._section()
-        help_page = ("<https://help.openai.com/en/articles/5722486-how-your-"
-                     "data-is-used-to-improve-model-performance> (Archive "
-                     "capture of 28 September 2026")
-        assert help_page in section
+        help_page = (r"<https://help\.openai\.com/en/articles/5722486-how-"
+                     r"your-data-is-used-to-improve-model-performance> \("
+                     + CAPTURE)
+        assert re.search(help_page, section)
         for quote in (
                 "To opt out, turn off Improve the model for everyone under "
                 "Settings > Data controls in ChatGPT, or select Do not "
@@ -831,10 +840,11 @@ class TestPhonesAndTheWeb:
         for words in (
                 "**ChatGPT on a phone**: it cannot start Exegete, but it can "
                 "use it through OpenAI's Remote.",
-                "<https://learn.chatgpt.com/docs/remote>",
+                # (v0.15.3: the page moved, and says the cloud too)
+                "<https://learn.chatgpt.com/docs/mobile>",
                 "\"Follow progress, approve actions, and send instructions "
-                "from your phone. Codex runs each task on your connected "
-                "computer.\"",
+                "from your phone. Codex runs tasks in the cloud or on a "
+                "connected computer.\"",
                 "<https://learn.chatgpt.com/docs/remote-connections>",
                 "\"MCP servers, skills, browser access, and Computer Use come "
                 "from that host's configuration.\"",
@@ -1045,10 +1055,12 @@ class TestCodexWorksInAFolderOfItsOwn:
                         "<https://learn.chatgpt.com/docs/"
                         "agent-approvals-security>",
                         "<https://learn.chatgpt.com/docs/permission-modes>",
-                        "<https://learn.chatgpt.com/docs/permissions>",
-                        "<https://github.com/openai/codex/tree/rust-v0.159.2/"
-                        "codex-rs>"):
+                        "<https://learn.chatgpt.com/docs/permissions>"):
             assert address in section, address
+        # Codex's source, at the release it was read in (v0.15.3: read
+        # again at its newest release, so the test holds the form)
+        assert re.search(r"<https://github\.com/openai/codex/tree/"
+                         r"rust-v\d+\.\d+\.\d+/codex-rs>", section)
         # (the owner, 1 October 2026: warn, don't prescribe)
         assert ("Codex changes files in the folder it works in without "
                 "asking, so a study's folder, the projects folder or the "
@@ -1127,9 +1139,21 @@ class TestWhatCodexKeepsAndTheOptOut:
 
     def test_privacy_gives_the_archive_addresses_and_the_link(self):
         section = _privacy_openai()
-        for capture in ("20260928102458", "20260929211725", "20260926195745"):
-            assert f"<https://web.archive.org/web/{capture}/https://" \
-                in section, capture
+        # (v0.15.3: each page read again in the Archive's newest capture,
+        # so the test holds the form: the capture's day, as written, is the
+        # day in its address)
+        import datetime
+        for page in ("help.openai.com/en/articles/5722486-how-your-data-is-"
+                     "used-to-improve-model-performance",
+                     "openai.com/enterprise-privacy/",
+                     "openai.com/policies/eu-terms-of-use/"):
+            found = re.search(r"Archive capture of (\d{1,2} [A-Z][a-z]+ "
+                              r"20\d\d), <https://web\.archive\.org/web/"
+                              r"(\d{8})\d{6}/https://" + re.escape(page)
+                              + ">", section)
+            assert found, page
+            day = datetime.datetime.strptime(found.group(1), "%d %B %Y")
+            assert day.strftime("%Y%m%d") == found.group(2), page
         assert ("In the page, \"this article\" links to <https://openai.com/"
                 "policies/how-your-data-is-used-to-improve-model-"
                 "performance/>.") in section
@@ -1536,9 +1560,12 @@ class TestAssistantsOwnFileAccess:
         # third do, instead of two bare "Do not"s)
         # (v0.15.2, the opening texts: what each setting does first, then
         # what the researcher could do)
+        # (v0.15.3: Anthropic's page, read again, puts the switch in
+        # Settings, Capabilities, or Settings, System)
         for words in ("1. **Computer use** lets Claude see your screen and "
                       "use other apps. You can keep computer use off, in "
-                      "Settings, General.",
+                      "Settings, Capabilities (or Settings, System, if it is "
+                      "not there).",
                       # (the readability reading: the aside a sentence
                       # of its own, and each suggestion one)
                       "2. **Connected folders and extensions.** Claude reads "
@@ -1586,9 +1613,11 @@ class TestAssistantsOwnFileAccess:
 
     def test_privacy_checks_each_assistant_with_its_source_and_date(self):
         section = _privacy_hosts()
-        assert ("What follows was checked on 30 September 2026 against each "
-                "maker's documentation (and, for Codex, its source code), "
-                "assistant by assistant.") in section
+        # (v0.15.3: the day is the one the pages were last read, in the
+        # form the dates check reads)
+        assert re.search(r"What follows was " + READ_ON + r" against each "
+                         r"maker's documentation \(and, for Codex, its "
+                         r"source code\), assistant by assistant\.", section)
         bullets = re.split(r" - (?=\*\*)", section)[1:]
         verdicts = {
             "**Codex**": "**yes, without asking**",
@@ -1610,14 +1639,17 @@ class TestAssistantsOwnFileAccess:
             assert verdict in bullet, host
             if host in makers:
                 assert makers[host] in bullet, host
-                assert ("30 September 2026" in bullet
+                assert (re.search(READ_ON, bullet)
                         or "the same day" in bullet), host
         # Codex's entry points to the part with OpenAI's words and the code
         assert ("quoted and dated: \"Codex's own file access\", in "
                 "\"OpenAI's apps\" below.") in bullets[0]
         openai = _privacy_openai()
-        for words in ("(release 0.159.2, 29 September 2026, read 30 "
-                      "September 2026,", "`protocol/src/permissions.rs`",
+        # (v0.15.3: Codex's source read again at its newest release: the
+        # release, its day and the day it was read, in the read form)
+        assert re.search(r"\(release \d+\.\d+\.\d+, \d{1,2} [A-Z][a-z]+ "
+                         r"20\d\d, " + READ_ON + ",", openai)
+        for words in ("`protocol/src/permissions.rs`",
                       "`windows-sandbox-rs/src/setup.rs`", ON_REQUEST_READS):
             assert words in openai, words
         # The private part of memos, named for what is bypassed
@@ -1896,15 +1928,18 @@ class TestTheSmallerPoints:
         assert len(chat) == 1
         for words in (
                 "Three exceptions.",
-                "(Settings, General, \"Enable computer use\")",
+                # (v0.15.3: Anthropic's page, read again, moved the switch
+                # and added the Ultra plan)
+                "(the \"Enable computer use\" toggle, in Settings, "
+                "Capabilities, or Settings, System, under This computer)",
                 "\"It can work in your browser, open files, and run your dev "
                 "tools automatically\"",
                 "\"Claude asks for your permission before accessing each "
                 "application.\"",
                 COMPUTER_USE,
-                "\"Computer use: In beta on Pro and Max plans, Claude can use "
-                "apps on your computer directly by clicking, typing, and "
-                "navigating your screen.\"",
+                "\"Computer use: In beta on Pro, Max, and Ultra plans, Claude "
+                "can use apps on your computer directly by clicking, typing, "
+                "and navigating your screen.\"",
                 "With no other extension that reads files, computer use "
                 "off, and no folder that holds your projects or transcripts "
                 "connected (your home folder, Documents or a whole drive "

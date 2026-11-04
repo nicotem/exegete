@@ -72,10 +72,10 @@ You can work with the reading tools alone, or with the tools that write as well.
 > QualCoder's code gives that commit, or a release, beside it. Its one
 > citation into QualCoder's own MCP server, a file much changed in the
 > release, under "The novelty filter and coder visibility", gives the
-> release's line as well. A full check against the release, on 6 October 2026,
-> found the same project schema (v17) and the same format for a new
-> project. The format tests now compare every project Exegete creates
-> with one made by 4.0's own New Project. The check also found the same
+> release's line as well. A full check against the 4.0 release found the
+> same project schema (v17) and the same format for a new project. The
+> format tests now compare every project Exegete creates with one made
+> by 4.0's own New Project. The check also found the same
 > backups, private memo sections, coder visibility, "AI Agent" coder
 > name, reports, merges and deletes, and the same fix for the 3.8.2
 > edit-mode caution (below). Exegete's tools wrote to a project 4.0
@@ -117,7 +117,7 @@ You can work with the reading tools alone, or with the tools that write as well.
 > closing the project there before Exegete writes to it keeps the two
 > programs from changing it at once.
 >
-> Four facts about how the tools relate (checked 6 October 2026).
+> Four facts about how the tools relate, as the 4.0 release has them.
 > QualCoder 4.0 ships its own embedded AI assistant, built on an MCP
 > server inside QualCoder. MCP is the protocol through which an
 > assistant's app uses tools, Exegete's among them. In the 4.0-Beta
@@ -169,10 +169,11 @@ supported. Exegete can create them, move a code with its sub-codes, and
 merge codes (the source's sub-codes move under the target). Deleting a
 code deletes its sub-codes with it, and listings, reports, the codebook
 and REFI-QDA exports show the nesting.
-Exegete does not yet nest an existing code under another code
-(QualCoder, if you use it, can). Moving a sub-code into a category, or
-out of every category, detaches it from its parent code, as in
-QualCoder, and the result says which parent it left.
+Exegete does not nest an existing code under another code (the README's
+["What comes next"](https://github.com/nicotem/exegete#what-comes-next)
+gives the plans). QualCoder, if you use it, can. Moving a sub-code into
+a category, or out of every category, detaches it from its parent code,
+as in QualCoder, and the result says which parent it left.
 Exegete refuses to write to a project newer than schema v17 until it
 has been verified against that schema. Setting `EXEGETE_ALLOW_UNKNOWN_SCHEMA=1` in
 Exegete's environment lets writes go ahead at your own risk, and every
@@ -536,7 +537,7 @@ QualCoder versions", above). An open 4.0 window will not display
 Exegete's writes until the project is reopened there.
 
 **Recovery hint.** If a host restarts Exegete in the middle of a
-conversation (seen with LM Studio in September 2026), every "no project
+conversation (seen with LM Studio 0.4.12), every "no project
 selected" error gives the full path of the last project used on this
 computer, when it still exists. One `select_project` call then
 recovers. The selection is never restored automatically. Exegete keeps
@@ -1143,7 +1144,7 @@ A known value with nothing in scope still answers empty, and that
 answer is a finding.
 
 **Rich transcript analysis:**
-- `read_file_with_codings(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and gives the name of a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts: about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's limit of 25,000 tokens (as recorded on 12 October 2026) with the codings beside it; `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
+- `read_file_with_codings(file_id, start, without_codes)` - Get complete file text with all coding context for deep analysis; counts the file's region and audio/video codings it does not show, and gives the name of a PDF with no usable text (a PDF QualCoder 3.8.2 stored as the file itself, recognised by a heuristic, has its text withheld). A long file comes in parts: about 60,000 characters of English text a part, fewer in other scripts, so that one answer fits Claude Code's limit of 25,000 tokens with the codings beside it (Anthropic's page on MCP in Claude Code, read on 4 November 2026, which also says that Claude Code saves a text answer longer than 50,000 characters to a file under `~/.claude/projects/` and gives Claude its path instead); `part` says where the next starts, and `start` asks for it. Every position, in every part, counts from the start of the whole file. A coding made in QualCoder is found where QualCoder draws it: QualCoder's text coder counts positions its own way (an emoji as two characters, a Windows line break as one, a byte-order mark at the start as none; QualCoder 3.8.2 kept the last two in the texts it imported), so such a coding gives its words' place in this text as `text_start` and `text_end` beside its stored positions, which are never moved, and the assistant is told to quote it from there. A coding whose stored passage is found by neither count is marked `stored_passage_differs`, never moved. `without_codes=true` gives the text alone, for a fresh reading: no codings, codes or annotations (counted, never shown), the file's memo kept
 - `open_file_for_reading(file_id, show, without_codes)` - **Let the researcher read a whole file on their own computer** (in every tool set). Its text does not pass through the conversation: the answer is the place of what was opened, and counts. `show="reading_copy"` (the default) writes a web page with the whole text and its codings and opens it in the researcher's browser; `"original"` opens a read-only copy of the document as it was imported in its own app (Word, Pages, LibreOffice, Preview); `"in_folder"` shows that copy in Finder or File Explorer (on a Mac, the space bar then gives Quick Look). `without_codes=true` writes the page with the text alone, for a fresh reading. See "Reading a whole file" above
 
 **Attributes and demographics:**

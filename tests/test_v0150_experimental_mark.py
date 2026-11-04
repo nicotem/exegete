@@ -177,8 +177,10 @@ KEPT = [
      1),
     ("README.md", "| **ChatGPT's desktop app and Codex** (Experimental) |", 1),
     ("README.md", "| **LM Studio**, with a local model (Experimental) |", 1),
+    # (v0.15.3: the mark is the fact; the day of the reading moves when the
+    # pages are read again)
     ("README.md", "This route is Experimental: we wrote it from OpenAI's "
-                  "documentation, read on 30 September 2026", 1),
+                  "documentation, read", 1),
     ("README.md", "#choosing-your-ai-host-data-governance-options-"
                   "experimental", 1),
     ("README.md", "#chatgpts-desktop-app-and-codex-experimental", 1),

@@ -546,6 +546,34 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     assert HOW_TO_TELL in _flat("PRIVACY.md")
 
 
+def test_privacy_warns_of_auto_where_it_suggests_the_chat():
+    """v0.15.3, its fix round (the privacy reader's row 15): PRIVACY.md,
+    which a researcher or an ethics committee may read on its own, says
+    what the README and INSTALL.md say. Where chat and Cowork are one
+    conversation, its permission setting starts on Auto on Pro, Max, Ultra
+    and Team plans, where Claude uses Exegete's tools without asking, and
+    the page does not say what either mode does with the mark that asks
+    before an import."""
+    privacy = _flat("PRIVACY.md")
+    hosts = _between(privacy, "## Assistants that open files by themselves",
+                     "## Files Exegete keeps on your computer")
+    route = hosts[hosts.index("**For participants' data**, this project "
+                              "suggests"):]
+    assert re.search(r"Anthropic's page, " + READ_ON + r", says that the "
+                     r"permission setting in the message box starts on Auto "
+                     r"on Pro, Max, Ultra and Team plans\. On Auto, Claude "
+                     r"does not stop to ask you before it uses Exegete's "
+                     r"tools: automated safety checks run instead\. On "
+                     r"Manual, which you could choose, Claude asks before it "
+                     r"takes actions\.", route)
+    imports = _between(privacy, "- **Hidden instructions in a document**",
+                       "- **A file imported by mistake**")
+    assert ("Ultra and Team plans, and on Auto automated safety checks run "
+            "instead of asking you.") in imports
+    assert re.search(r"Anthropic's page, " + READ_ON + r", does not say what "
+                     r"either of its modes does with the mark", imports)
+
+
 # Words that date, or leave the reader to guess what they name
 DATING = re.compile(r"(?i)\bnew(?:er)? experience\b")
 
@@ -748,7 +776,15 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "For participants' data this project suggests Claude Desktop's "
             "chat with the extension, with computer use off, no folder that "
             "holds your projects or transcripts connected to it, and no "
-            "other extension that reads files. Codex reads well beyond its "
+            "other extension that reads files.",
+            # (v0.15.3, its fix round: the warning about Auto, which the
+            # README and INSTALL.md give, in the list for ethics committees
+            # too, before the suggestion)
+            "Where chat and Cowork are one conversation, that "
+            "conversation's permission setting starts on Auto on Pro, Max, "
+            "Ultra and Team plans. On Auto, Claude does not stop to ask you "
+            "before it uses Exegete's tools, so you could set it to Manual",
+            "Codex reads well beyond its "
             # (ruling 85, item 4: the setting's test dropped, its words
             # those of OpenAI's page)
             "folder without asking. OpenAI documents a setting, marked "

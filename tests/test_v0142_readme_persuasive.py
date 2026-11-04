@@ -399,8 +399,9 @@ def _tools(mode="full"):
 # Their fix round: "manages" for "provides", one character fewer.
 # The readings read again (v0.15.3), 247 characters, 4 lines: 41,340 in 644.
 # Their readability reading, the one conversation said plainly: 41,470 in 646.
-README_LIMIT = 41_470
-README_LINES = 646
+# Their fix round, Codex's databases and Ultra's limit, 84 and a line: 41,554 in 647.
+README_LIMIT = 41_554
+README_LINES = 647
 
 
 def test_the_readme_stays_short():

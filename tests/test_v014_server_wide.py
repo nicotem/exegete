@@ -1169,7 +1169,9 @@ class TestTextsThatSentTheAssistantNowhere:
             assert "three levels deep" in section, name
             assert "not the usual places" in section, name
             assert "does not exist" in section, name
-            assert "naming the folder just above it" in section, name
+            # v0.15.3: the guide says the same fact in its own words
+            assert ("naming the folder just above it" in section
+                    or "naming the folder that holds it" in section), name
         # what the sections say is what the search does
         assert "each searched three levels deep" in given
         assert "the usual places were not searched" in given

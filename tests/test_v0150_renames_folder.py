@@ -436,7 +436,8 @@ class TestTheDocuments:
         text = (REPO / "PROJECT_SELECTION_GUIDE.md").read_text(
             encoding="utf-8")
         start = text.index("Exegete searches these places by default:")
-        section = text[start:text.index("You'll get a list like", start)]
+        section = text[start:text.index("The answer lists each project",
+                                        start)]
         items = [b for b in _blocks(section) if b.startswith("- ")]
         assert items[0].startswith(
             "- the folder `EXEGETE_WORKSPACE` names, when it is set")

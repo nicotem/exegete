@@ -369,3 +369,22 @@ class TestTheNamesListPath:
             assert thomas["left_by_choice"] == 2
             assert thomas["occurrences"] == {"wide": 3, "whole_word": 2}
 
+
+class TestTheRefusal:
+
+    def test_a_change_of_case_mode_is_named(self, tmp_path):
+        """Design 2's finding 21: Ann and Mary Ann over "I met mary Ann
+        today.". The occurrence chosen under case_mode exact is "Ann";
+        under insensitive "mary Ann" matches the longer name, so its id
+        names nothing there, and the refusal names a change of case_mode
+        among its causes."""
+        mapping = [{"original": "Ann", "pseudonym": "Pat"},
+                   {"original": "Mary Ann", "pseudonym": "Sam"}]
+        with fresh(tmp_path, "I met mary Ann today.\n"):
+            ids = choose(mapping=mapping, case_mode="exact")
+            out = preview_of(mapping=mapping, case_mode="insensitive",
+                             leave_occurrences=ids)
+            assert out.get("reason") == "occurrences_not_issued", out
+            assert out["unmatched"] == ids
+            assert "case_mode" in out["error"]
+            assert "preview_token" not in out

@@ -19811,13 +19811,16 @@ _CONTEXT_WITH_OCCURRENCES = (
     "without include_context.")
 # A list to leave whose ids the preview cannot place (v0.15.3): refused
 # on a preview, never on the execute, where the token answers. The
-# causes are every one that gives other ids (occurrences.py)
+# causes are every one that gives other ids (occurrences.py); a change
+# of case_mode, a bound argument, moves an occurrence as a change of
+# mapping does, where a longer name then matches across it
 _OCCURRENCES_NOT_ISSUED = (
     "These occurrence ids name no occurrence in this file's text as it is "
     "now. An id may have been copied wrongly, the text may have changed, "
-    "a change to the mapping may have moved the occurrence, or the ids "
-    "may come from another file or project; ids also change when the "
-    "project is moved or renamed, under another account, and after the "
+    "a change to the mapping or to case_mode may have moved the "
+    "occurrence, or the ids may come from another file or project; ids "
+    "also change when the project is moved or renamed, under another "
+    "account, and after the "
     "preview-token secret is replaced. Preview again with "
     "choose_occurrences and choose again.")
 _OCCURRENCE_ID_AMBIGUOUS = (

@@ -17,9 +17,9 @@ SHA-256 of the file's text and the occurrence's start and end. So, under
 one secret, the same text in the same project gives the same full ids on
 every preview; another secret (another account's, or one made anew) or
 a copy of the project in another folder gives other ids; any change to
-the text gives every occurrence another id; and a change of mapping
-keeps the id of each occurrence whose span it keeps. Without the secret,
-an id says nothing about where it points.
+the text gives every occurrence another id; and a change of mapping, or
+of case_mode, keeps the id of each occurrence whose span it keeps.
+Without the secret, an id says nothing about where it points.
 
 A full id is 26 characters of Crockford's base 32 in lower case (no i,
 l, o or u). The preview shows each cut to one length, the shortest from

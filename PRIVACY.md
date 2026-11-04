@@ -611,7 +611,7 @@ each backup's, a whole copy of the project, as does every change's
 answer with the backup taken before it, and `restore_backup` with the
 backup restored and the one it took first).
 
-What follows was checked on 30 September 2026 against each maker's
+What follows was checked on 4 November 2026 against each maker's
 documentation (and, for Codex, its source code), assistant by
 assistant. These pages change often, and the linked pages govern.
 
@@ -624,8 +624,8 @@ assistant. These pages change often, and the linked pages govern.
   dated: "Codex's own file access", in "OpenAI's apps" below.
 - **Claude Code** (the terminal app, and local sessions in Claude
   Desktop's Code tab): **yes**. It has file tools of its own and runs
-  shell commands. <https://code.claude.com/docs/en/permissions> (read 30
-  September 2026): "By default, Claude has access to files in the
+  shell commands. <https://code.claude.com/docs/en/permissions> (read 4
+  November 2026): "By default, Claude has access to files in the
   directory where you launched it." Reading there needs no approval (the
   page's table: none "within the working directory and additional
   directories"), and "Claude Code recognizes a built-in set of Bash
@@ -639,12 +639,13 @@ assistant. These pages change often, and the linked pages govern.
   starting permission mode for interactive terminal and VS Code
   sessions.", and, while
   `permissions.blockReadsOutsideWorkingDirectories` is off, "file reads
-  run without a prompt in auto mode, including reads outside the working
-  directories", apart from one question the first time its Read, Grep or
-  Glob tool goes outside them. In Manual mode, Claude Code "asks you
-  before reading paths outside this boundary with the Read, Grep, and
-  Glob tools" (<https://code.claude.com/docs/en/security>, the same
-  day); the read-only shell commands above are not in that list.
+  other than reads from network paths run without a prompt in auto mode,
+  including reads outside the working directories", apart from one
+  question the first time its Read, Grep or Glob tool goes outside them.
+  In Manual mode, Claude Code "asks you before its file tools read or
+  write outside the folder where it was started and its subfolders"
+  (<https://code.claude.com/docs/en/security>, the same day); the
+  read-only shell commands above are not among its file tools.
   Anthropic documents settings that narrow this: `Read` deny rules for
   your projects folder,
   `permissions.blockReadsOutsideWorkingDirectories` (version 2.1.257 or
@@ -663,7 +664,7 @@ assistant. These pages change often, and the linked pages govern.
 - **Claude's Cowork** (in Claude Desktop): **yes, in the folders you
   connect to it.**
   <https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>
-  (read 30 September 2026): "Since Claude can read, write, and
+  (read 4 November 2026): "Since Claude can read, write, and
   permanently delete these files, be cautious about granting access to
   sensitive information like financial documents, credentials, or
   personal records." Anthropic's pages document no question before each
@@ -676,14 +677,14 @@ assistant. These pages change often, and the linked pages govern.
   fetches a copy of just that file"
   (<https://support.claude.com/en/articles/15520349-use-claude-cowork-on-web-desktop-and-mobile>,
   the same day). In the version of Claude where chat and Cowork are
-  one conversation, which Anthropic is rolling out to Pro and Max plans
-  first, "everything Claude Cowork does is available from any
-  conversation", and "Folders you gave Cowork access to are listed
+  one conversation, which Anthropic is rolling out to Pro, Max and
+  Ultra plans first, "everything Claude Cowork does is available from
+  any conversation", and "Folders you gave Cowork access to are listed
   under Trusted folders."
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
-  the same day). The same page, read again on 1 October 2026, says how
-  to tell: "If you're on a Pro or Max plan and your message box still
-  shows "Chat" and "Cowork" options, you don't have it yet." So a
+  the same day). The same page says how to tell: "If you're on a Pro,
+  Max, or Ultra plan and your message box still shows "Chat" and
+  "Cowork" options, you don't have it yet." So a
   project, a transcript or your projects folder inside a
   folder connected to Claude is within its reach; kept out of every
   connected folder, with computer use off and no other extension that
@@ -700,34 +701,36 @@ assistant. These pages change often, and the linked pages govern.
   run."
   (<https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>,
   the same day), so another extension that reads files can read your
-  project. And computer use, once switched on (Settings, General,
-  "Enable computer use"): "It can work in your browser, open files, and
-  run your dev tools automatically", and "Claude asks for your
-  permission before accessing each application."
+  project. And computer use, once switched on (the "Enable computer
+  use" toggle, in Settings, Capabilities, or Settings, System, under
+  This computer): "It can work in your browser, open files, and run
+  your dev tools automatically", and "Claude asks for your permission
+  before accessing each application."
   (<https://support.claude.com/en/articles/14128542-let-claude-use-your-computer-in-cowork>,
   the same day); it is in Cowork and Claude Code, and in the version
   where chat and Cowork are one conversation any conversation has it
-  ("Computer use: In beta on Pro and Max plans, Claude can use apps on
-  your computer directly by clicking, typing, and navigating your
-  screen.", the article on that version above). It works from
-  screenshots, and sees more than the applications you allow: "Claude
-  takes screenshots of your computer to understand how to navigate the
-  screen and the apps to which you've given permission." and "This means
-  Claude can see any information visible on your screen or those apps,
-  including personal data, sensitive documents, or private information
-  belonging to you or others." (the article on computer use above, read
-  1 October 2026). So through any window on the screen, a file
+  ("Computer use: In beta on Pro, Max, and Ultra plans, Claude can use
+  apps on your computer directly by clicking, typing, and navigating
+  your screen.", the article on that version above). The article on
+  computer use says that Team and Enterprise plans do not have it. It
+  works from screenshots, and sees more than the applications you
+  allow: "Claude takes screenshots of your computer to understand how to
+  navigate the screen and the apps to which you've given permission."
+  and "This means Claude can see any information visible on your screen
+  or those apps, including personal data, sensitive documents, or
+  private information belonging to you or others." (the same article).
+  So through any window on the screen, a file
   viewer's, or QualCoder's if you use it, it can see a project, the
   private part of memos
   included. With no other extension that reads files, computer use off,
   and no folder that holds your projects or transcripts connected (your
   home folder, Documents or a whole drive included), the assistant
   reaches your project only through Exegete.
-- **LM Studio** (0.4.25, its chat window): **not by itself.** Its
+- **LM Studio** (0.4.28, its chat window): **not by itself.** Its
   pages document no file tool of its own for the chat (its MCP page,
-  <https://lmstudio.ai/docs/app/mcp>, read 30 September 2026, lists
+  <https://lmstudio.ai/docs/app/mcp>, read 4 November 2026, lists
   none, and its changelog, <https://lmstudio.ai/changelog/lmstudio>,
-  adds none up to 0.4.25): a file reaches the model when you attach one
+  adds none up to 0.4.28): a file reaches the model when you attach one
   (<https://lmstudio.ai/docs/app/basics/rag>, the same day) or through
   a tool, and "When a model calls a tool, LM Studio
   will show a confirmation dialog to the user."
@@ -805,9 +808,10 @@ since then Exegete keeps a link under that name pointing at
 `~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was; the
 extension's was `~/QualCoder projects` before 0.15.0: on the
 maintainer's Mac on 19 October 2026, the update moved a setting left at
-that default to `~/Exegete projects`, and a folder chosen by hand should
-be kept (not yet checked), so after updating, look at the setting. No
-project is moved, both folders are searched, and setting it back to
+that default to `~/Exegete projects`. Whether the update keeps a folder
+chosen by hand has not been checked, so after updating, look at the
+setting. No project is moved, both folders are searched, and setting it
+back to
 `~/QualCoder projects` keeps new projects beside the earlier ones.
 
 | Kind | Where | What | Who deletes it |
@@ -1056,8 +1060,8 @@ same there as in its development tree at commit 9bddf17 (25 August
 2026), where they were first checked, and the line numbers cited from
 QualCoder's code are still that commit's. What these sections say of
 QualCoder's own assistant and AI server, whose code changed a good deal
-in the release, was read again in the released code on 6 October 2026,
-and one statement was corrected: what QualCoder's server answers about
+in the release, was read again in 4.0's released code, and one
+statement was corrected: what QualCoder's server answers about
 an annotation (under "Coder visibility"). TOOLS.md, "Supported
 QualCoder versions", says what else was checked at the release. The
 coder visibility section was also verified against the 3.8.2 tag,
@@ -1862,8 +1866,8 @@ govern the AI's processing of your data. Exegete does not. The four options belo
 called rungs here, go from the default to a fully local model. Each says
 what changes and what to check. The official pages are quoted word for
 word with their addresses, never described in our own words. The terms
-below were quoted on 17 August 2026 and the passages on feedback on
-1 October 2026, and the linked pages govern. On every rung, Claude Code opens
+below were quoted again on 4 November 2026, and the linked pages
+govern. On every rung, Claude Code opens
 files by itself, outside Exegete, and the terms do not change what it
 reads ("Assistants that open files by themselves").
 
@@ -1880,13 +1884,13 @@ documents:
   > "We may use Materials to provide, maintain, and improve the
   > Services, including training our models, unless you opt out of
   > training through your account settings"
-- Privacy Policy (effective date shown: July 8, 2026):
+- Privacy Policy (effective date shown: September 10, 2026):
   <https://www.anthropic.com/legal/privacy>
 - Privacy Center article "Is my data used for model training?":
   <https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training>
 
-Exceptions that apply whatever the setting (Consumer Terms, quoted 17
-August 2026):
+Exceptions that apply whatever the setting (Consumer Terms, quoted 4
+November 2026):
 
 > "Even if you opt out, we will use Materials for model training when:
 > (1) you provide Feedback to us regarding any Materials, or (2) your
@@ -1931,7 +1935,7 @@ rung 3 says what this project suggests.
 Team and Enterprise plans also come under the Commercial Terms.
 Anthropic's announcement of August 2025 on its consumer terms
 (<https://www.anthropic.com/news/updates-to-our-consumer-terms>, quoted
-17 August 2026) says which services its changes on training leave
+4 November 2026) says which services its changes on training leave
 alone. The page shows them as a list, joined here with semicolons:
 
 > "These updates do not apply to services under our Commercial Terms,
@@ -1962,7 +1966,7 @@ while its check for new versions stays off, as it is on this route
 unless you switch it on ("Checking for new versions", below), though on Windows x64
 a library it installs for PDFs reports its use to Windows, with nothing
 from your projects ("A library's usage reports", under "How your data
-flows"). LM Studio's documentation states (quoted 17 August 2026,
+flows"). LM Studio's documentation states (quoted 4 November 2026,
 <https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
 entirely offline" and that "Nothing you enter into LM Studio when
 chatting with LLMs leaves your device". That is the maker's statement,
@@ -1989,7 +1993,7 @@ model's room than the full set, and gives the steps.
 - **Feedback, safety flagging and opt-in programmes** reach past every
   Anthropic route. A thumbs up or down sends the conversation it rates.
   <https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training>
-  (read 1 October 2026): "When you provide us feedback via our thumbs
+  (read 4 November 2026): "When you provide us feedback via our thumbs
   up/down button, we will store the entire related conversation,
   including any content, custom styles or conversation preferences, in
   our secured back-end for up to 5 years. Feedback data does not include
@@ -2044,14 +2048,12 @@ request, it shows your computer's internet address (IP address), which
 data-protection law may treat as personal data, and the time to the
 company that hosts the file, GitHub. GitHub, "What is GitHub Pages?",
 <https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages>
-(read on 5 October 2026 through GitHub's own source for its
-documentation, github/docs, since docs.github.com could not be opened
-where this was written): "When a GitHub Pages site is visited, the
+(read on 4 November 2026): "When a GitHub Pages site is visited, the
 visitor's IP address is logged and stored for security purposes,
 regardless of whether the visitor has signed into GitHub or not."
 GitHub's privacy statement,
 <https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement>
-("Effective date: April 27, 2026", read the same way on the same day),
+("Effective date: April 27, 2026", read the same day),
 says that "It applies to the Personal Data that GitHub, Inc. or GitHub
 B.V., processes as the “Data Controller” when you interact with
 websites, applications, and services that display this Statement"; that
@@ -2106,9 +2108,10 @@ Codex"), what a tool returns goes to OpenAI, and OpenAI's terms apply.
 The same discipline as above: OpenAI's pages are quoted verbatim with
 their addresses, never characterised in our own voice, and the linked
 pages govern. OpenAI's Help Center and openai.com refuse automated
-reading, so those pages were read on 30 September 2026 from the Internet
-Archive's captures of them, named with each quote: open the live page
-before you rely on it. (The recipe itself is Experimental, and not tried
+reading, so those pages were read on 4 November 2026 from the Internet
+Archive's newest captures of them, each named with its quote and dated
+by its capture: open the live page before you rely on it. (The recipe
+itself is Experimental, and not tried
 by this project. This project gives no steps for ChatGPT in a web
 browser, which could reach Exegete through OpenAI's Secure MCP Tunnel,
 or, in an enterprise workspace that switches on local computer access
@@ -2119,14 +2122,14 @@ guide says why.)
 **Codex's own file access.** Besides calling Exegete's tools, Codex
 runs commands of its own, outside Exegete, which change files in the
 folder it works in and read files well beyond it.
-<https://learn.chatgpt.com/docs/sandboxing> (read 30 September 2026),
+<https://learn.chatgpt.com/docs/sandboxing> (read 4 November 2026),
 on the mode in which it may edit (`workspace-write`):
 
 > "The agent can read files, edit within the workspace, and run
 > routine local commands inside that boundary."
 
 <https://learn.chatgpt.com/docs/agent-approvals-security> (read
-30 September 2026), the table "Common sandbox and approval
+4 November 2026), the table "Common sandbox and approval
 combinations", row "Auto (preset)":
 
 > "Codex can read files, make edits, and run commands in the workspace.
@@ -2146,8 +2149,8 @@ approval policy":
 
 `on-request` is the approval setting behind both "Ask for approval" and
 the read-only mode, and what is accessible reaches well beyond Codex's
-folder. In Codex's source code (release 0.159.2, 29 September 2026,
-read 30 September 2026, <https://github.com/openai/codex/tree/rust-v0.159.2/codex-rs>),
+folder. In Codex's source code (release 0.166.0, 29 October 2026,
+read 4 November 2026, <https://github.com/openai/codex/tree/rust-v0.166.0/codex-rs>),
 the two modes' presets both use `on-request`
 (`utils/approval-presets/src/lib.rs`), and both of their sandboxes let
 Codex's commands read from the root of the disk
@@ -2162,8 +2165,8 @@ can read. That takes in the extension's folder for projects
 (`~/Exegete projects`, or `~/QualCoder projects`, the earlier default),
 Documents and wherever
 else you keep projects and transcripts. OpenAI's page on permission
-modes (<https://learn.chatgpt.com/docs/permission-modes>, read 30
-September 2026) describes "Ask for approval" in words a reader may take
+modes (<https://learn.chatgpt.com/docs/permission-modes>, read 4
+November 2026) describes "Ask for approval" in words a reader may take
 to cover reading:
 
 > "It lets ChatGPT work within the current workspace and pauses before
@@ -2191,22 +2194,22 @@ leaves a real study on the same computer within its reach ("While you
 practise", above). OpenAI documents a setting, marked Beta, that can
 keep Codex's own commands from reading outside the folder it works in,
 a "permission profile" (<https://learn.chatgpt.com/docs/permissions>,
-read 30 September 2026: "Beta. Permission profiles are under active
+read 4 November 2026: "Beta. Permission profiles are under active
 development and may change."); it has not been tested with Exegete,
 and this project gives no steps for it. If you try it, you may want to
 check what Codex can still read before bringing in participants' data;
 for participants' data, this project suggests an assistant with no
 file access of its own, such as Claude Desktop's chat.
 
-**Phones, through a connected computer.** OpenAI's Remote,
-<https://learn.chatgpt.com/docs/remote> (read 30 September 2026):
+**Phones, through a connected computer.** OpenAI's page on Codex on
+mobile, <https://learn.chatgpt.com/docs/mobile> (read 4 November 2026):
 
 > "Follow progress, approve actions, and send instructions from your
-> phone. Codex runs each task on your connected computer."
+> phone. Codex runs tasks in the cloud or on a connected computer."
 
 The connected computer runs the ChatGPT desktop app on macOS or Windows
 (the Terminal guide lists what Remote needs, from OpenAI's pages).
-<https://learn.chatgpt.com/docs/remote-connections> (read 30 September
+<https://learn.chatgpt.com/docs/remote-connections> (read 4 November
 2026):
 
 > "MCP servers, skills, browser access, and Computer Use come from that
@@ -2230,7 +2233,7 @@ Connections in the desktop app ("In the app on the host, use
 page), and remove any device paired there. For enterprise
 workspaces with local computer access switched on,
 <https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read
-30 September 2026):
+4 November 2026):
 
 > "Conversations, tool results, and other task context do not stay
 > exclusively on the connected computer."
@@ -2242,13 +2245,13 @@ train its models. The settings, Codex's separate one included, and the
 exception for feedback are quoted below. Help Center, "How your data is
 used to improve model performance",
 <https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>
-(Archive capture of 28 September 2026,
-<https://web.archive.org/web/20260928102458/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
-it shows "Updated: 4 hours ago", which the capture's own data dates to
-28 September 2026):
+(Archive capture of 1 November 2026,
+<https://web.archive.org/web/20261101232003/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
+it shows "Updated: 13 days ago", which the capture's own data dates to
+20 October 2026):
 
-> "When you use our services for individuals, such as ChatGPT and
-> Codex, we may use your content to train our models. You can choose
+> "When you use our services for individuals (Free, Plus, Pro), we may
+> use your content to train our models. You can choose
 > whether your conversations help improve our models. To opt out, turn
 > off Improve the model for everyone under Settings > Data controls in
 > ChatGPT, or select Do not train on my content in our Privacy Portal."
@@ -2280,8 +2283,8 @@ The Privacy Portal is <https://privacy.openai.com/>.
 
 "Enterprise privacy at OpenAI", <https://openai.com/enterprise-privacy/>
 (the page shows "Updated: January 8, 2026"; Archive capture of
-29 September 2026,
-<https://web.archive.org/web/20260929211725/https://openai.com/enterprise-privacy/>):
+3 November 2026,
+<https://web.archive.org/web/20261103120300/https://openai.com/enterprise-privacy/>):
 
 > "Yes, we are able to execute a Data Processing Addendum (DPA) with
 > customers for their use of ChatGPT Business, ChatGPT Enterprise, and
@@ -2290,14 +2293,14 @@ The Privacy Portal is <https://privacy.openai.com/>.
 
 **Codex: how you sign in decides.** Codex can be signed in to with a
 ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>
-(read 30 September 2026):
+(read 4 November 2026):
 
 > "Your sign-in method also determines which admin controls and
 > data-handling policies apply."
 
 **Codex keeps session transcripts on your computer.**
 <https://learn.chatgpt.com/docs/agent-approvals-security> (read
-30 September 2026):
+4 November 2026):
 
 > "Review local data retention settings (for example,
 > `history.persistence` / `history.max_bytes`) if you don't want Codex
@@ -2308,8 +2311,8 @@ Codex's `config.toml`. A session's transcript can hold what Exegete's
 tools returned in it, and what Codex's own commands read, participants'
 words included, as Claude Code's
 local transcripts can ("Cross-rung cautions", above). The `history`
-settings are not enough to stop that (Codex's source code, `main` on
-30 September 2026: `history.persistence` governs only
+settings are not enough to stop that (Codex's source code at release
+0.166.0, read on 4 November 2026: `history.persistence` governs only
 `~/.codex/history.jsonl`, the text you typed, while every session is
 also written in full, tool results included, under `~/.codex/sessions`,
 and later `~/.codex/archived_sessions`, whichever `history` setting you
@@ -2320,8 +2323,8 @@ data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
-January 16, 2026"; Archive capture of 26 September 2026,
-<https://web.archive.org/web/20260926195745/https://openai.com/policies/eu-terms-of-use/>):
+January 16, 2026"; Archive capture of 28 October 2026,
+<https://web.archive.org/web/20261028153406/https://openai.com/policies/eu-terms-of-use/>):
 
 > "These Terms of Use apply if you reside in the European Economic Area
 > (EEA), Switzerland, or UK."

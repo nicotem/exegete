@@ -111,7 +111,7 @@ a71180f0246b0472	PRIVACY.md	document	qualcoder	QualCoder's backups, tools or cha
 c9c987c214d2281f	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	It writes a new folder with four empty subfolders, an empty ai_data folder (sinc
 1f266929502cc1cc	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Its backups and workspace copies include ai_data/ whole, minus exactly the files
 bff518547afd0436	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	Its coding report is another matter: in both versions checked it reads the base 
-5be34f1467f71d75	PRIVACY.md	document	voice	inside a quotation of the maker's page, kept word for word	LM Studio (0.4.25, its chat window): not by itself. Its pages document no file t
+de9cb0179d634cdb	PRIVACY.md	document	voice	inside a quotation of the maker's page, kept word for word	LM Studio (0.4.28, its chat window): not by itself. Its pages document no file t
 e0d9f3708108748e	PRIVACY.md	document	qualcoder	says where Exegete departs from QualCoder, with the reason	More of a document comes in than in QualCoder: a Word, OpenDocument or RTF file'
 45de25c965eb9a6e	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	On a project whose visibility capability is present but whose coder_names table 
 c30e43f9bf195e0f	PRIVACY.md	document	qualcoder	QualCoder's backups, tools or changes, with 'if you use it' or a change made in QualCoder, which happens only if you use it	Or you could move a file out of the project once Exegete has used it, and remove
@@ -159,7 +159,7 @@ f1770eb46a95e0a0	PRIVACY.md	document	qualcoder	says where Exegete departs from Q
 1f6e1cb8ede02899	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Those counts are a heuristic that reads wider than the rewrite does: the rewrite
 b3c83b092c55fcd8	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Three limits remain, as in QualCoder: an RTF file is read by the code page it de
 b1c93eb9a8f64ff5	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	What is not pseudonymised: the originals (copied unchanged into the project's fo
-db0d22dd24117c23	PRIVACY.md	document	qualcoder	says what was checked against QualCoder's own code and releases	What these sections say of QualCoder's own assistant and AI server, whose code c
+6d9abea554ed8612	PRIVACY.md	document	qualcoder	says what was checked against QualCoder's own code and releases	What these sections say of QualCoder's own assistant and AI server, whose code c
 7d093c335a89cc8d	PRIVACY.md	document	qualcoder	says what was checked against QualCoder's own code and releases	What they say of QualCoder is verified against QualCoder 4.0, released on 2 Octo
 cc403e2203910e03	PRIVACY.md	document	voice	an older copy of the server: the server as a running program, the sense the conventions keep (tests/test_v0142_selfrep.py)	When no link can be made, the folder is put back where it was, unless an older c
 078a57fa61e4b150	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	When the capability arrives while Exegete is connected. QualCoder creates the vi
@@ -202,7 +202,7 @@ da5c49e63cb847b7	README.md	document	qualcoder	about QualCoder itself: the dated 
 e26e0626541ae7fd	README.md	document	qualcoder	about QualCoder itself: the provenance of the code Exegete takes from it, which NOTICE lists	It contains a small number of routines and values taken from QualCoder, so that 
 d9aefa2937e8044a	README.md	document	qualcoder	about QualCoder's format: the releases whose format Exegete reads and writes	It reads and writes the formats of QualCoder 3.8.2 to 4.0.
 f0f69f12f293a43c	README.md	document	qualcoder	about QualCoder itself: the dated comparison of the two programs, back in the README by the owner's word of 29 October 2026	Per code, with a figure QualCoder labels Kappa
-f1862e6f431f3532	README.md	document	qualcoder	about QualCoder itself: its own server, which a researcher may take for Exegete's, with the date it was checked	QualCoder 4.0's own MCP server calls itself "qualcoder-mcp", Exegete's former na
+5b1d901f5b796cab	README.md	document	qualcoder	about QualCoder itself: its own server, which a researcher may take for Exegete's, named by the release it is true of	QualCoder 4.0's own MCP server calls itself "qualcoder-mcp", Exegete's former na
 311bfb6186f9a2e0	README.md	document	qualcoder	about QualCoder itself: the credit to its authors	QualCoder by Dr Colin Curtain and Dr Kai Dröge (homepage)
 0aaddf5a1f8c10f3	README.md	document	qualcoder	about QualCoder itself: its own setting, which does not govern Exegete	QualCoder's AI permission setting, such as Read-only, applies to that server and
 873597c4765555fc	README.md	document	qualcoder	about QualCoder itself: who made Exegete	QualCoder's developers did not make it and have not endorsed it.

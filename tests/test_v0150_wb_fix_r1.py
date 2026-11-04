@@ -500,8 +500,12 @@ class TestTheDocumentsOtherPoints:
                 ("which is done in QualCoder", tools),
                 ("If you want a file under your own name in QualCoder", tools)):
             assert gone not in text, gone
-        assert ("Exegete does not yet nest an existing code under another "
-                "code (QualCoder, if you use it, can)") in tools
+        # (v0.15.3: said as what Exegete does not do, with the plans'
+        # place, and no promise, as docs/WRITING.md asks)
+        assert ("Exegete does not nest an existing code under another code "
+                "(the README's [\"What comes next\"](https://github.com/"
+                "nicotem/exegete#what-comes-next) gives the plans). "
+                "QualCoder, if you use it, can.") in tools
         assert ("Exegete does not yet change an existing entry: QualCoder, "
                 "if you use it, can") in tools
 

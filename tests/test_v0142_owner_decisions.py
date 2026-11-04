@@ -259,16 +259,18 @@ def test_quickstart_dates_the_setting_as_privacy_does():
     carries the date PRIVACY.md gives for the terms it quotes there."""
     governance = _between(_flat("PRIVACY.md"), "## Your governance options",
                           "### Rung 1:")
-    date = re.search(r"The terms below were quoted on (\d{1,2} [A-Z][a-z]+ "
-                     r"\d{4})", governance).group(1)
+    # (v0.15.3, the dated readings brought up to date: the pages read
+    # again, both dates in the form the dates check reads, still one day)
+    date = re.search(r"The terms below were quoted (?:again )?on "
+                     r"(\d{1,2} [A-Z][a-z]+ \d{4})", governance).group(1)
     step5 = _between(_flat("QUICKSTART.md"), "### 5. Try it",
                      "If you have no project yet, ask Claude")
     assert ("https://claude.ai/settings/data-privacy-controls switches "
-            f"training off, as Anthropic's pages said on {date}.") in step5
+            f"training off, by Anthropic's pages, read on {date}.") in step5
     # (the fix round: the sentence on rating a reply is a claim about the
     # same terms, so it is dated by them, and it names their second
     # exception, which the terms PRIVACY quotes that day give)
-    assert ("The same pages said that rating a reply, with a thumbs up or "
+    assert ("The same pages say that rating a reply, with a thumbs up or "
             "down, can still let Anthropic train on that conversation, and "
             "so can its being flagged for a safety review.") in step5
     rung_one = _between(_flat("PRIVACY.md"), "### Rung 1:", "### Rung 2:")
@@ -703,19 +705,22 @@ def test_the_readme_says_what_it_costs():
     # Yes on Free and Claude Code No); OpenAI's plans and LM Studio's
     # needs are INSTALL.md's, read on 6 October 2026, the README pointing
     # there
+    # (v0.15.3: the page read again on 4 November 2026, in the form the
+    # dates check reads; it now lists Max at $100 and a new Ultra plan at
+    # $200)
+    assert re.search(r"\[Claude's pricing page\]\(https://claude\.com/"
+                     r"pricing\), read on \d{1,2} [A-Z][a-z]+ 20\d\d, lists "
+                     r"desktop extensions in its Free plan, so the extension "
+                     r"works on Free, which allows the least use\.", cost)
     for words in (
             "Exegete costs nothing, but your assistant may.",
-            "On 28 October 2026, [Claude's pricing page]"
-            "(https://claude.com/pricing) listed desktop extensions in its "
-            "Free plan, so the extension works on Free, which allows the "
-            "least use.",
             # (the page: "Pro gives you at least 5x more usage per 5-hour
             # session than Free.")
             # (v0.15.2, the readability reading: Max and the seat plans a
             # sentence of their own)
             "Pro, at $20 a month ($17 billed yearly), gives at least five "
-            "times as much. Max is from $100, and Team and Enterprise go by "
-            "the seat.",
+            "times as much. Max is $100 a month, Ultra $200, and Team and "
+            "Enterprise go by the seat.",
             # claude.com/pricing, 28 October 2026: "Every plan has usage
             # limits that reset on a rolling five-hour session window, and
             # paid plans add weekly limits on top." and "on paid plans,

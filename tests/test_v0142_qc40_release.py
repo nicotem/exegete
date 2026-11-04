@@ -126,11 +126,13 @@ def test_privacy_says_what_its_verification_covers():
             "as in its development tree at commit 9bddf17 (25 August 2026), "
             "where they were first checked, and the line numbers cited from "
             "QualCoder's code are still that commit's.",
+            # (v0.15.3: named by the release it is true of, which no
+            # longer changes, as docs/WRITING.md allows)
             "What these sections say of QualCoder's own assistant and AI "
             "server, whose code changed a good deal in the release, was read "
-            "again in the released code on 6 October 2026, and one statement "
-            "was corrected: what QualCoder's server answers about an "
-            "annotation (under \"Coder visibility\").",
+            "again in 4.0's released code, and one statement was corrected: "
+            "what QualCoder's server answers about an annotation (under "
+            "\"Coder visibility\").",
             "TOOLS.md, \"Supported QualCoder versions\", says what else was "
             "checked at the release."):
         assert words in note, words
@@ -169,10 +171,11 @@ def test_tools_says_what_the_full_re_check_found():
     versions = _between(_flat("TOOLS.md"), "## Supported QualCoder versions",
                         "A project from a QualCoder older than 3.8")
     for words in (
-            "A full check against the release, on 6 October 2026, found "
-            "the same project schema (v17) and the same format for a new "
-            "project. The format tests now compare every project Exegete "
-            "creates with one made by 4.0's own New Project",
+            # (v0.15.3: named by the release it is true of)
+            "A full check against the 4.0 release found the same project "
+            "schema (v17) and the same format for a new project. The format "
+            "tests now compare every project Exegete creates with one made "
+            "by 4.0's own New Project",
             "the same backups, private memo sections, coder visibility, "
             "\"AI Agent\" coder name, reports, merges and deletes, and the "
             "same fix for the 3.8.2 edit-mode caution (below)",
@@ -293,8 +296,10 @@ def test_the_readme_gives_both_new_facts():
     # pointers are one of their own, and the setting applies to the server)
     # (v0.15.2, the merge onto the integration branch: the Terminal
     # guide's "Coming from qualcoder-mcp" says how to keep the two apart)
-    assert ("calls itself \"qualcoder-mcp\", Exegete's former name, as "
-            "checked on 6 October 2026. TOOLS.md gives the facts, and "
+    # (v0.15.3: named by the release it is true of, QualCoder 4.0, which
+    # no longer changes, as docs/WRITING.md allows)
+    assert ("QualCoder 4.0's own MCP server calls itself \"qualcoder-mcp\", "
+            "Exegete's former name. TOOLS.md gives the facts, and "
             "[the Terminal guide](https://github.com/nicotem/exegete/blob/"
             "main/docs/installing-from-the-terminal.md#coming-from-"
             "qualcoder-mcp) says how to keep the two apart.") in facts
@@ -312,8 +317,9 @@ def test_the_readme_gives_both_new_facts():
 
 def test_tools_gives_both_new_facts():
     tools = _flat("TOOLS.md")
-    assert "Four facts about how the tools relate (checked 6 October " \
-        "2026)." in tools
+    # (v0.15.3: named by the release they are true of)
+    assert "Four facts about how the tools relate, as the 4.0 release has " \
+        "them." in tools
     # (v0.15.2: the earlier name, without its last release)
     # (v0.15.2: each fact in a sentence of its own)
     assert ("That server calls itself `qualcoder-mcp`, Exegete's earlier "

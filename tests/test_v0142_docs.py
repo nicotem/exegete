@@ -280,8 +280,10 @@ def test_claude_codes_file_tools_in_auto_mode_are_named():
     """In auto mode, its starting mode, Claude Code's file tools read
     outside its folder after one question the first time
     (code.claude.com/docs/en/permission-modes, quoted in PRIVACY.md)."""
-    assert ("\"file reads run without a prompt in auto mode, including "
-            "reads outside the working directories\"") in _flat("PRIVACY.md")
+    # (v0.15.3: the page, read again, words it with network paths aside)
+    assert ("\"file reads other than reads from network paths run without a "
+            "prompt in auto mode, including reads outside the working "
+            "directories\"") in _flat("PRIVACY.md")
     section = " ".join(_guide_part(*CLAUDE_CODE).split())
     assert ("In auto mode, the mode it starts in, its own file tools read "
             "outside that folder as well, after one question the first "
@@ -407,16 +409,22 @@ def test_the_conditions_check_would_notice():
 # Claude's Manual and Auto modes, Cowork and "Trusted folders"
 # ---------------------------------------------------------------------------
 
-# Anthropic, "Claude Cowork and Chat are one Claude" (read 1 October 2026)
+# Anthropic, "Claude Cowork and Chat are one Claude" (read again on
+# 4 November 2026)
 ONE_CLAUDE = ("<https://support.claude.com/en/articles/16761823-claude-"
               "cowork-and-chat-are-one-claude>")
 
 
 # Anthropic's way to tell whether an account has that version, as
-# INSTALL.md and PRIVACY.md quote it (read 1 October 2026)
-HOW_TO_TELL = ("\"If you're on a Pro or Max plan and your message box still "
-               "shows \"Chat\" and \"Cowork\" options, you don't have it "
-               "yet.\"")
+# INSTALL.md and PRIVACY.md quote it (read again on 4 November 2026, when
+# the page had added the Ultra plan)
+HOW_TO_TELL = ("\"If you're on a Pro, Max, or Ultra plan and your message box "
+               "still shows \"Chat\" and \"Cowork\" options, you don't have "
+               "it yet.\"")
+# A day a page was read, in the form the dates check reads
+# (docs/WRITING.md): the tests hold the form, not the day
+READ_ON = (r"read (?:again )?on \d{1,2} (?:January|February|March|April|May"
+           r"|June|July|August|September|October|November|December) 20\d\d")
 
 
 def test_the_check_after_installing_is_a_short_list():
@@ -438,8 +446,13 @@ def test_the_check_after_installing_is_a_short_list():
                             "asking. "), check
     # (v0.15.2, the readability reading: the setting and Auto a sentence
     # each, and the step before participants' data with its verb)
-    assert ("That conversation's permission setting comes as Manual. On "
-            "Auto, Claude does not ask.") in check
+    # (v0.15.3: Anthropic's page, read again, makes Auto the setting such a
+    # conversation comes with, and Manual only on Enterprise: the warning,
+    # then the suggestion)
+    assert ("Its permission setting comes as Auto, but as Manual on "
+            "Enterprise. On Auto, Claude does not ask: automated safety "
+            "checks decide instead, so for participants' data you could set "
+            "it to Manual.") in check
     # (the lead's reading of 29 October: the checks help keep the files
     # out of Claude's reach, and switch training off)
     assert check.endswith("Before you use participants' data, go through "
@@ -471,14 +484,18 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     # which says what the setting comes as and what Auto does
     # (the readability reading: the plans, the page's date and the
     # setting a sentence each)
-    assert ("If your message box offers no choice between \"Chat\" and "
-            "\"Cowork\", the two are one conversation, on Pro and Max plans. "
-            "Anthropic's page, read on 1 October 2026, says this is reaching "
-            "accounts gradually. That conversation's permission setting "
-            "comes as Manual. On Auto, Claude does not ask.") in one_click
+    # (v0.15.3: the page, read again, names the plans it reaches and the
+    # setting each starts with; the day is held by its form)
+    assert re.search(r"If your message box offers no choice between "
+                     r"\"Chat\" and \"Cowork\", the two are one "
+                     r"conversation\. Anthropic's page, " + READ_ON
+                     + r", says this is reaching Pro, Max and Ultra plans "
+                     r"gradually, and Team and Enterprise plans where it is "
+                     r"turned on\. Its permission setting comes as Auto, but "
+                     r"as Manual on Enterprise\.", one_click)
     # explained once
     assert readme.count("no choice between \"Chat\" and \"Cowork\"") == 1
-    assert readme.count("1 October 2026, says this is reaching accounts") \
+    assert readme.count("says this is reaching Pro, Max and Ultra plans") \
         == 1
     data = _between(readme, "## Where your data goes", "## Start here")
     # (the readability reading: the aside said in the sentence)
@@ -492,23 +509,30 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     # choice in each app
     assert ("In Claude, choose \"Allow once\" each time it asks. In Codex, "
             "answer each prompt.") in readme
-    assert readme.count("permission setting comes as Manual") == 1
+    assert readme.count("permission setting comes as Auto") == 1
     approvals = _between(_flat("INSTALL.md"),
                          "**Claude's questions before a tool runs.**",
                          "**Switch training off**")
+    # (v0.15.3: the page, read again, gives each mode its default by plan;
+    # the warning about Auto comes with the suggestion)
     for words in (ONE_CLAUDE,
                   "In the version of Claude where chat and Cowork are one "
-                  "conversation, which Anthropic is rolling out to Pro and "
-                  "Max plans first, a permission setting in the message box "
-                  "has two modes",
-                  "\"**Manual (default):** Claude asks before it takes "
-                  "actions, and you choose whether to allow each one.\"",
-                  "\"**Auto:** Claude keeps working without stopping to ask "
-                  "about each step, and automated safety checks run before "
-                  "it takes an action.\"",
+                  "conversation, which Anthropic is rolling out to Pro, Max "
+                  "and Ultra plans first, a permission setting in the message "
+                  "box has two modes",
+                  "\"**Auto (default on Pro, Max, Ultra, and Team plans):** "
+                  "Claude keeps working without stopping to ask about each "
+                  "step, and automated safety checks run before it takes an "
+                  "action.\"",
+                  "\"**Manual (default on Enterprise plans):** Claude asks "
+                  "before it takes actions, and you choose whether to allow "
+                  "each one.\"",
                   HOW_TO_TELL,
                   "On Manual, Claude keeps asking you, which suits work on "
-                  "real data."):
+                  "real data.",
+                  "Claude does not stop to ask you before it uses Exegete's "
+                  "tools, so you could switch it to Manual before you use "
+                  "participants' data."):
         assert words in approvals, words
     assert HOW_TO_TELL in _flat("PRIVACY.md")
 
@@ -572,7 +596,8 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
             "Improvement setting") in data
     assert "the newer Claude app" not in _flat("README.md")
     # Anthropic's words for the rollout, as PRIVACY.md quotes the page
-    assert "rolling out to Pro and Max plans" in _flat("PRIVACY.md")
+    # (read again in v0.15.3, with the Ultra plan)
+    assert "rolling out to Pro, Max and Ultra plans" in _flat("PRIVACY.md")
 
 
 # ---------------------------------------------------------------------------
@@ -689,9 +714,10 @@ def test_computer_use_sees_the_screen():
     # where the reader meets the setting, what computer use is
     readme = _flat("README.md")
     # v0.15.2, the opening texts: what it does first, then the switch
+    # (v0.15.3: where the switch is now, as Anthropic's article says)
     assert ("1. **Computer use** lets Claude see your screen and use other "
-            "apps. You can keep computer use off, in Settings, General.") \
-        in readme
+            "apps. You can keep computer use off, in Settings, Capabilities "
+            "(or Settings, System, if it is not there).") in readme
     assert "Claude can use apps on your computer directly" in privacy
 
 
@@ -1037,19 +1063,21 @@ def test_qualcoder_4_0_is_named_as_released():
     install = _flat("INSTALL.md")
     assert ("Projects made in QualCoder 3.8 or 4.0 work (project schemas "
             "v14 to v17;") in install
-    assert (("When this was checked, on 6 October 2026, 4.0 was at the top "
-             "of the page, marked \"Latest\", and 3.8.2 came next. Exegete "
-             "works with both. It can tell that QualCoder has a project open "
-             "only with 3.8.2, whose lock file shows it.")) \
-        in install
+    # (v0.15.3: GitHub's list of releases read again, the day in the form
+    # the dates check reads)
+    assert re.search(r"When this was checked on \d{1,2} [A-Z][a-z]+ 20\d\d, "
+                     r"4\.0 was at the top of the page, marked \"Latest\", "
+                     r"and 3\.8\.2 came next\. Exegete works with both\. It "
+                     r"can tell that QualCoder has a project open only with "
+                     r"3\.8\.2, whose lock file shows it\.", install)
     assert (("for Windows, Linux and Macs with Apple Silicon (M1 or later). "
              "QualCoder offers none for older Intel Macs")) in install
     tools = _flat("TOOLS.md")
     assert ("verified against QualCoder 4.0, released on 2 October 2026 "
             "(tag `4.0` at `b95e021`,") in tools
-    assert ("A full check against the release, on 6 October 2026, found "
-            "the same project schema (v17) and the same format for a new "
-            "project") in tools
+    # (v0.15.3: named by the release it is true of)
+    assert ("A full check against the 4.0 release found the same project "
+            "schema (v17) and the same format for a new project") in tools
     assert ("QualCoder 3.8.2 signals \"project open\" through a lock file, "
             "which Exegete honours. QualCoder 4.0 uses no lock file") \
         in tools

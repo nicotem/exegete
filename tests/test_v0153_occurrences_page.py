@@ -34,6 +34,7 @@ import re
 import sqlite3
 import sys
 import time
+import unicodedata
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -92,12 +93,15 @@ BRIEF_LINE = ("That page, the page a pseudonymisation preview opens for "
 ANSWER_KEYS = {"opened", "counts", "note", "location", "not_opened_because",
                "withheld_note", "not_written_because"}
 
-# The page's marks and labels, as occurrences.build_page draws them
+# The page's marks and labels, as occurrences.build_page draws them: each
+# line in the direction of its own first letter, each label's words
+# isolated, left to right
 MARK = r'<mark class="occ( left)?">([^<]*)</mark>'
-LABEL = (r'<span class="id( left)?"><span class="sr">occurrence id </span>'
-         r'([0-9a-z]+)(, left as it is)?</span>')
+LABEL = (r'<span class="id( left)?"><bdi dir="ltr"><span class="sr">'
+         r'occurrence id </span>([0-9a-z]+)(, left as it is)?</bdi></span>')
 TOKEN = re.compile(MARK + "|" + LABEL)
-PARAGRAPH = re.compile(r'<p><span class="n">(\d+)</span>(.*?)</p>', re.DOTALL)
+PARAGRAPH = re.compile(r'<p dir="auto"><span class="n">(\d+)</span>(.*?)</p>',
+                       re.DOTALL)
 LINE_BREAK = re.compile("\r\n|\r|\n")
 # The flagship's walk of every string, whose project is named after its
 # participant (taken through the module, so that it is not collected here)
@@ -321,6 +325,129 @@ class TestThePage:
                          (2, 8, "Tom", "bbbbb", False, False)]
         assert page.count('<mark class="occ left">') == 2
         assert counts == {"occurrences": 2, "left": 1, "lines": 2}
+
+
+# A line of Hebrew ("Moshe said that David came") and one of Arabic
+# ("Muhammad said that Ahmad came"), each naming two people; and a line of
+# each script naming one person in the other's
+RIGHT_TO_LEFT = {
+    "hebrew": ("אמר משה כי דוד בא", ["משה", "דוד"], True),
+    "arabic": ("قال محمد إن أحمد جاء", ["محمد", "أحمد"], True),
+    "hebrew, a latin name": ("אמר John כי דוד בא", ["John", "דוד"], True),
+    "english, a hebrew name": ("Then משה said that David came",
+                               ["משה", "David"], False),
+}
+# The ids the tests give the two occurrences of each line; the second is
+# marked as left
+RTL_IDS = ("k7m2q", "w9x4z")
+
+
+def _page_for(text, names):
+    marks = []
+    for name, one in zip(names, RTL_IDS):
+        start = text.index(name)
+        marks.append((start, start + len(name), one))
+    page, _counts = occurrences.build_page(
+        project_name="p", file_id=1, file_name="f.txt", text=text,
+        marks=marks, left={1}, written_at=datetime(2026, 11, 4, 9, 30))
+    return page
+
+
+class TestRightToLeft:
+    def test_each_line_takes_its_own_direction(self):
+        """Each line of the text is laid out in the direction of its own
+        first letter, and each id's words follow its occurrence isolated,
+        left to right: in a line of right-to-left text the id then stands
+        after its own occurrence in reading order, and a direction
+        character in the text before it does not turn it round."""
+        text = "\n".join(line for line, _names, _rtl in
+                         RIGHT_TO_LEFT.values()) + "\n‮Tom wrote."
+        marks, at = [], 0
+        for line, names, _rtl in RIGHT_TO_LEFT.values():
+            for name in names:
+                start = text.index(name, at)
+                marks.append((start, start + len(name), f"id{len(marks)}"))
+            at += len(line) + 1
+        start = text.index("Tom")
+        marks.append((start, start + 3, f"id{len(marks)}"))
+        page, _counts = occurrences.build_page(
+            project_name="p", file_id=1, file_name="f.txt", text=text,
+            marks=marks, left={1}, written_at=datetime(2026, 11, 4, 9, 30))
+        main = page[page.index('<main id="text">'):page.index("</main>")]
+        assert re.findall(r"<p\b[^>]*>", main) == ['<p dir="auto">'] * 5
+        for place, (begin, end, one) in enumerate(marks):
+            left = place == 1
+            label = (f'<span class="id{" left" if left else ""}">'
+                     f'<bdi dir="ltr"><span class="sr">occurrence id </span>'
+                     f'{one}{", left as it is" if left else ""}</bdi></span>')
+            kind = "occ left" if left else "occ"
+            assert (f'<mark class="{kind}">{html.escape(text[begin:end])}'
+                    f'</mark>{label}') in main, one
+        assert main.count('<span class="id') == len(marks)
+        # The page's own style sets the number's margin and the labels'
+        # by the line's direction, never by a side, which would be wrong
+        # in one of the two directions
+        for side in ("-left", "-right", ":left", ":right"):
+            assert side not in occurrences.PAGE_STYLE, side
+
+    def test_a_right_to_left_line_keeps_each_id_after_its_occurrence(
+            self, tmp_path):
+        """The page's own markup laid out by MuPDF's HTML engine (PyMuPDF,
+        no browser), which applies the Unicode bidirectional algorithm: in
+        reading order, right to left in a line of Hebrew or Arabic, each
+        id stands after its own occurrence, not after the next."""
+        pymupdf = pytest.importorskip("pymupdf")
+
+        def laid_out(page):
+            """Each line's letters as laid out, left to right, without
+            spaces, in compatibility form (MuPDF gives Arabic letters in
+            their shaped forms)."""
+            main = page[page.index('<main id="text">'):
+                        page.index("</main>") + len("</main>")]
+            story = pymupdf.Story(
+                html="<html><head><style>.sr{display:none}</style></head>"
+                     f"<body>{main}</body></html>")
+            path = tmp_path / "laid-out.pdf"
+            writer = pymupdf.DocumentWriter(str(path))
+            more = True
+            while more:
+                device = writer.begin_page(pymupdf.paper_rect("a4"))
+                more, _filled = story.place(pymupdf.Rect(36, 36, 559, 806))
+                story.draw(device)
+                writer.end_page()
+            writer.close()
+            with pymupdf.open(str(path)) as doc:
+                blocks = doc[0].get_text("rawdict")["blocks"]
+            lines = []
+            for block in blocks:
+                letters = sorted(
+                    (char["bbox"][0], char["c"])
+                    for line in block.get("lines", ())
+                    for span in line["spans"] for char in span["chars"]
+                    if not char["c"].isspace())
+                lines.append(unicodedata.normalize(
+                    "NFKC", "".join(c for _x, c in letters)))
+            return lines
+
+        plain = "".join(laid_out(_page_for("אמר משה", ["משה"])))
+        if "אמר" not in plain[::-1]:
+            pytest.skip("this MuPDF lays out no Hebrew letters")
+        for case, (text, names, rtl) in RIGHT_TO_LEFT.items():
+            [line] = laid_out(_page_for(text, names))
+            for name, one, left in zip(names, RTL_IDS, (False, True)):
+                label = one + (",leftasitis" if left else "")
+                # A right-to-left name is laid out from right to left
+                name_rtl = unicodedata.bidirectional(name[0]) in ("R", "AL")
+                seen = name[::-1] if name_rtl else name
+                if rtl and name_rtl:
+                    # After it in reading order is to its left
+                    assert label + seen in line, (case, name, line)
+                else:
+                    # Beside it: on which side, in a line of mixed
+                    # directions, depends on whether the engine isolates
+                    # the label, as a browser does and MuPDF does not
+                    assert label + seen in line or seen + label in line, \
+                        (case, name, line)
 
 
 class TestTheAnswer:

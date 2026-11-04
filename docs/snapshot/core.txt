@@ -3643,7 +3643,8 @@ Each is stated in full by its tool:
   out who someone is.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
-  the conversation. That page and the copies it opens are for the
+  the conversation. That page, the page a pseudonymisation preview opens
+  for choosing occurrences, and the copies they open are for the
   researcher: never open, read or look at them with any tool, browser or
   screenshot.
 

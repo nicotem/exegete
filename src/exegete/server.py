@@ -835,7 +835,8 @@ Each is stated in full by its tool:
   out who someone is.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
-  the conversation. That page and the copies it opens are for the
+  the conversation. That page, the page a pseudonymisation preview opens
+  for choosing occurrences, and the copies they open are for the
   researcher: never open, read or look at them with any tool, browser or
   screenshot.
 
@@ -21979,7 +21980,8 @@ def pseudonymise_source(
                  name, pseudonym or entry number, and no words of the
                  file. Set it when the researcher wants to choose
                  occurrences to leave as they are, such as those of a
-                 second person with the same name.
+                 second person with the same name. The preview then
+                 opens a page for the researcher.
         leave_occurrences: The ids, from a preview with
                  choose_occurrences, of the occurrences this run leaves
                  as they are: at most 500 occurrences in one run. This

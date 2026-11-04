@@ -13,7 +13,7 @@ checked", DESIGN_0153_small-corrections-2.md):
   program reads it is tried again for about a second, the file read
   again before each try, and nothing but an interrupt leaves the end of
   a write;
-- the MCP library's three lines that quote what the app sent hold a
+- the MCP library's four lines that quote what the app sent hold a
   fixed sentence instead, and every other line passes as it came;
 - a file whose reading library did not load is refused as such, never
   as damaged;
@@ -411,7 +411,8 @@ class TestTheFilter:
         assert record.stack_info is None
         written = as_written(record)
         assert FRONT not in written and BACK not in written
-        assert len({s for *_, s in server._LIBRARY_LINES}) == 3
+        assert len({s for *_, s in server._LIBRARY_LINES}) == \
+            len(server._LIBRARY_LINES) == 4
 
     @pytest.mark.parametrize("record", [
         a_record("exegete.server", logging.INFO, "Created code %d", (5,)),
@@ -440,10 +441,11 @@ class TestTheFilter:
 
 def test_what_the_app_sent_stays_out_of_the_log(tmp_path):
     """Exegete started over standard input in a home folder of its own,
-    sent a line that is not JSON, a call whose arguments are text and a
-    notification of no known kind, each holding text at both ends: it
-    goes on answering, and its standard error holds the three fixed
-    sentences and the library's other lines, never that text."""
+    sent a line that is not JSON, a call whose arguments are text, a
+    notification of no known kind and a response whose id is text, each
+    holding text at both ends: it goes on answering, and its standard
+    error holds the four fixed sentences and the library's other lines,
+    never that text."""
     from test_v0152_ctrl_c import INITIALIZE, INITIALIZED, _Started
     started = _Started(tmp_path)
     sentences = [s for *_, s in server._LIBRARY_LINES]
@@ -458,6 +460,7 @@ def test_what_the_app_sent_stays_out_of_the_log(tmp_path):
         assert "error" in started.answer(2)
         started.send({"jsonrpc": "2.0", "method": "notifications/" + SENT,
                       "params": {"said": SENT}})
+        started.send({"jsonrpc": "2.0", "id": SENT, "result": {}})
         started.send({"jsonrpc": "2.0", "id": 3, "method": "tools/list"})
         assert "result" in started.answer(3)
         limit = time.monotonic() + 20

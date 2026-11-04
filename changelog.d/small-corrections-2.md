@@ -54,14 +54,16 @@
 
 ### Security
 
-- **Three of the MCP library's log lines no longer quote what the app
-  sent.** A line that is not an MCP message, and a request or a
-  notification the library cannot read, each left part of what was sent
-  in the log the app keeps: the start and end of each value the library
-  rejected, part of a memo say, or the whole notification. Each now
-  holds a fixed sentence instead. INSTALL.md's "Reading the server log"
-  gives the two cases where the library's lines still carry text the
-  app sent.
+- **Four of the MCP library's log lines no longer quote what the app
+  sent.** A line the library does not take (one that is not an MCP
+  message, or a response to no request), and a request or a
+  notification it does not take, each left part of what was sent in the
+  log the app keeps: the start and end of each value the library
+  rejected, part of a memo say, or the whole notification. A response
+  whose id is text that is not a number left that id. Each now holds a
+  fixed sentence instead. INSTALL.md's "Reading the server log" gives
+  the two cases where the library's lines still carry text the app
+  sent.
 
 ### Documents
 

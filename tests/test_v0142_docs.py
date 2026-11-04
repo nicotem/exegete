@@ -449,10 +449,13 @@ def test_the_check_after_installing_is_a_short_list():
     # (v0.15.3: Anthropic's page, read again, makes Auto the setting such a
     # conversation comes with, and Manual only on Enterprise: the warning,
     # then the suggestion)
-    assert ("Its permission setting comes as Auto, but as Manual on "
-            "Enterprise. On Auto, Claude does not ask: automated safety "
-            "checks decide instead, so for participants' data you could set "
-            "it to Manual.") in check
+    # (its readability reading: where the setting is, what Auto skips, and
+    # the suggestion a sentence of its own)
+    assert ("Its permission setting, in the message box, starts on Auto, "
+            "except on Enterprise plans, where it starts on Manual. On Auto, "
+            "Claude does not stop to ask you before it uses a tool: "
+            "automated safety checks run instead. For participants' data, "
+            "you could set it to Manual.") in check
     # (the lead's reading of 29 October: the checks help keep the files
     # out of Claude's reach, and switch training off)
     assert check.endswith("Before you use participants' data, go through "
@@ -486,17 +489,20 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     # setting a sentence each)
     # (v0.15.3: the page, read again, names the plans it reaches and the
     # setting each starts with; the day is held by its form)
+    # (its readability reading: the version named, and the setting placed)
     assert re.search(r"If your message box offers no choice between "
-                     r"\"Chat\" and \"Cowork\", the two are one "
-                     r"conversation\. Anthropic's page, " + READ_ON
-                     + r", says this is reaching Pro, Max and Ultra plans "
-                     r"gradually, and Team and Enterprise plans where it is "
-                     r"turned on\. Its permission setting comes as Auto, but "
-                     r"as Manual on Enterprise\.", one_click)
+                     r"\"Chat\" and \"Cowork\", you have the version of "
+                     r"Claude in which the two are one conversation\. "
+                     r"Anthropic's page, " + READ_ON
+                     + r", says that this version is reaching Pro, Max and "
+                     r"Ultra plans gradually, and Team and Enterprise plans "
+                     r"where it is turned on\. Its permission setting, in the "
+                     r"message box, starts on Auto, except on Enterprise "
+                     r"plans, where it starts on Manual\.", one_click)
     # explained once
     assert readme.count("no choice between \"Chat\" and \"Cowork\"") == 1
-    assert readme.count("says this is reaching Pro, Max and Ultra plans") \
-        == 1
+    assert readme.count("says that this version is reaching Pro, Max and "
+                        "Ultra plans") == 1
     data = _between(readme, "## Where your data goes", "## Start here")
     # (the readability reading: the aside said in the sentence)
     assert ("Before you use participants' data with Claude Desktop's chat, "
@@ -509,17 +515,20 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
     # choice in each app
     assert ("In Claude, choose \"Allow once\" each time it asks. In Codex, "
             "answer each prompt.") in readme
-    assert readme.count("permission setting comes as Auto") == 1
+    assert readme.count("permission setting, in the message box, starts on "
+                        "Auto") == 1
     approvals = _between(_flat("INSTALL.md"),
                          "**Claude's questions before a tool runs.**",
                          "**Switch training off**")
     # (v0.15.3: the page, read again, gives each mode its default by plan;
     # the warning about Auto comes with the suggestion)
+    # (its readability reading: the version, the rollout and the setting a
+    # sentence each)
     for words in (ONE_CLAUDE,
-                  "In the version of Claude where chat and Cowork are one "
-                  "conversation, which Anthropic is rolling out to Pro, Max "
-                  "and Ultra plans first, a permission setting in the message "
-                  "box has two modes",
+                  "In one version of Claude, chat and Cowork are one "
+                  "conversation. Anthropic is rolling it out to Pro, Max and "
+                  "Ultra plans first. In that version, a permission setting "
+                  "in the message box has two modes.",
                   "\"**Auto (default on Pro, Max, Ultra, and Team plans):** "
                   "Claude keeps working without stopping to ask about each "
                   "step, and automated safety checks run before it takes an "

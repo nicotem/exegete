@@ -227,10 +227,12 @@ class TestClaudeCodesLimits:
         long = install[install.index(
             "**Long tool descriptions in Claude Code.**"):]
         long = long[:long.index("**", 45)]
+        # (v0.15.3, the readability reading: the earlier limit a sentence
+        # of its own, out of the page's brackets)
         for words in ("Claude Code keeps the first 4,096 characters of a "
                       "tool's description, or 16,384 for a tool it finds "
                       "through its tool search, which it uses by default",
-                      "before Claude Code 2.1.296, 2,048",
+                      "Before Claude Code 2.1.296, it kept 2,048.",
                       "`CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` (version "
                       "2.1.280 or later) replaces both limits",
                       "not with `-e` on `claude mcp add`, which passes "
@@ -502,10 +504,11 @@ class TestTheDocumentsOtherPoints:
             assert gone not in text, gone
         # (v0.15.3: said as what Exegete does not do, with the plans'
         # place, and no promise, as docs/WRITING.md asks)
-        assert ("Exegete does not nest an existing code under another code "
-                "(the README's [\"What comes next\"](https://github.com/"
-                "nicotem/exegete#what-comes-next) gives the plans). "
-                "QualCoder, if you use it, can.") in tools
+        # (its readability reading: the pointer a sentence of its own)
+        assert ("Exegete does not nest an existing code under another code. "
+                "QualCoder, if you use it, can. The README's [\"What comes "
+                "next\"](https://github.com/nicotem/exegete#what-comes-next) "
+                "gives the plans.") in tools
         assert ("Exegete does not yet change an existing entry: QualCoder, "
                 "if you use it, can") in tools
 

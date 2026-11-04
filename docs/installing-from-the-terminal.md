@@ -35,14 +35,13 @@ Claude, one fully local route, and OpenAI's apps.
 | **Fully local models** (LM Studio and similar hosts) | The model runs on your computer, so participants' data is not sent to an AI provider. We expect a local model to do the analysis less well than the hosted models, and do not know by how much, since we have evaluated neither. It is a route to consider for particular uses, such as a first pass over sensitive material, or work an agreement confines to one computer. Exegete offers its full tool set unless the host's entry asks for the smaller one, `core`. The recipe asks for `core`, which takes less of a local model's room than the full set. | [PRIVACY.md](../PRIVACY.md), rung 4; [the LM Studio recipe](#lm-studio-fully-local-experimental) below |
 | **OpenAI's apps** (the ChatGPT desktop app; Codex's command line and editor extension) | OpenAI's terms apply, and which ones depends on your plan and on how you sign in. Switch training off before participants' data: while it is on, OpenAI may use your conversations to train its models. The settings are "Improve the model for everyone" and Codex's separate "Include environments". Not ChatGPT in a web browser. A phone only through OpenAI's Remote, which has the paired computer run the work; this project suggests leaving Remote off for participants' data. Codex can also read your projects' files by itself, without asking, so for participants' data this project suggests an assistant with no file access of its own, such as Claude Desktop's chat. OpenAI documents a setting, marked Beta, that can keep Codex's own commands from reading outside the folder it works in; it has not been tested with Exegete. Not tried by this project. | [PRIVACY.md](../PRIVACY.md), "OpenAI's apps"; [the recipe](#chatgpts-desktop-app-and-codex-experimental) below |
 
-The multi-host support (the core toolset and the recipes below) is
-**Experimental**: written from official documentation and checked by
-Exegete's own tests. This project has not tried it end to end on every
-host, and has not evaluated it with local models. The recipes for
-OpenAI's apps, for LM Studio and for Claude Code with an Anthropic API
-key go step by step;
-Claude Code signed in with a Pro or Max plan follows "Claude Code",
-below. For another host, ask in
+The `core` tool set and the recipes below are **Experimental**. They
+are written from official documentation and checked by Exegete's own
+tests. This project has not tried them end to end on every host, and
+has not evaluated them with local models. The recipes for OpenAI's
+apps, for LM Studio and for Claude Code with an Anthropic API key go
+step by step. Claude Code signed in with a Pro or Max plan follows
+"Claude Code", below. For another host, ask in
 [GitHub Issues](https://github.com/nicotem/exegete/issues).
 
 **What the assistant is told (provisional).** Exegete gives the
@@ -392,8 +391,8 @@ reads", below).
 **Long tool descriptions in Claude Code.** Claude Code keeps the first
 4,096 characters of a tool's description, or 16,384 for a tool it
 finds through its tool search, which it uses by default (Anthropic's
-page on MCP in Claude Code, read on 4 November 2026; before Claude
-Code 2.1.296, 2,048). Exegete puts the rules a model must not miss
+page on MCP in Claude Code, read on 4 November 2026). Before Claude
+Code 2.1.296, it kept 2,048. Exegete puts the rules a model must not miss
 within each description's first 2,048 characters. The few named
 exceptions reach the model through `read_brief` or the tools' answers.
 The descriptions are longer on Python 3.11 and 3.12 than on 3.13, which
@@ -542,8 +541,8 @@ same.
 ## LM Studio (fully local) (Experimental)
 
 > **Status: Experimental.** Written from LM Studio's documentation
-> (pages read again on 4 November 2026; MCP support needs LM Studio
-> 0.3.17 or newer). On 7 September 2026 the maintainer checked this
+> (pages read again on 4 November 2026). LM Studio supports MCP from
+> version 0.3.17. On 7 September 2026 the maintainer checked this
 > recipe with LM Studio 0.4.22 and Exegete 0.11: Exegete loaded, and
 > tool calls completed. We expect a local model to do the analysis less well than
 > the hosted models, and do not know by how much, since we have
@@ -693,16 +692,15 @@ every start. LM Studio keeps its log, with Exegete's lines, in
 ## ChatGPT's desktop app and Codex (Experimental)
 
 > **Status: Experimental.** Written from OpenAI's documentation, read
-> again on 4 November 2026 (its pages show no date), and, where it is
-> silent, from Codex's source code at its release 0.166.0, read the
-> same day. This project has not run Exegete in any OpenAI app, so
-> these steps are untried. Codex reads files on your computer by
-> itself, so for participants' data this project suggests an assistant
-> with no file
-> access of its own, such as Claude Desktop's chat. OpenAI documents a
-> setting, marked Beta, that can keep Codex's own commands from reading
-> outside the folder it works in; it has not been tested with Exegete.
-> Step 3 says more.
+> again on 4 November 2026. Its pages show no date. Where the
+> documentation is silent, the steps follow Codex's source code at its
+> release 0.166.0, read the same day. This project has not run Exegete
+> in any OpenAI app, so these steps are untried. Codex reads files on
+> your computer by itself, so for participants' data this project
+> suggests an assistant with no file access of its own, such as Claude
+> Desktop's chat. OpenAI documents a setting, marked Beta, that can keep
+> Codex's own commands from reading outside the folder it works in; it
+> has not been tested with Exegete. Step 3 says more.
 
 **Which OpenAI apps can use Exegete.** OpenAI's page on MCP
 (<https://learn.chatgpt.com/docs/extend/mcp>) says: "The ChatGPT desktop
@@ -714,8 +712,8 @@ configuration for the same Codex host."
   <https://learn.chatgpt.com/docs/linux/linux-app>): yes, by OpenAI's
   documentation. It starts Exegete on your computer, from the settings
   file below. OpenAI documents this for Codex, which you select from
-  the ChatGPT dropdown (OpenAI also calls it the product selector);
-  whether the app's ChatGPT side (Chat and Work) offers Exegete's tools
+  the ChatGPT dropdown (OpenAI also calls it the product selector).
+  Whether the app's ChatGPT side (Chat and Work) offers Exegete's tools
   too is not documented, and this project has not checked it.
 - **Codex's command line, and its extension for VS Code and similar
   editors**: yes, by the same documentation, from the same settings
@@ -1158,11 +1156,11 @@ the two of the check for new versions (`EXEGETE_UPDATE_CHECK` and
   `~/Exegete projects`, because iCloud (Desktop and Documents) and
   OneDrive may sync `~/Documents`. On the maintainer's Mac on 19
   October 2026, the update moved a setting left at the earlier default,
-  `~/QualCoder projects`, to it (whether the update keeps a folder
-  chosen by hand has not been checked, so after updating, look at the
-  setting; no project is moved, both folders are searched, and setting
-  it back to
-  `~/QualCoder projects` keeps new projects beside the earlier ones).
+  `~/QualCoder projects`, to `~/Exegete projects`. Whether the update
+  keeps a folder chosen by hand has not been checked, so after updating,
+  look at the setting. No project is moved, and both folders are
+  searched. Setting it back to `~/QualCoder projects` keeps new projects
+  beside the earlier ones.
   A relative path, or a folder inside `~/.exegete` (or
   `~/.qualcoder_mcp`, its earlier name), QualCoder's settings folder
   `~/.qualcoder`, a `.qda` project or the folder Exegete itself is

@@ -265,8 +265,10 @@ def test_quickstart_dates_the_setting_as_privacy_does():
                      r"(\d{1,2} [A-Z][a-z]+ \d{4})", governance).group(1)
     step5 = _between(_flat("QUICKSTART.md"), "### 5. Try it",
                      "If you have no project yet, ask Claude")
+    # (its readability reading: the pages cited after the claim, in
+    # brackets, for "by Anthropic's pages")
     assert ("https://claude.ai/settings/data-privacy-controls switches "
-            f"training off, by Anthropic's pages, read on {date}.") in step5
+            f"training off (Anthropic's pages, read on {date}).") in step5
     # (the fix round: the sentence on rating a reply is a claim about the
     # same terms, so it is dated by them, and it names their second
     # exception, which the terms PRIVACY quotes that day give)
@@ -586,9 +588,10 @@ def test_openais_route_is_warned_of_with_an_alternative():
     assert ("OpenAI documents a setting, marked Beta, that can keep Codex's "
             "own commands from reading outside the folder it works in, a "
             "\"permission profile\"") in openai
-    assert ("it has not been tested with Exegete, and this project gives no "
+    # (v0.15.3, the readability reading: the semicolons now full stops)
+    assert ("It has not been tested with Exegete, and this project gives no "
             "steps for it") in openai
-    assert ("for participants' data, this project suggests an assistant "
+    assert ("For participants' data, this project suggests an assistant "
             "with no file access of its own, such as Claude Desktop's chat."
             ) in openai
     for name in ("README.md", "INSTALL.md", "PRIVACY.md", GUIDE):
@@ -603,7 +606,9 @@ def test_cowork_is_out_of_reach_only_with_all_three_conditions():
     privacy = _flat("PRIVACY.md")
     hosts = _between(privacy, "## Assistants that open files by themselves",
                      "## Keeping notes private")
-    assert ("kept out of every connected folder, with computer use off and "
+    # (v0.15.3, the readability reading: a sentence of its own after the
+    # reach, where a semicolon joined them)
+    assert ("Kept out of every connected folder, with computer use off and "
             "no other extension that reads files (both below), they stay out "
             "of it.") in hosts
     assert ("Cowork reads every folder connected to it, so projects kept out "

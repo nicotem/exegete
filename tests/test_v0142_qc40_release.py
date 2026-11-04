@@ -128,9 +128,11 @@ def test_privacy_says_what_its_verification_covers():
             "QualCoder's code are still that commit's.",
             # (v0.15.3: named by the release it is true of, which no
             # longer changes, as docs/WRITING.md allows)
+            # (its readability reading: the correction a sentence of its
+            # own)
             "What these sections say of QualCoder's own assistant and AI "
             "server, whose code changed a good deal in the release, was read "
-            "again in 4.0's released code, and one statement was corrected: "
+            "again in 4.0's released code. One statement was corrected: "
             "what QualCoder's server answers about an annotation (under "
             "\"Coder visibility\").",
             "TOOLS.md, \"Supported QualCoder versions\", says what else was "

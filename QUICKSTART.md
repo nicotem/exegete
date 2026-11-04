@@ -161,8 +161,8 @@ codes, memos, names) goes to Anthropic, the AI provider that runs
 Claude's AI model. While training is on, Anthropic may use your
 conversations, with any participants' data in them, to train its models.
 On a personal plan (Free, Pro or Max), the Model Improvement setting at
-https://claude.ai/settings/data-privacy-controls switches training off,
-by Anthropic's pages, read on 4 November 2026. The same pages say that
+https://claude.ai/settings/data-privacy-controls switches training off
+(Anthropic's pages, read on 4 November 2026). The same pages say that
 rating a reply, with a thumbs up or down, can still let Anthropic train
 on that conversation, and so can its being flagged for a safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),

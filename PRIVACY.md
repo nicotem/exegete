@@ -634,18 +634,19 @@ assistant. These pages change often, and the linked pages govern.
   `permissions.blockReadsOutsideWorkingDirectories` changes for paths
   outside your working directories." (the set includes `cat`, `grep` and
   `find`). Beyond that folder,
-  <https://code.claude.com/docs/en/permission-modes> (the same day):
-  "With Claude Code v2.1.283 or later, auto mode is the built-in
+  <https://code.claude.com/docs/en/permission-modes> (the same day)
+  says: "With Claude Code v2.1.283 or later, auto mode is the built-in
   starting permission mode for interactive terminal and VS Code
-  sessions.", and, while
+  sessions." The same page says that, while
   `permissions.blockReadsOutsideWorkingDirectories` is off, "file reads
   other than reads from network paths run without a prompt in auto mode,
-  including reads outside the working directories", apart from one
-  question the first time its Read, Grep or Glob tool goes outside them.
-  In Manual mode, Claude Code "asks you before its file tools read or
-  write outside the folder where it was started and its subfolders"
-  (<https://code.claude.com/docs/en/security>, the same day); the
-  read-only shell commands above are not among its file tools.
+  including reads outside the working directories". Claude Code asks
+  one question, the first time its Read, Grep or Glob tool goes outside
+  those directories. In Manual mode, Claude Code "asks you before its
+  file tools read or write outside the folder where it was started and
+  its subfolders" (<https://code.claude.com/docs/en/security>, the same
+  day). The read-only shell commands above are not among its file
+  tools.
   Anthropic documents settings that narrow this: `Read` deny rules for
   your projects folder,
   `permissions.blockReadsOutsideWorkingDirectories` (version 2.1.257 or
@@ -684,11 +685,11 @@ assistant. These pages change often, and the linked pages govern.
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
   the same day). The same page says how to tell: "If you're on a Pro,
   Max, or Ultra plan and your message box still shows "Chat" and
-  "Cowork" options, you don't have it yet." So a
-  project, a transcript or your projects folder inside a
-  folder connected to Claude is within its reach; kept out of every
-  connected folder, with computer use off and no other extension that
-  reads files (both below), they stay out of it.
+  "Cowork" options, you don't have it yet." So a project, a transcript
+  or your projects folder inside a folder connected to Claude is within
+  its reach. Kept out of every connected folder, with computer use off
+  and no other extension that reads files (both below), they stay out
+  of it.
 - **Claude Desktop's chat, with the extension**: **not by itself, as far
   as Anthropic's pages say.** They document no way for the older,
   separate chat to open a file on your computer other than one you
@@ -707,12 +708,13 @@ assistant. These pages change often, and the linked pages govern.
   your dev tools automatically", and "Claude asks for your permission
   before accessing each application."
   (<https://support.claude.com/en/articles/14128542-let-claude-use-your-computer-in-cowork>,
-  the same day); it is in Cowork and Claude Code, and in the version
-  where chat and Cowork are one conversation any conversation has it
-  ("Computer use: In beta on Pro, Max, and Ultra plans, Claude can use
-  apps on your computer directly by clicking, typing, and navigating
-  your screen.", the article on that version above). The article on
-  computer use says that Team and Enterprise plans do not have it. It
+  the same day). Computer use is in Cowork and Claude Code. In the
+  version where chat and Cowork are one conversation, any conversation
+  has it ("Computer use: In beta on Pro, Max, and Ultra plans, Claude
+  can use apps on your computer directly by clicking, typing, and
+  navigating your screen.", the article on that version above). The
+  article on computer use says that Team and Enterprise plans do not
+  have it. It
   works from screenshots, and sees more than the applications you
   allow: "Claude takes screenshots of your computer to understand how to
   navigate the screen and the apps to which you've given permission."
@@ -727,10 +729,10 @@ assistant. These pages change often, and the linked pages govern.
   home folder, Documents or a whole drive included), the assistant
   reaches your project only through Exegete.
 - **LM Studio** (0.4.28, its chat window): **not by itself.** Its
-  pages document no file tool of its own for the chat (its MCP page,
+  pages document no file tool of its own for the chat. Its MCP page,
   <https://lmstudio.ai/docs/app/mcp>, read 4 November 2026, lists
   none, and its changelog, <https://lmstudio.ai/changelog/lmstudio>,
-  adds none up to 0.4.28): a file reaches the model when you attach one
+  adds none up to 0.4.28. A file reaches the model when you attach one
   (<https://lmstudio.ai/docs/app/basics/rag>, the same day) or through
   a tool, and "When a model calls a tool, LM Studio
   will show a confirmation dialog to the user."
@@ -805,8 +807,8 @@ log files under the extension's earlier name (the Terminal guide,
 versions. Exegete's own folder was `~/.qualcoder_mcp` before 0.14.1:
 since then Exegete keeps a link under that name pointing at
 `~/.exegete`, as "How your data flows" says. The folder for projects was
-`~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was; the
-extension's was `~/QualCoder projects` before 0.15.0: on the
+`~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was. The
+extension's was `~/QualCoder projects` before 0.15.0. On the
 maintainer's Mac on 19 October 2026, the update moved a setting left at
 that default to `~/Exegete projects`. Whether the update keeps a folder
 chosen by hand has not been checked, so after updating, look at the
@@ -1060,9 +1062,9 @@ same there as in its development tree at commit 9bddf17 (25 August
 2026), where they were first checked, and the line numbers cited from
 QualCoder's code are still that commit's. What these sections say of
 QualCoder's own assistant and AI server, whose code changed a good deal
-in the release, was read again in 4.0's released code, and one
-statement was corrected: what QualCoder's server answers about
-an annotation (under "Coder visibility"). TOOLS.md, "Supported
+in the release, was read again in 4.0's released code. One statement
+was corrected: what QualCoder's server answers about an annotation
+(under "Coder visibility"). TOOLS.md, "Supported
 QualCoder versions", says what else was checked at the release. The
 coder visibility section was also verified against the 3.8.2 tag,
 which already creates the `coder_names` table, its `visibility` column
@@ -2105,19 +2107,20 @@ Blocked, Exegete says nothing about new versions.
 With the ChatGPT desktop app, or Codex's command line or editor
 extension (the Terminal guide's recipe, "ChatGPT's desktop app and
 Codex"), what a tool returns goes to OpenAI, and OpenAI's terms apply.
-The same discipline as above: OpenAI's pages are quoted verbatim with
-their addresses, never characterised in our own voice, and the linked
-pages govern. OpenAI's Help Center and openai.com refuse automated
-reading, so those pages were read on 4 November 2026 from the Internet
-Archive's newest captures of them, each named with its quote and dated
-by its capture: open the live page before you rely on it. (The recipe
-itself is Experimental, and not tried
-by this project. This project gives no steps for ChatGPT in a web
-browser, which could reach Exegete through OpenAI's Secure MCP Tunnel,
-or, in an enterprise workspace that switches on local computer access
-with Work Cloud, perhaps through a computer connected to the account,
-which OpenAI does not document for servers like Exegete; the Terminal
-guide says why.)
+As above, OpenAI's pages are quoted word for word with their addresses,
+never described in our own words, and the linked pages govern. OpenAI's
+Help Center and openai.com refuse automated reading, so those pages
+were read on 4 November 2026 in the Internet Archive's newest captures
+of them. Each quote below names its capture and gives the day the
+capture was made. The live page may have changed since, so you could
+open it before you rely on the quote. The recipe itself is
+Experimental, and this project has not tried it. This project gives no
+steps for ChatGPT in a web browser, which could reach Exegete through
+OpenAI's Secure MCP Tunnel. Nor does it give steps for an enterprise
+workspace that switches on local computer access with Work Cloud. Such
+a workspace could perhaps reach Exegete through a computer connected to
+the account, which OpenAI does not document for servers like Exegete.
+The Terminal guide says why.
 
 **Codex's own file access.** Besides calling Exegete's tools, Codex
 runs commands of its own, outside Exegete, which change files in the
@@ -2152,16 +2155,17 @@ the read-only mode, and what is accessible reaches well beyond Codex's
 folder. In Codex's source code (release 0.166.0, 29 October 2026,
 read 4 November 2026, <https://github.com/openai/codex/tree/rust-v0.166.0/codex-rs>),
 the two modes' presets both use `on-request`
-(`utils/approval-presets/src/lib.rs`), and both of their sandboxes let
+(`utils/approval-presets/src/lib.rs`). Both of their sandboxes let
 Codex's commands read from the root of the disk
-(`protocol/src/permissions.rs`): on macOS and Linux, any file your
-account can read (`sandboxing/src/seatbelt.rs`,
-`linux-sandbox/src/bwrap.rs`); on Windows, with its preferred sandbox,
-the system's folders, the working folder and every folder at the top of
-your home folder except a short list that holds keys and credentials,
-such as `.ssh` and `.aws` (`windows-sandbox-rs/src/setup.rs`), and with
-its fallback sandbox, which limits only writing, any file your account
-can read. That takes in the extension's folder for projects
+(`protocol/src/permissions.rs`). On macOS and Linux, the commands can
+read any file your account can read (`sandboxing/src/seatbelt.rs`,
+`linux-sandbox/src/bwrap.rs`). On Windows, the preferred sandbox lets
+them read the system's folders, the working folder and every folder at
+the top of your home folder except a short list that holds keys and
+credentials, such as `.ssh` and `.aws`
+(`windows-sandbox-rs/src/setup.rs`). The fallback sandbox, which limits
+only writing, lets them read any file your account can read. That takes
+in the extension's folder for projects
 (`~/Exegete projects`, or `~/QualCoder projects`, the earlier default),
 Documents and wherever
 else you keep projects and transcripts. OpenAI's page on permission
@@ -2186,19 +2190,19 @@ passes on, not the approval before anything is written, not the preview
 or the backup. Codex changes files in the folder it works in without
 asking, so a study's folder, the projects folder or the home folder
 given to it as that folder would be open to its changes as well as its
-reads. The Terminal guide's recipe gives it an empty folder of its own, which
-keeps a study's files out of the place Codex works in, so that it does
-not change them without asking, and does not keep Codex from reading
-them, or from searching other folders for them. Practising, too,
+reads. The Terminal guide's recipe gives it an empty folder of its own.
+That keeps a study's files out of the place Codex works in, so that it
+does not change them without asking. It does not keep Codex from
+reading them, or from searching other folders for them. Practising, too,
 leaves a real study on the same computer within its reach ("While you
 practise", above). OpenAI documents a setting, marked Beta, that can
 keep Codex's own commands from reading outside the folder it works in,
 a "permission profile" (<https://learn.chatgpt.com/docs/permissions>,
 read 4 November 2026: "Beta. Permission profiles are under active
-development and may change."); it has not been tested with Exegete,
+development and may change."). It has not been tested with Exegete,
 and this project gives no steps for it. If you try it, you may want to
-check what Codex can still read before bringing in participants' data;
-for participants' data, this project suggests an assistant with no
+check what Codex can still read before bringing in participants' data.
+For participants' data, this project suggests an assistant with no
 file access of its own, such as Claude Desktop's chat.
 
 **Phones, through a connected computer.** OpenAI's page on Codex on
@@ -2311,15 +2315,15 @@ Codex's `config.toml`. A session's transcript can hold what Exegete's
 tools returned in it, and what Codex's own commands read, participants'
 words included, as Claude Code's
 local transcripts can ("Cross-rung cautions", above). The `history`
-settings are not enough to stop that (Codex's source code at release
-0.166.0, read on 4 November 2026: `history.persistence` governs only
-`~/.codex/history.jsonl`, the text you typed, while every session is
-also written in full, tool results included, under `~/.codex/sessions`,
-and later `~/.codex/archived_sessions`, whichever `history` setting you
-choose). So delete those session files after any work on study data,
-and keep `~/.codex` out of folders that a sync or backup service
-copies. These files are part of what stays on the computer ("How your
-data flows").
+settings are not enough to stop that. In Codex's source code at release
+0.166.0, read on 4 November 2026, `history.persistence` governs only
+`~/.codex/history.jsonl`, the text you typed. Every session is also
+written in full, tool results included, under `~/.codex/sessions`, and
+later `~/.codex/archived_sessions`, whichever `history` setting you
+choose. So you could delete those session files after any work on
+study data, and keep `~/.codex` out of folders that a sync or backup
+service copies. These files are part of what stays on the computer
+("How your data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:

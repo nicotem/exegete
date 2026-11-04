@@ -1591,6 +1591,45 @@ def without_markers(text: str, markers: "re.Pattern[str]") -> str:
     return markers.sub("", text)
 
 
+def spans_without_markers(text: str, spans: Sequence[Sequence[int]],
+                          markers: "re.Pattern[str]"
+                          ) -> List[Tuple[int, int]]:
+    """Each span of `text` where it stands in `without_markers(text)`.
+
+    Its start and its end each move back by the length of the markers
+    wholly before them, so the span of "Maria[Comment 1] Brown" becomes
+    that of "Maria Brown". A span that starts or ends inside a marker has
+    no place in the text without the markers and is dropped. Used to count
+    the occurrences a run leaves (v0.15.3), never to write.
+    """
+    found = [(match.start(), match.end()) for match in markers.finditer(text)]
+    if not found:
+        return [(int(start), int(end)) for start, end in spans]
+    starts = [start for start, _end in found]
+    ends = [end for _start, end in found]
+    taken: List[int] = []
+    removed = 0
+    for start, end in found:
+        removed += end - start
+        taken.append(removed)
+
+    def before(position: int) -> int:
+        # The length of the markers that end at or before `position`
+        index = bisect_right(ends, position)
+        return taken[index - 1] if index else 0
+
+    def cut(position: int) -> bool:
+        # Whether `position` falls inside a marker, after its first
+        # character and before its end
+        index = bisect_right(starts, position)
+        return bool(index) and found[index - 1][0] < position < \
+            found[index - 1][1]
+
+    return [(int(start) - before(int(start)), int(end) - before(int(end)))
+            for start, end in spans
+            if not (cut(int(start)) or cut(int(end)))]
+
+
 def find_replacements_through(compiled: Compiled, text: str,
                               markers: "re.Pattern[str]"
                               ) -> List[Replacement]:
@@ -1797,9 +1836,11 @@ def case_variants_seen(compiled: Compiled, text: str) -> List[Dict[str, Any]]:
 # The kinds a wide occurrence in the file text is split into, in the
 # order the report lists them. `unattributed` is not a kind: it is the
 # occurrences no entry could be charged to, counted beside them.
+# `left_by_choice` (v0.15.3) is the occurrences a run leaves by a list,
+# charged out of the share that would otherwise be put back.
 TEXT_RESIDUE_REASONS = (
     "inside_a_longer_word", "case_only", "joined_differently",
-    "normalisation_variants", "put_back_by_a_pseudonym",
+    "normalisation_variants", "put_back_by_a_pseudonym", "left_by_choice",
     "whole_word_in_a_file_not_rewritten")
 
 # What `names_left_in_text` returns for one file, JSON-ready:
@@ -2235,7 +2276,8 @@ def names_left_in_text(compiled: "Compiled", text: str,
                        rewritten_by_this_run: bool,
                        max_matches: Optional[int] = None,
                        max_extra_work: Optional[int] = None,
-                       stopped: Optional[Dict[str, Any]] = None
+                       stopped: Optional[Dict[str, Any]] = None,
+                       left_spans: Sequence[Sequence[int]] = ()
                        ) -> Optional[TextResidue]:
     """Where this mapping's names are left in one file's text.
 
@@ -2243,7 +2285,9 @@ def names_left_in_text(compiled: "Compiled", text: str,
     for the one file the run rewrites, the stored text for every other.
     Counts, never spans and never surrounding text; with
     `list_longer_words`, the longer words a name sits inside (the typed
-    path only, decided by the caller).
+    path only, decided by the caller). `left_spans` (v0.15.3) are the
+    places in `text` of the occurrences this run leaves by a list, on the
+    file it rewrites; empty by default.
 
     Two readings of every count, in one object `{"wide", "whole_word"}`:
 
@@ -2258,7 +2302,8 @@ def names_left_in_text(compiled: "Compiled", text: str,
       not.
     - whole_word: the rewriter's own pattern over the RAW text, reported
       as it stands. On the file this run rewrote it is normally zero,
-      and non-zero means a pseudonym put a name back.
+      and non-zero means a pseudonym put a name back, or that the run
+      leaves occurrences by a list, which are in both counts.
 
     The kinds, for each wide match in the reader's text: a word
     character touches either end (inside_a_longer_word); otherwise the
@@ -2270,9 +2315,16 @@ def names_left_in_text(compiled: "Compiled", text: str,
     of the file this run rewrote, `min(whole_word, class)` is charged to
     put_back_by_a_pseudonym and the rest to normalisation_variants; on
     every other row nothing was put back by this run, so the same share
-    is charged to whole_word_in_a_file_not_rewritten instead. The `min`
-    and `max` are a declared HEURISTIC about which cause an occurrence
-    is charged to when both are present; their sum is exact.
+    is charged to whole_word_in_a_file_not_rewritten instead. On the
+    file this run rewrote, the whole words at `left_spans` are counted in
+    the same pass over the raw text, and up to that share's size are
+    charged to left_by_choice rather than to put_back_by_a_pseudonym
+    (v0.15.3). A left occurrence the share does not reach, one the
+    reader's reading sees as another kind, stays in that kind, never in
+    put_back_by_a_pseudonym. The `min` and `max` and the charge to
+    left_by_choice are a declared HEURISTIC about which cause an
+    occurrence is charged to when more than one is present; their sum
+    is exact.
 
     `max_matches` bounds the work a hostile text can cost: every match of
     the three passes counts against it, the first sight of each spelling
@@ -2312,6 +2364,8 @@ def names_left_in_text(compiled: "Compiled", text: str,
     extra_work = 0
     extra_limit = max_extra_work if max_extra_work is not None else -1
     seen = _reader_sees(text)
+    left_places = frozenset((int(start), int(end))
+                            for start, end in left_spans)
     rows: Dict[Tuple[int, str], Dict[str, Any]] = {}
     direct_total = 0
     folded_seen = 0
@@ -2332,7 +2386,8 @@ def names_left_in_text(compiled: "Compiled", text: str,
                                "case_only": 0, "joined_differently": 0,
                                "left_whole": 0, "folded_excess": 0,
                                "whole_word": 0, "rewriter_only": 0,
-                               "words": {}, "words_withheld": False}
+                               "left": 0, "words": {},
+                               "words_withheld": False}
         return row
 
     unattributed = 0
@@ -2441,6 +2496,10 @@ def names_left_in_text(compiled: "Compiled", text: str,
         key = _rewriter_form(compiled, lookup, matched)
         row = row_for(key)
         row["whole_word"] += 1
+        if match.span() in left_places:
+            # An occurrence the run leaves by a list: a look-up in the
+            # same pass, so the count spends nothing more for it
+            row["left"] += 1
         snippet = _with_trailing_marks(text, match.start(), match.end())
         seen_alone = detector_sees.get(snippet)
         if seen_alone is None:
@@ -2488,7 +2547,7 @@ def names_left_in_text(compiled: "Compiled", text: str,
                 "occurrences": {"wide": 0, "whole_word": 0},
                 "inside_a_longer_word": 0, "case_only": 0,
                 "joined_differently": 0, "normalisation_variants": 0,
-                "put_back_by_a_pseudonym": 0,
+                "put_back_by_a_pseudonym": 0, "left_by_choice": 0,
                 "whole_word_in_a_file_not_rewritten": 0,
                 "_words": {}, "_withheld": False}
         entry["occurrences"]["wide"] += wide
@@ -2498,7 +2557,11 @@ def names_left_in_text(compiled: "Compiled", text: str,
         entry["joined_differently"] += row["joined_differently"]
         entry["normalisation_variants"] += spelling
         if rewritten_by_this_run:
-            entry["put_back_by_a_pseudonym"] += shared
+            # The whole words left by a list come out of the share that
+            # would otherwise read as put back, never more than it holds
+            chosen = min(row["left"], shared)
+            entry["left_by_choice"] += chosen
+            entry["put_back_by_a_pseudonym"] += shared - chosen
         else:
             entry["whole_word_in_a_file_not_rewritten"] += shared
         for word, count in row["words"].items():

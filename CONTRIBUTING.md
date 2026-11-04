@@ -594,7 +594,11 @@ projects and these folders, start the Inspector with `HOME` set to an
 empty folder, as the suite does for each test. On Windows, set
 `USERPROFILE` to the same folder and `LOCALAPPDATA` to a folder inside
 it. On Linux, unset `XDG_CACHE_HOME` or set it inside that folder.
-`tests/conftest.py` shows how. Then make a made-up project there with
+Exegete also reads its settings from the environment it starts in. A
+project or a folder for projects set there would point the trial at
+your real projects, so leave out every setting whose name begins with
+`EXEGETE_` or `QUALCODER_`, as the suite does. `tests/conftest.py`
+shows how. Then make a made-up project there with
 `scripts/create_test_project.py`, which takes the path of a new folder
 ending in `.qda`, and select it by that path. In the page,
 `list_available_projects` and `select_project` choose a project.

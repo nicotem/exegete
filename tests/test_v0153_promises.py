@@ -16,7 +16,9 @@ example of the form is no reading, while a real reading there ages. On
 the repository, read without its history: each entry of NOT_PROMISES and
 NOT_READINGS is still found; the sentences are cut as the texts check
 cuts them; the script needs the standard library alone; the documents
-job has the history and runs the report before the install.
+job has the history and runs the report before the install;
+CONTRIBUTING's trial in the MCP Inspector leaves out every setting
+Exegete reads.
 """
 
 import ast
@@ -30,6 +32,7 @@ from pathlib import Path
 
 import pytest
 
+from exegete import names
 
 REPO = Path(__file__).resolve().parent.parent
 
@@ -450,3 +453,21 @@ def test_the_documents_job_has_history_and_the_report():
     assert steps[report - 1] == \
         "- name: Promises and dated readings (a report)"
 
+
+def _section(document, heading):
+    text = (REPO / document).read_text(encoding="utf-8")
+    start = text.index(f"\n### {heading}\n")
+    return text[start:text.index("\n## ", start + 1)]
+
+
+def test_a_trial_in_the_inspector_leaves_out_every_setting_exegete_reads():
+    """CONTRIBUTING's trial leaves out every setting whose name begins
+    with EXEGETE_ or QUALCODER_, as the suite does (tests/conftest.py):
+    Exegete reads every one of its settings under such a name."""
+    read = [name for spellings in names.SETTINGS.values()
+            for name in spellings] + list(names.NEW_ONLY_SETTINGS.values())
+    assert read and all(name.startswith(("EXEGETE_", "QUALCODER_"))
+                        for name in read), read
+    section = " ".join(_section(
+        "CONTRIBUTING.md", "Trying the tools in the MCP Inspector").split())
+    assert "`EXEGETE_`" in section and "`QUALCODER_`" in section

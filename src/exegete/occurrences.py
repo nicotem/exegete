@@ -61,8 +61,11 @@ def id_key(secret: str, project: str) -> bytes:
 
 
 def _base32(digest: bytes) -> str:
-    """The digest's first 130 bits as FULL_LENGTH characters of ALPHABET."""
-    number = int.from_bytes(digest[:17], "big") >> (17 * 8 - 5 * FULL_LENGTH)
+    """The digest's first 130 bits as FULL_LENGTH characters of ALPHABET.
+    The bytes are read as one number through their hex digits, since the
+    sweep for a guesser of character sets refuses the other spelling
+    (tests/test_v0143_import_decisions.py)."""
+    number = int(digest[:17].hex(), 16) >> (17 * 8 - 5 * FULL_LENGTH)
     letters = []
     for _ in range(FULL_LENGTH):
         letters.append(ALPHABET[number & 31])

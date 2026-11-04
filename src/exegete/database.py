@@ -13232,7 +13232,8 @@ class QualcoderDatabase:
 
     def pseudonymise_plan(self, compiled, overlap_policy: str,
                           file_ids: Optional[Sequence[int]] = None,
-                          occurrence_key: Optional[bytes] = None
+                          occurrence_key: Optional[bytes] = None,
+                          leave: Optional[Sequence[str]] = None
                           ) -> Dict[str, Any]:
         """Everything one run would do, computed without writing anything.
 
@@ -13244,15 +13245,37 @@ class QualcoderDatabase:
         is a plan computed against text that may have moved, which is the
         one failure this tool cannot afford.
 
-        With `occurrence_key` (occurrences.id_key, v0.15.3) each file
-        gains `occurrence_ids`: each replacement's full id, in the order
-        of `replacements`, from the file's id, its text's SHA-256 and the
-        span, so every phase that builds the plan from the same text gives
-        the same ids. Nothing signed reads them.
+        Each file keeps the occurrences as found, `found` (every
+        replacement the mapping makes, in text order), beside
+        `replacements`, the ones the run makes. With `occurrence_key`
+        (occurrences.id_key, v0.15.3) each file gains `occurrence_ids`:
+        each occurrence's full id, in the order of `found`, from the
+        file's id, its text's SHA-256 and the span, so every phase that
+        builds the plan from the same text gives the same ids. Nothing
+        signed reads them.
+
+        With `leave` (occurrences.canonical_leave's list of ids, v0.15.3)
+        the occurrences the ids name are left as they are: each file
+        gains `left_at` (their places in `found`, each once), `left`
+        (their number), `unmatched` and `ambiguous` (the ids that name
+        no occurrence or more than one) and `left_new_spans` (each left
+        occurrence's place in the new text), and `replacements` is
+        `found` without them, so the signed effect, the rows' maps, the
+        new text, the write, the run record and the journal see the
+        shorter list alone. The overlap diagnostic reads `found`, the
+        same with a list as without. A file whose every occurrence is
+        left stays in the plan, with no replacement and its text as it
+        was; a file with no occurrence is not in it, as without a list.
+        A list needs the key the ids are made with, so a list without
+        one raises rather than being set aside unread.
         """
         from . import occurrences
         from . import pseudonymise as engine
 
+        leave = list(leave or ())
+        if leave and occurrence_key is None:
+            raise ValueError("leave_occurrences needs a plan made with an "
+                             "occurrence key")
         eligible, skipped = self.pseudonymise_sources(file_ids)
         visibility = self.coder_visibility_map()
         files: List[Dict[str, Any]] = []
@@ -13266,14 +13289,25 @@ class QualcoderDatabase:
             # import's own names list reads it: a comment on a first name
             # puts "[Comment 1]" inside the full name (0.14.3).
             if source["through_markers"]:
-                replacements = engine.find_replacements_through(
+                found = engine.find_replacements_through(
                     compiled, text, doc_readers.NOTE_MARKER)
             else:
-                replacements = engine.find_replacements(compiled, text)
-            if not replacements:
+                found = engine.find_replacements(compiled, text)
+            if not found:
                 # A file with no match is not touched at all: no rewrite,
                 # no row update, no row read beyond the fingerprint.
                 continue
+            replacements = found
+            if occurrence_key is not None:
+                ids = occurrences.full_ids(
+                    occurrence_key, source["file_id"], sha,
+                    [(item.start, item.end) for item in found])
+            if leave:
+                left_at, unmatched, ambiguous = occurrences.match_each(
+                    leave, ids)
+                kept = set(left_at)
+                replacements = [item for place, item in enumerate(found)
+                                if place not in kept]
             mapper = engine.SpanMapper(replacements, len(text))
             rows = self._pseudonymise_rows(source["file_id"])
             for table, items in rows.items():
@@ -13283,8 +13317,11 @@ class QualcoderDatabase:
                         hideable and coder_is_hidden(visibility, row["owner"]))
                     row["map"] = mapper.map_row(row["pos0"], row["pos1"],
                                                 overlap_policy)
+            # Of the occurrences as found: a name of the mapping inside or
+            # overlapping an occurrence left is named here still, with a
+            # list as without one
             conflicts, truncated, capped = engine.overlap_conflicts(
-                compiled, text, replacements)
+                compiled, text, found)
             files.append({
                 "file_id": source["file_id"],
                 "name": source["name"],
@@ -13293,6 +13330,7 @@ class QualcoderDatabase:
                 "new_text": engine.apply_replacements(text, replacements),
                 "old_fingerprint": (length, sha),
                 "position_safe": position_safe(text),
+                "found": found,
                 "replacements": replacements,
                 "rows": rows,
                 "overlap_conflicts": conflicts,
@@ -13302,13 +13340,24 @@ class QualcoderDatabase:
                     source["file_id"], rows),
             })
             if occurrence_key is not None:
-                files[-1]["occurrence_ids"] = occurrences.full_ids(
-                    occurrence_key, source["file_id"], sha,
-                    [(item.start, item.end) for item in replacements])
+                files[-1]["occurrence_ids"] = ids
+            if leave:
+                # Where each left occurrence stands in the new text, for
+                # the count of the names left (never shown or written)
+                files[-1].update({
+                    "left_at": left_at,
+                    "left": len(left_at),
+                    "unmatched": unmatched,
+                    "ambiguous": ambiguous,
+                    "left_new_spans": [
+                        [mapper.map_start(found[place].start),
+                         mapper.map_end(found[place].end)]
+                        for place in left_at]})
         return {"eligible": digest_files, "skipped": skipped, "files": files,
                 "overlap_policy": overlap_policy,
                 "case_mode": compiled.case_mode,
-                "compiled": compiled}
+                "compiled": compiled,
+                "leave": leave}
 
     def pseudonymise_memo_plan(self, compiled,
                                file_plan: Optional[Dict[str, Any]] = None
@@ -14708,33 +14757,84 @@ class QualcoderDatabase:
                 for conflict in conflicts]
 
     @staticmethod
-    def _pseudonymise_occurrences(item: Dict[str, Any]) -> Dict[str, Any]:
+    def _pseudonymise_pre_existing(row: Dict[str, Any], pseudonym_of,
+                                   withheld) -> Dict[str, Any]:
+        """One row of `pre_existing_pseudonym_occurrences`, its pseudonym
+        as the preview may quote it. A pseudonym withheld because it
+        carries a name (the `use_project_pseudonyms` path) keeps its entry
+        and count and loses its spans (v0.15.3): in a text the assistant
+        has read, the text at each span is that pseudonym."""
+        shown = {**row, "pseudonym": pseudonym_of(row["entry"])}
+        if row["entry"] in withheld:
+            shown.pop("spans", None)
+            shown.pop("spans_truncated", None)
+        return shown
+
+    # The fixed sentences of the `occurrences` block (v0.15.3): what a
+    # list of occurrences to leave does, and how to give one
+    PSEUDONYMISE_OCCURRENCES_LEFT_NOTE = (
+        "An occurrence left is left whole, with any name of the mapping "
+        "inside or overlapping it. The counts per entry, and the names "
+        "that overlap, are of the occurrences as found, before any is "
+        "left; the run makes the replacements counted in "
+        "totals.replacements.")
+    PSEUDONYMISE_OCCURRENCES_NEXT = (
+        "To leave some of these, ask the researcher which, then preview "
+        "again with choose_occurrences and leave_occurrences listing their "
+        "ids: that preview marks the ones left, for the researcher to "
+        "check, and its token is the one the run needs.")
+
+    @classmethod
+    def _pseudonymise_occurrences(cls, item: Dict[str, Any],
+                                  may_echo_names: bool = True,
+                                  leave_given: bool = False
+                                  ) -> Dict[str, Any]:
         """A file's `occurrences` block (`choose_occurrences`, v0.15.3).
 
         `count`, and in text order up to OCCURRENCES_LISTED rows of the
-        short id and the line number; past it `listed_in_part` and how
-        many `more`. No name, pseudonym, entry number, span or word of the
-        text, on either path. The ids are shown at one length, the
-        shortest at which all the file's ids are distinct, the ones not
-        listed included.
+        short id, with its line number when the mapping was typed into
+        the call; past them `listed_in_part` and how many `more`. On the
+        `use_project_pseudonyms` path (`may_echo_names` false) a row is
+        the id alone: beside the entries' pseudonyms and counts, lines in
+        a text the assistant has read would tell which name each
+        pseudonym replaces (ruling 94). No name, pseudonym, entry number,
+        span or word of the text, on either path. The ids are shown at
+        one length, the shortest at which all the file's ids are
+        distinct, the ones not listed included.
+
+        Drawn from the occurrences as found, with a list to leave too
+        (`leave_given`): each left one's row gains `"left": true`, and
+        the block `left` (their number, the ones not listed included)
+        and `left_note`. Without a list, `next` says how to give one.
         """
         from . import occurrences
         full = item.get("occurrence_ids")
         if full is None:
             raise ValueError("choose_occurrences needs a plan made with an "
                              "occurrence key")
+        found = item.get("found", item["replacements"])
         shown = occurrences.shown_ids(full)[:occurrences.OCCURRENCES_LISTED]
-        lines = occurrences.line_numbers(
-            item["old_text"],
-            [replacement.start for replacement
-             in item["replacements"][:len(shown)]])
-        block: Dict[str, Any] = {
-            "count": len(full),
-            "listed": [{"id": one, "line": line}
-                       for one, line in zip(shown, lines)]}
+        left = set(item.get("left_at", ()))
+        rows: List[Dict[str, Any]] = [{"id": one} for one in shown]
+        if may_echo_names:
+            lines = occurrences.line_numbers(
+                item["old_text"],
+                [replacement.start for replacement in found[:len(shown)]])
+            for row, line in zip(rows, lines):
+                row["line"] = line
+        for place in left:
+            if place < len(rows):
+                rows[place]["left"] = True
+        block: Dict[str, Any] = {"count": len(full), "listed": rows}
         if len(full) > len(shown):
             block["listed_in_part"] = True
             block["more"] = len(full) - len(shown)
+        if leave_given:
+            block["left"] = item.get("left", 0)
+            if block["left"]:
+                block["left_note"] = cls.PSEUDONYMISE_OCCURRENCES_LEFT_NOTE
+        else:
+            block["next"] = cls.PSEUDONYMISE_OCCURRENCES_NEXT
         return block
 
     def pseudonymise_preview(self, plan: Dict[str, Any],
@@ -14757,14 +14857,21 @@ class QualcoderDatabase:
         never a row key.
 
         With `choose_occurrences` (v0.15.3) each file gains an
-        `occurrences` block (`_pseudonymise_occurrences`): short ids and
-        line numbers, from a plan built with an occurrence key. Without
-        it the block is absent and the preview is as before.
+        `occurrences` block (`_pseudonymise_occurrences`): short ids, each
+        beside its line number when the mapping was typed into the call,
+        from a plan built with an occurrence key. With a list of
+        occurrences to leave (the plan's `leave`) the block is given too,
+        and marks the occurrences left, for the researcher to check. The
+        entries' blocks and the overlap diagnostic are of the occurrences
+        as found, the same with a list as without; `totals.replacements`
+        counts the replacements the run makes. Without either the block is
+        absent and the preview is as before.
 
-        Read-only, and everything in it is a count, a span or a name the
-        caller already supplied. The only file CONTENT it can return is
-        the optional context around each match, which is off by default
-        and capped when it is on.
+        Read-only, and everything in it is a count, a span, a short id
+        with its line, or a name the caller already supplied. The only
+        file CONTENT it can return is the optional context around each
+        match, which is off by default and capped when it is on, and
+        refused while occurrences are chosen or left.
 
         `may_echo_names=False` when the mapping was read from the
         project's own `pseudonyms.json` rather than supplied by the
@@ -14775,10 +14882,13 @@ class QualcoderDatabase:
         `count`, and the overlap diagnostic its two entries. Beside a text
         the assistant has read, a match's span and its entry's pseudonym
         pair a name with its pseudonym, and the occurrence ids, listed in
-        text order, would line up with the spans. The `occurrences` block
-        still gives each occurrence's line on that path: beside the
-        entries' pseudonyms and counts, the lines can tell which name in
-        such a text each pseudonym replaces, and the changelog says so.
+        text order, would line up with the spans. For the same reason the
+        `occurrences` block gives the ids alone on that path, with no
+        line, and a pseudonym withheld because it carries a name keeps
+        its entry and count where it already occurs, with no span: the
+        text at that span is the pseudonym. With a list to leave, the new
+        text's length is left out on that path too: beside a preview
+        without the list it tells the left occurrences' entries.
         A context window is a slice of the file text around a match, so
         by construction it contains the name that matched: on this path
         that is the researcher's reverse key going into the conversation
@@ -14811,6 +14921,7 @@ class QualcoderDatabase:
 
         context_withheld = include_context and not may_echo_names
         include_context = include_context and may_echo_names
+        leave_given = bool(plan.get("leave"))
         files = []
         totals = {"replacements": 0, "files": 0, "codings_changed": 0,
                   "annotations_changed": 0, "case_links_changed": 0,
@@ -14823,8 +14934,11 @@ class QualcoderDatabase:
         context_budget = engine.MAX_CONTEXT_TOTAL_CHARS
         for item in plan["files"]:
             text = item["old_text"]
+            # Of the occurrences as found, so that a preview given a list
+            # to leave says per entry what one without it says, and ties
+            # no left occurrence to its entry
             per_entry: Dict[int, List[Dict[str, Any]]] = {}
-            for replacement in item["replacements"]:
+            for replacement in item.get("found", item["replacements"]):
                 per_entry.setdefault(replacement.entry, []).append(replacement)
             replacements = []
             for index in sorted(per_entry):
@@ -14852,7 +14966,9 @@ class QualcoderDatabase:
                         windows.append(window)
                     block["context"] = windows
                 replacements.append(block)
-                totals["replacements"] += len(spans)
+            # The replacements the run makes: with a list, fewer than the
+            # entries' counts above by the occurrences left
+            totals["replacements"] += len(item["replacements"])
 
             codings = self._pseudonymise_counts(item["rows"]["code_text"],
                                                 has_seltext=True)
@@ -14893,8 +15009,9 @@ class QualcoderDatabase:
                 "position_safe": item["position_safe"],
                 "replacements": replacements,
                 "pre_existing_pseudonym_occurrences": [
-                    {**item, "pseudonym": pseudonym_of(item["entry"])}
-                    for item in engine.pre_existing_pseudonym_occurrences(
+                    self._pseudonymise_pre_existing(row, pseudonym_of,
+                                                    withheld)
+                    for row in engine.pre_existing_pseudonym_occurrences(
                         compiled, text, max_spans_per_entry)],
                 "overlap_conflicts": (
                     item["overlap_conflicts"] if may_echo_names else
@@ -14917,9 +15034,14 @@ class QualcoderDatabase:
                 "null_position_rows": self._pseudonymise_null_rows(item),
                 "unique_constraint_collisions": collisions,
             })
-            if choose_occurrences:
+            if leave_given and not may_echo_names:
+                # Beside a preview without the list, the new length tells
+                # the left occurrences' entries: it differs by each left
+                # occurrence's pseudonym's length less its name's
+                del files[-1]["new_text_length"]
+            if choose_occurrences or leave_given:
                 files[-1]["occurrences"] = self._pseudonymise_occurrences(
-                    item)
+                    item, may_echo_names, leave_given)
 
         preview: Dict[str, Any] = {
             "project": str(self.db_path),
@@ -14945,8 +15067,8 @@ class QualcoderDatabase:
                 "include_context was asked for and is not returned on this "
                 "run: the mapping came from the project's own "
                 "pseudonyms.json, so the text around each match would quote "
-                "names you did not supply. The counts, the spans and every "
-                "other part of this preview are unaffected.")
+                "names you did not supply. The counts and every other part "
+                "of this preview are unaffected.")
         if compiled.mapping.shared_pseudonyms:
             preview["shared_pseudonyms"] = [
                 {**item, "pseudonym": (

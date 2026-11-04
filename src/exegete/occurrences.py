@@ -3,10 +3,12 @@
 preview (v0.15.3).
 
 With `choose_occurrences`, the preview lists every occurrence of a name
-the run would replace as a short id and its line number. It never gives
-the name, a pseudonym, an entry number or the words around it, so that
-the researcher can say which occurrences to leave as they are and the
-assistant sends back ids alone.
+the run would replace as a short id, beside its line number when the
+mapping was typed into the call; with the project's names list, the id
+alone. It never gives the name, a pseudonym, an entry number or the
+words around it, so that the researcher can say which occurrences to
+leave as they are and the assistant sends back ids alone, in
+`leave_occurrences`; the run then leaves those occurrences as they are.
 
 An id is a keyed digest. The key is HMAC-SHA256 under the preview-token
 secret over a label of its own and the project the token binds; each
@@ -30,11 +32,13 @@ import bisect
 import hashlib
 import hmac
 import re
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 # How many occurrences one preview lists, in text order; past it the
 # preview says how many more there are
 OCCURRENCES_LISTED = 150
+# The most occurrences one run leaves as they are (ruling 116)
+MAX_OCCURRENCES_LEFT = 500
 # The fewest characters an id is shown with, and an id given back needs
 SHORTEST = 5
 # A full id: 26 characters of base 32, the digest's first 130 bits
@@ -43,6 +47,10 @@ FULL_LENGTH = 26
 ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz"
 # The letters Crockford's decoding reads as digits
 _READ_AS = str.maketrans({"i": "1", "l": "1", "o": "0"})
+# The refusal of an id in a list to leave that no preview could have
+# listed, given before anything is read
+ID_FORM = ("An occurrence id has at least five characters, letters and "
+           "digits, as the preview lists it.")
 # What the key is made over before the project. No other value keyed
 # with the same secret begins with it: a token's signature is over JSON,
 # the change record's digests begin "exegete change record" and the run
@@ -100,6 +108,12 @@ def shown_ids(full: Sequence[str],
     return list(full)
 
 
+def _read(given: str) -> str:
+    """An id as Crockford's decoding reads it: in either case, with i and
+    l as 1 and o as 0, and white space around it set aside."""
+    return given.strip().lower().translate(_READ_AS)
+
+
 def match(given: object, full: Sequence[str],
           shortest: Optional[int] = None) -> Optional[int]:
     """The position in `full` of the occurrence an id given names, or None.
@@ -113,16 +127,80 @@ def match(given: object, full: Sequence[str],
     that begins as that id does: the id then begins two full ids and
     names nothing, never the other occurrence (about one chance in 33
     million for each occurrence added, at five characters). One whose
-    occurrence moved or went names nothing.
+    occurrence moved or went names nothing, but by the chance a short id
+    allows: at five characters, about one in 33 million for each other
+    occurrence, its id begins the full id of another, and then names
+    that one. So a preview given ids marks the occurrences they name,
+    for the researcher to check.
     """
     if not isinstance(given, str):
         return None
-    wanted = given.strip().lower().translate(_READ_AS)
+    wanted = _read(given)
     if len(wanted) < (SHORTEST if shortest is None else shortest):
         return None
     found = [index for index, one in enumerate(full)
              if one.startswith(wanted)]
     return found[0] if len(found) == 1 else None
+
+
+def canonical_leave(value: object) -> List[str]:
+    """The ids of a list of occurrences to leave, as one value: each read
+    as Crockford's decoding reads it (`_read`), duplicates dropped,
+    sorted. None, or an empty list, is no list.
+
+    Raises ValueError (ID_FORM) for anything a preview could not have
+    listed: a value that is not a list of strings, or an id under
+    SHORTEST characters or with a character outside the alphabet once
+    read (u, for one). This is checked before anything is read, so a
+    malformed list is never matched against a text.
+    """
+    if value is None:
+        return []
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(ID_FORM)
+    ids = set()
+    for given in value:
+        if not isinstance(given, str):
+            raise ValueError(ID_FORM)
+        wanted = _read(given)
+        if len(wanted) < SHORTEST or not set(wanted) <= set(ALPHABET):
+            raise ValueError(ID_FORM)
+        ids.add(wanted)
+    return sorted(ids)
+
+
+def match_each(given: Sequence[str], full: Sequence[str]
+               ) -> Tuple[List[int], List[str], List[str]]:
+    """The places in `full` the ids `given` name, with the ids that name
+    none: (places, unmatched, ambiguous).
+
+    Each id names what `match` would name. The places are in text order,
+    each once, so two ids of different lengths that name one occurrence
+    count it once. `unmatched` holds the ids that begin no full id (or
+    are too short to name one), `ambiguous` those that begin more than
+    one, each as read. Each id is compared only with the full ids that
+    share its first SHORTEST characters, found through one index, so a
+    list of hundreds of ids costs one pass over the file's ids rather
+    than one for each id.
+    """
+    index: Dict[str, List[int]] = {}
+    for place, one in enumerate(full):
+        index.setdefault(one[:SHORTEST], []).append(place)
+    places = set()
+    unmatched: List[str] = []
+    ambiguous: List[str] = []
+    for one in given:
+        wanted = _read(one)
+        found = ([] if len(wanted) < SHORTEST else
+                 [place for place in index.get(wanted[:SHORTEST], ())
+                  if full[place].startswith(wanted)])
+        if len(found) == 1:
+            places.add(found[0])
+        elif found:
+            ambiguous.append(wanted)
+        else:
+            unmatched.append(wanted)
+    return sorted(places), unmatched, ambiguous
 
 
 def line_numbers(text: str, starts: Sequence[int]) -> List[int]:

@@ -1648,4 +1648,6 @@ class TestSurfacePins:
     def test_the_setter_docstring_states_the_exact_comparison_rule(self):
         doc = " ".join((server.set_project_ai_coder_name.__doc__ or "").split())
         assert "compared exactly" in doc
-        assert "never case-insensitively" in doc
+        # the served text's readability reading (v0.15.3): the rule said
+        # as letter case counting, not as a double negative
+        assert "letter case counts" in doc

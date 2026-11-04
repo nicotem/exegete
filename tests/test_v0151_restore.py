@@ -61,10 +61,11 @@ PREVIEW_PARAGRAPH = (
     "The preview gives when the backup was taken (backup_taken), how many "
     "files, codes, codings and the rest the project has now and the backup "
     "has (counts), and what happens to the names list, pseudonyms.json "
-    "(names_list_note). The project's lock file is held, kept fresh, for "
-    "the whole restore, so QualCoder 3.8.2, or another conversation using "
-    "Exegete, finds the project in use until it ends; over a stale lock "
-    "file, none is held and the restore removes that file.")
+    "(names_list_note). Exegete holds the project's lock file for the "
+    "whole restore and keeps it fresh, so QualCoder 3.8.2, or another "
+    "conversation using Exegete, finds the project in use until the "
+    "restore ends. If the lock file there is stale, left behind by a "
+    "program, Exegete holds none, and the restore removes that file.")
 
 
 def without_the_preview_paragraph(description: str) -> str:
@@ -428,8 +429,13 @@ def _texts_that_say_the_lock_is_held():
 def test_each_text_says_no_lock_is_held_over_a_stale_one(where):
     text = " ".join(_texts_that_say_the_lock_is_held()[where].split())
     assert "finds the project in use until" in text, where
-    stale = re.search(r"[Oo]ver a (stale lock file|lock file already "
-                      r"stale)[^.;]*?,? (none|nothing) is held", text)
+    # (v0.15.3, the readability reading: the description says it as "If
+    # the lock file there is stale, ... Exegete holds none"; the fact the
+    # same in all three)
+    stale = re.search(r"(?:[Oo]ver a (?:stale lock file|lock file already "
+                      r"stale)|[Ii]f the lock file there is stale)[^.;]*?,? "
+                      r"(?:(?:none|nothing) is held|Exegete holds none)",
+                      text)
     assert stale is not None, where
     assert stale.start() > text.index("finds the project in use until")
 

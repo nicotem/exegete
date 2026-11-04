@@ -1225,7 +1225,7 @@ def _description():
 
 SENTENCE = ("The project's Exegete folder (files the researcher fills in) "
             "is kept as it is, never taken from the backup; the preview says "
-            "when either has one.")
+            "when the project or the backup has one.")
 
 
 class TestTheTexts:
@@ -1328,9 +1328,9 @@ class TestTheTexts:
         as announced in 0.14, and says so."""
         overview = _flat(server.explain_ai_coding_tools())
         assert "whole project back" not in overview
-        assert ("list_backups + restore_backup roll the project back (all "
+        assert ("list_backups and restore_backup roll the project back, all "
                 "but its Exegete, audio and video folders, which a restore "
-                "keeps).") in overview
+                "keeps.") in overview
         topic = json.loads(server.explain_ai_coding_tools("apply_codings"))
         assert topic["note"] == server.HELP_TOPIC_REMOVED
 

@@ -303,7 +303,7 @@ class TestProcessFilter:
             database._process_scan_cache["at"] = None
         assert signals == [
             "a process that looks like QualCoder is running on this "
-            "machine (2 match(es))"]
+            "computer (2 match(es))"]
 
     @pytest.mark.real_process_scan
     def test_scan_never_raises(self, monkeypatch):

@@ -1638,7 +1638,7 @@ class TestWhatTheRefusalSaysWhenATokenDoesNotVerify:
                        preview_token=self._forge_mac(token))
         error = out["error"]
         assert "the project changed since the preview" in error
-        assert "preview secret has been rotated" in error
+        assert "preview secret has been replaced" in error
         assert "not one Exegete issued for this state" in error
         assert "the remedy is the same for all of them" in error
         assert "without preview_token for a fresh preview" in error

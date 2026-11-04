@@ -282,10 +282,10 @@ class TestMergeCategory:
         shown = json.loads(server.merge_category(2))["preview"]
         assert shown["source_memo_carried_to_target"] is False
         assert shown["note"] == (
-            "Merging a category reparents its codes and direct "
-            "sub-categories to the target (codings are untouched; they key "
-            "on the code, not the category), then deletes the source "
-            "category." + TOP_LEVEL)
+            "Merging a category moves its codes and direct "
+            "sub-categories under the target (codings are untouched, since "
+            "a coding belongs to a code, not to a category), then deletes "
+            "the source category." + TOP_LEVEL)
 
     def test_into_another_category(self, ladder):
         """Fix round 1, beside entries 3 and 5: the memo carried, the
@@ -295,10 +295,10 @@ class TestMergeCategory:
             2, into_category="Category A"))["preview"]
         assert shown["source_memo_carried_to_target"] is True
         assert shown["note"] == (
-            "Merging a category reparents its codes and direct "
-            "sub-categories to the target (codings are untouched; they key "
-            "on the code, not the category), then deletes the source "
-            "category." + CARRIED)
+            "Merging a category moves its codes and direct "
+            "sub-categories under the target (codings are untouched, since "
+            "a coding belongs to a code, not to a category), then deletes "
+            "the source category." + CARRIED)
         for word in ("parity", "code_tree", "QualCoder"):
             assert word not in shown["note"], word
 

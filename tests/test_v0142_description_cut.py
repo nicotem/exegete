@@ -73,8 +73,8 @@ RULES = {
         "safety", "Two guards, each with an explicit override the "
         "researcher must ask for:", "both refusals come back in one response."),
     "hidden_coder_override": (
-        "safety", "Coder visibility (projects with the coder-visibility "
-        "capability that hide coders)", None),
+        "safety", "Coder visibility (in a project that hides some coders' "
+        "work)", None),
     "close_qualcoder_40_before_renaming": (
         "safety", "QualCoder 4.0 writes no lock file, so Exegete "
         "may miss a 4.0 window", None),
@@ -508,8 +508,10 @@ class TestWhatThisReleaseMoved:
                                    "Every suggestion is validated"),
             "rename_file": ("Refused while the project's lock file",
                             "Refused, each with its reason"),
+            # v0.15.3, the readability reading: the sentence the rule was
+            # moved past now points to list_available_projects in fewer words
             "select_project": ("QualCoder 4.0 detection",
-                               "Use this tool to change"),
+                               "list_available_projects finds the projects"),
         }
         for name, (earlier, later) in moved.items():
             d = " ".join(registered[name].split())

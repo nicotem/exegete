@@ -648,9 +648,9 @@ class TestTheSetter:
         server._apply_toolset("full")
         d = _flat(server.mcp.original_descriptions[
             "set_project_ai_coder_name"])
-        assert ("Refused if the name is the project's own coder name or the "
+        assert ("Refused if the name is the project's own coder name, the "
                 "researcher's own coder name in Exegete's settings, "
-                "QualCoder's literal default coder name \"default\", or "
+                "QualCoder's default coder name \"default\", or "
                 "QualCoder's speaker coder") in d
 
 

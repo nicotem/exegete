@@ -1401,7 +1401,7 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
                     signals.append(
                         "the QualCoder 4.0 AI search index shows recent "
                         f"activity ({sidecar} present and recently "
-                        "written: AI indexing appears to be in flight, "
+                        "written: AI indexing appears to be under way, "
                         "or the last exit was unclean)")
                 else:
                     signals.append(
@@ -1428,7 +1428,7 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
         if scan is not None and scan.hits:
             signals.append(
                 f"a process that looks like QualCoder is running on "
-                f"this machine ({len(scan.hits)} match(es))")
+                f"this computer ({len(scan.hits)} match(es))")
     except Exception as e:  # never let a heuristic break a tool
         logger.debug(f"GUI-open heuristics failed: {error_label(e)}")
     return signals
@@ -11732,8 +11732,8 @@ class QualcoderDatabase:
         file_id = validate_id(file_id, "file_id")
         if not isinstance(memo, str) or not memo.strip():
             raise ValueError(
-                "memo must be a non-empty string; an annotation IS its "
-                "note; there is no empty annotation"
+                "memo must be a non-empty string: an annotation is its "
+                "note, so there is no empty annotation"
             )
         _reject_if_too_long(memo, "memo")
         # Memo privacy ('#####'): new memos are public-text only (see
@@ -12075,8 +12075,8 @@ class QualcoderDatabase:
             if self.would_create_category_cycle(from_category_id,
                                                 into_category_id):
                 raise ValueError(
-                    "Cannot merge a category into its own descendant; "
-                    "that would orphan the subtree"
+                    "Cannot merge a category into a category below it; "
+                    "that would cut its branch off from the code tree"
                 )
             target_desc = {"id": into_category_id, "name": dest["name"]}
         else:
@@ -12118,10 +12118,11 @@ class QualcoderDatabase:
             "private_notes_affected": (
                 0 if carries_memo else self._count_private_notes(
                     "code_cat", "catid = ?", (from_category_id,))),
-            "note": "Merging a category reparents its codes and direct "
-                    "sub-categories to the target (codings are untouched; "
-                    "they key on the code, not the category), then deletes "
-                    "the source category." + memo_note,
+            "note": "Merging a category moves its codes and direct "
+                    "sub-categories under the target (codings are "
+                    "untouched, since a coding belongs to a code, not to "
+                    "a category), then deletes the source category."
+                    + memo_note,
         }
         graphs = self._saved_graph_preview(from_category_id)
         if graphs is not None:

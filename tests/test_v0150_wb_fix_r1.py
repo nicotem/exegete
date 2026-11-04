@@ -433,8 +433,8 @@ class TestTheDocumentsOtherPoints:
                 "pseudonymising a file, importing documents, saving the "
                 "names list and correcting the researcher's coder name take "
                 "two steps") in brief
-        assert ("gives the methods notes and approaches to prompting (two "
-                "published)") in brief
+        assert ("gives methods notes and three ways to prompt, two of them "
+                "published") in brief
         assert "some published approaches" not in brief
 
     def test_what_stays_on_your_computer(self):

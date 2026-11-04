@@ -6478,15 +6478,23 @@ Args:
              With include_context on, the context windows also share
              one budget for the whole preview; a block that runs out
              of it says context_truncated.
+    choose_occurrences: List every occurrence of a name this run
+             would replace, in text order, each as a short id and its
+             line number, in the file's `occurrences` block. It lists
+             the first 150 and says how many more. It holds no name,
+             pseudonym or entry number, and no words of the file. Set
+             it when the researcher wants to choose occurrences to
+             leave as they are, such as those of a second person
+             with the same name.
 
-The last five arguments, record_in_journal and
-researcher_keeps_mapping are NOT bound into the token: passing a
-different value for one of them on the execute call is not "a
-different operation", it changes what is shown, whether the run
-records itself, or attests where the mapping is kept. The six that
-ARE bound are mapping, file_id, case_mode, overlap_policy,
-rewrite_memos and save_mapping_to_project, and they must be repeated
-identically on the execute call.
+The arguments from include_context to choose_occurrences,
+record_in_journal and researcher_keeps_mapping are not bound into
+the token: passing a different value for one of them on the execute
+call is not "a different operation", it changes what is shown,
+whether the run records itself, or attests where the mapping is
+kept. The six that ARE bound are mapping, file_id, case_mode,
+overlap_policy, rewrite_memos and save_mapping_to_project, and they
+must be repeated identically on the execute call.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -6599,6 +6607,11 @@ Returns:
         "default": 50,
         "title": "Max Spans Per Entry",
         "type": "integer"
+      },
+      "choose_occurrences": {
+        "default": false,
+        "title": "Choose Occurrences",
+        "type": "boolean"
       }
     },
     "required": [

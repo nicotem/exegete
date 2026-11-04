@@ -8609,8 +8609,10 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "overlap_policy, rewrite_memos and save_mapping_to_project, and "
          "they must be repeated identically on the execute call."),
         ("the_unbound_arguments",                        # Brief 2, H.2.5
-         "The last five arguments, record_in_journal and "
-         "researcher_keeps_mapping are NOT bound into the token"),
+         # v0.15.3: choose_occurrences joins them, named without a count
+         "The arguments from include_context to choose_occurrences, "
+         "record_in_journal and researcher_keeps_mapping are not bound into "
+         "the token"),
         # Brief 2, 4.15: one pin per point the description must make.
         ("notes_are_rewritten_project_wide",             # point 1
          "rewrite_memos: Also rewrite the public part of every note (the "

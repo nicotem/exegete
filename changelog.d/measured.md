@@ -7,7 +7,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 205,456 | 204,793 |
+| `full` (80 tools) | 206,098 | 204,793 |
 | `core` (28 tools) | 76,139 | 75,947 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 13,784 | 13,721 |
@@ -22,3 +22,8 @@ Python 3.13.5 with the libraries in `uv.lock`:
   brief is 63 characters longer, from the rules on evidence, written for
   any document rather than for interviews alone, and the title of its
   last section.
+- `pseudonymise_source`, which is in `full` alone, is 642 characters
+  longer: its new argument `choose_occurrences` adds 542 to its
+  description and 100 to its schema. Its description, the one longer
+  than 16,384 characters, is 17,680 characters on 3.13 and 18,812 on
+  3.11.

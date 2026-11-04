@@ -113,6 +113,7 @@ from .database import (
     PSEUDONYMS_JSON_NAME,
 )
 from . import pseudonymise as pseudo
+from . import occurrences as occurrence_ids
 from . import new_project
 from . import names_file, parts, private_files, reading, reading_folder
 from .path_identity import is_inside, is_inside_any, is_same
@@ -19789,6 +19790,14 @@ _NOT_SAVED_NO_RUN = (
     "contains one of the names and preview again. (A researcher who uses "
     "QualCoder can also enter the mapping in its Pseudonyms dialog, under "
     "Manage Files.)")
+# Choosing occurrences to leave, and leaving them, refused with a note
+# rewrite (v0.15.3): one text for the preview's choice and the run's list
+_OCCURRENCES_WITH_NOTE_REWRITE = (
+    "Exegete cannot leave some occurrences of a name as they are while "
+    "rewrite_memos is on. A note rewrite replaces the name in every note "
+    "and journal entry across the project, including those about the "
+    "person whose occurrences are left. Preview again with rewrite_memos "
+    "off, and change by hand the notes that name either person.")
 
 
 def _after_a_colon(text: str) -> str:
@@ -21352,6 +21361,7 @@ def pseudonymise_source(
     scan_residue: bool = True,
     residue_detail: str = "file",
     max_spans_per_entry: int = 50,
+    choose_occurrences: bool = False,
 ) -> str:
     """Replace names with pseudonyms in a project's stored text.
 
@@ -21627,15 +21637,23 @@ def pseudonymise_source(
                  With include_context on, the context windows also share
                  one budget for the whole preview; a block that runs out
                  of it says context_truncated.
+        choose_occurrences: List every occurrence of a name this run
+                 would replace, in text order, each as a short id and its
+                 line number, in the file's `occurrences` block. It lists
+                 the first 150 and says how many more. It holds no name,
+                 pseudonym or entry number, and no words of the file. Set
+                 it when the researcher wants to choose occurrences to
+                 leave as they are, such as those of a second person
+                 with the same name.
 
-    The last five arguments, record_in_journal and
-    researcher_keeps_mapping are NOT bound into the token: passing a
-    different value for one of them on the execute call is not "a
-    different operation", it changes what is shown, whether the run
-    records itself, or attests where the mapping is kept. The six that
-    ARE bound are mapping, file_id, case_mode, overlap_policy,
-    rewrite_memos and save_mapping_to_project, and they must be repeated
-    identically on the execute call.
+    The arguments from include_context to choose_occurrences,
+    record_in_journal and researcher_keeps_mapping are not bound into
+    the token: passing a different value for one of them on the execute
+    call is not "a different operation", it changes what is shown,
+    whether the run records itself, or attests where the mapping is
+    kept. The six that ARE bound are mapping, file_id, case_mode,
+    overlap_policy, rewrite_memos and save_mapping_to_project, and they
+    must be repeated identically on the execute call.
 
     Returns:
         JSON: the preview and a preview_token, or the result of the run.
@@ -21684,6 +21702,14 @@ def pseudonymise_source(
     keeps = bool(researcher_keeps_mapping)
     if not typed and (save or keeps):
         return json.dumps({"error": _RETENTION_ON_THE_SIDECAR_PATH},
+                          indent=2)
+    # Choosing occurrences with a note rewrite (v0.15.3): the rewrite
+    # would give the pseudonym to the notes about whoever the occurrences
+    # left are, so the pair is refused here too, before any read
+    choose_occurrences = bool(choose_occurrences)
+    if choose_occurrences and bool(rewrite_memos):
+        return json.dumps({"error": _OCCURRENCES_WITH_NOTE_REWRITE,
+                           "reason": "occurrences_with_rewrite_memos"},
                           indent=2)
     sidecar_encoding = None
     if use_project_pseudonyms:
@@ -21763,7 +21789,8 @@ def pseudonymise_source(
         """
         if read_phase.get("conn") is db_.conn:
             return read_phase["plan"]
-        plan = db_.pseudonymise_plan(compiled, overlap_policy, file_ids)
+        plan = db_.pseudonymise_plan(compiled, overlap_policy, file_ids,
+                                     occurrence_key=occurrence_key)
         if "plan" not in read_phase:
             read_phase["plan"] = plan
             read_phase["conn"] = db_.conn
@@ -21804,7 +21831,7 @@ def pseudonymise_source(
             context_chars=context_chars, scan_residue=scan_residue,
             max_spans_per_entry=max_spans_per_entry,
             may_echo_names=may_echo_names, residue_detail=residue_detail,
-            memo_plan=memo_plan)
+            memo_plan=memo_plan, choose_occurrences=choose_occurrences)
         if sidecar_encoding is not None:
             preview["pseudonyms_json_encoding"] = sidecar_encoding
         preview["mapping_retention"] = _retention_block()
@@ -21947,6 +21974,11 @@ def pseudonymise_source(
             indent=2)
     bind = bind_id("pseudonymise_source", token_args, _token_project(),
                    secret, version=token_version(preview_token))
+    # The key the occurrences' ids are made with (v0.15.3), from the same
+    # secret and the project the token binds: given to every phase that
+    # builds the plan, so the preview, the state check under the write
+    # lock and the write all see the same ids
+    occurrence_key = occurrence_ids.id_key(secret, _token_project())
     manifest_name = f"run_{when.strftime('%Y%m%dT%H%M%SZ')}_{bind}.json"
     # The project path the manifest records, settled here with the rest
     # and never re-resolved after the commit: see _pseudonymise_manifest.
@@ -21974,7 +22006,8 @@ def pseudonymise_source(
         measured it at about a fifth of the residue scan's cost), not
         the residue scan this docstring keeps out of the transaction.
         """
-        plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids)
+        plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
+                                     occurrence_key=occurrence_key)
         captured["write_plan"] = plan
         memo_plan = (wdb.pseudonymise_memo_plan(compiled, plan)
                      if rewrite_memos else None)
@@ -22005,7 +22038,8 @@ def pseudonymise_source(
     def _op(wdb):
         plan = captured.get("write_plan")
         if plan is None:                  # pragma: no cover - defensive
-            plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids)
+            plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
+                                         occurrence_key=occurrence_key)
         # C7, with the fingerprints the READ-ONLY phase captured, which
         # is what D1 3.6 specifies. Passing the write phase's own
         # fingerprints made the check compare a read to itself: both

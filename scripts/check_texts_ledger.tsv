@@ -829,7 +829,6 @@ b196356792227b0e	src/exegete/server.py	served	voice	seeded 27 October, to be rea
 1160a5a3429f8313	src/exegete/server.py	served	qualcoder	about QualCoder itself: what it does, counts, keeps or shows, as the sentence says	The file joins the project's documents, ready for coding, stored as QualCoder's 
 9189d56ff787906f	src/exegete/server.py	served	voice	seeded 27 October, to be read	The file-text count has fixed budgets, and all it spends is charged to them: pas
 24a4553f4ab6b407	src/exegete/server.py	served	qualcoder	about QualCoder itself: what it does, counts, keeps or shows, as the sentence says	The index holds the text of every source, and QualCoder 4.0 rebuilds it when it 
-b27d71be9161d17b	src/exegete/server.py	served	voice	seeded 27 October, to be read	The last five arguments, record_in_journal and researcher_keeps_mapping are NOT 
 6fcf25d916e7a58b	src/exegete/server.py	path	request	a sign: the lock file QualCoder 3.8.2 writes, with another conversation using Exegete named as the other cause	The lock file has not been refreshed for over 30 seconds, so it is a leftover: Q
 3c9aec7afa79a7d3	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	The mapping cannot be saved into this project's pseudonyms.json: entry {} maps a
 190395c26c42b471	src/exegete/server.py	path	voice	seeded 27 October, to be read	The names file there could not be read just now (it changed or went while Exeget

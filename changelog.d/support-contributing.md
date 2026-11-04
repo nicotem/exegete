@@ -29,3 +29,8 @@
   What Zenodo and GitHub do is now dated, read on 4 November 2026.
 - NOTICE, in both packages, lists six, which EbookLib needs, under the
   MIT licence, and calls the program Exegete throughout.
+- The four documents were also read for plain words. Long sentences
+  were split, and words a newcomer meets first, such as an issue, a
+  lock file, a backup, a log and PyPI, are explained where they are
+  used. In NOTICE, entry 73 points to entry 45, the one it describes,
+  where it gave 44.

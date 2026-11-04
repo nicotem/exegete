@@ -250,9 +250,10 @@ def test_the_code_no_longer_calls_4_0_unreleased_or_a_beta():
             "4.0's;") in doc
     contributing = _flat("CONTRIBUTING.md")
     assert "VERIFIED_MASTER_COMMIT" not in contributing
-    assert ("What researchers are told Exegete is verified against is the "
-            "release itself, QualCoder 4.0 (`VERIFIED_QUALCODER` in "
-            "`database.py`).") in contributing
+    # (v0.15.3, the readability reading: the documents as the subject)
+    assert ("The documents tell researchers that Exegete is verified "
+            "against the release itself, QualCoder 4.0 "
+            "(`VERIFIED_QUALCODER` in `database.py`).") in contributing
 
 
 def test_the_bug_report_form_names_the_release():

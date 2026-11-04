@@ -228,7 +228,7 @@ class TestTheGuard:
         # v0.15.3, NOTICE read in full: "the assistant" for "the model"
         assert ("to offer the assistant QualCoder 4.0's four-way "
                 "methodological gate (allow, allow_with_caveat, "
-                "reframe_and_ask, refuse) in QualCoder's terms; the four "
+                "reframe_and_ask, refuse) in QualCoder's terms. The four "
                 "labels are QualCoder's") in notice
 
     def test_the_topic_on_the_earlier_name_is_still_reachable(self):

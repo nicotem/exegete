@@ -84,6 +84,10 @@ HEAD = ("This page is for you. To leave an occurrence as it is, tell the "
 NOTE = ("This page is for the researcher: do not open it, read it or look "
         "at it with any tool, browser or screenshot. Ask them which ids to "
         "leave.")
+BRIEF_LINE = ("That page, the page a pseudonymisation preview opens for "
+              "choosing occurrences, and the copies they open are for the "
+              "researcher: never open, read or look at them with any tool, "
+              "browser or screenshot.")
 # What `occurrences_page` may hold, and nothing else
 ANSWER_KEYS = {"opened", "counts", "note", "location", "not_opened_because",
                "withheld_note", "not_written_because"}
@@ -321,8 +325,9 @@ class TestThePage:
 
 class TestTheAnswer:
     def test_the_safety_sentences(self, tmp_path):
-        """The page's head and the answer's note, whose first sentence is
-        the import page's, word for word."""
+        """The page's head, the answer's note, whose first sentence is the
+        import page's, and the brief's privacy line naming the page, word
+        for word."""
         with fresh(tmp_path, TOMS) as folder:
             out = preview_of(mapping=TOM, choose_occurrences=True)
             page = " ".join(page_of(folder).split())
@@ -330,6 +335,8 @@ class TestTheAnswer:
             assert out["occurrences_page"]["note"] == NOTE
             first = import_page.FOR_THE_ASSISTANT.split(". ")[0]
             assert NOTE.startswith(first + ". ")
+        brief = " ".join(server.BRIEF_FULL.split())
+        assert BRIEF_LINE in brief
 
     def test_location_only_when_not_opened(self, tmp_path, monkeypatch):
         """On the typed path: opened, no place; not opened, the place and
@@ -389,6 +396,15 @@ class TestTheAnswer:
                                for record in caplog.records)
             assert "PermissionError EACCES" in logged
             assert "Zebedee" not in logged
+
+    def test_the_description_says_the_preview_opens_a_page(self):
+        server._apply_toolset("full")
+        text = " ".join(server.mcp.original_descriptions[
+            "pseudonymise_source"].split())
+        args = text[text.index("choose_occurrences: "):
+                    text.index("leave_occurrences: ")]
+        assert "The preview then opens a page for the researcher." in args
+
 
 class TestTheNamesListsPath:
     def test_the_walk_with_choose_occurrences(self, tmp_path):

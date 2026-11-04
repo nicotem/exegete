@@ -7,10 +7,10 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 206,829 | 204,793 |
+| `full` (80 tools) | 206,893 | 204,793 |
 | `core` (28 tools) | 76,139 | 75,947 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 13,784 | 13,721 |
+| The full brief | 13,856 | 13,721 |
 | The brief in `core` | 1,923 | 1,923 |
 
 - The reading of the texts Exegete gives the assistant adds 663
@@ -22,8 +22,14 @@ Python 3.13.5 with the libraries in `uv.lock`:
   brief is 63 characters longer, from the rules on evidence, written for
   any document rather than for interviews alone, and the title of its
   last section.
-- `pseudonymise_source`, which is in `full` alone, is 1,373
+- `pseudonymise_source`, which is in `full` alone, is 1,437
   characters longer: its two new arguments, `choose_occurrences` and
   `leave_occurrences`, add 1,117 to its description and 256 to its
-  schema. Its description, the one longer than 16,384 characters, is
-  18,255 characters on 3.13 and 19,423 on 3.11.
+  schema, and the sentence that says a preview with
+  `choose_occurrences` opens a page for the researcher adds 63 to its
+  description and 64 to the whole definition. Its description, the one
+  longer than 16,384 characters, is 18,318 characters on 3.13 and
+  19,490 on 3.11.
+- The full brief's line on the pages Exegete opens for the researcher
+  names the page for choosing occurrences too, which adds 72 characters
+  to it.

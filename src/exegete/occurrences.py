@@ -30,9 +30,11 @@ are made with the standard library alone.
 
 The same preview writes a page for the researcher (`build_page`): the
 file's whole text as stored, one paragraph per stored line, each
-numbered as the preview numbers it, every occurrence marked with its id
-after it and, with a list to leave, those left marked in a second style,
-labelled "left as it is". It shows no pseudonym, no entry number and
+numbered as the preview numbers it and laid out in the direction of
+its own first letter; every occurrence
+marked with its id after it (in a line of right-to-left text too) and,
+with a list to leave, those left marked in a second style, labelled
+"left as it is". It shows no pseudonym, no entry number and
 nothing else of the mapping. Exegete writes it into the file's folder in
 the reading folder (`reading_folder.occurrences_folder`, where pages are
 private to this account, not synced and not indexed) and opens it in the
@@ -253,19 +255,21 @@ PAGE_FOR_THE_ASSISTANT = (
 LEFT_LABEL = "left as it is"
 # The page's own rules beside the reading copy's (reading_copy.BASE_STYLE):
 # each line's number in a margin of its own, which copying leaves out, the
-# occurrences marked, and each id in a label after its occurrence
+# occurrences marked, and each id in a label after its occurrence. The
+# margins are set by the line's direction (inline start and end), so that
+# a line of right-to-left text has its number and margin on the right
 PAGE_STYLE = """
-#text p{padding-left:4.25em;text-indent:-4.25em}
-.n{display:inline-block;width:3.5em;margin-right:.75em;text-indent:0;
-text-align:right;color:var(--quiet);font-variant-numeric:tabular-nums;
+#text p{padding-inline-start:4.25em;text-indent:-4.25em}
+.n{display:inline-block;width:3.5em;margin-inline-end:.75em;text-indent:0;
+text-align:end;color:var(--quiet);font-variant-numeric:tabular-nums;
 -webkit-user-select:none;user-select:none}
 mark.occ{background:#ffe08a;color:#1f1f1f;border-radius:2px;
 outline:2px solid #b8860b}
 mark.occ.left{background:#d6e4f5;outline:2px dashed #3d6cb3}
 .id{font-size:.8em;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,
-monospace;margin:0 .2em 0 .3em;padding:0 .3em;border:1px solid var(--line);
-border-radius:.3em;background:var(--panel);color:var(--fg);
-white-space:nowrap}
+monospace;margin-block:0;margin-inline:.3em .2em;padding:0 .3em;
+border:1px solid var(--line);border-radius:.3em;background:var(--panel);
+color:var(--fg);white-space:nowrap}
 .id.left{border-style:dashed}
 """
 
@@ -291,19 +295,25 @@ def _lines(text: str) -> List[Tuple[int, int]]:
 
 def _label(shown_id: str, left: bool) -> str:
     """An occurrence's id, after it: text to copy, and a screen reader's
-    words before it."""
+    words before it. Its words are isolated, left to right (`bdi`), so
+    that in a line of right-to-left text they stand after their own
+    occurrence, play no part in choosing the line's direction, and are
+    not turned round by a direction character in the text before them."""
     words = f"{esc(shown_id)}, {LEFT_LABEL}" if left else esc(shown_id)
-    return (f'<span class="id{" left" if left else ""}">'
-            f'<span class="sr">occurrence id </span>{words}</span>')
+    return (f'<span class="id{" left" if left else ""}"><bdi dir="ltr">'
+            f'<span class="sr">occurrence id </span>{words}</bdi></span>')
 
 
 def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
                 left: Collection[int]) -> str:
     """The text as paragraphs, one per stored line, each after its number;
-    each occurrence in a mark, its id after its end. An occurrence never
-    crosses a line break (the rewrite matches nothing across one); were
-    one to, it is marked on each line it covers and labelled once, after
-    its last part."""
+    each occurrence in a mark, its id after its end. Each line takes the
+    direction of its own first letter (`dir="auto"`), as an editor shows
+    plain text, so that in a line of Hebrew or Arabic each id stands
+    after its own occurrence in reading order, not after the next. An
+    occurrence never crosses a line break (the rewrite matches nothing
+    across one); were one to, it is marked on each line it covers and
+    labelled once, after its last part."""
     lines = _lines(text)
     starts = [start for start, _end in lines]
     # Each line's marked stretches: start, end, the occurrence's position
@@ -325,7 +335,7 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
     out: List[str] = []
     for number, ((start, end), marked) in enumerate(zip(lines, pieces),
                                                     start=1):
-        parts = [f'<p><span class="n">{number}</span>']
+        parts = [f'<p dir="auto"><span class="n">{number}</span>']
         at = start
         for cut_start, cut_end, index, last in marked:
             cut_start = max(cut_start, at)

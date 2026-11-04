@@ -10,7 +10,9 @@ welcome, and they help decide what is built next.
 Everything goes through
 [GitHub Issues](https://github.com/nicotem/exegete/issues), the
 project's public list of reports on GitHub. Each report there is called
-an issue.
+an issue. Opening an issue needs a GitHub account, which is free.
+Reading the issues needs no account (checked on GitHub on 4 November
+2026).
 
 - **Bug reports.** Say what you asked the assistant to do, what you
   expected, and what happened instead. Exegete's actions are called
@@ -20,11 +22,17 @@ an issue.
   published with it. A made-up example, or one with names and details
   removed, usually shows the problem as well. You can also describe the
   data without copying it, such as "a code name with an apostrophe" or
-  "a file of about 40,000 characters". Claude Desktop keeps a log of
-  Exegete: a file that records every request to Exegete and every
-  answer, the text of your documents included. Other apps keep records
-  of their own. Read a log before you copy any of it into an issue, and
-  copy only the lines about the problem.
+  "a file of about 40,000 characters". A line of the names file,
+  `Names to replace.txt`, or an entry of the project's
+  `pseudonyms.json` pairs a real name with its pseudonym. For a problem
+  with replacing names, describe the name instead, such as its length,
+  an apostrophe in it, or that it is also an ordinary word. Claude
+  Desktop keeps a log of Exegete: a file that records every request to
+  Exegete and every answer, the text of your documents included. Other
+  apps keep records of their own. Read a log before you copy any of it
+  into an issue, and copy only the lines about the problem. They include
+  the request that failed and Exegete's answer, which can hold names,
+  paths and quoted text, so replace those or describe them.
   [INSTALL.md](INSTALL.md#reading-the-server-log) says where Claude
   Desktop keeps its log, and [PRIVACY.md](PRIVACY.md) says what leaves
   your computer when you use Exegete, and what stays on it.
@@ -58,7 +66,14 @@ reply. Please use
   as a copy. The assistant can make one with the tool
   `copy_project_to_workspace`, which copies a project into your folder
   for projects. A copy of important data on another disk also protects
-  it if this computer's disk fails.
+  it if this computer's disk fails, and your ethics approval may say
+  where copies of participants' data can be kept. A sync service such
+  as iCloud or OneDrive copies a project off this computer when it
+  keeps the project's folder. Installs from the Terminal put the folder
+  for projects in Documents, which those services may keep, unless you
+  choose another folder. The Terminal guide's
+  ["What you need"](docs/installing-from-the-terminal.md#what-you-need)
+  says more.
 - Everything Exegete gives the assistant goes into the conversation,
   the text of your documents included. Your app sends the conversation
   to its AI provider, such as Anthropic for Claude Desktop, unless the

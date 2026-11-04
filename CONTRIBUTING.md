@@ -61,8 +61,8 @@ at first.
    `TRACK6_GIANT=1` is set. The suite gives each test a home folder
    of its own, inside pytest's temporary folder (`tests/conftest.py`).
    At the end of a run, the suite fails if a test created anything in
-   your own folders for projects. It also fails if a test changed the
-   folder where Exegete keeps its own files: `~/.exegete`, or
+   your own folders for projects. It also fails if a test changed
+   `~/.exegete`, the folder where Exegete keeps its working files, or
    `~/.qualcoder_mcp` from before the rename. A copy of Exegete that you
    are running at the same time can change that folder too, so stop it
    before you run the suite.
@@ -158,8 +158,8 @@ at first.
    names an action must name the version it is pinned at. The tests
    fail on an unrecorded SHA on purpose: Dependabot has left a version
    comment stale beside a bumped SHA before, and nothing else checks the
-   comment against upstream. A new job declares, in its own entry, the
-   least `permissions:` it needs. A checkout passes
+   comment against upstream. A new job declares, in its own definition,
+   the least `permissions:` it needs. A checkout passes
    `persist-credentials: false` unless the job really uses git
    credentials. The same tests check both. They also read a workflow
    added as `.yaml`, and a composite action under `.github/actions`.
@@ -195,9 +195,11 @@ at first.
    while the project's lock file is active. Each is written once, as a
    constant in `src/exegete/server.py`, and `_with_paragraphs` puts it
    back into each tool's docstring, so a change to it is made there.
-   One copy is typed by hand: `apply_codings` gives the lock
-   paragraph's words as a safety guarantee of its own, with other line
-   breaks, so a rewording is made there too.
+   Three tool texts also give the lock paragraph's words, typed by hand:
+   `apply_codings`'s safety guarantees, `restore_backup`'s list of
+   safeguards, and the key features in `explain_ai_coding_tools`'
+   overview. The brief, which `read_brief` returns, gives a shorter form
+   of the same rule. A rewording is made in each of them too.
 
    For each tool set, `full` and `core`, `docs/snapshot/` keeps the
    texts Exegete gives the assistant that are the same for every
@@ -388,15 +390,19 @@ CI, and expect requests for more tests rather than fewer.
     and Macs with Apple silicon. They are large, but they are loaded
     only inside the reading process, never at Exegete's start. In the
     reading process, Exegete's own code imports onnxruntime only to
-    switch its usage reports off. A new major release of either could
-    stop PDFs being read there, which the `newest-libraries` job would
-    show;
+    switch its usage reports off. On Windows, onnxruntime makes a few
+    reports as it loads, before the switch can be reached, and
+    PRIVACY.md, "How your data flows", says what they hold. A new major
+    release of either could stop PDFs being read there, which the
+    `newest-libraries` job would show;
   - pywin32, on Windows only;
   - uvicorn, python-multipart and sse-starlette, since a limit at their
     next minor release would hold back routine fixes;
-  - defusedxml; striprtf, already required at one exact release;
-    EbookLib, small, with about one release a year; and Starlette,
-    neither large nor imported by Exegete.
+  - defusedxml;
+  - striprtf, already required at one exact release;
+  - EbookLib, which is small and has had six releases since 2018, the
+    latest on 1 November 2026 (PyPI, read on 4 November 2026);
+  - and Starlette, neither large nor imported by Exegete.
 
   If you change a dependency or a limit in `pyproject.toml`, run
   `uv lock` in the same commit to write `uv.lock` again. Then
@@ -474,7 +480,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── import_words.py      # What the import says, in fixed plain words
 │   │   ├── import_page.py       # The page for checking letters that look garbled
 │   │   ├── garbled_text.py      # Letters that came out wrong, read back through common sets
-│   │   ├── reading.py           # open_file_for_reading: the reading page by default, or the original in its folder or its own app (0.14.3)
+│   │   ├── reading.py           # open_file_for_reading: the reading page by default, or a read-only copy of the original, shown in its folder or opened in its own app (0.14.3)
 │   │   ├── reading_copy.py      # The reading page: a file's whole text and its codings
 │   │   ├── reading_folder.py    # The private reading folder, and its tidying
 │   │   ├── opener.py            # Opening a file in its own app, or showing it in its folder
@@ -556,10 +562,21 @@ The MCP library's own command, `mcp dev src/exegete/server.py`, cannot
 start Exegete. It loads `server.py` as a file on its own, and the
 module's imports are relative to its package. Started from the
 Inspector, Exegete works in your own home folder, as it does however it
-is started. It keeps its own files in `~/.exegete`, and looks for
+is started. It keeps its working files in `~/.exegete`, and looks for
 projects in the usual places. If an earlier copy left a folder at
-`~/.qualcoder_mcp`, the first start moves it to `~/.exegete`. In the
-page, `list_available_projects` and `select_project` choose a project.
+`~/.qualcoder_mcp`, the first start moves it to `~/.exegete`. The
+pages and copies that Exegete opens for reading go into its reading
+folder, and a reading page holds a document's whole text and its
+codings. [PRIVACY.md](PRIVACY.md#reading-a-whole-file-what-leaves-the-computer)
+says where that folder is. To try the tools away from your own
+projects and these folders, start the Inspector with `HOME` set to an
+empty folder, as the suite does for each test. On Windows, set
+`USERPROFILE` to the same folder and `LOCALAPPDATA` to a folder inside
+it. On Linux, unset `XDG_CACHE_HOME` or set it inside that folder.
+`tests/conftest.py` shows how. Then make a made-up project there with
+`scripts/create_test_project.py`, which takes the path of a new folder
+ending in `.qda`, and select it by that path. In the page,
+`list_available_projects` and `select_project` choose a project.
 Exegete is built on the
 [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
 

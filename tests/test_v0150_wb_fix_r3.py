@@ -83,15 +83,23 @@ def _section(text, start, end):
 class TestTheRefusalNamesBothCauses:
 
     def test_support(self):
+        # v0.15.3, SUPPORT read in full: the README's account, in its
+        # facts: the request is made of those who use QualCoder, the lock
+        # file has its two causes, 4.0 writes none and its signs can miss
+        # a window, and a write while QualCoder has the project open can
+        # lose work
         support = _flat(_read("SUPPORT.md"))
-        assert ("- If you also use QualCoder, close the project there before "
-                "any writing. Writes are refused while the project's lock "
-                "file is active (QualCoder 3.8.2 has the project open, or "
-                "another conversation using Exegete is writing to it). "
-                "QualCoder 4.0 writes no lock file, so there Exegete can "
-                "only report signs that the project may be open, which can "
-                "miss an open window; a write into a project open in any "
-                "QualCoder window can lose work.") in support
+        bullet = support[support.index("- If you also use QualCoder, close "
+                                       "the project there"):]
+        bullet = bullet[:bullet.index(" - ", 4)]
+        assert ("refuses every change to the project's database while the "
+                "project's lock file is active: while QualCoder 3.8.2 has the "
+                "project open, or while another conversation using Exegete "
+                "is writing to it.") in bullet
+        assert "QualCoder 4.0 writes no lock file." in bullet
+        assert "it can miss one" in bullet
+        assert ("a change made while QualCoder has the project open can lose "
+                "work") in bullet
 
     # v0.15.2, the tools and guides piece: each place that gives the
     # refusal still gives both causes; the guide tells the 4.0 caveat once,
@@ -195,7 +203,8 @@ class TestTheRefusalNamesBothCauses:
 
     def test_the_project_selection_guide(self):
         guide = _flat(_read("PROJECT_SELECTION_GUIDE.md"))
-        assert ("Shows which project is currently open, whether the "
+        # v0.15.3: "selected", the guide's word for the project in use
+        assert ("Shows which project is selected, whether the "
                 "project's lock file is active (`qualcoder_open`: QualCoder "
                 "3.8.2 has the project open, or another conversation using "
                 "Exegete is writing to it) and the signs of an open "

@@ -11284,10 +11284,18 @@ def edit_suggestion(
                              f"{new_start}-{new_end}"
                 })
 
-    final_code_id = new_code["id"] if new_code else sugg.code_id
+    # A code named in the edit is taken as it is now: one renamed since
+    # the suggestion was recorded, or whose number SQLite gave to a new
+    # code, takes the name it has now, which apply_codings then finds
+    # (v0.15.3, fix round 1). An edit that names no code keeps the
+    # recorded name, so apply_codings still refuses it.
+    recorded_code = (sugg.code_id, sugg.code_name)
+    final_code = ((new_code["id"], new_code["name"]) if new_code
+                  else recorded_code)
+    final_code_id = final_code[0]
     new_label = label if wants_label else sugg.reading
-    if (new_start, new_end, final_code_id, new_label) == (
-            sugg.start_pos, sugg.end_pos, sugg.code_id, sugg.reading):
+    if (new_start, new_end, final_code, new_label) == (
+            sugg.start_pos, sugg.end_pos, recorded_code, sugg.reading):
         return json.dumps({"error": "No effective change: the span, code "
                                     "and reading are unchanged"})
 
@@ -11333,7 +11341,7 @@ def edit_suggestion(
                 f"is opened in QualCoder, codings on it may show shifted in "
                 f"its editor. Relay this to the user."
             )
-    if new_code is not None and new_code["id"] != sugg.code_id:
+    if new_code is not None and final_code != recorded_code:
         changes["code"] = {"from": sugg.code_name, "to": new_code["name"]}
         old_code_name = sugg.code_name
         sugg.code_id = new_code["id"]
@@ -11551,13 +11559,18 @@ REASONING_NOT_TEXT = ("its reasoning is not text. Reject this suggestion "
 # numbers QualCoder's codes with no AUTOINCREMENT. Refused before any
 # lock and again under SQLite's write lock, so nothing is ever written
 # under a code that cannot be matched; a code renamed since is refused
-# too. Names are compared exactly as the project stores them.
+# too. Names are compared exactly as the project stores them. The way on
+# works in the same session (fix round 1): edit_suggestion naming the
+# code records the name it has now. Recording the passage again does
+# not, since the session keeps the refused suggestion and skips its
+# duplicate.
 CODE_NOT_AS_RECORDED = (
     "code_id {code_id} is now called '{now}', not '{recorded}' as when "
     "this suggestion was recorded: the code was deleted or renamed since, "
-    "so nothing is written under it. If the passage belongs under the "
-    "code as it is now, reject this suggestion and record the passage "
-    "again; edit_suggestion can move it to another code.")
+    "so nothing is written under it. If the researcher wants it under "
+    "'{now}', reopen it with update_suggestion_status, name that code in "
+    "edit_suggestion, which records the name it has now, and approve it "
+    "again; or move it to another code the same way, or reject it.")
 
 
 class _CodingsChecked(NamedTuple):

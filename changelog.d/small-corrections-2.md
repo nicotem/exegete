@@ -31,9 +31,12 @@
   still have the name it had when the suggestion was recorded. One whose
   code was renamed since, or deleted and its number given to a code of
   another name, is refused, with nothing written and no backup made. The
-  refusal gives both names, so you can look at the code, then reject the
-  suggestion or move it to another code with `edit_suggestion`. A code
-  renamed since is refused too, which keeps to the safe side.
+  refusal gives both names, so you can look at the code. To keep the
+  suggestion under the code as it is now, it is reopened, the code is
+  named again with `edit_suggestion`, which now records the name the
+  code has, and you approve it again; it can also be moved to another
+  code, or rejected. A code renamed since is refused too, which keeps
+  to the safe side.
 - **On Windows, the project's lock file is removed at the end of a
   write even while another copy of Exegete is reading it.** A removal
   refused then is tried again for about a second, the file read again

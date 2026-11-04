@@ -206,7 +206,7 @@ package.
 **On a Mac with Apple silicon.** From 0.15.3 the part brings PyMuPDF 2
 there too, with onnxruntime, and pip, pipx, uv tool and uvx each choose
 the releases afresh from PyPI, by the Mac's macOS and the Python. What
-they chose on 3 November 2026:
+they chose (checked on 3 November 2026):
 
 - On macOS 14 or later: PyMuPDF 2 with the newest onnxruntime.
 - On macOS 13 with Python 3.11, 3.12 or 3.13: the last onnxruntime

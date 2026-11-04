@@ -11,7 +11,7 @@ Everything goes through
 [GitHub Issues](https://github.com/nicotem/exegete/issues), the
 project's public list of reports on GitHub. Each report there is called
 an issue. Opening an issue needs a GitHub account, which is free.
-Reading the issues needs no account (checked on GitHub on 4 November
+Reading the issues needs no account (GitHub, checked on 4 November
 2026).
 
 - **Bug reports.** Say what you asked the assistant to do, what you

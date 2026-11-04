@@ -274,7 +274,7 @@ QualCoder 4.0 stores.
 **What PyMuPDF 2 costs.** At the first start, the part adds about 98 MB
 to download on Windows, and about 210 MB more on disk. On Linux it
 adds 114 to 118 MB to download, and 250 to 260 MB on disk. On a Mac
-with Apple silicon, measured with Python 3.13 on 3 November 2026, it
+with Apple silicon, measured on 3 November 2026 with Python 3.13, it
 adds about 105 MB to download, and about 240 MB on disk. With PyMuPDF
 1.28.2, on an Intel Mac or Windows on Arm, it adds about 24 to 33 MB to
 download, and 62 to 77 MB on disk. PyMuPDF 2 also takes 0.4 to 1 second

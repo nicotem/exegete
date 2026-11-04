@@ -1663,9 +1663,12 @@ environment avoids.
    session files (`~/.codex/sessions`) and its two databases of
    conversations (`~/.codex/thread_history_1.sqlite` and
    `~/.codex/state_5.sqlite`), and LM Studio's log
-   (`~/Library/Logs/LM Studio/main.log` on a Mac). Like the
-   conversation, these hold names, paths and quoted text: if you are
-   clearing a study's traces from the computer, look at them too
+   (`~/Library/Logs/LM Studio/main.log` on a Mac). Codex also keeps the
+   text you typed (`~/.codex/history.jsonl`) and, from its command line,
+   pieces of the assistant's answers in its log database
+   (`~/.codex/logs_2.sqlite`). Like the conversation, these hold names,
+   paths and quoted text: if you are clearing a study's traces from the
+   computer, look at them too
    ([PRIVACY.md's checklist](../PRIVACY.md#before-you-use-real-participant-data-check-these)
    lists what stays).
 4. **Exegete's own folder and its reading folder** stay until you

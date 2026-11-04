@@ -54,6 +54,33 @@
   leave out the occurrences counted under `left_by_choice`, and each
   file's row gives their number, since a row per entry would tell which
   name an occurrence left is.
+- **A page shows the researcher each occurrence where it stands.** A
+  preview with `choose_occurrences` also writes a page and opens it in
+  the researcher's browser: the file's whole text, each line numbered
+  as the preview numbers it, every occurrence of a name the run would
+  replace marked with its id, and, with `leave_occurrences`, the ones
+  left marked as left. It shows no pseudonym and nothing else of the
+  mapping. The page is for the researcher, who tells the assistant the
+  ids to leave; its head says that words copied from it into the
+  conversation go to the AI provider, names included, unless the model
+  runs on the researcher's own computer. The preview's answer gives,
+  under `occurrences_page`, whether the page opened, its counts and a
+  note asking the assistant never to open, read or look at it, and the
+  brief's line on the pages Exegete opens for the researcher now names
+  this one. The answer gives the page's place only when it did not
+  open. With `use_project_pseudonyms`, that place, and the words of an
+  error that gives one, are withheld where they carry a name from the
+  list, as the project folder's name can, and a note says where the
+  page is. Where a page was written, the occurrences block's next note
+  tells the assistant that it shows each id, so that the researcher
+  need not count occurrences in the order they appear. A page that cannot be written or opened never
+  stops the preview, and a file in which no name of the mapping occurs
+  gets none. The page is kept in the file's folder in the reading
+  folder, one for each file, and goes at Exegete's first tidy once it
+  is an hour old, or sooner, when Exegete changes the file's text or
+  name, as a run does. The reading folder's note, `About this
+  folder.txt`, names the page and when it goes, and Exegete writes the
+  note again where an earlier release left other words there.
 
 ### Changed
 

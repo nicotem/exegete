@@ -20258,7 +20258,8 @@ _FILE_TEXT_WARNING_KINDS = (
 
 
 def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
-                                    chosen_said: bool = False
+                                    chosen_said: bool = False,
+                                    run: bool = True
                                     ) -> Optional[str]:
     """The second residue warning: occurrences in the file text.
 
@@ -20281,7 +20282,10 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
     beside the rewrite's when some are left, alone when all are. With
     `chosen_said` that sentence is not given: every occurrence counted is
     one left by choice, which the preview's warning on the occurrences
-    left says, with this count.
+    left says, with this count, and the sentences after it call no files
+    "further". With `run` false, where a list leaves every occurrence and
+    an execute would rewrite nothing, no sentence says that a run happens
+    or that the rewrite applies to the file (fix round 1).
     """
     totals = file_text.get("totals") or {}
     occurrences = totals.get("occurrences") or {}
@@ -20295,6 +20299,7 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
         - uncounted_showing - in_part
     above = totals.get("files_whole_word_above_wide", 0)
     unchecked = totals.get("files_not_checked", 0)
+    after = "after this run, " if run else ""
     sentences: List[str] = []
     if wide and chosen_said:
         # Every occurrence counted is one left by choice, which the
@@ -20324,7 +20329,7 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
         elif chosen:
             because += ", and because some were chosen to be left as they were"
         sentences.append(
-            f"Warning: after this run, {wide} occurrence(s) of these names "
+            f"Warning: {after}{wide} occurrence(s) of these names "
             f"would still be in the text of {counted_showing} file(s), "
             f"{because}.")
         # Every kind can be zero when the wide occurrences are the ones
@@ -20359,6 +20364,9 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
             f"would still match {whole_word} occurrence(s) of these names "
             f"in the text of {counted_showing} file(s), which the wide "
             f"reading did not count.")
+    # Whether a sentence above counted the files; the files below are
+    # further files only after one (fix round 1)
+    counted_said = bool(sentences)
     # Fix round 5, the lead's four rules: files whose count stopped
     # part-way (a name certainly shows; a lower bound, and no remedy);
     # the file this call rewrites, too large for this mapping; files past
@@ -20367,8 +20375,8 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
     # too large for this mapping, whose one remedy is fewer names.
     if in_part:
         sentences.append(
-            f"{'Warning: after this run, ' if not sentences else ''}"
-            f"{in_part} {'further ' if (wide or whole_word) else ''}file(s) "
+            f"{'Warning: ' + after if not sentences else ''}"
+            f"{in_part} {'further ' if counted_said else ''}file(s) "
             f"would still show at least "
             f"{totals.get('occurrences_at_least', 0)} occurrence(s) of "
             f"these names in their text, found before counting them "
@@ -20391,34 +20399,36 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
     # True, False, or None when it was too large to check as well.
     named_shows = totals.get("named_file_shows_a_name")
     if named_large:
-        shown = {True: "and a name would still show in it after this run",
-                 False: "and it was asked whether a name would still show "
-                        "in it after this run: none does",
-                 None: "or to check whether a name would still show in it "
-                       "after this run"}[named_shows]
+        then = " after this run" if run else ""
+        shown = {True: f"and a name would still show in it{then}",
+                 False: f"and it was asked whether a name would still show "
+                        f"in it{then}: none does",
+                 None: f"or to check whether a name would still show in it"
+                       f"{then}"}[named_shows]
+        named = "rewrites" if run else "names"
+        applies = ". The rewrite still applies to it" if run else ""
         if named_beyond:
             sentences.append(
                 f"{'Warning: the' if not sentences else 'The'}"
-                f" file this call rewrites is too large to count in a "
-                f"preview with any mapping, even of one name, {shown}. The "
-                f"rewrite still applies to it (see "
-                f"files_too_large_for_any_mapping).")
+                f" file this call {named} is too large to count in a "
+                f"preview with any mapping, even of one name, {shown}"
+                f"{applies} (see files_too_large_for_any_mapping).")
         else:
             sentences.append(
                 f"{'Warning: the' if not sentences else 'The'}"
-                f" file this call rewrites is too large to count in full "
-                f"with this many names, {shown}. The rewrite still applies "
-                f"to it, and fewer names would let it be counted (see "
+                f" file this call {named} is too large to count in full "
+                f"with this many names, {shown}{applies}, and fewer names "
+                f"would let it be counted (see "
                 f"files_too_large_for_this_mapping).")
     past_showing = (uncounted_showing - large_showing - beyond_showing
                     - pdf_showing)
     if past_showing:
-        further = wide or whole_word or in_part
+        further = counted_said or in_part
         # Not "to count them": on its own a file dense enough to pass the
         # match budget alone is counted in part (the coordinator's
         # follow-on to fix round 5), so the remedy promises more, not all.
         sentences.append(
-            f"{'Warning: after this run, ' if not sentences else ''}"
+            f"{'Warning: ' + after if not sentences else ''}"
             f"{past_showing} {'further ' if further else ''}file(s) "
             f"would still show one of these names in their text, and "
             f"were not counted in full because the files before them spent "
@@ -20664,8 +20674,12 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     file_text = residue.get("file_text")
     left, counted_left, chosen_alone = _occurrences_left(preview, file_text)
     if file_text:
-        text_warning = _pseudonymise_file_text_warning(file_text,
-                                                       chosen_alone)
+        # A list that leaves every occurrence rewrites nothing, as the
+        # preview says below, so no run is spoken of (fix round 1)
+        text_warning = _pseudonymise_file_text_warning(
+            file_text, chosen_alone,
+            run=not (left and not preview.get("totals", {}).get(
+                "replacements")))
         if text_warning:
             warnings.append(text_warning)
     unreadable = residue.get("unreadable") or []

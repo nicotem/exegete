@@ -36,20 +36,24 @@
 - **The count of the names left in the file text tells occurrences left
   by choice from a name put back.** After a preview given
   `leave_occurrences`, the residue's count of the names still in the
-  file text charges the occurrences left to a kind of their own,
-  `left_by_choice`, and no longer to `put_back_by_a_pseudonym`, whose
-  warning advised changing a pseudonym that was fine. Word, OpenDocument
-  and RTF files are counted the same way, without the markers of their
-  notes and comments. The count's totals by kind gain the key, and so
-  does each entry's row with a mapping given in the call, at 0 where
-  nothing is left; the count's reading note says that occurrences left
-  are in both of its counts. A warning says how many occurrences are
-  left and that they are real names that stay in the file's text,
-  whether or not the file was counted; the warning on the names left in
-  the file text gives them their own reason, and neither repeats the
-  other. With `use_project_pseudonyms`, the rows per entry leave the
-  occurrences left out, and each file's row gives their number, since a
-  row per entry would tell which name an occurrence left is.
+  file text charges the occurrences left that it reads as the rewrite
+  matched them to a kind of their own, `left_by_choice`, and no longer
+  to `put_back_by_a_pseudonym`, whose warning advised changing a
+  pseudonym that was fine. One it reads otherwise (joined to the next
+  word by an invisible character, for instance) stays under the kind it
+  reads, and a name put back beside it is still reported. Word,
+  OpenDocument and RTF files are counted the same way, without the
+  markers of their notes and comments. The count's totals by kind gain
+  the key, and so does each entry's row with a mapping given in the
+  call, at 0 where nothing is left; the count's reading note says that
+  occurrences left are in both of its counts. A warning says how many
+  occurrences are left and that they are real names that stay in the
+  file's text, whether or not the file was counted; the warning on the
+  names left in the file text gives them their own reason, and neither
+  repeats the other. With `use_project_pseudonyms`, the rows per entry
+  leave out the occurrences counted under `left_by_choice`, and each
+  file's row gives their number, since a row per entry would tell which
+  name an occurrence left is.
 
 ### Changed
 

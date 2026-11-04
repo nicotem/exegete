@@ -289,8 +289,8 @@ def _read(header: Dict[str, Any], raw: bytes) -> Dict[str, Any]:
         return _damaged(type(error), kind)
     except ImportError as error:
         # A library the readers import as they read (PyMuPDF, EbookLib,
-        # defusedxml) did not load on this computer: the file is not at
-        # fault (v0.15.3). ModuleNotFoundError is one of these.
+        # defusedxml, striprtf) did not load on this computer: the file is
+        # not at fault (v0.15.3). ModuleNotFoundError is one of these.
         return _damaged(type(error), kind,
                         {"ok": False, "refusal": "reader_library"})
     except Exception as error:

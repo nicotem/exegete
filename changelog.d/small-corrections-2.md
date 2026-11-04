@@ -38,19 +38,20 @@
   code, or rejected. A code renamed since is refused too, which keeps
   to the safe side.
 - **On Windows, the project's lock file is removed at the end of a
-  write even while another copy of Exegete is reading it.** A removal
-  refused then is tried again for about a second, the file read again
-  before each try and removed only while it still holds Exegete's lines.
-  Before, the file stayed and refused every copy's writes for 30
-  seconds.
+  write once another copy of Exegete has finished reading it.** A
+  removal refused while that copy reads it is tried again for about a
+  second, the file read again before each try and removed only while it
+  still holds Exegete's lines. Before, the file stayed and refused every
+  copy's writes for 30 seconds.
 - **A file whose reading library did not load is no longer called
   damaged.** When the library Exegete reads a kind of file with
-  (PyMuPDF for PDFs, EbookLib for EPUBs, defusedxml for Word) cannot
-  load on the computer, the file is now refused with words saying that
-  the file is not at fault and that installing Exegete again, with its
-  optional part for PDF and EPUB, may help. Before, it was called
-  damaged, and saving a fresh copy was suggested. Exegete's log names
-  the kind of error and the library's release, never the file.
+  (PyMuPDF for PDFs, EbookLib for EPUBs, defusedxml for Word, striprtf
+  for RTF) cannot load on the computer, the file is now refused with
+  words saying that the file is not at fault and that installing
+  Exegete again may help, for a PDF or EPUB file with its optional part
+  for PDF and EPUB. Before, it was called damaged, and saving a fresh
+  copy was suggested. Exegete's log names the kind of error and the
+  library's release, never the file.
 
 ### Security
 

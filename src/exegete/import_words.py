@@ -204,12 +204,14 @@ FILE_REFUSALS = {
     # v0.15.3: a library the readers import as they read did not load,
     # so the file was never read and is not at fault. Installing again
     # may help; it is not promised, since a library can fail to load on
-    # a system it does not support.
+    # a system it does not support. The optional part concerns PDF and
+    # EPUB files alone (fix round 1): Word and RTF files are read by
+    # libraries every install has.
     "reader_library": "The part of Exegete that reads this kind of file "
                       "did not load on this computer, so the file was not "
                       "read; the file itself is not at fault. Installing "
-                      "Exegete again, with its optional part for PDF and "
-                      "EPUB, may help.",
+                      "Exegete again may help, for a PDF or EPUB file "
+                      "with its optional part for PDF and EPUB.",
     "not_supported": "Exegete does not import this kind of file.",
 }
 

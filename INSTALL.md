@@ -622,9 +622,11 @@ The MCP library, the code Exegete uses to talk to the app, writes lines
 of its own beside them, giving the kind of each request. They carry
 text the app sent in two cases:
 
-- for a prompt called with an argument it does not declare, that
-  argument's value;
-- for a call of a tool Exegete does not list, that tool's name.
+- a prompt: one asked for by a name Exegete does not have leaves that
+  name, and one given an argument it does not declare leaves that
+  argument's name and value;
+- a tool: a call of a tool Exegete does not list leaves that tool's
+  name.
 
 That text is what the app or the model sent, never anything read from
 the project, but it can hold a name the model wrote. When the library

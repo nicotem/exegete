@@ -3116,7 +3116,7 @@ class TestTheEstimateReadsWhatTheCountReads:
         monkeypatch.setattr(unicodedata, "decomposition", spelled)
         for name in ("_READING_EXTRA", "_READING_EXTRA_PATTERN",
                      "_UNSEEN_TABLE", "_UNSEEN_PATTERN", "_MARK_RANGES",
-                     "_NON_STARTER_RANGES"):
+                     "_NON_STARTER_RANGES", "_SECOND_PARTS"):
             monkeypatch.setattr(P, name, None)
         assert P.reading_length("\uac01 \ufdfa said") == 1 + 1 + 18 + 5
         assert P._reader_sees("Tho\u00admas") == "Thomas"

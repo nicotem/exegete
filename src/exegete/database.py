@@ -14083,12 +14083,12 @@ class QualcoderDatabase:
         `left_new_spans`, v0.15.3) are passed to the count of the file it
         rewrites, mapped through the import's markers where its text is
         read without them, and counted under `left_by_choice` where the
-        reader's reading reads them as the rewrite matched them
-        (`names_left_in_text`). On the `use_project_pseudonyms` path the
-        rows per entry keep those out and each full file row gives their
-        number once, as `left_by_choice`: beside the entries' pseudonyms,
-        a row per entry counting a left occurrence would tell which name
-        it is.
+        reader's reading reads them as the rewrite matched them, or does
+        not see them at all (`names_left_in_text`). On the
+        `use_project_pseudonyms` path the rows per entry keep those out
+        and each full file row gives their number once, as
+        `left_by_choice`: beside the entries' pseudonyms, a row per entry
+        counting a left occurrence would tell which name it is.
         """
         from . import pseudonymise as engine
 

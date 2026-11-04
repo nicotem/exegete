@@ -718,7 +718,6 @@ ef27f196d143eb2d	src/exegete/server.py	served	voice	seeded 27 October, to be rea
 14d66298e28d540e	src/exegete/server.py	served	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Only codings that lie wholly inside the text linked to a case are counted for it
 c3aef7d780afadba	src/exegete/server.py	served	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Only codings that lie wholly inside the text linked to a case are counted for it
 13d7e8d01b83542f	src/exegete/server.py	served	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Only codings that lie wholly inside the text linked to the case are counted, as 
-e4f1c027699edb5d	src/exegete/server.py	served	voice	seeded 27 October, to be read	Only if they agree, call again with the SAME mapping, file_id, case_mode, overla
 0a16270fb803fb53	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Only the case's name changed, as in QualCoder's Manage Cases; its date, notes, f
 0791f828b99c3fa9	src/exegete/server.py	path	qualcoder	seeded 27 October, to be read	Only the file's name in the project changed (as with QualCoder's "Rename databas
 9d29a97352f37a61	src/exegete/server.py	path	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Only the names in this project's pseudonyms.json were replaced, as whole words a
@@ -842,7 +841,6 @@ bd58c91d014fc96a	src/exegete/server.py	path	qualcoder	the brief's own rule for Q
 400a857c8d77ab5b	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	The result carries changed: true, old_name, file_type, and what kept the old nam
 1ac3858c6daea630	src/exegete/server.py	served	qualcoder	about QualCoder itself: what it does, counts, keeps or shows, as the sentence says	The rule is stated in the response because QualCoder itself has a second, differ
 f4f1604860c2fedb	src/exegete/server.py	served	voice	seeded 27 October, to be read	The session must belong to the CURRENTLY OPEN project; applying a session to a d
-5ad2fd418c2a66b4	src/exegete/server.py	served	voice	seeded 27 October, to be read	The six that ARE bound are mapping, file_id, case_mode, overlap_policy, rewrite_
 7498b07d58801c8f	src/exegete/server.py	served	qualcoder	about QualCoder itself: what it does, counts, keeps or shows, as the sentence says	The source code's nodes and lines on QualCoder's saved graphs are removed (saved
 b11569b100b1b47c	src/exegete/server.py	served	voice	seeded 27 October, to be read	The steps are for the user to follow: the app that started Exegete must be close
 e9a1370db4b97913	src/exegete/server.py	path	qualcoder	about QualCoder's format: the folders, files and backups QualCoder makes in a project	They keep QualCoder 3.8's AI search store, ai_data/vectorstore/faiss_store.bin, 

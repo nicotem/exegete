@@ -3,18 +3,20 @@
 preview (rulings 94, 106 and 116).
 
 With `choose_occurrences`, a pseudonymisation preview lists every
-occurrence of a name the run would replace as a short id and its line
-number, in text order, in each file's `occurrences` block, and nothing
-else: no name, pseudonym, entry number, span or word of the text, on
-either mapping path. An id is keyed with the preview-token secret and
-the project, and made from the file, its text and the occurrence's span,
-so it holds while those hold, and an id shown earlier names its
-occurrence, or none, when more occurrences lengthen the ids shown. On
-the names list's path no match's span comes back, beside a pseudonym in
-an entry's block or in the overlap diagnostic; with the flag each
-occurrence's line does, beside the entries' pseudonyms and counts, and
-the changelog says what those lines can tell. The choice is refused
-with `rewrite_memos` before anything is read, and it binds nothing.
+occurrence of a name the run would replace as a short id, in text
+order, in each file's `occurrences` block, each beside its line number
+when the mapping was typed into the call, and nothing else: no name,
+pseudonym, entry number, span or word of the text, on either mapping
+path. An id is keyed with the preview-token secret and the project, and
+made from the file, its text and the occurrence's span, so it holds
+while those hold, and an id shown earlier names its occurrence, or none,
+when more occurrences lengthen the ids shown. On the names list's path
+neither a match's span nor an occurrence's line comes back: the
+entries' blocks and the overlap diagnostic keep their entries and
+counts, the occurrences block its ids alone (v0.15.3), and
+the changelog no longer says that lines come there. The choice is
+refused with `rewrite_memos` before anything is read, and it binds
+nothing.
 
 The fixture and helpers are the flagship's own
 (`test_v012_pseudonymise_tool.py`), as in the other files that pin this
@@ -66,11 +68,14 @@ INTERVIEW = ("Interviewer: thank you for coming.\n"
 REPO = Path(__file__).resolve().parents[1]
 CHANGELOG_TEXTS = (REPO / "changelog.d" / "occurrences.md",
                    REPO / "CHANGELOG.md")
-# The safety sentence on the names list's path, and the claim it replaced
+# What the changelog says of the names list's path: the ids come alone
+# there; the two sentences it gave while the lines came, gone with them
+IDS_ALONE = ("With `choose_occurrences`, the preview on this path lists "
+             "each occurrence's id alone, with no line.")
+LINES_GIVEN = ("the preview on this path gives the line of each "
+               "occurrence")
 LINES_CAN_PAIR = ("In a text the assistant has read, those lines can show "
                   "which name each pseudonym replaces.")
-NO_POSITION_CLAIMED = ("the preview no longer says where in the file each "
-                       "name was found")
 
 
 def block(out):
@@ -340,8 +345,12 @@ class TestWhatTheBlockHolds:
                              choose_occurrences=True)
         found = block(out)
         assert found["count"] == FIVE
-        assert set(found) <= {"count", "listed", "listed_in_part", "more"}
-        assert all(set(row) == {"id", "line"} for row in found["listed"])
+        assert set(found) <= {"count", "listed", "listed_in_part", "more",
+                              "next"}
+        # The id beside its line with a typed mapping, alone with the
+        # names list (v0.15.3)
+        row_keys = {"id", "line"} if path == "typed" else {"id"}
+        assert all(set(row) == row_keys for row in found["listed"])
         words = json.dumps(found)
         for name in NAMES_AND_PSEUDONYMS:
             assert name not in words, name
@@ -365,15 +374,15 @@ class TestWhatTheBlockHolds:
 
     def test_the_lines_on_the_names_list_path_and_what_the_changelog_says(
             self, project):
-        """With the flag, the names list's path gives each occurrence's
-        line beside the entries' pseudonyms and counts, so in a text the
-        assistant has read the lines can show which name a pseudonym
-        replaces. The changelog's sentence on that path is a safety
-        sentence: it says so, where it once said that the preview there
-        no longer says where in the file each name was found. Red when
-        the fragment's words go back to that claim, and when the lines
-        stop coming on that path, so that the sentence changes with
-        them."""
+        """On the names list's path the occurrences block gives the ids
+        alone, with no line (v0.15.3): beside the entries'
+        pseudonyms and counts, the lines would show in a text the
+        assistant has read which name each pseudonym replaces (here the
+        one capitalised word on lines 2, 4 and 6 is the name). The typed
+        path keeps each id beside its line. The changelog says that the
+        ids come alone there, and no longer that lines do. Red when the
+        lines come back on that path, and when the fragment's words go
+        back to them."""
         set_text(project, INTERVIEW)
         names_list(project, [{"original": "Maria",
                               "pseudonym": "Participant A"}])
@@ -381,17 +390,21 @@ class TestWhatTheBlockHolds:
                          choose_occurrences=True)
         assert out["preview"]["files"][0]["replacements"] == [
             {"entry": 0, "pseudonym": "Participant A", "count": 4}]
-        lines = [line for _, line in listed(out)]
-        assert lines == [2, 4, 4, 6]
-        # The one capitalised word on every listed line is the name
-        rows = INTERVIEW.split("\n")
-        assert set.intersection(*(
-            set(re.findall(r"[A-Z][a-z]+", rows[line - 1]))
-            for line in lines)) == {"Maria"}
+        found = block(out)
+        assert found["count"] == 4
+        assert [set(row) for row in found["listed"]] == [{"id"}] * 4
+        assert "line" not in json.dumps(found)
+        typed = preview_of(mapping=[{"original": "Maria",
+                                     "pseudonym": "Participant A"}],
+                           choose_occurrences=True)
+        assert [line for _, line in listed(typed)] == [2, 4, 4, 6]
+        assert [row["id"] for row in found["listed"]] == [
+            one for one, _ in listed(typed)]
         said = changelog_words()
         assert said
-        assert any(LINES_CAN_PAIR in text for text in said)
-        assert not any(NO_POSITION_CLAIMED in text for text in said)
+        assert any(IDS_ALONE in text for text in said)
+        assert not any(LINES_GIVEN in text or LINES_CAN_PAIR in text
+                       for text in said)
 
     def test_the_overlap_diagnostic_keeps_its_entries_alone(self, project):
         """The lead's call on the overlap diagnostic: on the names list's

@@ -19800,6 +19800,69 @@ _OCCURRENCES_WITH_NOTE_REWRITE = (
     "occurrences, preview again with rewrite_memos off and change by hand "
     "the notes that name either person. To rewrite the notes, call again "
     "without choosing occurrences.")
+# The words around each occurrence, refused while occurrences are chosen
+# or left (v0.15.3, ruling 106: the conversation carries ids and counts)
+_CONTEXT_WITH_OCCURRENCES = (
+    "Exegete does not give the words around each occurrence while "
+    "occurrences are chosen or left: they would come into the conversation "
+    "beside the ids. Preview again without include_context.")
+# A list to leave whose ids the preview cannot place (v0.15.3): refused
+# on a preview, never on the execute, where the token answers
+_OCCURRENCES_NOT_ISSUED = (
+    "These occurrence ids name no occurrence in this file's text as it is "
+    "now: an id was copied wrongly, the text changed, a change to the "
+    "mapping moved the occurrence, or the ids came from another file or "
+    "project. Preview again with choose_occurrences and choose again.")
+_OCCURRENCE_ID_AMBIGUOUS = (
+    "This id begins the ids of more than one occurrence: give each id as "
+    "the preview lists it.")
+# A list that leaves every occurrence found (v0.15.3): nothing would be
+# rewritten by choice, which the answers say rather than that no name
+# occurs
+_EVERY_OCCURRENCE_LEFT = (
+    "Every occurrence of the mapping's names in this file is left as it "
+    "is, by choice, so an execute would rewrite nothing.")
+_EVERY_OCCURRENCE_WAS_LEFT = (
+    "Every occurrence of the mapping's names in this file was left as it "
+    "is, by choice, so nothing was rewritten and no backup was taken.")
+
+
+class _OccurrencesRefused(Exception):
+    """A list to leave that a preview refuses once the plan is built: an
+    id names no occurrence, or more than one. Neither a ValueError nor a
+    RuntimeError, which the token gate answers itself; `answer` is the
+    tool's answer."""
+
+    def __init__(self, answer: Dict[str, Any]):
+        super().__init__(answer["reason"])
+        self.answer = answer
+
+
+def _left_by_choice(preview: Dict[str, Any]) -> bool:
+    """Whether a preview's file has occurrences left by a list (v0.15.3):
+    where it makes no replacement, every occurrence found is left."""
+    return any((item.get("occurrences") or {}).get("left")
+               for item in preview.get("files", []))
+
+
+def _refuse_occurrences_not_placed(plan: Dict[str, Any]) -> None:
+    """Raise _OccurrencesRefused when an id of a preview's list to leave
+    names no occurrence in the file's text as it is now, or more than
+    one (v0.15.3). A file with no occurrence is not in the plan, so every
+    id given is then refused. The ids come back as read: the assistant's
+    own, never a name."""
+    files = plan["files"]
+    unmatched = ([one for item in files for one in item.get("unmatched", ())]
+                 if files else list(plan["leave"]))
+    if unmatched:
+        raise _OccurrencesRefused({"error": _OCCURRENCES_NOT_ISSUED,
+                                   "reason": "occurrences_not_issued",
+                                   "unmatched": unmatched})
+    ambiguous = [one for item in files for one in item.get("ambiguous", ())]
+    if ambiguous:
+        raise _OccurrencesRefused({"error": _OCCURRENCE_ID_AMBIGUOUS,
+                                   "reason": "occurrence_id_ambiguous",
+                                   "ambiguous": ambiguous})
 
 
 def _after_a_colon(text: str) -> str:
@@ -20739,14 +20802,21 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         # nothing, a save asked for on the typed path is said not to
         # happen either (the lead's third ruling for Brief 2).
         note_rows = (memo_block or {}).get("totals", {}).get("rows", 0)
+        save_asked = retention.get("required") and retention.get(
+            "chosen") in ("save_requested", "both")
         no_save = (" The mapping would not be saved either, because no run "
                    "would happen. Pick a file that contains one of the names "
                    "and preview again. (A researcher who uses QualCoder can "
                    "also enter the mapping in its Pseudonyms dialog, under "
-                   "Manage Files.)"
-                   if retention.get("required") and retention.get("chosen")
-                   in ("save_requested", "both") else "")
-        if memo_block is None:
+                   "Manage Files.)" if save_asked else "")
+        if _left_by_choice(preview):
+            # Every occurrence found is left by a list (v0.15.3; never
+            # with rewrite_memos): no name is missing from the file
+            warnings.append(
+                _EVERY_OCCURRENCE_LEFT
+                + (" The mapping would not be saved either, because no run "
+                   "would happen." if save_asked else ""))
+        elif memo_block is None:
             warnings.append(
                 "None of the names in this mapping occurs in this file, so "
                 "an execute would rewrite nothing." + no_save)
@@ -21072,6 +21142,13 @@ def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
         for replacement in item["replacements"]:
             per_entry[replacement.entry] = per_entry.get(
                 replacement.entry, 0) + 1
+    # Occurrences left by a list (v0.15.3). With the names list, the
+    # counts per entry, beside a preview without the list, would tell the
+    # left occurrences' entries, so that path names the pseudonyms of the
+    # names found, without counts
+    leave_given = bool(plan.get("leave"))
+    without_counts = leave_given and (retention or {}).get(
+        "choice") == "project_pseudonyms_json"
     lines = [
         f"Pseudonymisation run, "
         f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}.",
@@ -21091,6 +21168,10 @@ def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
             f"{report['annotations_updated']} annotation(s) moved, "
             f"{report['case_links_updated']} case link(s) moved, "
             f"{report['codings_deleted']} coding(s) deleted.")
+    if leave_given:
+        # A count only: never where an occurrence left is, nor its entry
+        left = sum(item.get("left", 0) for item in plan["files"])
+        lines.append(f"{left} occurrence(s) left as they were, by choice.")
     memos = written.get("memos")
     if memos is not None:
         # v0.13, Brief 2, 5.8: counts and field names only, never a key,
@@ -21115,7 +21196,15 @@ def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
             f"{totals['journal_entries_from_earlier_runs']}.")
         lines.append("This entry was written after the rewrite and was not "
                      "itself rewritten.")
-    if per_entry:
+    if without_counts:
+        named = sorted({replacement.entry for item in plan["files"]
+                        for replacement in item["found"]})
+        lines.append("Pseudonyms of the names found: " + ", ".join(
+            f"entry {index}, withheld" if index in withheld
+            else entries[index].pseudonym for index in named) + ".")
+        if withheld.intersection(named):
+            lines.append(pseudo.PSEUDONYMS_WITHHELD_NOTE)
+    elif per_entry:
         applied = ", ".join(
             (f"entry {index}, withheld ({count})" if index in withheld
              else f"{entries[index].pseudonym} ({count})")
@@ -21308,6 +21397,12 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
                     for entry in entries],
         "files": files,
     }
+    if plan.get("leave"):
+        # Occurrences left by a list (v0.15.3): a count only, never where
+        # one is, nor its entry or form; `files` holds the replacements
+        # made alone. A key added, so the format stays 3
+        manifest["occurrences_left"] = sum(item.get("left", 0)
+                                           for item in plan["files"])
     if withheld:
         manifest["pseudonyms_withheld"] = len(withheld)
         manifest["pseudonyms_withheld_note"] = pseudo.PSEUDONYMS_WITHHELD_NOTE
@@ -21364,6 +21459,7 @@ def pseudonymise_source(
     residue_detail: str = "file",
     max_spans_per_entry: int = 50,
     choose_occurrences: bool = False,
+    leave_occurrences: Optional[List[str]] = None,
 ) -> str:
     """Replace names with pseudonyms in a project's stored text.
 
@@ -21378,13 +21474,13 @@ def pseudonymise_source(
     and the result is a preview of exactly what would change, with a
     preview_token. Show the user the preview and every warning it
     carries, and ask whether to proceed. Only if they agree, call again
-    with the SAME mapping, file_id, case_mode, overlap_policy,
-    rewrite_memos and save_mapping_to_project, plus
-    preview_token=<the token>. The token is valid for 60 minutes and only
-    while the text and the rows it covers are unchanged; if the project
-    changed in between, the execute is refused and you must preview
-    again. Exegete takes a backup first, as before every change; a run
-    that changes nothing takes none.
+    with the same mapping, file_id, case_mode, overlap_policy,
+    rewrite_memos, save_mapping_to_project and leave_occurrences when
+    given, plus preview_token=<the token>. The token is valid for 60
+    minutes and only while the text and the rows it covers are
+    unchanged; if the project changed in between, the execute is refused
+    and you must preview again. Exegete takes a backup first, as before
+    every change; a run that changes nothing takes none.
 
     Deterministic and rule-based. ONLY the names in the mapping are
     replaced, as whole words, case-sensitively unless case_mode says
@@ -21640,22 +21736,31 @@ def pseudonymise_source(
                  one budget for the whole preview; a block that runs out
                  of it says context_truncated.
         choose_occurrences: List every occurrence of a name this run
-                 would replace, in text order, each as a short id and its
-                 line number, in the file's `occurrences` block. It lists
-                 the first 150 and says how many more. It holds no name,
-                 pseudonym or entry number, and no words of the file. Set
-                 it when the researcher wants to choose occurrences to
-                 leave as they are, such as those of a second person
-                 with the same name.
+                 would replace, in text order, each as a short id in the
+                 file's `occurrences` block: beside its line number with
+                 a typed mapping, alone with use_project_pseudonyms. It
+                 lists the first 150 and says how many more. It holds no
+                 name, pseudonym or entry number, and no words of the
+                 file. Set it when the researcher wants to choose
+                 occurrences to leave as they are, such as those of a
+                 second person with the same name.
+        leave_occurrences: The ids, from a preview with
+                 choose_occurrences, of the occurrences this run leaves
+                 as they are: at most 500 occurrences in one run. This
+                 argument is bound into the token: give it to a preview
+                 first, which marks the occurrences left for the
+                 researcher to check, then repeat it on the execute. Not
+                 with rewrite_memos or include_context.
 
     The arguments from include_context to choose_occurrences,
     record_in_journal and researcher_keeps_mapping are not bound into
     the token: passing a different value for one of them on the execute
     call is not "a different operation", it changes what is shown,
     whether the run records itself, or attests where the mapping is
-    kept. The six that ARE bound are mapping, file_id, case_mode,
-    overlap_policy, rewrite_memos and save_mapping_to_project, and they
-    must be repeated identically on the execute call.
+    kept. The arguments that are bound are mapping, file_id, case_mode,
+    overlap_policy, rewrite_memos, save_mapping_to_project and
+    leave_occurrences when given, and they must be repeated identically
+    on the execute call.
 
     Returns:
         JSON: the preview and a preview_token, or the result of the run.
@@ -21705,14 +21810,26 @@ def pseudonymise_source(
     if not typed and (save or keeps):
         return json.dumps({"error": _RETENTION_ON_THE_SIDECAR_PATH},
                           indent=2)
-    # Choosing occurrences with a note rewrite (v0.15.3): the rewrite
-    # would give the pseudonym to the notes about whoever the occurrences
-    # left are, so the pair is refused here too, before any read
+    # The occurrences to leave (v0.15.3), each id read as the preview
+    # lists them, before any read: an id no preview could have listed is
+    # refused with the form an id has
+    try:
+        leave = occurrence_ids.canonical_leave(leave_occurrences)
+    except ValueError as e:
+        return json.dumps({"error": str(e), "reason": "occurrence_id_form"},
+                          indent=2)
+    # Choosing or leaving occurrences with a note rewrite (v0.15.3): the
+    # rewrite would give the pseudonym to the notes about whoever the
+    # occurrences left are, so the pair is refused here too, before any
+    # read
     choose_occurrences = bool(choose_occurrences)
-    if choose_occurrences and bool(rewrite_memos):
+    if (choose_occurrences or leave) and bool(rewrite_memos):
         return json.dumps({"error": _OCCURRENCES_WITH_NOTE_REWRITE,
                            "reason": "occurrences_with_rewrite_memos"},
                           indent=2)
+    if (choose_occurrences or leave) and bool(include_context):
+        return json.dumps({"error": _CONTEXT_WITH_OCCURRENCES,
+                           "reason": "context_with_occurrences"}, indent=2)
     sidecar_encoding = None
     if use_project_pseudonyms:
         try:
@@ -21764,7 +21881,7 @@ def pseudonymise_source(
         mapping=pseudo.canonical_mapping(validated),
         file_id=file_id, case_mode=case_mode,
         overlap_policy=overlap_policy, rewrite_memos=rewrite_memos,
-        save_mapping_to_project=save)
+        save_mapping_to_project=save, leave_occurrences=leave)
 
     # The plan is the expensive part of everything below it: it reads
     # every eligible file's text, runs the pattern over all of it, and
@@ -21792,7 +21909,8 @@ def pseudonymise_source(
         if read_phase.get("conn") is db_.conn:
             return read_phase["plan"]
         plan = db_.pseudonymise_plan(compiled, overlap_policy, file_ids,
-                                     occurrence_key=occurrence_key)
+                                     occurrence_key=occurrence_key,
+                                     leave=leave)
         if "plan" not in read_phase:
             read_phase["plan"] = plan
             read_phase["conn"] = db_.conn
@@ -21827,6 +21945,11 @@ def pseudonymise_source(
 
     def _preview_with_effect(db_):
         plan = _read_plan(db_)
+        if leave and preview_token is None:
+            # On a preview only: on the execute an id that names nothing
+            # leaves nothing, so the effect differs from the signed one
+            # and the token answers
+            _refuse_occurrences_not_placed(plan)
         memo_plan = _read_memo_plan(db_)
         preview = db_.pseudonymise_preview(
             plan, ai_names, include_context=include_context,
@@ -21893,6 +22016,16 @@ def pseudonymise_source(
             # token stays valid until it expires (D3 3.2). With
             # rewrite_memos on, a run with no match in the file and a
             # match in a note has something to do (Brief 2, 4.8).
+            if _left_by_choice(preview):
+                # Every occurrence found is left (v0.15.3), never "no
+                # name occurs" nor "pick a file"
+                return {
+                    "success": True,
+                    "nothing_changed": True,
+                    "message": _EVERY_OCCURRENCE_WAS_LEFT + (
+                        " The mapping was not saved, because no run "
+                        "happened." if typed and save else ""),
+                }
             return {
                 "success": True,
                 "nothing_changed": True,
@@ -22009,7 +22142,8 @@ def pseudonymise_source(
         the residue scan this docstring keeps out of the transaction.
         """
         plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
-                                     occurrence_key=occurrence_key)
+                                     occurrence_key=occurrence_key,
+                                     leave=leave)
         captured["write_plan"] = plan
         memo_plan = (wdb.pseudonymise_memo_plan(compiled, plan)
                      if rewrite_memos else None)
@@ -22041,7 +22175,8 @@ def pseudonymise_source(
         plan = captured.get("write_plan")
         if plan is None:                  # pragma: no cover - defensive
             plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
-                                         occurrence_key=occurrence_key)
+                                         occurrence_key=occurrence_key,
+                                         leave=leave)
         # C7, with the fingerprints the READ-ONLY phase captured, which
         # is what D1 3.6 specifies. Passing the write phase's own
         # fingerprints made the check compare a read to itself: both
@@ -22108,11 +22243,18 @@ def pseudonymise_source(
         if memos is not None:
             message += (f" and {memos['totals']['rows_updated']} note(s) or "
                         f"journal entr(ies)")
+        files = written["files"]
+        if leave and not typed:
+            # With the names list and occurrences left (v0.15.3): beside
+            # the preview without the list, the new length tells the left
+            # occurrences' entries
+            files = [{key: value for key, value in report.items()
+                      if key != "new_length"} for report in files]
         result = {
             "success": True,
             "message": message,
             "preview_verified": True,
-            "files": written["files"],
+            "files": files,
             "hidden_coder_rows_updated": hidden_updated,
             "journal_entry": journal_entry,
         }
@@ -22162,6 +22304,8 @@ def pseudonymise_source(
                 # attestation only when the preview call gave it.
                 "save_mapping_to_project": save,
                 **({"researcher_keeps_mapping": True} if keeps else {}),
+                # Bound when given, so repeated as it binds (v0.15.3)
+                **({"leave_occurrences": leave} if leave else {}),
             },
             state_preview_fn=_signed,
             override_required_fn=_override_required,
@@ -22173,6 +22317,8 @@ def pseudonymise_source(
             # the record keeps every table as the run left it
             record_whole={"rewrite_memos": bool(rewrite_memos)},
         )
+    except _OccurrencesRefused as e:
+        result = e.answer
     finally:
         # A run that did not commit leaves no pseudonyms.json behind for
         # QualCoder to apply to the next import (the lead's ruling for

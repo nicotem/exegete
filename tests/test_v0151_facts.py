@@ -187,6 +187,9 @@ class Facts:
     # v0.15.3: how many occurrences a pseudonymisation preview lists
     # (occurrences.py)
     occurrences_listed: int
+    # v0.15.3: the most occurrences one pseudonymisation run leaves as
+    # they are (occurrences.py)
+    occurrences_left: int
 
 
 def _pdf_epub_extra(project: dict) -> str:
@@ -427,6 +430,7 @@ def facts_from_the_code(root: Path = REPO,
         releases=dict(plan.RELEASES),
         full_characters=sizes["full"]["tool_definitions_characters"],
         core_characters=sizes["core"]["tool_definitions_characters"],
+        occurrences_left=occurrences.MAX_OCCURRENCES_LEFT,
         occurrences_listed=occurrences.OCCURRENCES_LISTED)
 
 
@@ -445,6 +449,8 @@ QUANTITIES: Dict[str, Tuple[Tuple[str, ...], Callable[[Facts], float]]] = {
                              lambda f: len(f.runtime_dependencies)),
     "occurrences listed": (("occurrences_listed",),
                            lambda f: f.occurrences_listed),
+    "occurrences left": (("occurrences_left",),
+                         lambda f: f.occurrences_left),
 }
 for _field in ("extension_call_seconds", "terminal_call_seconds",
                "call_seconds_least", "call_seconds_most",
@@ -540,6 +546,12 @@ MEMORY_PATTERNS = (
 OCCURRENCE_PATTERNS = (
     (r"\blists\s+the\s+first\s+(?P<n>\d+)\b",
      {"n": ("occurrences listed",)}),
+)
+# The most occurrences one pseudonymisation run leaves as they are
+# (v0.15.3): "at most 500 occurrences", in the tool's description
+LEFT_PATTERNS = (
+    (r"\bat\s+most\s+(?P<n>\d+)\s+occurrences\b",
+     {"n": ("occurrences left",)}),
 )
 # The size of each set's tool definitions, as the documents round it
 # (v0.15.2): a figure passes within SIZE_TOLERANCE of the snapshot's,
@@ -919,6 +931,11 @@ FACTS: Dict[str, Fact] = {
         code="occurrences.py: OCCURRENCES_LISTED",
         documents=(SERVER_SOURCE,),
         patterns=tuple(p for p, _ in OCCURRENCE_PATTERNS),
+        code_texts=True),
+    "the occurrences left": Fact(
+        code="occurrences.py: MAX_OCCURRENCES_LEFT",
+        documents=(SERVER_SOURCE,),
+        patterns=tuple(p for p, _ in LEFT_PATTERNS),
         code_texts=True),
 }
 # The version and its date are held already: tests/test_updates.py and
@@ -2250,6 +2267,8 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the releases to come": check_future_releases,
     "the occurrences listed": lambda facts, document: _check_numbers(
         "the occurrences listed", OCCURRENCE_PATTERNS, facts, document),
+    "the occurrences left": lambda facts, document: _check_numbers(
+        "the occurrences left", LEFT_PATTERNS, facts, document),
 }
 
 
@@ -2422,6 +2441,8 @@ CHANGES = (
     ("core_characters", lambda f: round(f.core_characters * 1.1)),
     # v0.15.3: the occurrences a preview lists, fifty more
     ("occurrences_listed", lambda f: f.occurrences_listed + 50),
+    # v0.15.3: the most occurrences a run leaves, fifty more
+    ("occurrences_left", lambda f: f.occurrences_left + 50),
 )
 
 
@@ -2816,6 +2837,7 @@ SOURCES = {
     "tool_arguments": (server.mcp._tool_manager, "_tools"),
     "preview_tools": (preview_tokens, "REGISTRY"),
     "occurrences_listed": (occurrences, "OCCURRENCES_LISTED"),
+    "occurrences_left": (occurrences, "MAX_OCCURRENCES_LEFT"),
 }
 
 

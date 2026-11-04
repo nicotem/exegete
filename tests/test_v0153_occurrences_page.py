@@ -85,10 +85,10 @@ HEAD = ("This page is for you. To leave an occurrence as it is, tell the "
 NOTE = ("This page is for the researcher: do not open it, read it or look "
         "at it with any tool, browser or screenshot. Ask them which ids to "
         "leave.")
-BRIEF_LINE = ("That page, the page a pseudonymisation preview opens for "
-              "choosing occurrences, and the copies they open are for the "
-              "researcher: never open, read or look at them with any tool, "
-              "browser or screenshot.")
+BRIEF_LINE = ("That page and the copies it opens, and the page a "
+              "pseudonymisation preview opens for choosing occurrences, are "
+              "for the researcher: never open, read or look at them with any "
+              "tool, browser or screenshot.")
 # What `occurrences_page` may hold, and nothing else
 ANSWER_KEYS = {"opened", "counts", "note", "location", "not_opened_because",
                "withheld_note", "not_written_because"}
@@ -326,6 +326,25 @@ class TestThePage:
         assert page.count('<mark class="occ left">') == 2
         assert counts == {"occurrences": 2, "left": 1, "lines": 2}
 
+    def test_the_lines_said_as_each_path_gives_them(self, tmp_path):
+        """The page says the lines are numbered as the preview numbers them
+        only where the preview gives lines (a mapping typed into the call);
+        with the names list it says that the preview lists the ids alone.
+        Neither path's page speaks of a run."""
+        with fresh(tmp_path, ZEB_TEXT) as folder:
+            names_list(folder, ZEB)
+            for typed in (True, False):
+                arguments = ({"mapping": ZEB} if typed else
+                             {"mapping": None, "use_project_pseudonyms": True})
+                call(choose_occurrences=True, **arguments)
+                page = " ".join(page_of(folder).split())
+                facts = page[page.index('<ul class="facts">'):
+                             page.index("</ul>")]
+                assert ("as the preview numbers them" in facts) is typed
+                assert ("the preview lists the ids alone" in facts) \
+                    is not typed
+                assert "run" not in facts
+
 
 # A line of Hebrew ("Moshe said that David came") and one of Arabic
 # ("Muhammad said that Ahmad came"), each naming two people; and a line of
@@ -361,7 +380,7 @@ class TestRightToLeft:
         after its own occurrence in reading order, and a direction
         character in the text before it does not turn it round."""
         text = "\n".join(line for line, _names, _rtl in
-                         RIGHT_TO_LEFT.values()) + "\n‮Tom wrote."
+                         RIGHT_TO_LEFT.values()) + "\n\u202eTom wrote."
         marks, at = [], 0
         for line, names, _rtl in RIGHT_TO_LEFT.values():
             for name in names:
@@ -542,6 +561,8 @@ class TestTheNamesListsPath:
         folder's name, is null with its note; and a file Exegete did not
         write at the page's place gives withheld words while the preview
         stands."""
+        withheld = server._OCCURRENCES_PAGE_WITHHELD.format(
+            reading_folder=reading_folder.root_in_words(), file_id=1)
         folder = WALK()._build(tmp_path, collide=False)
         with wired(folder):
             out = call(mapping=None, use_project_pseudonyms=True,
@@ -551,8 +572,15 @@ class TestTheNamesListsPath:
             answer = out["occurrences_page"]
             assert answer["opened"] is False
             assert answer["location"] is None
-            assert answer["withheld_note"] == \
-                server._OCCURRENCES_PAGE_WITHHELD.format(file_id=1)
+            assert answer["withheld_note"] == withheld
+            # The note says where to look: the reading folder in the
+            # general form, which carries no account's or project's name
+            # and is this system's reading folder when expanded
+            general = reading_folder.root_in_words()
+            assert f"({general})" in withheld
+            assert PARTICIPANT not in general
+            assert Path(os.path.expandvars(os.path.expanduser(general))) \
+                == reading_folder.root()
             # The route is really taken: the page is there, at a place
             # that carries the name
             where = page_at(folder)
@@ -565,8 +593,7 @@ class TestTheNamesListsPath:
             assert routes_carrying(again, PARTICIPANT, DECLARED_ROUTES) == []
             answer = again["occurrences_page"]
             assert answer == {"opened": False, "not_written_because": None,
-                              "withheld_note": server.
-                              _OCCURRENCES_PAGE_WITHHELD.format(file_id=1)}
+                              "withheld_note": withheld}
             assert where.read_text(encoding="utf-8") == \
                 "the researcher's own notes"
 
@@ -676,6 +703,29 @@ class TestWhereThePageGoes:
             reading_folder.sweep(now)
             assert not page.exists() and fresh_temp.exists()
 
+    def test_a_reading_copy_beside_the_page_goes_at_its_week(self, tmp_path):
+        """A reading copy more than a week old goes at the sweep that
+        removes the page for choosing beside it: the page's folder, and
+        the file's folder whose time its making changed, keep the copy no
+        longer than the page stands. Beside a page under an hour old the
+        copy stays until that page goes. The folders' own times are left
+        as Exegete's writes made them."""
+        with fresh(tmp_path, TOMS) as folder:
+            shown = json.loads(server.open_file_for_reading(1))
+            copy = Path(shown["location"])
+            preview_of(mapping=TOM, choose_occurrences=True)
+            page = page_at(folder)
+            assert copy.parent == page.parent.parent
+            now = time.time()
+            os.utime(copy, (now - reading_folder.LIFETIME - 24 * 3600,) * 2)
+            os.utime(page, (now - 30 * 60,) * 2)
+            reading_folder.sweep(now)
+            assert copy.exists() and page.exists()
+            os.utime(page, (now - reading_folder.PREVIEW_LIFETIME - 5,) * 2)
+            reading_folder.sweep(now)
+            assert not page.exists()
+            assert not copy.exists() and not copy.parent.exists()
+
 
 class TestTheFoldersNote:
     def test_the_folder_note_written_again(self, tmp_path, monkeypatch):
@@ -717,33 +767,73 @@ class TestTheFoldersNote:
 
 
 class TestNoRunSpokenOf:
+    @staticmethod
+    def _another_file_says(folder, words, memo=None):
+        """File 4's text, and file 1's note when given."""
+        con = sqlite3.connect(str(folder / "data.qda"))
+        con.execute("UPDATE source SET fulltext=? WHERE id=4", (words,))
+        if memo is not None:
+            con.execute("UPDATE source SET memo=? WHERE id=1", (memo,))
+        con.commit()
+        con.close()
+        server.db.close()
+        server.db = QualcoderDatabase(str(folder))
+
+    @staticmethod
+    def _file_text_warning(out):
+        text = [w for w in out["warnings"] if "would still be in the text" in w]
+        assert len(text) == 1, out["warnings"]
+        return text[0]
+
     def test_no_run_spoken_of_where_no_name_is_in_the_file(self, tmp_path):
         """A preview given no list, of a file where no name of the mapping
-        occurs, with a name in another file: the file-text warning speaks
-        of no run, as where a list leaves every occurrence. With a note to
-        rewrite, a run happens, and the warning says so."""
+        occurs, with names in another file: the file-text warning speaks
+        of no run, neither opening "after this run" nor saying that this
+        run did not rewrite the other file, as where a list leaves every
+        occurrence; the kind is still given. With a note to rewrite, a run
+        happens, and the warning says so."""
         with fresh(tmp_path, "Nobody is named in this one.\n") as folder:
-            con = sqlite3.connect(str(folder / "data.qda"))
-            con.execute("UPDATE source SET fulltext=? WHERE id=4",
-                        ("Thomas wrote this.",))
-            con.execute("UPDATE source SET memo=? WHERE id=1",
-                        ("Thomas called back.",))
-            con.commit()
-            con.close()
-            server.db.close()
-            server.db = QualcoderDatabase(str(folder))
+            self._another_file_says(folder, "Thomas wrote this. Mary Ann "
+                                    "too.", memo="Thomas called back.")
             out = preview_of(mapping=MAPPING)
-            warnings = out["warnings"]
             assert ("None of the names in this mapping occurs in this file, "
-                    "so an execute would rewrite nothing.") in warnings
-            text = [w for w in warnings if "would still be in the text" in w]
-            assert len(text) == 1, warnings
-            assert text[0].startswith("Warning: 1 occurrence(s) of these "
+                    "so an execute would rewrite nothing.") in out["warnings"]
+            warning = self._file_text_warning(out)
+            assert warning.startswith("Warning: 2 occurrence(s) of these "
                                       "names would still be in the text of "
-                                      "1 file(s)")
-            assert not any("after this run" in w for w in warnings), warnings
+                                      "1 file(s)"), warning
+            assert "2 of those are whole words in files" in warning
+            assert "this run" not in warning, warning
             out = preview_of(mapping=MAPPING, rewrite_memos=True)
-            text = [w for w in out["warnings"]
-                    if "would still be in the text" in w]
-            assert text[0].startswith("Warning: after this run, 1 "
-                                      "occurrence(s)"), out["warnings"]
+            warning = self._file_text_warning(out)
+            assert warning.startswith("Warning: after this run, 2 "
+                                      "occurrence(s)"), warning
+            assert "whole words in files this run did not rewrite" in warning
+
+    def test_no_run_spoken_of_where_every_occurrence_is_left(self, tmp_path):
+        """A list that leaves every occurrence, with the name in another
+        file: the file-text warning gives the other file's kind without
+        saying that this run did not rewrite it, since no run happens."""
+        with fresh(tmp_path, TOMS) as folder:
+            self._another_file_says(folder, "Tom wrote this.")
+            ids = [row["id"] for row in block(preview_of(
+                mapping=TOM, choose_occurrences=True))["listed"]]
+            out = preview_of(mapping=TOM, choose_occurrences=True,
+                             leave_occurrences=ids)
+            assert server._EVERY_OCCURRENCE_LEFT in out["warnings"]
+            warning = self._file_text_warning(out)
+            assert "1 are whole words in files" in warning, warning
+            assert "this run" not in warning, warning
+
+    def test_the_whole_word_sentence_speaks_of_a_run_only_with_one(self):
+        """The whole-word-only sentence, which no known text reaches, on
+        the totals alone: no run spoken of where none happens."""
+        totals = {"occurrences": {"wide": 0, "whole_word": 2},
+                  "files_showing_a_name": 1}
+        without = server._pseudonymise_file_text_warning(
+            {"totals": totals}, run=False)
+        assert without.startswith("Warning: the rewrite's own whole-word "
+                                  "rule would still match 2 occurrence(s)")
+        assert "this run" not in without
+        assert "this run" in server._pseudonymise_file_text_warning(
+            {"totals": totals})

@@ -30,8 +30,8 @@ are made with the standard library alone.
 
 The same preview writes a page for the researcher (`build_page`): the
 file's whole text as stored, one paragraph per stored line, each
-numbered as the preview numbers it and laid out in the direction of
-its own first letter; every occurrence
+numbered as the preview numbers it where the preview gives lines, and
+laid out in the direction of its own first letter; every occurrence
 marked with its id after it (in a line of right-to-left text too) and,
 with a list to leave, those left marked in a second style, labelled
 "left as it is". It shows no pseudonym, no entry number and
@@ -355,12 +355,16 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
 def build_page(*, project_name: str, file_id: int, file_name: str,
                text: str, marks: Sequence[Tuple[int, int, str]],
                left: Collection[int], written_at: datetime,
-               version: str = "") -> Tuple[str, Dict[str, Any]]:
+               version: str = "", lines_in_preview: bool = True
+               ) -> Tuple[str, Dict[str, Any]]:
     """The page, and the counts the preview's answer gives.
 
     `marks` holds each occurrence's start and end in `text` and the id
     the preview shows for it, in text order; `left` the positions in
-    `marks` of the occurrences the list given leaves as they are."""
+    `marks` of the occurrences the list given leaves as they are.
+    `lines_in_preview` is false where the preview lists the ids alone
+    (the names list's path): the page then numbers its lines for reading
+    only, and says so."""
     left = set(left)
     lines = len(_lines(text))
     counts = {"occurrences": len(marks), "left": len(left), "lines": lines}
@@ -368,9 +372,12 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         f"Written at {_when(written_at)}, by a pseudonymisation preview. It "
         f"goes at Exegete's first tidy once it is an hour old, or sooner, "
         f"when Exegete changes this file's text or name.",
-        "Each occurrence of a name the run would replace is marked, with "
-        "its id after it. The lines are numbered as the preview numbers "
-        "them."]
+        "Each occurrence of a name the preview looked for is marked, with "
+        "its id after it. "
+        + ("The lines are numbered as the preview numbers them."
+           if lines_in_preview else
+           "The lines are numbered on this page only: the preview lists "
+           "the ids alone.")]
     if left:
         facts.append(
             f"{_plural(len(left), 'occurrence is', 'occurrences are')} "

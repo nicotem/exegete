@@ -10,7 +10,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
 | `full` (80 tools) | 206,893 | 204,793 |
 | `core` (28 tools) | 76,139 | 75,947 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 13,856 | 13,721 |
+| The full brief | 13,859 | 13,721 |
 | The brief in `core` | 1,923 | 1,923 |
 
 - The reading of the texts Exegete gives the assistant adds 663
@@ -31,5 +31,5 @@ Python 3.13.5 with the libraries in `uv.lock`:
   longer than 16,384 characters, is 18,318 characters on 3.13 and
   19,490 on 3.11.
 - The full brief's line on the pages Exegete opens for the researcher
-  names the page for choosing occurrences too, which adds 72 characters
+  names the page for choosing occurrences too, which adds 75 characters
   to it.

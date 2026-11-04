@@ -485,29 +485,14 @@ def sweep(now: Optional[float] = None) -> int:
                           and item.is_dir(follow_symlinks=False)):
                         # An interrupted copy of an original is left in
                         # the original's own folder, one level down.
-                        try:
-                            copies = list(os.scandir(item.path))
-                        except OSError:
-                            copies = []
-                        for copy in copies:
-                            if copy.name.startswith(TEMP_PREFIX):
-                                removed += _remove_if_older(
-                                    Path(copy.path), now, TEMP_LIFETIME)
+                        removed += _sweep_inside(item.path, now)
                     elif (item.name == OCCURRENCES
                           and item.is_dir(follow_symlinks=False)):
                         # The page for choosing occurrences marks which
                         # words are names, so it goes after an hour, as a
-                        # preview page does (v0.15.3); an interrupted
-                        # write's file after ten minutes
-                        try:
-                            pages = list(os.scandir(item.path))
-                        except OSError:
-                            pages = []
-                        for page in pages:
-                            removed += _remove_if_older(
-                                Path(page.path), now,
-                                TEMP_LIFETIME if page.name.startswith(
-                                    TEMP_PREFIX) else PREVIEW_LIFETIME)
+                        # preview page does (v0.15.3)
+                        removed += _sweep_inside(item.path, now,
+                                                 PREVIEW_LIFETIME)
                 removed += _remove_if_older(path, now, LIFETIME,
                                             newest_inside=True)
                 continue
@@ -519,6 +504,24 @@ def sweep(now: Optional[float] = None) -> int:
                 os.rmdir(project.path)
         except OSError:
             pass
+    return removed
+
+
+def _sweep_inside(folder: str, now: float,
+                  age: Optional[float] = None) -> int:
+    """In a folder inside a file's folder: the temporary files an
+    interrupted write left, once ten minutes old, and with `age` anything
+    else once that old. Returns how many entries went."""
+    try:
+        entries = list(os.scandir(folder))
+    except OSError:
+        return 0
+    removed = 0
+    for entry in entries:
+        if entry.name.startswith(TEMP_PREFIX):
+            removed += _remove_if_older(Path(entry.path), now, TEMP_LIFETIME)
+        elif age is not None:
+            removed += _remove_if_older(Path(entry.path), now, age)
     return removed
 
 

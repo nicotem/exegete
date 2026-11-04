@@ -2,16 +2,17 @@
 """v0.15.3: the documents' promises and dated readings
 (scripts/check_promises.py).
 
-Pinned on small git repositories, each commit made by a test identity
-at noon UTC on a day the test chooses, and never pushed: each form of a
+Pinned on small git repositories, each commit made by a test identity at
+noon UTC on a day the test chooses, and never pushed: each form of a
 promise is listed once, with the line its own words are on and that
 line's day by git blame; release preparation refuses a promise older
 than MAX_AGE_DAYS that names no row of the plan and is no state, and a
 dated reading older than MAX_AGE_DAYS by the day it gives; the three
 forms of a date and the Archive's captures are read, "released on" is
-not; the words that are no promise are left out; a shallow clone
-refuses release preparation; the files read are the facts check's
-documents, the records and fragments left out; docs/WRITING.md's
+not; the words that are no promise are left out; a shallow clone refuses
+release preparation, and a folder git cannot read stops the run; the
+report goes to the job's step summary too; the files read are the facts
+check's documents, the records and fragments left out; docs/WRITING.md's
 example of the form is no reading, while a real reading there ages. On
 the repository, read without its history: each entry of NOT_PROMISES and
 NOT_READINGS is still found; the sentences are cut as the texts check
@@ -413,6 +414,36 @@ def test_sentences_are_cut_as_the_texts_check_cuts_them():
             assert [(each.line, each.text) for each in
                     promises.block_sentences(name, fragments)] == \
                 texts.cut(fragments), (name, fragments[0][0])
+
+
+@needs_git
+def test_the_report_goes_to_the_step_summary_too(tmp_path, capsys,
+                                                 monkeypatch):
+    root = _commit(tmp_path / "repo", {
+        "GUIDE.md": "Exegete does not yet nest a code.\n\nThe page says so "
+                    "(read on 1 November 2026).\n"}, _days_ago(5))
+    summary = tmp_path / "summary.md"
+    summary.write_text("### The step before\n", encoding="utf-8")
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(summary))
+    code, lines, _ = _run(capsys, root)
+    assert code == 0
+    # added after what the job's earlier steps wrote: the report, whole
+    assert summary.read_text(encoding="utf-8").splitlines() == [
+        "### The step before"] + lines
+    assert "**Promises**" in lines and "**Dated readings**" in lines
+
+
+@needs_git
+def test_a_folder_git_cannot_read_exits_2(tmp_path, capsys, monkeypatch):
+    folder = tmp_path / "not-a-repository"
+    folder.mkdir()
+    (folder / "GUIDE.md").write_text("Exegete does not yet nest a code.\n",
+                                     encoding="utf-8")
+    # git looks no higher than the test's own folder
+    monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
+    code, lines, error = _run(capsys, folder)
+    assert (code, lines) == (2, [])
+    assert error.startswith("check_promises: git ")
 
 
 # ---------------------------------------------------------------------------

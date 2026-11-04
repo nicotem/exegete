@@ -20017,6 +20017,23 @@ def _occurrences_next(preview: Dict[str, Any], page: Any) -> None:
             block["next"] = words
 
 
+def _with_occurrences_page(result: Dict[str, Any],
+                           plan: Optional[Dict[str, Any]], typed: bool,
+                           compiled) -> Dict[str, Any]:
+    """A preview's answer with the page for choosing occurrences: the page
+    written from the plan the preview was built from, so with its ids,
+    the block's next note naming it, and what the answer says of it
+    beside the preview (v0.15.3)."""
+    page = _occurrences_page(plan, typed, compiled)
+    _occurrences_next(result["preview"], page)
+    answer: Dict[str, Any] = {}
+    for key, value in result.items():
+        answer[key] = value
+        if key == "preview":
+            answer["occurrences_page"] = page
+    return answer
+
+
 def _after_a_colon(text: str) -> str:
     """A sentence set after a colon: its first letter in lower case."""
     return text[:1].lower() + text[1:]
@@ -22577,18 +22594,9 @@ def pseudonymise_source(
             preview.pop("_effect", None)
         if choose_occurrences and preview_token is None and \
                 isinstance(preview, dict) and "preview_token" in result:
-            # The page for choosing (v0.15.3), on a preview alone, written
-            # from the plan the preview was built from, so with its ids,
-            # and said beside the preview
-            page = _occurrences_page(read_phase.get("plan"), typed,
-                                     compiled)
-            _occurrences_next(preview, page)
-            answer: Dict[str, Any] = {}
-            for key, value in result.items():
-                answer[key] = value
-                if key == "preview":
-                    answer["occurrences_page"] = page
-            result = answer
+            # The page for choosing (v0.15.3), on a preview alone
+            result = _with_occurrences_page(result, read_phase.get("plan"),
+                                            typed, compiled)
         if typed and not save and not keeps and "execute_with" in result:
             # Ruling 14a: the preview says which is needed, and the model
             # finds the two ways forward where it finds the recipe.

@@ -390,7 +390,8 @@ class TestTheExtension:
                            "lifecycle (the earlier name of full)",
                            "Not sure"]
         support = _flat("SUPPORT.md")
-        assert (f"the toolset is `core` when its switch \"{switch}\" is "
+        # (v0.15.3: "tool set", the documents' word, as the switch has it)
+        assert (f"the tool set is `core` when its switch \"{switch}\" is "
                 f"on, and `full` otherwise.") in support
         assert "Tool set setting" not in support
 

@@ -544,9 +544,12 @@ def test_contributing_says_exegetes_code_imports_onnxruntime():
     text = " ".join((REPO / "CONTRIBUTING.md").read_text(
         encoding="utf-8").split())
     assert "never by Exegete's own code" not in text
-    assert ("loaded only inside the reading process, never at Exegete's "
-            "start, where Exegete's own code imports onnxruntime only to "
-            "switch its usage reports off") in text
+    # (v0.15.3, the readability reading: where the import happens has a
+    # sentence of its own, so that "where" cannot read as the start)
+    assert ("they are loaded only inside the reading process, never at "
+            "Exegete's start. In the reading process, Exegete's own code "
+            "imports onnxruntime only to switch its usage reports off") \
+        in text
 
 
 def test_the_parity_script_switches_onnxruntimes_reports_off(tmp_path):

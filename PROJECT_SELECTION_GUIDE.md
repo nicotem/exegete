@@ -1,9 +1,9 @@
 # Choosing a project
 
 Exegete works on one project at a time. You can choose it in the
-conversation, or set one project in the configuration of the app that
-starts Exegete. This guide is for installs from the Terminal, where you
-write that configuration by hand. With the desktop extension for Claude
+conversation, or name one project in the configuration file of the app
+that starts Exegete. This guide is for installs from the Terminal, where
+you write that file by hand. With the desktop extension for Claude
 Desktop, you choose a project in the conversation.
 
 ## Choosing a project in the conversation
@@ -14,7 +14,8 @@ them.
 
 ### Setup
 
-In your `claude_desktop_config.json`, leave out `EXEGETE_PROJECT_PATH`:
+In Claude Desktop's configuration file, `claude_desktop_config.json`,
+leave out the setting `EXEGETE_PROJECT_PATH`:
 
 ```json
 {
@@ -27,10 +28,11 @@ In your `claude_desktop_config.json`, leave out `EXEGETE_PROJECT_PATH`:
 }
 ```
 
-This example is for a copy of the source. For an install from PyPI, the
-command is the one the Terminal guide gives, in
+This example is for an install from the source. For an install from
+PyPI, use the command that the Terminal guide gives in
 ["Claude Desktop set up by hand"](docs/installing-from-the-terminal.md#claude-desktop-set-up-by-hand).
-There is no `env` section.
+The entry has no `env` section, the part where the example further down
+sets the project.
 
 ### Usage
 
@@ -41,10 +43,10 @@ List my available projects
 ```
 
 Exegete searches these places by default:
-- the folder `EXEGETE_WORKSPACE` names, when it is set (with the
-  desktop extension, its "Folder for projects", by default
-  `~/Exegete projects/`), at its top level only, unless it is one of
-  the places below
+- the folder `EXEGETE_WORKSPACE` names, when it is set. With the
+  desktop extension, that is its setting "Folder for projects", by
+  default `~/Exegete projects/`. Exegete searches that folder at its
+  top level only, unless it is one of the places below
 - `~/Documents/QualCoder_projects/`
 - `~/Documents/QualCoder/`
 - `~/QualCoder/`
@@ -53,10 +55,11 @@ Exegete searches these places by default:
 - `~/Documents/`
 
 The answer lists each project with its path, its name, the folder it is
-in and when that folder last changed, the most recently changed first.
-It also gives the project selected, if any, the folder where new
-projects go and the folders searched. The size it gives, `size_mb`, is
-that of the project folder's own entry, not of the files inside it. In
+in, and when the project's own folder last changed, the most recently
+changed first. It also gives the project selected, if any, the folder
+where new projects go and the folders searched. The size it gives,
+`size_mb`, leaves out the files inside the project's folder, so it does
+not show how large the project is. In
 this example, the first project is in the desktop extension's folder and
 the second in one of QualCoder's, as it would be if you use QualCoder.
 The answer begins like this:
@@ -162,7 +165,7 @@ What are my most used codes?
 | | Choosing in the conversation | One project in the configuration |
 |---------|---------------|---------------|
 | **Setup** | No path to set | The project's full path |
-| **Several projects** | Switch at any time | Switch at any time too (`select_project` works; the variable only sets the project Exegete starts with) |
+| **Several projects** | Switch at any time | Switch at any time too: `select_project` still works, and the setting only chooses the project Exegete starts with |
 | **First use** | Ask the assistant to select a project | The project opens with the first tool that needs it |
 | **Suits** | Work across several projects | Work on one project |
 
@@ -194,8 +197,9 @@ it.
 
 ### "No project currently open"
 
-`get_current_project` says this before a project is selected, and the
-other tools say "No project selected". Ask the assistant:
+The tool `get_current_project` gives this answer before a project is
+selected, and Exegete's other tools say "No project selected". Ask the
+assistant:
 
 ```
 List available projects
@@ -203,8 +207,9 @@ Select the first project
 ```
 
 When a project was selected or created before on this computer, and
-still exists, the answer also gives its path. One `select_project` call
-with that path continues with it. Exegete keeps that path in
+still exists, the answer also gives its path. To go back to that
+project, ask the assistant to select it: one `select_project` call with
+that path is enough. Exegete keeps that path in
 `~/.exegete/mru_project.json`, and never selects the project by itself.
 
 ### A project is missing from the list
@@ -247,17 +252,20 @@ Selects a project (a `.qda` folder) for the tools that follow
 - `project_path`: the path of the `.qda` project folder, or of the
   `data.qda` file inside it
 
-The answer includes `qualcoder_gui_signals`, the signs it finds that
-QualCoder 4.0 may have the project open. QualCoder 3.8.2 shows itself
-through the project's lock file. Exegete records the selection as the
+The answer includes `qualcoder_gui_signals`: the signs Exegete finds
+that QualCoder 4.0 may have the project open. QualCoder 3.8.2 shows
+that it has the project open with a lock file, a small file it writes
+in the project's folder. Exegete records the selection as the
 last project used on this computer. A selection that fails changes
 nothing: the project selected before stays selected.
 
 ### 3. `get_current_project`
-Shows which project is selected, whether the project's lock file is
-active (`qualcoder_open`: QualCoder 3.8.2 has the project open, or
-another conversation using Exegete is writing to it) and the signs of
-an open QualCoder 4.0 window (`qualcoder_gui_signals`)
+Shows which project is selected, and whether something else may be
+using it:
+- `qualcoder_open`: whether the project's lock file is active. It is
+  active while QualCoder 3.8.2 has the project open, or while another
+  conversation using Exegete is writing to it.
+- `qualcoder_gui_signals`: the signs of an open QualCoder 4.0 window
 
 **No arguments**
 

@@ -98,7 +98,9 @@ class TestTheRefusalNamesBothCauses:
                 "is writing to it.") in bullet
         assert "QualCoder 4.0 writes no lock file." in bullet
         assert "it can miss one" in bullet
-        assert ("a change made while QualCoder has the project open can lose "
+        # (the readability reading of v0.15.3 gave the loss a sentence of
+        # its own)
+        assert ("change made while QualCoder has the project open can lose "
                 "work") in bullet
 
     # v0.15.2, the tools and guides piece: each place that gives the
@@ -203,12 +205,18 @@ class TestTheRefusalNamesBothCauses:
 
     def test_the_project_selection_guide(self):
         guide = _flat(_read("PROJECT_SELECTION_GUIDE.md"))
-        # v0.15.3: "selected", the guide's word for the project in use
-        assert ("Shows which project is selected, whether the "
-                "project's lock file is active (`qualcoder_open`: QualCoder "
-                "3.8.2 has the project open, or another conversation using "
-                "Exegete is writing to it) and the signs of an open "
-                "QualCoder 4.0 window (`qualcoder_gui_signals`)") in guide
+        # v0.15.3: "selected", the guide's word for the project in use;
+        # the readability reading made the two fields a list, each with
+        # its fact: the lock file's two causes, and 4.0's signs
+        tool = guide[guide.index("### 3. `get_current_project`"):]
+        tool = tool[:tool.index("## ", 4)]
+        assert "Shows which project is selected" in tool
+        assert ("- `qualcoder_open`: whether the project's lock file is "
+                "active. It is active while QualCoder 3.8.2 has the project "
+                "open, or while another conversation using Exegete is "
+                "writing to it.") in tool
+        assert ("- `qualcoder_gui_signals`: the signs of an open QualCoder "
+                "4.0 window") in tool
 
     @pytest.mark.parametrize("name", sorted(set(
         NAMED_IN_THE_CHANGELOG.values())))

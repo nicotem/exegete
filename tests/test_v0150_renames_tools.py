@@ -741,7 +741,9 @@ class TestTheDocuments:
         # facts check, tests/test_v0151_facts.py, holds every name a
         # document calls a tool or an argument)
         text = _flat(_read("CONTRIBUTING.md"))
-        examples = re.search(r"never changed: tool names \(`(\w+)`\), "
+        # (v0.15.3, the readability reading: "Identifiers keep their exact
+        # spelling ... They include tool names (...), argument names (...)")
+        examples = re.search(r"include tool names \(`(\w+)`\), "
                              r"argument names \(`(\w+)`\),", text)
         assert examples, "CONTRIBUTING's examples of names"
         tool, argument = examples.groups()

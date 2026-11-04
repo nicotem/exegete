@@ -18,9 +18,9 @@ WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser
 General Public License for more details.
 
-The licence texts ship with this program: COPYING.LESSER is the GNU
-Lesser General Public License, version 3, and legal/GPL-3.0.txt is the
-GNU General Public License, version 3, whose terms the Lesser licence
+The licence texts ship with this program. COPYING.LESSER is the GNU
+Lesser General Public License, version 3. legal/GPL-3.0.txt is the GNU
+General Public License, version 3, whose terms the Lesser licence
 incorporates.
 
 This licence applies from version 0.13. Every release up to and
@@ -36,21 +36,22 @@ Code derived from QualCoder
 
 Exegete is a separate program that reads and writes projects in the
 file format of QualCoder (https://github.com/ccbogel/QualCoder). It does not
-include QualCoder, but it contains a small number of routines and values
-taken from QualCoder so that its results match QualCoder's exactly, and
-it restates facts of QualCoder's file format so that projects stay
-compatible. This section lists every such item, from a provenance audit
-(citation, string and similarity sweeps, with a completeness check) of
-the repository against QualCoder's source and history (September 2026).
-Code written for this project to give QualCoder's results, without
-carrying QualCoder's code, is not listed.
+include QualCoder. It contains a small number of routines and values
+taken from QualCoder, so that its results match QualCoder's exactly. It
+also restates facts of QualCoder's file format, so that projects stay
+compatible. This section lists every such item. The list comes from an
+audit of this repository against QualCoder's source and history, made
+in September 2026. The audit searched for citations of QualCoder, for
+strings shared with it and for similar code, and checked that the list
+was complete. Code written for this project to give QualCoder's
+results, without carrying QualCoder's code, is not listed.
 
-QualCoder is copyright Colin Curtain and contributors (its source file
-headers name the authors as Colin Curtain, Kai Dröge, Justin
-Missaghieh--Poncet and Lorenzo Salomón), and is licensed under the GNU
-Lesser General Public License, version 3 or (at your option) any later
-version (LGPL-3.0-or-later). This project uses the items below under
-that licence.
+QualCoder is copyright Colin Curtain and contributors. The headers of
+its source files name the authors as Colin Curtain, Kai Dröge, Justin
+Missaghieh--Poncet and Lorenzo Salomón. QualCoder is licensed under the
+GNU Lesser General Public License, version 3 or (at your option) any
+later version (LGPL-3.0-or-later). This project uses the items below
+under that licence.
 
 How to read an entry. "Here" is the file in this repository and the
 functions, classes or names that carry the item. "From" is the
@@ -60,7 +61,7 @@ under src/qualcoder/ in QualCoder's master branch at commit
 file at the 3.8.2 release tag (marked 3.8.2), at the 4.0 tag (the
 release of 2 October 2026), or from the root of QualCoder's repository.
 "Author", where given, is what QualCoder's file header or git history
-records for those lines; how a git identity maps to a person is for the
+records for those lines. How a git identity maps to a person is for the
 QualCoder project to confirm. "Why" is the reason the item was copied.
 An entry marked withdrawn keeps its number, so that the entries'
 references to each other stay true; the code it described is no longer
@@ -85,25 +86,26 @@ Routines in the package
    From: reports.py, lines 1140-1151 (the same expression is at
    report_compare_coder_file.py, lines 817-829).
    Author: Colin Curtain (QualCoder's git history, 9 of the 12 lines).
-   Why: the value must be the number QualCoder's Coder comparison report
-   displays, and a floating-point result is identical only when the same
-   operations run in the same order, so the expression is QualCoder's.
+   Why: the value must be the number that QualCoder's Coder comparison
+   report displays. A floating-point result is identical only when the
+   same operations run in the same order, so the expression is
+   QualCoder's.
 
 3. QualCoder's coder comparison percentages (closely ported)
    Here: src/exegete/coder_comparison.py, statistics.
    From: reports.py, lines 1102-1107.
    Why: the five headline percentages are rounded as QualCoder rounds
-   them, including 100 minus the already rounded agreement, so that they
-   equal QualCoder's to the last digit; that needs QualCoder's
-   expressions in QualCoder's order.
+   them, so that they equal QualCoder's to the last digit. One of them is
+   100 minus the agreement already rounded. That needs QualCoder's
+   expressions, in QualCoder's order.
 
 4. QualCoder's coder comparison counting (closely ported)
    Here: src/exegete/coder_comparison.py, qualcoder_report_values.
    From: reports.py, lines 1061-1115.
-   Why: to state exactly what QualCoder's report would show when one
-   coder's segments of a code overlap, where QualCoder counts
-   differently from Exegete; it is a disclosure, never the headline
-   number.
+   Why: when one coder's segments of a code overlap, QualCoder counts
+   differently from Exegete. These values state exactly what
+   QualCoder's report would show then. They are a disclosure, never the
+   headline number.
 
 5. QualCoder's palette matcher (closely ported)
    Here: src/exegete/database.py, snap_to_palette.
@@ -162,8 +164,8 @@ Routines in the package
     ai_memo.py's header gives as Kai Dröge's).
     Why: to offer the assistant QualCoder 4.0's four-way methodological
     gate (allow, allow_with_caveat, reframe_and_ask, refuse) in
-    QualCoder's terms; the four labels are QualCoder's and their
-    definitions a close paraphrase of its prompt. The brief's sections 2
+    QualCoder's terms. The four labels are QualCoder's, and their
+    definitions closely paraphrase its prompt. The brief's sections 2
     (principles), 12 (when to ask and when to act), 10 (finding your way
     in the data) and 13 (reporting to the researcher) follow those four
     sections of QualCoder's brief for its own assistant, in order and in
@@ -196,9 +198,9 @@ Routines in the package
     From: refi.py, lines 3160-3167 (3.8.2 refi.py, lines 3068-3075).
     Author: recorded in QualCoder's git history under the identity
     "QualCoder Developer".
-    Why: rename_file refuses a name that would change the file type
-    QualCoder's REFI-QDA export declares for such a text, which needs
-    the type QualCoder reads from the name, by QualCoder's steps.
+    Why: rename_file refuses a name that would change the file type that
+    QualCoder's REFI-QDA export declares for such a text. To know that
+    type, Exegete reads it from the name by QualCoder's steps.
 
 
 Values in the package
@@ -241,11 +243,12 @@ Values in the package
     SEGMENT_STRATEGIES, _resolve_exclude_code_ids, get_coded_segments
     and prune_backups.
     From: ai_mcp_server.py, lines 69-70, 1693, 3587, 3757 and 5358.
-    Why: the segment-budget ceiling, QualCoder 4.0's 8000-character
-    default budget, which the get_coded_segments description recommends,
-    the sampling strategy names and the parameter and field names
-    exclude_code_ids, hit_max_char_limit and requires_confirmation are
-    aligned with QualCoder 4.0's own MCP server.
+    Why: to align these with QualCoder 4.0's own MCP server. They are
+    the ceiling on the segment budget, and QualCoder 4.0's default budget
+    of 8000 characters, which the get_coded_segments description
+    recommends. They are also the names of the sampling strategies, and
+    the parameter and field names exclude_code_ids, hit_max_char_limit
+    and requires_confirmation.
 
 21. QualCoder's journal-name attempt limit
     Here: src/exegete/server.py, JOURNAL_NAME_ATTEMPTS.
@@ -301,8 +304,8 @@ Values in the package
     rename_file.
     From: manage_files.py, line 1967.
     Why: to say in QualCoder's words what it does with such a name
-    (unnamed_file_<id>), and to refuse a new name that would take the
-    one QualCoder is about to give another file.
+    (unnamed_file_<id>). Exegete also refuses a new name that would take
+    the name QualCoder is about to give another file.
 
 29. Two menu labels of QualCoder's Manage Files
     Here: src/exegete/database.py, _ENDING_STILL_POSSIBLE.
@@ -329,21 +332,21 @@ Values in the package
     Here: src/exegete/reading_copy.py, QUALCODER_WHITE_TEXT and
     text_colour.
     From: color_selector.py, lines 37-49 (TextColor).
-    Why: a reading copy draws each coded passage with the text colour
-    QualCoder's own HTML export of a coded file gives it (code_text.py,
-    lines 3504-3621, whose rules the reading copy follows without
-    copying its code).
+    Why: a reading copy draws each coded passage in the text colour that
+    QualCoder's own HTML export of a coded file gives it. That export is
+    in code_text.py, lines 3504-3621. The reading copy follows its rules
+    without copying its code.
 
 
 Facts of QualCoder's file format in the package
 -----------------------------------------------
 
-These are facts of QualCoder's file format restated so projects stay
-compatible: the table and column layouts, file names, conventions and
-rules that a program must follow for QualCoder to open, read and trust
-a project Exegete has written. They are restated in this project's
-own code; where the statement is a table or column list, it is the one
-the format dictates.
+These are facts of QualCoder's file format, restated so that projects
+stay compatible. They are the table and column layouts, file names,
+conventions and rules that a program must follow for QualCoder to open,
+read and trust a project Exegete has written. They are restated in this
+project's own code. Where the statement is a table or column list, it
+is the one the format dictates.
 
 32. QualCoder 3.8.2's lock file: its name, timeout, content and
     heartbeat interval.
@@ -365,9 +368,10 @@ the format dictates.
     From: __main__.py, lines 2296-2346.
 
 35. The media path prefixes that tell text, PDF, image, audio and video
-    sources apart, and what a PDF source with no text layer holds (only
-    whitespace, by the test QualCoder 4.0's import applies; the PDF file
-    itself, decoded as text, in a 3.8.2 import).
+    sources apart, and what a PDF source with no text layer holds. After
+    QualCoder 4.0's import, it holds only whitespace, by the test that
+    import applies. After a 3.8.2 import, it holds the PDF file itself,
+    decoded as text.
     Here: src/exegete/database.py, _detect_file_type,
     pdf_text_problem and QualcoderDatabase.pdf_text_problems.
     Here: src/exegete/server.py, _stored_copy_block and
@@ -386,9 +390,9 @@ the format dictates.
     lines 2193-2201, 2893 and 2895, ai_vectorstore.py, lines 576-577,
     and ai_chat.py, lines 1693-1695.
     Why: Exegete makes an empty ai_data folder when it creates a project
-    or copies one that has none, a named departure (QualCoder's New
-    Project makes only the four folders), so that QualCoder 4.0's first
-    open finds it.
+    or copies one that has none, so that QualCoder 4.0 finds the folder
+    the first time it opens the project. This is a named departure:
+    QualCoder's New Project makes only the four folders.
 
 37. The name, entry shape and write format of pseudonyms.json.
     Here: src/exegete/database.py, PSEUDONYMS_JSON_NAME,
@@ -521,8 +525,8 @@ the format dictates.
     Why: a project Exegete creates must be, in everything QualCoder
     reads, the project QualCoder 4.0's own New Project creates. The
     table statements are generated from this project's own column
-    table, not copied: QualCoder never reads a table's stored text, and
-    the tests compare everything it does read with a project 4.0
+    table, not copied. QualCoder never reads a table's stored text, and
+    the tests compare everything it does read with a project that 4.0
     created. The coder_names table, the views' condition and the two
     coder_names inserts read as QualCoder's, being what the format
     requires.
@@ -671,12 +675,12 @@ own format.
     Here: tests/fixtures/qc40_new_project.json.
     Here: tests/test_v014_create_project_format.py,
     TestTheOracleItself.test_the_fixture_is_four_point_zero_s_project.
-    From: the project QualCoder 4.0's own New Project (at the 4.0 tag,
-    __main__.py, lines 2141-2330) wrote, recorded as facts (objects,
+    From: a project that QualCoder 4.0's own New Project wrote (at the
+    4.0 tag, __main__.py, lines 2141-2330), recorded as facts: objects,
     columns, indexes, header fields, first rows and what the views
-    return); it holds no QualCoder source text. The test pins the
-    fixture's counts and its project row, whose about value QualCoder
-    takes from app.py, line 119 at the same tag.
+    return. The fixture holds no QualCoder source text. The test checks
+    the fixture's counts and its project row. QualCoder takes that row's
+    about value from app.py, line 119, at the same tag.
     Why: the format tests compare every project Exegete creates with
     it.
 
@@ -701,11 +705,11 @@ own format.
     4959-4963 and 5020-5023; 3.8.2 __main__.py, lines 2985-2992; 3.8.2
     case_file_manager.py, lines 208-222; 3.8.2 manage_files.py, lines
     755-764 and 2010-2020.
-    Why: statements that name QualCoder's tables and columns to plant
-    rows and old schema versions in fixtures, among them saved graphs,
-    PDF sources and whole-file case links in the shapes QualCoder
-    writes them, and backup folders under QualCoder's names; similar
-    one-line statements occur elsewhere in tests/.
+    Why: these statements name QualCoder's tables and columns to plant
+    rows and old schema versions in fixtures. Among them are saved
+    graphs, PDF sources and whole-file case links in the shapes
+    QualCoder writes them, and backup folders under QualCoder's names.
+    Similar one-line statements occur elsewhere in tests/.
 
 70. The backup and merge-label checks (copied values)
     Here: tests/test_qc40_backup_parity.py,
@@ -745,16 +749,17 @@ own format.
     and 269-307).
     Why: fixtures hold saved displays and filters in the text QualCoder
     writes, and saved rows that QualCoder 4.0 and 3.8.2 wrote through
-    their own code, so the reading of item 44 is tested on QualCoder's
+    their own code. So the reading of item 45 is tested on QualCoder's
     own format.
 
 74. QualCoder's pseudonym import loop (copied verbatim)
     Here: tests/test_v012_pseudonymise_tool.py, upstream_apply and
     TestSavingTheMappingIntoPseudonymsJson.test_qualcoder_applying_the_written_file_gives_this_runs_text.
     From: manage_files.py, lines 2510-2512 and 3344-3349.
-    Why: to test that QualCoder's own application of the pseudonyms.json
-    Exegete saves, one entry at a time in file order, gives the text
-    Exegete's run gave, rather than a restatement of that loop.
+    Why: the test applies the pseudonyms.json that Exegete saves with
+    QualCoder's own loop, one entry at a time in file order, rather than
+    a restatement of that loop. It checks that the result is the text
+    Exegete's run gave.
 
 75. QualCoder's pseudonyms.json write statement (file-format facts)
     Here: tests/test_v012_pseudonymise_tool.py,
@@ -804,12 +809,12 @@ Added for document import (0.14.3)
     Why: so that, with none of Exegete's named departures switched on, a
     Word file's text is QualCoder's to the character: every paragraph at
     any depth, its text and tab elements in document order. The walk is
-    QualCoder's with Word's namespace written as a constant where
-    QualCoder builds it from its prefix table, and its comments
-    rewrapped; each departure switched on leaves out a kind of element
-    or reads one more (TOOLS.md lists them; with the one that moves
-    notes to the end, a note's reference becomes its label in square
-    brackets); the tree is parsed with defusedxml instead of the
+    QualCoder's, except that Word's namespace is written as a constant
+    where QualCoder builds it from its prefix table, and the comments are
+    rewrapped. Each departure switched on leaves out a kind of element or
+    reads one more, and TOOLS.md lists them. With the departure that
+    moves notes to the end, a note's reference becomes its label in
+    square brackets. The tree is parsed with defusedxml instead of the
     standard parser.
 
 80. QualCoder's OpenDocument text recipe (closely ported)
@@ -817,18 +822,18 @@ Added for document import (0.14.3)
     _ODT_ENTITIES and odt_recipe.
     From: manage_files.py, lines 3415-3467.
     Why: so that, with none of Exegete's named departures switched on,
-    an OpenDocument file's text is QualCoder's to the character; the
-    replacements and the tag rule are QualCoder's, the character loop
-    run by chunks, and each departure switched on is a step before or
-    after them (TOOLS.md lists them).
+    an OpenDocument file's text is QualCoder's to the character. The
+    replacements and the tag rule are QualCoder's, and the character
+    loop runs by chunks. Each departure switched on is a step before or
+    after them, and TOOLS.md lists them.
 
 81. The order of QualCoder's import steps (closely ported)
     Here: scripts/qualcoder_parity.py, QualCoder.stored and
     QualCoder._transcript.
     From: manage_files.py, lines 3213-3341 and 2484-2505.
     Why: to record what QualCoder's import stores from each test
-    document, the extraction functions themselves are loaded at run time
-    from a QualCoder source tree and are not in this repository.
+    document. The extraction functions themselves are loaded at run time
+    from a QualCoder source tree, and are not in this repository.
 
 
 Libraries for document import
@@ -840,33 +845,35 @@ adds PyMuPDF and EbookLib, both under the GNU Affero General Public
 License, version 3, and the two libraries EbookLib needs, lxml
 (BSD-3-Clause) and six (MIT). An install with that part is, taken as a
 whole, under the AGPL's terms, as QualCoder 4.0's own installs are.
-Exegete's own code stays under the LGPL (the maintainer's decision of
-6 October 2026, which also switches the part on in the Claude Desktop
-extension). None of these libraries is contained in Exegete's package
-or its Claude Desktop extension file: they are fetched from PyPI on the
-researcher's computer.
+Exegete's own code stays under the LGPL. That is the maintainer's
+decision of 6 October 2026, which also switches the part on in the
+Claude Desktop extension. None of these libraries is contained in
+Exegete's package or its Claude Desktop extension file: they are
+fetched from PyPI on the researcher's computer.
 
 With Python 3.11 to 3.14 on Windows x64, on Linux (x86-64 and Arm) and
-on Macs with Apple silicon, the part brings PyMuPDF 2 (from v0.15.1; on
-those Macs from v0.15.3), and with it nine libraries more, fetched from
-PyPI likewise, under these licences as the licence files and metadata
-inside the packages the lock gives those computers state them:
+on Macs with Apple silicon, the part brings PyMuPDF 2: from v0.15.1 on
+Windows x64 and Linux, and from v0.15.3 on those Macs. With PyMuPDF 2
+come nine more libraries, also fetched from PyPI. Their licences are
+these, as the licence files and metadata inside the packages that the
+lock gives those computers state them:
 
 - onnxruntime: MIT, Microsoft Corporation; its packages also carry
   Microsoft's notices for the third-party software they contain
   (onnxruntime/ThirdPartyNotices.txt).
 - numpy: BSD-3-Clause, NumPy Developers, with parts under 0BSD, MIT,
-  Zlib and CC0-1.0; its packages for Windows and Linux also contain
-  OpenBLAS (BSD-3-Clause) with LAPACK (BSD-3-Clause-Open-MPI) and the
-  GCC runtime libraries (GPL-3.0-or-later with the GCC Runtime Library
-  Exception), and on Linux x86-64 libquadmath (LGPL-2.1-or-later), each
-  named in the package's LICENSE.txt; its packages for Windows also
-  contain Microsoft's C++ runtime library (msvcp140.dll), Microsoft's
-  redistributable code under Microsoft's own terms, which LICENSE.txt
-  does not name. Its packages for Macs with Apple silicon at macOS 14,
-  which an install from the lock takes there, contain none of these
-  libraries and use Apple's Accelerate framework, part of macOS, though
-  their LICENSE.txt names OpenBLAS and the GCC runtime libraries too.
+  Zlib and CC0-1.0. Its packages for Windows and Linux also contain
+  OpenBLAS (BSD-3-Clause) with LAPACK (BSD-3-Clause-Open-MPI), the GCC
+  runtime libraries (GPL-3.0-or-later with the GCC Runtime Library
+  Exception), and on Linux x86-64 libquadmath (LGPL-2.1-or-later). The
+  package's LICENSE.txt names each of these, and its packages for
+  Windows also contain Microsoft's C++ runtime library (msvcp140.dll),
+  which LICENSE.txt does not name. That library is Microsoft's
+  redistributable code, under Microsoft's own terms. Its packages for
+  Macs with Apple silicon at macOS 14, which an install from the lock
+  takes there, contain none of these libraries and use Apple's
+  Accelerate framework, part of macOS. Their LICENSE.txt names OpenBLAS
+  and the GCC runtime libraries all the same.
 - networkx: BSD-3-Clause, NetworkX Developers.
 - psutil: BSD-3-Clause, Jay Loden, Dave Daeschler and Giampaolo Rodola.
 - protobuf: BSD-3-Clause, Google Inc.
@@ -877,8 +884,8 @@ inside the packages the lock gives those computers state them:
 - packaging: Apache-2.0 or BSD-2-Clause, Donald Stufft and individual
   contributors.
 
-Two packages more, pymupdf-layout and pymupdf4llm, are empty at 2.0:
-their code and its trained models are inside PyMuPDF's own package,
+Two more packages, pymupdf-layout and pymupdf4llm, are empty at 2.0.
+Their code and its trained models are inside PyMuPDF's own package,
 under PyMuPDF's statement, "Dual Licensed - GNU AFFERO GPL 3.0 or
 Artifex Commercial License". Every other computer, Intel Macs and
 Windows on Arm among them, takes PyMuPDF 1.x and none of these.

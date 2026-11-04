@@ -409,3 +409,22 @@ class TestTheChoiceBindsNothing:
         out = preview_of()
         done = execute_from(out, choose_occurrences=True)
         assert done.get("success") is True, done
+
+    def test_every_phase_builds_its_plan_with_the_same_key(
+            self, project, monkeypatch):
+        """The preview, the execute's read and the state check under the
+        write lock each build the plan afresh, and each with the one key,
+        so that all of them see the same ids."""
+        real = QualcoderDatabase.pseudonymise_plan
+        keys = []
+
+        def recorded(self, *args, **kwargs):
+            keys.append(kwargs.get("occurrence_key"))
+            return real(self, *args, **kwargs)
+        monkeypatch.setattr(QualcoderDatabase, "pseudonymise_plan", recorded)
+        out = preview_of(choose_occurrences=True)
+        done = execute_from(out)
+        assert done.get("success") is True, done
+        assert len(keys) >= 3
+        assert set(keys) == {occurrences.id_key(pt.load_secret(),
+                                                server._token_project())}

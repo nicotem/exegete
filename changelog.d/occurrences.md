@@ -24,14 +24,32 @@
   preview given it lists every occurrence again, the ones left marked,
   for the researcher to check before the run. An id that matches no
   occurrence in the file's text as it is now is refused at the preview,
-  so after any change to the text, or a change of mapping that moves an
-  occurrence, the occurrences are chosen again. An occurrence left is
+  so after any change to the text, or a change of mapping or of
+  `case_mode` that moves an occurrence, the occurrences are chosen
+  again. An occurrence left is
   left whole, with any name of the mapping inside or overlapping it. The
   run record and the journal entry say how many occurrences were left,
   never where. A list that leaves every occurrence rewrites nothing, and
   the preview and the answer say that the occurrences were left by
   choice. Neither `rewrite_memos` nor `include_context` can be used while
   occurrences are chosen or left.
+- **The count of the names left in the file text tells occurrences left
+  by choice from a name put back.** After a preview given
+  `leave_occurrences`, the residue's count of the names still in the
+  file text charges the occurrences left to a kind of their own,
+  `left_by_choice`, and no longer to `put_back_by_a_pseudonym`, whose
+  warning advised changing a pseudonym that was fine. Word, OpenDocument
+  and RTF files are counted the same way, without the markers of their
+  notes and comments. Each entry's row of the count and its totals by
+  kind gain the key, at 0 where nothing is left, and the count's reading
+  note says that occurrences left are in both of its counts. A warning
+  says how many occurrences are left and that they are real names that
+  stay in the file's text, whether or not the file was counted; the
+  warning on the names left in the file text gives them their own
+  reason, and neither repeats the other. With `use_project_pseudonyms`,
+  the rows per entry leave the occurrences left out, and the file's row
+  gives their number, since a row per entry would tell which name an
+  occurrence left is.
 
 ### Changed
 

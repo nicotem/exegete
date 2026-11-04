@@ -182,14 +182,16 @@ SAFE_CELLS = ("formulas sanitised for spreadsheet safety: cells starting "
 COMPARED = ("If compared with QualCoder's comparison table, which counts "
             "by file linkage, the numbers can differ.")
 SEGMENTS_RULE = (
-    "Containment: a coding belongs to a case only if its span lies fully "
-    "inside one of the case's text spans on the same file (the same rule "
-    "as QualCoder's coding report). " + COMPARED + " Whole-file links made "
+    "Containment: a coding belongs to a case when, and only when, its span "
+    "lies fully inside one of the case's text spans on the same file (the "
+    "same rule as QualCoder's coding report). " + COMPARED + " Whole-file "
+    "links made "
     "in QualCoder end at len-1 or len depending on the dialog, which can "
     "exclude a coding touching the file end.")
 MATRIX_RULE = (
-    "Containment: a coding counts for a case only if fully inside one of the "
-    "case's text spans on the same file (text codings on existing files; "
+    "Containment: a coding counts for a case when, and only when, it lies "
+    "fully inside one of the case's text spans on the same file (text "
+    "codings on existing files; "
     "the same rule as QualCoder's coding report). " + COMPARED)
 FOOTER = ("on this computer (its layout follows QualCoder's export of a "
           "coded file). A copy for reading: changes to it go "

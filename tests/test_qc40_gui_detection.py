@@ -447,7 +447,7 @@ class TestSelectProjectFailureWording:
         out = json.loads(server.select_project(str(tmp_path)))
         assert out["success"] is False
         assert "list_available_projects" in out["error"]
-        assert "APPEARS" not in out["error"]
+        assert "appears to be open" not in out["error"]
 
     def test_qda_folder_without_data_keeps_path_hint(
             self, setup_server, tmp_path, one_process_hit):
@@ -456,7 +456,7 @@ class TestSelectProjectFailureWording:
         out = json.loads(server.select_project(str(hollow)))
         assert out["success"] is False
         assert "list_available_projects" in out["error"]
-        assert "APPEARS" not in out["error"]
+        assert "appears to be open" not in out["error"]
 
     def test_corrupt_database_is_reported_as_damaged_not_open(
             self, setup_server, tmp_path, one_process_hit):
@@ -468,7 +468,7 @@ class TestSelectProjectFailureWording:
         assert "damaged" in out["error"]
         assert "backup" in out["error"]
         # a process hit alone is machine-wide evidence, not project-scoped
-        assert "APPEARS" not in out["error"]
+        assert "appears to be open" not in out["error"]
 
     def test_corrupt_database_with_stale_wal_keeps_damage_fallback(
             self, setup_server, tmp_path, no_process_hits):

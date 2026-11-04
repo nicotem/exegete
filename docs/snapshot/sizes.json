@@ -3,7 +3,7 @@
     "brief_characters": 1923,
     "opening_text_characters": 2042,
     "tool_count": 28,
-    "tool_definitions_characters": 76055,
+    "tool_definitions_characters": 76139,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -18,8 +18,8 @@
         "description_characters": 2285
       },
       "copy_project_to_workspace": {
-        "definition_characters": 2322,
-        "description_characters": 1908
+        "definition_characters": 2318,
+        "description_characters": 1904
       },
       "create_code": {
         "definition_characters": 3680,
@@ -54,8 +54,8 @@
         "description_characters": 902
       },
       "list_backups": {
-        "definition_characters": 2589,
-        "description_characters": 2387
+        "definition_characters": 2671,
+        "description_characters": 2468
       },
       "open_file_for_reading": {
         "definition_characters": 1642,
@@ -66,8 +66,8 @@
         "description_characters": 294
       },
       "read_file_with_codings": {
-        "definition_characters": 2739,
-        "description_characters": 2290
+        "definition_characters": 2745,
+        "description_characters": 2296
       },
       "record_suggestions": {
         "definition_characters": 5083,
@@ -124,7 +124,7 @@
     "brief_characters": 13784,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 205261,
+    "tool_definitions_characters": 205456,
     "tools": {
       "add_annotation": {
         "definition_characters": 2238,
@@ -155,12 +155,12 @@
         "description_characters": 3039
       },
       "copy_project_to_workspace": {
-        "definition_characters": 2322,
-        "description_characters": 1908
+        "definition_characters": 2318,
+        "description_characters": 1904
       },
       "create_attribute_type": {
-        "definition_characters": 2618,
-        "description_characters": 1975
+        "definition_characters": 2636,
+        "description_characters": 1993
       },
       "create_case": {
         "definition_characters": 2111,
@@ -191,16 +191,16 @@
         "description_characters": 1672
       },
       "delete_code": {
-        "definition_characters": 2722,
-        "description_characters": 2244
+        "definition_characters": 2728,
+        "description_characters": 2249
       },
       "delete_coding": {
         "definition_characters": 3326,
         "description_characters": 2709
       },
       "delete_coding_session": {
-        "definition_characters": 531,
-        "description_characters": 234
+        "definition_characters": 592,
+        "description_characters": 294
       },
       "edit_suggestion": {
         "definition_characters": 4602,
@@ -211,16 +211,16 @@
         "description_characters": 459
       },
       "export_case_code_matrix_csv": {
-        "definition_characters": 1883,
-        "description_characters": 1410
+        "definition_characters": 1896,
+        "description_characters": 1423
       },
       "export_codebook": {
         "definition_characters": 2580,
         "description_characters": 1962
       },
       "export_coded_segments_report": {
-        "definition_characters": 4422,
-        "description_characters": 3108
+        "definition_characters": 4435,
+        "description_characters": 3121
       },
       "export_frequencies_csv": {
         "definition_characters": 1764,
@@ -295,8 +295,8 @@
         "description_characters": 902
       },
       "list_backups": {
-        "definition_characters": 2556,
-        "description_characters": 2354
+        "definition_characters": 2638,
+        "description_characters": 2435
       },
       "list_coding_sessions": {
         "definition_characters": 1023,
@@ -347,8 +347,8 @@
         "description_characters": 294
       },
       "read_file_with_codings": {
-        "definition_characters": 2739,
-        "description_characters": 2290
+        "definition_characters": 2745,
+        "description_characters": 2296
       },
       "recolor_code": {
         "definition_characters": 1719,

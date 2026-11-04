@@ -1523,7 +1523,8 @@ class TestFixRound2WhatAReadingMayRestOn:
         read = " ".join(server.GROUNDING_READ.split())
         assert "rather than on other files" not in read
         # release preparation: one wording in every place the rule is given
-        assert "never on outside facts or assumptions about them" in read
+        assert "never on outside facts or assumptions about the person" \
+            in read
         assert "general knowledge" not in read
         record = " ".join(server.GROUNDING_RECORD.split())
         assert "any passage elsewhere or framework concept it draws on" \

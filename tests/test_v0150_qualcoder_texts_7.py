@@ -242,7 +242,7 @@ class TestAFileChangedDuringAWrite:
         out = json.loads(server.add_annotation(1, 0, 10, "note",
                                                create_backup=False))
         assert CHANGED_TEXT in out["error"], out
-        assert "confirm with the user" not in out["error"]
+        assert "confirm with the researcher" not in out["error"]
         assert _rows(qualcoder_db_path,
                      "SELECT COUNT(*) FROM annotation") == [(0,)]
 

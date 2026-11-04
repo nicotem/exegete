@@ -730,8 +730,13 @@ def test_the_readme_says_what_it_costs():
             # limits that reset on a rolling five-hour session window, and
             # paid plans add weekly limits on top." and "on paid plans,
             # turn on usage credits"
-            "Usage limits reset every five hours, and paid plans add weekly "
-            "limits.",
+            # (v0.15.3, its fix round: the page, read on 4 November 2026,
+            # says "Most accounts have a limit that resets on a rolling
+            # five-hour session window", and Ultra "no 5-hour limit for
+            # verified accounts")
+            "On most accounts, usage limits reset every five hours, and "
+            "paid plans add weekly limits. Ultra has no five-hour limit for "
+            "verified accounts.",
             "At a limit you wait, move up a plan or, on a paid plan, pay for "
             "extra use.",
             "coding many transcripts uses far more than practice",

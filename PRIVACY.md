@@ -135,10 +135,14 @@ officer will ask, and the summary above depends on them:
   themselves", below). For participants' data this project suggests
   Claude Desktop's chat with the extension, with computer use off, no
   folder that holds your projects or transcripts connected to it, and
-  no other extension that reads files. Codex reads well beyond its
-  folder without asking. OpenAI documents a setting, marked Beta, that
-  can keep Codex's own commands from reading outside the folder it
-  works in; it has not been tested with Exegete. Practising, too, leaves
+  no other extension that reads files. Where chat and Cowork are one
+  conversation, that conversation's permission setting starts on Auto
+  on Pro, Max, Ultra and Team plans. On Auto, Claude does not stop to
+  ask you before it uses Exegete's tools, so you could set it to Manual
+  ("Assistants that open files by themselves", below). Codex reads well
+  beyond its folder without asking. OpenAI documents a setting, marked
+  Beta, that can keep Codex's own commands from reading outside the
+  folder it works in; it has not been tested with Exegete. Practising, too, leaves
   a real study on the same computer within reach of Codex and Claude
   Code ("While you practise", below). A local model keeps the data on
   your computer. We expect it to do the analysis less well than the
@@ -171,8 +175,10 @@ officer will ask, and the summary above depends on them:
   - Claude Desktop's log of the extension, which keeps every request and
     answer, names and quoted text included (INSTALL.md, "Reading the
     server log");
-  - Codex's session files (`~/.codex/sessions`) and Claude Code's
-    transcripts (`~/.claude/projects/`).
+  - Codex's session files (`~/.codex/sessions`) and its two databases
+    of conversations, `~/.codex/thread_history_1.sqlite` and
+    `~/.codex/state_5.sqlite` ("OpenAI's apps", below);
+  - Claude Code's transcripts (`~/.claude/projects/`).
 
   Say where each is kept, whether a sync or backup service copies it,
   who else can reach the computer, and when you will delete them.
@@ -777,7 +783,13 @@ that reads files, stay out of its reach. Claude Code reads the folder
 it starts in without asking: an empty folder of its own keeps your
 projects out of that folder, but does not stop its read-only commands
 reading them, or its file tools in auto mode (above). That is why, for
-participants' data, this project suggests the chat above instead.
+participants' data, this project suggests the chat above instead. In
+the version of Claude where chat and Cowork are one conversation,
+Anthropic's page, read on 4 November 2026, says that the permission
+setting in the message box starts on Auto on Pro, Max, Ultra and Team
+plans. On Auto, Claude does not stop to ask you before it uses
+Exegete's tools: automated safety checks run instead. On Manual, which
+you could choose, Claude asks before it takes actions.
 
 ## Files Exegete keeps on your computer
 
@@ -1518,7 +1530,12 @@ Seven cautions:
   allow", the import would run without asking, and such instructions
   could then bring in another file unasked; allowing it once, after
   reading the preview, keeps you asked each time. Codex's default mode
-  runs it without asking.
+  runs it without asking. Where chat and Cowork are one conversation,
+  that conversation's permission setting starts on Auto on Pro, Max,
+  Ultra and Team plans, and on Auto automated safety checks run instead
+  of asking you. Anthropic's page, read on 4 November 2026, does not say
+  what either of its modes does with the mark (INSTALL.md, "What hosts
+  do with the tools' read and write marks").
 - **A file imported by mistake** stays in every backup taken after it,
   since a backup copies the project (all but its audio and video
   folders). Restoring the backup taken
@@ -2320,10 +2337,25 @@ settings are not enough to stop that. In Codex's source code at release
 `~/.codex/history.jsonl`, the text you typed. Every session is also
 written in full, tool results included, under `~/.codex/sessions`, and
 later `~/.codex/archived_sessions`, whichever `history` setting you
-choose. So you could delete those session files after any work on
-study data, and keep `~/.codex` out of folders that a sync or backup
-service copies. These files are part of what stays on the computer
-("How your data flows").
+choose. In the same source, Codex also copies each new conversation
+into a database in that folder, `~/.codex/thread_history_1.sqlite`. It
+keeps your messages, the assistant's answers and each tool's result
+there, up to 64 KiB of each result, with the middle of a longer one
+left out. So participants' words that Exegete returned are kept there
+too. A second database, `~/.codex/state_5.sqlite`, keeps each
+conversation's title, its first message and a preview of it. Deleting
+the session files by hand leaves both databases as they were. Codex's
+own way of deleting a conversation removes its session files and its
+rows in both databases. In Codex's command line, `/delete` does this
+for the conversation you are in, and `codex delete` with a session's
+name does it for another. OpenAI's page on these commands,
+<https://learn.chatgpt.com/docs/cli/slash-commands> (read 4 November
+2026), describes `/delete` as "Permanently delete the current session."
+and `/archive` as removing a session from the lists "without deleting
+its transcript." So, after any work on study data, you could delete its
+conversations that way, and keep `~/.codex` out of folders that a sync
+or backup service copies. These files are part of what stays on the
+computer ("How your data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:

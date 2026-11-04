@@ -1086,8 +1086,9 @@ class TestWhatCodexKeepsAndTheOptOut:
         data = _readme_data()
         stays = data[data.index("**What stays on your computer**"):]
         assert "copies its folder (PRIVACY.md says where):" in stays
-        assert "- Codex's session files, with what Codex read by itself" \
-            in stays
+        # (v0.15.3, its fix round: the databases beside the session files)
+        assert ("- Codex's session files and databases, with what Codex "
+                "read by itself") in stays
         section = _privacy_openai()
         assert ("A session's transcript can hold what Exegete's tools "
                 "returned in it, and what Codex's own commands read, "
@@ -1098,11 +1099,59 @@ class TestWhatCodexKeepsAndTheOptOut:
                       "`~/.codex/history.jsonl`",
                       "Every session is also written in full, tool results "
                       "included, under `~/.codex/sessions`, and later "
-                      "`~/.codex/archived_sessions`",
-                      "So you could delete those session files after any "
-                      "work on study data, and keep `~/.codex` out of "
-                      "folders that a sync or backup service copies."):
+                      "`~/.codex/archived_sessions`"):
             assert words in section, words
+
+    def test_codex_s_databases_are_named_and_deleting_files_leaves_them(self):
+        # v0.15.3, its fix round: Codex's source at rust-v0.166.0 projects
+        # each durable write of a conversation that is not ephemeral into
+        # thread_history_1.sqlite ("SQLite is a rebuildable view",
+        # thread-store/src/local/live_writer.rs 436-447; the Paginated
+        # default, app-server/src/request_processors/thread_processor.rs
+        # 1570-1573), an MCP result kept up to 64 KiB with its middle left
+        # out (rollout/src/policy.rs 16; utils/output-truncation/src/lib.rs
+        # 61, 71-113); state_5.sqlite keeps the title, the first message and
+        # the preview (state/migrations 0001, 0007, 0032). Only Codex's own
+        # deletion removes the rows (thread-store/src/local/delete_thread.rs
+        # 1-7, 271; thread_history.rs 242-284): `/delete` and `codex delete`
+        # (tui/src/app/event_dispatch.rs 3933-3961; tui/src/
+        # session_archive_commands.rs 111-117)
+        section = _privacy_openai()
+        account = section[section.index("Every session is also written in "
+                                        "full"):]
+        account = account[:account.index("**The UK, the EEA and "
+                                         "Switzerland.**")]
+        for words in ("`~/.codex/thread_history_1.sqlite`",
+                      "each tool's result there, up to 64 KiB of each "
+                      "result",
+                      "So participants' words that Exegete returned are kept "
+                      "there too.",
+                      "`~/.codex/state_5.sqlite`, keeps each conversation's "
+                      "title, its first message",
+                      "Deleting the session files by hand leaves both "
+                      "databases as they were.",
+                      "removes its session files and its rows in both "
+                      "databases",
+                      "`/delete`", "`codex delete`",
+                      "<https://learn.chatgpt.com/docs/cli/slash-commands>"):
+            assert words in account, words
+        assert re.search(r"slash-commands> \(" + READ_ON + r"\)", account)
+        # the suggestion is no longer to delete the session files alone
+        assert "you could delete those session files" not in section
+        assert ("you could delete its conversations that way, and keep "
+                "`~/.codex` out of folders that a sync or backup service "
+                "copies.") in account
+        # and every list of what stays names the databases too
+        checklist = _between(_flat("PRIVACY.md"), "**What stays on the "
+                             "computer, and for how long.**",
+                             "## How your data flows")
+        guide = _between(_flat("INSTALL.md"), "3. **Look at what the hosts "
+                         "keep.**", "4. **Exegete's own folder")
+        for text in (checklist, guide):
+            for name in ("`~/.codex/sessions`",
+                         "`~/.codex/thread_history_1.sqlite`",
+                         "`~/.codex/state_5.sqlite`"):
+                assert name in text, name
 
     def test_readme_gives_openai_users_the_opt_out_and_a_deadline(self):
         """v0.14.2, the README review: the switch is the first of OpenAI's

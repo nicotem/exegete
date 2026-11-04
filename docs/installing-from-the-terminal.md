@@ -1660,7 +1660,9 @@ environment avoids.
 3. **Look at what the hosts keep.** Each host's own record of your
    conversations stays, and is the host's to remove: Claude Desktop's
    log, Claude Code's transcripts (`~/.claude/projects/`), Codex's
-   session files (`~/.codex/sessions`), and LM Studio's log
+   session files (`~/.codex/sessions`) and its two databases of
+   conversations (`~/.codex/thread_history_1.sqlite` and
+   `~/.codex/state_5.sqlite`), and LM Studio's log
    (`~/Library/Logs/LM Studio/main.log` on a Mac). Like the
    conversation, these hold names, paths and quoted text: if you are
    clearing a study's traces from the computer, look at them too

@@ -283,7 +283,7 @@ copies its folder (PRIVACY.md says where):
   (`Names to replace.txt`, in the project's `Exegete` folder), which
   Exegete never shows to the assistant
 - Claude Desktop's log of the extension, with every request and answer
-- Codex's session files, with what Codex read by itself
+- Codex's session files and databases, with what Codex read by itself
 
 ## Start here
 
@@ -295,8 +295,9 @@ the route this project suggests for participants' data.
 2026, lists desktop extensions in its Free plan, so the extension works
 on Free, which allows the least use. Pro, at $20 a month ($17 billed
 yearly), gives at least five times as much. Max is $100 a month, Ultra
-$200, and Team and Enterprise go by the seat. Usage limits reset every
-five hours, and paid plans add weekly limits. At a limit you wait, move
+$200, and Team and Enterprise go by the seat. On most accounts, usage
+limits reset every five hours, and paid plans add weekly limits. Ultra
+has no five-hour limit for verified accounts. At a limit you wait, move
 up a plan or, on a paid plan, pay for extra use. Longer conversations
 and more tool use count for more, so coding many transcripts uses far
 more than practice.

@@ -643,3 +643,89 @@ class TestACodeThatIsNotTheOneRecorded:
         after = rows(project)
         assert after["code_text"] == before[0]["code_text"]
         assert backups(project) == before[1]
+
+
+def the_refusals_route(sid, guid, **naming):
+    """What the refusal tells the assistant to do once the researcher
+    says the code as it is now is the one meant: reopen the suggestion,
+    name the code in edit_suggestion, approve it again. The edit's
+    answer."""
+    body = answer(server.apply_codings(coding_session_id=sid))
+    (failure,) = body["failures"]
+    assert "reopen" in failure["reason"]
+    assert "edit_suggestion" in failure["reason"]
+    server.update_suggestion_status(coding_session_id=sid, reopen=[guid])
+    assert status_of(sid, guid) == "pending"
+    edited = answer(server.edit_suggestion(
+        coding_session_id=sid, suggestion_guid=guid, **naming))
+    assert "error" not in edited, edited
+    server.update_suggestion_status(coding_session_id=sid, approve=[guid])
+    assert status_of(sid, guid) == "approved"
+    return edited
+
+
+def status_of(sid, guid):
+    session = server.session_manager.load_session(sid)
+    return session.get_suggestion_by_guid(guid).status
+
+
+def coded_under(project, cid):
+    return [row for row in rows(project)["code_text"] if row[1] == cid]
+
+
+class TestTheWayOnAfterTheRefusal:
+    """The refusal's way on works in the session it was given in: naming
+    the code again in edit_suggestion records the name it has now, so
+    the researcher's choice, made after the refusal, is what is written.
+    An edit that does not name the code leaves the recorded name, and
+    the suggestion is refused again."""
+
+    def test_a_code_renamed_with_exegete_named_again_by_name(self, project):
+        sid, (guid,) = a_session((("Doubt", QUOTE),))
+        cid = code_id(project, "Doubt")
+        renamed = answer(server.rename_code(cid, "Uncertainty"))
+        assert "error" not in renamed, renamed
+        edited = the_refusals_route(sid, guid, code_name="Uncertainty")
+        assert edited["changes"]["code"] == {"from": "Doubt",
+                                             "to": "Uncertainty"}
+        # The reading was given for the code under its old name: cleared,
+        # as when a suggestion moves to another code
+        assert edited["changes"]["reading"] == {"from": "explicit",
+                                                "to": None}
+        assert "reading_cleared" in edited
+        body = server.apply_codings(coding_session_id=sid)
+        assert '"error"' not in body, body
+        assert len(coded_under(project, cid)) == 1
+
+    def test_a_number_given_again_named_by_number_with_a_reading(
+            self, project):
+        new_code("Newest")
+        cid = code_id(project, "Newest")
+        sid, (guid,) = a_session((("Newest", QUOTE),))
+        a_new_code_takes_the_number(project, cid)
+        edited = the_refusals_route(sid, guid, code_id=cid,
+                                    reading="interpretive")
+        assert edited["changes"]["code"] == {"from": "Newest",
+                                             "to": "Later"}
+        assert edited["reading"] == "interpretive"
+        body = server.apply_codings(coding_session_id=sid)
+        assert '"error"' not in body, body
+        assert len(coded_under(project, cid)) == 1
+        assert code_id(project, "Later") == cid
+
+    def test_an_edit_that_does_not_name_the_code_is_refused_again(
+            self, project):
+        sid, (guid,) = a_session((("Doubt", QUOTE),))
+        cid = code_id(project, "Doubt")
+        execute(project, "update code_name set name = 'Uncertainty' "
+                         "where cid = ?", (cid,))
+        edited = the_refusals_route(sid, guid, reading="interpretive")
+        assert "code" not in edited["changes"]
+        refused_unchanged(project, sid, guid, now="Uncertainty",
+                          recorded="Doubt")
+
+    def test_the_code_named_as_recorded_is_no_change(self, project):
+        sid, (guid,) = a_session((("Doubt", QUOTE),), approve=False)
+        edited = answer(server.edit_suggestion(
+            coding_session_id=sid, suggestion_guid=guid, code_name="Doubt"))
+        assert edited["error"].startswith("No effective change"), edited

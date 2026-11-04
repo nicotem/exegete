@@ -835,8 +835,8 @@ Each is stated in full by its tool:
   out who someone is.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
-  the conversation. That page, the page a pseudonymisation preview opens
-  for choosing occurrences, and the copies they open are for the
+  the conversation. That page and the copies it opens, and the page a
+  pseudonymisation preview opens for choosing occurrences, are for the
   researcher: never open, read or look at them with any tool, browser or
   screenshot.
 
@@ -19899,11 +19899,14 @@ _OCCURRENCES_PAGE_NONE = (
     "No name of this mapping occurs in this file, so no page was written.")
 # With the names list, the page's place, or the words that say why it could
 # not be written, withheld where they carry a name from the mapping: they
-# run through the project folder's own name
+# run through the project folder's own name. The reading folder is named in
+# the general form for this kind of system, which carries no account's or
+# project's name (reading_folder.root_in_words), so that the researcher can
+# still find the page
 _OCCURRENCES_PAGE_WITHHELD = (
     "Withheld (null): a reader of it would see a name from this mapping. "
-    "The page's place is in Exegete's reading folder, in this project's "
-    "folder, under file-{file_id}.")
+    "The page's place is in Exegete's reading folder ({reading_folder}), "
+    "in this project's folder, under file-{file_id}.")
 # The occurrences block's next note where a page shows the researcher each
 # id, opened or written for them to open: without a page, the ids alone
 # leave them to count occurrences in text order. Where none was written,
@@ -19969,7 +19972,7 @@ def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
             marks=[(found.start, found.end, one)
                    for found, one in zip(item["found"], shown)],
             left=item.get("left_at", ()), written_at=reading.now(),
-            version=_package_version)
+            version=_package_version, lines_in_preview=typed)
         path = reading_folder.write_page(
             reading_folder.occurrences_folder(_current_project_folder(),
                                               file_id),
@@ -19996,7 +19999,7 @@ def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
         answer["note"] = occurrence_ids.PAGE_FOR_THE_ASSISTANT
     if withheld:
         answer["withheld_note"] = _OCCURRENCES_PAGE_WITHHELD.format(
-            file_id=file_id)
+            reading_folder=reading_folder.root_in_words(), file_id=file_id)
     return answer
 
 
@@ -20397,6 +20400,13 @@ _FILE_TEXT_WARNING_KINDS = (
      "whole words in files this run did not rewrite (a PDF source, or a "
      "file to be run with its own mapping)", "are"),
 )
+# The kinds' words where an execute would rewrite nothing, so no run is
+# spoken of (v0.15.3)
+_FILE_TEXT_WARNING_KINDS_WITHOUT_A_RUN = {
+    "whole_word_in_a_file_not_rewritten":
+        "whole words in files this call does not rewrite (a PDF source, or "
+        "a file to be run with its own mapping)",
+}
 
 
 def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
@@ -20457,6 +20467,8 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
                 # Every one of them left by choice is the sentence's own
                 # reason, below, and is not said again as a kind
                 continue
+            if not run:
+                text = _FILE_TEXT_WARNING_KINDS_WITHOUT_A_RUN.get(key, text)
             of_those = "" if clauses else " of those"
             clauses.append(f"{count}{of_those} "
                            f"{verb + ' ' if verb else ''}{text}")
@@ -20503,8 +20515,9 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
         # warning never goes quiet if that ever stops being true, and
         # worded without the kinds, which are all zero here, and without
         # the Mary, Ann reason, which is not it.
+        rule = "this run's own" if run else "the rewrite's own"
         sentences.append(
-            f"Warning: after this run, this run's own whole-word rule "
+            f"Warning: {after}{rule} whole-word rule "
             f"would still match {whole_word} occurrence(s) of these names "
             f"in the text of {counted_showing} file(s), which the wide "
             f"reading did not count.")
@@ -26113,7 +26126,10 @@ def main(argv: Optional[List[str]] = None, *,
     _settle_state_folder()
 
     # v0.14.3: the reading folder's stale pages and copies
-    # (previews after an hour, everything after a week) go at each start
+    # (previews after an hour, everything after a week) go at each start;
+    # v0.15.3: pages for choosing occurrences after an hour too. The
+    # folder's note is read at the first write there in a process
+    # (reading_folder.ensure_root), not here
     try:
         reading_folder.sweep()
     except Exception as e:

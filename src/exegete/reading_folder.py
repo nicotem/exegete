@@ -132,6 +132,24 @@ def root(platform: Optional[str] = None, home: Optional[Path] = None) -> Path:
     return (Path(cache) if cache else home / ".cache") / "exegete" / "reading"
 
 
+def root_in_words(platform: Optional[str] = None) -> str:
+    """Where the reading folder is on this system (`root`), in the general
+    form the documents give (v0.15.3): the home folder as `~` and a
+    variable by its name, so no account's or project's name, and an
+    answer that withholds the folder's full place can still say where to
+    look."""
+    platform = platform or sys.platform
+    if platform == "darwin":
+        return "~/Library/Caches/Exegete/Reading.noindex"
+    if platform == "win32":
+        base = ("%LOCALAPPDATA%" if env_settings.windows_local_app_data()
+                else "~\\AppData\\Local")
+        return base + "\\Exegete\\Reading"
+    base = ("$XDG_CACHE_HOME" if env_settings.xdg_cache_home()
+            else "~/.cache")
+    return base + "/exegete/reading"
+
+
 def safe_name(name: str, limit: int = 80) -> str:
     """A form of `name` that is safe as one file name on every system:
     letters, digits, spaces and `-_.()` kept, everything else `_`, no
@@ -414,8 +432,9 @@ def _remove(path: Path) -> int:
 
 
 def forget_file(project, file_id: int) -> int:
-    """Remove one file's reading copy and copy of its original (its text
-    or name has changed). Returns how many folders went."""
+    """Remove one file's reading copy, copy of its original and page for
+    choosing occurrences: its whole folder (its text or name has
+    changed). Returns how many folders went."""
     top = root()
     if not os.path.lexists(top):
         return 0
@@ -526,14 +545,30 @@ def _sweep_inside(folder: str, now: float,
 
 
 def _newest(path: Path) -> float:
-    """The newest modification time of a folder and what it holds."""
-    newest = os.lstat(path).st_mtime
+    """The newest modification time of what a file's folder holds: each
+    entry's own, but for the folder of the page for choosing occurrences
+    the times of what is in it (v0.15.3). That page goes after an hour:
+    while it stands it keeps the file's folder, and once it has gone its
+    empty folder keeps nothing. The file's folder's own time, which a
+    removal or a new folder inside it changes with nothing written to
+    keep, counts only when nothing inside it does."""
+    times = []
     try:
-        for entry in os.scandir(path):
-            newest = max(newest, entry.stat(follow_symlinks=False).st_mtime)
+        entries = list(os.scandir(path))
     except OSError:
-        pass
-    return newest
+        entries = []
+    for entry in entries:
+        try:
+            if entry.name == OCCURRENCES and \
+                    entry.is_dir(follow_symlinks=False):
+                with os.scandir(entry.path) as inside:
+                    times.extend(item.stat(follow_symlinks=False).st_mtime
+                                 for item in inside)
+            else:
+                times.append(entry.stat(follow_symlinks=False).st_mtime)
+        except OSError:
+            continue
+    return max(times) if times else os.lstat(path).st_mtime
 
 
 def _remove_if_older(path: Path, now: float, age: float,

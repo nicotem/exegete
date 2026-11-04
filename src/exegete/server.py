@@ -25417,8 +25417,8 @@ TTY_NOTICE = "\n".join((
     f"Normally an app starts {names.SERVER_NAME} and talks to it.",
     "That app can be Claude Desktop, Claude Code, LM Studio or another MCP "
     "client.",
-    "Started by hand in a terminal, it prints its start-up lines and this "
-    "note.",
+    f"Started by hand in a terminal, {names.SERVER_NAME} prints its "
+    "start-up lines and this note.",
     "Then it waits for an app that is not there.",
     f"To check that the installation works, run '{names.COMMAND} "
     "--version'.",

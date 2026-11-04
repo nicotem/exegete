@@ -36,26 +36,27 @@ d35763ee5b19e971	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for 
 d979461109f4b7fc	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Solution: Exegete reads the project's database itself, not a copy of it, so anyt
 e2adb8f67467a1e0	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The limit is in the other direction: a QualCoder 4.0 window does not display cha
 9bf088acdb0fc0be	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	list_backups shows the backups, QualCoder's own _BKUP_ backups included.
-6b05c26424fd156b	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	A feature is justified on general grounds: the whole life of a project from the 
-066269f0e2a78803	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	A test that carries QualCoder's code as its oracle is listed there too, and test
-c2b99d04e18b33f8	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Capability probes, never version strings. Behaviour keys on the existence of tab
-1562e616438a1e98	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Cite QualCoder's file and line you matched in the docstring.
-5994c074b1edaed2	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Copy QualCoder's code only where identical results cannot be had otherwise, as w
-e474b802076064e1	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Every new behaviour needs a test that fails without the change, including the ed
-8df0d009bf64afbd	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Heuristics are phrased as heuristics. A result that reports a guess (a project t
-6963bdf8e5496285	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	It asks for the Exegete version, the QualCoder version if you use QualCoder, the
-7fc7870d72602d7c	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	List every copy in NOTICE with its reason: its file and function here, the QualC
+6b05c26424fd156b	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; the commitment to QualCoder's formats and conventions, in the maintainer's words of 9 October 2026, held by tests/test_v0142_selfrep.py	A feature is justified on general grounds: the whole life of a project from the 
+066269f0e2a78803	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder's own code, and the rule for it	A test that carries QualCoder's code as its oracle is listed there too, and test
+8c9ed4d71d41c582	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; says what the facts check holds: QualCoder's own folders, and the choice 'if you use QualCoder'	An example in one of QualCoder's own folders has "if you use QualCoder" in its p
+c2b99d04e18b33f8	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, its migration ladder, which probes columns and tables (__main__.py 2296-2346 at 9bddf17, read)	Capability probes, never version strings. Behaviour keys on the existence of tab
+1562e616438a1e98	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder's own code, and the rule for it	Cite QualCoder's file and line you matched in the docstring.
+b91d881d9c7e937f	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder's own code, and the rule for it	Copy QualCoder's code only where identical results cannot be had otherwise, as w
+e474b802076064e1	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, the behaviour a change matches	Every new behaviour needs a test that fails without the change, including the ed
+8df0d009bf64afbd	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; a sign that QualCoder is in use, in the answers' own words	Heuristics are phrased as heuristics. A result that reports a guess (a project t
+a5ffa4a3f1bd11e4	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, what CI's comparison reads in QualCoder 4.0's source	It also reads QualCoder 4.0's source for two more facts: that QualCoder's backup
+7fc7870d72602d7c	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder's own code, and the rule for it	List every copy in NOTICE with its reason: its file and function here, the QualC
 77d1559eb780799a	CONTRIBUTING.md	document	qualcoder	read 27 October: for contributors; about QualCoder itself, the comparison of the import's text with QualCoder 4.0's extraction and with its newest code	One compares the text the import stores with the text QualCoder 4.0's own extrac
-d827ac78b62fefc6	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Parity claims cite the pinned QualCoder commit. Any statement that "QualCoder do
-0f6895bc8ad69280	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	QualCoder is licensed under LGPL-3.0-or-later as well, and the rule for its code
-6184a94127c0b44b	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	The QA review checks that each new behaviour has a test that fails without it, t
-29116e9799e58ca1	CONTRIBUTING.md	document	qualcoder	read 27 October: for contributors; each mention is about QualCoder itself (a QualCoder window as a sign that it is in use, its own folders) or the choice 'if you use QualCoder'	The facts the documents repeat are checked too (tests/test_v0151_facts.py): the 
+650e4c2bd9592471	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, how a claim about its code is cited	Parity claims cite QualCoder's code. Any statement that "QualCoder does X" in a 
+4b2bbedf4443e792	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, its licence and the rule for its code	QualCoder is licensed under LGPL-3.0-or-later as well, and the rule for its code
+6184a94127c0b44b	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, the behaviour a change matches	The QA review checks that each new behaviour has a test that fails without it, t
+07fd5f87bc6c4a7c	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, the commit and the release its code is cited at	The code's citations stay at the pinned commit, QualCoder master 9bddf17 (versio
 350add8e09ffe3e9	CONTRIBUTING.md	document	qualcoder	says what the texts check looks for; proposed by the developer, 27 October	The first names QualCoder other than about QualCoder itself or its format, on a 
 789491632df6d336	CONTRIBUTING.md	document	request	says what the texts check looks for; proposed by the developer, 27 October	The second asks everyone to close QualCoder.
-362ba0db321b6fb6	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	UTF-8 pinned on text IO. Every open() of a text file passes encoding="utf-8" (or
-c8d987d69f5d6c27	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	What researchers are told Exegete is verified against is the release itself, Qua
-a8f08fe2c8e716cc	CONTRIBUTING.md	document	qualcoder	seeded 27 October, to be read	Write our own implementation by default, and prove parity with tests against Qua
-219321cc1d9462f3	CONTRIBUTING.md	document	qualcoder	read 27 October: for contributors; about QualCoder itself, the comparison of the import's text with QualCoder 4.0's extraction and with its newest code	qualcoder-watch.yml compares the text the import stores with what QualCoder's ne
+362ba0db321b6fb6	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, the encoding its own exports write	UTF-8 pinned on text IO. Every open() of a text file passes encoding="utf-8" (or
+c8d987d69f5d6c27	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, the release Exegete is verified against (database.py VERIFIED_QUALCODER)	What researchers are told Exegete is verified against is the release itself, Qua
+a8f08fe2c8e716cc	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder's own code, and the rule for it	Write our own implementation by default, and prove parity with tests against Qua
+000b64c9c0770fc5	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, the weekly comparison with its newest code	qualcoder-watch.yml runs the test files of the comparison with QualCoder 4.0, ab
 bcb1c097ac682c9b	INSTALL.md	document	voice	'just' means a moment before or immediately next to, not 'merely'	A project folder deeper than three levels is not found either: naming the folder
 13fed0e79d2c7887	INSTALL.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Either way, Exegete still refuses to write while QualCoder 3.8.2 has a project o
 fddbb7578ca6266b	INSTALL.md	document	voice	the earlier section's title in the table of sections now in the Terminal guide, kept so that a text naming it finds the pointer	Environment variables the server reads
@@ -69,16 +70,11 @@ dd267db82a331954	INSTALL.md	document	qualcoder	about the signs that QualCoder is
 39f4f2250c31bd01	INSTALL.md	document	qualcoder	quotes the title of a setting the extension had up to 0.15.1, so that a researcher who saw it recognises it	Up to 0.15.1 the extension had two text boxes, "Tool set" and "Do you also use Q
 86907440370deafc	INSTALL.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	With another release, QualCoder may report a text mismatch and offer to restruct
 288a86860563ff25	INSTALL.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	With it on, Exegete adds some notes that matter only if you also open your proje
-317223a80298e242	NOTICE	document	voice	seeded 27 October, to be read	Exegete is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
-441162f254ea563b	NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SCHEMA_VERSION, TABLES, CODER_NAMES_TABLE, VIS
-bca8fa48f189d75f	NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and about_line.
-ab7d8a481d2c4237	NOTICE	document	voice	seeded 27 October, to be read	The owner strings QualCoder writes Here: src/exegete/database.py, KNOWN_AI_ASSIS
-36fe226ff2d9303b	NOTICE	document	voice	seeded 27 October, to be read	The palette, pinned to QualCoder's (copied values) Here: tests/test_v012_palette
-49c6be17e9a4c2ce	NOTICE	document	voice	seeded 27 October, to be read	The pseudonymisation fixture schema (file-format facts) Here: tests/test_v012_ps
-63dbd4ddaf5b29bb	NOTICE	document	qualcoder	seeded 27 October, to be read	Those releases also contained some of the QualCoder-derived items listed below; 
-69a80d522ac6b43e	NOTICE	document	voice	seeded 27 October, to be read	Why: a file name QualCoder 4.0 treats as invalid (empty, spaces only or dots onl
-c143f37f7035cb38	NOTICE	document	voice	seeded 27 October, to be read	Why: named parity cases, computed with QualCoder's function.
-14a6c93024631cb7	NOTICE	document	voice	seeded 27 October, to be read	Why: parity tests run QualCoder's own harvest.
+317223a80298e242	NOTICE	document	voice	read 4 November: the GNU licences' own notice of no warranty, quoted as the licence gives it; the capitals are the licence's	Exegete is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
+441162f254ea563b	NOTICE	document	voice	read 4 November: the names of constants in the code, in the capitals the code gives them	Here: src/exegete/new_project.py, SCHEMA_VERSION, TABLES, CODER_NAMES_TABLE, VIS
+bca8fa48f189d75f	NOTICE	document	voice	read 4 November: the names of constants in the code, in the capitals the code gives them	Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and about_line.
+49c6be17e9a4c2ce	NOTICE	document	voice	read 4 November: the names of constants in the code, in the capitals the code gives them	The pseudonymisation fixture schema (file-format facts) Here: tests/test_v012_ps
+63dbd4ddaf5b29bb	NOTICE	document	qualcoder	read 4 November: the maintainer's wording of 24 September 2026 on the releases already published, held word for word by tests/test_licence.py; about QualCoder's code itself	Those releases also contained some of the QualCoder-derived items listed below; 
 3d6f6753e7ae893e	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A backup that holds them (copied while a program was writing, made before 0.14, 
 8613ec854aa8d0dc	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	A declaration seen without all four of QualCoder's views is refused by the read 
 a82661de56740765	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	A few other tools look at it only when they work out the project's history with 
@@ -183,16 +179,9 @@ d2225d7842008a65	PRIVACY.md	document	qualcoder	about the signs that QualCoder is
 e0aea7c29acac9e2	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	whether QualCoder's own _BKUP_ backups sit beside the project (the names, in the
 ee47df4de8b5417d	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	whether QualCoder's settings folder (~/.qualcoder) exists;
 ff18499522038a29	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	without psutil, a QualCoder run through Python, or one of QualCoder's Linux down
-c0d96785a95ff245	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	A project more than three levels down is not found; naming the folder just above
-dc2e5f667604b944	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	If unsure: Start with Option 1 - it's more flexible!
-44b1606e6a12cc61	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	No need to select anything - just start asking questions:
-73b6a8cf2d5f148d	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	Note: No env section!
-26844e55477427aa	PROJECT_SELECTION_GUIDE.md	document	qualcoder	seeded 27 October, to be read	Shows which project is currently open, whether the project's lock file is active
-0e6bfbfd2fac9bc2	PROJECT_SELECTION_GUIDE.md	document	qualcoder	seeded 27 October, to be read	The result reports qualcoder_gui_signals (best-effort heuristics for an open Qua
-ff3d84d4f818c5fd	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	When a project was selected before on this machine and still exists, the error a
-73dce042c4605cd2	PROJECT_SELECTION_GUIDE.md	document	qualcoder	seeded 27 October, to be read	You'll get a list like this one, where the first project is in the desktop exten
-22ccc94b3581ca91	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime
-bc6c47e09c41b5b8	PROJECT_SELECTION_GUIDE.md	document	voice	seeded 27 October, to be read	✅ Switch anytime too (select_project works; the variable only sets the start-up 
+752700a8989f4147	PROJECT_SELECTION_GUIDE.md	document	qualcoder	read 4 November: about QualCoder itself, its folders for projects, with the choice 'if you use QualCoder'	In this example, the first project is in the desktop extension's folder and the 
+65787c4ac1cf70c2	PROJECT_SELECTION_GUIDE.md	document	qualcoder	read 4 November: about QualCoder itself: the two fields that report its lock file and the signs of its window, held by tests/test_v0150_wb_fix_r3.py	Shows which project is selected, whether the project's lock file is active (qual
+8dd0ad3c020c2e59	PROJECT_SELECTION_GUIDE.md	document	qualcoder	read 4 November: about QualCoder itself: the field that gives the signs of a QualCoder 4.0 window	The answer includes qualcoder_gui_signals, the signs it finds that QualCoder 4.0
 4c4ebbab01b016d7	README.md	document	qualcoder	about QualCoder itself: only QualCoder 3.8 or newer updates a project made before 3.8	A project made in QualCoder before 3.8 must first be opened once in QualCoder 3.
 60caa96d5daca940	README.md	document	qualcoder	about QualCoder itself: the figure is QualCoder's own, reproduced so that results match	Compare two coders, code by code, with Cohen's kappa beside the figure QualCoder
 5de1493ad56524c0	README.md	document	qualcoder	the heading of the section on how the two programs relate, each of its sentences about QualCoder itself or its format	Exegete and QualCoder
@@ -213,10 +202,7 @@ d72f4c7afe136dcf	README.md	document	qualcoder	about QualCoder itself: the commit
 b038017a43714f0a	README.md	document	qualcoder	about QualCoder itself: the project's stance towards QualCoder's own server and its developers	This project welcomes QualCoder's own server, and is ready to cooperate with Qua
 8266c01f1afbc5ab	README.md	document	qualcoder	about QualCoder itself: its rules, which Exegete follows and departs from only with a reason	Where QualCoder has a rule, Exegete follows it and says where it departs, and wh
 58e66d117940acb2	README.md	document	qualcoder	says once that QualCoder is not needed, for readers who knew Exegete as qualcoder-mcp	You do not need QualCoder, either to start or while you work, though a few thing
-4a29c118c100f7ef	SUPPORT.md	document	voice	seeded 27 October, to be read	(For what happens to research data when you USE the tool, what leaves your machi
-90291fac1247e4e3	SUPPORT.md	document	qualcoder	QualCoder as a choice: its version in a bug report, if you use it; read at v0.15.2's release preparation, when the sentence's version example changed	Include in bug reports: your QualCoder version, if you use QualCoder (a 3.8.x re
-17ca6e737d41dd91	SUPPORT.md	document	qualcoder	seeded 27 October, to be read	QualCoder 4.0 writes no lock file, so there Exegete can only report signs that t
-1e8a46c3fd801a6f	SUPPORT.md	document	qualcoder	seeded 27 October, to be read	Writes are refused while the project's lock file is active (QualCoder 3.8.2 has 
+583544fa8b48cd03	SUPPORT.md	document	qualcoder	read 4 November: the title of the TOOLS.md section on QualCoder's releases	The section "Supported QualCoder versions", in TOOLS.md, says which project sche
 eca70320a98236b2	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	"Recorded under it" means the name is the owner of any row in the tables QualCod
 6932840b59654c00	TOOLS.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	A PDF with no usable text (no text layer, or a PDF QualCoder 3.8.2 stored as the
 2ebb8042ce3141ab	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A PDF's text is QualCoder's to the character, since QualCoder 4.0 re-reads a PDF
@@ -412,16 +398,11 @@ b7661791c8c44547	docs/installing-from-the-terminal.md	document	qualcoder	about Q
 54ec50913053a3c6	docs/installing-from-the-terminal.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	default and QualCoder's speaker coder are never stored as an AI coder name: a ne
 0b312d0fe9002b51	packaging/desktop-extension/manifest.in.json	document	qualcoder	about QualCoder itself: who made Exegete, said once where the program is introduced	QualCoder's developers did not make Exegete and have not endorsed it.
 9de1783fd1de4124	packaging/desktop-extension/manifest.in.json	document	qualcoder	the switch "I use QualCoder on this computer" is itself the sign; the writing checklist's own rewrite of this description	With this on, Exegete adds notes that matter if you open projects in QualCoder.
-317223a80298e242	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Exegete is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
-441162f254ea563b	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SCHEMA_VERSION, TABLES, CODER_NAMES_TABLE, VIS
-bca8fa48f189d75f	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and about_line.
-ab7d8a481d2c4237	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	The owner strings QualCoder writes Here: src/exegete/database.py, KNOWN_AI_ASSIS
-36fe226ff2d9303b	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	The palette, pinned to QualCoder's (copied values) Here: tests/test_v012_palette
-49c6be17e9a4c2ce	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	The pseudonymisation fixture schema (file-format facts) Here: tests/test_v012_ps
-63dbd4ddaf5b29bb	packaging/pypi-old-name/NOTICE	document	qualcoder	seeded 27 October, to be read	Those releases also contained some of the QualCoder-derived items listed below; 
-69a80d522ac6b43e	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Why: a file name QualCoder 4.0 treats as invalid (empty, spaces only or dots onl
-c143f37f7035cb38	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Why: named parity cases, computed with QualCoder's function.
-14a6c93024631cb7	packaging/pypi-old-name/NOTICE	document	voice	seeded 27 October, to be read	Why: parity tests run QualCoder's own harvest.
+317223a80298e242	packaging/pypi-old-name/NOTICE	document	voice	read 4 November: the GNU licences' own notice of no warranty, quoted as the licence gives it; the capitals are the licence's	Exegete is distributed in the hope that it will be useful, but WITHOUT ANY WARRA
+441162f254ea563b	packaging/pypi-old-name/NOTICE	document	voice	read 4 November: the names of constants in the code, in the capitals the code gives them	Here: src/exegete/new_project.py, SCHEMA_VERSION, TABLES, CODER_NAMES_TABLE, VIS
+bca8fa48f189d75f	packaging/pypi-old-name/NOTICE	document	voice	read 4 November: the names of constants in the code, in the capitals the code gives them	Here: src/exegete/new_project.py, SUBFOLDERS, CREATED_FOLDERS and about_line.
+49c6be17e9a4c2ce	packaging/pypi-old-name/NOTICE	document	voice	read 4 November: the names of constants in the code, in the capitals the code gives them	The pseudonymisation fixture schema (file-format facts) Here: tests/test_v012_ps
+63dbd4ddaf5b29bb	packaging/pypi-old-name/NOTICE	document	qualcoder	read 4 November: the maintainer's wording of 24 September 2026 on the releases already published, held word for word by tests/test_licence.py; about QualCoder's code itself	Those releases also contained some of the QualCoder-derived items listed below; 
 0046066f16248112	pages/update/index.html	document	qualcoder	names the removed text box by its title, so that a researcher who updates finds it	The switches "Limit Exegete to its small tool set" and "I use QualCoder on this 
 39445733730d8321	src/exegete/coder_comparison.py	path	qualcoder	about QualCoder itself: what it does, counts, keeps or shows, as the sentence says	QualCoder's Coder comparison report counts a character once per segment, so over
 8e86fd29dc331428	src/exegete/coder_comparison.py	path	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	kappa_cohen undefined: both coders coded every character in scope (no variance);

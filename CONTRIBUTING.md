@@ -190,7 +190,8 @@ that it is looked at first.
    `full` and `core`, `docs/snapshot/` keeps the texts Exegete gives the
    assistant that are the same for every project. They are the opening
    text; each tool's description, the schemas of its arguments and of
-   its answer, and its annotations; and the prompts, with their texts.
+   its answer, its annotations and its marks under `_meta`; and the
+   prompts, with their texts.
    The resources and resource templates are there too, with the texts
    of the two guidance resources, and so is the brief, which
    `read_brief` returns. The answers of the other tools are not in it.

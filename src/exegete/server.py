@@ -20662,20 +20662,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"look-alike letter from another script is not caught. See "
             f"residue, and tell the user which fields to check.")
     file_text = residue.get("file_text")
-    # The occurrences a list leaves (v0.15.3), from each file's own
-    # block, which a preview given a list carries whether or not the file
-    # was counted, and how many of them the file-text count charged to
-    # left_by_choice, which it does only where it counted the file
-    left = sum((item.get("occurrences") or {}).get("left", 0)
-               for item in preview.get("files", []))
-    text_totals = (file_text or {}).get("totals") or {}
-    counted_left = (text_totals.get("by_reason") or {}).get(
-        "left_by_choice", 0)
-    chosen_alone = bool(
-        left and counted_left
-        and counted_left == (text_totals.get("occurrences") or {}).get(
-            "wide", 0)
-        and not text_totals.get("files_whole_word_above_wide"))
+    left, counted_left, chosen_alone = _occurrences_left(preview, file_text)
     if file_text:
         text_warning = _pseudonymise_file_text_warning(file_text,
                                                        chosen_alone)
@@ -20900,13 +20887,45 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         # Last, after the sentence that says, where every occurrence is
         # left, that it is by choice (v0.15.3). The put-back warning above
         # reads a count that no longer holds them
-        warning = (_EVERY_OCCURRENCE_LEFT_WARNING
-                   if not totals.get("replacements")
-                   else _OCCURRENCES_LEFT_WARNING).format(left=left)
-        if chosen_alone:
-            warning += _OCCURRENCES_LEFT_COUNTED.format(counted=counted_left)
-        warnings.append(warning)
+        warnings.append(_occurrences_left_warning(
+            preview, left, counted_left, chosen_alone))
     return warnings
+
+
+def _occurrences_left(preview: Dict[str, Any],
+                      file_text: Optional[Dict[str, Any]]
+                      ) -> Tuple[int, int, bool]:
+    """The occurrences a list leaves (v0.15.3): their number, from each
+    file's own block, which a preview given a list carries whether or not
+    the file was counted; how many of them the file-text count charged to
+    left_by_choice, which it does only where it counted the file; and
+    whether every occurrence that count found is one of them, where the
+    file-text sentence would only say again what the warning on them
+    says. Not where the whole-word count is above the wide one, which
+    that sentence explains."""
+    left = sum((item.get("occurrences") or {}).get("left", 0)
+               for item in preview.get("files", []))
+    totals = (file_text or {}).get("totals") or {}
+    counted = (totals.get("by_reason") or {}).get("left_by_choice", 0)
+    alone = bool(left and counted
+                 and counted == (totals.get("occurrences") or {}).get(
+                     "wide", 0)
+                 and not totals.get("files_whole_word_above_wide"))
+    return left, counted, alone
+
+
+def _occurrences_left_warning(preview: Dict[str, Any], left: int,
+                              counted: int, alone: bool) -> str:
+    """The preview's warning on the occurrences a list leaves (v0.15.3),
+    in the form that says nothing the sentence for a file whose every
+    occurrence is left has said, and with the file-text count's number
+    where that count gives no sentence of its own."""
+    every = not preview.get("totals", {}).get("replacements")
+    warning = (_EVERY_OCCURRENCE_LEFT_WARNING if every
+               else _OCCURRENCES_LEFT_WARNING).format(left=left)
+    if alone:
+        warning += _OCCURRENCES_LEFT_COUNTED.format(counted=counted)
+    return warning
 
 
 # After a pseudonymisation run (v0.15.0, not presuming QualCoder, piece

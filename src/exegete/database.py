@@ -14257,14 +14257,10 @@ class QualcoderDatabase:
                         case_variants = found["case_variants_seen"]
                         spellings = found["normalisation_variants_seen"]
                     else:
-                        # The occurrences left by choice, out of the rows
-                        # per entry and counted once for the file
-                        row_out["left_by_choice"] = sum(
-                            entry["left_by_choice"]
-                            for entry in found["entries"])
-                        entries = self._pseudonymise_entries_without_left(
-                            self._pseudonymise_without_forms(
-                                found["entries"]))
+                        entries, row_out["left_by_choice"] = \
+                            self._pseudonymise_entries_without_left(
+                                self._pseudonymise_without_forms(
+                                    found["entries"]))
                         case_variants = self._pseudonymise_without_forms(
                             found["case_variants_seen"])
                         spellings = self._pseudonymise_without_forms(
@@ -14776,9 +14772,11 @@ class QualcoderDatabase:
 
     @staticmethod
     def _pseudonymise_entries_without_left(entries: Sequence[Dict[str, Any]]
-                                           ) -> List[Dict[str, Any]]:
+                                           ) -> Tuple[List[Dict[str, Any]],
+                                                      int]:
         """The residue's rows per entry on the `use_project_pseudonyms`
-        path (v0.15.3), the occurrences left by choice taken out.
+        path (v0.15.3), the occurrences left by choice taken out, and
+        their number, for the file's row.
 
         Each row's `left_by_choice` comes out of both its counts and the
         key goes; a row left with nothing is dropped, and the rest are
@@ -14790,8 +14788,10 @@ class QualcoderDatabase:
         up to each row's wide count.
         """
         kept = []
+        total = 0
         for entry in entries:
             left = entry.get("left_by_choice", 0)
+            total += left
             row = {key: value for key, value in entry.items()
                    if key != "left_by_choice"}
             if left:
@@ -14806,7 +14806,7 @@ class QualcoderDatabase:
         kept.sort(key=lambda row: (-row["occurrences"]["wide"],
                                    -row["occurrences"]["whole_word"],
                                    row["entry"]))
-        return kept
+        return kept, total
 
     @staticmethod
     def _pseudonymise_entries_only(conflicts: Sequence[Dict[str, Any]]

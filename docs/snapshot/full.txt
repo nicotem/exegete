@@ -6217,13 +6217,13 @@ Two-step by design. Call without preview_token: nothing is written
 and the result is a preview of exactly what would change, with a
 preview_token. Show the user the preview and every warning it
 carries, and ask whether to proceed. Only if they agree, call again
-with the SAME mapping, file_id, case_mode, overlap_policy,
-rewrite_memos and save_mapping_to_project, plus
-preview_token=<the token>. The token is valid for 60 minutes and only
-while the text and the rows it covers are unchanged; if the project
-changed in between, the execute is refused and you must preview
-again. Exegete takes a backup first, as before every change; a run
-that changes nothing takes none.
+with the same mapping, file_id, case_mode, overlap_policy,
+rewrite_memos, save_mapping_to_project and leave_occurrences when
+given, plus preview_token=<the token>. The token is valid for 60
+minutes and only while the text and the rows it covers are
+unchanged; if the project changed in between, the execute is refused
+and you must preview again. Exegete takes a backup first, as before
+every change; a run that changes nothing takes none.
 
 Deterministic and rule-based. ONLY the names in the mapping are
 replaced, as whole words, case-sensitively unless case_mode says
@@ -6479,22 +6479,31 @@ Args:
              one budget for the whole preview; a block that runs out
              of it says context_truncated.
     choose_occurrences: List every occurrence of a name this run
-             would replace, in text order, each as a short id and its
-             line number, in the file's `occurrences` block. It lists
-             the first 150 and says how many more. It holds no name,
-             pseudonym or entry number, and no words of the file. Set
-             it when the researcher wants to choose occurrences to
-             leave as they are, such as those of a second person
-             with the same name.
+             would replace, in text order, each as a short id in the
+             file's `occurrences` block: beside its line number with
+             a typed mapping, alone with use_project_pseudonyms. It
+             lists the first 150 and says how many more. It holds no
+             name, pseudonym or entry number, and no words of the
+             file. Set it when the researcher wants to choose
+             occurrences to leave as they are, such as those of a
+             second person with the same name.
+    leave_occurrences: The ids, from a preview with
+             choose_occurrences, of the occurrences this run leaves
+             as they are: at most 500 occurrences in one run. This
+             argument is bound into the token: give it to a preview
+             first, which marks the occurrences left for the
+             researcher to check, then repeat it on the execute. Not
+             with rewrite_memos or include_context.
 
 The arguments from include_context to choose_occurrences,
 record_in_journal and researcher_keeps_mapping are not bound into
 the token: passing a different value for one of them on the execute
 call is not "a different operation", it changes what is shown,
 whether the run records itself, or attests where the mapping is
-kept. The six that ARE bound are mapping, file_id, case_mode,
-overlap_policy, rewrite_memos and save_mapping_to_project, and they
-must be repeated identically on the execute call.
+kept. The arguments that are bound are mapping, file_id, case_mode,
+overlap_policy, rewrite_memos, save_mapping_to_project and
+leave_occurrences when given, and they must be repeated identically
+on the execute call.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -6612,6 +6621,21 @@ Returns:
         "default": false,
         "title": "Choose Occurrences",
         "type": "boolean"
+      },
+      "leave_occurrences": {
+        "anyOf": [
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Leave Occurrences"
       }
     },
     "required": [

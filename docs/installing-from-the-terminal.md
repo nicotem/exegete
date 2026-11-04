@@ -398,9 +398,9 @@ exceptions reach the model through `read_brief` or the tools' answers.
 The descriptions are longer on Python 3.11 and 3.12 than on 3.13, which
 strips the indentation they are written with. On Python 3.13, 4 of
 `full`'s 80 descriptions are longer than 4,096 characters
-(`pseudonymise_source`, about 17,000; `start_coding_session`, about
+(`pseudonymise_source`, about 18,000; `start_coding_session`, about
 6,000; `search_files`, about 4,500; `record_suggestions`, about 4,500).
-On 3.11 and 3.12, the same four are, at about 18,000, 6,300, 4,900 and
+On 3.11 and 3.12, the same four are, at about 19,000, 6,300, 4,900 and
 4,700.
 [docs/snapshot/sizes.json](snapshot/sizes.json) gives each
 description's exact length on Python 3.13.

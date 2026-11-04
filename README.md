@@ -552,7 +552,7 @@ which carry your project's texts. `lifecycle`, the earlier name of
   the rules that matter come within its first 2,048 characters, a few
   named exceptions apart (the Terminal guide gives Claude Code's
   figures). One description is longer than 16,384 characters,
-  `pseudonymise_source`'s (about 17,000 on Python 3.13, about 18,000
+  `pseudonymise_source`'s (about 18,000 on Python 3.13, about 19,000
   on 3.11 and 3.12): [the guide's section on Claude Code](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#claude-code) says how to let it through whole.
 - **Resources** (`exegete://...`) and prompts. The command
   `exegete --check-transition` lists what the change of name from

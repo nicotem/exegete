@@ -68,25 +68,25 @@ reply. Please use
   ethics approval and data protection law, such as the GDPR, allow.
   [PRIVACY.md](PRIVACY.md) says where your data goes.
 - If you also use QualCoder, close the project there before the
-  assistant changes it. A lock file is a small file in a project's
-  folder that marks the project as in use. Exegete refuses every change
-  to the project's database while the project's lock file is active:
-  while QualCoder 3.8.2 has the project open, or while another
-  conversation using Exegete is writing to it.
-  QualCoder 4.0 writes no lock file. Exegete looks for signs of an open
-  4.0 window, but it can miss one. A change made while QualCoder has the
-  project open can lose work.
+  assistant changes it. A change made while QualCoder has the project
+  open can lose work. A lock file is a small file in a project's folder
+  that marks the project as in use. Exegete refuses every change to the
+  project's database while the project's lock file is active: while
+  QualCoder 3.8.2 has the project open, or while another conversation
+  using Exegete is writing to it. QualCoder 4.0 writes no lock file.
+  Exegete looks for signs of an open 4.0 window, but it can miss one.
 - A bug report needs a few facts about your setup, and the form for a
   bug report asks for each of them:
   - the version of Exegete, which the next point says how to find
   - the app you use Exegete in, such as Claude Desktop, Claude Code or
     LM Studio
-  - the tool set, `core` or `full`. With the Claude Desktop extension,
+  - the tool set, `core` or `full`. `full` has all of Exegete's tools,
+    and `core` has a smaller set. With the Claude Desktop extension,
     the tool set is `core` when its switch "Limit Exegete to its small
     tool set" is on, and `full` otherwise. For other installs, the
     setting `EXEGETE_TOOLSET` chooses it, and Exegete takes `full` when
-    that setting is not set. `lifecycle` is the earlier name of `full`,
-    before 0.15.0.
+    that setting is not set. `full` was called `lifecycle` before
+    0.15.0.
   - your project's schema version, the version of its database layout.
     It is the `databaseversion` value in the `schema` part of what the
     tool `get_current_project` returns, and you can ask the assistant
@@ -99,8 +99,9 @@ reply. Please use
   the Terminal, `exegete --version`, in the environment you installed
   into, gives the version. For an install from the source, the command
   is `python -m exegete.server --version`. An install made under the
-  earlier name answers `qualcoder-mcp --version` too. Each of these
+  earlier name answers `qualcoder-mcp --version` too. PyPI is the
+  public index from which Python programs are installed. Each of these
   commands gives the version in the form PyPI uses, as
-  `pip show exegete`, `pipx list` and `uv tool list` also do. PyPI is
-  the public index from which Python programs are installed. It writes
-  "-alpha" at the end of a version as "a0", and "-alpha.1" as "a1".
+  `pip show exegete`, `pipx list` and `uv tool list` also do. That form
+  writes "-alpha" at the end of a version as "a0", and "-alpha.1" as
+  "a1".

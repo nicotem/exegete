@@ -19,9 +19,10 @@ for your operating system. An issue is public, so participants' data or
 a project put into one is published with it. Describe the data without
 copying it instead, such as "a code name with an apostrophe" or "a file
 of about 40,000 characters". SUPPORT.md says what a log can hold.
-Report a security concern the same way. Open an issue, describe the
-problem without copying data, and say in the title that it concerns
-data exposure or write safety, so that it is looked at first.
+Report a security concern the same way. Open an issue and describe the
+problem without copying data. Say in the title that it concerns data
+exposure or a write that could damage a project, so that it is looked
+at first.
 
 ## Proposing changes
 
@@ -51,11 +52,11 @@ data exposure or write safety, so that it is looked at first.
    python -m pytest -q
    ```
 
-   The whole suite must pass, on your platform and on the CI. Every new
-   behaviour needs a test that fails without the change, including the
-   edge cases of any QualCoder behaviour you are matching. Do not add
-   skips without a stated reason in the test. Two scale tests are not
-   part of a normal run. They share one build, a project with more than
+   The whole suite must pass on your platform and in CI, the checks
+   that step 5 describes. Every new behaviour needs a test that fails
+   without the change, including the edge cases of any QualCoder
+   behaviour you are matching. Do not add skips without a stated reason
+   in the test. Two scale tests are not part of a normal run. They share one build, a project with more than
    10,000 codings and a document of 500,000 characters, made only when
    `TRACK6_GIANT=1` is set. The suite gives each test a home folder
    of its own, inside pytest's temporary folder (`tests/conftest.py`).
@@ -185,8 +186,8 @@ data exposure or write safety, so that it is looked at first.
    file of the same release that it supersedes, saying so in its pull
    request. A change made without a branch of its own, such as a
    dependency update, adds a file named for its subject in the same
-   commit. A test pins facts from the code, never these files' words,
-   which the release deletes.
+   commit. A test may check facts from the code, but never the words of
+   these files, which the release deletes.
 
    Update the docstring of every tool whose arguments or behaviour
    changed: the docstrings are the descriptions the assistant reads.
@@ -230,27 +231,32 @@ data exposure or write safety, so that it is looked at first.
    page's included.
 
    The facts the documents repeat are checked too, by
-   `tests/test_v0151_facts.py`. It checks these against the code's
-   constants: the folders, in full example paths too (such as
-   `/Users/YOUR_NAME/Exegete projects`), the reading folder, the time
-   per import call and the counts. It checks the sizes of the tool sets
-   against `docs/snapshot/sizes.json`, within five per cent, the
-   libraries' releases against `uv.lock`, and the requirements against
-   `pyproject.toml`. It checks the list of the tools that preview a
-   change first, and the list of those that report whether QualCoder
-   4.0 may have the project open. It checks what PRIVACY.md, INSTALL.md
-   and the Terminal guide say Exegete keeps on the computer. It checks
-   the map below: its lists of the package's modules and of the scripts
-   must give exactly the Python files that git tracks in `src/exegete/`
-   and `scripts/`. It checks that every install command of Exegete
-   names the optional part for PDF and EPUB, in its brackets or in its
-   paragraph. It checks that an example in one of QualCoder's own
-   folders has "if you use QualCoder" in its paragraph. It checks that
-   the extension's settings are called by their titles, never by their
-   place in the list. It checks that every name a document gives a tool
-   or an argument is one that Exegete has. When you change one of these
-   facts in the code, the check lists every sentence that still gives
-   the old one, in the forms it reads.
+   `tests/test_v0151_facts.py`. It checks:
+   - the folders, in full example paths too (such as
+     `/Users/YOUR_NAME/Exegete projects`), the reading folder, the time
+     per import call and the counts, against the code's constants
+   - the sizes of the tool sets, against `docs/snapshot/sizes.json`,
+     within five per cent
+   - the libraries' releases, against `uv.lock`, and the requirements,
+     against `pyproject.toml`
+   - the list of the tools that preview a change first, and the list of
+     those that report whether QualCoder 4.0 may have the project open
+   - what PRIVACY.md, INSTALL.md and the Terminal guide say Exegete
+     keeps on the computer
+   - the map below: its lists of the package's modules and of the
+     scripts must give exactly the Python files that git tracks in
+     `src/exegete/` and `scripts/`
+   - that every install command of Exegete names the optional part for
+     PDF and EPUB, in its brackets or in its paragraph
+   - that an example in one of QualCoder's own folders has "if you use
+     QualCoder" in its paragraph
+   - that the extension's settings are called by their titles, never by
+     their place in the list
+   - that every name a document gives a tool or an argument is one that
+     Exegete has
+
+   When you change one of these facts in the code, the check lists every
+   sentence that still gives the old one, in the forms it reads.
 
    A release to come may be named in a document, or in a text the code
    holds. Such a text is a tool's description, a note, a refusal or a
@@ -259,11 +265,11 @@ data exposure or write safety, so that it is looked at first.
    sentence that names the release must name something the plan gives to
    that release. When the sentence names nothing in the plan, its
    paragraph must, and each list item counts as a paragraph of its own.
-   Something in the plan that is named beside a release to come must be
-   named beside its own release. README's "What comes next" must give no
-   release already made. When a decision moves something to another
-   release, change its row in the plan in the same commit as any text
-   that gives its new release. At release preparation, the rows of that
+   Something from the plan that is named beside a release to come must
+   be named beside the release the plan gives it. README's "What comes
+   next" must give no release already made. When a decision moves
+   something to another release, change its row in the plan in the same
+   commit as any text that gives its new release. At release preparation, the rows of that
    release leave the plan. When you remove a tool or an argument, add
    it, with the release, to the test's `RETIRED` table. When you add a
    module or a script, add it to the map.
@@ -277,8 +283,8 @@ cases of the QualCoder behaviour being matched are covered, and that
 the tests are safe on Windows and with any text encoding. The security
 review looks at write paths, file and symlink handling, and what a tool
 result discloses into the conversation. It also asks what a hostile
-project folder, a hostile model input or a hostile network response
-could make Exegete do or put into the conversation. The network
+project folder, hostile input from the assistant or a hostile network
+response could make Exegete do or put into the conversation. The network
 response here is the version file of the check for new versions.
 Findings from both are fixed and re-verified before the merge, and
 behaviour changes that come out of them are recorded in the CHANGELOG.
@@ -350,7 +356,7 @@ CI, and expect requests for more tests rather than fewer.
   something exists (a private note on a row, a hidden coder's row, a
   count), never what it contains or whose it is. If a change alters what
   passes from the project into the conversation, `PRIVACY.md` changes
-  in the same pull request. So it does if the change alters anything
+  in the same pull request. It changes too when a change alters anything
   Exegete sends beyond this computer: an address it contacts, what a
   request carries, or when a request is made.
 - **No tool argument named `session_id`.** In August 2026, Anthropic's
@@ -373,11 +379,11 @@ CI, and expect requests for more tests rather than fewer.
   (`tests/test_v0151_libraries.py` checks). Such a library takes an
   upper limit at its next major release when it is large or changes
   fast. So does a library that the MCP library loads at start without a
-  limit of its own. An install from PyPI then meets a new major release
-  only with a release of Exegete tried with it. These libraries have no
-  upper limit today:
-  - cryptography, never loaded by Exegete and held per computer by
-    `[tool.uv]`;
+  limit of its own. Then an install from PyPI takes a library's new
+  major release only once a release of Exegete has been tried with it.
+  These libraries have no upper limit today:
+  - cryptography, which Exegete never loads. `[tool.uv]` keeps it, on
+    each computer, to a release that has a wheel there;
   - onnxruntime and numpy, which PyMuPDF 2 brings on Windows x64, Linux
     and Macs with Apple silicon. They are large, but they are loaded
     only inside the reading process, never at Exegete's start. In the
@@ -388,9 +394,9 @@ CI, and expect requests for more tests rather than fewer.
   - pywin32, on Windows only;
   - uvicorn, python-multipart and sse-starlette, since a limit at their
     next minor release would hold back routine fixes;
-  - defusedxml; striprtf, already exact; EbookLib, small, with about one
-    release a year; and Starlette, neither large nor imported by
-    Exegete.
+  - defusedxml; striprtf, already required at one exact release;
+    EbookLib, small, with about one release a year; and Starlette,
+    neither large nor imported by Exegete.
 
   If you change a dependency or a limit in `pyproject.toml`, run
   `uv lock` in the same commit to write `uv.lock` again. Then

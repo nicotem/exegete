@@ -19773,10 +19773,12 @@ _NOT_SAVED_NO_RUN = (
 # rewrite (v0.15.3): one text for the preview's choice and the run's list
 _OCCURRENCES_WITH_NOTE_REWRITE = (
     "Exegete cannot leave some occurrences of a name as they are while "
-    "rewrite_memos is on. A note rewrite replaces the name in every note "
-    "and journal entry across the project, including those about the "
-    "person whose occurrences are left. Preview again with rewrite_memos "
-    "off, and change by hand the notes that name either person.")
+    "rewrite_memos is on. A note rewrite replaces the name in the public "
+    "part of every note and journal entry across the project, including "
+    "those about the person whose occurrences are left. To choose "
+    "occurrences, preview again with rewrite_memos off and change by hand "
+    "the notes that name either person. To rewrite the notes, call again "
+    "without choosing occurrences.")
 
 
 def _after_a_colon(text: str) -> str:

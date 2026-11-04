@@ -14768,12 +14768,15 @@ class QualcoderDatabase:
         project's own `pseudonyms.json` rather than supplied by the
         caller: the two diagnostics that carry a surface form then carry
         the entry index alone, and `include_context` returns nothing.
-        Nor does any match position come back on that path (v0.15.3,
+        Nor does any match's span come back on that path (v0.15.3,
         ruling 94): the entries' blocks keep `entry`, `pseudonym` and
         `count`, and the overlap diagnostic its two entries. Beside a text
         the assistant has read, a match's span and its entry's pseudonym
         pair a name with its pseudonym, and the occurrence ids, listed in
-        text order, would line up with the spans.
+        text order, would line up with the spans. The `occurrences` block
+        still gives each occurrence's line on that path: beside the
+        entries' pseudonyms and counts, the lines can tell which name in
+        such a text each pseudonym replaces, and the changelog says so.
         A context window is a slice of the file text around a match, so
         by construction it contains the name that matched: on this path
         that is the researcher's reverse key going into the conversation

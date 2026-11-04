@@ -10,10 +10,10 @@ as put back by a pseudonym, in Word, OpenDocument and RTF files too,
 whose text is counted without the import's markers. A warning, given
 whether or not the file was counted, says how many were left and that
 they are real names; the file-text warning gives them their own reason.
-With design 2's words for a file whose every occurrence is left, these
-say nothing twice: where every occurrence the count found is one left by
-choice, the file-text warning's sentence on it is left out and the
-warning on the occurrences left gives the count. On the names list's
+With the second part's words for a file whose every occurrence is left,
+these say nothing twice: where every occurrence the count found is one
+left by choice, the file-text warning's sentence on it is left out and
+the warning on the occurrences left gives the count. On the names list's
 path the residue's rows per entry keep the occurrences left out, and the
 file's row gives their number. The refusal of ids that name nothing
 names a change of case_mode among its causes.
@@ -228,13 +228,14 @@ class TestTheWarnings:
         assert COUNTED not in left_warning(out)
 
     def test_every_occurrence_left_said_once(self, toms):
-        """Beside design 2's sentence for a file whose every occurrence is
-        left, by choice and with nothing to rewrite: the warning on them
-        gives their number, that they are real names, and the count,
-        without saying again that they are left by choice and without a
-        run; no sentence gives the rewrite's reason or a put-back. With
-        the save asked too. With a name in another file, the file-text
-        sentence gives both reasons and the count is said there."""
+        """Beside the second part's sentence for a file whose every
+        occurrence is left, by choice and with nothing to rewrite: the
+        warning on them gives their number, that they are real names,
+        and the count, without saying again that they are left by choice
+        and without a run; no sentence gives the rewrite's reason or a
+        put-back. With the save asked too. With a name in another file,
+        the file-text sentence gives both reasons and the count is said
+        there."""
         everyone = choose(mapping=TOM)
         for save in (False, True):
             out = preview_of(mapping=TOM, leave_occurrences=everyone,
@@ -328,9 +329,9 @@ class TestThroughMarkers:
 
 class TestTheNamesListPath:
 
-    # Design 2's review probe: two names lists giving the same entries'
-    # blocks (entry 0 Alexander, entry 1 Joan, each found twice), pairing
-    # Ruth and Thomas the other way round
+    # The second part's review probe: two names lists giving the same
+    # entries' blocks (entry 0 Alexander, entry 1 Joan, each found twice),
+    # pairing Ruth and Thomas the other way round
     PAIRINGS = ([{"original": "Ruth", "pseudonym": "Alexander"},
                  {"original": "Thomas", "pseudonym": "Joan"}],
                 [{"original": "Thomas", "pseudonym": "Alexander"},
@@ -398,11 +399,11 @@ class TestTheNamesListPath:
 class TestTheRefusal:
 
     def test_a_change_of_case_mode_is_named(self, tmp_path):
-        """Design 2's finding 21: Ann and Mary Ann over "I met mary Ann
-        today.". The occurrence chosen under case_mode exact is "Ann";
-        under insensitive "mary Ann" matches the longer name, so its id
-        names nothing there, and the refusal names a change of case_mode
-        among its causes."""
+        """A probe of the second part's review: Ann and Mary Ann over "I
+        met mary Ann today.". The occurrence chosen under case_mode exact
+        is "Ann"; under insensitive "mary Ann" matches the longer name, so
+        its id names nothing there, and the refusal names a change of
+        case_mode among its causes."""
         mapping = [{"original": "Ann", "pseudonym": "Pat"},
                    {"original": "Mary Ann", "pseudonym": "Sam"}]
         with fresh(tmp_path, "I met mary Ann today.\n"):

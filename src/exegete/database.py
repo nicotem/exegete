@@ -14071,7 +14071,9 @@ class QualcoderDatabase:
         On the `use_project_pseudonyms` path (`may_echo_names=False`)
         every `form` is taken out and no longer word is collected. The
         file's own NAME is returned on both paths (ruling 12), as
-        `preview["files"][].name` always was.
+        `preview["files"][].name` always was. `scanned.characters` holds
+        the rewritten file's new length, so the preview takes it out
+        where it leaves that length out (v0.15.3).
         """
         from . import pseudonymise as engine
 
@@ -14887,8 +14889,9 @@ class QualcoderDatabase:
         line, and a pseudonym withheld because it carries a name keeps
         its entry and count where it already occurs, with no span: the
         text at that span is the pseudonym. With a list to leave, the new
-        text's length is left out on that path too: beside a preview
-        without the list it tells the left occurrences' entries.
+        text's length is left out on that path too, as `new_text_length`
+        and inside the residue's count of the characters it read: beside
+        a preview without the list it tells the left occurrences' entries.
         A context window is a slice of the file text around a match, so
         by construction it contains the name that matched: on this path
         that is the researcher's reverse key going into the conversation
@@ -15105,6 +15108,12 @@ class QualcoderDatabase:
             preview["residue"] = self.pseudonymise_residue(
                 compiled, plan, may_echo_names=may_echo_names,
                 detail=residue_detail, memo_plan=memo_plan)
+            if leave_given and not may_echo_names:
+                # As `new_text_length` above: the count of the characters
+                # read sums every file's text after the run, the
+                # rewritten file's new length included
+                preview["residue"].get("file_text", {}).get(
+                    "scanned", {}).pop("characters", None)
         return preview
 
     # The fixed strings of the preview's `memo_rewrites` block (v0.13,

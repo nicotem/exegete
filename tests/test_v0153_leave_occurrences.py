@@ -9,10 +9,13 @@ bound into the token when given, and placed on a preview only: an id
 that names no occurrence in the file's text as it is now, or more than
 one, is refused there, and on the execute the token answers. A preview
 given a list lists every occurrence as found, the ones left marked, and
-says per entry what a preview without it says, so that on the names
-list's path nothing ties a left occurrence to its entry: there the ids
-come without lines, the new text's length is left out and the journal
-names the pseudonyms without counts. When every occurrence is left, the
+says per entry what a preview without it says. On the names list's path
+the ids come without lines, the new text's length is left out, with the
+residue's count of the characters it read, and the journal names the
+pseudonyms without counts, so that none of these ties a left occurrence
+to its entry; the counts of rows by kind of change still can, and so do
+the residue's rows per entry, which count a name left under its entry.
+When every occurrence is left, the
 preview and the answer say that they are left by choice. The run record
 and the journal give a count; undo takes the run back like any other.
 
@@ -348,6 +351,56 @@ class TestThePreview:
             assert done["files"][0]["new_length"] == len(text) + 2
             assert "Pseudonyms applied: Alex (2)." in journal_text(folder)
 
+    # Two names lists whose entries' blocks are the same (entry 0
+    # Alexander, entry 1 Joan, each found twice), pairing the two names
+    # the other way round
+    PAIRINGS = ([{"original": "Ruth", "pseudonym": "Alexander"},
+                 {"original": "Thomas", "pseudonym": "Joan"}],
+                [{"original": "Thomas", "pseudonym": "Alexander"},
+                 {"original": "Ruth", "pseudonym": "Joan"}])
+    MET = ("Ruth and Thomas met.\nThis line is coded.\n"
+           "Ruth came back.\nThomas came back.\n")
+    # The other two files of the fixture with text, which the residue
+    # reads as they are
+    OTHERS = len("extracted page text") + len("nothing to see here")
+
+    def test_names_list_residue_counts_no_characters(self, tmp_path):
+        """With a list on the names list's path, the residue gives no
+        count of the characters it read. That count holds the rewritten
+        file's new length, which beside the preview without the list
+        tells the left occurrences' entries. The two pairings, with
+        Thomas's first occurrence left, give the same `scanned` block,
+        where the count would be 121 under one (Joan, two characters
+        shorter than Thomas) and 116 under the other (Alexander, three
+        longer). Without the list, and with a typed mapping and a list,
+        the count stays: every file's text as it will be after the run."""
+        scanned = []
+        for number, listed in enumerate(self.PAIRINGS):
+            with fresh(tmp_path, self.MET, f"pairing{number}.qda") as folder:
+                names_list(folder, listed)
+                chosen = preview_of(choose_occurrences=True, **NAMES)
+                read = chosen["preview"]["residue"]["file_text"]["scanned"]
+                assert read["characters"] == chosen["preview"]["files"][0][
+                    "new_text_length"] + self.OTHERS
+                out = preview_of(leave_occurrences=[ids_of(chosen)[1]],
+                                 **NAMES)
+                assert block(out)["left"] == 1
+                read = out["preview"]["residue"]["file_text"]["scanned"]
+                assert "characters" not in read, read
+                assert read["files"] == 3
+                scanned.append(read)
+                done = execute_as_recipe(out)
+                assert done.get("success") is True, done
+                assert stored(folder).count("Thomas") == 1
+        assert scanned[0] == scanned[1]
+        listed = self.PAIRINGS[0]
+        with fresh(tmp_path, self.MET, "typed.qda") as folder:
+            out = preview_of(mapping=listed,
+                             leave_occurrences=choose(mapping=listed)[1:2])
+            read = out["preview"]["residue"]["file_text"]["scanned"]
+            assert execute_from(out, mapping=listed).get("success") is True
+            assert read["characters"] == len(stored(folder)) + self.OTHERS
+
 
 class TestTheToken:
 
@@ -577,6 +630,17 @@ class TestTheRefusals:
             out = preview_of(include_context=True, **choice, **arguments)
             assert out.get("reason") == "context_with_occurrences", out
             assert out["error"] == server._CONTEXT_WITH_OCCURRENCES
+
+    def test_the_context_refusal_on_an_execute(self, toms):
+        """include_context is not bound: an execute that adds it to the
+        token of a preview given a list is refused with nothing written,
+        and the same execute without it runs, as the refusal says."""
+        out = preview_of(mapping=TOM,
+                         leave_occurrences=choose(mapping=TOM)[2:])
+        refused = execute_from(out, mapping=TOM, include_context=True)
+        assert refused.get("reason") == "context_with_occurrences", refused
+        assert stored(toms) == TOMS and backups(toms) == []
+        assert execute_from(out, mapping=TOM).get("success") is True
 
     @pytest.mark.parametrize("save", [False, True])
     def test_every_occurrence_left(self, toms, save):

@@ -19801,18 +19801,25 @@ _OCCURRENCES_WITH_NOTE_REWRITE = (
     "the notes that name either person. To rewrite the notes, call again "
     "without choosing occurrences.")
 # The words around each occurrence, refused while occurrences are chosen
-# or left (v0.15.3, ruling 106: the conversation carries ids and counts)
+# or left (v0.15.3, ruling 106: the conversation carries ids and counts),
+# on both mapping paths. include_context is not bound, so an execute
+# without it runs from the same token
 _CONTEXT_WITH_OCCURRENCES = (
     "Exegete does not give the words around each occurrence while "
-    "occurrences are chosen or left: they would come into the conversation "
-    "beside the ids. Preview again without include_context.")
+    "occurrences are chosen or left: the choice is made by their ids, and "
+    "the words around a name stay out of the conversation. Call again "
+    "without include_context.")
 # A list to leave whose ids the preview cannot place (v0.15.3): refused
-# on a preview, never on the execute, where the token answers
+# on a preview, never on the execute, where the token answers. The
+# causes are every one that gives other ids (occurrences.py)
 _OCCURRENCES_NOT_ISSUED = (
     "These occurrence ids name no occurrence in this file's text as it is "
-    "now: an id was copied wrongly, the text changed, a change to the "
-    "mapping moved the occurrence, or the ids came from another file or "
-    "project. Preview again with choose_occurrences and choose again.")
+    "now. An id may have been copied wrongly, the text may have changed, "
+    "a change to the mapping may have moved the occurrence, or the ids "
+    "may come from another file or project; ids also change when the "
+    "project is moved or renamed, under another account, and after the "
+    "preview-token secret is replaced. Preview again with "
+    "choose_occurrences and choose again.")
 _OCCURRENCE_ID_AMBIGUOUS = (
     "This id begins the ids of more than one occurrence: give each id as "
     "the preview lists it.")

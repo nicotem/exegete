@@ -46,5 +46,6 @@
   its entry number and count where it already occurs in the file, and
   no longer its positions. With occurrences left, the preview and the
   run's answer on this path leave out the new text's length, and the
-  journal entry names the pseudonyms of the names found without
-  counting them.
+  preview's residue leaves out its count of the characters it read,
+  which holds that length; the journal entry names the pseudonyms of
+  the names found without counting them.

@@ -25,11 +25,14 @@ which opens no window (tests/conftest.py); where a page must be seen to
 open, `opener.open_file` is replaced by a recorder that opens nothing.
 """
 
+import ctypes
+import ctypes.util
 import errno
 import html
 import json
 import logging
 import os
+import random
 import re
 import sqlite3
 import sys
@@ -95,10 +98,12 @@ ANSWER_KEYS = {"opened", "counts", "note", "location", "not_opened_because",
 
 # The page's marks and labels, as occurrences.build_page draws them: each
 # line in the direction of its own first letter, each label's words
-# isolated, left to right
+# isolated, left to right, and named for the mark the page's style draws
+# after it where it needs one
 MARK = r'<mark class="occ( left)?">([^<]*)</mark>'
-LABEL = (r'<span class="id( left)?"><bdi dir="ltr"><span class="sr">'
-         r'occurrence id </span>([0-9a-z]+)(, left as it is)?</bdi></span>')
+LABEL = (r'<span class="id( left)?(?: bidi-(?:l|r|al))?"><bdi dir="ltr">'
+         r'<span class="sr">occurrence id </span>([0-9a-z]+)'
+         r'(, left as it is)?</bdi></span>')
 TOKEN = re.compile(MARK + "|" + LABEL)
 PARAGRAPH = re.compile(r'<p dir="auto"><span class="n">(\d+)</span>(.*?)</p>',
                        re.DOTALL)
@@ -372,6 +377,258 @@ def _page_for(text, names):
     return page
 
 
+# The page laid out as a browser lays out a paragraph, by ICU's
+# implementation of Unicode's bidirectional algorithm (UAX 9): the
+# system's own library through ctypes (macOS's libicucore, a Linux
+# system's libicuuc, Windows' icu.dll), no browser opened. A browser hands
+# the algorithm each paragraph's text with the line number's box as one
+# neutral object, each label's isolate (`bdi`) between an isolate's
+# opening and closing characters, the mark the page's style draws after
+# a label, and the paragraph's direction from its first letter outside
+# the labels (`dir="auto"`); the screen reader's words are out of flow
+LRI, PDI, OBJECT = chr(0x2066), chr(0x2069), chr(0xFFFC)
+# Each label's mark, by its class, as the page's style draws it
+AFTER = {name: chr(int(code, 16)) for name, code in re.findall(
+    r'\.id\.(bidi-[a-z]+)::after\{content:"\\([0-9a-f]+)"\}',
+    occurrences.PAGE_STYLE)}
+# A paragraph's pieces: an occurrence's mark, its end, a label
+PIECE = re.compile(
+    r'<mark class="occ(?: left)?">|</mark>|<span class="([^"]*)"><bdi '
+    r'dir="ltr"><span class="sr">occurrence id </span>([^<]*)</bdi></span>')
+# Lines that mix directions, with the names marked in each: the review's
+# (a line of Hebrew; a line of Arabic after a Latin speaker label, so laid
+# out left to right; English after a Hebrew speaker label, and English
+# opening with a Hebrew name, so laid out right to left; two Latin names
+# in one stretch of a Hebrew line; English with a Hebrew name), names of
+# the two directions side by side, two Hebrew names in one stretch of an
+# English line, and digits that take the direction of the letter before
+# them across an Arabic digit (W7), or follow an Arabic name
+MIXED = [
+    ("אמר משה כי דוד בא.", ["משה", "דוד"]),
+    ("P1: قال محمد إن أحمد", ["محمد", "أحمد"]),
+    ("משה: I saw Tom.", ["משה", "Tom"]),
+    ("משה said hello to Tom.", ["משה", "Tom"]),
+    ("אמר Tom and Ann כי בא.", ["Tom", "Ann"]),
+    ("Then משה said that David came.", ["משה", "David"]),
+    ("Tom משה said", ["Tom", "משה"]),
+    ("משה Tom כי", ["משה", "Tom"]),
+    ("Tom משה דוד said", ["Tom", "משה", "דוד"]),
+    ("אמר Tom ٢٥ 25 Ann כי", ["Tom", "Ann"]),
+    ("Hi ٢٥ 3 משה said", ["משה"]),
+    ("P1: قال محمد إن أحمد 25% منهم", ["أحمد"]),
+]
+# What lines are drawn from at random: words of Latin, Hebrew, Arabic and
+# Persian script, some with marks on their letters or a joiner inside;
+# European and Arabic digits, signs and brackets; and, rarely, a
+# paragraph separator or a character that sets a direction
+RANDOM_WORDS = ["Tom", "Ann", "and", "said", "to", "I", "saw", "Then",
+                "Mary", "P1", "Zoë", "משה", "דוד", "אמר", "כי", "שרה",
+                "מֹשֶׁה", "محمد", "أحمد", "قال", "إن", "فاطمة", "مُحَمَّدٌ",
+                "نمی" + chr(0x200C) + "دانم"]
+RANDOM_OTHERS = ["25", "3", "2026", "٢٥", "٣", ".", ",", ":", "?", "!",
+                 "-", "%", '"', "(", ")"]
+RANDOM_RARE = [chr(code) for code in
+               (0x2029, 0x202A, 0x202B, 0x202C, 0x202E, 0x2066, 0x2069)]
+
+
+def _icu_bidi():
+    """ICU's functions for the algorithm, or None where this system has no
+    ICU the test can find."""
+    if sys.platform == "darwin":
+        names = ["/usr/lib/libicucore.dylib"]
+    elif sys.platform == "win32":
+        names = ["icu.dll", "icuuc.dll"]
+    else:
+        names = [ctypes.util.find_library("icuuc")]
+    for name in filter(None, names):
+        try:
+            library = ctypes.CDLL(name)
+        except OSError:
+            continue
+        # A Linux system's ICU names its functions with its version
+        for suffix in [""] + [f"_{number}" for number in range(99, 49, -1)]:
+            if hasattr(library, "ubidi_open" + suffix):
+                return _Bidi(library, suffix)
+    return None
+
+
+class _Bidi:
+    def __init__(self, library, suffix):
+        def function(name, restype, *argtypes):
+            found = getattr(library, name + suffix)
+            found.restype, found.argtypes = restype, list(argtypes)
+            return found
+        error = ctypes.POINTER(ctypes.c_int)
+        self.open = function("ubidi_open", ctypes.c_void_p)
+        self.set = function("ubidi_setPara", None, ctypes.c_void_p,
+                            ctypes.POINTER(ctypes.c_uint16), ctypes.c_int32,
+                            ctypes.c_uint8, ctypes.c_void_p, error)
+        self.length = function("ubidi_getResultLength", ctypes.c_int32,
+                               ctypes.c_void_p, error)
+        self.order = function("ubidi_getVisualMap", None, ctypes.c_void_p,
+                              ctypes.POINTER(ctypes.c_int32), error)
+        self.level = function("ubidi_getLevelAt", ctypes.c_uint8,
+                              ctypes.c_void_p, ctypes.c_int32)
+        self.close = function("ubidi_close", None, ctypes.c_void_p)
+
+    def lay_out(self, text, level):
+        """`text` as one paragraph at `level` (0 left to right, 1 right to
+        left), as a browser gives the level: each character's logical
+        place in visual order, left to right, and each one's level."""
+        size = len(text)
+        units = text.encode("utf-16-le")
+        assert len(units) == 2 * size, "characters of the first plane only"
+        buffer = (ctypes.c_uint16 * size).from_buffer_copy(units)
+        error = ctypes.c_int(0)
+        bidi = self.open()
+        assert bidi
+        try:
+            self.set(bidi, buffer, size, level, None, ctypes.byref(error))
+            assert error.value <= 0, error.value
+            assert self.length(bidi, ctypes.byref(error)) == size
+            order = (ctypes.c_int32 * size)()
+            self.order(bidi, order, ctypes.byref(error))
+            assert error.value <= 0, error.value
+            return list(order), [self.level(bidi, at) for at in range(size)]
+        finally:
+            self.close(bidi)
+
+
+def _as_built(paragraph):
+    """A paragraph of the page as a browser hands it to the algorithm: its
+    characters, each one's role (("number",), ("text", its place in the
+    line), ("label", n) or ("mark", n)) and the paragraph's level."""
+    body = re.fullmatch(r'<p dir="auto"><span class="n">\d+</span>(.*)</p>',
+                        paragraph, re.DOTALL).group(1)
+    characters, roles = [OBJECT], [("number",)]
+    place = labels = cursor = 0
+    for piece in [*PIECE.finditer(body), None]:
+        for character in html.unescape(
+                body[cursor:piece.start() if piece else len(body)]):
+            characters.append(character)
+            roles.append(("text", place))
+            place += 1
+        if piece is None:
+            break
+        if piece.group(1) is not None:
+            for character in LRI + html.unescape(piece.group(2)) + PDI:
+                characters.append(character)
+                roles.append(("label", labels))
+            for name in piece.group(1).split():
+                if name in AFTER:
+                    characters.append(AFTER[name])
+                    roles.append(("mark", labels))
+            labels += 1
+        cursor = piece.end()
+    first = next((unicodedata.bidirectional(character)
+                  for character, role in zip(characters, roles)
+                  if role[0] == "text" and unicodedata.bidirectional(
+                      character) in ("L", "R", "AL")), "L")
+    return "".join(characters), roles, 0 if first == "L" else 1
+
+
+def _one_way(words):
+    """Whether `words` hold letters of one direction only."""
+    return len({"L" if kind == "L" else "R" for kind in map(
+        unicodedata.bidirectional, words) if kind in ("L", "R", "AL")}) <= 1
+
+
+def _faults(bidi, text, spans, others=True, placed=True):
+    """What is wrong with where the labels stand when the page of the one
+    line `text`, with occurrences at `spans`, is laid out: a label not
+    beside its own occurrence; the text laid out otherwise than alone;
+    with `others`, a label beside another occurrence; and with `placed`,
+    a label not where the rule puts it, after its occurrence as the line
+    reads or, where the occurrence ends a stretch written against the
+    line's direction that began before it (as the line laid out alone
+    shows), after its last letter as the stretch reads."""
+    marks = [(begin, end, f"q{n:04d}") for n, (begin, end) in enumerate(spans)]
+    page, _counts = occurrences.build_page(
+        project_name="p", file_id=1, file_name="f.txt", text=text,
+        marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0))
+    main = page[page.index('<main id="text">'):page.index("</main>")]
+    [paragraph] = re.findall(r'<p dir="auto">.*?</p>', main, re.DOTALL)
+    built, roles, level = _as_built(paragraph)
+    order, _levels = bidi.lay_out(built, level)
+    drawn = "".join(character for character, role in zip(built, roles)
+                    if role[0] == "text")
+    alone, levels = bidi.lay_out(OBJECT + drawn, level)
+    levels = levels[1:]
+    seen = [roles[at] for at in order if roles[at][0] != "mark"]
+    faults = []
+    if [role[1] for role in seen if role[0] == "text"] != [
+            at - 1 for at in alone if at]:
+        faults.append("the text laid out otherwise than alone")
+    for n, (begin, end) in enumerate(spans):
+        where = [at for at, role in enumerate(seen) if role == ("label", n)]
+        first, final = where[0], where[-1]
+        assert where == list(range(first, final + 1))
+        before = seen[first - 1] if first else None
+        after = seen[final + 1] if final + 1 < len(seen) else None
+
+        def within(role, low=begin, high=end):
+            return (role is not None and role[0] == "text"
+                    and low <= role[1] < high)
+        if not (within(before) or within(after)):
+            faults.append(f"label {n} not beside its occurrence")
+        for other, (low, high) in enumerate(spans):
+            if others and other != n and (within(before, low, high)
+                                          or within(after, low, high)):
+                faults.append(f"label {n} beside occurrence {other}")
+        if not placed:
+            continue
+        last = end - 1
+        if levels[last] % 2 == level % 2:
+            line_reads = True
+        elif end < len(drawn) and levels[end] > level:
+            # The stretch goes on past the occurrence
+            line_reads = False
+        else:
+            start = last
+            while start > 0 and levels[start - 1] > level:
+                start -= 1
+            line_reads = start >= begin
+        own = [at for at, role in enumerate(seen) if within(role)]
+        if line_reads:
+            placed = (within(before) and max(own) < first if level == 0
+                      else within(after) and min(own) > final)
+        else:
+            placed = (before == ("text", last) if levels[last] % 2 == 0
+                      else after == ("text", last))
+        if not placed:
+            faults.append(f"label {n} not after its occurrence as "
+                          + ("the line reads" if line_reads else "it reads"))
+    return faults
+
+
+def _random_line(draw):
+    """A line drawn at random, and the spans of the occurrences marked in
+    it: single words, and now and then two words together."""
+    text, spans, marked = "", [], False
+    for number in range(draw.randint(1, 9)):
+        roll = draw.random()
+        word = roll < 0.7
+        piece = (draw.choice(RANDOM_WORDS) if word else
+                 draw.choice(RANDOM_OTHERS) if roll < 0.97 else
+                 draw.choice(RANDOM_RARE))
+        if number:
+            text += " "
+        begin = len(text)
+        text += piece
+        if word and draw.random() < 0.45:
+            if marked and draw.random() < 0.2:
+                spans[-1] = (spans[-1][0], len(text))
+            else:
+                spans.append((begin, len(text)))
+            marked = True
+        else:
+            marked = False
+        if draw.random() < 0.15:
+            text += draw.choice(".,:;!?")
+            marked = False
+    return text, spans
+
+
 class TestRightToLeft:
     def test_each_line_takes_its_own_direction(self):
         """Each line of the text is laid out in the direction of its own
@@ -396,7 +653,12 @@ class TestRightToLeft:
         assert re.findall(r"<p\b[^>]*>", main) == ['<p dir="auto">'] * 5
         for place, (begin, end, one) in enumerate(marks):
             left = place == 1
-            label = (f'<span class="id{" left" if left else ""}">'
+            # No occurrence here ends a stretch against its line's direction
+            # that began before it, so no label needs a mark, but in the line
+            # that holds a direction character of its own, where every label
+            # has its mark, Tom's left-to-right one
+            mark = " bidi-l" if place == len(marks) - 1 else ""
+            label = (f'<span class="id{" left" if left else ""}{mark}">'
                      f'<bdi dir="ltr"><span class="sr">occurrence id </span>'
                      f'{one}{", left as it is" if left else ""}</bdi></span>')
             kind = "occ left" if left else "occ"
@@ -470,6 +732,80 @@ class TestRightToLeft:
                     # the label, as a browser does and MuPDF does not
                     assert label + seen in line or seen + label in line, \
                         (case, name, line)
+
+    def test_a_label_takes_its_mark_where_the_line_may_not_set_it(self):
+        """Where a line holds a character that sets a direction of its own
+        (here an embedding), every label has its mark, and so has one whose
+        stretch meets a paragraph separator, which not every reader of the
+        page may take as one: the direction around such a label may not be
+        the one the page reads from the line's letters. Elsewhere a label
+        whose occurrence begins its stretch has none."""
+        lines = ["אמר " + chr(0x202A) + "Tom and Ann" + chr(0x202C) + " כי",
+                 "אמר Tom " + chr(0x2029) + " Ann כי",
+                 "אמר Tom כי Ann בא"]
+        text = "\n".join(lines)
+        marks, at = [], 0
+        for line in lines:
+            for name in ("Tom", "Ann"):
+                start = text.index(name, at)
+                marks.append((start, start + 3, f"id{len(marks)}"))
+            at += len(line) + 1
+        page, _counts = occurrences.build_page(
+            project_name="p", file_id=1, file_name="f.txt", text=text,
+            marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0))
+        assert re.findall(r'<span class="(id[^"]*)">', page) == [
+            "id bidi-l", "id bidi-l", "id", "id bidi-l", "id", "id"]
+
+    def test_a_line_of_mixed_directions_keeps_each_id_beside_its_own(self):
+        """The page's own markup and style laid out as a browser lays out
+        a paragraph (the label an isolate, as MuPDF's engine does not
+        take it), by ICU's implementation of the algorithm: in each line,
+        each id stands beside its own occurrence and beside no other,
+        after it as the line reads or, where the occurrence ends a stretch
+        written against the line's direction that began before it, after
+        its last letter as the stretch reads; and the text keeps the
+        layout it has alone (a digit after an Arabic name among it)."""
+        bidi = _icu_bidi()
+        if bidi is None:
+            pytest.skip("no ICU on this system to lay a line out with")
+        for text, names in MIXED:
+            spans, at = [], 0
+            for name in names:
+                begin = text.index(name, at)
+                spans.append((begin, begin + len(name)))
+                at = begin + len(name)
+            assert _faults(bidi, text, spans) == [], text
+
+    def test_lines_drawn_at_random_keep_each_id_beside_its_own(self):
+        """The same over 3,000 lines drawn at random (a fixed seed): in
+        every line each id beside its own occurrence, and the text's own
+        layout kept. Where each occurrence in a line is written in one
+        direction, each id beside no other occurrence; an occurrence of
+        two words written in two directions is laid out in two parts, as
+        the text is, and an id glued to its own occurrence can then touch
+        one of them. Where, besides, the line holds no bracket, paragraph
+        separator or character that sets a direction, each id stands where
+        the rule puts it: beside brackets, which the algorithm pairs
+        (N0), a label can take a mark it does not need, and with a
+        direction character or a separator every label takes its mark."""
+        bidi = _icu_bidi()
+        if bidi is None:
+            pytest.skip("no ICU on this system to lay a line out with")
+        draw = random.Random(20261105)
+        faults, labels, both_ways = [], 0, 0
+        for _ in range(3000):
+            text, spans = _random_line(draw)
+            if not spans:
+                continue
+            labels += len(spans)
+            others = all(_one_way(text[begin:end]) for begin, end in spans)
+            both_ways += not others
+            placed = others and not any(
+                character in text for character in "()" + "".join(RANDOM_RARE))
+            faults += [(text, fault) for fault in
+                       _faults(bidi, text, spans, others, placed)]
+        assert labels > 4000 and both_ways > 50
+        assert faults == []
 
 
 class TestTheAnswer:

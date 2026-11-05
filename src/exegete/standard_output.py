@@ -17,24 +17,41 @@ it once the line carrying that answer has been written and flushed.
 The library's writer (mcp 1.30.0, `server/stdio.py` 75-81) calls
 `write` with each message as one line of JSON, then `flush`. Both go to
 the library's own stream (`server/stdio.py` 49), so the bytes are the
-same. After each flush, while a note is held, the line is read with
-`json.loads`: a response for a held id settles its notes, recorded as
-given when it is a result not marked as an error, and due again
-otherwise (an error, the app's cancel among them), so that the next
-answer carries them. Requests and notifications of Exegete's own are
-passed over, whatever their id. The library answers each request once,
-with its result or a cancel's error; a cancel that crosses the result
-sends the error as well, and the first line for an id settles it.
-There is no await between the flush and the record, so a stop lands
-before the flush (nothing recorded: the note comes at the next start)
-or after the record. The text read is the text handed to `write`,
-before the stream turns its line ends into Windows' own.
+same. After each flush, while a note is held, what was written since
+the last flush is read a line at a time with `json.loads`: a response
+for a held id settles its notes, recorded as given when it is a result
+not marked as an error to a request the app has not cancelled, and due
+again otherwise (an error, the library's answer to a cancel among
+them), so that the next answer carries them. What this relies on is a
+flush once each message has been written: a message written in two
+parts, or two messages to one flush, are read alike, and only a library
+that stopped flushing would leave every note held. Requests and
+notifications of Exegete's own are passed over, whatever their id. The
+library answers each request once, with its result or a cancel's error;
+a cancel that crosses the result sends the error as well, and the first
+line for an id settles it. There is no await between the flush and the
+record, so a stop lands before the flush (nothing recorded: the note
+comes at the next start) or after the record. The text read is the text
+handed to `write`, before the stream turns its line ends into Windows'
+own.
+
+The app's cancel is read on the way in (`read_cancel`, which server.py
+gives to standard input's reader, standard_input.py). Every tool but
+check_for_updates is plain and runs on the event loop, so the library
+reads a cancel only once such a tool has answered, and sends that
+answer alone, note included, which by MCP's rule the app does not show.
+Standard input's own thread reads the line the app sends while a tool
+runs, so the cancel is known before that answer goes out
+(updates.cancelled), and its notes are due again. A cancel read only
+once the answer has gone out, as when the app cancels at that moment,
+or when the app sent other lines first while the tool ran, comes too
+late, and the note counts as given.
 
 A fault in the reading or the record is logged by its kind alone, as
 every log line is (database.error_label), since the line read may hold
-a project's text. It never reaches the library's writer: the answers go
-on, and a note whose record failed comes again at the next start rather
-than being lost.
+a project's text. It never reaches the library's reader or writer: the
+answers go on, and a note whose record failed comes again at the next
+start rather than being lost.
 """
 
 import json
@@ -51,6 +68,10 @@ from .database import error_label
 logger = logging.getLogger(__name__)
 # The log line of a fault in the reading or the record: its kind alone
 _NOT_RECORDED = "A note told in an answer could not be recorded: %s"
+# The same for the app's cancel
+_NOT_READ = "A cancel from the app could not be read: %s"
+# The method of the app's cancel, looked for before a line is parsed
+_CANCEL = "notifications/cancelled"
 
 
 class StandardOutputLines:
@@ -107,3 +128,28 @@ def _settle(line: str) -> None:
     else:
         return
     updates.written(request_id, delivered)
+
+
+def read_cancel(line: str) -> None:
+    """A line of standard input, as standard input's thread reads it:
+    the app's cancel of a request gives the request's id to
+    updates.cancelled. A line without the cancel's method is passed over
+    unparsed; one with it is parsed, and passed over unless it is the
+    app's cancel of a request. Never raises: a fault is logged by its
+    kind alone."""
+    try:
+        if _CANCEL not in line:
+            return
+        message = json.loads(line)
+        if not isinstance(message, dict) or "id" in message or \
+                message.get("method") != _CANCEL:
+            return
+        params = message.get("params")
+        request_id = (params.get("requestId") if isinstance(params, dict)
+                      else None)
+        if isinstance(request_id, bool) or \
+                not isinstance(request_id, (int, str)):
+            return
+        updates.cancelled(request_id)
+    except Exception as error:
+        logger.debug(_NOT_READ, error_label(error))

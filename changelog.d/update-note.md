@@ -13,27 +13,37 @@
 
 - **A note Exegete gives once is no longer lost to a stop or to the app
   cancelling a request.** The note that the check for new versions
-  exists, a new version's notice and the note after an update were
-  each recorded as given when they were added to an answer, before the
-  answer was sent; so was what `check_for_updates` tells when you ask.
-  A Ctrl+C, or the app cancelling the request, in between lost the note
-  for good. For the note that the check exists, the first check then
-  came a week later without you having been told of it. Each is now
-  recorded as given only once the answer carrying it has gone out to
-  the app, and one cut short comes in a later answer or at the next
-  start. A note can still come twice in rare cases: two copies of
-  Exegete on one computer, a file Exegete could not write, or a stop in
-  the instant after the answer has gone out.
+  exists, a new version's notice and the note after an update were each
+  recorded as given when they were added to an answer, before the answer
+  was sent; so was what `check_for_updates` tells when you ask. A Ctrl+C
+  before the answer went out lost the note for good. So did the app
+  cancelling the request: the answer could still come, but an app is
+  meant to ignore the answer to a request it has cancelled. For the note
+  that the check exists, the first check then came a week later without
+  you having been told of it. Each is now recorded as given only once
+  the answer carrying it has gone out to the app, and not when the app
+  has cancelled the request; one cut short comes in a later answer or at
+  the next start. A note can still come twice in rare cases: two copies
+  of Exegete on one computer, a file Exegete could not write, a stop in
+  the instant after the answer has gone out, or another answer going out
+  while Exegete checks for a new version at your request. One can still
+  be missed if the app's cancel reaches Exegete only after the answer
+  has gone out, as when the app cancels at the moment the answer is
+  sent.
 
 ### For contributors
 
 - `src/exegete/standard_output.py` writes standard output as the MCP
   library does, over the library's own stream, and records what an
   answer told once that answer's line has been written and flushed
-  (`updates.give`, `updates.written`). It relies on the library writing
-  each message with one write and one flush, and
+  (`updates.give`, `updates.written`). It relies on the library
+  flushing standard output once each message has been written, and
   `tests/test_v0153_update_note.py` holds the bytes on the three
-  systems. `release.SUMMARY` is now one plain paragraph of at most 800
-  characters, with no link and no line break, which
+  systems. The app's cancel is read as it arrives, in standard input's
+  own thread (`standard_output.read_cancel`, `updates.cancelled`):
+  every tool but `check_for_updates` runs on the event loop, so the
+  library reads a cancel only once such a tool has answered, and sends
+  that answer. `release.SUMMARY` is now one plain paragraph of at most
+  800 characters, with no link, no Markdown and no line break, which
   `tests/test_updates.py` holds; CONTRIBUTING's "The check for new
   versions" gives the release step.

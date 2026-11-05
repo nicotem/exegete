@@ -685,11 +685,17 @@ What Exegete tells once (the check's disclosure and a new version,
 whether on another tool's answer or in `check_for_updates`' own, and
 the note after an update) is recorded as told only after the answer
 carrying it has been written to standard output and flushed
-(`src/exegete/standard_output.py`). This relies on the MCP library
-writing each message with one write and one flush. A release of the
-library that wrote otherwise would leave every note held: each would
-come again at every start, and with checking on, the disclosure would
-never be recorded, so the check would never run.
+(`src/exegete/standard_output.py`), and not when the app has cancelled
+the request. Every tool but `check_for_updates` runs on the event loop,
+so the library reads a cancel only once such a tool has answered, and
+that answer still goes out; standard input's own thread reads the
+app's cancel as it arrives instead (`src/exegete/standard_input.py`).
+This relies on the MCP library flushing standard output once each
+message has been written: a message written in two parts, or two
+messages to one flush, are read alike. A release of the library that
+stopped flushing would leave every note held: each would come again at
+every start, and with checking on, the disclosure would never be
+recorded, so the check would never run.
 `tests/test_v0153_update_note.py` holds this, and the
 `newest-libraries` job, which runs the suite on the newest releases,
 is where such a change would show first.

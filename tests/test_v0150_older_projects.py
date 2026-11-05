@@ -555,8 +555,9 @@ class TestTheDocuments:
         # holds, and pointed to from the guide, with the way without
         # QualCoder named)
         guide = _flat("AI_CODING_GUIDE.md")
-        assert ("An older project is refused; \"Supported QualCoder "
-                "versions\" in TOOLS.md says how to bring one up to date, "
+        # (v0.15.3, the readability reading: a sentence each)
+        assert ("Exegete refuses an older project. \"Supported QualCoder "
+                "versions\", in TOOLS.md, says how to bring one up to date, "
                 "with QualCoder or without it") in guide
         assert "## Supported QualCoder versions" in _flat("TOOLS.md")
         assert "open and save them in QualCoder 3.8" not in guide

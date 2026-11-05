@@ -114,11 +114,14 @@ class TestTheRefusalNamesBothCauses:
         guide = _flat(_section(_read("AI_CODING_GUIDE.md"),
                                "## Prerequisites", "\n## "))
         # (v0.15.2: the request in a sentence, and the 4.0 caveat in
-        # three)
-        assert ("- **If you also use QualCoder**, the project needs to be "
-                "closed there before Exegete writes to it. Writes are "
-                "refused while the project's lock file is active ("
-                + self.BOTH + ").") in guide
+        # three; v0.15.3, the readability reading: the causes a sentence
+        # of their own, each with "while")
+        assert ("- **If you also use QualCoder**, close the project there "
+                "before Exegete writes to it. Exegete refuses to write "
+                "while the project's lock file is active. The lock file is "
+                "active while QualCoder 3.8.2 has the project open, or "
+                "while another conversation using Exegete is writing to "
+                "it.") in guide
         assert ("QualCoder 4.0 writes no lock file. With 4.0, Exegete can "
                 "only report signs that the project may be open "
                 "(`qualcoder_gui_signals`), and those signs can miss an idle "
@@ -254,8 +257,8 @@ class TestTheChangelogHoldsWhatItSays:
         assert "If you also use QualCoder, close the project there" \
             in support
         guide = _flat(_read("AI_CODING_GUIDE.md"))
-        assert ("**If you also use QualCoder**, the project needs to be "
-                "closed there") in guide
+        assert ("**If you also use QualCoder**, close the project "
+                "there") in guide
         tools = _flat(_read("TOOLS.md"))
         assert ("if you also use QualCoder, make sure no window has the "
                 "project open before a write") in tools

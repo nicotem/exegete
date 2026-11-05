@@ -98,12 +98,16 @@ class TestTheThreeTexts:
         guide = _read("AI_CODING_GUIDE.md")
         assert "Close QualCoder First" not in guide
         flat = _flat(guide)
-        assert ("Writes are refused while the project's lock file is "
-                "active (QualCoder 3.8.2 has the project open, or another "
-                "conversation using Exegete is writing to it). The refusal "
-                "gives both causes and the way through for each: closing "
-                "the project in QualCoder, if you use it, or waiting a "
-                "moment and trying again.") in flat
+        # (v0.15.3, the readability reading: the causes a sentence of
+        # their own, the facts unchanged)
+        assert ("**If you also use QualCoder**, close the project there "
+                "before Exegete writes to it. Exegete refuses to write "
+                "while the project's lock file is active. The lock file is "
+                "active while QualCoder 3.8.2 has the project open, or "
+                "while another conversation using Exegete is writing to "
+                "it. The refusal gives both causes and the way through for "
+                "each: closing the project in QualCoder, if you use it, or "
+                "waiting a moment and trying again.") in flat
         assert ("So it is for you to make sure that no QualCoder 4.0 "
                 "window has the project open") in flat
         assert "make sure yourself that no QualCoder window" not in flat

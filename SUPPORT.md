@@ -36,11 +36,11 @@ Reading the issues needs no account (GitHub, checked on 4 November
   [INSTALL.md](INSTALL.md#reading-the-server-log) says where Claude
   Desktop keeps its log, and [PRIVACY.md](PRIVACY.md) says what leaves
   your computer when you use Exegete, and what stays on it.
-- **Questions.** The troubleshooting section of
+- **Questions.** The troubleshooting sections of
   [INSTALL.md](INSTALL.md#troubleshooting) and
-  [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md) answer many of them.
-  If they do not answer yours, open an issue: the next person often has
-  the same question.
+  [AI_CODING_GUIDE.md](AI_CODING_GUIDE.md#troubleshooting) answer many
+  of them. If they do not answer yours, open an issue: the next person
+  often has the same question.
 - **Ideas for features.** Exegete's next features are worked out with
   the researchers who use it now, so an issue that begins "it would help
   my analysis if…" is useful.

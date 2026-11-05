@@ -327,7 +327,7 @@ class TestTheTexts:
 
 DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
              "QUICKSTART.md", "SUPPORT.md", "CONTRIBUTING.md", "CLAUDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md")
+             "AI_CODING_GUIDE.md", "PROJECT_SELECTION_GUIDE.md")
 # The folder's own spelling, letter case kept: "Qualcoder projects",
 # meaning projects in the format (IMPORT_INSTRUCTIONS.md, an early
 # document git's history keeps), is not it
@@ -459,11 +459,14 @@ class TestTheDocuments:
         `/Users/YOUR_NAME/`), not counting the Terminal routes' folder
         in Documents (fix round 1: that one was counted too). Nine until
         v0.15.2, when the workflow told the folders once, in "The
-        workspace", and pointed there."""
-        guide = (REPO / "AI_CODING_WORKFLOW.md").read_text(encoding="utf-8")
+        workspace", and pointed there. Since 0.15.3 the workflow guide's
+        text is in the one coding guide, which tells the folders once,
+        in its step 1, beside its examples: held, it names the new
+        folder and never the earlier one."""
+        guide = (REPO / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")
         home_level = re.findall(r"(?:~|/Users/YOUR_NAME)/Exegete projects/",
                                 guide)
-        assert len(home_level) == 7
+        assert home_level
         assert "QualCoder projects" not in guide
 
     def test_the_readmes_first_session_says_by_default(self):

@@ -700,9 +700,11 @@ class TestTheDocuments:
                 "name to each project it creates, without asking, and says "
                 "so;") in guide
         assert "only declares a name to offer first" not in guide
-        assert ("You choose that name in Exegete's settings, for the "
-                "projects Exegete creates, or the first time a write needs "
-                "it") in _doc("AI_CODING_WORKFLOW.md")
+        # (v0.15.3: the workflow guide's step on applying is in this
+        # guide, and points to these two ways rather than repeat them)
+        assert ("- in a project that has no AI coder name, the first time "
+                "a write needs one.") in guide
+        assert "\"Which coder name do AI codings carry?\", below" in guide
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

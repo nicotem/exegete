@@ -1007,7 +1007,7 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
         # left the repository's files)
         documents = sorted(p for p in REPO.glob("*.md")
                            if p.name != "CHANGELOG.md")
-        assert {"README.md", "TOOLS.md", "AI_CODING_WORKFLOW.md",
+        assert {"README.md", "TOOLS.md", "AI_CODING_GUIDE.md",
                 "INSTALL.md", "PRIVACY.md"} <= {p.name for p in documents}
         offenders = []
         for path in documents:

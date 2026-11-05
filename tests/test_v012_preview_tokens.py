@@ -1024,7 +1024,7 @@ class TestTheConfirmArgumentIsGone:
     # it at a model. The docstrings are swept above; these are the texts
     # a human hands over, and they are where the instruction survived a
     # round that had already corrected the docstrings and the README.
-    SHIPPED_GUIDES = ("AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
+    SHIPPED_GUIDES = ("AI_CODING_GUIDE.md",
                       "README.md", "TOOLS.md", "QUICKSTART.md",
                       "INSTALL.md")
 

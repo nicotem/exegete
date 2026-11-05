@@ -596,7 +596,7 @@ class TestExegetesBackups:
 # ---------------------------------------------------------------------------
 
 DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
-             "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md", "CONTRIBUTING.md")
+             "AI_CODING_GUIDE.md", "CONTRIBUTING.md")
 
 # The other direction of a host's remembered choice (fix round 1): a tool
 # blocked under its earlier name is not blocked under its new one.
@@ -846,11 +846,12 @@ class TestTheDocuments:
         assert ("| `start_coding_session(file_ids, code_names, "
                 "instruction)` | Start a coding session |") in \
             _read("AI_CODING_GUIDE.md")
-        workflow = _read("AI_CODING_WORKFLOW.md")
-        # (v0.15.2: the heading in sentence case)
-        assert "### Step 2: Start a coding session" in workflow
-        assert ("2. Starts a new coding session with its own ID "
-                "(`start_coding_session`),") in workflow
+        guide = _read("AI_CODING_GUIDE.md")
+        # (v0.15.2: the heading in sentence case; v0.15.3: the workflow
+        # guide's steps, in the one coding guide)
+        assert "### Step 2: Start a coding session" in guide
+        assert ("1. starts a coding session with its own ID "
+                "(`start_coding_session`),") in guide
 
 
 # ---------------------------------------------------------------------------

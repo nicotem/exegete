@@ -48,7 +48,7 @@ DEPRECATIONS = sorted(name for name in dir(server)
                       if name.startswith("DEPRECATED_")
                       and isinstance(getattr(server, name), str))
 DOCUMENTS = ("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
-             "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md", "QUICKSTART.md")
+             "AI_CODING_GUIDE.md", "QUICKSTART.md")
 # A release number of the v0.15 series without its third part
 BARE_V015 = re.compile(r"v?0\.15(?![.\d])")
 

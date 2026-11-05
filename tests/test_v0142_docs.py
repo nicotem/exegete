@@ -583,7 +583,7 @@ def _without_dating_words():
                          "## [0.14.1-alpha]")
     texts = {name: _flat(name) for name in (
         "README.md", "INSTALL.md", "PRIVACY.md", "QUICKSTART.md", "TOOLS.md",
-        "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")}
+        "AI_CODING_GUIDE.md")}
     texts["CHANGELOG, 0.14.2"] = " ".join(changelog.split())
     return texts
 
@@ -1024,9 +1024,9 @@ RELEASE_LABEL = re.compile(r"\(v?\d+\.\d+\.\d+\+\)|\bin v?\d+\.\d+\.\d+\+|"
 
 def _openings():
     texts = {}
-    # each guide's title, its first lines and its overview
-    for name, end in (("AI_CODING_GUIDE.md", "## How it works"),
-                      ("AI_CODING_WORKFLOW.md", "## Safety first")):
+    # the guide's title, its first lines and its contents (v0.15.3: one
+    # coding guide)
+    for name, end in (("AI_CODING_GUIDE.md", "## How it works"),):
         text = _read(name)
         texts[name] = " ".join(text[:text.index("\n" + end)].split())
     texts["TOOLS.md, the brief"] = _between(
@@ -1062,7 +1062,7 @@ def test_the_release_label_check_would_notice():
 # ---------------------------------------------------------------------------
 
 QC_DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "SUPPORT.md",
-                "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
+                "AI_CODING_GUIDE.md",
                 "docs/installing-from-the-terminal.md")
 # Said while 4.0 was a beta and wrong since its release; and "a released
 # QualCoder (3.x)" for the versions with a lock file, a group 4.0, released
@@ -1238,13 +1238,14 @@ def test_no_current_document_gives_qualcoder_a_file_menu():
     from the Project menu ("Project", "Open Project": ui_main.py,
     menuProject and actionOpen_Project, in both releases).
     AI_CODING_WORKFLOW.md's troubleshooting step said "File > Open
-    Project" from October 2025 until 0.14.2."""
+    Project" from October 2025 until 0.14.2; the step is in the one
+    coding guide since 0.15.3."""
     found = {name: FILE_MENU.findall(text)
              for name, text in _current_markdown().items()
              if FILE_MENU.search(text)}
     assert found == {}
-    workflow = _read("AI_CODING_WORKFLOW.md")
-    step = _between(workflow, "In QualCoder:\n", "Select the `.qda` folder")
+    guide = _read("AI_CODING_GUIDE.md")
+    step = _between(guide, "In QualCoder:\n", "Select the `.qda` folder")
     assert "- Project > Open Project" in step
 
 

@@ -43,7 +43,7 @@ MARIA = {"mapping": [{"original": "Maria", "pseudonym": "Joan"}],
          "file_id": 1}
 DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "SUPPORT.md", "QUICKSTART.md", "AI_CODING_GUIDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
+             "PROJECT_SELECTION_GUIDE.md",
              "CLAUDE.md", "CONTRIBUTING.md", "NOTICE",
              "packaging/pypi-old-name/NOTICE",
              "packaging/pypi-old-name/README.md",

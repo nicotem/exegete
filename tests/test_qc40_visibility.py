@@ -1043,7 +1043,7 @@ class TestTheCapabilityIsNotAVersion:
     """
 
     DOCS = ("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
-            "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
+            "AI_CODING_GUIDE.md")
 
     # Sentences where 4.0 is genuinely about 4.0 and not a stand-in for
     # the capability: its own assistant, its own rebuilds, its own lock

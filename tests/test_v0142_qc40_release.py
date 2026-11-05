@@ -58,7 +58,7 @@ COMMIT_AS_VERIFIED = ("verified against QualCoder master",
                       "additionally verified against the QualCoder 4.0-Beta")
 READ_BY_RESEARCHERS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
                        "SUPPORT.md", "AI_CODING_GUIDE.md",
-                       "AI_CODING_WORKFLOW.md", "QUICKSTART.md")
+                       "QUICKSTART.md")
 
 
 def test_the_documents_name_the_release_as_verified():

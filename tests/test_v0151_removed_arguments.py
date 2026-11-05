@@ -57,7 +57,7 @@ AI_NAME = "AI-Test"
 # records the removal itself
 DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "SUPPORT.md", "QUICKSTART.md", "AI_CODING_GUIDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
+             "PROJECT_SELECTION_GUIDE.md",
              "CLAUDE.md", "packaging/pypi-old-name/README.md")
 
 

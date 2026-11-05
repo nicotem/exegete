@@ -132,6 +132,12 @@ def _text(message: dict) -> dict:
     return json.loads(message["result"]["content"][0]["text"])
 
 
+def _due():
+    """The key of the note the next answer would carry, or None."""
+    note = updates.due_note(True)
+    return None if note is None else note.key
+
+
 class _StartedAgain(_Started):
     """A second start in the same home, read as _Started reads one; over
     _child_env(home), since a second _Started would make the home again,
@@ -314,7 +320,7 @@ def test_a_cancelled_check_tells_nothing(newer_site, monkeypatch):
     updates.start(OLD, environ=EXTENSION_ON, now=now)
     _cancelled_while_held(monkeypatch)
     assert "disclosed_at" not in updates.read_state()
-    assert updates.due_note(True).key == "disclosure"
+    assert _due() == "disclosure"
 
     # The disclosure given eight days ago: the asked check fetches, and
     # finds a newer version
@@ -326,7 +332,7 @@ def test_a_cancelled_check_tells_nothing(newer_site, monkeypatch):
     state = updates.read_state()
     assert state["newest"].version == updates.parse_published("0.15.0a0")
     assert "announced" not in state
-    assert updates.due_note(True).key == "new version:0.15.0a0"
+    assert _due() == "new version:0.15.0a0"
 
 
 def test_a_failed_check_tells_nothing(newer_site, monkeypatch):
@@ -345,7 +351,7 @@ def test_a_failed_check_tells_nothing(newer_site, monkeypatch):
     assert "error" in json.loads(asyncio.run(server.check_for_updates()))
     assert len(newer_site.requests) == 1
     assert "announced" not in updates.read_state()
-    assert updates.due_note(True).key == "new version:0.15.0a0"
+    assert _due() == "new version:0.15.0a0"
 
 
 # ---------------------------------------------------------------------------
@@ -416,7 +422,7 @@ def test_the_record_waits_for_the_flush():
             out, stream, note = _fresh()
             given = time.time() - 100
             updates.give(note, 7, given)
-            assert updates.due_note(True) is None        # not twice
+            assert _due() is None        # not twice
             await _send(out, _result(7, notice=notice), flush=False)
             assert not _disclosed()
             await out.flush()
@@ -442,7 +448,7 @@ def test_the_record_waits_for_the_flush():
             updates.give(note, 7)
             await _send(out, answer)
             assert not _disclosed() and not updates.holding()
-            assert updates.due_note(True).key == "disclosure"
+            assert _due() == "disclosure"
 
         # A result, then a cancel's error for the same id: recorded once,
         # and not due again
@@ -451,7 +457,7 @@ def test_the_record_waits_for_the_flush():
         await _send(out, _result("seven"))
         await _send(out, _error("seven"))
         assert _disclosed()
-        assert updates.due_note(True) is None
+        assert _due() is None
 
     asyncio.run(run())
 

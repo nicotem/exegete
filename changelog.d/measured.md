@@ -7,8 +7,8 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 207,097 | 204,793 |
-| `core` (28 tools) | 76,139 | 75,947 |
+| `full` (80 tools) | 208,086 | 204,793 |
+| `core` (28 tools) | 76,265 | 75,947 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,180 | 13,721 |
 | The brief in `core` | 1,923 | 1,923 |
@@ -37,3 +37,12 @@ Python 3.13.5 with the libraries in `uv.lock`:
   to it. Three sentences on choosing occurrences add 321: when to
   preview with `choose_occurrences`, that the page is the
   researcher's, and that the assistant gives the ids alone.
+- The rule on characters no one sees on screen in a new name adds 989
+  characters to `full` and 126 to `core`, all in the tools'
+  descriptions: 124 to 134 in `create_code`, `create_category` and
+  `create_case` (`create_code` is the one in `core`), 137 to 151 in
+  `rename_code`, `rename_category` and `rename_case`, 86 in
+  `propose_codes`, with its sentence on `collides_with`, 35 in
+  `update_proposal` and 43 in `create_proposed_codes`. None of these
+  descriptions newly passes 2,048 characters: `create_category`'s, the
+  longest of them still under it, is 1,973.

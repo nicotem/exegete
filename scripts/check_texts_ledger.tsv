@@ -612,7 +612,7 @@ d35630367cc065a8	src/exegete/server.py	path	voice	seeded 27 October, to be read	
 f165afce126f00dc	src/exegete/server.py	served	qualcoder	about QualCoder's format: the folders, files and backups QualCoder makes in a project	Each is dated by the time in its name, which is when it was taken; QualCoder's n
 53a687685f851399	src/exegete/server.py	path	qualcoder	a sign: said only when the project or this computer shows QualCoder, or the researcher said they use it	Each time QualCoder opens this project, it writes the coder name in its own sett
 6873d92bd56f4463	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Endings are refused only where QualCoder acts on them: a transcript keeps '.txt'
-01ae5d14c478860b	src/exegete/server.py	served	voice	seeded 27 October, to be read	Every approved proposal is validated BEFORE the backup and the write: the name m
+8117ffc5ab28d8e0	src/exegete/server.py	served	voice	seeded 27 October, to be read	Every approved proposal is validated BEFORE the backup and the write: the name m
 11bc62b3461880f8	src/exegete/server.py	served	voice	seeded 27 October, to be read	Every approved suggestion is re-validated BEFORE the backup and the
 337efb5de2e9b7ab	src/exegete/server.py	path	voice	seeded 27 October, to be read	Every backup, including the one just taken, keeps the old name, and so do Exeget
 44b9ac394a227b89	src/exegete/server.py	served	qualcoder	seeded 27 October, to be read	Every count is two readings, wide and whole-word, and the residue's file_text bl

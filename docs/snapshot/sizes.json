@@ -3,7 +3,7 @@
     "brief_characters": 1923,
     "opening_text_characters": 2042,
     "tool_count": 28,
-    "tool_definitions_characters": 76139,
+    "tool_definitions_characters": 76265,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -22,8 +22,8 @@
         "description_characters": 1904
       },
       "create_code": {
-        "definition_characters": 3680,
-        "description_characters": 2883
+        "definition_characters": 3806,
+        "description_characters": 3007
       },
       "delete_coding": {
         "definition_characters": 3326,
@@ -124,7 +124,7 @@
     "brief_characters": 14180,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 207097,
+    "tool_definitions_characters": 208086,
     "tools": {
       "add_annotation": {
         "definition_characters": 2238,
@@ -163,24 +163,24 @@
         "description_characters": 1993
       },
       "create_case": {
-        "definition_characters": 2111,
-        "description_characters": 1647
+        "definition_characters": 2237,
+        "description_characters": 1771
       },
       "create_category": {
-        "definition_characters": 2425,
-        "description_characters": 1839
+        "definition_characters": 2562,
+        "description_characters": 1973
       },
       "create_code": {
-        "definition_characters": 3680,
-        "description_characters": 2883
+        "definition_characters": 3806,
+        "description_characters": 3007
       },
       "create_project": {
         "definition_characters": 3237,
         "description_characters": 2637
       },
       "create_proposed_codes": {
-        "definition_characters": 2297,
-        "description_characters": 1867
+        "definition_characters": 2341,
+        "description_characters": 1910
       },
       "delete_annotation": {
         "definition_characters": 2282,
@@ -327,8 +327,8 @@
         "description_characters": 713
       },
       "propose_codes": {
-        "definition_characters": 3383,
-        "description_characters": 2865
+        "definition_characters": 3471,
+        "description_characters": 2951
       },
       "prune_backups": {
         "definition_characters": 3938,
@@ -359,16 +359,16 @@
         "description_characters": 4484
       },
       "rename_case": {
-        "definition_characters": 2571,
-        "description_characters": 2124
+        "definition_characters": 2725,
+        "description_characters": 2275
       },
       "rename_category": {
-        "definition_characters": 1449,
-        "description_characters": 998
+        "definition_characters": 1588,
+        "description_characters": 1135
       },
       "rename_code": {
-        "definition_characters": 1399,
-        "description_characters": 968
+        "definition_characters": 1538,
+        "description_characters": 1105
       },
       "rename_file": {
         "definition_characters": 3620,
@@ -435,8 +435,8 @@
         "description_characters": 1954
       },
       "update_proposal": {
-        "definition_characters": 2763,
-        "description_characters": 1819
+        "definition_characters": 2799,
+        "description_characters": 1854
       },
       "update_proposal_status": {
         "definition_characters": 1401,

@@ -282,6 +282,34 @@ dialogs compare these names exactly, so a project made in QualCoder can
 hold both. QualCoder 4.0's own MCP server ignores spacing and letter
 case, but only for the letters A to Z.
 
+A new code, category or case name may not hold a character no one sees
+on screen: a control character, an invisible formatting character such
+as a zero-width space, a soft hyphen or a byte order mark, or another
+character Unicode marks as ignorable, such as a Hangul filler. A name
+you cannot see is a name you cannot check, and two names that differ
+only by such a character look the same in every list. Two kinds are
+kept where they shape the characters beside them: the joiners ZWNJ and
+ZWJ between two characters outside ASCII, which spell words in Persian
+and Indic scripts and join emoji, and a variation selector straight
+after a visible character outside ASCII, which picks the form of a CJK
+character, an emoji or a Mongolian letter. The refusal gives the
+character's code and its position, and the name without it. A new name
+that matches another of its kind only once such characters are left
+out is refused too, with that one's id: use it, or give it the new name
+with `rename_code`, `rename_category` or `rename_case`. A rename that
+keeps what a name looks like, in other letter case or without such a
+character, is never refused for this. A name already in a project, as
+a project made in QualCoder may hold one, is read, listed, coded,
+merged and exported as it is, and changes only when you rename it.
+Some names that look alike are not caught: a letter from another
+script that looks like a Latin one (a Cyrillic "о" beside a Latin
+"o"), a blank that Unicode does not count as invisible, such as
+U+2800, and a joiner kept between two letters it does not join, such
+as "é" and "ü", where the name without the joiner is still refused as
+its twin. And some names that show are refused: a keycap emoji (a
+digit, U+FE0F and U+20E3), a flag written with tag characters, and a
+format character that shows, such as the Arabic number signs.
+
 The setting travels with the project folder: Exegete's backups and
 workspace copies carry it, so do QualCoder's own `_BKUP_` backups, and
 `restore_backup` puts back whatever the backup held (the result says so
@@ -1182,18 +1210,18 @@ answer is a finding.
 - `explain_ai_coding_tools(tool_name)` - Built-in help for this workflow, including `grounding_rules`, `methodology_vocabulary` and `methods_notes`
 
 **Inductive coding (proposing new codes):**
-- `propose_codes(coding_session_id, proposals, replace)` - Record brand-new code proposals discovered in the data
+- `propose_codes(coding_session_id, proposals, replace)` - Record brand-new code proposals discovered in the data; a name holding an invisible character, or matching another proposal's once invisible characters are left out, is rejected, and one matching an existing code that way is flagged in `collides_with`
 - `review_proposals(coding_session_id, proposal_guids, show_examples)` - Review proposed codes in detail before deciding
-- `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created; changing an approved proposal returns it to pending, so what is created is what was approved
+- `update_proposal(coding_session_id, proposal_guid, name, color, category, memo, example_segments)` - Refine a proposal before it is created; changing an approved proposal returns it to pending, so what is created is what was approved; a new name holding an invisible character, or matching another proposal's once invisible characters are left out, is refused
 - `update_proposal_status(coding_session_id, approve, reject)` - Approve or reject proposals; GUIDs not in the session are listed, and a GUID in both lists is refused
-- `create_proposed_codes(coding_session_id, create_backup)` - **Writes to the database** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first
+- `create_proposed_codes(coding_session_id, create_backup)` - **Writes to the database** - Create the approved proposals in the codebook, as codes only: no passage is coded; the answer lists each new code's example passages, which the assistant then suggests one by one in the same session, first. A name holding an invisible character, or two approved names that match once invisible characters are left out, refuse the batch
 
 **Data import, cases and attributes (writes):**
 - `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, character_sets, show_text, memo)` - **Writes to the database** - Bring documents in from the researcher's computer by their paths, or a folder's: Word (.docx), OpenDocument (.odt), RTF, plain text, Markdown, web pages and subtitle files, and PDF and EPUB with the optional part. Read on the computer following QualCoder 4.0's own import; where QualCoder's readers lose or garble content, Exegete keeps it, and names the departure (a PDF's text is QualCoder's to the character), so that within a project both programs read the text Exegete stores; the text never passes through the conversation, but for one line of a file not saved as UTF-8, as each character set reads it. Two steps: the call without `preview_token` writes nothing and answers with a preview (never the text, but that line) and a token; the call with the token, on the researcher's word, takes one backup, copies each original unchanged into the project's folder of originals (`documents`, stored path `/docs/<name>`) and stores its text under the AI coder name. The project's names list is applied by default (never to PDFs, nor to the originals); PDFs holding listed names, and files whose names hold them, are held back, each coming in only on the researcher's word through an argument of its own (renaming a file first is the advice); so are files whose letters look garbled (`import_files_with_garbled_letters`), with a warning that says what was seen, never the text, and `show_text` on the preview opens a page on the researcher's own screen to check them on first. The preview and the import count, by file and never by name, the places where a name from the list may still show in a form the list does not replace (other capitals, a first name alone, a name joined or split differently, a name inside a longer word), or say that a file was not checked (`listed_names_left`). Refused or held back with a reason in plain words: hidden places, links, network paths, the project and Exegete's own folders, any project's `Exegete` folder, other formats, files over the limits, names already in the project, text not saved as UTF-8 (with steps to save a copy so, under a new name, in Word, TextEdit or Notepad, given once in the answer for every such file, `saving_a_copy_as_utf8`; nothing is guessed). A plain text file not saved as UTF-8 comes in when, on the researcher's word, `character_sets` names the reading picked from those the preview shows ({the file as the preview gives it: that reading's `character_set`}), previewed again with it: its text is stored as UTF-8, the original copied unchanged, and a line in its memo says how it was read. The import is refused before any backup while the project's lock file is active: another conversation using Exegete is writing to the project (wait a moment and try again), or QualCoder 3.8.2 has it open (if you use QualCoder, close the project there). The signs that QualCoder 4.0 may have the project open (it writes no lock file) are passed on as a warning in the preview (`qualcoder_gui_hint`). Its departures from QualCoder are listed under "Document import: where it departs from QualCoder" above. In the full set, not core
 - `import_text_file(filename, content, memo, create_backup, case_name, apply_project_pseudonyms)` - **Writes to the database** - Add a new text source, optionally linked to a case. The name follows `rename_file`'s rules (at most 200 bytes in UTF-8; no path, control or invisible characters; no name Windows cannot store; not a name already in the project's `documents/` folder). With `apply_project_pseudonyms=true` the project's own `pseudonyms.json` is applied to the text before it is stored, which is what QualCoder does to every text file it imports; default off
 - `link_file_to_case(file_id, case_id, case_name, create_backup)` - **Writes to the database** - Make a file visible to case-based analyses; a PDF with no usable text is refused (the case read gives no text for a link to one, and gives its name)
-- `create_case(name, memo, create_backup)` - **Writes to the database** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case)
-- `rename_case(case_id, new_name, create_backup)` - **Writes to the database** - Rename a case, as QualCoder's Manage Cases does: the name only, the date untouched. A name another case has, ignoring letter case, spacing and Unicode form, is refused; the result says where the old name stays (saved graph labels, table displays and filters, files named after the case, backups)
+- `create_case(name, memo, create_backup)` - **Writes to the database** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case; a new name may hold no invisible character, and one that matches another case's only once invisible characters are left out is refused with that case's id)
+- `rename_case(case_id, new_name, create_backup)` - **Writes to the database** - Rename a case, as QualCoder's Manage Cases does: the name only, the date untouched. A name another case has, ignoring letter case, spacing and Unicode form, is refused, and so is a name holding an invisible character, or one that would newly match another case's once invisible characters are left out; the result says where the old name stays (saved graph labels, table displays and filters, files named after the case, backups)
 - `rename_file(file_id, new_name, create_backup)` - **Writes to the database** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text). A name the project's backups show is not looked for: `restore_backup`, or QualCoder's own Rename if you use it, can put an earlier name back
 - `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **Writes to the database** - Define a new attribute for cases or files; attributes on journal entries are refused, and those already in a project stay (QualCoder's Journals window, if you use QualCoder, sets and shows them)
 - `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **Writes to the database** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them); not on a journal entry (see `create_attribute_type`)
@@ -1221,12 +1249,12 @@ answer is a finding.
 - `delete_annotation(annotation_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` - **Writes to the database** - Delete an annotation
 
 **Codebook editing (writes):**
-- `create_code(name, category, color, memo, parent_code_id, create_backup)` - **Writes to the database** - Create a new code (a supplied colour is snapped onto QualCoder's 120-colour palette and the result says so; `parent_code_id` nests it as a sub-code on v16+ schemas). Idempotent: a name that already exists, ignoring letter case, spacing and Unicode form, answers `created: false, reason: already_exists` with the existing code and makes no backup
-- `rename_code(code_id, new_name, create_backup)` - **Writes to the database** - Rename a code (a name another code already uses, case-insensitively, is refused; the identical name answers `changed: false`)
+- `create_code(name, category, color, memo, parent_code_id, create_backup)` - **Writes to the database** - Create a new code (a supplied colour is snapped onto QualCoder's 120-colour palette and the result says so; `parent_code_id` nests it as a sub-code on v16+ schemas). Idempotent: a name that already exists, ignoring letter case, spacing and Unicode form, answers `created: false, reason: already_exists` with the existing code and makes no backup. A new name may hold no invisible character, and one that matches another code's only once invisible characters are left out is refused with that code's id
+- `rename_code(code_id, new_name, create_backup)` - **Writes to the database** - Rename a code (a name another code already uses, case-insensitively, is refused, and so is a name holding an invisible character, or one that would newly match another code's once invisible characters are left out; the identical name answers `changed: false`)
 - `recolor_code(code_id, color, create_backup)` - **Writes to the database** - Change a code's colour (snapped onto QualCoder's palette; `changed: false` when the code already has that colour)
 - `move_code_to_category(code_id, category, create_backup)` - **Writes to the database** - Move a code into a category (omit `category` for top level; `changed: false` when it is already there). The result gives the category it resolved to (`new_category`), since a name matches ignoring letter case, spacing and Unicode form
-- `create_category(name, parent_category, memo, create_backup)` - **Writes to the database** - Create a category (idempotent like `create_code`: an existing name, case-insensitively, answers `created: false` with the existing category)
-- `rename_category(category_id, new_name, create_backup)` - **Writes to the database** - Rename a category (same collision and no-op rules as `rename_code`)
+- `create_category(name, parent_category, memo, create_backup)` - **Writes to the database** - Create a category (idempotent like `create_code`: an existing name, case-insensitively, answers `created: false` with the existing category; a new name follows `create_code`'s rule on invisible characters)
+- `rename_category(category_id, new_name, create_backup)` - **Writes to the database** - Rename a category (same collision, invisible-character and no-op rules as `rename_code`)
 - `move_category(category_id, parent_category, create_backup)` - **Writes to the database** - Reparent a category (refuses moves that would create a cycle; `changed: false` when it is already under that parent). The result gives the new parent (`new_parent`)
 
 **Source text, destructive (preview, then token, then safety backup):**

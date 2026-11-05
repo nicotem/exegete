@@ -2728,7 +2728,9 @@ the stored colour (`color`) and whether it was snapped
 the palette has five greys and the matching rule is QualCoder's own.
 
 Args:
-    name: The code name (unique among codes, case-insensitively)
+    name: The code name (unique among codes, case-insensitively; no
+          invisible characters, nor a name that matches another's
+          only once invisible characters are left out)
     category: Optional category name to place the code in (must
               already exist; the exact spelling wins, otherwise
               letter case, spacing and Unicode form are ignored)

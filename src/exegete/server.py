@@ -17128,7 +17128,8 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     Args:
         coding_session_id: The session ID from start_coding_session
         proposals: List of proposal objects with keys:
-            name (required): the proposed code name
+            name (required): the proposed code name, no invisible
+            characters
             memo: the code definition (what belongs under this code)
             rationale: why this code emerges from the data
             color: optional #RRGGBB (default: QualCoder palette pick at
@@ -17150,7 +17151,8 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     Returns:
         JSON with recorded proposals (GUIDs for review/approval),
         per-item rejections, and collides_with flags where a proposal
-        name matches an existing code (creation will refuse those unless
+        name matches an existing code, or would once invisible
+        characters are left out (creation will refuse those unless
         renamed; consider applying the existing code instead). If it
         contains `position_safety_warning`, you MUST relay it to the
         user before proceeding.
@@ -17503,7 +17505,8 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
     Args:
         coding_session_id: The session ID
         proposal_guid: The proposal to refine
-        name: New name (collision flag is refreshed)
+        name: New name, no invisible characters (collision flag is
+              refreshed)
         color: New #RRGGBB colour, stored as the nearest QualCoder palette
                colour (120 fixed colours, as the QualCoder colour picker
                offers); the result reports the stored colour and whether
@@ -17858,10 +17861,11 @@ def create_proposed_codes(coding_session_id: str,
     Every approved proposal is validated BEFORE the backup and the write:
     the name must still be unique against the live codebook (a name that
     matches an existing code exactly, or once letter case, spacing and
-    Unicode form are ignored, refuses the batch; rename the proposal
-    first) and the category must exist. Any failure -> nothing is
-    written. Only APPROVED proposals are created: a rejected one only if
-    it is approved again, a merged one never.
+    Unicode form are ignored, or once invisible characters are left
+    out, refuses the batch; rename the proposal first) and the category
+    must exist. Any failure -> nothing is written. Only APPROVED
+    proposals are created: a rejected one only if it is approved
+    again, a merged one never.
 
     Args:
         coding_session_id: The session with approved proposals
@@ -18193,7 +18197,9 @@ def create_code(name: str, category: Optional[str] = None,
     the palette has five greys and the matching rule is QualCoder's own.
 
     Args:
-        name: The code name (unique among codes, case-insensitively)
+        name: The code name (unique among codes, case-insensitively; no
+              invisible characters, nor a name that matches another's
+              only once invisible characters are left out)
         category: Optional category name to place the code in (must
                   already exist; the exact spelling wins, otherwise
                   letter case, spacing and Unicode form are ignored)
@@ -18324,7 +18330,9 @@ def rename_code(code_id: int, new_name: str,
     Args:
         code_id: The code's cid
         new_name: The new name (must not collide with another code,
-                  case-insensitively)
+                  case-insensitively; no invisible characters, nor a name
+                  that would newly match another's once invisible
+                  characters are left out)
         create_backup: No longer used: Exegete takes a backup before every
                        change (accepted until the release on method)
     """
@@ -18576,7 +18584,10 @@ def create_category(name: str, parent_category: Optional[str] = None,
     collapse to one space.
 
     Args:
-        name: The category name (unique among categories, case-insensitively)
+        name: The category name (unique among categories,
+              case-insensitively; no invisible characters, nor a name
+              that matches another's only once invisible characters
+              are left out)
         parent_category: Optional parent category name to nest under
                          (the exact spelling wins, otherwise letter case,
                          spacing and Unicode form are ignored; the result
@@ -18673,7 +18684,9 @@ def rename_category(category_id: int, new_name: str,
     Args:
         category_id: The category's catid
         new_name: The new name (must not collide with another category,
-                  case-insensitively)
+                  case-insensitively; no invisible characters, nor a name
+                  that would newly match another's once invisible
+                  characters are left out)
         create_backup: No longer used: Exegete takes a backup before every
                        change (accepted until the release on method)
     """
@@ -23378,7 +23391,9 @@ def create_case(name: str, memo: Optional[str] = None,
     Whitespace runs in the name collapse to one space.
 
     Args:
-        name: The case name (unique among cases, case-insensitively)
+        name: The case name (unique among cases, case-insensitively; no
+              invisible characters, nor a name that matches another's
+              only once invisible characters are left out)
         memo: Optional case memo
         create_backup: No longer used: Exegete takes a backup before every
                        change (accepted until the release on method)
@@ -23589,7 +23604,10 @@ def rename_case(case_id: int, new_name: str,
     Args:
         case_id: The case's id (caseid)
         new_name: The new name (must not collide with another case,
-                  ignoring letter case, spacing and Unicode form)
+                  ignoring letter case, spacing and Unicode form; no
+                  invisible characters, nor a name that would newly
+                  match another's once invisible characters are left
+                  out)
         create_backup: No longer used: Exegete takes a backup before every
                        change (accepted until the release on method)
     """

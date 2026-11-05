@@ -12,8 +12,9 @@ is not cut:
 - the full brief's privacy section, after its line on pseudonyms: when
   to preview with `choose_occurrences`, that the page it opens is the
   researcher's, never to be opened, read or looked at, nor the
-  researcher asked for words from it, and that the ids come back alone,
-  in `leave_occurrences`. It is a safety sentence, held word for word;
+  researcher asked for words from it, and that the assistant gives the
+  ids alone, in `leave_occurrences`. It is a safety sentence, held word
+  for word;
 - the description's paragraph "Two people who share a name": the second
   run inside one file, naming both arguments, within the first 4,096
   characters of the description on the Python running the test.
@@ -29,13 +30,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server  # noqa: E402
 
-# The brief's sentence, word for word
+# The brief's sentence, word for word (the readability reading: "you
+# give those ids", where "you send back" could be read as back to the
+# researcher)
 BRIEF_SENTENCE = (
     "When the researcher wants to leave some occurrences of a name as they "
     "are, preview pseudonymise_source with choose_occurrences. The page it "
     "opens is theirs: never open, read or look at it, and never ask them "
-    "for words from it. They give you the ids to leave, and you send back "
-    "those ids alone, in leave_occurrences.")
+    "for words from it. They tell you the ids to leave, and you give those "
+    "ids alone, in leave_occurrences.")
 # The line it follows in the brief's privacy section
 PSEUDONYMS_LINE = ("Where the researcher uses pseudonyms, use them, and never "
                    "try to work out who someone is.")

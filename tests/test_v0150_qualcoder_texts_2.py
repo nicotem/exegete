@@ -145,14 +145,16 @@ LISTED_ABOVE = "What this does NOT rewrite, and where the names will remain:"
 # conversation carries when occurrences are chosen, and where the words
 # around them are (server.py: _occurrences_page; database.py:
 # _pseudonymise_occurrences), a paragraph of its own after the one on
-# what reaches the assistant
+# what reaches the assistant (its readability reading: the line numbers
+# in a sentence of their own, so that "and counts" no longer trails them)
 CHOOSING_OCCURRENCES = (
     "A run can also leave chosen occurrences of a name as they are, such as "
     "those of a second person with the same name. For that choice, the "
-    "preview gives the conversation a short id for each occurrence, with its "
-    "line number when the mapping was typed into the conversation, and "
-    "counts. It gives none of the words around an occurrence: those are on a "
-    "page that Exegete opens in your browser, where you choose. The "
+    "preview gives the conversation a short id for each occurrence, and "
+    "counts. When the mapping was typed into the conversation, each id comes "
+    "with its line number. It gives none of the words around an occurrence: "
+    "those are on a page that Exegete opens in your browser, where you "
+    "choose. The "
     "assistant is told never to open or read that page, and you give it the "
     "ids to leave. \"Reading a whole file\", below, says where the page is "
     "kept and when it goes.")

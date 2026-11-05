@@ -337,13 +337,14 @@ format (`save_mapping_to_project`), or kept by you
 (`researcher_keeps_mapping`), and the run asks you which.
 
 A run can also leave chosen occurrences of a name as they are, such as
-those of a second person with the same name. Ask the assistant to
-preview with `choose_occurrences`: a page opens in your browser with an
-id beside each occurrence, and you tell the assistant which ids to leave
+those of a second person with the same name. To choose them, ask the
+assistant for a preview that lists the occurrences
+(`choose_occurrences`). A page opens in your browser with an id beside
+each occurrence, and you tell the assistant which ids to leave
 (`leave_occurrences`). The page is for you alone, and the assistant is
 told never to read it. A second run can then give the second person a
-pseudonym of their own. It takes a list you type and keep yourself,
-since the names list holds one pseudonym for each name.
+pseudonym of their own. That run needs a list you type and keep
+yourself, since the names list holds one pseudonym for each name.
 
 The rest of the project is treated in other ways:
 

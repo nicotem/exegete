@@ -135,17 +135,18 @@
 ### Documents
 
 - TOOLS.md, PRIVACY.md and AI_CODING_GUIDE.md describe choosing
-  occurrences. The conversation carries each occurrence's id, its line
-  number with a mapping typed into the call, and counts. The words
-  around each occurrence are on the page in the researcher's browser,
-  which the assistant is told never to open or read. TOOLS.md lists the
-  arguments the preview token binds. It gives the refusals: with
-  `rewrite_memos` or `include_context`, ids that match no occurrence in
-  the text as it is now, and more than 500 ids in one run. With the
-  names list, it gives the two routes left for a name most of whose
-  occurrences should stay, each with its cost. A mapping typed into the
-  call puts names and their pseudonyms in the conversation, and a name
-  taken out of the names list is not replaced by later imports either.
+  occurrences. The conversation carries an id for each occurrence, and
+  counts. With a mapping typed into the call, each id comes with its
+  line number. The words around each occurrence are on the page in the
+  researcher's browser, which the assistant is told never to open or
+  read. TOOLS.md lists the arguments the preview token binds. It gives
+  the refusals: with `rewrite_memos` or `include_context`, ids that
+  match no occurrence in the text as it is now, and more than 500 ids in
+  one run. With the names list, past that limit, it gives the two
+  routes that leave a name out of a run, each with its cost. A mapping
+  typed into the call puts names and their pseudonyms in the
+  conversation, and a name taken out of the names list is not replaced
+  by later imports either.
 - PRIVACY.md lists the page for choosing occurrences wherever it lists
   what the reading folder holds and where a transcript's text can end
   up. The page marks the names in the file's text, so anyone who can
@@ -162,5 +163,5 @@
   with a mapping typed into the call, replaces them with the second
   person's pseudonym. The brief also says when to preview with
   `choose_occurrences`. It says that the page is the researcher's,
-  never to be opened, read or looked at, and that the ids come back
-  alone.
+  never to be opened, read or looked at, and that the assistant gives
+  the ids alone, in `leave_occurrences`.

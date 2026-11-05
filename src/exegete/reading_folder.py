@@ -89,27 +89,31 @@ NOTE = """\
 About this folder
 
 Exegete writes pages here so that you can read your project's files in
-your own browser. It keeps here, too, the read-only copies of documents
-that it opens for you and, when an import's preview is asked for one, a
-page on which to check letters that look garbled before a file comes in.
-When a pseudonymisation preview is asked to list the occurrences of
-names, Exegete also writes a page on which you choose the occurrences
-to leave as they are. That page marks every occurrence of the names you
-asked to replace. All of these are copies: deleting them changes nothing
-in any project, and you can delete this whole folder at any time.
+your own browser. It also keeps here the read-only copies of documents
+that it opens for you. An import's preview, when asked, writes here a
+page on which to check letters that look garbled before a file comes
+in. When a pseudonymisation preview is asked to list the
+occurrences of names, Exegete also writes a page on which you choose
+the occurrences to leave as they are. That page marks every occurrence
+of the names you asked to replace. All of these are copies: deleting
+them changes nothing in any project, and you can delete this whole
+folder at any time.
 
-Exegete also deletes them itself: a file's pages and copy, when Exegete
-changes that file's text or name; a page for choosing occurrences, also
-at the first tidy once it is an hour old; a page for checking letters,
-after the import or at the first tidy once it is an hour old;
-everything here, at the first tidy once it is a week old. Exegete
-tidies this folder when it starts, and at most every five minutes while
-it writes here.
+Exegete also deletes them itself:
+- a file's pages and copy, when Exegete changes that file's text or
+  name;
+- a page for choosing occurrences, also at the first tidy once it is an
+  hour old;
+- a page for checking letters, after the import or at the first tidy
+  once it is an hour old;
+- everything here, at the first tidy once it is a week old.
+Exegete tidies this folder when it starts, and at most every five
+minutes while it writes here.
 
 This folder is not synced and is not indexed by the computer's search.
-A page holds a whole file's text: to keep one, save it elsewhere from
-the browser or print it to PDF, and look after it as you look after
-the project.
+A page holds a whole file's text. To keep one, save it elsewhere from
+the browser or print it to PDF, and look after it as you look after the
+project.
 """
 
 

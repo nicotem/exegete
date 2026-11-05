@@ -158,10 +158,10 @@ officer will ask, and the summary above depends on them:
     (`~/.exegete/import-texts.noindex`), until the import or, when none
     follows, until Exegete's next start, or the next import it
     prepares, an hour or more later;
-  - the reading folder's pages, with a file's whole text and its
-    codings, its read-only copies of originals, an import's pages for
-    checking letters, and the pages for choosing occurrences, which mark
-    the names in a file's text (macOS
+  - the reading folder's pages and copies: pages with a file's whole
+    text and its codings, read-only copies of originals, an import's
+    pages for checking letters, and the pages for choosing occurrences,
+    which mark the names in a file's text (macOS
     `~/Library/Caches/Exegete/Reading.noindex`,
     Windows `%LOCALAPPDATA%\Exegete\Reading`, Linux
     `~/.cache/exegete/reading`, or `exegete/reading` under
@@ -990,13 +990,13 @@ above).
 
 A run can also leave chosen occurrences of a name as they are, such as
 those of a second person with the same name. For that choice, the
-preview gives the conversation a short id for each occurrence, with its
-line number when the mapping was typed into the conversation, and
-counts. It gives none of the words around an occurrence: those are on a
-page that Exegete opens in your browser, where you choose. The
-assistant is told never to open or read that page, and you give it the
-ids to leave. "Reading a whole file", below, says where the page is
-kept and when it goes.
+preview gives the conversation a short id for each occurrence, and
+counts. When the mapping was typed into the conversation, each id comes
+with its line number. It gives none of the words around an occurrence:
+those are on a page that Exegete opens in your browser, where you
+choose. The assistant is told never to open or read that page, and you
+give it the ids to leave. "Reading a whole file", below, says where the
+page is kept and when it goes.
 
 An imagined example. You bring ten interview transcripts into a project,
 meaning to replace the names before any coding starts. One file is
@@ -1156,19 +1156,20 @@ Apple Books, which adds it to its library and, with Books' iCloud Drive
 setting on, keeps a copy in iCloud; `show="in_folder"` shows it in
 Finder instead, without opening it.
 
-**The page for choosing occurrences.** A pseudonymisation preview asked
-to list the occurrences of names (`pseudonymise_source` with
-`choose_occurrences`) writes a page into the reading folder, in that
-file's folder, and opens it in your browser. It holds the file's
+**The page for choosing occurrences.** You can choose occurrences of a
+name for a pseudonymisation run to leave as they are
+(`pseudonymise_source` with `choose_occurrences`). For that, the run's
+preview writes a page into the reading folder, in that file's own
+folder, and opens it in your browser. It holds the file's
 whole text as stored, with every occurrence of the names you asked to
 replace marked and labelled with its id, and no pseudonym. So while it
 stays, anyone who can read the reading folder can see which words of
 that file are those names. It goes when Exegete changes the file's text
 or name, as a run on the file, an undo or a restore does. Otherwise it
 goes at Exegete's first tidy once it is an hour old, which can be later
-(below). The preview's answer gives the page's place only when the page
-did not open, and with the names list it withholds that place where it
-carries a name from the list.
+(below). The preview's answer says where the page is only when the page
+did not open. With the names list, the answer withholds the page's
+place when the place itself holds a name from the list.
 
 Three cautions:
 
@@ -1177,8 +1178,8 @@ Three cautions:
   file in a folder connected to it, so the reading folder too when
   your home folder or its drive is connected ("Assistants that open
   files by themselves", above). The page, the tool's description and the assistant's brief
-  ask the assistant not to, and for the page for choosing occurrences
-  the preview's answer asks it too. Nothing enforces it. In Claude Code, a
+  ask the assistant not to. For the page for choosing occurrences, the
+  preview's answer asks it too. Nothing enforces it. In Claude Code, a
   permission rule that denies its file-reading tool on the reading
   folder narrows this, for example `"deny":
   ["Read(~/Library/Caches/Exegete/**)"]` in the `permissions` of its
@@ -1193,7 +1194,7 @@ Three cautions:
   opening unasked, in a shared office or a meeting with your screen
   shared, would be a disclosure. The page for choosing occurrences opens
   in the same way. The brief and the tool's description tell the
-  assistant to ask for it when you want to leave some occurrences of a
+  assistant to request it when you want to leave some occurrences of a
   name as they are.
 
 **Where a transcript's text can end up** on your computer:
@@ -1212,8 +1213,8 @@ Three cautions:
 - the page on which you choose the occurrences of a name to leave as
   they are (`choose_occurrences`), which marks every occurrence of the
   names you asked to replace. It goes after a run on that file, an undo
-  or a restore, or at Exegete's first tidy once it is an hour old, and
-  can stay longer in the same way;
+  or a restore, or at Exegete's first tidy once it is an hour old. Like
+  the import's page, it can stay longer;
 - any backup of the whole disk, such as Time Machine or File History,
   that copies those folders.
 
@@ -2569,11 +2570,11 @@ near the top of this document, set them out.
     the notes that name either person by hand; give the second person a
     typed mapping with `save_mapping_to_project` off and
     `researcher_keeps_mapping` on, because `pseudonyms.json` holds one
-    pseudonym per name. The names list then holds one pseudonym for the
-    name while the file holds two. What leads back from the second
-    person's pseudonym to their name is your own record of that mapping,
-    and the backup taken before the second run. The count is in the
-    preview's `residue` block, and a name that occurs only in a
+    pseudonym per name. The names list then holds one pseudonym for that
+    name, while the file's text holds two. Two things lead back from the
+    second person's pseudonym to their name: your own record of that
+    mapping, and the backup taken before the second run. The count is
+    in the preview's `residue` block, and a name that occurs only in a
     `#####` private note is neither read nor counted. Those counts are a
     heuristic that reads wider than the rewrite does: the rewrite
     replaces whole words only, as QualCoder's own import does, while
@@ -2600,7 +2601,8 @@ near the top of this document, set them out.
     the file this call rewrites, the occurrences a run leaves by choice
     are counted under a kind of their own, `left_by_choice`, where the
     count reads them as the rewrite matched them. That count is a
-    heuristic, and the number left that the preview gives is exact. The
+    heuristic. The number of occurrences left, which the preview gives,
+    is exact. The
     block names every file in which a name still shows, including the
     files this run does not touch, on both mapping paths, so name your
     files accordingly. By default it gives full detail for the file this
@@ -2741,10 +2743,12 @@ near the top of this document, set them out.
     and `include_context` returns nothing at all. Nor does the preview
     give the position of any match there. Each entry's block gives its
     number, its pseudonym and its count, and the list of names that
-    overlap gives the two entries. The occurrences listed for choosing
-    are ids without line numbers. A position beside a pseudonym, in a text
-    the assistant has read, would pair a name with it. This protects the key
-    ("How your data flows"). Four things are still returned as they
+    overlap gives each overlap as its two entry numbers. The occurrences
+    listed for choosing are ids without line numbers. Given a position
+    beside a pseudonym, an assistant that has read the text could find
+    the name there, and so learn which name the pseudonym replaces. This
+    protects the key ("How your data flows"). Four things are still
+    returned as they
     stand, because a preview whose files cannot be named cannot be
     relayed: the project path, each file's own name (including every
     file the residue's file-text block lists), the backup path and the
@@ -2754,8 +2758,8 @@ near the top of this document, set them out.
     these can itself contain one of those names. The tool's description
     says so. The place of the page for choosing occurrences is not among
     them. The preview gives it only when the page did not open, and on
-    this path withholds it where it carries one of those names. A note
-    then says which folder the page is in.
+    this path withholds it when the place itself holds one of those
+    names. A note then says which folder the page is in.
 - **Check that a project's consent covers third-party processing**
   before you work on it with an assistant whose AI runs on its maker's
   computers.

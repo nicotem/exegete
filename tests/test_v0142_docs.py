@@ -794,9 +794,11 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "the lists of suggestions waiting for review "
             "(`~/.exegete/sessions/`)",
             # (the staleness audit of 20 October 2026: the reading folder
-            # and the run records, which PRIVACY's table already listed)
-            "the reading folder's pages, with a file's whole text and its "
-            "codings",
+            # and the run records, which PRIVACY's table already listed;
+            # v0.15.3, the occurrences choice's readability reading: its
+            # pages and copies listed after a colon)
+            "the reading folder's pages and copies: pages with a file's "
+            "whole text and its codings",
             # (each place as reading_folder.root gives it, held there by
             # tests/test_v0151_stale_texts.py, $XDG_CACHE_HOME included)
             "macOS `~/Library/Caches/Exegete/Reading.noindex`",

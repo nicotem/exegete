@@ -10,7 +10,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
 | `full` (80 tools) | 207,097 | 204,793 |
 | `core` (28 tools) | 76,139 | 75,947 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 14,185 | 13,721 |
+| The full brief | 14,180 | 13,721 |
 | The brief in `core` | 1,923 | 1,923 |
 
 - The reading of the texts Exegete gives the assistant adds 663
@@ -34,6 +34,6 @@ Python 3.13.5 with the libraries in `uv.lock`:
   and 19,703 on 3.11.13.
 - The full brief's line on the pages Exegete opens for the researcher
   names the page for choosing occurrences too, which adds 75 characters
-  to it. Three sentences on choosing occurrences add 326: when to
+  to it. Three sentences on choosing occurrences add 321: when to
   preview with `choose_occurrences`, that the page is the
-  researcher's, and how the ids come back.
+  researcher's, and that the assistant gives the ids alone.

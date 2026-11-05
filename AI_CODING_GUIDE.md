@@ -429,9 +429,9 @@ answer gave. "Troubleshooting", below, says how to find it. A
 QualCoder 4.0 window that already had the project open must close and
 reopen it to show the new codings. Under **Coding > Code text**,
 select the files you analysed. Each of the assistant's codings has the
-project's AI coder name as its owner (`AI Coding Assistant` if you
-took the default quick pick), and a memo that begins "Reading:
-explicit" or "Reading: interpretive", then the reasoning.
+project's AI coder name as its owner, `AI Coding Assistant` if you
+took the default quick pick. Its memo begins "Reading: explicit" or
+"Reading: interpretive", then gives the reasoning.
 
 ## Example conversations
 
@@ -678,13 +678,11 @@ Applied 12 codings (ctid 445-456)
    two to four codes shows how the suggestions read before more files
    are coded. You can then adjust your instruction and widen the next
    session
-3. **Answer the three questions**: before a session starts, the
-   assistant is told to ask you what to look for, how long a coded
-   passage should be, and whether a passage may carry more than one
-   code. Step 2, above, gives the choices for each. A specific
-   instruction works best, such as "segments where participants
-   describe feeling overwhelmed, not mere mentions of the word stress".
-   If you are unsure, ask for a short pilot first
+3. **Answer the three questions**: step 2, above, gives them, with the
+   choices for each. A specific instruction works best, such as
+   "segments where participants describe feeling overwhelmed, not mere
+   mentions of the word stress". If you are unsure, ask for a short
+   pilot first
 4. **Your data**: having read the files yourself lets you judge each
    suggestion against the whole file
 
@@ -731,10 +729,11 @@ Applied 12 codings (ctid 445-456)
    and decide whether you share the reading. The assistant is told that
    such a reading may draw on two things, and never on outside facts or
    assumptions. One is what the same person or document says elsewhere:
-   in the same file, as the same speaker in a group discussion, in the
-   question asked in an interview, or in another file of the same case,
-   which the reason then gives. The other is the study's framework, as
-   the project memo states it, and the reason then gives the concept.
+   in the same file, from the same speaker in a group discussion, or in
+   the question asked in an interview. It can also be in another file
+   of the same case, which the reason then gives. The other is the
+   study's framework, as the project memo states it, and the reason
+   then gives the concept.
    The review shows the passage in its own paragraph or speaker turn,
    so to read a passage drawn on from elsewhere, open the file the
    reason gives. How many readings are interpretive follows from the
@@ -931,9 +930,9 @@ closed and reopened there.
 - The whole batch: `restore_backup`, with the backup the apply took
   (`list_backups` lists it). It shows a preview first, and backs up the
   project as it is before restoring ("Backups", above)
-- By hand, if you use QualCoder: open the project there, find the
-  codings by the project's AI coder name (`AI Coding Assistant` if you
-  took the default quick pick), and delete the ones you do not want
+- By hand, if you use QualCoder: open the project there, and find the
+  codings by the project's AI coder name. Delete the ones you do not
+  want
 
 ### Session file damaged or lost
 

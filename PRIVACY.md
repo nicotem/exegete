@@ -442,16 +442,20 @@ What stays local, always, unless a sync service copies the folder it is in
 - the preview-token secret (`~/.exegete/preview_secret`): 64
   random hex characters, created owner-only on POSIX systems, used to
   sign the tokens that approve a two-step operation, to key the digests
-  in the pseudonymisation run manifests, and to name and sign the texts
-  an import's preview keeps. It never leaves your machine, never
-  appears in a result, a log line or an error, and holds nothing about
-  your project. Deleting it has three effects, and nothing else:
+  in the pseudonymisation run manifests, to key the ids a
+  pseudonymisation preview gives for choosing occurrences, and to name
+  and sign the texts an import's preview keeps. It never leaves your
+  machine, never appears in a result, a log line or an error, and holds
+  nothing about your project. Deleting it has four effects, and nothing
+  else:
   - it invalidates outstanding preview tokens, so the next execute asks
     for a fresh preview;
   - the keyed digests in the run manifests already written can then no
     longer be checked;
   - the texts an import's preview kept can no longer be used, so the
-    next preview reads the documents again.
+    next preview reads the documents again;
+  - every occurrence gets a new id, so the ids to give in
+    `leave_occurrences` are those of a preview made since.
 
   Exegete replaces the secret by itself, with the same effects, when it
   finds the file malformed or, on macOS and Linux, readable by other
@@ -2524,8 +2528,10 @@ near the top of this document, set them out.
     for the mapping to be saved into this file
     (`save_mapping_to_project`, which the preview must be run with) or
     attests that the researcher keeps their own record
-    (`researcher_keeps_mapping`), because a typed mapping exists nowhere
-    else and is half of the reverse key. A save merges with what is
+    (`researcher_keeps_mapping`), because Exegete keeps no copy of a
+    typed mapping: outside this file it is only in the conversation and
+    the host's records of it, and it is half of the reverse key. A save
+    merges with what is
     there by QualCoder's own rules, and is written only once the run has
     committed. A file the save creates is owner-only (0600) on macOS and
     Linux, where QualCoder's own write would leave it readable by other

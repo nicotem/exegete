@@ -213,12 +213,15 @@ def part_path_refusal(destination: Path, on_windows: bool,
         return None
     part = destination.parent / part_name(destination.name, os.getpid(),
                                           time.time_ns())
-    longest = max(len(str(part)), len(str(destination)))
-    if longest <= WINDOWS_MAX_FILE_PATH:
+    if len(str(destination)) > WINDOWS_MAX_FILE_PATH:
+        why = f"the export's path is {len(str(destination))} characters"
+    elif len(str(part)) > WINDOWS_MAX_FILE_PATH:
+        why = (f"Exegete writes the file beside its destination under a "
+               f"longer name first, which needs a path of "
+               f"{len(str(part))} characters")
+    else:
         return None
-    return (f"The export's path would be too long for Windows: Exegete "
-            f"writes the file beside its destination under a longer name "
-            f"first, which needs a path of {longest} characters, and "
+    return (f"The export's path would be too long for Windows: {why}, and "
             f"Windows cannot open a file beyond {WINDOWS_MAX_FILE_PATH} "
             f"characters unless long paths are switched on. Choose a "
             f"shorter name, or a folder nearer the top of the disk.")
@@ -575,7 +578,7 @@ class RefiQdaExporter:
                                    "to export")
 
         members: List[Tuple[str, str]] = []
-        values: Dict[Tuple[str, Any], List[Tuple[Tuple[str, str], Any]]] = {}
+        values: Dict[Tuple[str, Any], List[Dict[str, Any]]] = {}
         annotations: Dict[int, List[Dict[str, Any]]] = {}
         journals: List[Dict[str, Any]] = []
         cases_written = 0
@@ -598,9 +601,9 @@ class RefiQdaExporter:
             variables = {}
 
         self._add_sources_section(
-            root, suggestions, written, texts, file_guids, users, owners,
-            whole_project, mark_status, annotations, variables, values,
-            used_guids)
+            root, suggestions, written, texts, file_guids,
+            codes_written["guids"], users, owners, whole_project,
+            mark_status, annotations, variables, values, used_guids)
         for fid in written:
             members.append((f"sources/{file_guids[fid]}.txt",
                             texts[fid]["content"]))
@@ -644,7 +647,7 @@ class RefiQdaExporter:
         with every code and category (`whole_project`, as QualCoder's own
         export writes the codebook, v0.15.3). Written only when it has a
         code or a category; returns how many elements, and how many
-        codable codes, it wrote.
+        codable codes, it wrote, and the codes' GUIDs, read once.
 
         Category hierarchy is preserved: REFI-QDA expresses categories as
         nested Code elements with isCodable="false" (QualCoder's own
@@ -710,7 +713,7 @@ class RefiQdaExporter:
                     cat_id = all_categories[cat_id].get("parent_id")
 
         if not needed_codes and not needed_categories:
-            return {"elements": 0, "codes": 0}
+            return {"elements": 0, "codes": 0, "guids": code_guids}
         codebook_elem = ET.SubElement(root, f"{{{NAMESPACE}}}CodeBook")
         codes_elem = ET.SubElement(codebook_elem, f"{{{NAMESPACE}}}Codes")
 
@@ -797,7 +800,7 @@ class RefiQdaExporter:
         for code_id in sorted(needed_codes):
             _code_elem(code_id)
         return {"elements": len(category_elems) + len(code_elems),
-                "codes": len(code_elems)}
+                "codes": len(code_elems), "guids": code_guids}
 
     def _read_attributes(self, used_guids: Set[str]):
         """The case and file attribute types as Variables (numeric as
@@ -976,6 +979,7 @@ class RefiQdaExporter:
         written: List[int],
         texts: Dict[int, Optional[Dict[str, Any]]],
         file_guids: Dict[int, str],
+        code_guids: Dict[int, str],
         users: _Users,
         owners: Optional[Dict[str, Any]],
         whole_project: bool,
@@ -1002,9 +1006,6 @@ class RefiQdaExporter:
         for suggestion in suggestions:
             file_suggestions.setdefault(suggestion.file_id, []).append(
                 suggestion)
-
-        code_guids = read_for_export("codes and categories",
-                                     self.db.get_code_guids)
 
         for file_id in written:
             file_content = texts[file_id]

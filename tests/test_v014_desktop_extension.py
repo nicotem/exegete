@@ -1003,9 +1003,9 @@ class TestEverySectionNamingTheOldFolderNamesTheSetting:
         return found
 
     def test_every_shipped_document(self):
-        # with the older ones kept in docs/history/ (v0.15.1)
-        documents = sorted(p for p in [*REPO.glob("*.md"),
-                                       *REPO.glob("docs/history/*.md")]
+        # (v0.15.3: the older ones kept in docs/history/ from v0.15.1
+        # left the repository's files)
+        documents = sorted(p for p in REPO.glob("*.md")
                            if p.name != "CHANGELOG.md")
         assert {"README.md", "TOOLS.md", "AI_CODING_WORKFLOW.md",
                 "INSTALL.md", "PRIVACY.md"} <= {p.name for p in documents}

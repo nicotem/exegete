@@ -81,7 +81,6 @@ UPDATE_PAGE = "pages/update/index.html"
 # The guide to installing from the Terminal (v0.15.2), which took
 # INSTALL.md's Terminal routes: their facts are stated there now
 GUIDE = "docs/installing-from-the-terminal.md"
-HISTORY = "docs/history/"
 LOCK = "uv.lock"
 SERVER_SOURCE = "src/exegete/server.py"
 # The sizes of what each tool set serves, which scripts/served_texts.py
@@ -94,12 +93,11 @@ SCRIPTS_FOLDER = "scripts"
 PLAN = "scripts/release_plan.py"
 # The files under the root the facts are read from
 FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN, SIZES)
-# Every document read. Not read: the CHANGELOG's released entries, the
-# other documents kept as a record of early versions in docs/history/
-# (FEATURE_ANALYSIS.md and the other plans and analyses) and
-# docs/update-check/ (a design record). IMPORT_INSTRUCTIONS.md, moved
-# to docs/history/ with them, is read there by the first five facts
-# alone: it names the state folder. The texts Exegete's code holds (its
+# Every document read. Not read: the CHANGELOG's released entries and
+# docs/update-check/ (a design record). The early plans and analyses
+# kept in docs/history/ from v0.15.1 left the repository's files in
+# v0.15.3, and git's history keeps them (test_v0151_history_folder.py).
+# The texts Exegete's code holds (its
 # tools' descriptions, its brief, its notes, refusals, help topics and
 # log lines, in every module of src/exegete) are read by the facts that
 # say so, the releases to come (v0.15.2) and the occurrences a preview
@@ -112,7 +110,7 @@ DOCUMENTS = (
     "README.md", "INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
     "QUICKSTART.md",
     "SUPPORT.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
-    "PROJECT_SELECTION_GUIDE.md", HISTORY + "IMPORT_INSTRUCTIONS.md",
+    "PROJECT_SELECTION_GUIDE.md",
     "CLAUDE.md", "CONTRIBUTING.md", "NOTICE",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/feature_request.yml",
@@ -803,7 +801,7 @@ class Fact:
     code: str            # the constants it reads
     documents: Tuple[str, ...]   # each states it at least once
     patterns: Tuple[str, ...]    # the patterns that find it
-    # read in docs/history/ and the CHANGELOG's [Unreleased] part too
+    # read in the CHANGELOG's [Unreleased] part and the fragments too
     history: bool = False
     # read in the texts Exegete's code holds too (read_code_texts)
     code_texts: bool = False
@@ -837,7 +835,6 @@ FACTS: Dict[str, Fact] = {
         documents=("INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
                    "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
                    "PROJECT_SELECTION_GUIDE.md",
-                   "docs/history/IMPORT_INSTRUCTIONS.md",
                    "CLAUDE.md", "packaging/pypi-old-name/README.md"),
         patterns=(DOT_FOLDER,),
         history=True),
@@ -2294,16 +2291,15 @@ class Outcome:
 
 
 def _reads(fact: Fact, document: Document) -> bool:
-    """Whether the fact reads the document: docs/history/, the CHANGELOG
-    and its fragments only for the first five facts, the code's texts
+    """Whether the fact reads the document: the CHANGELOG and its
+    fragments only for the first five facts, the code's texts
     only for the facts that say so, and none of a fact's documents left
     out."""
     if document.code_text:
         return fact.code_texts
     if document.name in fact.left_out:
         return False
-    return fact.history or not (document.name.startswith((HISTORY,
-                                                          FRAGMENTS))
+    return fact.history or not (document.name.startswith(FRAGMENTS)
                                 or document.name == CHANGELOG)
 
 

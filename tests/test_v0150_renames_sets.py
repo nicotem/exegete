@@ -683,10 +683,10 @@ class TestTheDocuments:
         changelog = _flat("CHANGELOG.md")
         unreleased = changelog[changelog.index("## [0.15.0-alpha]"):
                                changelog.index("## [0.14.3")]
-        # and in the older documents kept in docs/history/ (v0.15.1)
+        # (v0.15.3: the older documents kept in docs/history/ from v0.15.1
+        # left the repository's files)
         names = [path.relative_to(REPO).as_posix()
-                 for path in sorted(REPO.glob("*.md"))
-                 + sorted(REPO.glob("docs/history/*.md"))]
+                 for path in sorted(REPO.glob("*.md"))]
         texts = {name: _flat(name) for name in names
                  if name != "CHANGELOG.md"}
         texts["CHANGELOG.md, [0.15.0-alpha]"] = unreleased

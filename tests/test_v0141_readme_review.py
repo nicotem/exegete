@@ -94,11 +94,11 @@ def _without_the_dated_record(name, text):
 
 
 def _documents():
-    """Every Markdown document at the top of the repository, and the
-    older ones kept in docs/history/ (v0.15.1), by their paths in it."""
+    """Every Markdown document at the top of the repository, by its
+    path in it (v0.15.3: the older ones kept in docs/history/ from
+    v0.15.1 left the repository's files)."""
     return [path.relative_to(REPO).as_posix()
-            for path in sorted(REPO.glob("*.md"))
-            + sorted(REPO.glob("docs/history/*.md"))]
+            for path in sorted(REPO.glob("*.md"))]
 
 
 def test_no_document_says_qualcoders_ai_keeps_the_private_part():

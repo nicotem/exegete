@@ -11,8 +11,8 @@ What it reads, of the files git tracks (the tree is never walked): every
 Markdown and HTML file, both NOTICE files, the issue forms and the
 desktop extension's manifest. Not read: CHANGELOG.md, whose released
 entries are records; the fragments in changelog.d/, which the next entry
-is written from; anything under tests/, docs/history/, docs/update-check/
-or docs/structure/, which are records and designs; and the texts in the
+is written from; anything under tests/, docs/update-check/ or
+docs/structure/, which are records and designs; and the texts in the
 package's code, whose releases to come the facts check holds
 (tests/test_v0151_facts.py). The files are read through the texts
 check's reading, scripts/check_texts.py, loaded from beside this script:
@@ -91,8 +91,8 @@ MAX_AGE_DAYS = 30
 
 # What is never read: records, designs and the next entry's fragments
 NOT_READ = ("CHANGELOG.md",)
-NOT_READ_FOLDERS = ("tests/", "docs/history/", "docs/update-check/",
-                    "docs/structure/", "changelog.d/")
+NOT_READ_FOLDERS = ("tests/", "docs/update-check/", "docs/structure/",
+                    "changelog.d/")
 
 # The forms of a promise, each with a name the report and the tests use;
 # "version" is the release an "until" names by its numbers

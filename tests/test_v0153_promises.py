@@ -362,7 +362,7 @@ def test_a_shallow_clone_refuses_release_mode(tmp_path, capsys):
 @needs_git
 def test_the_script_reads_every_document_the_facts_check_reads(
         tmp_path, capsys):
-    from test_v0151_facts import DOCUMENTS, HISTORY
+    from test_v0151_facts import DOCUMENTS
     sentence = "Exegete does not yet nest a code."
     forms = {
         ".github/ISSUE_TEMPLATE/bug_report.yml":
@@ -374,9 +374,9 @@ def test_the_script_reads_every_document_the_facts_check_reads(
         "packaging/desktop-extension/manifest.in.json":
             f'{{"display_name": "Exegete", "description": "{sentence}"}}\n',
         "pages/update/index.html": f"<p>{sentence}</p>\n"}
-    read = [name for name in DOCUMENTS if not name.startswith(HISTORY)]
+    read = list(DOCUMENTS)
     not_read = ("CHANGELOG.md", "changelog.d/promises.md",
-                "docs/history/PLAN.md", "docs/structure/0.15.2.md",
+                "docs/structure/0.15.2.md",
                 "docs/update-check/design.md", "tests/fixtures/GUIDE.md")
     root = _commit(tmp_path / "repo", {
         name: forms.get(name, f"{sentence}\n")

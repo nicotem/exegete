@@ -778,22 +778,25 @@ carries. Its README records where it came from.
 Documents
 ---------
 
-These are in the repository only; no package contains them.
+These three are in early documents that the repository held up to
+its release 0.15.2-alpha, and that no package contained. Git's
+history keeps the documents: each address below opens one as it was
+at that release.
 
 76. A REFI-QDA coded-segment example (copied verbatim)
-    Here: docs/history/QUALCODER_IMPORT_CAPABILITIES.md.
+    Here: https://github.com/nicotem/exegete/blob/v0.15.2-alpha/docs/history/QUALCODER_IMPORT_CAPABILITIES.md.
     From: refi.py, lines 1660-1669 (the example in load_codings_for_text's
     docstring).
     Why: to show the REFI-QDA coded-segment format.
 
 77. A case CSV example (copied values)
-    Here: docs/history/QUALCODER_IMPORT_CAPABILITIES.md.
+    Here: https://github.com/nicotem/exegete/blob/v0.15.2-alpha/docs/history/QUALCODER_IMPORT_CAPABILITIES.md.
     From: 3.8.2 Examples/cases.csv, lines 1-4, at the root of
     QualCoder's repository.
     Why: to show the case CSV import format.
 
 78. Notes on QualCoder's schema (file-format facts)
-    Here: docs/history/RESEARCH_SUMMARY.md.
+    Here: https://github.com/nicotem/exegete/blob/v0.15.2-alpha/docs/history/RESEARCH_SUMMARY.md.
     From: __main__.py, lines 1788-1828; 3.8.2 __main__.py, lines
     2347-2417.
     Why: research notes on QualCoder's tables and columns, in prose.

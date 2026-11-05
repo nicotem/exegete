@@ -46,6 +46,7 @@ sys.path.insert(0, str(REPO / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
+from exegete import occurrences  # noqa: E402
 
 TOOL = "pseudonymise_source"
 CUT = 2048
@@ -146,13 +147,16 @@ LISTED_ABOVE = "What this does NOT rewrite, and where the names will remain:"
 # around them are (server.py: _occurrences_page; database.py:
 # _pseudonymise_occurrences), a paragraph of its own after the one on
 # what reaches the assistant (its readability reading: the line numbers
-# in a sentence of their own, so that "and counts" no longer trails them)
+# in a sentence of their own, so that "and counts" no longer trails them;
+# its fix round: the ids of the first OCCURRENCES_LISTED alone, the
+# rest on the page, the figure held to the constant)
 CHOOSING_OCCURRENCES = (
     "A run can also leave chosen occurrences of a name as they are, such as "
     "those of a second person with the same name. For that choice, the "
-    "preview gives the conversation a short id for each occurrence, and "
-    "counts. When the mapping was typed into the conversation, each id comes "
-    "with its line number. It gives none of the words around an occurrence: "
+    "preview gives the conversation a short id for each of the first "
+    f"{occurrences.OCCURRENCES_LISTED} occurrences, and counts. When the "
+    "mapping was typed into the conversation, each id comes with its line "
+    "number. It gives none of the words around an occurrence: "
     "those are on a page that Exegete opens in your browser, where you "
     "choose. The "
     "assistant is told never to open or read that page, and you give it the "

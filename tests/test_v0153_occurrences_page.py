@@ -316,6 +316,24 @@ class TestThePage:
                 server._OCCURRENCES_PAGE_NONE
             assert not page_at(folder).exists()
 
+    def test_a_list_alone_writes_no_page(self, tmp_path):
+        """A preview given leave_occurrences without choose_occurrences
+        marks the ones left in its block alone: it writes no page and
+        gives no occurrences_page, so the page marks them only on a
+        preview with both (TOOLS.md, the tool's entry)."""
+        with fresh(tmp_path, TOMS) as folder:
+            ids = [row["id"] for row in block(preview_of(
+                mapping=TOM, choose_occurrences=True))["listed"]]
+            reading_folder.forget_file(folder, 1)
+            assert not page_at(folder).exists()
+            out = preview_of(mapping=TOM, leave_occurrences=ids[2:])
+            assert "preview_token" in out, out
+            assert "occurrences_page" not in out
+            assert not page_at(folder).exists()
+            assert [row.get("left", False) for row in
+                    block(out)["listed"]] == [False, False, True, True]
+            assert block(out)["left"] == 2
+
     def test_an_occurrence_across_a_line_break(self):
         """Were an occurrence to cross a line break, which the rewrite
         never matches, it is marked on each line and labelled once."""

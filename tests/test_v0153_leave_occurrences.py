@@ -173,6 +173,32 @@ class TestTheRun:
         assert (coding["pos0"], coding["pos1"], coding["seltext"]) == (
             SON + 2, SON + 5, "Tom")
 
+    def test_two_people_and_the_backups_that_hold_the_name(self, tmp_path):
+        """Two people who share a name (PRIVACY.md): a first run leaves
+        the son's two Toms, and a second, with a mapping typed into the
+        call, gives them a pseudonym of their own. The backup each run
+        takes holds the name where the son's pseudonym now stands, the
+        first run's as well as the second's."""
+        son = [{"original": "Tom", "pseudonym": "Blake"}]
+        with fresh(tmp_path, TOMS) as folder:
+            sons = choose(mapping=TOM)[2:]
+            first = execute_from(preview_of(mapping=TOM,
+                                            leave_occurrences=sons),
+                                 mapping=TOM)
+            assert first.get("success") is True, first
+            second = execute_from(preview_of(mapping=son), mapping=son)
+            assert second.get("success") is True, second
+            assert stored(folder) == TOMS.replace(
+                "manager Tom", "manager Alex").replace(
+                "Tom said", "Alex said").replace(
+                "son Tom", "son Blake").replace("Tom asked", "Blake asked")
+            taken = [Path(done["backup_path"]) for done in (first, second)]
+            assert taken[0] != taken[1]
+            for backup in taken:
+                then = query(backup, "SELECT fulltext FROM source "
+                                     "WHERE id=1")[0]["fulltext"]
+                assert "son Tom was waiting" in then and "Tom asked" in then
+
     def test_left_whole(self, tmp_path):
         """A left occurrence is left whole, with a mapped name inside it
         or overlapping it; the overlap diagnostic, of the occurrences as

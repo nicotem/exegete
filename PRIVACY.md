@@ -168,7 +168,7 @@ officer will ask, and the summary above depends on them:
     `$XDG_CACHE_HOME` if it is set). They stay until Exegete's first
     tidy once they are a week old (an hour for an import's page or a
     page for choosing occurrences), and longer while Exegete is not
-    running;
+    running, or runs without writing there;
   - the records of changes kept for undo (`~/.exegete/changes/`): ids
     and digests, never a name or a text. They stay until Exegete's next
     start, or its next record of a change to the same project, once
@@ -247,9 +247,16 @@ protect three other things, each with its own readers:
 
 - **The key.** The names list pairs each real name with its pseudonym.
   No tool returns the names on it: you can fill it in on your own
-  computer, in the names file, and what Exegete says of the list and
-  the file is counts and line or entry numbers. A mapping you type into
-  the conversation reaches the provider as you type it ("What
+  computer, in the names file. What Exegete says of the list and the
+  file is counts, line or entry numbers, and short ids for choosing
+  occurrences. A pseudonymisation preview also gives each entry's
+  pseudonym, unless the pseudonym itself carries a name from the list.
+  Some of its figures can then tell an assistant that has read a file's
+  text which name a pseudonym replaces. Among them are how often each
+  entry occurs, how long a short name is and how many codings the run
+  would move. Replacing the names before the assistant reads a file
+  leaves it no text to match these against. A mapping you type into the
+  conversation reaches the provider as you type it ("What
   pseudonymisation is for", below).
 - **What stays on the computer, and who else reads it.** Several things
   stay on your disk: the project, its backups and copies, Exegete's own
@@ -840,7 +847,7 @@ back to
 | Kind | Where | What | Who deletes it |
 |---|---|---|---|
 | Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read, and the records of the changes Exegete makes to projects (`changes/`, below); the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says, and a change's record once it is a day old; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the records of changes (those changes can then no longer be undone), the pseudonymisation run records, and the secret that keys their digests |
-| Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled, the page for choosing occurrences of a name | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page or a page for choosing occurrences), as "Reading a whole file" says, so they can stay longer while Exegete is not running; the working folder as each reading ends; you, at any time |
+| Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled, the page for choosing occurrences of a name | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page or a page for choosing occurrences), as "Reading a whole file" says, so they can stay longer while Exegete is not running, or runs without writing there; the working folder as each reading ends; you, at any time |
 | Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
 | Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word). At your word, `undo_changes` also removes the originals an import stored, when it takes the import back, and `pseudonyms.json`, when it takes back the save that made it |
 
@@ -990,11 +997,11 @@ above).
 
 A run can also leave chosen occurrences of a name as they are, such as
 those of a second person with the same name. For that choice, the
-preview gives the conversation a short id for each occurrence, and
-counts. When the mapping was typed into the conversation, each id comes
-with its line number. It gives none of the words around an occurrence:
-those are on a page that Exegete opens in your browser, where you
-choose. The assistant is told never to open or read that page, and you
+preview gives the conversation a short id for each of the first 150
+occurrences, and counts. When the mapping was typed into the
+conversation, each id comes with its line number. It gives none of the
+words around an occurrence: those are on a page that Exegete opens in
+your browser, where you choose. The assistant is told never to open or read that page, and you
 give it the ids to leave. "Reading a whole file", below, says where the
 page is kept and when it goes.
 
@@ -1165,10 +1172,10 @@ whole text as stored, with every occurrence of the names you asked to
 replace marked and labelled with its id, and no pseudonym. So while it
 stays, anyone who can read the reading folder can see which words of
 that file are those names. It goes when Exegete changes the file's text
-or name, as a run on the file, an undo or a restore does. Otherwise it
-goes at Exegete's first tidy once it is an hour old, which can be later
-(below). The preview's answer says where the page is only when the page
-did not open. With the names list, the answer withholds the page's
+or name, as a run on the file, an undo that changes it or a restore
+does. Otherwise it goes at Exegete's first tidy once it is an hour old,
+which can be later (below). The preview's answer says where the page
+is only when the page did not open. With the names list, the answer withholds the page's
 place when the place itself holds a name from the list.
 
 Three cautions:
@@ -1177,11 +1184,12 @@ Three cautions:
   copies: Claude Code and Codex, any file your account can; Cowork, any
   file in a folder connected to it, so the reading folder too when
   your home folder or its drive is connected ("Assistants that open
-  files by themselves", above). The page, the tool's description and the assistant's brief
-  ask the assistant not to. For the page for choosing occurrences, the
-  preview's answer asks it too. Nothing enforces it. In Claude Code, a
-  permission rule that denies its file-reading tool on the reading
-  folder narrows this, for example `"deny":
+  files by themselves", above). The page, the tool's description and
+  the assistant's brief ask the assistant not to. For the page for
+  choosing occurrences, the page itself, the brief and the preview's
+  answer ask it. Nothing enforces it. In Claude Code, a permission rule
+  that denies its file-reading tool on the reading folder narrows this,
+  for example `"deny":
   ["Read(~/Library/Caches/Exegete/**)"]` in the `permissions` of its
   settings on a Mac; a shell command could still read the file, so it
   narrows the reach without closing it.
@@ -1212,9 +1220,10 @@ Three cautions:
   Exegete running such a page can stay longer);
 - the page on which you choose the occurrences of a name to leave as
   they are (`choose_occurrences`), which marks every occurrence of the
-  names you asked to replace. It goes after a run on that file, an undo
-  or a restore, or at Exegete's first tidy once it is an hour old. Like
-  the import's page, it can stay longer;
+  names you asked to replace. It goes after a run on that file, after an
+  undo that changes it or after a restore, and otherwise at Exegete's
+  first tidy once it is an hour old. Like the import's page, it can stay
+  longer;
 - any backup of the whole disk, such as Time Machine or File History,
   that copies those folders.
 
@@ -2571,10 +2580,17 @@ near the top of this document, set them out.
     typed mapping with `save_mapping_to_project` off and
     `researcher_keeps_mapping` on, because `pseudonyms.json` holds one
     pseudonym per name. The names list then holds one pseudonym for that
-    name, while the file's text holds two. Two things lead back from the
-    second person's pseudonym to their name: your own record of that
-    mapping, and the backup taken before the second run. The count is
-    in the preview's `residue` block, and a name that occurs only in a
+    name, while the file's text holds two. Several things lead back from
+    the second person's pseudonym to their name. One is the mapping you
+    typed for the second run, which is in the conversation. The
+    conversation reaches your AI provider, unless the model runs on your
+    own computer, and the host keeps its own records of it. Another is
+    your own record of that mapping. And every copy of the file's text
+    from before the second run holds the name where that pseudonym now
+    stands. Those copies include every backup taken before that run, the
+    first run's among them, and, for an imported document, its original
+    in the project's folder of originals. The count is in the preview's
+    `residue` block, and a name that occurs only in a
     `#####` private note is neither read nor counted. Those counts are a
     heuristic that reads wider than the rewrite does: the rewrite
     replaces whole words only, as QualCoder's own import does, while
@@ -2741,13 +2757,15 @@ near the top of this document, set them out.
     the mapping is the researcher's own reverse key and the model never
     supplied it, so no diagnostic and no refusal quotes a name from it
     and `include_context` returns nothing at all. Nor does the preview
-    give the position of any match there. Each entry's block gives its
-    number, its pseudonym and its count, and the list of names that
-    overlap gives each overlap as its two entry numbers. The occurrences
-    listed for choosing are ids without line numbers. Given a position
-    beside a pseudonym, an assistant that has read the text could find
-    the name there, and so learn which name the pseudonym replaces. This
-    protects the key ("How your data flows"). Four things are still
+    give the position of any name it matches there. Each entry's block
+    gives its number, its pseudonym and its count, and the list of names
+    that overlap gives each overlap as its two entry numbers. The
+    occurrences listed for choosing are ids without line numbers. Given
+    a position beside a pseudonym, an assistant that has read the text
+    could find the name there, and so learn which name the pseudonym
+    replaces. This protects the key, though not wholly: some of the
+    preview's figures can still let such an assistant learn that ("How
+    your data flows"). Four things are still
     returned as they
     stand, because a preview whose files cannot be named cannot be
     relayed: the project path, each file's own name (including every

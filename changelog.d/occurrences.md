@@ -135,33 +135,41 @@
 ### Documents
 
 - TOOLS.md, PRIVACY.md and AI_CODING_GUIDE.md describe choosing
-  occurrences. The conversation carries an id for each occurrence, and
-  counts. With a mapping typed into the call, each id comes with its
-  line number. The words around each occurrence are on the page in the
-  researcher's browser, which the assistant is told never to open or
-  read. TOOLS.md lists the arguments the preview token binds. It gives
-  the refusals: with `rewrite_memos` or `include_context`, ids that
-  match no occurrence in the text as it is now, and more than 500 ids in
-  one run. With the names list, past that limit, it gives the two
-  routes that leave a name out of a run, each with its cost. A mapping
-  typed into the call puts names and their pseudonyms in the
-  conversation, and a name taken out of the names list is not replaced
-  by later imports either.
+  occurrences. The conversation carries an id for each of the first 150
+  occurrences, and counts. With a mapping typed into the call, each id
+  comes with its line number. The words around each occurrence are on
+  the page in the researcher's browser, which the assistant is told
+  never to open or read. TOOLS.md lists the arguments the preview token
+  binds. It gives the refusals: with `rewrite_memos` or
+  `include_context`, an id that matches no occurrence in the text as it
+  is now, or more than one, and more than 500 ids in one run. With the
+  names list, the refusal of more than 500 ids gives the limit alone.
+  TOOLS.md gives the two routes that leave a name out of a run there,
+  each with its cost. A mapping typed into the call puts names and their
+  pseudonyms in the conversation, and a name taken out of the names list
+  is not replaced by later imports either.
 - PRIVACY.md lists the page for choosing occurrences wherever it lists
   what the reading folder holds and where a transcript's text can end
   up. The page marks the names in the file's text, so anyone who can
   read the reading folder can see which words are names. It goes when
   Exegete changes the file's text or name, or at the first tidy once it
   is an hour old, which can be later. PRIVACY.md also says that the run
-  record and the journal entry give how many occurrences were left,
-  never where. It says too that, with the names list, the preview
-  gives no position of a match. The reading folder's note, `About this
-  folder.txt`, says that the page marks the names.
-- For two people who share a name, the documents, the brief and the
-  tool's description give a second run inside one file. A first run
-  leaves the second person's occurrences as they are, and a second run,
-  with a mapping typed into the call, replaces them with the second
-  person's pseudonym. The brief also says when to preview with
-  `choose_occurrences`. It says that the page is the researcher's,
-  never to be opened, read or looked at, and that the assistant gives
-  the ids alone, in `leave_occurrences`.
+  manifest and the journal entry give how many occurrences were left,
+  never where. It says too that, with the names list, the preview gives
+  no position of a name it matches. It also warns that some of the
+  preview's figures, such as each entry's count, can still tell an
+  assistant that has read the file's text which name a pseudonym
+  replaces. The reading folder's note, `About this folder.txt`, says
+  that the page marks the names.
+- For two people who share a name, the documents and the tool's
+  description give a second run inside one file. A first run leaves the
+  second person's occurrences as they are, and a second run, with a
+  mapping typed into the call, replaces them with the second person's
+  pseudonym. PRIVACY.md says what then leads back from that pseudonym
+  to the name: the mapping typed for the second run, which is in the
+  conversation, and the researcher's own record of it. Every copy of the
+  file's text from before that run leads back too, the first run's
+  backup among them. The brief says when to preview with
+  `choose_occurrences`. It says that the page is the researcher's, never
+  to be opened, read or looked at, and that the assistant gives the ids
+  alone, in `leave_occurrences`.

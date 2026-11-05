@@ -826,8 +826,13 @@ async def call_every_tool(client, root, lock_check=False):
         import_paths.hidden_step = real_hidden_step
     await run("create_category", {"name": "Feelings"})
     await run("create_category", {"name": "Other"})
+    # A colour of its own: a code made without one takes a random pick from
+    # QualCoder's 120 colours, #EB7333 about one run in 120, and the recolour
+    # below then changes nothing, so the undo record's tests find no receipt
+    # for it (v0.15.3: one full run failed so).
     await run("create_code", {"name": "Trust", "category": "Feelings",
-                              "memo": "Reliance on others"})
+                              "memo": "Reliance on others",
+                              "color": "#F5F6CE"})
     await run("create_code", {"name": "Doubt"})
     await run("create_case", {"name": "P1", "memo": "First participant"})
     await run("link_file_to_case", {"file_id": 1, "case_name": "P1"})

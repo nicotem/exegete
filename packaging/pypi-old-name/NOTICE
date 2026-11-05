@@ -319,14 +319,14 @@ Values in the package
 30. Labels of QualCoder's menus and buttons named in Exegete's answers
     Here: src/exegete/database.py, PDF_PROBLEM_MESSAGES and
     QualcoderDatabase.search_files.
-    Here: src/exegete/server.py, REFI_EXPORT_KNOWN_FAULTS,
-    get_project_summary and _opening_in_qualcoder_40.
-    From: GUI/ui_main.py, lines 368, 370, 379 and 410; code_pdf.py,
-    lines 2018-2020 and 5792; __main__.py, lines 2034-2035.
+    Here: src/exegete/server.py, get_project_summary and
+    _opening_in_qualcoder_40.
+    From: GUI/ui_main.py, lines 368 and 379; code_pdf.py, lines
+    2018-2020 and 5792; __main__.py, lines 2034-2035.
     Why: to point the researcher to QualCoder's own commands by the
-    words on its menus and buttons: "REFI-QDA Project export" under
-    Project and Export, "Open Project", "Restructure" in the PDF view,
-    and "Keep" or "Switch" when QualCoder asks about a coder name.
+    words on its menus and buttons: "Open Project" under Project,
+    "Restructure" in the PDF view, and "Keep" or "Switch" when
+    QualCoder asks about a coder name.
 
 31. QualCoder's colours that take a light text (copied values)
     Here: src/exegete/reading_copy.py, QUALCODER_WHITE_TEXT and
@@ -466,10 +466,34 @@ is the one the format dictates.
     712-718; app.py, lines 46 and 1611-1612; __main__.py, lines
     2582-2590 (3.8.2 __main__.py, line 205).
 
-44. How a REFI-QDA codebook nests sub-codes for QualCoder's importer.
-    Here: src/exegete/refi_export.py,
-    RefiQdaExporter._add_codebook_section.
-    From: refi.py, lines 242-254, 3228-3248 and 3279-3290.
+44. How a REFI-QDA file carries a project for QualCoder's importer:
+    the codebook's nesting of sub-codes, the whole codebook, one user
+    per coder, the cases with their variables and links to whole files,
+    and journal entries and annotations as notes (format facts).
+    Here: src/exegete/refi_export.py, _Users,
+    RefiQdaExporter._add_codebook_section,
+    RefiQdaExporter._read_attributes,
+    RefiQdaExporter._add_cases_section,
+    RefiQdaExporter._add_sources_section and
+    RefiQdaExporter._add_notes_section.
+    From: refi.py, lines 242-254, 3228-3248 and 3279-3290 (the nesting
+    of sub-codes); 3209 and 3264-3291 (every code and category);
+    3190-3202, 2743 and 2749 (one user per owner, and each row's owner
+    as its creator); 439-442 (the importer makes the first user its
+    coder name); 2420-2502 (a case's description, variable values and
+    source references); 1654-1655 and 1699-1733 (a selection without a
+    coding read as an annotation, so no link to part of a file is
+    written); 2283 (a numeric attribute as Float, any other as Text);
+    2312-2350 and 2131-2133 (a journal entry as a note with its text in
+    sources/); 2352-2393 and 2616-2622 (an annotation as a note, with a
+    reference in its text source); 1768-1772 and 1842-1847 (the dates
+    the importer reads).
+    Why: so that QualCoder's importer, and other programs that read the
+    format, find each part where QualCoder's own export puts it. Where
+    Exegete departs (no attribute for a row with no owner, a reference
+    for every annotation, UTF-8 without a byte order mark, local times
+    without a zone, numbers in plain decimal notation, positions
+    checked), the reason is given in the code beside it.
 
 45. QualCoder's saved graph labels, table displays and filters: their
     tables and columns, and the text in which a saved display and a

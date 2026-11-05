@@ -536,8 +536,8 @@ def test_a_failed_export_keeps_the_earlier_file(setup_server,
     with monkeypatch.context() as patch:
         _failing_member(patch)
         failed = _export(output_path=str(out), overwrite=True)
-    assert "success" not in failed and "unchanged" in failed["error"], failed
     assert out.read_bytes() == earlier and _parts(tmp_path) == []
+    assert "success" not in failed and "unchanged" in failed["error"], failed
 
     # The replace itself fails, as on Windows when a scanner holds the
     # part file

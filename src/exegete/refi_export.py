@@ -405,8 +405,10 @@ class _Users:
 
     def guid(self, name: Any, owns: bool = True) -> Optional[str]:
         """The GUID of the User a row's owner is, or None for a row with
-        no owner. The AI coder's name (the project's AI coder name, the
-        name its codings carry) is the "ai_coder" User."""
+        no owner, which is then written without a creatingUser (QualCoder
+        writes an empty one, which the schema's GUIDType refuses). The
+        AI coder's name (the project's AI coder name, the name its
+        codings carry) is the "ai_coder" User."""
         key = _xml_safe(name)
         if key == "":
             return None
@@ -942,9 +944,11 @@ class RefiQdaExporter:
                               ) -> Dict[int, List[Dict[str, Any]]]:
         """The annotations the file holds, by file: those on a text source
         written, with the positions a coding needs, each given its Note's
-        and its selection's GUID. One with a NULL position, reaching past
-        its text, or on a file not written is left out and counted in
-        annotations_left_out."""
+        and its selection's GUID. One with a NULL position (the table
+        allows it; it would reach startPosition, an xsd:integer, as
+        "None", and stop QualCoder's importer at int(pos0)), reaching
+        past its text, or on a file not written is left out and counted
+        in annotations_left_out."""
         rows = read_for_export("annotations", self.db.list_annotations)
         written_ids = set(written)
         by_file: Dict[int, List[Dict[str, Any]]] = {}
@@ -1038,7 +1042,9 @@ class RefiQdaExporter:
                             if mark_status else None),
                 )
 
-            # The TextSource sequence: NoteRef before VariableValue
+            # The TextSource sequence: NoteRef before VariableValue. One
+            # for every annotation written (QualCoder's export stops at
+            # the first, so its importer brings back one per file)
             for row in annotations.get(file_id, []):
                 ET.SubElement(source_elem, f"{{{NAMESPACE}}}NoteRef",
                               attrib={"targetGUID": row["note_guid"]})

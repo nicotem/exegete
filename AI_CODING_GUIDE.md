@@ -336,6 +336,15 @@ typed list is either saved into `pseudonyms.json`, in QualCoder's
 format (`save_mapping_to_project`), or kept by you
 (`researcher_keeps_mapping`), and the run asks you which.
 
+A run can also leave chosen occurrences of a name as they are, such as
+those of a second person with the same name. Ask the assistant to
+preview with `choose_occurrences`: a page opens in your browser with an
+id beside each occurrence, and you tell the assistant which ids to leave
+(`leave_occurrences`). The page is for you alone, and the assistant is
+told never to read it. A second run, with a list you type and keep
+yourself, can then give the second person a pseudonym of their own,
+since the names list holds one pseudonym for each name.
+
 The rest of the project is treated in other ways:
 
 - notes and journal entries are scanned and their names counted. With

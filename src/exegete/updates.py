@@ -39,10 +39,12 @@ else here follows from the design reviewed before it was written:
   three notes, and what check_for_updates' own answer tells: the
   disclosure, a newer version) is recorded as told only once the answer
   telling it has been written to standard output and flushed
-  (standard_output.py; `give` and `written` below). One cut short, by a
-  stop or the app's cancel, comes in a later answer or at the next
-  start. In process, where nothing writes the answers out (the suite,
-  the snapshot), it is recorded as it is added.
+  (standard_output.py; `give` and `written` below), and not when the
+  app has cancelled the request, whose answer the app does not show
+  (`cancelled`). One cut short, by a stop or the app's cancel, comes in
+  a later answer or at the next start. In process, where nothing writes
+  the answers out (the suite, the snapshot), it is recorded as it is
+  added.
 - **Never a reason to fail.** Every network, file and parsing problem
   ends as "could not check" and one line in the log naming the kind of
   problem only.
@@ -113,6 +115,9 @@ CHECK_EVERY = 7 * DAY          # the check on its own
 ASKED_REUSE = DAY              # the check when asked
 FIRST_CHECK_WAIT = 7 * DAY     # after the disclosure note
 ANNOUNCED_KEEP = 20
+# The app's cancels kept until an answer to each has been written out
+# (`cancelled`)
+CANCELS_KEPT = 64
 # The longest answer a note rides on, in characters (about 5,000 tokens).
 # A note counts as given once the answer carrying it has gone out, so it
 # waits for an answer short enough to be read whole, rather than ride at
@@ -859,6 +864,9 @@ class _Run:
         # standard_output.py, which settles them (off in process)
         self.held: Dict[Any, List[Tuple["Note", float]]] = {}
         self.after_writing = False
+        # and the requests the app has cancelled, by id, in the order the
+        # cancels came, until an answer to each has been written out
+        self.cancelled: Dict[Any, None] = {}
         self.thread: Optional[threading.Thread] = None
         self.windows = os.name == "nt"
         # What this run itself set, kept in memory as well as in the
@@ -1165,12 +1173,17 @@ def give(note: Note, request_id: Any = None,
 
 def written(request_id: Any, delivered: bool) -> None:
     """The answer to `request_id` has been written out and flushed.
-    Delivered (a result not marked as an error), its notes are recorded
-    as given, each with the time it was given; otherwise (an error, the
-    app's cancel among them) they are due again, and the next answer
-    carries them. The first answer for an id settles it: a later one,
-    such as a cancel's error crossing the result, finds nothing held."""
+    Delivered (a result not marked as an error, to a request the app has
+    not cancelled), its notes are recorded as given, each with the time
+    it was given; otherwise (an error, or the app's cancel) they are due
+    again, and the next answer carries them. The first answer for an id
+    settles it: a later one, such as a cancel's error crossing the
+    result, finds nothing held."""
     with _LOCK:
+        if request_id in _run.cancelled:
+            # By MCP's rule the app does not show this answer
+            del _run.cancelled[request_id]
+            delivered = False
         notes = _run.held.pop(request_id, None)
         if not notes:
             return
@@ -1184,6 +1197,27 @@ def written(request_id: Any, delivered: bool) -> None:
             return
     for note, when in notes:
         mark_given(note, when)
+
+
+def cancelled(request_id: Any) -> None:
+    """The app has cancelled request `request_id`, read as the cancel
+    arrives (standard_output.read_cancel, in standard input's own
+    thread). By MCP's rule an app does not show the answer to a request
+    it has cancelled, so the notes that answer carries are due again
+    once it has been written out (`written`). Read there because every
+    tool but check_for_updates runs on the event loop: the library reads
+    the cancel only once such a tool has answered, and sends that answer
+    alone. Only while this run writes its answers through
+    standard_output.py; the oldest cancels are let go past CANCELS_KEPT,
+    since one that came after its answer had gone out is never settled.
+    """
+    with _LOCK:
+        if not _run.after_writing:
+            return
+        _run.cancelled.pop(request_id, None)
+        _run.cancelled[request_id] = None
+        while len(_run.cancelled) > CANCELS_KEPT:
+            del _run.cancelled[next(iter(_run.cancelled))]
 
 
 def holding() -> bool:

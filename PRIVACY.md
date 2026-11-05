@@ -2164,15 +2164,20 @@ update carries a paragraph on what is new, written with the release and
 built into Exegete, and a link to that release's notes on GitHub, which
 Exegete never opens. A note, and what the answer tells when you
 ask (that the check exists, that a newer version is out), counts as
-given once that answer has gone out to the app. One cut short before
-then, by a stop or by the app cancelling the request, comes in a later
+given once that answer has gone out to the app, unless the app has
+cancelled the request: an app is meant to ignore the answer to a
+request it has cancelled. One cut short, by a stop before the answer
+has gone out or by the app cancelling the request, comes in a later
 answer or at the next start. Each comes once, except that it can come
 again when two copies of Exegete run on the same computer, when
 Exegete cannot write its file (a full disk, or on Windows another
-program reading the file at that moment), or when Exegete stops in the
-instant after the answer has gone out. Whether a note reaches you
-depends on the assistant passing it on, and on the app showing the
-answer: an app that has cancelled a request may not show its answer.
+program reading the file at that moment), when Exegete stops in the
+instant after the answer has gone out, or when another answer goes out
+while Exegete checks for a new version at your request. Whether a note
+reaches you depends on the assistant passing it on, and on the app
+showing the answer: if the app's cancel reaches Exegete only after the
+answer has gone out, as when the app cancels at the moment the answer
+is sent, the note counts as given and the app does not show it.
 When you ask, the answer gives the installed and newest versions, how Exegete was
 installed, and the steps, with any folder in your home folder written
 from it (`$HOME`); a folder outside your home folder is written in

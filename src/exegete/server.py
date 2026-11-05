@@ -36,7 +36,7 @@ from pydantic import Field
 
 from . import env_settings, names, state_folder, updates
 from .standard_input import StandardInputLines
-from .standard_output import StandardOutputLines
+from .standard_output import StandardOutputLines, read_cancel
 from . import database as _database_module
 from .database import (
     QualcoderDatabase,
@@ -1261,8 +1261,10 @@ class _ExegeteMCP(FastMCP):
         # which is all some hosts read, and is met before the data
         # (updates.attach says why). check_for_updates says these things
         # itself. Since 0.15.3 the note counts as given once this answer
-        # has been written out (updates.give, standard_output.py), so a
-        # stop or the app's cancel before then leaves it due.
+        # has been written out, and not when the app has cancelled the
+        # request (updates.give, updates.cancelled, standard_output.py):
+        # a stop before then, or the app's cancel read before then,
+        # leaves it due.
         # Nothing about the check may fail a tool: each step that could
         # raise is read as "no note".
         try:
@@ -1342,8 +1344,10 @@ class _ExegeteMCP(FastMCP):
         standard input read in a daemon thread of Exegete's own
         (standard_input.py), so that a stop waits for no line, and
         standard output written through standard_output.py, so that what
-        Exegete tells once counts as told once its answer has gone out."""
-        async with stdio_server(stdin=StandardInputLines(),
+        Exegete tells once counts as told once its answer has gone out.
+        That thread also reads the app's cancel as it arrives
+        (standard_output.read_cancel), since a tool holds the loop."""
+        async with stdio_server(stdin=StandardInputLines(watch=read_cancel),
                                 stdout=StandardOutputLines()) as (
                 read_stream, write_stream):
             await self._mcp_server.run(

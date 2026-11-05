@@ -8,16 +8,22 @@ tells the disclosure and a newer version. Each was recorded as told
 before its answer was sent, so a stop or the app's cancel in between
 lost it for good. Now updates.give holds what an answer tells under the
 answer's request id, and src/exegete/standard_output.py records it once
-the line carrying that answer has been written and flushed. Pinned here:
+the line carrying that answer has been written and flushed, unless the
+app has cancelled the request, which standard input's thread reads as
+it arrives. Pinned here:
 
 - over standard input and output, a stop before the answer leaves the
   note after an update, and an asked check's disclosure, for the next
-  start, which records each once its answer has gone out;
+  start, which records each once its answer has gone out; and so does
+  the app's cancel of a call while it runs, though the call's answer,
+  note included, still goes out;
 - in process, a check cancelled or failing tells nothing;
 - the writer: the record after the flush and for the answer's own id,
   an error or a result marked as an error making the note due again,
   the first answer for an id settling it; the library's bytes; a fault
   in the record never stopping the answers, and logged by its kind;
+- the app's cancel: read from a line of standard input, in the reader's
+  thread, and the answer to a cancelled request recording nothing;
 - without the writer (the suite, the snapshot's in-memory session), a
   note is recorded as it is added, as before;
 - the note after an update connects to nothing.
@@ -49,10 +55,12 @@ sys.path.insert(0, str(REPO / "tests"))
 
 import exegete.server as server                             # noqa: E402
 from exegete import names, updates                          # noqa: E402
-from exegete.standard_output import StandardOutputLines     # noqa: E402
+from exegete.standard_input import StandardInputLines       # noqa: E402
+from exegete.standard_output import (                       # noqa: E402
+    StandardOutputLines, read_cancel)
 from test_v0152_ctrl_c import (                             # noqa: E402
     INITIALIZE, INITIALIZED, INTERRUPTED_START, RUN, STOP_LIMIT, STOPPED,
-    _Started, _child_env, _ended, _session)
+    _Raw, _Started, _child_env, _collect, _ended, _session)
 
 OLD = "0.14.2a0"
 NEW = "0.15.2a0"
@@ -108,9 +116,19 @@ updates.tool_answer = slow_answer
 '''
 
 
+# What the stand-ins above need, in a start without INTERRUPTED_START
+IMPORTS = "import os, time\nfrom pathlib import Path\n"
+
+
 def _call(request_id: int, tool: str) -> dict:
     return {"jsonrpc": "2.0", "id": request_id, "method": "tools/call",
             "params": {"name": tool, "arguments": {}}}
+
+
+def _cancel(request_id) -> dict:
+    """The app's cancel of its request `request_id`."""
+    return {"jsonrpc": "2.0", "method": "notifications/cancelled",
+            "params": {"requestId": request_id, "reason": "test"}}
 
 
 def _seed(home: Path, **values) -> None:
@@ -257,6 +275,45 @@ def test_an_asked_check_stopped_before_its_answer_leaves_the_disclosure_due(
     assert _text(answer)["message"].startswith(DISCLOSURE)
     assert status == 0, again.tail()
     assert "disclosed_at" in _state(home)
+
+
+def test_a_call_the_app_cancels_leaves_its_note_due(
+        tmp_path):
+    """The app cancels a call while it runs (fix round 1, the review's
+    major). The tool is plain and runs on the event loop, so the library
+    reads the cancel only once the call has finished, and the answer,
+    note included, can still go out; by MCP's rule the app does not show
+    it. Exegete reads the cancel as it arrives, so the note is not
+    recorded as given, and the next start's first answer carries it."""
+    home = tmp_path / "home"
+    _seed(home, highest_version_run=OLD)
+    stalled = tmp_path / "attaching"
+    started = _Started(tmp_path, IMPORTS + AS_NEW + STALLED_ATTACH + RUN,
+                       UPDATE_NOTE_TEST_STALLED=str(stalled))
+    try:
+        started.send(INITIALIZE)
+        started.answer(1)
+        started.send(INITIALIZED)
+        started.send(_call(2, "explain_ai_coding_tools"))
+        started.wait_for(stalled)
+        started.send(_cancel(2))
+        started.proc.stdin.close()
+        status = _ended(started.proc, STOP_LIMIT)
+    finally:
+        started.stop()
+    assert status == 0, started.tail()
+    # Not recorded as given: the note is still due
+    assert _state(home).get("highest_version_run") == OLD
+
+    again = _StartedAgain(tmp_path, AS_NEW + RUN)
+    try:
+        answer = _answered_again(again, "explain_ai_coding_tools")
+        status = again.finish()
+    finally:
+        again.stop()
+    assert f"updated to {NEW_SHOWN}" in _text(answer)["exegete_notice"]
+    assert status == 0, again.tail()
+    assert _state(home).get("highest_version_run") == NEW
 
 
 # ---------------------------------------------------------------------------
@@ -554,6 +611,151 @@ def test_a_failing_record_never_stops_the_answers(monkeypatch, caplog):
               if record.name == "exegete.standard_output"]
     assert logged and all("ValueError" in line for line in logged), logged
     assert marker not in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# The app's cancel, read on the way in
+# ---------------------------------------------------------------------------
+
+def test_the_answer_to_a_cancelled_request_records_nothing():
+    async def run():
+        # The cancel read while the call runs, before its note is given:
+        # the result, written out, records nothing; the note is due again,
+        # and the next answer carries it and records it
+        out, _, note = _fresh()
+        read_cancel(_line(_cancel(7)))
+        updates.give(note, 7)
+        assert _due() is None
+        await _send(out, _result(7, notice=True))
+        assert not _disclosed() and not updates.holding()
+        assert _due() == "disclosure"
+        updates.give(updates.due_note(True), 8)
+        await _send(out, _result(8, notice=True))
+        assert _disclosed()
+
+        # The cancel read once the note is held, for a string id
+        out, _, note = _fresh()
+        updates.give(note, "seven")
+        read_cancel(_line(_cancel("seven")))
+        await _send(out, _result("seven"))
+        assert not _disclosed() and _due() == "disclosure"
+
+        # A cancel of another request leaves this one's record alone
+        out, _, note = _fresh()
+        read_cancel(_line(_cancel(8)))
+        updates.give(note, 7)
+        await _send(out, _result(7))
+        assert _disclosed()
+
+    asyncio.run(run())
+
+
+def test_only_the_apps_cancel_is_read(monkeypatch, caplog):
+    seen = []
+    monkeypatch.setattr(updates, "cancelled", seen.append)
+    cancel = _cancel(7)
+    lines = [
+        _line(cancel), _line(_cancel("seven")),
+        json.dumps(cancel),                          # the last, unended
+        _line(_call(9, "explain_ai_coding_tools")),
+        _line({**_call(9, "x"), "params": {           # a request naming it
+            "name": "x", "arguments": {"text": "notifications/cancelled"}}}),
+        _line({**cancel, "id": 3}),                  # not a notification
+        _line({**cancel, "params": {}}),             # no request named
+        _line({**cancel, "params": {"requestId": True}}),
+        _line({**cancel, "params": {"requestId": 7.0}}),
+        _line({**cancel, "params": {"requestId": None}}),
+        _line([cancel]),
+        "\n", ""]
+    for line in lines:
+        read_cancel(line)
+    assert seen == [7, "seven", 7]
+
+    # A line that is not JSON, and a fault in the record: logged by kind
+    # alone, never raised to the reader
+    marker = "Words from a participant's transcript"
+
+    def failing(request_id):
+        raise ValueError(f"could not record {marker}")
+
+    caplog.set_level(logging.DEBUG, logger="exegete.standard_output")
+    read_cancel('{"notifications/cancelled": "' + marker + '\n')
+    monkeypatch.setattr(updates, "cancelled", failing)
+    read_cancel(_line(cancel))
+    logged = [record.getMessage() for record in caplog.records
+              if record.name == "exegete.standard_output"]
+    assert len(logged) == 2, logged
+    assert "JSONDecodeError" in logged[0] and "ValueError" in logged[1]
+    assert marker not in caplog.text
+
+
+def test_cancels_are_kept_only_while_answers_are_written_out():
+    """In process nothing writes the answers out, so a cancel is not
+    kept; and only the newest CANCELS_KEPT are, since a cancel that came
+    once its answer had gone out is never settled."""
+    updates.start(OLD, environ=EXTENSION_ON)
+    read_cancel(_line(_cancel(0)))
+    updates.record_after_writing()
+    # The cancel of request 0, read in process, was not kept: the answer
+    # to 0 records its note
+    updates.give(updates.due_note(True), 0)
+    updates.written(0, True)
+    assert _disclosed()
+    for request_id in range(1, updates.CANCELS_KEPT + 2):
+        read_cancel(_line(_cancel(request_id)))
+    assert list(updates._run.cancelled) == list(
+        range(2, updates.CANCELS_KEPT + 2))
+
+
+def test_the_reader_shows_each_line_to_the_watch_as_it_is_read():
+    reads = [b'{"a":1}\n{"b":2}\n', b'{"c":3}']
+    expected = ['{"a":1}\n', '{"b":2}\n', '{"c":3}']
+    seen = []
+    assert asyncio.run(asyncio.wait_for(_collect(StandardInputLines(
+        _Raw(reads), watch=seen.append)), 5)) == expected
+    assert seen == expected
+
+    # A watch that fails stops nothing
+    def failing(line):
+        raise RuntimeError("the watch failed")
+
+    assert asyncio.run(asyncio.wait_for(_collect(StandardInputLines(
+        _Raw(reads), watch=failing)), 5)) == expected
+
+
+def test_the_watch_sees_a_line_while_a_tool_holds_the_loop():
+    """The app's cancel, sent while a plain tool runs: the reader's thread
+    reads it and shows it to the watch then, not once the loop is free."""
+    arrives, seen = threading.Event(), threading.Event()
+    cancel = _line(_cancel(2))
+
+    class Raw:
+        reads = 0
+
+        def read(self, size):
+            self.reads += 1
+            if self.reads == 1:
+                return b'{"first":1}\n'
+            if self.reads == 2:
+                arrives.wait(30)
+                return cancel.encode("utf-8")
+            return b""
+
+    def watch(line):
+        if line == cancel:
+            seen.set()
+
+    async def run():
+        reader = StandardInputLines(Raw(), watch=watch)
+        assert await reader.__anext__() == '{"first":1}\n'
+        ask = asyncio.ensure_future(reader.__anext__())
+        await asyncio.sleep(0)          # the next line asked for
+        # The loop held, as a plain tool holds it, while the line comes
+        arrives.set()
+        held = seen.wait(10)
+        return held, await ask
+
+    assert asyncio.run(asyncio.wait_for(run(), 30)) == (True, cancel)
 
 
 # ---------------------------------------------------------------------------

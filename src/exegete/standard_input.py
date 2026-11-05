@@ -15,6 +15,12 @@ blocked in that reader holds the reader's lock, and the interpreter,
 closing the reader at exit, then stops with a fatal error ("could not
 acquire lock ... possibly due to daemon threads").
 
+Each line is also shown to a watch, when one is given, in the thread as
+it is read and before the loop has it (v0.15.3: server.py gives
+standard_output.read_cancel, so that the app's cancel of a request is
+known while a tool holds the loop). Nothing the watch does stops the
+lines.
+
 A line ends at "\\n" alone, the framing of MCP over standard input, so
 an empty line stays the line "\\n". Each line is decoded as UTF-8 whole,
 a bad byte replaced, as the library decodes it, so a character whose
@@ -50,10 +56,12 @@ class StandardInputLines:
     asked for; what followed it in the same read waits for the next ask.
     """
 
-    def __init__(self, raw=None):
+    def __init__(self, raw=None, watch=None):
         # A FileIO, or on Windows the console's own stream; a stand-in in
         # the tests
         self._raw = sys.stdin.buffer.raw if raw is None else raw
+        # Called in the thread with each line read, or None
+        self._watch = watch
         self._rest = b""                  # the thread's alone
         self._asks: "queue.SimpleQueue" = queue.SimpleQueue()
         self._thread = None
@@ -111,10 +119,22 @@ class StandardInputLines:
                 # A read error, or a stream closed: raised in the
                 # library's reader, as before
                 line = error
+            else:
+                self._watched(line)
             finally:
                 handed = _hand_over(loop, answer, line)
             if not (handed and isinstance(line, str) and line):
                 return   # the loop closed, the end of input, or an error
+
+    def _watched(self, line: str) -> None:
+        """The line to the watch, if there is one; whatever the watch
+        does, the line is handed over next."""
+        if self._watch is None or not line:
+            return
+        try:
+            self._watch(line)
+        except Exception:
+            pass
 
 
 def _hand_over(loop, answer, line) -> bool:

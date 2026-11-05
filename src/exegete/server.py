@@ -19925,6 +19925,14 @@ _OCCURRENCES_NEXT_TO_OPEN = (
     "for them shows each id where it stands in the text, and "
     "occurrences_page says where it is, since it did not open. "
     + _OCCURRENCES_NEXT_THEN)
+# The block's note where it lists the first OCCURRENCES_LISTED alone and a
+# page was written, opened or not: a list is matched against every id
+# issued for the text, listed or not, so any id from the page may be
+# given. Without a page the block lists the first ones and says how many
+# more, and occurrences_page says why there is none
+_OCCURRENCES_LISTED_IN_PART_NOTE = (
+    "The page shows every occurrence with its id; the researcher may give "
+    "any of them, listed here or not.")
 
 
 def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
@@ -20009,15 +20017,24 @@ def _occurrences_next(preview: Dict[str, Any], page: Any) -> None:
     the one whose place the answer gives for them to open. On the names
     list's path the ids come alone, so without the page the researcher
     could choose only by counting occurrences in text order. Where none
-    was written the block's own note, which names no page, stands."""
+    was written the block's own note, which names no page, stands.
+
+    Where the block lists the first OCCURRENCES_LISTED alone
+    (`listed_in_part`) and the page was written, it gains `note`: the
+    page shows them all, and any of their ids may be given, with a list
+    or without one."""
     if not isinstance(page, dict) or "note" not in page:
         return
     words = (_OCCURRENCES_NEXT_OPENED if page.get("opened")
              else _OCCURRENCES_NEXT_TO_OPEN)
     for item in preview.get("files", []):
         block = item.get("occurrences")
-        if isinstance(block, dict) and "next" in block:
+        if not isinstance(block, dict):
+            continue
+        if "next" in block:
             block["next"] = words
+        if block.get("listed_in_part"):
+            block["note"] = _OCCURRENCES_LISTED_IN_PART_NOTE
 
 
 def _with_occurrences_page(result: Dict[str, Any],

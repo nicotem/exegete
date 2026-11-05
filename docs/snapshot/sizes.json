@@ -124,7 +124,7 @@
     "brief_characters": 14180,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 209280,
+    "tool_definitions_characters": 209565,
     "tools": {
       "add_annotation": {
         "definition_characters": 2238,
@@ -179,8 +179,8 @@
         "description_characters": 2637
       },
       "create_proposed_codes": {
-        "definition_characters": 2340,
-        "description_characters": 1909
+        "definition_characters": 2366,
+        "description_characters": 1935
       },
       "delete_annotation": {
         "definition_characters": 2282,
@@ -327,16 +327,16 @@
         "description_characters": 706
       },
       "propose_codes": {
-        "definition_characters": 3514,
-        "description_characters": 2993
+        "definition_characters": 3540,
+        "description_characters": 3019
       },
       "prune_backups": {
-        "definition_characters": 4041,
-        "description_characters": 3479
+        "definition_characters": 4186,
+        "description_characters": 3623
       },
       "pseudonymise_source": {
-        "definition_characters": 20957,
-        "description_characters": 18658
+        "definition_characters": 20989,
+        "description_characters": 18691
       },
       "query_by_attribute": {
         "definition_characters": 3267,
@@ -363,12 +363,12 @@
         "description_characters": 2273
       },
       "rename_category": {
-        "definition_characters": 1636,
-        "description_characters": 1182
+        "definition_characters": 1664,
+        "description_characters": 1210
       },
       "rename_code": {
-        "definition_characters": 1586,
-        "description_characters": 1152
+        "definition_characters": 1614,
+        "description_characters": 1180
       },
       "rename_file": {
         "definition_characters": 3705,

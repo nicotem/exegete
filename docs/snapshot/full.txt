@@ -3845,8 +3845,8 @@ Safety rules:
 - At least the newest of Exegete's backups is always kept, unless you
   explicitly pass keep_last=0. The newest is the newest by the time in
   its name. A folder whose name is dated ahead of the clock is dated by
-  its folder instead, as list_backups says, so it never counts as the
-  newest.
+  its folder instead, as list_backups says, so it never takes the place
+  of the newest dated by its name.
 
 Two-step by design. Call without preview_token: nothing is removed and
 the result is a preview of exactly which folders would go and how much
@@ -3865,7 +3865,8 @@ Exegete/Names to replace.txt), which a backup copies too. A project
 is not pseudonymised while those copies sit beside it, so once a run
 is verified, pruning is part of finishing it. Removing them also
 removes recovery points, which is the trade: keep at least one until
-the researcher is sure.
+the researcher is sure. Pruning does not touch the project's own names
+list and names file, which go with the project wherever it is copied.
 
 This does not touch the live project database, so it works even while
 QualCoder has the project open. Each backup is a copy of the whole
@@ -4465,11 +4466,11 @@ Args:
 Returns:
     JSON with recorded proposals (GUIDs for review/approval),
     per-item rejections, and collides_with flags where a proposal
-    name matches an existing code, or would once invisible
-    characters are left out (creation will refuse those unless
-    renamed; consider applying the existing code instead). If it
-    contains `position_safety_warning`, relay it to the researcher
-    before going on.
+    name matches an existing code, or would once characters that
+    usually show nothing on screen are left out (creation will refuse
+    those unless renamed; consider applying the existing code
+    instead). If it contains `position_safety_warning`, relay it to
+    the researcher before going on.
 
 
 ==== Tool propose_codes: the rest of its entry ====
@@ -4839,10 +4840,10 @@ Every approved proposal is checked before the backup and the write.
 Its name must still be unique in the codebook as it is now, and its
 category must exist. A name that matches an existing code exactly, or
 once letter case, spacing and Unicode form are ignored, or once
-invisible characters are left out, refuses the batch: rename the
-proposal first. On any failure nothing is written. Only approved
-proposals are created: a rejected one only if it is approved
-again, a merged one never.
+characters that usually show nothing on screen are left out, refuses
+the batch: rename the proposal first. On any failure nothing is
+written. Only approved proposals are created: a rejected one only if
+it is approved again, a merged one never.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -5304,9 +5305,9 @@ there are some, ask the researcher before writing.
 Args:
     code_id: The code's cid
     new_name: The new name (must not collide with another code,
-              case-insensitively; no invisible characters, nor a name
-              that would newly match another's once invisible
-              characters are left out)
+              ignoring letter case, spacing and Unicode form; no
+              invisible characters, nor a name that would newly match
+              another's once invisible characters are left out)
     create_backup: No longer used: Exegete takes a backup before every
                    change (accepted until the release on method)
 
@@ -5678,9 +5679,9 @@ there are some, ask the researcher before writing.
 Args:
     category_id: The category's catid
     new_name: The new name (must not collide with another category,
-              case-insensitively; no invisible characters, nor a name
-              that would newly match another's once invisible
-              characters are left out)
+              ignoring letter case, spacing and Unicode form; no
+              invisible characters, nor a name that would newly match
+              another's once invisible characters are left out)
     create_backup: No longer used: Exegete takes a backup before every
                    change (accepted until the release on method)
 
@@ -6276,11 +6277,11 @@ Pseudonymised data is still personal data and is often
 re-identifiable from context. This reduces risk; it does not
 anonymise (PRIVACY.md).
 
-One file per call: file_id gives the file, so each file gets the
-mapping that is right for it. To pseudonymise a project, run it file
-by file; with use_project_pseudonyms the mapping is read from the
-project's own pseudonyms.json each time, and with a typed mapping the
-mapping is repeated on each call. The notes and the report always
+One file per call: file_id gives the file, so that each file can be
+given the mapping that is right for it. To pseudonymise a project, run
+it file by file; with use_project_pseudonyms the mapping is read from
+the project's own pseudonyms.json each time, and with a typed mapping
+the mapping is repeated on each call. The notes and the report always
 cover the whole project.
 
 Two people who share a name: one file per call gives each their own
@@ -6317,13 +6318,13 @@ but not a PDF QualCoder 3.8.2 stored as the file itself, which holds
 no text. A name inside a longer word is reported and never
 substituted.
 
-The backup keeps the real names, and so does pseudonyms.json if the
-researcher keeps one: both lead back from the pseudonyms to the
-names, so they belong somewhere secure. The run record Exegete
-writes, and the journal entry it can add, never contain an original
-name: a file name, folder name, path or pseudonym that carries one
-is withheld from both, and the file id or the entry number is used
-instead.
+The backup keeps the real names, and so do the names list and names
+file (pseudonyms.json, Exegete/Names to replace.txt) when the project
+has them. Each leads back from the pseudonyms to the names, so they
+belong somewhere secure. The run record Exegete writes, and the
+journal entry it can add, never contain an original name: a file
+name, folder name, path or pseudonym that carries one is withheld
+from both, and the file id or the entry number is used instead.
 
 After the run, re-read the file before any further coding: every
 position after the first replacement in it has changed, and any
@@ -6447,13 +6448,12 @@ Args:
              be added on the execute call.
 
              On a typed mapping the execute is refused unless one of
-             these two is true, since without a record of the mapping
-             nobody can say later who each pseudonym was. With
-             use_project_pseudonyms the file is the record and neither
-             may be given. The transport turns 1, "1", "true", "yes",
-             "on", "t" and "y" into true for each of these three
-             switches before Exegete sees it, and 0, "0", "false",
-             "no" and "off" into false.
+             these two is true, since Exegete keeps no record of who
+             each pseudonym was. With use_project_pseudonyms the file
+             is the record and neither may be given. The transport
+             turns 1, "1", "true", "yes", "on", "t" and "y" into true
+             for each of these three switches before Exegete sees it,
+             and 0, "0", "false", "no" and "off" into false.
     preview_token: The token from this operation's preview; omit it
              to get the preview.
     allow_hidden_coder: Required when the preview says this run would

@@ -4351,9 +4351,8 @@ class TestKeepingTheMapping:
         assert refused["reason"] == "mapping_retention_required"
         assert refused["nothing_changed"] is True
         assert refused["error"].startswith(
-            "This run applies a mapping you typed, and without a record of "
-            "it nobody can say later who each pseudonym was. Nothing was "
-            "written.")
+            "This run applies a mapping you typed, and Exegete keeps no "
+            "record of who each pseudonym was. Nothing was written.")
         _house_rules([refused["error"]])
         assert backups(project) == []
         assert query(project, "SELECT fulltext FROM source WHERE id=1"
@@ -4426,10 +4425,9 @@ class TestKeepingTheMapping:
         assert block["required"] is True and block["chosen"] is None
         assert "if_saved" not in block
         assert block["note"] == (
-            "This run applies a mapping you typed. Without a record of it "
-            "nobody can say later who each pseudonym was, so the run is "
-            "refused until the call says where the mapping is kept. To save "
-            "it into "
+            "This run applies a mapping you typed. Exegete keeps no record "
+            "of who each pseudonym was, so the run is refused until the call "
+            "says where the mapping is kept. To save it into "
             "the project's own pseudonyms.json in QualCoder's format, "
             "preview again with save_mapping_to_project=true: that argument "
             "is bound into the token, and the preview then shows what the "
@@ -4540,12 +4538,14 @@ class TestKeepingTheMapping:
         note = [n for n in result["notes"]
                 if n.startswith("The mapping you gave")]
         assert note == [
-            "The mapping you gave, with the backup that holds the real "
-            "names, is what leads back from each pseudonym of this run to "
-            "its name. Exegete does not keep the mapping unless asked. On "
-            "this run the call attested that the researcher keeps their own "
-            "record; make sure that is true now, because nothing else can "
-            "say later who each pseudonym was."]
+            "The mapping you gave leads back from each pseudonym of this "
+            "run to its name. So does every copy of the file's text from "
+            "before the run, among them the backup Exegete took first, "
+            "every older backup and, for an imported document, its stored "
+            "copy in the project's documents/ folder. Exegete does not keep "
+            "the mapping unless asked. On this run the call attested that "
+            "the researcher keeps their own record. Make sure that is true "
+            "now."]
         _house_rules(result["notes"])
 
     @pytest.mark.parametrize("source", ["typed", "sidecar"])
@@ -4624,9 +4624,12 @@ class TestSavingTheMappingIntoPseudonymsJson:
         notes = result["notes"]
         mapping_note = [n for n in notes if n.startswith("The mapping you")]
         assert mapping_note == [
-            "The mapping you gave, with the backup that holds the real "
-            "names, is what leads back from each pseudonym of this run to "
-            "its name. Exegete does not keep the mapping unless asked. On "
+            "The mapping you gave leads back from each pseudonym of this "
+            "run to its name. So does every copy of the file's text from "
+            "before the run, among them the backup Exegete took first, "
+            "every older backup and, for an imported document, its stored "
+            "copy in the project's documents/ folder. Exegete does not keep "
+            "the mapping unless asked. On "
             "this run it was saved into the project's own pseudonyms.json "
             "(3 entries added). Later imports apply it: Exegete's "
             "import_documents by default, import_text_file when asked, and "
@@ -8504,9 +8507,12 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "re-identifiable from context. This reduces risk; it does not "
          "anonymise (PRIVACY.md)."),
         ("the_backup_is_the_reverse_key",
-         "The backup keeps the real names, and so does pseudonyms.json if "
-         "the researcher keeps one: both lead back from the pseudonyms to "
-         "the names, so they belong somewhere secure."),
+         # (the served texts' second batch, fix round 1: the names file
+         # named beside the names list)
+         "The backup keeps the real names, and so do the names list and "
+         "names file (pseudonyms.json, Exegete/Names to replace.txt) when "
+         "the project has them. Each leads back from the pseudonyms to the "
+         "names, so they belong somewhere secure."),
         ("the_manifest_and_journal_hold_no_original",
          "The run record Exegete writes, and the journal entry it can "
          "add, never contain an original name"),
@@ -8571,9 +8577,10 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "one that had to be clamped because its stored end lay past the "
          "end of the text."),
         ("one_file_per_call",                            # v0.13 decision A
-         # (the served texts' second batch: a file, not a participant's)
-         "One file per call: file_id gives the file, so each file gets the "
-         "mapping that is right for it. "
+         # (the served texts' second batch: a file, not a participant's;
+         # fix round 1: what one file per call makes possible)
+         "One file per call: file_id gives the file, so that each file can "
+         "be given the mapping that is right for it. "
          "To pseudonymise a project, run it file by file; with "
          "use_project_pseudonyms the mapping is read from the project's "
          "own pseudonyms.json each time, and with a typed mapping the "
@@ -8653,9 +8660,11 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "which may be added on the execute call."),
         ("a_typed_mapping_must_be_kept",                 # point 6
          # (the served texts' second batch: why, in plain words)
+         # (fix round 1: what Exegete keeps, since the backups and an
+         # imported document's stored copy lead back too)
          "On a typed mapping the execute is refused unless one of these two "
-         "is true, since without a record of the mapping nobody can say "
-         "later who each pseudonym was. With use_project_pseudonyms the "
+         "is true, since Exegete keeps no record of who each pseudonym "
+         "was. With use_project_pseudonyms the "
          "file is the record and neither may be given."),
         ("the_save_preview_confirms_names",      # fix round 1, S-4; 2, RS-1
          # (the readability reading: its two points in sentences of

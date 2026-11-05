@@ -30,10 +30,19 @@ else here follows from the design reviewed before it was written:
   successful tool answer (`exegete_notice`), so that hosts which read
   only a tool's structured content (Codex) see it too. It goes first in
   that answer, and only into an answer of at most NOTE_MAX_ANSWER
-  characters, since it counts as given once added: a host that cuts a
-  long answer keeps its start, and a short answer is read whole.
+  characters, since it counts as given once that answer has gone out: a
+  host that cuts a long answer keeps its start, and a short answer is
+  read whole.
 - **A note after an update**, once, with the installed version's own
-  summary.
+  paragraph on what is new (release.py) and a link to its notes.
+- **Given once written out** (v0.15.3). What Exegete tells once (the
+  three notes, and what check_for_updates' own answer tells: the
+  disclosure, a newer version) is recorded as told only once the answer
+  telling it has been written to standard output and flushed
+  (standard_output.py; `give` and `written` below). One cut short, by a
+  stop or the app's cancel, comes in a later answer or at the next
+  start. In process, where nothing writes the answers out (the suite,
+  the snapshot), it is recorded as it is added.
 - **Never a reason to fail.** Every network, file and parsing problem
   ends as "could not check" and one line in the log naming the kind of
   problem only.
@@ -105,10 +114,10 @@ ASKED_REUSE = DAY              # the check when asked
 FIRST_CHECK_WAIT = 7 * DAY     # after the disclosure note
 ANNOUNCED_KEEP = 20
 # The longest answer a note rides on, in characters (about 5,000 tokens).
-# A note counts as given once it is added, so it waits for an answer short
-# enough to be read whole, rather than ride at the end of a long one that
-# a host may cut or an assistant skim (the code review of pull request
-# #11). Ordinary answers (a project, a list, a page of results) are well
+# A note counts as given once the answer carrying it has gone out, so it
+# waits for an answer short enough to be read whole, rather than ride at
+# the end of a long one that a host may cut or an assistant skim (the
+# code review of pull request #11). Ordinary answers (a project, a list, a page of results) are well
 # under it; a whole transcript or a long page of codings may not be.
 NOTE_MAX_ANSWER = 20_000
 USER_AGENT = names.SERVER_NAME
@@ -843,6 +852,12 @@ class _Run:
         self.after_update = False
         self.recorded = False
         self.given: set = set()
+        # v0.15.3: the notes given in answers not yet written out, by the
+        # request id of the answer carrying them, each with the time it
+        # was given; and whether this run writes its answers through
+        # standard_output.py, which settles them (off in process)
+        self.held: Dict[Any, List[Tuple["Note", float]]] = {}
+        self.after_writing = False
         self.thread: Optional[threading.Thread] = None
         self.windows = os.name == "nt"
         # What this run itself set, kept in memory as well as in the
@@ -1124,14 +1139,66 @@ def mark_given(note: Note, now: Optional[float] = None) -> None:
             update_state(_announce(version), now)
 
 
+def give(note: Note, request_id: Any = None,
+         now: Optional[float] = None) -> None:
+    """`note`, given in the answer to request `request_id` (v0.15.3).
+    Once this run writes its answers through standard_output.py, the
+    note is held until that answer has been written out (`written`), and
+    no other answer in this run carries it meanwhile. Otherwise, or with
+    no request id (in process), it is recorded at once (`mark_given`)."""
+    now = time.time() if now is None else now
+    with _LOCK:
+        if _run.after_writing and request_id is not None:
+            _run.given.add(note.key)
+            _run.held.setdefault(request_id, []).append((note, now))
+            return
+    mark_given(note, now)
+
+
+def written(request_id: Any, delivered: bool) -> None:
+    """The answer to `request_id` has been written out and flushed.
+    Delivered (a result not marked as an error), its notes are recorded
+    as given, each with the time it was given; otherwise (an error, the
+    app's cancel among them) they are due again, and the next answer
+    carries them. The first answer for an id settles it: a later one,
+    such as a cancel's error crossing the result, finds nothing held."""
+    with _LOCK:
+        notes = _run.held.pop(request_id, None)
+        if not notes:
+            return
+        if not delivered:
+            # Due again, unless another answer still holds the same note
+            still = {note.key for others in _run.held.values()
+                     for note, _ in others}
+            for note, _ in notes:
+                if note.key not in still:
+                    _run.given.discard(note.key)
+            return
+    for note, when in notes:
+        mark_given(note, when)
+
+
+def holding() -> bool:
+    """Whether a note waits for its answer to be written out."""
+    with _LOCK:
+        return bool(_run.held)
+
+
+def record_after_writing() -> None:
+    """From now on in this run, a note given with a request id is held
+    until its answer has been written out (standard_output.py)."""
+    with _LOCK:
+        _run.after_writing = True
+
+
 def attach(answer: Any, note: Note) -> Optional[str]:
     """`answer` with the note as its first field, `exegete_notice`, when
     it is a successful JSON object of at most NOTE_MAX_ANSWER characters;
     else None (the note waits for the next answer). First, so that a host
     that cuts a long answer keeps it and an assistant meets it before the
-    data; never in a long answer, since it counts as given once added.
-    The tool's own text is kept as it was, byte for byte, after its
-    opening brace."""
+    data; never in a long answer, since it counts as given once that
+    answer has gone out. The tool's own text is kept as it was, byte for
+    byte, after its opening brace."""
     if not isinstance(answer, str) or len(answer) > NOTE_MAX_ANSWER:
         return None
     try:
@@ -1178,11 +1245,25 @@ def _you_have(installed: str, released: Optional[str]) -> str:
 
 
 def tool_answer(now: Optional[float] = None,
-                tool_available: bool = True) -> str:
+                tool_available: bool = True,
+                notes: Optional[List[Note]] = None) -> str:
     """check_for_updates' answer, as JSON. Makes at most one fetch, and
     none when checking is off, before the first-check date, or when an
-    attempt was made in the last day."""
+    attempt was made in the last day.
+
+    What the answer tells once (the disclosure, a newer version) goes
+    into `notes` when the caller gives a list, for the caller to give
+    once the answer is made (server.py's check_for_updates, v0.15.3);
+    without one it is recorded at once. The answer's words are the same
+    either way."""
     now = time.time() if now is None else now
+
+    def tell(note: Note) -> None:
+        if notes is None:
+            mark_given(note, now)
+        else:
+            notes.append(note)
+
     if not _run.started:
         # A test, or an import without main(): read what main() would
         from . import __version__
@@ -1229,9 +1310,9 @@ def tool_answer(now: Optional[float] = None,
     state = _current_state(now)
     prefix = ""
     if state.get("disclosed_at") is None:
-        # The disclosure, said to the researcher in the answer itself
-        mark_given(Note("disclosure", _disclosure_text(now, tool_available)),
-                   now)
+        # The disclosure, said to the researcher in the answer itself.
+        # Unrecorded, the first check's date below is still seven days on
+        tell(Note("disclosure", _disclosure_text(now, tool_available)))
         prefix = ("This version of Exegete can tell you when a new version "
                   "is out. Once a week at most, and when you ask, it fetches "
                   "a small file from its website, which GitHub hosts. "
@@ -1288,14 +1369,9 @@ def tool_answer(now: Optional[float] = None,
                     f"update.")
     answer["up_to_date"] = False
     answer["release_notes"] = release_notes_link(new)
-    # The researcher has now been told: the notice is not repeated
-    with _LOCK:
-        _run.given.add(f"new version:{newest.version.pep440()}")
-    with _LOCK:
-        _run.memory["announced"] = [newest.version.pep440()] + [
-            v for v in _run.memory.get("announced", [])
-            if v != newest.version.pep440()]
-    update_state(_announce(newest.version), now)
+    # The researcher is told here: the notice is not repeated (recorded
+    # by mark_given, whose text is never used for this key)
+    tell(Note(f"new version:{newest.version.pep440()}", ""))
     when = spoken_date(newest.released)
     second = ("It fixes a problem that could affect your projects: the page "
               "below says what it is, and what to do until you update."

@@ -14,7 +14,10 @@
   `start_coding_session` asks them: a phrase, whole sentences, or a
   whole paragraph or answer, where the workflow guide gave a whole
   answer alone. What an interpretive reading may draw on no longer
-  takes it that your documents are interviews.
+  takes it that your documents are interviews. Near its start, the
+  guide now says that what the assistant reads through Exegete
+  passes through the conversation to the AI provider, unless the
+  model runs on your own computer, and points to PRIVACY.md.
 - The early plans, analyses, research notes and security review kept
   in `docs/history/` since 0.15.1 are no longer among the repository's
   files. Git's history keeps them, and the folder is at the tag of

@@ -577,7 +577,7 @@ def test_write_path_approval_flow(write_project):
     # The approval was recorded (formatted-text response).
     assert "Approved: 1" in upd, upd
     # The write actually happened.
-    assert "CODINGS APPLIED TO DATABASE" in applied, applied[:300]
+    assert "Codings applied to the database" in applied, applied[:300]
     assert "Successfully Applied: 1" in applied, applied[:300]
     # And the coding is genuinely persisted.
     assert verify["segment_count"] == 1, verify

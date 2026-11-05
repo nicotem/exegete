@@ -140,7 +140,7 @@ class TestInductiveLoop:
         rec = _record_one(sid, 1, "I cope by exercising",
                           code="Recovery practices")
         server.update_suggestion_status(sid, approve=[rec["guid"]])
-        assert "CODINGS APPLIED" in server.apply_codings(sid,
+        assert "Codings applied" in server.apply_codings(sid,
                                                          create_backup=False)
 
     def test_evidence_comes_back_to_suggest_not_coded(self, setup_server,
@@ -166,7 +166,7 @@ class TestInductiveLoop:
         guids = [_record_one(sid, 1, x["segment_text"],
                              code="Evidence code")["guid"] for x in passages]
         server.update_suggestion_status(sid, approve=guids)
-        assert "CODINGS APPLIED" in server.apply_codings(sid,
+        assert "Codings applied" in server.apply_codings(sid,
                                                          create_backup=False)
         # P1 invariant on the applied passages
         bad = _one(qualcoder_db_path,

@@ -235,7 +235,7 @@ class TestNoBypassNoCaching:
             "start_pos": 24, "end_pos": 55, "segment_text": FULLTEXT[24:55],
         }]))
         server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])
-        assert "CODINGS APPLIED" in server.apply_codings(sid)
+        assert "Codings applied" in server.apply_codings(sid)
 
     def test_banner_session_is_fully_usable_after_close(self, setup_server,
                                                         qualcoder_db_path):
@@ -252,7 +252,7 @@ class TestNoBypassNoCaching:
             assert rec["recorded_count"] == 1
             server.update_suggestion_status(
                 sid, approve=[rec["recorded"][0]["guid"]])
-            assert "CODINGS APPLIED" in server.apply_codings(sid)
+            assert "Codings applied" in server.apply_codings(sid)
         finally:
             _lock(qualcoder_db_path).unlink()
 
@@ -323,6 +323,6 @@ class TestConcurrencyLadder:
             assert cur["qualcoder_lock"]["state"] == "stale"
             assert "proceed" in cur["qualcoder_lock"]["note"]
             sid = _approved_session(qualcoder_db_path)
-            assert "CODINGS APPLIED" in server.apply_codings(sid)
+            assert "Codings applied" in server.apply_codings(sid)
         finally:
             _lock(qualcoder_db_path).unlink()

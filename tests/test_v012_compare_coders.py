@@ -554,7 +554,7 @@ class TestVisibility:
         project, name = hidden
         out = _compare("TestCoder", "Nobody")
         assert name not in out["error"]
-        assert "hidden in QualCoder" in out["error"]
+        assert "the project hides" in out["error"]
 
     def test_visible_pair_on_a_project_that_hides_others(self, hidden):
         project, name = hidden
@@ -578,7 +578,7 @@ class TestVisibility:
         error = out["error"]
         assert "visible text codings" not in error, error
         assert "hidden coders included" in error, error
-        assert "more coders hidden in QualCoder" not in error, error
+        assert "more coders the project hides" not in error, error
         assert "allow_hidden_coder=true to include hidden coders" not in error
         # Three coders listed, three counted: the old text said three and
         # then added "and 1 more hidden", for a project with three.
@@ -592,7 +592,7 @@ class TestVisibility:
         error = out["error"]
         assert "visible text codings" not in error, error
         assert "hidden coders included" in error, error
-        assert "more coders hidden in QualCoder" not in error, error
+        assert "more coders the project hides" not in error, error
 
     def test_without_the_override_both_listings_stay_verbatim(self, hidden):
         """The control for the two above: the D2 3.11 texts are pinned
@@ -606,14 +606,14 @@ class TestVisibility:
         assert ("coder_a and coder_b are required: this project has 3 "
                 "coders with visible text codings: "
                 "['Second Coder', 'TestCoder', 'Third Coder'] (and 1 more "
-                "coder hidden in QualCoder; pass allow_hidden_coder=true "
+                "coder the project hides; pass allow_hidden_coder=true "
                 "to include hidden coders). Name two of them.") == auto
         assert name not in auto
         unknown = _compare("Nobody", SECOND)["error"]
         assert ("coder_a 'Nobody' has no text codings in this project. "
                 "Coders with visible text codings: "
                 "['Second Coder', 'TestCoder', 'Third Coder'] (and 1 more "
-                "coder hidden in QualCoder; pass allow_hidden_coder=true "
+                "coder the project hides; pass allow_hidden_coder=true "
                 "to include hidden coders).") == unknown
         assert name not in unknown
 

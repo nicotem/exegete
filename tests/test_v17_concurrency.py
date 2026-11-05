@@ -104,7 +104,7 @@ class TestT18ApplyCodingsPrecondition:
         server.update_suggestion_status(
             sid, approve=[out["recorded"][0]["guid"]])
         result = server.apply_codings(sid, create_backup=False)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
 
 
 class TestT18AnnotationPrecondition:

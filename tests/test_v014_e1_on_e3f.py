@@ -100,7 +100,7 @@ class TestRecordingUnderBothRules:
         text = text_of(host_session(lambda c: c.call_tool(
             "apply_codings", {"coding_session_id": sid,
                               "create_backup": False})))
-        assert "CODINGS APPLIED" in text
+        assert "Codings applied" in text
         assert _memos(qualcoder_db_path) == [
             "Reading: explicit (the passage states what the code names)"]
 
@@ -326,7 +326,7 @@ class TestDeleteUnderTheOtherSpelling:
             return sid, guid, applied, deleted
 
         sid, guid, applied, deleted = host_session(drive)
-        assert "CODINGS APPLIED" in str(applied), applied
+        assert "Codings applied" in str(applied), applied
         assert deleted["success"] is True, deleted
         assert deleted["sessions_updated"] == [{
             "coding_session_id": sid, "suggestion_guids": [guid],

@@ -959,7 +959,7 @@ class TestRoundTrip:
         assert "error" not in server.update_suggestion_status(
             sid, approve=guids).lower()
         applied = server.apply_codings(sid)
-        assert "CODINGS APPLIED" in applied, applied
+        assert "Codings applied" in applied, applied
         for code in (parent, child):
             segments = json.loads(server.get_coded_segments(
                 code["code"]["id"]))

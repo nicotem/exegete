@@ -511,7 +511,7 @@ class TestAHiddenCoderIsNeverNamedInARefusal:
         _reopen(qualcoder_db_path)
         out = host("get_coding_frequencies", coder=HIDDEN.upper())
         assert HIDDEN not in json.dumps(out)
-        assert "1 more coder hidden in QualCoder" in out["error"]
+        assert "1 more coder the project hides" in out["error"]
         assert "did_you_mean" not in out
         # Named exactly, a hidden coder is read (the explicit filter's
         # bypass), not refused

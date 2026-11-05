@@ -281,7 +281,7 @@ class TestWriteLoop:
 
         server.update_suggestion_status(sid, approve=guids)
         applied = server.apply_codings(sid, create_backup=True)
-        assert "CODINGS APPLIED" in applied, applied
+        assert "Codings applied" in applied, applied
 
         after_apply = db_counts(proj)
         assert after_apply["code_text"] == before["code_text"] + 5

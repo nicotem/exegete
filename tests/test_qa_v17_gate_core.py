@@ -523,7 +523,7 @@ class TestC7FingerprintRace:
         # the race became a recoverable precondition failure
         server.switch_project(str(p))
         out2 = server.apply_codings(sid)
-        assert "error" in out2 or "CODINGS APPLIED" in out2
+        assert "error" in out2 or "Codings applied" in out2
 
     def test_add_annotation_race_never_anchors_stale(self, tmp_path,
                                                      monkeypatch):

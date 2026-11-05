@@ -412,29 +412,29 @@ class TestARestoreThatBringsBackAList:
 # ---------------------------------------------------------------------------
 
 MAPPING_NOTE = (
-    "The mapping you gave is half of the reverse key for this run; the "
-    "backup is the other half and holds the real names. Exegete does not "
-    "keep the mapping unless asked. On this run it was saved into the "
-    "project's own pseudonyms.json (3 entries added), which later imports "
-    "apply (Exegete's import_documents by default, import_text_file when "
-    "asked; QualCoder's text and transcript imports always) and which "
-    "travels into every later backup; store that file securely once the "
-    "import work is done.")
+    "The mapping you gave, with the backup that holds the real names, is "
+    "what leads back from each pseudonym of this run to its name. Exegete "
+    "does not keep the mapping unless asked. On this run it was saved into "
+    "the project's own pseudonyms.json (3 entries added). Later imports "
+    "apply it: Exegete's import_documents by default, import_text_file when "
+    "asked, and QualCoder's text and transcript imports always. It travels "
+    "into every later backup, so store it securely once the import work is "
+    "done.")
 # Fix round 1: what file order can do is said of QualCoder's imports
 # alone; Exegete's apply the list in one pass.
 ORDER_NOTE = (
-    "Later imports apply pseudonyms.json case-sensitively: Exegete's "
-    "(import_documents by default, import_text_file when asked) in one "
-    "pass, longest name first, so nothing they write is replaced again; "
-    "QualCoder's text and transcript imports one entry at a time, in file "
-    "order. For QualCoder's imports, the new entries were written longest "
-    "name first, so a shorter name inside a longer one does not pre-empt "
-    "it; there an entry already in the file still can (see the warnings), "
-    "two names that overlap without either containing the other (Mary Ann "
-    "and Ann Lee, in Mary Ann Lee) can come out differently from this run, "
-    "and a pseudonym that contains a name from the mapping is rewritten "
-    "again. In Exegete as in QualCoder, under an insensitive case mode "
-    "only the spellings saved are replaced.")
+    "Later imports apply pseudonyms.json case-sensitively. Exegete's "
+    "(import_documents by default, import_text_file when asked) apply it in "
+    "one pass, longest name first, so nothing they write is replaced again. "
+    "QualCoder's text and transcript imports apply it one entry at a time, "
+    "in file order. For QualCoder's imports, the new entries were written "
+    "longest name first, so a shorter name inside a longer one does not "
+    "pre-empt it. There an entry already in the file still can (see the "
+    "warnings), two names that overlap without either containing the other "
+    "(Mary Ann and Ann Lee, in Mary Ann Lee) can come out differently from "
+    "this run, and a pseudonym that contains a name from the mapping is "
+    "rewritten again. In Exegete as in QualCoder, under an insensitive case "
+    "mode only the spellings saved are replaced.")
 # What only QualCoder's file-order imports do, each said after "For
 # QualCoder's imports" and before the sentence on both programs.
 QUALCODER_ONLY = ("pre-empt", "still can", "come out differently",
@@ -500,7 +500,7 @@ class TestARunThatSavedTheMapping:
         assert result["mapping_saved"] is True, result
         notes = [n for n in result["notes"] if n.startswith("The mapping you")]
         assert notes == [MAPPING_NOTE]
-        _before_qualcoder(notes[0][notes[0].index("which later"):],
+        _before_qualcoder(notes[0][notes[0].index("Later imports apply it"):],
                           "Exegete's import_documents by default, "
                           "import_text_file when asked")
 
@@ -529,7 +529,7 @@ class TestARunThatSavedTheMapping:
         for clause in QUALCODER_ONLY:
             assert clause in note, clause
             assert scope < note.index(clause) < both, clause
-        exegetes = note[:note.index("; QualCoder's text and transcript")]
+        exegetes = note[:note.index(" QualCoder's text and transcript")]
         assert "Exegete's (import_documents by default" in exegetes
         assert "nothing they write is replaced again" in exegetes
 

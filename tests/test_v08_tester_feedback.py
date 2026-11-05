@@ -143,7 +143,7 @@ class TestF1aEditCodeAndGates:
         server.update_suggestion_status(sid, approve=[guid])
         out = json.loads(server.edit_suggestion(sid, guid, start_pos=24))
         assert "this one is approved" in out["error"]
-        assert "CODINGS APPLIED" in server.apply_codings(
+        assert "Codings applied" in server.apply_codings(
             sid, create_backup=False)
         out = json.loads(server.edit_suggestion(sid, guid, start_pos=24))
         assert "this one is applied" in out["error"]

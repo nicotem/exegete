@@ -1042,7 +1042,7 @@ def _notice_text(published: Published, tool_available: bool) -> str:
     installed = _run.installed.display() if _run.installed else ""
     ask = ('To update, they can ask: "How do I update Exegete?"'
            if tool_available else f"To update, see {UPDATE_PAGE}")
-    lead = "Note for the user, who sees it only if you pass it on. "
+    lead = "Note for the researcher, who sees it only if you pass it on. "
     if published.important:
         return (lead + "Pass it on calmly, once, after answering their "
                 "request, and before making any further change to a "
@@ -1063,7 +1063,7 @@ def _disclosure_text(now: float, tool_available: bool) -> str:
     when_asked = ", and when they ask," if tool_available else ""
     switch = _switch_off_words(_run.route).replace(
         "To switch it off", "To switch it off before then or at any time")
-    return ("Note for the user, who sees it only if you pass it on. Pass "
+    return ("Note for the researcher, who sees it only if you pass it on. Pass "
             "it on once, briefly, after answering their request. This "
             "version of Exegete can tell them when a new version is out. "
             f"Once a week at most{when_asked} it fetches a small file "
@@ -1091,7 +1091,7 @@ def _after_update_text() -> str:
     described = installed == release.VERSION
     how = ("in the release's own words and with the link" if described
            else "with the link")
-    text = ("Note for the user, who sees it only if you pass it on. Pass "
+    text = ("Note for the researcher, who sees it only if you pass it on. Pass "
             f"it on once, after answering their request, {how}: Exegete "
             f"has been updated to {installed} on this computer, so the "
             "update worked.")
@@ -1340,8 +1340,8 @@ def tool_answer(now: Optional[float] = None,
         else:
             how = (f"To let Exegete check, set "
                    f"{names.NEW_ONLY_SETTINGS['update_check']} to on in "
-                   f"the settings of the app that starts it (INSTALL.md, "
-                   f"\"Environment variables the server reads\").")
+                   f"the settings of the app that starts it (the Terminal "
+                   f"guide, \"Environment variables Exegete reads\").")
         return done("Checking for new versions is switched off, so Exegete "
                     f"made no connection. {have} You can look yourself at "
                     f"{UPDATE_PAGE}. {how}")

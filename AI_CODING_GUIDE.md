@@ -365,17 +365,18 @@ keeps its original name and text.
 
 The names list and the backup each lead back from the pseudonyms to
 the real names on their own. The list pairs each name with its
-pseudonym. The backup taken before the run holds the text as it was,
-real names included, and so does every older backup beside the
-project. Every backup and copy of the project also carries
-`pseudonyms.json` and the names file, when the project has them.
-Anyone who can read one of these can undo the pseudonyms, so they are
-best kept somewhere secure. Exegete's coding sessions, kept outside the
-project, hold each suggested passage word for word, so after a run they
-still hold the real names until `delete_coding_session` removes them.
-The run's answer lists those sessions. Pseudonymised data is still
-personal data. PRIVACY.md says what that means before you send it
-anywhere.
+pseudonym, and so does a mapping typed into the call, in the
+conversation and the host's records of it. The backup taken before the
+run holds the text as it was, real names included, and so does every
+older backup beside the project. Every backup and copy of the project
+also carries `pseudonyms.json` and the names file, when the project
+has them. Anyone who can read one of these can undo the pseudonyms, so
+they are best kept somewhere secure. Exegete's coding sessions, kept
+outside the project, hold each suggested passage word for word, so
+after a run they still hold the real names until
+`delete_coding_session` removes them. The run's answer lists those
+sessions. Pseudonymised data is still personal data. PRIVACY.md says
+what that means before you send it anywhere.
 
 **What happens to my original project?** Exegete changes a project
 made in Exegete directly, with a backup before every change. A project

@@ -768,7 +768,7 @@ class TestSetterValidation:
         _reopen(qualcoder_db_path)
         out = json.loads(server.set_project_ai_coder_name(HIDDEN))
         assert out["error"] == (
-            f"\"{HIDDEN}\" is a coder currently hidden in QualCoder; rows "
+            f"\"{HIDDEN}\" is a coder the project hides; rows "
             f"written under it would not be shown in QualCoder or in "
             f"Exegete's default reads. Pass allow_hidden_coder=true to "
             f"store it anyway, or ask the researcher to unhide the coder in "
@@ -1320,7 +1320,7 @@ class TestRestartResilience:
         del data["ai_coder_name_at_record"]
         path.write_text(json.dumps(data), encoding="utf-8")
         out = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         assert "were recorded while the project's AI coder name" not in out
 
 

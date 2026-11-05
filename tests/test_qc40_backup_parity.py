@@ -99,8 +99,9 @@ class TestTheDatabaseSideFilesAreADeparture:
     set above matches the side files of `*.sqlite` files, never the
     database's, `data.qda-journal`, `-wal` and `-shm`, so QualCoder's own
     backups copy those with the database, as a file. Exegete's backups
-    copy the database with SQLite's online backup and never copy them
-    (tests/test_v014_existing_projects.py): list_backups' description
+    copy the database with SQLite's online backup and do not copy them
+    (tests/test_v014_existing_projects.py), except a database SQLite
+    cannot read, copied as a file with them: list_backups' description
     says so as a departure, and never that QualCoder's backups leave the
     database's side files out."""
 
@@ -118,8 +119,14 @@ class TestTheDatabaseSideFilesAreADeparture:
                          .description or "").split())
         assert "QualCoder's own backups copy the database as a file." \
             in text
-        assert "the database's journal and WAL files are never copied" \
+        assert "the database's journal and WAL files are not copied" \
             in text
+        # The served texts' second batch: the one exception, a database
+        # SQLite cannot read, which a backup copies as a file with its
+        # side files (database._copy_database; _DATABASE_AS_FILE_NOTE)
+        assert ("unless SQLite cannot read the database: then it is "
+                "copied as a file, side files and all") in text
+        assert "are never copied" not in text
         sentences = re.split(r"(?<=\.) (?=[A-Z])", text)
         alike = [s for s in sentences if "like qualcoder" in s.lower()
                  and "unlike" not in s.lower()]
@@ -661,7 +668,7 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
         link = self._plant(qualcoder_db_path, tmp_path)
         session = _approved_session(setup_server, qualcoder_db_path)
         text = server.apply_codings(session.session_id, create_backup=True)
-        assert "CODINGS APPLIED" in text
+        assert "Codings applied" in text
         assert "Backup created" in text
         assert "backup_skipped_symlinks: 1 (" in text
         assert os.path.join("documents", "leak.txt") in text
@@ -673,7 +680,7 @@ class TestSkippedSymlinksSurfacedByEveryBackupTaker:
         session = _approved_session(setup_server, qualcoder_db_path,
                                     span=(57, 77), text="I cope by exercising")
         text = server.apply_codings(session.session_id, create_backup=True)
-        assert "CODINGS APPLIED" in text
+        assert "Codings applied" in text
         assert "skipped" not in text
 
     def test_restore_safety_backup_reports_skipped(self, setup_server,

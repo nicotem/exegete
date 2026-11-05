@@ -69,7 +69,7 @@ def _apply_one(file_id=1, code_name="Stress", start=24, end=55,
     assert rec["recorded_count"] == 1, rec
     server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])
     result = server.apply_codings(sid, create_backup=False)
-    assert "CODINGS APPLIED" in result, result
+    assert "Codings applied" in result, result
     return sid
 
 
@@ -267,7 +267,7 @@ class TestTextPositions:
         }]))
         assert rec["recorded_count"] == 1
         server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])
-        assert "CODINGS APPLIED" in server.apply_codings(sid, create_backup=False)
+        assert "Codings applied" in server.apply_codings(sid, create_backup=False)
         row = _sql(qualcoder_db_path,
                    "SELECT seltext FROM code_text WHERE fid=75")[0]
         assert row["seltext"] == "one\npara"       # stored slice, not the U+2029 form

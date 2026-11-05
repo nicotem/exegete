@@ -499,7 +499,7 @@ class TestApplyCodings:
         server.update_suggestion_status(session.session_id, approve=[guid])
 
         result = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
         assert "1 codings" in result
 
     def test_apply_with_no_approved(self, session_with_suggestions):
@@ -518,7 +518,7 @@ class TestApplyCodings:
         server.update_suggestion_status(session.session_id, approve=[guid])
 
         result = server.apply_codings(session.session_id, create_backup=True)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
         assert "Backup created" in result
 
 

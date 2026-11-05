@@ -692,6 +692,6 @@ class TestHeartbeatProtocol:
             "segment_text": FULLTEXT[24:55]}]))
         server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])
         result = server.apply_codings(sid)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
         assert seen == {"exists": True, "holder": getpass.getuser()}
         assert not _lock(qualcoder_db_path).exists()

@@ -133,11 +133,11 @@ APPLY = ("position_safety_warning: file(s) ['emoji.txt'] contain Windows "
          "line breaks or characters beyond U+FFFF (such as emoji); if the "
          "project is opened in QualCoder, these codings may show shifted or "
          "unhighlighted in its editor (reports and exports are unaffected). "
-         "Relay this to the user.")
+         "Relay this to the researcher.")
 EVIDENCE = ("Evidence file(s) ['emoji.txt'] contain Windows line breaks or "
             "characters beyond U+FFFF (such as emoji); if the project is "
             "opened in QualCoder, codings on them may show shifted in its "
-            "editor. Relay this to the user.")
+            "editor. Relay this to the researcher.")
 ANNOTATE = ("File 'emoji.txt' contains Windows line breaks or characters "
             "beyond U+FFFF (such as emoji); if the project is opened in "
             "QualCoder, this annotation's span may show shifted in its "
@@ -215,9 +215,9 @@ WHY_SUBTITLES = (
     "use it, imports one only as a recording's transcript, so there is no "
     "QualCoder reading to match.)")
 SUBTITLES = (
-    "A subtitle file comes in line by line, with its timings and numbers; "
-    "if your transcription tool can export a Word or text file, that reads "
-    "more easily. Brought in as a document, it cannot later become a "
+    "A subtitle file comes in line by line, with its timings and numbers. "
+    "If your transcription tool can export a Word or text file, that is "
+    "easier to read. Brought in as a document, it cannot later become a "
     "recording's transcript (a link QualCoder makes when it imports a "
     "subtitle file with its recording), so its codings stay on the "
     "document.")
@@ -325,7 +325,7 @@ class TestThePositionWarning:
         guid = _record(sid, emoji_file)["recorded"][0]["guid"]
         server.update_suggestion_status(sid, approve=[guid])
         out = server.apply_codings(sid)
-        assert "CODINGS APPLIED" in out, out
+        assert "Codings applied" in out, out
         assert APPLY + "\n" in out
 
     def test_propose_codes(self, emoji_file):

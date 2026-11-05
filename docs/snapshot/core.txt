@@ -388,16 +388,20 @@ project with the same name already exists in the workspace, the copy
 gets a timestamped name.
 
 The copy holds the whole project folder, including ai_data/ (QualCoder's
-AI prompt library and chat history, the researcher's data). Like
-a backup, it leaves out ai_data/search.sqlite, which QualCoder 4.0
-rebuilds when it opens the copy, the database's side files (its journal
-and WAL files among them) and lock files. Unlike a backup, it keeps the
-audio and video folders. A copy of a project without an ai_data folder
-gets an empty one, as a new project does. The database is copied with
-SQLite's own online backup, so a copy taken while another program is
-writing to the project holds what was last committed. That program's
-saves wait while the copy runs; on a database of about 4 GB or more, a
-save in an open QualCoder window can fail. Symlinks that point outside
+AI prompt library and chat history, the researcher's data) and any
+names list and names file (pseudonyms.json, Exegete/Names to
+replace.txt), with the real names in them. Like a backup, it leaves
+out ai_data/search.sqlite, which
+QualCoder 4.0 rebuilds when it opens the copy, the database's side
+files (its journal and WAL files among them) and lock files. Unlike a
+backup, it keeps the audio and video folders. A copy of a project
+without an ai_data folder gets an empty one, as a new project does.
+The database is copied with SQLite's own online backup, so a copy
+taken while another program is writing to the project holds what was
+last committed. That program's saves wait while the copy runs; on a
+database of about 4 GB or more, a save in an open QualCoder window can
+fail. A database SQLite cannot read is copied as a file, side files
+and all, and the answer says so. Symlinks that point outside
 the project folder, or lead nowhere, are not followed: they are skipped
 and reported (skipped_symlinks, with names), so a shared or untrusted
 project folder cannot pull outside files into the copy. A symlink loop
@@ -2069,9 +2073,9 @@ Example:
 ==== Tool apply_codings: its description ====
 Apply approved coding suggestions to the project database.
 
-THIS WRITES TO THE DATABASE. This is the final step that actually modifies
-your project. Only approved suggestions will be applied. Exegete takes a
-backup of the project first, as before every change.
+It writes to the database: this is the step that changes the
+researcher's project. Only approved suggestions are applied. Exegete
+takes a backup of the project first, as before every change.
 
 Text containing '#####', QualCoder's private-note marker, is refused before anything is written or backed up: what follows it is the researcher's own, not the assistant's to write.
 
@@ -2081,23 +2085,24 @@ Safety guarantees:
   to it) or another program is writing to the database; for
   QualCoder 4.0, get_current_project shows any signs of an open
   window, and if there are some, ask the researcher before writing.
-- The session must belong to the CURRENTLY OPEN project; applying a
+- The session must belong to the project open now; applying a
   session to a different project is refused.
 - If the success output contains `position_safety_warning`, relay it
-  to the user: the written file is position-unsafe (emoji/CRLF) and
-  the codings may render shifted in QualCoder's editor.
-- Every approved suggestion is re-validated BEFORE the backup and the
+  to the researcher: the file holds Windows line breaks or characters
+  beyond U+FFFF, such as emoji, so if the project is opened in
+  QualCoder, the codings can show shifted there.
+- Every approved suggestion is checked again before the backup and the
   write: the file must exist and be a text source, the code must exist,
-  and the segment text must match the file text at the stored positions.
-  If anything fails validation, nothing is written and no backup is made.
+  and the passage must match the file text at the stored positions.
+  If anything fails the check, nothing is written and no backup is made.
 - All codings are written in a single all-or-nothing transaction.
-- Applied suggestions are marked "applied" so the session cannot be
-  double-applied by accident.
+- Applied suggestions are marked "applied", so the session cannot be
+  applied twice by accident.
 - An approved suggestion whose identical coding (same code, file,
   span and coder) is already in the project is not written again: it
   is marked applied, listed in the result as already in the database
   with its ctid, and the rest are written as one batch. When every
-  approved suggestion already exists nothing is written and no
+  approved suggestion already exists, nothing is written and no
   backup is made.
 
 Args:
@@ -2298,7 +2303,9 @@ time, as QualCoder's do, so in the hour after the clocks go back two
 backups can be listed out of order.
 
 Backups hold the whole project folder, including ai_data/ (QualCoder's
-AI prompt library and chat history, which cannot be rebuilt). Like
+AI prompt library and chat history, which cannot be rebuilt) and any
+names list and names file (pseudonyms.json, Exegete/Names to
+replace.txt), with the real names in them. Like
 QualCoder 4.0's own backups, they leave out ai_data/search.sqlite, the
 AI search index, and the side files of every .sqlite file. The index
 holds the text of every source, and QualCoder 4.0 rebuilds it when it
@@ -2308,8 +2315,9 @@ video folders too; one made earlier may hold files in them
 database as a file. Exegete copies it with SQLite's own online backup
 instead, so a backup taken while another program is writing to the
 project holds what was last committed, and the database's journal and
-WAL files are never copied. A backup that holds them (copied
-mid-write, or made before v0.14) is marked `unclean`, and
+WAL files are not copied, unless SQLite cannot read the database:
+then it is copied as a file, side files and all. A backup that holds them
+(copied mid-write, or made before v0.14) is marked `unclean`, and
 restore_backup refuses it. Unlike QualCoder's backups, symlinks that
 point outside the project folder, or lead nowhere, are not followed:
 they are skipped and the write result reports them
@@ -2695,13 +2703,13 @@ Example:
 ==== Tool create_code: its description ====
 Create a new code in the codebook.
 
-THIS WRITES TO THE DATABASE. Adds a code that can then be applied to
-segments. Code names are unique across the whole codebook (no
-per-category scope) and compared case-insensitively. The colour
-defaults to a random pick from QualCoder's own palette (like
-GUI-created codes).
+It writes to the database. Adds a code that can then be applied to
+passages. Code names are unique across the whole codebook (no
+per-category scope) and compared ignoring letter case. Without a
+colour, the code gets one picked at random from QualCoder's palette,
+as a code made in QualCoder does.
 
-IDEMPOTENT: if a code with this name already exists (ignoring letter
+Idempotent: if a code with this name already exists (ignoring letter
 case, spacing and Unicode form), nothing is written and no backup is
 made; the result is `created: false, reason: already_exists` with the
 existing row under `code` (use its id), `match` (exact or
@@ -2711,8 +2719,8 @@ supplied memo is never applied to an existing code (set_memo does
 that). Successful creates carry `created: true`. Whitespace runs in
 the name collapse to one space.
 
-SUB-CODES (projects with schema v16 or newer only): pass
-parent_code_id to nest the new code under an existing CODE instead of
+Sub-codes (projects with schema v16 or newer only): pass
+parent_code_id to nest the new code under an existing code instead of
 a category. A code has either a parent code or a category, never
 both; on projects without sub-code support the parameter is refused.
 

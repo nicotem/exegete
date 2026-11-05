@@ -89,7 +89,7 @@ def test_the_paragraph_on_two_people_gives_the_second_run():
     description = _tools()[TOOL].description or ""
     flat = _flat(description)
     start = flat.index(PARAGRAPH)
-    paragraph = flat[start:flat.index("What this does NOT rewrite", start)]
+    paragraph = flat[start:flat.index("What this does not rewrite", start)]
     # The sentence that names both arguments speaks of a second run
     named = [sentence for sentence in re.split(r"(?<=\.) ", paragraph)
              if all(name in sentence for name in ARGUMENTS)]

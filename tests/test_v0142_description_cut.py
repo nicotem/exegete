@@ -87,7 +87,10 @@ RULES = {
     "grounding_record": (
         "grounding", "Grounding: reasoning states, in a sentence or two",
         None),
-    "grounding_propose": ("grounding", "GROUNDING (inductive coding):",
+    # (the served texts' second batch moved the first words of eight
+    # rules out of capitals, or into the researcher's name; the rules and
+    # their carriers are the same)
+    "grounding_propose": ("grounding", "Grounding (inductive coding):",
                           None),
     "grounding_rules": (
         "grounding", "Grounding rules (every analysis tool expects these):",
@@ -116,14 +119,15 @@ RULES = {
     "suggestion_pairings": (
         "approval", "Span style: as the session's instruction says", None),
     "approved_only": (
-        "approval", "THIS WRITES TO THE DATABASE. This is the final step",
+        "approval", "It writes to the database: this is the step that "
+        "changes the researcher's project",
         None),
     "decide_again": ("approval", "Only pending suggestions are editable.",
                      None),
     "approve_on_the_users_word": (
         "approval", "Use this to record the researcher's decisions", None),
     "proposal_workflow_approval": (
-        "approval", "WORKFLOW: start_coding_session creates a session", None),
+        "approval", "Workflow: start_coding_session creates a session", None),
     "ask_for_the_coder_name": (
         "approval", "Covers codings, annotations, journal entries", None),
     "researchers_coder_name": ("approval", "The researcher's coder name:",
@@ -136,7 +140,7 @@ RULES = {
     # v0.15.0 (not presuming QualCoder, piece 5), the write tools'
     # sentence: qualcoder_open_refusal, whose carriers now include it
     "apply_other_project_refused": (
-        "refusal", "The session must belong to the CURRENTLY OPEN project",
+        "refusal", "The session must belong to the project open now",
         "is refused."),
     "relay_open_warning": (
         "safety", "The result may include a `warning`; relay it.", None),
@@ -156,24 +160,25 @@ RULES = {
     "category_merge_destructive": (
         "approval", "It deletes the source category: preview first, then "
         "confirm.", None),
-    "prune_destructive": ("approval", "DESTRUCTIVE to your recovery points",
-                          None),
+    "prune_destructive": ("approval", "It removes recovery points: preview "
+                          "first, then execute", None),
     "prune_safety_rules": ("safety", "Safety rules:", None),
     "restore_replaces_state": (
         "safety", "This replaces the project as it is now", None),
     # Pseudonymisation
-    "rewrites_source_text": ("safety", "THIS REWRITES SOURCE TEXT", None),
+    "rewrites_source_text": ("safety", "It rewrites the file's stored text",
+                             None),
     "relay_preview_residue": (
         "approval", "Preview first, relay the counts, the collisions and "
         "the residue", None),
     "only_mapped_names": (
-        "safety", "Deterministic and rule-based. ONLY the names in the "
+        "safety", "Deterministic and rule-based. Only the names in the "
         "mapping", None),
     "still_personal_data": (
         "safety", "Pseudonymised data is still personal data", None),
     "names_left_unrewritten": (
-        "safety", "What this does NOT rewrite, and where the names will "
-        "remain", None),
+        "safety", "What this does not rewrite, so the names remain there",
+        None),
     "backup_keeps_real_names": (
         "safety", "The backup keeps the real names", None),
     "shared_name": ("safety", "Two people who share a name", None),

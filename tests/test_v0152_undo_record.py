@@ -714,7 +714,7 @@ class Route:
     def made(self, text):
         """The change answered as made, its backup named."""
         if self.name == "apply_codings":
-            return "CODINGS APPLIED" in text and "Backup created" in text
+            return "Codings applied" in text and "Backup created" in text
         done = answer(text)
         return "error" not in done and bool(done.get("backup_path"))
 
@@ -1417,7 +1417,7 @@ def test_the_projects_names_run_nothing(project, monkeypatch):
     schema = schema_of(project)
     session, guid = approved_session()
     text = server.apply_codings(coding_session_id=session)
-    assert "CODINGS APPLIED" in text and receipt_of(text) in record_files()
+    assert "Codings applied" in text and receipt_of(text) in record_files()
     ctid = database_value(project, "SELECT ctid FROM code_text")
     assert len(ctid) == 1
     record = records()[receipt_of(text)]
@@ -1434,7 +1434,7 @@ def test_the_table_name_alone_runs_nothing(project):
                              "(id integer primary key)")
     session, guid = approved_session()
     text = server.apply_codings(coding_session_id=session)
-    assert "CODINGS APPLIED" in text and receipt_of(text) in record_files()
+    assert "Codings applied" in text and receipt_of(text) in record_files()
     assert database_value(project, "SELECT count(*) FROM code_text") == [(1,)]
 
 

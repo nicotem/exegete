@@ -366,7 +366,7 @@ class TestApplyCodingsSafety:
     def test_applied_status_prevents_double_apply(self, setup_server, qualcoder_db_path):
         session = self._approved_session(setup_server, qualcoder_db_path)
         out = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         # second run: clean explanation, not a unique-constraint blowup
         result = json.loads(server.apply_codings(session.session_id, create_backup=False))
         assert "already applied" in result["error"]

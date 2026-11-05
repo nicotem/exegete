@@ -2,7 +2,7 @@
 """P1-6: MRU hint on "no project selected" errors (approved 2026-08-28).
 
 Every no-project error path appends the machine's most-recently-used
-project ("The last project used on this machine was <path>.") so a
+project ("The last project used on this computer was <path>.") so a
 client whose host recycled the server process recovers with one
 deterministic select_project call. The MRU is recorded on successful
 select_project in ~/.qualcoder_mcp/ (patched to a temp dir in tests);
@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import exegete.server as server
 
 
-HINT_PHRASE = "The last project used on this machine was"
+HINT_PHRASE = "The last project used on this computer was"
 
 
 @pytest.fixture

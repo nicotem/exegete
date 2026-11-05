@@ -2518,7 +2518,7 @@ class TestOneProjectUnderTwoSpellings:
         assert session in {s["coding_session_id"]
                            for s in listed["sessions"]}
         assert "different project" not in str(applied), applied
-        assert "CODINGS APPLIED" in str(applied), applied
+        assert "Codings applied" in str(applied), applied
         assert session in done["stale_sessions"]
 
     def test_letter_case(self, tmp_path):

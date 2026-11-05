@@ -210,7 +210,7 @@ class TestDefaultAttribution:
             session.session_id,
             approve=[session.suggestions[0].guid])
         out = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         row = _row(qualcoder_db_path,
                    "SELECT owner FROM code_text WHERE pos0=0 AND pos1=10")
         assert row["owner"] == DEFAULT_AI_CODER_NAME
@@ -292,7 +292,7 @@ class TestConfiguredAttribution:
 
         # Retrying without the argument writes under the project's name.
         out = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         assert _row(qualcoder_db_path,
                     "SELECT owner FROM code_text WHERE pos0=0 AND pos1=10"
                     )["owner"] == DEFAULT_AI_CODER_NAME

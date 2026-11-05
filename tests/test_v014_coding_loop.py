@@ -203,7 +203,7 @@ class TestTheLabelOnTheWayToTheProject:
         rec = record(sid, item(reading="interpretive"),
                      item(text=COPE, code="Coping"))
         out = approve_and_apply(sid, [r["guid"] for r in rec["recorded"]])
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         memos = [r["memo"] for r in rows(
             qualcoder_db_path, "SELECT memo FROM code_text WHERE owner = "
             "'AI Coding Assistant' ORDER BY pos0")]
@@ -267,7 +267,7 @@ class TestSessionsFromEarlierReleases:
         sid, path = self._old_session(qualcoder_db_path)
         out = call("apply_codings", coding_session_id=sid,
                    create_backup=False)
-        assert "CODINGS APPLIED" in out, out
+        assert "Codings applied" in out, out
         memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "owner = 'AI Coding Assistant'")[0]["memo"]
         assert memo == "old reason"
@@ -289,7 +289,7 @@ class TestSessionsFromEarlierReleases:
         conn.close()
         sid = new_session()
         rec = record(sid, item())
-        assert "CODINGS APPLIED" in approve_and_apply(
+        assert "Codings applied" in approve_and_apply(
             sid, [rec["recorded"][0]["guid"]])
         assert rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "ctid = 2")[0]["memo"] == "r\n\n[AI Confidence: 0.85]"
@@ -973,7 +973,7 @@ class TestOnlyApprovedItemsAreWritten:
         yes, no, _ = [r["guid"] for r in rec["recorded"]]
         call("update_suggestion_status", coding_session_id=sid,
              approve=[yes], reject=[no])
-        assert "CODINGS APPLIED" in call("apply_codings",
+        assert "Codings applied" in call("apply_codings",
                                          coding_session_id=sid,
                                          create_backup=False)
         written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
@@ -1119,7 +1119,7 @@ class TestFixRoundTheLabelBelongsToItsCode:
         review = call("review_suggestions", coding_session_id=sid)
         assert "not given (cleared when the code was changed" in review
         assert "states it" not in review
-        assert "CODINGS APPLIED" in approve_and_apply(sid, [guid])
+        assert "Codings applied" in approve_and_apply(sid, [guid])
         memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "owner = 'AI Coding Assistant'")[0]["memo"]
         assert memo == "reason for Stress"                  # no label
@@ -1985,7 +1985,7 @@ class TestFixRound2WhatGoesInV015:
         assert refused["removed"] == {"owner": server.REMOVED_ARGUMENTS[
             ("apply_codings", "owner")]}
         applied = call("apply_codings", coding_session_id=sid)
-        assert "CODINGS APPLIED" in applied        # a text answer
+        assert "Codings applied" in applied        # a text answer
         assert "removed in 0.15.1" not in applied
         refused = jcall("import_text_file", filename="a.txt",
                         content="text", owner="Somebody Else")

@@ -580,7 +580,7 @@ and the coding-session tools end after "'select_project' to open one".
 Ask Claude to list your projects and select one.
 
 When a project was selected before on this computer and still exists,
-the same error ends with "The last project used on this machine was
+the same error ends with "The last project used on this computer was
 <path>. Use select_project with that path to continue with it." Exegete
 reads that path from `~/.exegete/mru_project.json`, which
 `select_project` writes on every selection and `create_project` for

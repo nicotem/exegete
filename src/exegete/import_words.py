@@ -407,7 +407,7 @@ HELD_BACK = {
                           "this import (import_file_names_with_listed_"
                           "names), and it comes in under that name, which "
                           "then reaches the AI provider whenever an answer "
-                          "names the file.",
+                          "gives the file's name.",
     "pdf_listed_names": "This PDF names {people} from your list, "
                         "{times}. Names in a PDF are never replaced, here "
                         "or in QualCoder; if the assistant reads this "
@@ -610,8 +610,8 @@ WARNINGS = {
         "See explain_ai_coding_tools('converted_documents')."),
     "subtitles": ("changes",
         "A subtitle file comes in line by line, with its timings and "
-        "numbers; if your transcription tool can export a Word or text "
-        "file, that reads more easily. Brought in as a document, it "
+        "numbers. If your transcription tool can export a Word or text "
+        "file, that is easier to read. Brought in as a document, it "
         "cannot later become a recording's transcript (a link QualCoder "
         "makes when it imports a subtitle file with its recording), so its "
         "codings stay on the document."),
@@ -641,8 +641,8 @@ WARNINGS = {
     "listed_name_in_file_name": ("information",
         "Its own name holds a name from your names list, and it comes in "
         "under that name, as you said: the name reaches the AI provider "
-        "whenever an answer names the file, and the project's copy of "
-        "the original keeps it."),
+        "whenever an answer gives the file's name, and the project's copy "
+        "of the original keeps it."),
     # v0.15.1: a plain text file read in the character set chosen for it.
     "chosen_reading": ("information",
         "Read as {name}, as chosen: its text is stored as UTF-8, and the "
@@ -710,7 +710,7 @@ NO_READING_OFFERED = (
     "cannot make or control codes no text holds, so no line is shown: it "
     "may be saved in a set not offered (Turkish, Baltic, Hebrew, Arabic, "
     "Thai or Vietnamese, say), or as UTF-16 or UTF-32 without the mark "
-    "at its start that names it.")
+    "at its start that tells which it is.")
 READINGS_TOO_LONG = (
     "Read in any character set that can read it, this file is longer "
     "than Exegete's limit for a document's text, so no line is shown.")

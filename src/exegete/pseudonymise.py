@@ -671,7 +671,7 @@ def validate_mapping(raw: Any, case_mode: str = "exact",
                 f"mapping entry {entry.index}: {shown} "
                 f"is also an original or variant in this "
                 f"mapping. QualCoder's import would chain the two "
-                f"replacements; this tool refuses instead. Choose a "
+                f"replacements; Exegete refuses instead. Choose a "
                 f"pseudonym that does not occur as a name in the mapping.")
 
     by_pseudonym: Dict[str, List[int]] = {}

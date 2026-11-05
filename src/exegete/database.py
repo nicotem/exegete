@@ -4457,9 +4457,9 @@ def hidden_coder_refusal(kind: str, row_id: int,
     the row belongs to a hidden coder, a trade the owner accepted and
     PRIVACY.md documents.
     """
-    return (f"{kind} {row_id} belongs to a coder currently hidden in "
-            f"QualCoder; nothing was changed. Pass {override}=true to change "
-            f"it anyway, or ask the researcher to unhide the coder in "
+    return (f"{kind} {row_id} belongs to a coder the project hides; "
+            f"nothing was changed. Pass {override}=true to change it "
+            f"anyway, or ask the researcher to unhide the coder in "
             f"QualCoder.")
 
 
@@ -9527,7 +9527,7 @@ class QualcoderDatabase:
             self.conn.rollback()
             # Check for unique constraint violation
             if "unique" in str(e).lower():
-                raise ValueError(f"Coding already exists at this position for this user") from None
+                raise ValueError(f"Coding already exists at this position for this coder") from None
             raise RuntimeError(
                 f"Failed to add coding: {sqlite_error_label(e)}") from None
         except sqlite3.Error as e:
@@ -14869,7 +14869,7 @@ class QualcoderDatabase:
             "of every file with stored text as occurrences, under "
             "file_text. Each count is two readings, wide and whole-word. "
             "To find the notes a count points at, search_memos searches "
-            "the public part of all twelve fields and names each result's "
+            "the public part of all twelve fields and gives each result's "
             f"kind{hidden_coders}. "
             "search_files reads narrower than this block does (a plain "
             "substring, no normalisation), so a name it does not find may "
@@ -15414,7 +15414,7 @@ class QualcoderDatabase:
 
     PSEUDONYMISE_MEMO_HIDDEN_NOTE = (
         "Of the rows above, this many are notes on codings or annotations of "
-        "a coder currently hidden in QualCoder; their names are not shown. "
+        "a coder the project hides; their names are not shown. "
         "Rewriting a note changes no coding decision, so it needs no "
         "allow_hidden_coder.")
 

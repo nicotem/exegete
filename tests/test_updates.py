@@ -864,11 +864,11 @@ class TestTheServer:
         tool = server.mcp._tool_manager._tools["check_for_updates"]
         text = " ".join(tool.description.split())
         assert len(tool.description) <= 1000
-        rules = ("Call only when the user asks whether Exegete is up to "
-                 "date, how to update it, or which version they have.",
-                 "Give the user the message and the steps as returned, and "
-                 "do not suggest other ways to update",
-                 "The steps are for the user to follow: the app that "
+        rules = ("Call only when the researcher asks whether Exegete is up "
+                 "to date, how to update it, or which version they have.",
+                 "Give the researcher the message and the steps as "
+                 "returned, and do not suggest other ways to update",
+                 "The steps are for the researcher to follow: the app that "
                  "started Exegete must be closed while Exegete changes, so "
                  "do not run them yourself.")
         assert text.startswith(rules[0])

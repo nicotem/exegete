@@ -12,7 +12,8 @@ id is read, is refused before anything of the project is read: after the
 refusals of two mapping sources and of keeping a mapping on the names
 list's path, and after each id's form is checked. With a mapping typed
 into the call the refusal says what taking the name out of the mapping
-for the run does; with the names list it gives the limit alone.
+for the run does; with the names list, or with no mapping at all, it
+gives the limit alone.
 
 The fixtures and helpers are the flagship's own
 (`test_v012_pseudonymise_tool.py`), the first part's
@@ -186,6 +187,23 @@ class TestTheLimit:
                     for route in ("mapping", "names", "pseudonyms.json",
                                   "list"):
                         assert route not in error, route
+
+    @pytest.mark.parametrize("mapping", [None, [], {"Tom": "Alex"}],
+                             ids=["absent", "empty", "not a list"])
+    def test_a_call_with_no_mapping_gets_the_limit_alone(
+            self, tmp_path, reads, mapping):
+        """The served texts' second batch (the occurrences choice's
+        design 5, review finding 2): a call on the typed path with no
+        mapping at all, absent, empty or not a list, has no name to take
+        out of a mapping, so the refusal gives the limit alone, before
+        anything is read. Red with the condition on the mapping taken
+        out, when the typed path's advice comes back."""
+        with fresh(tmp_path, MANY):
+            out = call(mapping=mapping, leave_occurrences=TOO_MANY)
+            assert out.get("reason") == "too_many_occurrences_to_leave", out
+            assert out["error"] == server._TOO_MANY_LEFT
+            assert "take the name out of the mapping" not in out["error"]
+            assert reads == {"names list": 0, "files": 0, "plan": 0}
 
     def test_the_limit_counts_ids_as_read(self, tmp_path, reads):
         """The limit counts each id once as read, the same id in another

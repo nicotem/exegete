@@ -19,10 +19,10 @@ for your operating system. An issue is public, so participants' data or
 a project put into one is published with it. Describe the data without
 copying it instead, such as "a code name with an apostrophe" or "a file
 of about 40,000 characters". SUPPORT.md says what a log can hold.
-Report a security concern the same way. Open an issue and describe the
-problem without copying data. Say in the title that it concerns data
-exposure or a write that could damage a project, so that it is looked
-at first.
+A security concern, such as a fault that could expose participants'
+data or let a write damage a project, is best reported privately, as
+[SECURITY.md](SECURITY.md) describes, so that it is not public before
+its fix. Describe it there without copying data, as above.
 
 ## Proposing changes
 
@@ -584,6 +584,7 @@ exegete/                     # the clone (its folder's name does not matter)
 ├── CITATION.cff            # Citation metadata
 ├── .zenodo.json            # How Zenodo describes each release it archives
 ├── SUPPORT.md              # Support policy (GitHub Issues only)
+├── SECURITY.md             # How to report a security fault privately
 ├── COPYING.LESSER          # The licence: GNU LGPL, version 3
 └── NOTICE                  # Copyright, licence, and the code derived from QualCoder
 ```

@@ -62,11 +62,9 @@
   name the preview looked for marked with its id beside it, and, with
   `leave_occurrences`, the ones left marked as left. In a line that
   mixes directions, such as English names in a line of Hebrew, each id
-  stands after its occurrence as the line reads or, where the name ends
-  a stretch of several words written the other way, after it as that
-  stretch reads, beside its own name rather than at the stretch's far
-  end. It shows no
-  pseudonym and nothing else of the mapping. The page is for the
+  stands beside its own name rather than at the far end of a stretch
+  written the other way. It shows no pseudonym and nothing else of the
+  mapping. The page is for the
   researcher, who tells the assistant the ids to leave; its head says
   that words copied from it into the conversation go to the AI
   provider, names included, unless the model runs on the researcher's

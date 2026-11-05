@@ -32,11 +32,10 @@ The same preview writes a page for the researcher (`build_page`): the
 file's whole text as stored, one paragraph per stored line, each
 numbered as the preview numbers it where the preview gives lines, and
 laid out in the direction of its own first letter; every occurrence
-marked with its id beside it, after it as the line reads or, where the
-occurrence ends a stretch written against the line's direction that
-began before it, after it as that stretch reads (`_mark_after`), and,
-with a list to leave, those left marked in a second style, labelled
-"left as it is". It shows no pseudonym, no entry number and
+marked with its id beside it, rather than at the far end of a stretch
+written the other way (`_mark_after`), and, with a list to leave, those
+left marked in a second style, labelled "left as it is". It shows no
+pseudonym, no entry number and
 nothing else of the mapping. Exegete writes it into the file's folder in
 the reading folder (`reading_folder.occurrences_folder`, where pages are
 private to this account, not synced and not indexed) and opens it in the

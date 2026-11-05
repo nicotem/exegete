@@ -131,3 +131,35 @@
   counts those that match "the rewrite's own whole-word rule", not "this
   run's"; with `rewrite_memos` on and no note to rewrite, it says that an
   execute would rewrite none of them.
+
+### Documents
+
+- TOOLS.md, PRIVACY.md and AI_CODING_GUIDE.md describe choosing
+  occurrences. The conversation carries each occurrence's id, its line
+  number with a mapping typed into the call, and counts. The words
+  around each occurrence are on the page in the researcher's browser,
+  which the assistant is told never to open or read. TOOLS.md lists the
+  arguments the preview token binds and the refusals: with
+  `rewrite_memos` or `include_context`, ids that match no occurrence in
+  the text as it is now, and more than 500 ids in one run. With the
+  names list, it gives the two routes left for a name most of whose
+  occurrences should stay, each with its cost. A mapping typed into the
+  call puts names and their pseudonyms in the conversation, and a name
+  taken out of the names list is not replaced by later imports either.
+- PRIVACY.md lists the page for choosing occurrences wherever it lists
+  what the reading folder holds and where a transcript's text can end
+  up. The page marks the names in the file's text, so anyone who can
+  read the reading folder can see which words are names. It goes when
+  Exegete changes the file's text or name, or at the first tidy once it
+  is an hour old, which can be later. PRIVACY.md also says that the run
+  record and the journal entry give how many occurrences were left,
+  never where, and that with the names list the preview gives no
+  position of a match. The reading folder's note, `About this
+  folder.txt`, says that the page marks the names.
+- For two people who share a name, the documents, the brief and the
+  tool's description give a second run inside one file. A first run
+  leaves the second person's occurrences as they are, and a second run,
+  with a mapping typed into the call, replaces them with the second
+  person's pseudonym. The brief also says when to preview with
+  `choose_occurrences`, that the page is the researcher's and is never
+  to be opened, read or looked at, and that the ids come back alone.

@@ -32,7 +32,13 @@
   never where. A list that leaves every occurrence rewrites nothing, and
   the preview and the answer say that the occurrences were left by
   choice. Neither `rewrite_memos` nor `include_context` can be used while
-  occurrences are chosen or left.
+  occurrences are chosen or left. One run leaves at most 500
+  occurrences: a longer list is refused before anything in the project
+  is read. With a mapping typed into the call, the refusal says that
+  taking the name out of the mapping for the run leaves every occurrence
+  of it, those that should change among them, and that the count of the
+  names left in the file text then does not count them; with
+  `use_project_pseudonyms` it gives the limit alone.
 - **The count of the names left in the file text tells occurrences left
   by choice from a name put back.** After a preview given
   `leave_occurrences`, the residue's count of the names still in the
@@ -80,7 +86,10 @@
   (`~/Library/Caches/Exegete/Reading.noindex` on a Mac). Where a page
   was written, the occurrences block's next note tells the assistant
   that it shows each id, so that the researcher need not count
-  occurrences in the order they appear. A page that cannot be written
+  occurrences in the order they appear; where the preview lists only
+  the first 150, the block adds that the page shows every occurrence
+  with its id and that the researcher may give any of them, listed in
+  the preview or not. A page that cannot be written
   or opened never stops the preview, and a file in which no name of
   the mapping occurs gets none. The page is kept in the file's folder
   in the reading folder, one for each file, and goes at Exegete's
@@ -110,11 +119,15 @@
 ### Fixed
 
 - **A pseudonymisation preview that would rewrite nothing no longer
-  speaks of a run in its warning on the names left in the file text.**
+  speaks of a run in its warnings on the names left.**
   Where no name of the mapping occurs in the file the preview names and
-  no note is to be rewritten, that warning, which counts the names in
-  the other files' text, no longer opens "after this run", as where a
-  list leaves every occurrence: the preview says that an execute would
-  rewrite nothing. In both cases it now counts the whole words in other
-  files as words in files "this call does not rewrite", not "this run
-  did not rewrite".
+  no note is to be rewritten, the warning on the names left in the file
+  text, which counts the names in the other files' text, no longer opens
+  "after this run", as where a list leaves every occurrence: the preview
+  says that an execute would rewrite nothing. In both cases it now
+  counts the whole words in other files as words in files "this call
+  does not rewrite", not "this run did not rewrite", and the warning on
+  the notes, labels and attribute values that may still show a name
+  counts those that match "the rewrite's own whole-word rule", not "this
+  run's"; with `rewrite_memos` on and no note to rewrite, it says that an
+  execute would rewrite none of them.

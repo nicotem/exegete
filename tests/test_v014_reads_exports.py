@@ -774,10 +774,11 @@ class TestExportsSayWhatTheyHold:
                                                 tmp_path):
         path = tmp_path / "p.qdpx"
         out = host("export_refi_qda", output_path=str(path))
-        # (v0.15.3: the cases, annotations and journals are written too,
-        # and every category)
-        assert "the cases, the journal entries and the annotations" in \
-            out["note"]
+        # (v0.15.3: the cases and the attributes, annotations and journals
+        # are written too, and every category)
+        for words in ("the cases", "with their attributes",
+                      "the journal entries", "the annotations"):
+            assert words in out["note"], words
         with zipfile.ZipFile(path) as z:
             name = next(n for n in z.namelist() if n.endswith(".qde"))
             root = ET.fromstring(z.read(name))
@@ -785,7 +786,7 @@ class TestExportsSayWhatTheyHold:
                    if e.tag.endswith("Code") and e.get("isCodable") == "false"]
         assert parents == ["Category A"]
         tags = {e.tag.split("}")[1] for e in root.iter()}
-        assert {"Cases", "Notes"} <= tags
+        assert {"Cases", "Notes", "Variables"} <= tags
         assert "Every category is included" in out["note"]
         assert "Categories, cases" not in out["note"]
 

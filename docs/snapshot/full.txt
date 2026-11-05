@@ -6248,7 +6248,10 @@ repeated on each call. The notes and the report always cover the
 whole project.
 
 Two people who share a name: one file per call gives each their own
-pseudonym in the file text only. With rewrite_memos on, whichever
+pseudonym in the file text only. Inside one file, a first run can
+leave the second person's occurrences as they are (choose_occurrences,
+then leave_occurrences), and a second run then replaces them with the
+second person's pseudonym. With rewrite_memos on, whichever
 run carries it rewrites that name in notes across the whole project,
 the other person's notes included, and no order of runs avoids
 this. Keep rewrite_memos off on every run of a shared name and
@@ -8426,6 +8429,11 @@ Each is stated in full by its tool:
   never shows it to you; do not try to infer it.
 - Where the researcher uses pseudonyms, use them, and never try to work
   out who someone is.
+- When the researcher wants to leave some occurrences of a name as they
+  are, preview pseudonymise_source with choose_occurrences. The page it
+  opens is theirs: never open, read or look at it, and never ask them
+  for words from it. They give you the ids to leave, and you send back
+  those ids alone, in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a
@@ -9132,6 +9140,11 @@ Each is stated in full by its tool:
   never shows it to you; do not try to infer it.
 - Where the researcher uses pseudonyms, use them, and never try to work
   out who someone is.
+- When the researcher wants to leave some occurrences of a name as they
+  are, preview pseudonymise_source with choose_occurrences. The page it
+  opens is theirs: never open, read or look at it, and never ask them
+  for words from it. They give you the ids to leave, and you send back
+  those ids alone, in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a

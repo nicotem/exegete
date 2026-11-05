@@ -13,29 +13,24 @@ ba439373518884db	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded
 67746e6bc574473b	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded 27 October, to be read	Writes are refused while the project's lock file is active (QualCoder 3.8.2 has 
 029f9a2dcbd37605	.github/ISSUE_TEMPLATE/feature_request.yml	document	voice	seeded 27 October, to be read	The research task or workflow, not just the feature.
 c5cf3518abeab52f	AI_CODING_GUIDE.md	document	qualcoder	the title of a section about QualCoder's versions or its import	"Supported QualCoder versions" in TOOLS.md says what can be done with either
+b42719762752d2a9	AI_CODING_GUIDE.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	A QualCoder 4.0 window that already had the project open must close and reopen i
 5c1c4a46d0617ec4	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A memo's text from the first ##### marker onward is private, in QualCoder 4.0's 
 fe9958f09da88913	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	A project in the format of QualCoder 3.8 to 4.0 (schema v14 to v17).
 9946e6fefd203e7e	AI_CODING_GUIDE.md	document	qualcoder	the title of a section about QualCoder's versions or its import	An older project is refused; "Supported QualCoder versions" in TOOLS.md says how
+cfa0da5fc195ad33	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete reads the project's database itself, not a copy of it, so anything QualC
 f458718ebd263d8a	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete takes a timestamped backup before every change (list_backups shows them,
+c2a4068441af4d51	AI_CODING_GUIDE.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	Finding the workspace project in QualCoder
 5cbd2da8996cc3c7	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	For QualCoder 4.0, which writes no lock file, see the prerequisites above
+fb8b7a24e517328b	AI_CODING_GUIDE.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	In QualCoder:
+b67651b464eb2742	AI_CODING_GUIDE.md	document	voice	a speaker label quoted in capitals, the example of letter case ignored	It compares labels by name, so "Respondent [00:01:09]:" and "RESPONDENT:" are on
 e24c5e621b067c12	AI_CODING_GUIDE.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	So it is for you to make sure that no QualCoder 4.0 window has the project open
+e2adb8f67467a1e0	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The limit is in the other direction: a QualCoder 4.0 window does not display cha
 cbe4d2362378d85b	AI_CODING_GUIDE.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	Without the matching override, it refuses a coding whose memo carries a ##### pr
 005b22fc5dcb86d5	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Write: add a new transcript, optionally linked to a case; apply_project_pseudony
 1e8a46c3fd801a6f	AI_CODING_GUIDE.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Writes are refused while the project's lock file is active (QualCoder 3.8.2 has 
 d022c7d89745ffe6	AI_CODING_GUIDE.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Writes are refused while the project's lock file is active: QualCoder 3.8.2 has 
 c97d71ad4c4438d3	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Writes need a project schema from v14 to v17, the formats of QualCoder 3.8 to 4.
-fa5b04b7fae1684c	AI_CODING_WORKFLOW.md	document	qualcoder	the title of a section about QualCoder's versions or its import	"Supported QualCoder versions" in TOOLS.md lists the answers that report them.
-3da8a03d8731cc45	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	A QualCoder 4.0 window that already had the project open must close and reopen i
-4b5d69d64e50e231	AI_CODING_WORKFLOW.md	document	qualcoder	Exegete's own refusal, quoted word for word	Every write operation is refused while the project's lock file is active. The re
-c2a4068441af4d51	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	Finding the workspace project in QualCoder
-fb8b7a24e517328b	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	In QualCoder:
-b67651b464eb2742	AI_CODING_WORKFLOW.md	document	voice	a speaker label quoted in capitals, the example of letter case ignored	It compares labels by name, so "Respondent [00:01:09]:" and "RESPONDENT:" are on
-d70609fdfcb6a2e4	AI_CODING_WORKFLOW.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	It is also active while QualCoder 3.8.2 has the project open, since QualCoder ke
-fb4c8042398acfca	AI_CODING_WORKFLOW.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	On a project that can hide coders (QualCoder 3.8.2 and 4.0, schema v14 and later
-d35763ee5b19e971	AI_CODING_WORKFLOW.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	Open QualCoder.
-d979461109f4b7fc	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Solution: Exegete reads the project's database itself, not a copy of it, so anyt
-e2adb8f67467a1e0	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The limit is in the other direction: a QualCoder 4.0 window does not display cha
-9bf088acdb0fc0be	AI_CODING_WORKFLOW.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	list_backups shows the backups, QualCoder's own _BKUP_ backups included.
+9bf088acdb0fc0be	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	list_backups shows the backups, QualCoder's own _BKUP_ backups included.
 6b05c26424fd156b	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; the commitment to QualCoder's formats and conventions, in the maintainer's words of 9 October 2026, held by tests/test_v0142_selfrep.py	A feature is justified on general grounds: the whole life of a project from the 
 91b2e74803771ccf	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder's own code, and the rule for it	A test that carries QualCoder's code as its oracle is listed there too.
 2a42bc2f83529439	CONTRIBUTING.md	document	qualcoder	read 4 November: for contributors; about QualCoder itself, its migration ladder, which probes columns and tables (__main__.py 2296-2346 at 9bddf17, read)	Capability probes, never version strings. Exegete decides what it can do from th

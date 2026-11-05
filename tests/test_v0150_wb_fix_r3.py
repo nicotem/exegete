@@ -39,7 +39,8 @@ NAMED_IN_THE_CHANGELOG = {
     "SUPPORT.md": "SUPPORT.md",
     "PROJECT_SELECTION_GUIDE.md": "PROJECT_SELECTION_GUIDE.md",
     "the AI coding guide": "AI_CODING_GUIDE.md",
-    "AI_CODING_WORKFLOW.md": "AI_CODING_WORKFLOW.md",
+    # (v0.15.3: its text is in the one coding guide)
+    "AI_CODING_WORKFLOW.md": "AI_CODING_GUIDE.md",
     "the bug report form": ".github/ISSUE_TEMPLATE/bug_report.yml",
 }
 

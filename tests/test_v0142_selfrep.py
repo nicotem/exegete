@@ -424,7 +424,7 @@ class TestNothingSaysExegeteOpensAQualCoderProject:
     def test_the_documents_read_include_the_ones_that_matter(self):
         docs = _documents()
         for name in ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
-                     "QUICKSTART.md", "AI_CODING_WORKFLOW.md",
+                     "QUICKSTART.md",
                      "AI_CODING_GUIDE.md", "CONTRIBUTING.md", "SUPPORT.md",
                      "CLAUDE.md", "PROJECT_SELECTION_GUIDE.md", "NOTICE",
                      "packaging/pypi-old-name/README.md",
@@ -670,9 +670,9 @@ class TestTheDocumentsSayExegete:
                            "Exegete works with any MCP host, over standard",
                            "Exegete tells you, through Claude, when"),
             "README.md": ("more work alongside QualCoder 4.0",),
-            "AI_CODING_WORKFLOW.md": ("ask for a random sample",),
+            # (v0.15.3: the workflow guide's phrase, held in the one guide)
             "AI_CODING_GUIDE.md": ("Exegete rejects any excerpt that is "
-                                   "not",),
+                                   "not", "ask for a random sample"),
         }
         for name, phrases in gone.items():
             flat = _flat((REPO / name).read_text(encoding="utf-8"))

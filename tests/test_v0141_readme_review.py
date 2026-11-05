@@ -414,8 +414,9 @@ def _misspelt(text):
             for m in re.finditer("Qualcoder", flat)]
 
 
+# (v0.15.3: the workflow guide's text is in the one coding guide)
 @pytest.mark.parametrize("name", ["README.md", "TOOLS.md", "INSTALL.md",
-                                  "AI_CODING_WORKFLOW.md"])
+                                  "AI_CODING_GUIDE.md"])
 def test_qualcoder_is_spelt_so_in_prose(name):
     assert _misspelt(_read(name)) == []
 
@@ -444,7 +445,7 @@ def test_the_folder_keeps_its_name_where_the_code_writes_it():
 # ---------------------------------------------------------------------------
 
 DOCS = ("README.md", "TOOLS.md", "INSTALL.md", "CONTRIBUTING.md",
-        "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
+        "AI_CODING_GUIDE.md")
 # v0.14.1, the rename: the repository's address. A link to the old one is reported: GitHub redirects it,
 # but the documents name the new address, and a link this check skips
 # is a link nobody checks.

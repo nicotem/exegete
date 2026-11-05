@@ -1380,7 +1380,8 @@ class TestFixRoundTextsTrue:
     def test_the_backup_is_said_to_be_the_default(self):
         help_ = json.loads(server.explain_ai_coding_tools())
         assert "automatic backup" not in json.dumps(help_)
-        guide = (Path(__file__).parent.parent / "AI_CODING_WORKFLOW.md") \
+        # (v0.15.3: the workflow guide's text is in the one coding guide)
+        guide = (Path(__file__).parent.parent / "AI_CODING_GUIDE.md") \
             .read_text(encoding="utf-8")
         assert "created automatically before each write" not in guide
 
@@ -2269,13 +2270,14 @@ class TestFixRound2TheMinors:
             text = " ".join(tools[name].description.split())
             assert "a name matching two codes is refused" in text, name
         root = Path(__file__).parent.parent
-        workflow = " ".join((root / "AI_CODING_WORKFLOW.md").read_text(
+        # (v0.15.3: the workflow guide's text is in the one coding guide)
+        flat_guide = " ".join((root / "AI_CODING_GUIDE.md").read_text(
             encoding="utf-8").split())
         assert "Every write operation creates a timestamped backup" \
-            not in workflow
+            not in flat_guide
         # v0.15.1: Exegete takes a backup before every change, and no
         # text offers to skip one (tests/test_v0151_ignored_argument.py)
-        assert "create_backup=false" not in workflow
+        assert "create_backup=false" not in flat_guide
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()
                     if l.startswith("- `start_coding_session("))

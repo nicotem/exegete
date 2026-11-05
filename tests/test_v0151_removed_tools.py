@@ -60,7 +60,7 @@ TOPICS = ("analyze_for_coding", "apply_codings", "edit_suggestion",
 # the CHANGELOG records the removal itself
 DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "SUPPORT.md", "QUICKSTART.md", "AI_CODING_GUIDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
+             "PROJECT_SELECTION_GUIDE.md",
              "CONTRIBUTING.md", "CLAUDE.md",
              "packaging/pypi-old-name/README.md",
              "packaging/desktop-extension/manifest.in.json",

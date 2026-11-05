@@ -109,7 +109,7 @@ FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN, SIZES)
 DOCUMENTS = (
     "README.md", "INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
     "QUICKSTART.md",
-    "SUPPORT.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
+    "SUPPORT.md", "AI_CODING_GUIDE.md",
     "PROJECT_SELECTION_GUIDE.md",
     "CLAUDE.md", "CONTRIBUTING.md", "NOTICE",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
@@ -819,7 +819,7 @@ FACTS: Dict[str, Fact] = {
              "server.py: _USUAL_SEARCH_PLACES (its folders for projects "
              "in Documents)",
         documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
-                   "TOOLS.md", "AI_CODING_WORKFLOW.md", "QUICKSTART.md",
+                   "TOOLS.md", "AI_CODING_GUIDE.md", "QUICKSTART.md",
                    "PROJECT_SELECTION_GUIDE.md", "pages/update/index.html",
                    MANIFEST),
         patterns=(PROJECTS_FOLDER, DEFAULT_BEFORE, DEFAULT_AFTER,
@@ -833,7 +833,7 @@ FACTS: Dict[str, Fact] = {
     "the state folder": Fact(
         code="names.py: STATE_FOLDER, OLD_STATE_FOLDER",
         documents=("INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
-                   "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
+                   "AI_CODING_GUIDE.md",
                    "PROJECT_SELECTION_GUIDE.md",
                    "CLAUDE.md", "packaging/pypi-old-name/README.md"),
         patterns=(DOT_FOLDER,),
@@ -872,7 +872,7 @@ FACTS: Dict[str, Fact] = {
              "RENAMED_TOOLS, the prompts and each tool's input schema",
         documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
                    "TOOLS.md", "SUPPORT.md", "AI_CODING_GUIDE.md",
-                   "AI_CODING_WORKFLOW.md", "CONTRIBUTING.md"),
+                   "CONTRIBUTING.md"),
         patterns=(CALL_FORM,) + TOOL_CLAIMS + (TOOL_NAMES_LIST,)
         + ARGUMENT_CLAIMS + (ARGUMENT_NAMES_LIST,)),
     "the sizes": Fact(

@@ -256,8 +256,9 @@ def f(holder):
         for phrase in OLD_IN_PRIVACY:
             assert phrase not in privacy, phrase
 
-    def test_no_old_phrase_is_in_the_workflow_guide(self):
-        guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+    def test_no_old_phrase_is_in_the_coding_guide(self):
+        # (v0.15.3: the workflow guide's text is in the one coding guide)
+        guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
             encoding="utf-8"))
         for phrase in OLD_IN_WORKFLOW:
             assert phrase not in guide, phrase
@@ -472,12 +473,17 @@ class TestTheNamesListIsTheProjects:
         assert "Pnine" not in json.dumps(out)
 
 
-def test_the_workflow_guide_quotes_the_whole_refusal():
+def test_the_coding_guide_gives_the_ways_through():
     """Fix round 1: AI_CODING_WORKFLOW.md quoted the refusal without the
-    ways through; it now quotes the whole message."""
-    guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+    ways through; it then quoted the whole message. Since 0.15.3 the one
+    coding guide holds the workflow guide's text, and gives the
+    refusal's causes and both ways through in its own words."""
+    guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
         encoding="utf-8"))
-    assert f'"{refusal("...")}"' in guide
+    assert "close it in QualCoder, or wait a moment" in refusal("...")
+    assert ("The refusal gives both causes and the way through for each: "
+            "closing the project in QualCoder, if you use it, or waiting "
+            "a moment and trying again.") in guide
 
 
 def test_the_workflow_guides_rule_is_the_lock_file():
@@ -486,12 +492,15 @@ def test_the_workflow_guides_rule_is_the_lock_file():
     named another conversation using Exegete; the rule is now the lock
     file, which the next sentence explains. The fourth reading of the
     documents put the two causes before the rule, in the section now
-    called "One program at a time" (tests/test_v0150_lock_wording.py)."""
-    guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+    called "One program at a time" (tests/test_v0150_lock_wording.py).
+    Since 0.15.3 the one coding guide gives the rule in its
+    prerequisite for those who also use QualCoder."""
+    guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
         encoding="utf-8"))
-    assert ("**Every write operation is refused while the project's lock "
-            "file is active.** The refusal gives both causes and the way "
-            "through for each") in guide
+    assert ("Writes are refused while the project's lock file is active "
+            "(QualCoder 3.8.2 has the project open, or another "
+            "conversation using Exegete is writing to it). The refusal "
+            "gives both causes and the way through for each") in guide
 
 
 class TestTheMemoIsNotSaidToBeSeeded:

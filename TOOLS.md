@@ -7,8 +7,7 @@ be opened in QualCoder. QualCoder is free software for qualitative
 analysis. The [README](https://github.com/nicotem/exegete/blob/main/README.md)
 says what Exegete is and how to start. [INSTALL.md](INSTALL.md)
 covers installing and setting up. [AI_CODING_GUIDE.md](AI_CODING_GUIDE.md)
-and [AI_CODING_WORKFLOW.md](AI_CODING_WORKFLOW.md) walk through coding
-with the assistant, with example conversations.
+walks through coding with the assistant, with example conversations.
 
 - [What the tools do, in brief](#what-the-tools-do-in-brief)
 - [Supported QualCoder versions](#supported-qualcoder-versions)
@@ -765,7 +764,7 @@ kept as it is, is safest worked on as a copy:
 A project made with Exegete is already in the workspace, and Exegete
 takes a backup before each change to it.
 
-[AI_CODING_WORKFLOW.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_WORKFLOW.md) walks through the whole workflow, with example conversations.
+[AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md#step-by-step) walks through a coding session step by step, with example conversations.
 
 ## Reading a whole file
 

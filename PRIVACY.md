@@ -550,8 +550,11 @@ What stays local, always, unless a sync service copies the folder it is in
   researcher; or read from that file). A length does not reconstruct a
   note, and no note text, old or new, is in it. A run that leaves
   occurrences of a name as they are records how many it left
-  (`occurrences_left`), never where they are. No tool reads these
-  files back: each is an audit record of which rows a run changed and
+  (`occurrences_left`), never where they are, and each file's entry
+  says whether the check for mapping entries competing for the same
+  characters stopped early (`overlap_conflicts_capped`), never where.
+  No tool reads these files back: each is an audit record of which rows
+  a run changed and
   where the pseudonyms now sit, kept so a run can be accounted for
   afterwards. It is not a way back; the backup taken before the run is.
 
@@ -2740,7 +2743,9 @@ near the top of this document, set them out.
     pseudonyms, the replacement spans, the row ids and offsets) and the
     journal entry inside the project (the pseudonyms and counts) never
     carry an original name. Where a run leaves occurrences as they are,
-    both give how many, never where they are. When a run rewrites notes, the
+    both give how many, never where they are. The manifest also says, for
+    each file, whether the check for mapping entries competing for the
+    same characters stopped early, never where. When a run rewrites notes, the
     manifest names each note by its table and key, with the lengths of
     its public part, and the journal entry gives counts only; an
     attribute type is keyed by its own name, which is withheld where a

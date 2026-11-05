@@ -21941,6 +21941,9 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
             "new_text_hmac_sha256": run_record_text_digest(
                 secret, item["new_text"]),
             "replacements": spans,
+            # Whether the overlap check stopped early (v0.15.3), never
+            # where: a key added, so the format stays 3
+            "overlap_conflicts_capped": item["overlap_conflicts_capped"],
             **rows,
         })
     canonical_map = pseudo.canonical_mapping(compiled.mapping)

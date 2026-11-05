@@ -15550,6 +15550,9 @@ class QualcoderDatabase:
                 "annotations_deleted": len(deleted["annotation"]),
                 "case_links_deleted": len(deleted["case_text"]),
                 "position_safe": position_safe(new_text),
+                # Whether the overlap check stopped early, as the preview
+                # said (v0.15.3): never where, nor what it found
+                "overlap_conflicts_capped": item["overlap_conflicts_capped"],
             })
         written: Dict[str, Any] = {"files": report}
         if memo_plan is not None:

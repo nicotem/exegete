@@ -543,3 +543,42 @@ def test_the_prerestore_note_only_when_it_went(project, monkeypatch):
     apart = [note for note in done["notes"] if prerestore.name in note]
     assert len(apart) == 1 and WARNING in apart[0]
     assert prerestore.name in _listed()
+
+
+# ---------------------------------------------------------------------------
+# The overlap check's capped flag, repeated
+# ---------------------------------------------------------------------------
+
+def test_the_capped_flag_is_repeated(tmp_path, monkeypatch):
+    """The overlap check capped at 20 forms examined: the preview's file
+    row, the execute's file report and the run record's file entry all
+    say so, and on the names list's path with occurrences left too, where
+    the execute withholds the new length."""
+    from exegete import pseudonymise as P
+    from test_v012_pseudonymise_tool import (execute_as_recipe,
+                                             execute_from, preview_of)
+    from test_v0153_leave_occurrences import NAMES, choose, fresh
+    from test_v0153_occurrence_ids import names_list
+    mapping = [{"original": "Ann Marie", "pseudonym": "Sam"},
+               {"original": "Marie Curie", "pseudonym": "Pat"}]
+    text = "Ann Marie Curie spoke. Ann Marie Curie spoke.\n"
+    monkeypatch.setattr(P, "MAX_OVERLAP_CANDIDATES", 20)
+    with fresh(tmp_path, text, "typed.qda"):
+        out = preview_of(mapping=mapping)
+        assert out["preview"]["files"][0]["overlap_conflicts_capped"] is True
+        done = execute_from(out, mapping=mapping)
+        assert done["files"][0]["overlap_conflicts_capped"] is True, done
+        record = json.loads(Path(done["manifest_path"]).read_text(
+            encoding="utf-8"))
+        assert record["format"] == 3
+        assert record["files"][0]["overlap_conflicts_capped"] is True
+    with fresh(tmp_path, text, "names.qda") as folder:
+        names_list(folder, mapping)
+        out = preview_of(leave_occurrences=choose(**NAMES)[1:], **NAMES)
+        done = execute_as_recipe(out)
+        report = done["files"][0]
+        assert "new_length" not in report, done
+        assert report["overlap_conflicts_capped"] is True
+        record = json.loads(Path(done["manifest_path"]).read_text(
+            encoding="utf-8"))
+        assert record["files"][0]["overlap_conflicts_capped"] is True

@@ -905,10 +905,15 @@ class TestTheRelease:
         assert versions == [release.VERSION]
         assert dates == [release.RELEASED]
 
-    def test_the_summary_is_plain_short_text(self):
+    def test_the_summary_is_one_plain_paragraph(self):
+        # v0.15.3 (the owner's answers of 3 November 2026): a paragraph
+        # written by hand at each release, which the note after an update
+        # gives as written and the update page shows; the link is the
+        # note's own, never the paragraph's
         assert forbidden_display_char(release.SUMMARY) is None
         assert release.SUMMARY.isprintable()
-        assert 0 < len(release.SUMMARY) <= 300
+        assert 0 < len(release.SUMMARY) <= 800
+        assert "\n" not in release.SUMMARY and "\r" not in release.SUMMARY
         assert "http" not in release.SUMMARY
 
 

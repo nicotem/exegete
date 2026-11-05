@@ -49,6 +49,8 @@ from . import updates
 from .database import error_label
 
 logger = logging.getLogger(__name__)
+# The log line of a fault in the reading or the record: its kind alone
+_NOT_RECORDED = "A note told in an answer could not be recorded: %s"
 
 
 class StandardOutputLines:
@@ -77,17 +79,12 @@ class StandardOutputLines:
                 else []
         except Exception as error:
             lines = []
-            _fault(error)
+            logger.debug(_NOT_RECORDED, error_label(error))
         for line in lines:
             try:
                 _settle(line)
             except Exception as error:
-                _fault(error)
-
-
-def _fault(error: BaseException) -> None:
-    logger.debug("A note told in an answer could not be recorded: %s",
-                 error_label(error))
+                logger.debug(_NOT_RECORDED, error_label(error))
 
 
 def _settle(line: str) -> None:

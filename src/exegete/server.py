@@ -2625,10 +2625,10 @@ def _rename_collision(rows, row_id: int, new_name: str, kind: str):
         ids = ", ".join(str(r["id"]) for r in twins)
         label = "id" if len(twins) == 1 else "ids"
         return {
-            "error": f"Another {kind} already uses the name "
+            "error": f"Once characters that usually show nothing on "
+                     f"screen are left out, another {kind}, "
                      f"'{name_shown_with_codes(twins[0]['name'])}' "
-                     f"({label} {ids}) once characters that usually show "
-                     f"nothing on screen are left out, so the two could "
+                     f"({label} {ids}), has this name, so the two could "
                      f"look the same in a list.",
             "candidates": [{"id": r["id"], "name": r["name"]}
                            for r in twins],
@@ -2705,18 +2705,19 @@ def _new_name_refusal(rows, name: str, kind: str
     shown = ", ".join(f"'{name_shown_with_codes(r['name'])}'" for r in twins)
     if len(twins) == 1:
         row = twins[0]
-        message = (f"The {kind} {shown} (id {row['id']}) has the name "
-                   f"'{name}' once characters that usually show nothing on "
-                   f"screen are left out, so the two could look the same in "
+        message = (f"Once characters that usually show nothing on screen "
+                   f"are left out, the {kind} {shown} (id {row['id']}) has "
+                   f"the name '{name}', so the two could look the same in "
                    f"a list. Nothing was created. Use id {row['id']}, or "
                    f"give that {kind} this name with {rename}.")
     else:
-        message = (f"{len(twins)} {_KIND_PLURAL[kind]} ({shown}; ids "
+        message = (f"Once characters that usually show nothing on screen "
+                   f"are left out, {len(twins)} {_KIND_PLURAL[kind]} "
+                   f"({shown}; ids "
                    f"{', '.join(str(r['id']) for r in twins)}) have the "
-                   f"name '{name}' once characters that usually show "
-                   f"nothing on screen are left out, so they could look the "
-                   f"same in a list. Nothing was created. Use one of their "
-                   f"ids, or give one of them this name with {rename}.")
+                   f"name '{name}', so they could look the same in a list. "
+                   f"Nothing was created. Use one of their ids, or give one "
+                   f"of them this name with {rename}.")
     return {"error": message,
             "candidates": [{"id": r["id"], "name": r["name"]}
                            for r in twins]}
@@ -7256,22 +7257,25 @@ def copy_project_to_workspace(
     AI prompt library and chat history, the researcher's data) and any
     names list and names file (pseudonyms.json, Exegete/Names to
     replace.txt), with the real names in them. Like a backup, it leaves
-    out ai_data/search.sqlite, which
-    QualCoder 4.0 rebuilds when it opens the copy, the database's side
-    files (its journal and WAL files among them) and lock files. Unlike a
-    backup, it keeps the audio and video folders. A copy of a project
-    without an ai_data folder gets an empty one, as a new project does.
+    out lock files, the database's side files (its journal and WAL files
+    among them) and ai_data/search.sqlite, which QualCoder 4.0 rebuilds
+    when it opens the copy. Unlike a backup, it keeps the audio and video
+    folders. A copy of a project without an ai_data folder gets an empty
+    one, as a new project does.
+
     The database is copied with SQLite's own online backup, so a copy
     taken while another program is writing to the project holds what was
-    last committed. That program's saves wait while the copy runs; on a
+    last committed. That program's saves wait while the copy runs. On a
     database of about 4 GB or more, a save in an open QualCoder window can
     fail. A database SQLite cannot read is copied as a file, side files
-    and all, and the answer says so. Symlinks that point outside
-    the project folder, or lead nowhere, are not followed: they are skipped
-    and reported (skipped_symlinks, with names), so a shared or untrusted
-    project folder cannot pull outside files into the copy. A symlink loop
-    (a link back into a folder already being copied) is skipped and
-    reported the same way. Other symlinks inside the project are copied.
+    and all, and the answer says so.
+
+    Symlinks that point outside the project folder, or lead nowhere, are
+    not followed: they are skipped and reported (skipped_symlinks, with
+    names), so a shared or untrusted project folder cannot pull outside
+    files into the copy. A symlink loop (a link back into a folder already
+    being copied) is skipped and reported the same way. Other symlinks
+    inside the project are copied.
 
     The copy is not opened automatically: use select_project on the
     returned path when you are ready to work on it.
@@ -9938,8 +9942,9 @@ def get_case_code_matrix(coder: Optional[str] = None) -> str:
     comparing cases.
 
     Only codings that lie wholly inside the text linked to a case are
-    counted for it, as QualCoder's coding report selects them (its report
-    Code counts by file/case counts the whole of each linked file).
+    counted for it, as QualCoder's coding report selects them. QualCoder's
+    report "Code counts by file/case" differs: it counts the whole of each
+    linked file.
 
     Coder visibility: a project in the format of QualCoder 3.8.2, or of
     4.0 onwards, can hide some coders' work. When it does, counts cover
@@ -11926,7 +11931,7 @@ def apply_codings(
       to it) or another program is writing to the database; for
       QualCoder 4.0, get_current_project shows any signs of an open
       window, and if there are some, ask the researcher before writing.
-    - The session must belong to the project open now; applying a
+    - The session must belong to the project open now. Applying a
       session to a different project is refused.
     - If the success output contains `position_safety_warning`, relay it
       to the researcher: the file holds Windows line breaks or characters
@@ -11940,11 +11945,11 @@ def apply_codings(
     - Applied suggestions are marked "applied", so the session cannot be
       applied twice by accident.
     - An approved suggestion whose identical coding (same code, file,
-      span and coder) is already in the project is not written again: it
-      is marked applied, listed in the result as already in the database
-      with its ctid, and the rest are written as one batch. When every
-      approved suggestion already exists, nothing is written and no
-      backup is made.
+      span and coder) is already in the project is not written again. It
+      is marked applied and listed in the result as already in the
+      database, with its ctid, and the rest are written as one batch.
+      When every approved suggestion already exists, nothing is written
+      and no backup is made.
 
     Args:
         coding_session_id: The session ID with approved suggestions
@@ -12904,7 +12909,7 @@ IMPORT_DONE_LINES = {
         "it names first (first names alone aside); a file too long for a "
         "list of this size is not counted there either."),
     "file_name_names": ("A file came in under a name that holds a name from "
-                        "your list, as you said: that name reaches the AI "
+                        "your list, as you said. That name reaches the AI "
                         "provider whenever an answer gives the file's name, "
                         "and the project's copy of the original keeps it."),
     "prune": ("The project's backups now take about {size} MB; "
@@ -12954,18 +12959,18 @@ def import_documents(
     show_text: bool = False,
     memo: str = ""
 ) -> str:
-    """Bring documents from the researcher's computer into the selected project. Their text never passes through the conversation, but one line of a file not in UTF-8, shown as each character set reads it. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
+    """Bring documents from the researcher's computer into the selected project. Their text never passes through the conversation, except one line of a file not in UTF-8, shown as each character set reads it. Never paste a document's text into a tool or open it with your own file tools first: give its path.
 
-    Two steps. Call with paths and no preview_token: nothing is written to the project; the answer is a preview (names, sizes, lengths and warnings, never other text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
+    Two steps. Call with paths and no preview_token: nothing is written to the project. The answer is a preview (names, sizes, lengths, warnings, never other text) and its token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
 
-    Set a switch below off its default only on the researcher's word for this import, never to get past a refusal. The names list, if any, is applied to the stored text (not PDFs or originals); PDFs and file names holding its names, and files whose letters look garbled, are kept out.
+    Change a switch below only on the researcher's word for this import, never to get past a refusal. A names list is applied to the stored text, not PDFs or originals. PDFs and file names holding its names, and files whose letters look garbled, are kept out.
 
     Refused or kept out, saying why: while another conversation using Exegete or QualCoder 3.8.2 has the project in use (its lock file); paths in the project, Exegete's folders, hidden folders or links; other types; files over the limits; text not in UTF-8; names already in the project.
 
     Formats: .docx, .odt, .rtf, .txt, .md, .html, .htm, .srt, .vtt; .pdf and .epub with the optional part. Exegete reads them QualCoder's way, keeps what QualCoder's readers lose or garble, and names each departure.
 
     Args:
-        paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes accepted)
+        paths: 1 to 50 full paths to files or folders (a folder's own files; ~ and quotes work)
         preview_token: from the preview
         apply_project_pseudonyms: default true
         import_pdfs_with_listed_names: default false
@@ -12973,7 +12978,7 @@ def import_documents(
         import_files_with_garbled_letters: default false
         character_sets: on the researcher's word, {file as previewed: character_set}
         show_text: preview only; opens the garbled-looking files' text on the researcher's screen
-        memo: a note for every file; at most 10,000 characters
+        memo: a note for every file, up to 10,000 characters
     """
     # Each call's reading time is counted from here
     # (doc_import.call_seconds).
@@ -13661,12 +13666,12 @@ def list_backups() -> str:
 
     Exegete takes a backup before every change (apply_codings,
     import_text_file, delete_coding, restore_backup and the other write
-    tools): a timestamped folder next to the project, named
+    tools). Each is a timestamped folder next to the project, named
     '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
     together with QualCoder's own '<project>_BKUP_*' backups found next to
     the project (kind 'qualcoder'), newest first, so you can pick one for
     restore_backup. Each is dated by the time in its name, which is when
-    it was taken; QualCoder's names give it to the hour. Backups taken in
+    it was taken. QualCoder's names give it to the hour. Backups taken in
     the same second are listed in the order they were taken. `dated_from`
     is 'folder' for a name that carries no time, and 'folder (name in the
     future)' for a name dated more than five minutes ahead of this
@@ -13682,21 +13687,24 @@ def list_backups() -> str:
     AI search index, and the side files of every .sqlite file. The index
     holds the text of every source, and QualCoder 4.0 rebuilds it when it
     opens the project. Those made from 0.15.1 on leave out the audio and
-    video folders too; one made earlier may hold files in them
-    (holds_audio_or_video, read from it). QualCoder's own backups copy the
-    database as a file. Exegete copies it with SQLite's own online backup
-    instead, so a backup taken while another program is writing to the
-    project holds what was last committed, and the database's journal and
-    WAL files are not copied, unless SQLite cannot read the database:
-    then it is copied as a file, side files and all. A backup that holds them
-    (copied mid-write, or made before v0.14) is marked `unclean`, and
-    restore_backup refuses it. Unlike QualCoder's backups, symlinks that
-    point outside the project folder, or lead nowhere, are not followed:
-    they are skipped and the write result reports them
-    (backup_skipped_symlinks), so a shared or untrusted project folder
-    cannot pull outside files into a backup. A symlink loop inside the
-    project (a link back into a folder already being copied) is skipped
-    and reported the same way.
+    video folders too. One made earlier may hold files in them:
+    holds_audio_or_video, read from the backup itself, says whether it does.
+
+    QualCoder's own backups copy the database as a file. Exegete copies it
+    with SQLite's own online backup instead, so a backup taken while
+    another program is writing to the project holds what was last
+    committed, and the database's journal and WAL files are not copied.
+    The exception is a database SQLite cannot read: it is copied as a
+    file, side files and all. A backup that holds them (copied mid-write,
+    or made before v0.14) is marked `unclean`, and restore_backup refuses
+    it.
+
+    Exegete's backups, unlike QualCoder's, do not follow symlinks that
+    point outside the project folder or lead nowhere: such links are
+    skipped, and the write result reports them (backup_skipped_symlinks),
+    so a shared or untrusted project folder cannot pull outside files into
+    a backup. A symlink loop inside the project (a link back into a folder
+    already being copied) is skipped and reported the same way.
 
     Returns:
         JSON with the project name and an array of backups
@@ -13941,13 +13949,13 @@ def prune_backups(keep_last: Optional[int] = None,
 
     It removes recovery points: preview first, then execute with the
     token that preview returns. Every write creates a backup copy of the
-    project, and they accumulate until pruned; this tool prunes them by a
-    retention policy you choose:
+    project, and the copies accumulate until pruned. This tool prunes them
+    by a retention policy you choose:
 
     - keep_last=N: keep only the N newest of Exegete's backups
     - older_than_days=D: remove Exegete's backups older than D days
-    - both: a backup is removed only if it fails both criteria (beyond the
-      newest N and older than D days), the cautious intersection
+    - both: a backup is removed only if it is both beyond the newest N and
+      older than D days
 
     Safety rules:
     - Only Exegete's backups are touched: the folders whose whole
@@ -13958,20 +13966,20 @@ def prune_backups(keep_last: Optional[int] = None,
       under never_removed and never removed. QualCoder's own _BKUP_
       backups are never removed.
     - At least the newest of Exegete's backups is always kept, unless you
-      explicitly pass keep_last=0; the newest is the newest by the time
-      in its name, so a folder whose name is dated ahead of the clock
-      (dated by its folder instead, list_backups says so) never takes
-      its place.
+      explicitly pass keep_last=0. The newest is the newest by the time in
+      its name. A folder whose name is dated ahead of the clock is dated by
+      its folder instead, as list_backups says, so it never counts as the
+      newest.
 
     Two-step by design. Call without preview_token: nothing is removed and
     the result is a preview of exactly which folders would go and how much
     space is reclaimed, with a preview_token. Show the researcher the
     preview and ask whether to proceed. Only if they agree, call again
     with the same arguments and preview_token=<the token>. The token is
-    valid for 60 minutes and only while the folders it covers are
-    unchanged; if they changed in between, the execute is refused and you
-    must preview again. No backup is taken here: this tool removes backup
-    folders and never touches the project database.
+    valid for 60 minutes, and only while the folders it covers are
+    unchanged. If they changed in between, the second call is refused and
+    you must preview again. No backup is taken here: this tool removes
+    backup folders and never touches the project database.
 
     A reason to prune beyond disk space: a backup taken before a
     `pseudonymise_source` run holds the text as it was, real names
@@ -13983,17 +13991,19 @@ def prune_backups(keep_last: Optional[int] = None,
     the researcher is sure.
 
     This does not touch the live project database, so it works even while
-    QualCoder has the project open. Each backup is the project tree,
-    ai_data/ included, so pruning also removes those recovery points for
-    QualCoder's AI prompt library and chat history. Like QualCoder 4.0's
-    own backups, Exegete's leave out ai_data/search.sqlite, the AI search
-    index, and the side files of every .sqlite file.
-    Backups made from 0.15.1 on leave out the audio and video folders;
-    one made earlier may hold them, with recordings the project no
-    longer has, which pruning removes too. So the preview gives, for
-    each backup it would remove, audio_video_files_only_here: the files
-    there that neither the project nor a backup kept holds (same name
-    and size), with a note.
+    QualCoder has the project open. Each backup is a copy of the whole
+    project folder, ai_data/ included, so pruning also removes those
+    recovery points for QualCoder's AI prompt library and chat history.
+    Like QualCoder 4.0's own backups, Exegete's leave out
+    ai_data/search.sqlite, the AI search index, and the side files of
+    every .sqlite file.
+
+    Backups made from 0.15.1 on leave out the audio and video folders. One
+    made earlier may hold them, with recordings the project no longer has,
+    which pruning removes too. So, for each backup it would remove, the
+    preview lists under audio_video_files_only_here the files there that
+    neither the project nor any backup the prune keeps holds (compared by
+    name and size), with a note.
 
     Args:
         keep_last: Keep only this many of Exegete's newest backups (0
@@ -14306,23 +14316,24 @@ def _prune_only_copies_note(only_copies: Dict[str, List[Any]],
         after = ("Once " + ("it is" if one else "they are")
                  + " removed, Exegete knows of no other lasting copy. "
                  "It may be the only record")
-    note = (f"{subject} a pseudonyms.json that the project does not hold "
-            f"now, byte for byte, and that no backup Exegete keeps "
-            f"holds: {', '.join(named)}. {after} of a names list (a "
-            f"pseudonymise_source run's save writes one, and a restore of "
-            f"an earlier backup leaves it in the pre-restore safety "
-            f"backup)")
+    note = (f"{subject} a pseudonyms.json that is not, byte for byte, in "
+            f"the project now or in any backup Exegete keeps: "
+            f"{', '.join(named)}. {after} of a names list. A "
+            f"pseudonymise_source run's save writes such a file, and a "
+            f"restore of an earlier backup leaves one in the pre-restore "
+            f"safety backup.")
     qualcoder = only_copies["qualcoder"]
     if qualcoder:
-        note += ("; QualCoder's own "
+        note += (" QualCoder's own "
                  + (f"backup {qualcoder[0]} holds a copy for now, until "
                     f"QualCoder deletes it among its oldest backups"
                     if len(qualcoder) == 1 else
                     f"backups {', '.join(qualcoder)} hold a copy for now, "
                     f"until QualCoder deletes them among its oldest backups")
-                 + " when a project closes")
-    return note + ("." if done else
-                   "; copy it somewhere safe first if it is still needed.")
+                 + " when a project closes.")
+    return note + ("" if done else
+                   " Copy that file somewhere safe first if it is still "
+                   "needed.")
 
 
 def _prune_media_only_copies(project_folder: Path,
@@ -17183,14 +17194,13 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     the session for the researcher to review, refine and approve, and
     only create_proposed_codes (after approval) changes the codebook.
 
-    Workflow: start_coding_session creates a session -> you read
-    the files and record the codes you see emerging with this tool ->
-    present them -> the researcher refines (update_proposal; to merge two,
-    reject one with update_proposal_status, then give the other its own
-    passages and the rejected one's together in update_proposal's
-    example_segments, which replaces the list) and decides
-    (update_proposal_status) -> create_proposed_codes writes the approved
-    ones.
+    Workflow: start_coding_session creates a session. You read the files,
+    record with this tool the codes you see emerging, and present them.
+    The researcher refines them (update_proposal) and decides
+    (update_proposal_status). Then create_proposed_codes writes the
+    approved ones. To merge two, reject one with update_proposal_status,
+    then give the other its own passages and the rejected one's together
+    in update_proposal's example_segments, which replaces the list.
 
     Args:
         coding_session_id: The session ID from start_coding_session
@@ -17312,9 +17322,9 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         if twin is not None:
             rejected.append({
                 "index": idx,
-                "reason": f"the proposal {twin} in this session has the "
-                          f"name '{name}' once characters that usually show "
-                          f"nothing on screen are left out, so the two "
+                "reason": f"once characters that usually show nothing on "
+                          f"screen are left out, the proposal {twin} in "
+                          f"this session has the name '{name}', so the two "
                           f"codes could look the same in a list",
                 "proposal_guid": twin})
             continue
@@ -17393,12 +17403,12 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         "rejected_count": len(rejected),
         "rejected": rejected,
         "proposal_statistics": session.proposal_statistics(),
-        "next_step": "Present the proposals to the researcher; refine with "
-                     "update_proposal (to merge two, reject one and give "
-                     "the other both sets of passages in example_segments, "
-                     "which replaces the list), decide with "
+        "next_step": "Present the proposals to the researcher. Refine them "
+                     "with update_proposal, decide with "
                      "update_proposal_status, then write the approved ones "
-                     "with create_proposed_codes.",
+                     "with create_proposed_codes. To merge two, reject one "
+                     "and give the other both sets of passages in "
+                     "example_segments, which replaces the list.",
     }
     if replace:
         result["replaced_pending"] = removed_pending
@@ -17413,9 +17423,8 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
             "Proposals flagged collides_with match an existing code "
             "(letter case, spacing and Unicode form ignored, or characters "
             "that usually show nothing on screen left out). Creation will "
-            "refuse them unless renamed; "
-            "consider applying the existing code via the normal coding "
-            "loop instead of creating a near-duplicate."
+            "refuse them unless renamed. Consider suggesting codings with "
+            "the existing code instead of creating a near-duplicate."
         )
     if unsafe_files:
         result["position_safety_warning"] = (
@@ -17561,15 +17570,15 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
     It changes the session only and writes nothing to the project. Only
     the fields given change. Pass category="" to make the proposal
     uncategorised. example_segments replaces the proposal's evidence
-    whole: pass the full corrected list (with widened spans, say); each
+    whole, so pass the full corrected list, widened spans and all. Each
     span is checked against the file text as propose_codes checks it. A
-    proposal already created cannot be changed here; edit the code itself
+    proposal already created cannot be changed here: edit the code itself
     with the codebook tools instead. A merged proposal is final, and a
     change to it is refused. Changing an approved proposal returns it to
     pending (the result says approval_withdrawn): what the researcher
     approved is no longer what would be created, so show it to them
-    again. Values that are already the proposal's own change nothing and
-    say so (changed: false); an approval then stands.
+    again. Values the proposal already has change nothing, and the result
+    says so (changed: false). An approval then stands.
 
     Args:
         coding_session_id: The session ID
@@ -17642,11 +17651,11 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
                  and visible_name_key(p.name) == shown), None)
             if twin is not None:
                 return json.dumps({
-                    "error": f"The proposal {twin.guid} in this session has "
-                             f"the name '{new_name}' once characters that "
-                             f"usually show nothing on screen are left out, "
-                             f"so the two codes could look the same in a "
-                             f"list.",
+                    "error": f"Once characters that usually show nothing "
+                             f"on screen are left out, the proposal "
+                             f"{twin.guid} in this session has the name "
+                             f"'{new_name}', so the two codes could look "
+                             f"the same in a list.",
                     "proposal_guid": twin.guid})
             changes["name"] = (proposal.name, new_name)
             proposal.name = new_name
@@ -17886,11 +17895,11 @@ def _check_approved_proposals(db_, approved):
         elif shown in batch_shown:
             # v0.15.3: two that match only once characters no one sees are
             # left out would be written as two codes that read alike
-            problem = (f"the approved proposal {batch_shown[shown]} in this "
-                       f"batch has the same name once characters that "
-                       f"usually show nothing on screen are left out, so "
-                       f"the two codes could look the same in a list. "
-                       f"Reject one, or rename it with update_proposal")
+            problem = (f"once characters that usually show nothing on "
+                       f"screen are left out, the approved proposal "
+                       f"{batch_shown[shown]} in this batch has the same "
+                       f"name, so the two codes could look the same in a "
+                       f"list. Reject one, or rename it with update_proposal")
         elif p.category is not None:
             match = next((c for c in cats
                           if c["name"].lower() == p.category.lower()), None)
@@ -17929,12 +17938,12 @@ def create_proposed_codes(coding_session_id: str,
     session (record_suggestions), each new code's example passages first
     (the answer lists them), for the researcher to decide.
 
-    Every approved proposal is checked before the backup and the write:
-    the name must still be unique in the codebook as it is now (a name
-    that matches an existing code exactly, or once letter case, spacing
-    and Unicode form are ignored, or once invisible characters are left
-    out, refuses the batch; rename the proposal first) and the category
-    must exist. On any failure nothing is written. Only approved
+    Every approved proposal is checked before the backup and the write.
+    Its name must still be unique in the codebook as it is now, and its
+    category must exist. A name that matches an existing code exactly, or
+    once letter case, spacing and Unicode form are ignored, or once
+    invisible characters are left out, refuses the batch: rename the
+    proposal first. On any failure nothing is written. Only approved
     proposals are created: a rejected one only if it is approved
     again, a merged one never.
 
@@ -18246,9 +18255,9 @@ def create_code(name: str, category: Optional[str] = None,
     colour, the code gets one picked at random from QualCoder's palette,
     as a code made in QualCoder does.
 
-    Idempotent: if a code with this name already exists (ignoring letter
-    case, spacing and Unicode form), nothing is written and no backup is
-    made; the result is `created: false, reason: already_exists` with the
+    If a code with this name already exists (ignoring letter case, spacing
+    and Unicode form), nothing is written and no backup is made. The
+    result is then `created: false, reason: already_exists`, with the
     existing row under `code` (use its id), `match` (exact or
     case_insensitive) and, under `requested`, only the arguments that
     differ from the stored row (spelling, category, parent, colour). A
@@ -18259,7 +18268,7 @@ def create_code(name: str, category: Optional[str] = None,
     Sub-codes (projects with schema v16 or newer only): pass
     parent_code_id to nest the new code under an existing code instead of
     a category. A code has either a parent code or a category, never
-    both; on projects without sub-code support the parameter is refused.
+    both. On projects without sub-code support, the parameter is refused.
 
     Colours are stored as the nearest QualCoder palette colour (120 fixed
     colours, as the QualCoder colour picker offers); the result reports
@@ -18645,10 +18654,10 @@ def create_category(name: str, parent_category: Optional[str] = None,
     are unique among categories, globally (no per-parent scope) and
     compared ignoring letter case.
 
-    Idempotent: if a category with this name already exists (ignoring
-    letter case, spacing and Unicode form), nothing is written and no
-    backup is made; the result is `created: false, reason: already_exists`
-    with the existing row under `category` (use its id), `match` (exact or
+    If a category with this name already exists (ignoring letter case,
+    spacing and Unicode form), nothing is written and no backup is made.
+    The result is then `created: false, reason: already_exists`, with the
+    existing row under `category` (use its id), `match` (exact or
     case_insensitive) and, under `requested`, only the arguments that
     differ from the stored row (spelling, parent). A supplied memo is
     never applied to an existing category (set_memo does that).
@@ -20135,22 +20144,22 @@ def _write_run_manifest(payload: Dict[str, Any],
 
 _RETENTION_REQUIRED = (
     "This run applies a mapping you typed, and without a record of it "
-    "nobody can say later who each pseudonym was. Nothing was written. Ask "
-    "the researcher which they want. To save the mapping into the "
-    "project's own pseudonyms.json in QualCoder's format, call the preview "
-    "again with save_mapping_to_project=true (the token binds it) and "
-    "execute from that preview. To record that the researcher keeps their "
-    "own copy, call again with the same preview_token and "
-    "researcher_keeps_mapping=true.")
+    "nobody can say later who each pseudonym was. Nothing was written. To "
+    "save the mapping into the project's own pseudonyms.json in "
+    "QualCoder's format, call the preview again with "
+    "save_mapping_to_project=true (the token binds it) and execute from "
+    "that preview. To record that the researcher keeps their own copy, "
+    "call again with the same preview_token and "
+    "researcher_keeps_mapping=true. Ask the researcher which they want.")
 _RETENTION_ON_THE_SIDECAR_PATH = (
     "save_mapping_to_project and researcher_keeps_mapping describe what "
-    "happens to a mapping you typed; with use_project_pseudonyms the mapping "
-    "is already the project's own pseudonyms.json, which is the record. "
-    "Give neither.")
+    "happens to a mapping you typed. With use_project_pseudonyms the "
+    "mapping is already the project's own pseudonyms.json, which is the "
+    "record. Give neither.")
 _RETENTION_NOTE_TYPED = (
     "This run applies a mapping you typed. Without a record of it nobody "
-    "can say later who each pseudonym was, so the execute is refused until "
-    "the call says where it is kept. To "
+    "can say later who each pseudonym was, so the run is refused until "
+    "the call says where the mapping is kept. To "
     "save it into the project's own pseudonyms.json in QualCoder's format, "
     "preview again with save_mapping_to_project=true: that argument is bound "
     "into the token, and the preview then shows what the save would do. To "
@@ -20158,14 +20167,14 @@ _RETENTION_NOTE_TYPED = (
     "researcher_keeps_mapping=true to the execute call with this token. Ask "
     "the researcher which.")
 _RETENTION_NOTE_SIDECAR = (
-    "The mapping is the project's own pseudonyms.json, which is the record; "
-    "nothing needs choosing.")
+    "The mapping is the project's own pseudonyms.json, which is the "
+    "record. Nothing needs choosing.")
 _RETENTION_ASK = (
-    "Ask the researcher which they want. To save the mapping, call the "
-    "preview "
-    "again with save_mapping_to_project=true and execute from that preview. "
-    "To attest that the researcher keeps their own record, add "
-    "researcher_keeps_mapping=true to this execute call.")
+    "To save the mapping, call the preview again with "
+    "save_mapping_to_project=true and execute from that preview. To record "
+    "that the researcher keeps their own copy, add "
+    "researcher_keeps_mapping=true to this execute call. Ask the researcher "
+    "which they want.")
 _SAVE_INSTEAD = (
     "preview again without save_mapping_to_project and execute with "
     "researcher_keeps_mapping=true instead.")
@@ -20214,14 +20223,14 @@ _CONTEXT_WITH_OCCURRENCES = (
 _TOO_MANY_LEFT = (
     f"leave_occurrences holds more than "
     f"{occurrence_ids.MAX_OCCURRENCES_LEFT} ids, and one run takes at most "
-    f"{occurrence_ids.MAX_OCCURRENCES_LEFT}. Give each occurrence left by "
-    f"one id only.")
+    f"{occurrence_ids.MAX_OCCURRENCES_LEFT}. Give each occurrence to leave "
+    f"by one id only.")
 _TOO_MANY_LEFT_TYPED = _TOO_MANY_LEFT + (
     " If most occurrences of a name in this file should stay, take the "
-    "name out of the mapping for this run. Every occurrence of it then "
-    "stays, those that should change among them, and the count of the "
-    "names left in the file text does not count them, since it counts "
-    "only the mapping's names.")
+    "name out of the mapping for this run. Then every occurrence of it "
+    "stays, including those that should change. The count of the names "
+    "left in the file text does not count them, since it counts only the "
+    "mapping's names.")
 # A list to leave whose ids the preview cannot place (v0.15.3): refused
 # on a preview, never on the execute, where the token answers. The
 # causes are every one that gives other ids (occurrences.py); a change
@@ -21182,8 +21191,9 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     if any(item.get("overlap_conflicts") for item in preview.get("files", [])):
         warnings.append(
             "Warning: two mapping entries compete for the same characters "
-            "somewhere (see overlap_conflicts); the longer surface form "
-            "won and the other did not fire there. Show the researcher the "
+            "somewhere (see overlap_conflicts). The match that starts first, "
+            "and the longest of those that start there, was replaced, and "
+            "the other was not replaced there. Show the researcher the "
             "conflicts.")
     capped = [str(item["file_id"]) for item in preview.get("files", [])
               if item.get("overlap_conflicts_capped")]
@@ -21403,14 +21413,14 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     if retention.get("required") and retention.get("chosen") is None:
         # Ruling 14a: the preview says which is needed.
         warnings.append(
-            "Warning: the execute will be refused unless the call says "
-            "where the mapping is kept. To save it into the project's own "
+            "Warning: the run will be refused unless the call says where "
+            "the mapping is kept. To save it into the project's own "
             "pseudonyms.json in QualCoder's format, preview again with "
-            "save_mapping_to_project=true, which the token binds; to record "
+            "save_mapping_to_project=true, which the token binds. To record "
             "that the researcher keeps their own copy, add "
             "researcher_keeps_mapping=true to the execute call with this "
-            "token. Ask the researcher which; see "
-            "execute_with.mapping_retention.")
+            "token. Ask the researcher which (see "
+            "execute_with.mapping_retention).")
     if_saved = retention.get("if_saved") or {}
     if if_saved.get("conflicts"):
         warnings.append(
@@ -22184,10 +22194,10 @@ def pseudonymise_source(
     agree, call again with the same mapping, file_id, case_mode,
     overlap_policy, rewrite_memos, save_mapping_to_project and
     leave_occurrences when given, plus preview_token=<the token>. The
-    token is valid for 60 minutes and only while the text and the rows
-    it covers are unchanged; if the project changed in between, the
-    execute is refused and you must preview again. Exegete takes a backup
-    first, as before every change; a run that changes nothing takes none.
+    token is valid for 60 minutes, and only while the text and the rows
+    it covers are unchanged. If the project changed in between, the run
+    is refused and you must preview again. Exegete takes a backup first,
+    as before every change. A run that changes nothing takes none.
 
     Deterministic and rule-based. Only the names in the mapping are
     replaced, as whole words, case-sensitively unless case_mode says
@@ -22237,11 +22247,11 @@ def pseudonymise_source(
     private note. Its counts use a wider reading than the rewrite: any
     occurrence a person would see, inside a longer word and in any case
     included, so a case named Thomas_P01 is counted even under
-    case_mode="exact". Every count is two readings, wide and whole-word,
-    and the residue's file_text block counts the names left in the text
-    of every file after the run, the files this run does not touch
-    included (not a PDF QualCoder 3.8.2 stored as the file itself, which
-    holds no text). A name inside a longer word is reported and never
+    case_mode="exact". Every count is two readings, wide and whole-word.
+    The residue's file_text block counts the names left in the text of
+    every file after the run, the files this run does not touch included,
+    but not a PDF QualCoder 3.8.2 stored as the file itself, which holds
+    no text. A name inside a longer word is reported and never
     substituted.
 
     The backup keeps the real names, and so does pseudonyms.json if the
@@ -22254,19 +22264,19 @@ def pseudonymise_source(
 
     After the run, re-read the file before any further coding: every
     position after the first replacement in it has changed, and any
-    pending coding suggestion for it is stale. The result lists, under
-    stale_sessions, every coding session of this project whose file
-    still holds an excerpt of the file's earlier text (a suggestion's
-    passage and context, whatever its status, or a proposed code's
-    evidence), and under stale_sessions_with_work_to_apply those with
-    suggestions or proposals still to apply; tell the researcher, since
-    those files hold the real names until delete_coding_session removes
-    them.
+    pending coding suggestion for it is stale. The result lists under
+    stale_sessions every coding session of this project whose file still
+    holds an excerpt of the file's earlier text: a suggestion's passage
+    and context, whatever its status, or a proposed code's evidence.
+    Under stale_sessions_with_work_to_apply it lists those with
+    suggestions or proposals still to apply. Tell the researcher, since
+    those session files hold the real names until delete_coding_session
+    removes them.
 
     If the researcher uses QualCoder: a QualCoder window open on the
-    project does not refresh from this write on its own (re-selecting
-    the file in the Files list re-reads it; reopening the project always
-    does), and QualCoder 4.0's AI search index keeps the previous text
+    project does not refresh from this write on its own. Selecting the
+    file again in the Files list re-reads it, and reopening the project
+    always does. QualCoder 4.0's AI search index keeps the previous text
     until it re-indexes on the next open with AI enabled.
 
     What it is for: it helps manage what the researcher shares with other
@@ -22306,13 +22316,12 @@ def pseudonymise_source(
                  is withheld (null) wherever the preview would quote it,
                  and its entry number stands in. Four things are still
                  returned as they stand, so that the preview can be
-                 relayed: the project path,
-                 each file's own name (every file the residue's file-text
-                 block lists included), and the backup path and the note
-                 that gives it, both named after the project folder. The
-                 backup path is reported on any failure after the backup
-                 was taken, as on success. Any of these can itself hold
-                 one of those names.
+                 relayed: the project path, each file's own name (every
+                 file the residue's file-text block lists included), and
+                 the backup path and the note that gives it, both named
+                 after the project folder. The backup path is reported on
+                 any failure after the backup was taken, as on success.
+                 Any of these can itself hold one of those names.
         case_mode: "exact" (default, QualCoder's own rule: TOM, Tom and
                  tom are three different names), "insensitive" (all three
                  get the pseudonym exactly as written), or
@@ -22340,37 +22349,35 @@ def pseudonymise_source(
                  bound into the token: repeat it on the execute call.
         save_mapping_to_project: On a typed mapping, write it into the
                  project's own pseudonyms.json in QualCoder's format,
-                 merging with what is there (a name the file already maps
-                 refuses the execute, as QualCoder's Pseudonyms dialog (the
-                 button in Manage Files) refuses a duplicate original,
-                 whether or not the pseudonym is the same; a pseudonym the
-                 file already uses for another name is written and
-                 reported). QualCoder's text and transcript imports (not
+                 merging with what is there. A name the file already maps
+                 refuses the execute, whether or not the pseudonym is the
+                 same, as QualCoder's Pseudonyms dialog (the button in
+                 Manage Files) refuses a duplicate original. A pseudonym
+                 the file already uses for another name is written and
+                 reported. QualCoder's text and transcript imports (not
                  PDFs) apply the file one entry at a time, in file order
                  and case-sensitively (its survey import and text-file
-                 replacement match differently): the new entries
-                 are written longest name first, so a shorter name inside
-                 a longer one does not pre-empt it, the preview warns when
-                 an entry already in the file would, and under an
-                 insensitive case_mode only the spellings saved are
-                 replaced on the next such import. Alternative
-                 spellings become separate entries with the same
-                 pseudonym, which the dialog will not add by hand. The
-                 file holds the real names in plain text at the project
-                 root and travels into every backup; a new one is written
-                 owner-only on macOS and Linux, an existing one keeps its
-                 own permissions, and one this account cannot write is
-                 refused. The preview run with it lists, by entry number,
-                 which typed names the file already maps, which typed
-                 pseudonyms it already gives to another name and which
-                 typed names hold, as a word, a name the file lists, so
-                 it confirms whether a name is in the file; and an
-                 execute refused for a name the file already maps says
-                 when the file holds every typed name under its typed
-                 pseudonym, which confirms an exact pair. This argument is
-                 bound into the token:
-                 the preview must be run with it, and the execute repeats
-                 it.
+                 replacement match differently). So the new entries are
+                 written longest name first, and a shorter name inside a
+                 longer one is not applied before it; the preview warns
+                 when an entry already in the file would be. Under an
+                 insensitive case_mode, only the spellings saved are
+                 replaced on the next such import. Alternative spellings
+                 become separate entries with the same pseudonym, which
+                 the dialog will not add by hand. The file holds the real
+                 names in plain text at the project root and travels into
+                 every backup. A new one is written owner-only on macOS
+                 and Linux, an existing one keeps its own permissions, and
+                 one this account cannot write is refused. The preview run
+                 with it lists, by entry number, which typed names the
+                 file already maps, which typed pseudonyms it already gives
+                 to another name, and which typed names hold, as a word, a
+                 name the file lists: so it confirms whether a name is in
+                 the file. An execute refused for a name the file already
+                 maps says when the file holds every typed name under its
+                 typed pseudonym, which confirms an exact pair. This
+                 argument is bound into the token: the preview must be run
+                 with it, and the execute repeats it.
         researcher_keeps_mapping: On a typed mapping, attest that the
                  researcher keeps their own record of it. Not bound into
                  the token: an attestation with no side effect, which may
@@ -22391,15 +22398,16 @@ def pseudonymise_source(
                  project hides (hidden_coder_rows). A coding that covered
                  a name, or contained one, and now covers or contains its
                  pseudonym needs no override, whatever the two lengths,
-                 and neither does a pure position shift, because neither
-                 changes a coding decision; a coding that grew to swallow
-                 a pseudonym, one that would be deleted, or one that had
-                 to be clamped because its stored end lay past the end of
-                 the text, does. A note that rewrite_memos rewrites needs
-                 no override either, whoever owns it, because it changes
-                 no coding decision; the preview counts those of hidden
-                 coders (memo_rewrites.memos_of_hidden_coders), never
-                 giving their names.
+                 and neither does a pure position shift: neither changes a
+                 coding decision. The override is needed for a coding that
+                 grew to swallow a pseudonym, one that would be deleted,
+                 and one that had to be clamped because its stored end lay
+                 past the end of the text. A note that rewrite_memos
+                 rewrites needs no override either, whoever owns it,
+                 because it changes no coding decision; the preview
+                 counts those of hidden coders
+                 (memo_rewrites.memos_of_hidden_coders), never giving
+                 their names.
         record_in_journal: Write a journal entry in the project recording
                  the run (default true). It carries counts, pseudonyms
                  and file ids, never an original name. This argument is
@@ -22420,15 +22428,16 @@ def pseudonymise_source(
                  and attribute values, and in the text of every file
                  after the run (default true). Both readings, wide and
                  whole-word, for every count. The file-text count has
-                 fixed budgets, and all it spends is charged to them:
-                 past them a file is only asked whether a name shows,
-                 past a budget for that question it is not checked, and
-                 the warning says which file. The file this call gives is
-                 read first, with the first claim on the budgets. A
+                 fixed budgets, and all its work counts against them.
+                 Past them, a file is only checked for whether a name
+                 shows. Past a budget for that check, it is not checked,
+                 and the warning says which file. The file this call gives
+                 is read first, with the first claim on the budgets. A
                  count that stops part-way found a name and gives a
                  lower bound. A file too large to count with this many
-                 names is said to be, as is one too large for any
-                 mapping; with fewer names a text file could be counted.
+                 names is reported as such: with fewer names, a text file
+                 could be counted. A file too large for any mapping is
+                 reported too.
         residue_detail: "file" (default): full detail for the file this
                  call gives and, for up to 1,000 other files that still
                  show a name, one row with its id, name and two counts;
@@ -22466,10 +22475,11 @@ def pseudonymise_source(
     the token. A different value for one of them on the execute call is
     not "a different operation": it changes what is shown, whether the
     run records itself, or where the mapping is said to be kept. A pair
-    refused on a preview is refused there too. The arguments that are
-    bound are mapping, file_id, case_mode, overlap_policy, rewrite_memos,
-    save_mapping_to_project and leave_occurrences when given, and they
-    must be repeated identically on the execute call.
+    refused on a preview is refused on the execute call too. The
+    arguments that are bound are mapping, file_id, case_mode,
+    overlap_policy, rewrite_memos, save_mapping_to_project and
+    leave_occurrences when given, and they must be repeated identically
+    on the execute call.
 
     Returns:
         JSON: the preview and a preview_token, or the result of the run.
@@ -23463,15 +23473,15 @@ def create_case(name: str, memo: Optional[str] = None,
     """Create a new case (a participant, for example) in the project.
 
     It writes to the database. Cases group data by person, site or
-    whatever the study compares; link files to the new case with
-    link_file_to_case (or import_text_file's case_name parameter) so they
-    appear in case-based analyses. Case names are unique and compared
+    whatever the study compares. Link files to the new case with
+    link_file_to_case, or import_text_file's case_name parameter, so that
+    they appear in case-based analyses. Case names are unique and compared
     ignoring letter case. Placeholder rows are created for any existing
     case attributes, as QualCoder creates them.
 
-    Idempotent: if a case with this name already exists (ignoring letter
-    case, spacing and Unicode form), nothing is written and no backup is
-    made; the result is `created: false, reason: already_exists` with the
+    If a case with this name already exists (ignoring letter case, spacing
+    and Unicode form), nothing is written and no backup is made. The
+    result is then `created: false, reason: already_exists`, with the
     existing row under `case` (use its id) and `match` (exact or
     case_insensitive). A supplied memo is never applied to an existing
     case (set_memo does that). Successful creates carry `created: true`.
@@ -23664,10 +23674,10 @@ _RENAME_QC40_PARAGRAPH = (
 @_with_paragraphs(LOCK_REFUSED_PARAGRAPH, before="Args:")
 def rename_case(case_id: int, new_name: str,
                 create_backup: Optional[bool] = None) -> str:
-    """Rename a case. It writes to the database. Only the name changes.
+    """Rename a case. It writes to the database.
 
     Only the case's name is written: its date, owner, notes, file links,
-    codings and attributes are untouched (they are kept by id), as in
+    codings and attributes are untouched (they are linked by id), as in
     QualCoder's Manage Cases. Whitespace runs collapse to one space, as in
     create_case, so a name stored with extra spacing is rewritten in
     normal form. A new name that matches another case, ignoring letter
@@ -23675,13 +23685,14 @@ def rename_case(case_id: int, new_name: str,
     case's id: rename that one first if the respelling is wanted. A
     respelling of this case's own name in other letter case goes ahead.
     The current name given again answers `changed: false, reason:
-    unchanged`, with nothing written and no backup made. Successful
-    renames carry `changed: true` and `old_name`, plus where the old name
-    stays: `old_name_left_in` counts QualCoder's saved graph labels,
-    table displays and filters that still contain it and lists the ids of
-    files named after it (a heuristic: the old name as a whole word,
-    ignoring letter case, '_' and '.' separating words; each count only
-    when not zero), and `note` gives the rest.
+    unchanged`, with nothing written and no backup made.
+
+    Successful renames carry `changed: true` and `old_name`, and say where
+    the old name stays. `old_name_left_in` counts QualCoder's saved graph
+    labels, table displays and filters that still contain it, and lists
+    the ids of files named after it. It is a heuristic: the old name as a
+    whole word, ignoring letter case, with '_' and '.' separating words,
+    and each count only when not zero. `note` gives the rest.
 
     Find a case id in exegete://cases/list, get_case_code_matrix, a
     create_case answer, or QualCoder's own id column.
@@ -24082,16 +24093,17 @@ def _file_rename_precheck(db, file_id: int, candidate: str):
                   before="Refused, each with its reason:")
 def rename_file(file_id: int, new_name: str,
                 create_backup: Optional[bool] = None) -> str:
-    """Rename a file's entry. It writes to the database. Only the name.
+    """Rename a file's entry. It writes to the database.
 
     Only the name the project gives the file is written, as with "Rename
-    database entry" in QualCoder's Manage Files. Nothing on disk is renamed, and the
-    stored path, date, notes, codings, case links and transcript link are
-    kept (they are by id). The name is trimmed at both ends and
-    normalised to Unicode NFC. The identical current name answers
-    `changed: false, reason: unchanged` before any rule, with nothing
-    written and no backup made; a name stored with spaces at its ends or
-    in another Unicode form is rewritten in normal form when retyped.
+    database entry" in QualCoder's Manage Files. Nothing on disk is
+    renamed, and the stored path, date, notes, codings, case links and
+    transcript link are kept (they are linked by id). The name is trimmed
+    at both ends and normalised to Unicode NFC. The identical current name
+    answers `changed: false, reason: unchanged` before any rule, with
+    nothing written and no backup made. A name stored with spaces at its
+    ends or in another Unicode form is rewritten in normal form when
+    retyped.
 
     QualCoder 4.0 writes no lock file, so Exegete may miss a 4.0 window: a Manage Files window opened before the rename still shows the old name, and an edit there can overwrite the rename or fail on it. If the researcher uses 4.0, ask them to close the project there first.
 
@@ -24099,33 +24111,35 @@ def rename_file(file_id: int, new_name: str,
     name; control, line-separator or invisible formatting characters;
     '/', '\\', '..' or ':'; a name Windows cannot store (< > | ? * ",
     a trailing dot or space, a device name such as CON or NUL.txt); over
-    200 bytes in UTF-8;
-    another file's name (exactly, after NFC; a name differing from
-    another only in letter case is allowed, as in QualCoder); for a text
-    document, a name already present in the project's documents folder;
-    'unnamed_file_<n>' while file n has an invalid name. Endings are
-    refused only where QualCoder acts on them: a transcript keeps '.txt'
-    or '.transcribed' exactly; '.pdf' is neither gained nor lost;
-    '.transcribed' is not gained; an image, audio or video file keeps its
-    stored file's extension; a text with no stored file whose name ends
-    in '.txt' or has no dot keeps it that way. QualCoder's own Rename, if
-    the researcher uses it, can still make those changes. Any other name
-    changes freely
-    ('Thomas.Jones' to 'P01'). An ending the name of its stored file has
-    may be put back, except a transcript losing both endings or a media
-    file its extension; a name the project's backups show is not looked
-    for.
+    200 bytes in UTF-8; another file's name (exactly, after NFC; a name
+    differing from another only in letter case is allowed, as in
+    QualCoder); for a text document, a name already present in the
+    project's documents folder; 'unnamed_file_<n>' while file n has an
+    invalid name.
 
-    The result carries `changed: true`, `old_name`, `file_type`, and
-    what kept the old name: `stored_copy` (an imported file's copy in the
-    project folder and its stored path keep it, and for a document the
-    copy holds the original text), `linked_transcript` or
-    `transcript_of`, `transcript_pairing` (pairings QualCoder makes by
-    name), `old_name_left_in` (saved graph labels, table displays and
-    filters holding it as a whole word, and ids of other files named
-    after it; a heuristic, each count only when not zero),
-    `search_index_note` and
-    `note`.
+    Endings are refused only where QualCoder acts on them: a transcript
+    keeps '.txt' or '.transcribed' exactly; '.pdf' is neither gained nor
+    lost; '.transcribed' is not gained; an image, audio or video file
+    keeps its stored file's extension; a text with no stored file whose
+    name ends in '.txt' or has no dot keeps it that way. QualCoder's own
+    Rename, if the researcher uses it, can still make those changes. Any
+    other name changes freely ('Thomas.Jones' to 'P01'). A rename may put
+    back an ending that the stored file's own name has. Even so, a
+    transcript may not lose both its endings, nor a media file its
+    extension. Exegete does not look for earlier names in the project's
+    backups.
+
+    The result carries `changed: true`, `old_name` and `file_type`, and
+    what kept the old name:
+    - `stored_copy`: an imported file's copy in the project folder and its
+      stored path keep it, and for a document the copy holds the original
+      text
+    - `linked_transcript` or `transcript_of`
+    - `transcript_pairing`: pairings QualCoder makes by name
+    - `old_name_left_in`: saved graph labels, table displays and filters
+      holding it as a whole word, and ids of other files named after it
+      (a heuristic; each count only when not zero)
+    - `search_index_note` and `note`
 
     Find a file id in exegete://files/list or search_files.
 
@@ -24264,8 +24278,8 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     """Set (or clear) an attribute value on a case or a file.
 
     It writes to the database. The attribute must already exist (see
-    create_attribute_type and list_attribute_types) and must belong to
-    the target's domain; a case attribute cannot be set on a file.
+    create_attribute_type and list_attribute_types) and be of the
+    target's kind: a case attribute cannot be set on a file.
     Pass value="" to unset: QualCoder's format keeps "no value" as an
     empty cell, and the row itself always remains.
 
@@ -24274,7 +24288,7 @@ def set_attribute(target_type: str, target_id: int, attribute_name: str,
     included, is refused with an error and nothing changes. QualCoder
     blanks or reverts a value that is not a number, with a warning, and
     accepts "nan", "inf" and underscores, which its attribute report
-    then reads as other numbers; Exegete refuses them, so what it
+    then reads as other numbers. Exegete refuses them, so what it
     stores is what query_by_attribute compares.
 
     Args:
@@ -26086,7 +26100,7 @@ def create_project(name: str, directory: Optional[str] = None,
 
 @mcp.tool(annotations=TOOL_CHECKS_ONLINE)
 async def check_for_updates() -> str:
-    """Call only when the researcher asks whether Exegete is up to date, how to update it, or which version they have. Give the researcher the message and the steps as returned, and do not suggest other ways to update, such as GitHub's Releases page. The steps are for the researcher to follow: the app that started Exegete must be closed while Exegete changes, so do not run them yourself. Returns the installed version and its date, the newest version and its date, numbered steps for this computer, and links. While checking is on, it may fetch Exegete's version file from its website, which GitHub hosts, at most once a day; when checking is switched off in Exegete's settings, it makes no connection and returns the installed version and where to look."""
+    """Call only when the researcher asks whether Exegete is up to date, how to update it, or which version they have. Give the researcher the message and the steps as returned, and do not suggest other ways to update, such as GitHub's Releases page. The steps are for the researcher to follow: the app that started Exegete must be closed while Exegete changes, so do not run them yourself. Returns the installed version and its date, the newest version and its date, numbered steps for this computer, and links. While checking is on, it may fetch Exegete's version file from its website, which GitHub hosts, at most once a day. When checking is switched off in Exegete's settings, it makes no connection and returns the installed version and where to look."""
     # The fetch runs in a worker thread under updates.DEADLINE, so
     # Exegete keeps answering while it waits (every other tool is plain
     # and runs on the event loop). The guard every tool has, written out:

@@ -14019,7 +14019,7 @@ def prune_backups(keep_last: Optional[int] = None,
                                           to_remove)
     if media_only:
         notes.append(_prune_media_only_note(media_only, done=False))
-    removes_newest_prerestore = False
+    removes_newest_prerestore = None
     prerestore_removed = [b for b in to_remove if "_prerestore" in b["name"]]
     if prerestore_removed:
         newest_prerestore = next(
@@ -14027,7 +14027,8 @@ def prune_backups(keep_last: Optional[int] = None,
         if newest_prerestore and any(
                 b["name"] == newest_prerestore["name"]
                 for b in prerestore_removed):
-            removes_newest_prerestore = True
+            # Its name, for the execute's notes (v0.15.3)
+            removes_newest_prerestore = newest_prerestore["name"]
             notes.append(_prune_prerestore_note(done=False))
 
     if not to_remove:
@@ -14147,14 +14148,29 @@ def prune_backups(keep_last: Optional[int] = None,
                            "check permissions.")
     # The execute is refused unless the set is the one the preview named,
     # so its notes say what was done, in the past tense, in the preview's
-    # order.
+    # order: of the backups removed alone (v0.15.3), since a backup whose
+    # removal failed may still hold what the note would call gone. Those
+    # are named apart, last.
     notes = []
-    if only_copies["copies"]:
-        notes.append(_prune_only_copies_note(only_copies, done=True))
-    if media_only:
-        notes.append(_prune_media_only_note(media_only, done=True))
-    if removes_newest_prerestore:
+    gone = set(removed)
+    copies_gone = [pair for pair in only_copies["copies"] if pair[0] in gone]
+    if copies_gone:
+        held = {fingerprint for _, fingerprint in copies_gone}
+        notes.append(_prune_only_copies_note({
+            "copies": copies_gone,
+            "qualcoder": sorted(
+                name for name, fingerprint
+                in only_copies["qualcoder_holds"].items()
+                if fingerprint in held)}, done=True))
+    media_gone = [pair for pair in media_only if pair[0] in gone]
+    if media_gone:
+        notes.append(_prune_media_only_note(media_gone, done=True))
+    if removes_newest_prerestore in gone:
         notes.append(_prune_prerestore_note(done=True))
+    if failed:
+        notes.append(_prune_not_removed_note(
+            failed, [name for name, _ in only_copies["copies"]],
+            media_only, removes_newest_prerestore))
     if notes:
         result["notes"] = notes
     return json.dumps(result, indent=2)
@@ -14194,9 +14210,15 @@ def _prune_only_mapping_copies(project_folder: Path,
         for fingerprint in [pseudonyms_json_fingerprint(b["path"])]
         if fingerprint not in held)
     named = {fingerprint for _, fingerprint in copies}
-    qualcoder = sorted(b["name"] for b in backups if b["kind"] == "qualcoder"
-                       and pseudonyms_json_fingerprint(b["path"]) in named)
-    return {"copies": copies, "qualcoder": qualcoder}
+    # Each QualCoder backup that holds one of them, with the fingerprint
+    # it holds, so that the execute's note names beside the backups it
+    # removed only those holding what they held (v0.15.3)
+    holds = {b["name"]: fingerprint for b in backups
+             if b["kind"] == "qualcoder"
+             for fingerprint in [pseudonyms_json_fingerprint(b["path"])]
+             if fingerprint in named}
+    return {"copies": copies, "qualcoder": sorted(holds),
+            "qualcoder_holds": holds}
 
 
 def _prune_only_copies_note(only_copies: Dict[str, List[Any]],
@@ -14332,6 +14354,60 @@ def _prune_prerestore_note(done: bool) -> str:
     return (f"This {'removed' if done else 'removes'} your most recent "
             f"pre-restore safety snapshot, the state saved just before the "
             f"last restore_backup.")
+
+
+def _prune_not_removed_note(failed: List[str], only_copies: List[str],
+                            media_only: List[List[Any]],
+                            newest_prerestore: Optional[str]) -> str:
+    """The execute's note on the backups it could not remove whole
+    (v0.15.3): folder names only. The removal is in place, so such a
+    backup keeps its name: list_backups lists it, and restore_backup
+    accepts it while its database remains, though some of its files may
+    have gone. One that held the only copy of a pseudonyms.json, or of a
+    recording, may still hold it, or may not (its file may have gone
+    before the error)."""
+    one = len(failed) == 1
+
+    def listed(names: List[str]) -> str:
+        return (names[0] if len(names) == 1
+                else ", ".join(names[:-1]) + " and " + names[-1])
+
+    if one:
+        note = (f"Exegete could not remove the backup {failed[0]} whole, so "
+                f"it keeps its name: list_backups still lists it and "
+                f"restore_backup accepts it while its database remains, "
+                f"though it may lack some of its files, which a restore "
+                f"from it would not bring back.")
+    else:
+        note = (f"Exegete could not remove the backups {listed(failed)} "
+                f"whole, so they keep their names: list_backups still lists "
+                f"them and restore_backup accepts them while their "
+                f"databases remain, though each may lack some of its files, "
+                f"which a restore from it would not bring back.")
+    copies = [name for name in failed if name in only_copies]
+    if copies:
+        note += (f" {listed(copies)} held a pseudonyms.json that neither the "
+                 f"project nor a backup Exegete keeps holds, and may still "
+                 f"hold it.")
+    media = [[name, count] for name, count in media_only if name in failed]
+    if media:
+        single = sum(count for _, count in media) == 1
+        note += (" " + listed([f"{name} ({count} file"
+                               f"{'' if count == 1 else 's'})"
+                               for name, count in media])
+                 + " held " + ("a file" if single else "files") + " in "
+                 + ("its" if len(media) == 1 else "their")
+                 + " audio or video folders that neither the project nor a "
+                 "backup Exegete keeps holds, and may still hold "
+                 + ("it." if single else "them."))
+    if newest_prerestore in failed:
+        note += (f" {newest_prerestore} is your most recent pre-restore "
+                 f"safety snapshot.")
+    return note + (" You could remove " + ("it" if one else "them")
+                   + " by hand once nothing holds " + ("it" if one else
+                                                       "them")
+                   + " open: another program may have one of "
+                   + ("its" if one else "their") + " files open.")
 
 
 def _project_is_write_locked(data_qda: Path) -> bool:

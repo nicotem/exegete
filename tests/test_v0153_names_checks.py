@@ -16,6 +16,7 @@ Windows-safe: tmp fixtures only, no wall-clock waits.
 """
 
 import json
+import shutil
 import sqlite3
 from pathlib import Path
 
@@ -454,3 +455,91 @@ def test_a_batch_holding_two_that_read_alike_is_refused(project):
     assert [f["guid"] for f in out.get("failures", [])] == [two], out
     assert one in out["failures"][0]["reason"]
     assert _names(project) == names and _beside(project) == beside
+
+
+# ---------------------------------------------------------------------------
+# The prune's notes, built from what was removed
+# ---------------------------------------------------------------------------
+
+WARNING = "may lack some of its files"
+
+
+def _backup(project, name, files):
+    """A backup beside the project named `name`, a copy of the project
+    with `files` ({path below it: bytes}) added."""
+    project = Path(project)
+    folder = project.parent / name
+    shutil.copytree(project, folder)
+    for below, data in files.items():
+        path = folder / below
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+    return folder
+
+
+def _own(project, stamp, files, suffix=""):
+    return _backup(project, f"{Path(project).stem}_backup_{stamp}{suffix}.qda",
+                   {"extra.txt": b"x", **files})
+
+
+def _prune_with_one_failing(monkeypatch, failing):
+    """Every backup pruned (keep_last=0), the removal of `failing` going
+    partway: one of its files goes, then it raises."""
+    preview = json.loads(server.prune_backups(keep_last=0))
+    real = shutil.rmtree
+
+    def rmtree(path, *args, **kwargs):
+        if Path(path) == failing:
+            (failing / "extra.txt").unlink()
+            raise PermissionError("a file in it is open")
+        return real(path, *args, **kwargs)
+
+    monkeypatch.setattr(shutil, "rmtree", rmtree)
+    return json.loads(server.prune_backups(
+        keep_last=0, preview_token=preview["preview_token"]))
+
+
+def _listed():
+    return [b["name"] for b in json.loads(server.list_backups())["backups"]]
+
+
+def test_the_prune_note_names_what_was_removed(project, monkeypatch):
+    """Two backups holding the only copies of two pseudonyms.json files,
+    and a QualCoder backup holding a copy of the first one's."""
+    first = _own(project, "20260101_000000", {"pseudonyms.json": b"{}"})
+    second = _own(project, "20260102_000000", {"pseudonyms.json": b"[]"})
+    qualcoder = _backup(project, f"{project.stem}_BKUP_2026010300.qda",
+                        {"pseudonyms.json": b"{}"})
+    done = _prune_with_one_failing(monkeypatch, first)
+    assert done["removed"] == [second.name], done
+    assert done["failed_to_remove"] == [first.name]
+    past = [note for note in done["notes"] if second.name in note]
+    assert len(past) == 1
+    assert first.name not in past[0] and qualcoder.name not in past[0]
+    apart = [note for note in done["notes"] if first.name in note]
+    assert len(apart) == 1 and WARNING in apart[0]
+    assert first.name in _listed()
+
+
+def test_the_media_note_names_what_was_removed(project, monkeypatch):
+    first = _own(project, "20260101_000000", {"audio/one.mp3": b"1"})
+    second = _own(project, "20260102_000000", {"audio/two.mp3": b"22"})
+    done = _prune_with_one_failing(monkeypatch, first)
+    assert done["removed"] == [second.name], done
+    past = [note for note in done["notes"] if second.name in note]
+    assert len(past) == 1 and first.name not in past[0]
+    apart = [note for note in done["notes"] if first.name in note]
+    assert len(apart) == 1 and WARNING in apart[0]
+    assert first.name in _listed()
+
+
+def test_the_prerestore_note_only_when_it_went(project, monkeypatch):
+    other = _own(project, "20260101_000000", {})
+    prerestore = _own(project, "20260102_000000", {}, suffix="_prerestore")
+    done = _prune_with_one_failing(monkeypatch, prerestore)
+    assert done["removed"] == [other.name], done
+    assert not any("removed your most recent pre-restore" in note
+                   for note in done["notes"])
+    apart = [note for note in done["notes"] if prerestore.name in note]
+    assert len(apart) == 1 and WARNING in apart[0]
+    assert prerestore.name in _listed()

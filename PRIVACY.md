@@ -2523,7 +2523,13 @@ near the top of this document, set them out.
     copies, so a prune whose set changed after its preview (the
     project's own file removed outside Exegete, for example) is refused
     as a changed project and removes nothing, and the execute's note
-    says, in the past tense, which backups held the copy. Since v0.13 a
+    says, in the past tense, which of the backups it removed held the
+    copy. A backup it could not remove whole, as when another program
+    has one of its files open, is named apart: it may still hold the
+    copy, and it keeps its name, so `list_backups` lists it and
+    `restore_backup` accepts it while its database remains, though it
+    may lack some of its files, which a restore from it would not bring
+    back. You could remove it by hand once nothing holds it open. Since v0.13 a
     run on a mapping you typed is refused unless the call either asks
     for the mapping to be saved into this file
     (`save_mapping_to_project`, which the preview must be run with) or

@@ -101,8 +101,10 @@ AMONG_WHAT_REACHES = (
     "Not everything is replaced, though; among what still reaches the "
     "assistant through Exegete: a PDF's text, file and case names, "
     "attribute values, any name, or form of a name, that the list or the "
-    "mapping does not match, and notes and journal entries unless you ask "
-    "for them to be rewritten.")
+    # (v0.15.3, the occurrences choice: the occurrences a run leaves by
+    # choice are real names, still in the text)
+    "mapping does not match, occurrences left by choice, and notes and "
+    "journal entries unless you ask for them to be rewritten.")
 TYPED_NAMES = (
     "Names you type into the conversation for a mapping reach the "
     "assistant as you type them.")
@@ -115,7 +117,8 @@ NOT_EVERYTHING = (
     "replaced text carries the pseudonyms. " + AMONG_WHAT_REACHES + " "
     + TYPED_NAMES + " " + POINTERS)
 # The longest sentence the second paragraph may hold, in words: its
-# list is 51; the first round's sentence was 80
+# list is 55 (51 before the occurrences left by choice); the first
+# round's sentence was 80
 LONGEST_SENTENCE = 55
 ANOTHER_COPY = (
     "Deleting the originals from Downloads after the import would not "
@@ -138,6 +141,21 @@ POINTED_TO = (
 )
 # The paragraph of the description that "listed above" refers to
 LISTED_ABOVE = "What this does NOT rewrite, and where the names will remain:"
+# v0.15.3, the occurrences choice (its sixth design): what the
+# conversation carries when occurrences are chosen, and where the words
+# around them are (server.py: _occurrences_page; database.py:
+# _pseudonymise_occurrences), a paragraph of its own after the one on
+# what reaches the assistant
+CHOOSING_OCCURRENCES = (
+    "A run can also leave chosen occurrences of a name as they are, such as "
+    "those of a second person with the same name. For that choice, the "
+    "preview gives the conversation a short id for each occurrence, with its "
+    "line number when the mapping was typed into the conversation, and "
+    "counts. It gives none of the words around an occurrence: those are on a "
+    "page that Exegete opens in your browser, where you choose. The "
+    "assistant is told never to open or read that page, and you give it the "
+    "ids to leave. \"Reading a whole file\", below, says where the page is "
+    "kept and when it goes.")
 # The new texts, word for word, white space collapsed (fix round 1:
 # what the project's folder still holds, what is not replaced, where
 # else an unchanged copy sits, and three phrases)
@@ -159,6 +177,7 @@ SECTION = (
     "meets a problem may work round it by a route outside Exegete, and "
     "what it reads that way goes to its AI provider in full (\"Assistants "
     "that open files by themselves\", above). "
+    + CHOOSING_OCCURRENCES + " "
     "An imagined example. You bring ten interview transcripts into a "
     "project, meaning to replace the names before any coding starts. One "
     "file is refused. The assistant, which in your set-up can open files on "

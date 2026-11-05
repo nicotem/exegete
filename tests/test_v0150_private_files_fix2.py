@@ -546,8 +546,11 @@ class TestTheTexts:
                 "behind.") in section
         assert ("A backup or a copy that leaves out a link kept there counts "
                 "it the same way.") in section
+        # (v0.15.3: and for a page for choosing occurrences,
+        # reading_folder.sweep)
         assert ("the reading folder's files at its first tidy once they are "
-                "a week old (an hour for an import's page)") in section
+                "a week old (an hour for an import's page or a page for "
+                "choosing occurrences)") in section
         assert "(a week at most)" not in section
         assert "—" not in section
 

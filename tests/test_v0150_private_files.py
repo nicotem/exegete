@@ -1074,10 +1074,12 @@ class TestTheDocuments:
                 # (v0.15.1: cleanup_old_sessions removed, as announced)
                 "coding sessions go at your word (`delete_coding_session`)",
                 "| Pages and copies to look at | the reading folder",
+                # (v0.15.3: the page for choosing occurrences goes after
+                # an hour too, reading_folder.sweep)
                 "the reading folder's files at its first tidy once they are "
-                "a week old (an hour for an import's page), as \"Reading a "
-                "whole file\" says, so they can stay longer while Exegete is "
-                "not running;",
+                "a week old (an hour for an import's page or a page for "
+                "choosing occurrences), as \"Reading a whole file\" says, so "
+                "they can stay longer while Exegete is not running;",
                 "| Files you fill in | the `Exegete` folder inside the "
                 # the names file (piece 3, test_v0150_names_file.py)
                 "project | files you fill in for the project, such as the names "

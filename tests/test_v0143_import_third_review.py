@@ -425,7 +425,10 @@ class TestTheTexts:
         assert "names list (1 entry)" in doc_import.names_list_line(ctx)
         ctx.names_list_entries = 3
         assert "names list (3 entries)" in doc_import.names_list_line(ctx)
-        assert "The names list, if any," in _import_description()
+        # (the served texts' second batch, readability: "A names list",
+        # the one term the same)
+        assert "A names list is applied to the stored text" in \
+            _import_description()
         assert "pseudonyms list" not in _import_description()
         for name in ("PRIVACY.md", "TOOLS.md"):
             assert "pseudonyms list" not in _doc(name), name

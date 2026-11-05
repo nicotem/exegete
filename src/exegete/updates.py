@@ -117,8 +117,9 @@ ANNOUNCED_KEEP = 20
 # A note counts as given once the answer carrying it has gone out, so it
 # waits for an answer short enough to be read whole, rather than ride at
 # the end of a long one that a host may cut or an assistant skim (the
-# code review of pull request #11). Ordinary answers (a project, a list, a page of results) are well
-# under it; a whole transcript or a long page of codings may not be.
+# code review of pull request #11). Ordinary answers (a project, a list,
+# a page of results) are well under it; a whole transcript or a long
+# page of codings may not be.
 NOTE_MAX_ANSWER = 20_000
 USER_AGENT = names.SERVER_NAME
 TOOL_NAME = "check_for_updates"
@@ -1075,14 +1076,21 @@ def _switch_off_words(route: str) -> str:
 
 
 def _after_update_text() -> str:
+    """The note after an update: the paragraph release.py holds, given
+    as written, and the release's notes; no paragraph for a version
+    release.py does not describe."""
     installed = _run.installed.display() if _run.installed else ""
+    described = installed == release.VERSION
+    how = ("in the release's own words and with the link" if described
+           else "with the link")
     text = ("Note for the user, who sees it only if you pass it on. Pass "
-            "it on once, briefly, after answering their request: Exegete "
+            f"it on once, after answering their request, {how}: Exegete "
             f"has been updated to {installed} on this computer, so the "
             "update worked.")
-    if installed == release.VERSION:
+    if described:
         text += f" What's new: {release.SUMMARY}"
-    return text + f" The full notes: {release_notes_link(installed)}."
+    return text + (" The release's notes, with each change and what to "
+                   f"do: {release_notes_link(installed)}.")
 
 
 def due_note(tool_available: bool, now: Optional[float] = None

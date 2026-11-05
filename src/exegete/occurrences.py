@@ -32,7 +32,9 @@ The same preview writes a page for the researcher (`build_page`): the
 file's whole text as stored, one paragraph per stored line, each
 numbered as the preview numbers it where the preview gives lines, and
 laid out in the direction of its own first letter; every occurrence
-marked with its id after it (in a line of right-to-left text too) and,
+marked with its id beside it, after it as the line reads or, where the
+occurrence ends a stretch written against the line's direction that
+began before it, after it as that stretch reads (`_mark_after`), and,
 with a list to leave, those left marked in a second style, labelled
 "left as it is". It shows no pseudonym, no entry number and
 nothing else of the mapping. Exegete writes it into the file's folder in
@@ -52,8 +54,10 @@ import bisect
 import hashlib
 import hmac
 import re
+import unicodedata
 from datetime import datetime
-from typing import Any, Collection, Dict, List, Optional, Sequence, Tuple
+from typing import (Any, Collection, Dict, Iterator, List, Optional,
+                    Sequence, Tuple)
 
 from .reading_copy import BASE_STYLE, POLICY, esc
 from .reading_folder import PAGE_MARK
@@ -253,11 +257,21 @@ PAGE_FOR_THE_ASSISTANT = (
     "it with any tool, browser or screenshot. Ask them which ids to leave.")
 # The label after an occurrence left by the list the preview was given
 LEFT_LABEL = "left as it is"
+# The mark that follows a label which must take the direction of the
+# letter before it (`_mark_after`), by that letter's bidirectional class
+# (Unicode's UAX 9): the left-to-right mark, the right-to-left mark and
+# the Arabic letter mark. Each is of its letter's own class, so the text
+# after the label keeps the layout it has alone (a digit after an Arabic
+# letter, for one, is still read as an Arabic number). The page's style
+# draws the mark after the label (`::after`), so copying an id never
+# takes the mark with it
+DIRECTION_MARKS = {"L": "\u200e", "R": "\u200f", "AL": "\u061c"}
 # The page's own rules beside the reading copy's (reading_copy.BASE_STYLE):
 # each line's number in a margin of its own, which copying leaves out, the
 # occurrences marked, and each id in a label after its occurrence. The
 # margins are set by the line's direction (inline start and end), so that
-# a line of right-to-left text has its number and margin on the right
+# a line of right-to-left text has its number and margin on the right.
+# The last rules draw each label's mark (DIRECTION_MARKS)
 PAGE_STYLE = """
 #text p{padding-inline-start:4.25em;text-indent:-4.25em}
 .n{display:inline-block;width:3.5em;margin-inline-end:.75em;text-indent:0;
@@ -271,7 +285,8 @@ monospace;margin-block:0;margin-inline:.3em .2em;padding:0 .3em;
 border:1px solid var(--line);border-radius:.3em;background:var(--panel);
 color:var(--fg);white-space:nowrap}
 .id.left{border-style:dashed}
-"""
+""" + "".join(f'.id.bidi-{kind.lower()}::after{{content:"\\{ord(mark):x}"}}\n'
+              for kind, mark in DIRECTION_MARKS.items())
 
 
 def _when(moment: datetime) -> str:
@@ -293,15 +308,128 @@ def _lines(text: str) -> List[Tuple[int, int]]:
     return spans
 
 
-def _label(shown_id: str, left: bool) -> str:
+def _label(shown_id: str, left: bool, mark: str = "") -> str:
     """An occurrence's id, after it: text to copy, and a screen reader's
     words before it. Its words are isolated, left to right (`bdi`), so
-    that in a line of right-to-left text they stand after their own
-    occurrence, play no part in choosing the line's direction, and are
-    not turned round by a direction character in the text before them."""
+    that they play no part in choosing the line's direction and are not
+    turned round by a direction character in the text before them.
+    `mark`, a key of DIRECTION_MARKS or "", names the mark the page's
+    style draws after it (`_mark_after`)."""
     words = f"{esc(shown_id)}, {LEFT_LABEL}" if left else esc(shown_id)
-    return (f'<span class="id{" left" if left else ""}"><bdi dir="ltr">'
+    kind = ("id" + (" left" if left else "")
+            + (f" bidi-{mark.lower()}" if mark else ""))
+    return (f'<span class="{kind}"><bdi dir="ltr">'
             f'<span class="sr">occurrence id </span>{words}</bdi></span>')
+
+
+# A character that sets a direction for the text after it: an embedding,
+# an override or an isolate, or the end of one
+_EXPLICIT = re.compile("[\u202a-\u202e\u2066-\u2069]")
+# The paragraph separators a line can hold on the page: the reading
+# copy's line breaks end lines, and the page shows the other controls as
+# their pictures
+_SEPARATORS = "\x85\u2029"
+
+
+def _line_direction(line: str) -> str:
+    """The direction `dir="auto"` gives a line: its first letter's, "L"
+    or "R", else left to right."""
+    for character in line:
+        kind = unicodedata.bidirectional(character)
+        if kind in ("L", "R", "AL"):
+            return "L" if kind == "L" else "R"
+    return "L"
+
+
+def _strong_before(line: str, at: int, line_direction: str) -> str:
+    """The class of the first letter before `at`, "L", "R" or "AL", which
+    sets the direction of the European digits after it (UAX 9, W2 and W7,
+    which pass over everything else, Arabic digits included); past a
+    paragraph separator or the line's start, the line's direction."""
+    while at > 0:
+        at -= 1
+        if line[at] in _SEPARATORS:
+            break
+        kind = unicodedata.bidirectional(line[at])
+        if kind in ("L", "R", "AL"):
+            return kind
+    return line_direction
+
+
+def _directions_before(line: str, at: int, line_direction: str
+                       ) -> Iterator[Tuple[int, Optional[str], str]]:
+    """Each character before `at` that gives the neutral characters beside
+    it a direction (UAX 9, N1), nearest first: its place, "L" or "R", and
+    the class of the letter that sets it. A letter sets its own, an Arabic
+    digit is right to left, and a European digit takes the first letter
+    before it (`_strong_before`), worked out once for each run of digits.
+    A paragraph separator ends the walk, given as its place, None and
+    ""."""
+    digits = ""
+    while at > 0:
+        at -= 1
+        if line[at] in _SEPARATORS:
+            yield at, None, ""
+            return
+        kind = unicodedata.bidirectional(line[at])
+        if kind in ("L", "R", "AL"):
+            digits = ""
+            yield at, "L" if kind == "L" else "R", kind
+        elif kind == "AN":
+            yield at, "R", "R"
+        elif kind == "EN":
+            if not digits:
+                digits = _strong_before(line, at, line_direction)
+            yield at, "L" if digits == "L" else "R", digits
+
+
+def _mark_after(line: str, start: int, end: int, line_direction: str,
+                explicit: bool) -> str:
+    """The mark that follows the label of the occurrence from `start` to
+    `end` in `line`, as a key of DIRECTION_MARKS, or "" for none.
+
+    A label is a neutral to the line around it (an isolate), so where
+    what stands on either side of it differs in direction it takes the
+    line's. It then stands after its occurrence as the line reads, beside
+    it, unless the occurrence ends a stretch written against the line's
+    direction that began before it: the line's direction would carry the
+    label to the stretch's far end, beside the stretch's first words,
+    which can be another occurrence. There the label is followed by a
+    mark of the class of the letter that sets the occurrence's end, and
+    so takes that direction and stands after the occurrence as the
+    stretch reads. In a line that holds a direction character of its own
+    (`explicit`), every label is followed by its mark, since the direction
+    around a label may then not be the line's; so is one whose stretch
+    meets a paragraph separator. Brackets are passed over as signs,
+    though the algorithm gives a pair the direction of what it holds or
+    follows (N0), so beside brackets a label can take a mark it does not
+    need: it then stands after its occurrence's last letter, beside it
+    still. Each walk stops at the first letter of the other direction, so
+    a line's labels cost about one pass over the line."""
+    walk = _directions_before(line, end, line_direction)
+    last, own, mark = next(walk, (-1, None, ""))
+    if own is None:
+        # Only signs since the line's start or a separator: they and the
+        # label take the line's direction, beside the occurrence
+        return ""
+    if explicit:
+        return mark
+    if own == line_direction:
+        return ""
+    if last < start:
+        # Nothing of the occurrence's own sets its direction: the letter
+        # before it does, so the stretch began before it
+        return mark
+    for at, direction, _kind in walk:
+        if direction is None:
+            # A separator, which not every reader of the page may take as
+            # one: the mark does no harm
+            return mark
+        if direction != own:
+            return ""
+        if at < start:
+            return mark
+    return ""
 
 
 def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
@@ -309,11 +437,11 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
     """The text as paragraphs, one per stored line, each after its number;
     each occurrence in a mark, its id after its end. Each line takes the
     direction of its own first letter (`dir="auto"`), as an editor shows
-    plain text, so that in a line of Hebrew or Arabic each id stands
-    after its own occurrence in reading order, not after the next. An
-    occurrence never crosses a line break (the rewrite matches nothing
-    across one); were one to, it is marked on each line it covers and
-    labelled once, after its last part."""
+    plain text, and each id stands beside its own occurrence, with the
+    mark `_mark_after` gives it where it needs one. An occurrence never
+    crosses a line break (the rewrite matches nothing across one); were
+    one to, it is marked on each line it covers and labelled once, after
+    its last part."""
     lines = _lines(text)
     starts = [start for start, _end in lines]
     # Each line's marked stretches: start, end, the occurrence's position
@@ -336,6 +464,10 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
     for number, ((start, end), marked) in enumerate(zip(lines, pieces),
                                                     start=1):
         parts = [f'<p dir="auto"><span class="n">{number}</span>']
+        if marked:
+            line_text = text[start:end]
+            direction = _line_direction(line_text)
+            explicit = bool(_EXPLICIT.search(line_text))
         at = start
         for cut_start, cut_end, index, last in marked:
             cut_start = max(cut_start, at)
@@ -344,7 +476,9 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
             parts.append(f'<mark class="{kind}">'
                          f"{esc(text[cut_start:cut_end])}</mark>")
             if last:
-                parts.append(_label(marks[index][2], index in left))
+                mark = _mark_after(line_text, cut_start - start,
+                                   cut_end - start, direction, explicit)
+                parts.append(_label(marks[index][2], index in left, mark))
             at = max(at, cut_end)
         parts.append(esc(text[at:end]))
         parts.append("</p>")

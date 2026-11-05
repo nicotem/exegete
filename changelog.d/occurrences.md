@@ -58,10 +58,14 @@
   preview with `choose_occurrences` also writes a page and opens it in
   the researcher's browser: the file's whole text, each line numbered
   (as the preview numbers it, where the preview gives lines) and laid
-  out in the direction of its own first letter, so that in a line of
-  Hebrew or Arabic each id stands after its own occurrence, every
-  occurrence of a name the preview looked for marked with its id, and,
-  with `leave_occurrences`, the ones left marked as left. It shows no
+  out in the direction of its own first letter, every occurrence of a
+  name the preview looked for marked with its id beside it, and, with
+  `leave_occurrences`, the ones left marked as left. In a line that
+  mixes directions, such as English names in a line of Hebrew, each id
+  stands after its occurrence as the line reads or, where the name ends
+  a stretch of several words written the other way, after it as that
+  stretch reads, beside its own name rather than at the stretch's far
+  end. It shows no
   pseudonym and nothing else of the mapping. The page is for the
   researcher, who tells the assistant the ids to leave; its head says
   that words copied from it into the conversation go to the AI

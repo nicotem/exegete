@@ -818,3 +818,149 @@ def test_every_reference_resolves(setup_server, qualcoder_db_path, tmp_path,
                  if n.get("name") == "Entry 1")
     assert members["sources/" + entry.get("plainTextPath")[
         len("internal://"):]] == b"Some notes"
+
+
+# ===========================================================================
+# 10. What the answer names and counts, and what a failure says
+# ===========================================================================
+
+def test_codings_that_do_not_fit_are_named_as_the_description_says(
+        setup_server, qualcoder_db_path, tmp_path):
+    """A coding whose positions do not fit its text is left out and named
+    in the answer's skipped_details, as before v0.15.3: the description
+    names that field, and what it calls never named is no such coding."""
+    _exec(qualcoder_db_path,
+          "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, "
+          "date, memo, important) VALUES (1, 1, 'x', 70, 9999, "
+          "'TestCoder', '2024', '', 0)")
+    _reopen(qualcoder_db_path)
+    answer = _export(output_path=str(tmp_path / "b.qdpx"))
+    assert answer["success"] is True, answer
+    assert answer["skipped_invalid_codings"] == 1
+    named = answer["skipped_details"][0]
+    assert (named["code_name"], named["file_name"]) == ("Stress",
+                                                       "interview.txt")
+    flat = " ".join(_description().split())
+    assert "skipped_details" in flat
+    for sentence in re.split(r"(?<=\.)\s", flat):
+        if "never named" in sentence:
+            for item in re.split(r"[:;]", sentence):
+                assert not ("position" in item and "coding" in item), \
+                    sentence
+
+
+def test_a_coding_on_a_source_without_text_is_counted_apart(
+        setup_server, qualcoder_db_path, tmp_path):
+    """A coding on a PDF with no text layer: the file holds no such
+    source, so the coding is counted apart, never among those exported."""
+    _exec(qualcoder_db_path,
+          "INSERT INTO source (id, name, fulltext, mediapath, memo, owner, "
+          "date) VALUES (8, 'scan.pdf', ?, '/docs/scan.pdf', '', "
+          "'TestCoder', '2024')", ("\n\n\n\n",))
+    _exec(qualcoder_db_path,
+          "INSERT INTO code_text (cid, fid, seltext, pos0, pos1, owner, "
+          "date, memo, important) VALUES (1, 8, ?, 0, 2, 'TestCoder', "
+          "'2024', '', 0)", ("\n\n",))
+    _reopen(qualcoder_db_path)
+    out = tmp_path / "pdf.qdpx"
+    answer = _export(output_path=str(out))
+    assert answer["success"] is True, answer
+    root = _root(out)
+    assert answer["codings_exported"] == len(list(root.iter(f"{Q}Coding")))
+    assert answer["skipped_codings_on_non_text_sources"] == 1
+    assert "scan.pdf" not in {s.get("name")
+                              for s in root.iter(f"{Q}TextSource")}
+
+
+def test_a_file_exegete_cannot_read_stops_the_export_by_its_kind(
+        setup_server, qualcoder_db_path, tmp_path, caplog):
+    """A file's name stored as bytes that are not UTF-8, in a project
+    with codings: the check made before the file is built reads every
+    file, and stops the export in words naming text sources, the bytes
+    in neither the answer nor the log, the earlier file unchanged."""
+    out = tmp_path / "p.qdpx"
+    assert _export(output_path=str(out))["success"] is True
+    earlier = out.read_bytes()
+    _exec(qualcoder_db_path,
+          f"UPDATE source SET name = CAST(X'{b'MARKERSIX'.hex().upper()}FF'"
+          f" AS TEXT) WHERE id = 2")
+    _reopen(qualcoder_db_path)
+    caplog.set_level(logging.DEBUG)
+    refused = _export(output_path=str(out), overwrite=True)
+    assert "success" not in refused, refused
+    assert "text sources" in refused["error"], refused
+    assert "unchanged" in refused["error"]
+    assert "backup" not in refused["error"]
+    assert "MARKERSIX" not in json.dumps(refused)
+    assert "MARKERSIX" not in caplog.text
+    assert out.read_bytes() == earlier and _parts(tmp_path) == []
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows removes no file while it is open")
+def test_a_part_file_removed_meanwhile(setup_server, qualcoder_db_path,
+                                       tmp_path, monkeypatch):
+    """Two exports to one name at once: the one that finishes first
+    replaces the file and removes the other's part file, which then
+    fails. Its answer names no part file, since none is left, and says
+    the earlier file is unchanged only when it is."""
+    import posix
+    out = tmp_path / "p.qdpx"
+    assert _export(output_path=str(out))["success"] is True
+    earlier = out.read_bytes()
+    real = zipfile.ZipFile.writestr
+
+    def meanwhile(replace):
+        def writestr(self, name, data, *args, **kwargs):
+            for part in tmp_path.iterdir():
+                if part.name.endswith(".part"):
+                    # As another process removes it, which POSIX allows
+                    # while the file is open; the suite's emulation of
+                    # Windows (conftest.py) refuses it through os.unlink,
+                    # os.remove and Path.unlink, not posix.unlink
+                    posix.unlink(part)
+            if replace and out.read_bytes() == earlier:
+                newer = tmp_path / "newer"
+                newer.write_bytes(b"the other export's file")
+                os.replace(newer, out)
+            return real(self, name, data, *args, **kwargs)
+        return writestr
+
+    # The other export finished first: the file of that name is its own
+    with monkeypatch.context() as patch:
+        patch.setattr(zipfile.ZipFile, "writestr", meanwhile(True))
+        failed = _export(output_path=str(out), overwrite=True)
+    assert "success" not in failed, failed
+    assert ".part" not in failed["error"], failed
+    assert "deleted" not in failed["error"]
+    assert "unchanged" not in failed["error"], failed
+    assert out.read_bytes() == b"the other export's file"
+    assert _parts(tmp_path) == []
+
+    # The part file alone removed (by hand, say): the earlier file is
+    # unchanged, and the answer says so
+    out.write_bytes(earlier)
+    with monkeypatch.context() as patch:
+        patch.setattr(zipfile.ZipFile, "writestr", meanwhile(False))
+        failed = _export(output_path=str(out), overwrite=True)
+    assert "success" not in failed, failed
+    assert ".part" not in failed["error"], failed
+    assert "unchanged" in failed["error"], failed
+    assert out.read_bytes() == earlier and _parts(tmp_path) == []
+
+
+def test_permission_bits_are_set_where_the_file_system_allows(
+        setup_server, qualcoder_db_path, tmp_path, monkeypatch):
+    """A file system that refuses a change of permissions (a FAT volume
+    on Linux, for one) still takes the export: the part file was made
+    with the earlier file's bits, which the umask can only narrow."""
+    out = tmp_path / "p.qdpx"
+    out.write_bytes(b"an earlier file")
+
+    def refuse(*args, **kwargs):
+        raise PermissionError(1, "Operation not permitted")
+    with monkeypatch.context() as patch:
+        patch.setattr(refi_export.os, "chmod", refuse)
+        answer = _export(output_path=str(out), overwrite=True)
+    assert answer.get("success") is True, answer
+    assert zipfile.is_zipfile(out) and _parts(tmp_path) == []

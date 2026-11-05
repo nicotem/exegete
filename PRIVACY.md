@@ -1100,10 +1100,11 @@ convention, whichever program made the project, Exegete or QualCoder:
   exported files with the same care as the project itself. A whole
   project's REFI-QDA `.qdpx` holds, besides, the name and the work of
   every coder, those hidden in QualCoder's view included, as Exegete's
-  other file exports do ("Coder visibility", below); the cases, with
-  their attributes; the journal entries in full, their private part
-  included, which Exegete's reads keep from the assistant; and the
-  annotations.
+  other file exports do ("Coder visibility", below); the cases; the
+  attributes of the cases and of the files; the journal entries in
+  full, their private part included, which Exegete's reads keep from
+  the assistant; and the annotations. A coding session's `.qdpx` holds
+  the project's coder name too, as its first user.
 
 The private zone stays in your project database on disk; this
 convention controls only what enters the AI conversation through

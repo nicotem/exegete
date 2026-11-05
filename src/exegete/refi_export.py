@@ -287,6 +287,33 @@ def _earlier_mode(destination: Path) -> Optional[int]:
         return None
 
 
+def _identity(path: Path) -> Any:
+    """What tells one file under `path` from another: its device, inode,
+    size and time of change; None when there is no file, and "unknown"
+    when it cannot be read."""
+    try:
+        state = os.stat(path)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        return "unknown"
+    return (state.st_dev, state.st_ino, state.st_size, state.st_mtime_ns)
+
+
+def _after_a_failure(destination: Path, before: Any) -> str:
+    """What a failed export's answer says of the file under its name:
+    unchanged only when it is still the file that was there before the
+    export began. Another export to that name that finishes first
+    replaces it, and removes this export's part file."""
+    now = _identity(destination)
+    if "unknown" in (before, now) or (before is None and now is None):
+        return "Nothing was written under that name."
+    if now == before:
+        return "The earlier file of that name is unchanged."
+    return ("The file of that name was changed meanwhile, by another "
+            "export to that name or by another program.")
+
+
 def write_beside_and_replace(destination: Path,
                              fill: Callable[[BinaryIO], None],
                              overwrite: bool) -> int:
@@ -298,10 +325,11 @@ def write_beside_and_replace(destination: Path,
     which the umask can only narrow, so no text is ever more widely
     readable while written than the earlier file kept it. It is written,
     flushed, synced and closed (Windows renames no open file), given
-    those bits again (nothing on Windows, where chmod moves only the
-    read-only flag), and replaced onto the destination. The destination
-    is never removed, emptied or opened before the replace. With
-    `overwrite` false, the destination is checked again just before it.
+    those bits again where the file system allows it (nothing on
+    Windows, where chmod moves only the read-only flag), and replaced
+    onto the destination. The destination is never removed, emptied or
+    opened before the replace. With `overwrite` false, the destination
+    is checked again just before it.
 
     Raises:
         ValueError: with `overwrite` false, a file took the name meanwhile
@@ -311,8 +339,9 @@ def write_beside_and_replace(destination: Path,
     folder = destination.parent
     part: Optional[Path] = None
     made = False
-    earlier = None
+    before: Any = "unknown"
     try:
+        before = _identity(destination)
         earlier = _earlier_mode(destination)
         own_ns = time.time_ns()
         part = folder / part_name(destination.name, os.getpid(), own_ns)
@@ -329,7 +358,13 @@ def write_beside_and_replace(destination: Path,
             handle.flush()
             os.fsync(handle.fileno())
         if earlier is not None and os.name != "nt":
-            os.chmod(part, earlier)
+            try:
+                os.chmod(part, earlier)
+            except OSError as refused:
+                # As _inherit_mode_bits: the part file was made with these
+                # bits, which the umask can only have narrowed
+                logger.warning("The export's permission bits could not be "
+                               "set: %s", error_label(refused))
         if not overwrite and os.path.lexists(destination):
             raise _FileAppeared()
         os.replace(part, destination)
@@ -339,6 +374,10 @@ def write_beside_and_replace(destination: Path,
         if made:
             try:
                 os.remove(part)
+            except FileNotFoundError:
+                # Removed meanwhile, as another export to that name
+                # removes the part files made before its own
+                pass
             except OSError as removal:
                 logger.error("The unfinished export could not be removed: "
                              "%s", error_label(removal))
@@ -354,12 +393,9 @@ def write_beside_and_replace(destination: Path,
                 f"to replace it.{kept}") from None
         logger.error("The REFI-QDA archive could not be written or put in "
                      "place: %s", error_label(e))
-        unchanged = ("The earlier file of that name is unchanged."
-                     if earlier is not None else
-                     "Nothing was written under that name.")
         raise ExportWriteError(
-            f"REFI-QDA export failed: {error_text(e)}. {unchanged}"
-            f"{kept}") from None
+            f"REFI-QDA export failed: {error_text(e)}. "
+            f"{_after_a_failure(destination, before)}{kept}") from None
     return remove_earlier_parts(folder, destination.name, own_ns)
 
 
@@ -1325,6 +1361,10 @@ class RefiQdaExporter:
 
         Returns:
             List of validation warnings/errors (empty if all valid)
+
+        Raises:
+            RuntimeError: a read of the project failed, in words naming
+                the kind of row (`read_for_export`)
         """
         warnings = []
         texts = texts if texts is not None else {}
@@ -1334,18 +1374,13 @@ class RefiQdaExporter:
             warnings.append("No suggestions to export")
             return warnings
 
-        # Get all codes and files from database for validation
-        try:
-            codes = self.db.list_codes()
-            code_ids = {c["id"] for c in codes}
-
-            files = self.db.list_files()
-            file_ids = {f["id"] for f in files}
-
-        except Exception as e:
-            warnings.append(f"Could not load project data for validation: "
-                            f"{error_text(e)}")
-            return warnings
+        # Every code and file of the project, each read worded by its kind
+        # of row when it fails, as the export's other reads are: the
+        # export stops before anything is written
+        code_ids = {c["id"] for c in read_for_export(
+            "codes and categories", self.db.list_codes)}
+        file_ids = {f["id"] for f in read_for_export(
+            "text sources", self.db.list_files)}
 
         # File text lengths (also identifies files with no exportable text)
         content_lengths: Dict[int, int] = {}

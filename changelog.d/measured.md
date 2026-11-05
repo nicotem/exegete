@@ -7,7 +7,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 208,362 | 204,793 |
+| `full` (80 tools) | 208,664 | 204,793 |
 | `core` (28 tools) | 76,265 | 75,947 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,180 | 13,721 |
@@ -46,11 +46,13 @@ Python 3.13.5 with the libraries in `uv.lock`:
   `update_proposal` and 43 in `create_proposed_codes`. None of these
   descriptions newly passes 2,048 characters: `create_category`'s, the
   longest of them still under it, is 1,973.
-- `export_refi_qda`, which is in `full` alone, is 276 characters
+- `export_refi_qda`, which is in `full` alone, is 578 characters
   longer, now that the REFI-QDA export is fixed but for media. Its
-  description, 2,576 characters, is 264 longer: it says what the file
-  holds in each mode, what is left out and counted, the order of the
-  coders' names, and that the file is written beside its destination,
-  and it no longer names the known faults. It stays within the 4,096
-  characters Claude Code keeps of a description. The other 12 are its
-  new line breaks, escaped in the definition.
+  description, 2,873 characters, is 561 longer: it says what the file
+  holds in each mode, what is left out and counted and what the counts
+  take in, that the answer lists the codings whose positions do not
+  fit their text, the order of the coders' names, and that the file is
+  written beside its destination, and it no longer names the known
+  faults. It stays within the 4,096 characters Claude Code keeps of a
+  description. The other 17 are its new line breaks, escaped in the
+  definition.

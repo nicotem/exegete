@@ -361,8 +361,12 @@ class TestConfiguredAttribution:
             with zipfile.ZipFile(tmp_path / fname) as zf:
                 root = ET.fromstring(zf.read("project.qde"))
             users = root.findall(f"{{{NAMESPACE}}}Users/{{{NAMESPACE}}}User")
-            assert len(users) == 1
-            seen.append((users[0].get("guid"), users[0].get("name"),
+            # (v0.15.3: one User per coder; the AI's is found by its
+            # stable GUID, and it is the last)
+            ai = server.db.get_or_create_user_guid("ai_coder")
+            ai_users = [u for u in users if u.get("guid") == ai]
+            assert len(ai_users) == 1 and users[-1] is ai_users[0]
+            seen.append((ai_users[0].get("guid"), ai_users[0].get("name"),
                          root.get("creatingUserGUID")))
         assert seen[0][1] == DEFAULT_AI_CODER_NAME
         assert seen[1][1] == "AI Agent"

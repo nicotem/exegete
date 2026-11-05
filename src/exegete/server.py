@@ -385,28 +385,23 @@ FREQUENCIES_COUNT_NOTE = (
     "applied most often are not thereby the most important, and one "
     "participant can account for many codings.")
 
-# The REFI-QDA export, deprecated in v0.14, is kept, to be fixed (ruling
-# 85, item 2): this sentence names its known faults and no removal, in
-# its description and, under known_faults, in every answer the tool
-# itself gives (not a refusal made by _tool_guard, outside it). The
-# QualCoder export it names is for researchers who have QualCoder, the
-# gap said as Exegete's (whole-branch review, round 2). Each fault is in
-# the code: one User, the AI coder, creates every selection and coding
-# (refi_export.py); the project export reads every coder's codings,
-# hidden ones included; no Cases or Notes element, text sources only;
-# a session's export takes every suggestion and writes no status. The
-# piece that fixes the export removes the sentence and its guards
-# (tests/test_v0151_refi_known_faults.py).
-REFI_EXPORT_KNOWN_FAULTS = (
-    "Known faults (a later release is meant to fix them): this export "
-    "files every coding under the AI coder name, the researcher's own and "
-    "a hidden coder's included, so another program shows them as the "
-    "AI's; it leaves out cases, annotations, journals and media; and a "
-    "session's export includes every suggestion, rejected ones too, with "
-    "nothing to say which. Exegete has no other REFI-QDA export yet; "
-    "QualCoder's own export (Project, Export, REFI-QDA Project export), "
-    "for researchers who have QualCoder, keeps each coder, the cases, "
-    "notes and media.")
+# The REFI-QDA export, fixed in v0.15.3 but for media (ruling 85, item 2;
+# ruling 115, item 1): what each mode's file holds, said in its answer,
+# and the refusal of an earlier file it cannot write, which the write in
+# place refused and the replace would not
+REFI_EXPORT_PROJECT_NOTE = (
+    "Export includes every code and category, every text source, the "
+    "cases, the journal entries and the annotations, with each coding "
+    "under its own coder. Every category is included, as a non-codable "
+    "parent code (QualCoder's own REFI-QDA convention).")
+REFI_EXPORT_SESSION_NOTE = (
+    "Export includes the session's suggestions, each description starting "
+    "with its status, the codes they name and their text sources. The "
+    "categories above the exported codes are included, as non-codable "
+    "parent codes (QualCoder's own REFI-QDA convention).")
+REFI_EXPORT_READ_ONLY_REFUSAL = (
+    "Exegete cannot write '{name}' (it may be read-only or locked), so it "
+    "is unchanged. Choose another name for the export.")
 
 # What warns in v0.14 and goes in v0.15.1 (owner ruling 25, questions 3,
 # 7 and 8; ruling 70 moved the removals from v0.15 to v0.15.1): one
@@ -1001,10 +996,8 @@ def _deprecated(sentence: Any, before: Optional[str],
     The answer carries it under `key`, "deprecated" unless another is
     given: create_backup's sentence has a key of its own,
     create_backup_ignored, so it never takes the place of a "deprecated"
-    one (v0.15.1), and the REFI-QDA export's sentence, which names its
-    known faults and no removal, has known_faults, since the export is
-    kept (ruling 85, item 2). With `in_description` false the description
-    is left as it is, for a sentence its Args line already gives.
+    one (v0.15.1). With `in_description` false the description is left
+    as it is, for a sentence its Args line already gives.
 
     A sentence that names a tool the core set lacks, on a core tool, is
     given as a function returning it marked (`_mark_unregistered`), and
@@ -3056,7 +3049,7 @@ AI_CODER_NAME_SETTING_INVALID_END = (
 def _export_owner_and_source() -> Tuple[str, str]:
     """The AI User name for an EXPORT, and where it came from.
 
-    Exports never ask (ruling 6): a REFI-QDA package names one AI User
+    Exports never ask (ruling 6): a REFI-QDA package names the AI User
     and a researcher exporting a project they have not coded through this
     server should not be stopped to choose a name. Precedence: the
     project's setting, else the AI coder name in Exegete's settings
@@ -8373,44 +8366,56 @@ def search_memos(query: str, limit: int = 50) -> str:
 
 @mcp.tool(annotations=TOOL_CHANGES)
 @_tool_guard
-@_deprecated(REFI_EXPORT_KNOWN_FAULTS, before="REFI-QDA is the interchange",
-             key="known_faults")
 @_with_paragraphs(EXPORT_FULL_MEMOS_PARAGRAPH, before="Two modes:")
 def export_refi_qda(
     output_path: str,
     coding_session_id: Optional[str] = None,
     overwrite: bool = False
 ) -> str:
-    """Export codings as a REFI-QDA .qdpx file for other QDA software.
+    """Export the project, or one AI coding session, as a REFI-QDA .qdpx file for other QDA software.
 
     REFI-QDA is the interchange standard supported by QualCoder, NVivo,
-    ATLAS.ti, MAXQDA and others. The export contains the referenced codes,
-    the text sources, and the coded selections (with coding memos as
-    descriptions).
+    ATLAS.ti, MAXQDA and others.
 
     Two modes:
-    - Default (no coding_session_id): exports ALL text codings of the currently
-      open project.
-    - With coding_session_id: exports that AI coding session's suggestions
-      (all statuses), useful for reviewing suggestions in another tool
-      before applying them.
+    - Default (no coding_session_id): the whole project, each coding
+      under its own coder, a hidden coder's included: every code and
+      category (categories as non-codable parent codes), every text
+      source, the cases with their attributes and whole-file links, the
+      journal entries in full, their private part included, and the
+      annotations.
+    - With coding_session_id: that AI coding session's suggestions, each
+      description starting with its status, with the codes they name
+      and their text sources, under the AI coder name; useful for
+      reviewing suggestions in another tool before applying them.
+
+    Left out and counted, never named: images, audio, video and areas
+    of a PDF page; a case's link to part of a file; a numeric
+    attribute's value that is not a number; codings and annotations
+    whose positions do not fit their text.
+
+    The project's coder name is the first user, which QualCoder's
+    importer takes as its own coder name. The AI coder name is the last,
+    named after the project's AI coder name, else the AI coder name in
+    Exegete's settings (EXEGETE_AI_CODER_NAME) or the built-in default;
+    the result says which (ai_user_name_source). Where it is the first
+    (a project with no coder name set), suggest checking QualCoder's
+    coder name after importing the file there.
 
     Position convention (QualCoder's): selections are character offsets
     into the plain text exactly as exported (verbatim, UTF-8, no BOM,
     newlines as single \\n), 0-based, end-exclusive. Tools that count \\r\\n
     as two characters (e.g. NVivo) may show shifted boundaries.
 
-    The categories above the exported codes are included, as non-codable
-    parent codes. The one export user is named after the project's AI
-    coder name, else the AI coder name in Exegete's settings
-    (EXEGETE_AI_CODER_NAME) or the built-in default; the result says which
-    (ai_user_name_source).
+    The file is written beside output_path and moved into place when
+    complete, so with overwrite an earlier file stays whole until then;
+    an earlier file Exegete cannot write is refused.
 
     Args:
         output_path: Where to write the .qdpx file (must end in .qdpx; the
                      directory must already exist)
         coding_session_id: Optional AI coding session to export instead of the
-                    project's codings
+                    project
         overwrite: Allow replacing an existing file (default: False)
 
     Returns:
@@ -8423,7 +8428,8 @@ def export_refi_qda(
     # 'session_id' (reserved for its own routing); the tool
     # argument is coding_session_id, aliased for the body.
     session_id = coding_session_id
-    from .refi_export import RefiQdaExporter
+    from .refi_export import (RefiQdaExporter, part_path_refusal,
+                              read_for_export)
 
     ro_db = get_db()
 
@@ -8458,9 +8464,24 @@ def export_refi_qda(
         })
     if _in_a_projects_exegete_folder(output_path, out_file):
         return json.dumps({"error": EXPORT_IN_A_PROJECTS_FOLDER_REFUSAL})
+    # The file is written beside its destination and moved into place
+    # (v0.15.3): an earlier file Exegete cannot write (made read-only, or
+    # locked in Finder), which writing in place used to refuse, is
+    # refused before anything is read, rather than replaced
+    if overwrite and out_file.exists() and not os.access(out_file, os.W_OK):
+        return json.dumps({"error": REFI_EXPORT_READ_ONLY_REFUSAL.format(
+            name=out_file.name)})
+    long_path = part_path_refusal(out_file, os.name == "nt",
+                                  new_project.windows_long_paths_enabled())
+    if long_path is not None:
+        return json.dumps({"error": long_path})
 
     # --- collect what to export ---
     skipped_non_text = 0
+    owners: Optional[Dict[str, Any]] = None
+    texts: Dict[int, Optional[Dict[str, Any]]] = {}
+    coder_name = read_for_export(
+        "settings", ro_db.get_project_info).get("coder_name")
     if session_id is not None:
         if not session_manager.session_exists(session_id):
             return json.dumps({
@@ -8478,7 +8499,8 @@ def export_refi_qda(
             return json.dumps({"error": "The session has no suggestions to export"})
     else:
         # Whole-project export: every text coding, built via the same
-        # CodingSuggestion structures the exporter understands.
+        # CodingSuggestion structures the exporter understands, each with
+        # its owner (v0.15.3: each coding under its own coder).
         #
         # Skip-and-disclose (QA2-5): real legacy projects legitimately
         # contain rows this server would never write — GUI-created codings
@@ -8487,23 +8509,25 @@ def export_refi_qda(
         # all-or-nothing is right for explicit session exports, but "export
         # my project" must export everything valid and report the rest.
         suggestions = []
+        owners = {}
         skipped_invalid = []
         truncated_codes = []
-        file_cache: Dict[int, Optional[Dict[str, Any]]] = {}
         code_frequencies: Optional[Dict[int, int]] = None
-        for code in ro_db.list_codes():
+        for code in read_for_export("codes and categories", ro_db.list_codes):
             # P1-3: interchange exports read BASE tables (QualCoder's own
             # refi.py does not filter by coder visibility)
-            segments = ro_db.get_coded_text_segments(
-                code["id"], limit=5000, honor_visibility=False)
+            segments = read_for_export(
+                "codings", lambda: ro_db.get_coded_text_segments(
+                    code["id"], limit=5000, honor_visibility=False))
             if len(segments) == 5000:
                 # The read is capped at 5000 per code — disclose when the
                 # project actually holds more (QA2-3)
                 if code_frequencies is None:
                     code_frequencies = {
                         c["code_id"]: c["frequency"]
-                        for c in ro_db.get_coding_frequencies(
-                            honor_visibility=False)["codes"]
+                        for c in read_for_export(
+                            "codings", lambda: ro_db.get_coding_frequencies(
+                                honor_visibility=False))["codes"]
                     }
                 total = code_frequencies.get(code["id"], len(segments))
                 if total > 5000:
@@ -8514,11 +8538,14 @@ def export_refi_qda(
                     })
             for seg in segments:
                 fid = seg["file_id"]
-                if fid not in file_cache:
-                    file_cache[fid] = ro_db.get_file_content(fid)
-                fc = file_cache[fid]
+                # Each text is read once: the exporter writes the file's
+                # element and member from this read
+                if fid not in texts:
+                    texts[fid] = read_for_export(
+                        "text sources", lambda: ro_db.get_file_content(fid))
+                fc = texts[fid]
                 fulltext = (fc or {}).get("content") or ""
-                if fc is None or not fulltext:
+                if fc is None or not fulltext or not fc.get("is_text"):
                     skipped_non_text += 1
                     continue
                 pos0, pos1 = seg["position_start"], seg["position_end"]
@@ -8542,7 +8569,7 @@ def export_refi_qda(
                                   f"(emoji/CRLF) file",
                     })
                     continue
-                suggestions.append(CodingSuggestion(
+                suggestion = CodingSuggestion(
                     file_id=fid,
                     file_name=seg["file_name"],
                     code_id=code["id"],
@@ -8553,46 +8580,53 @@ def export_refi_qda(
                     reasoning=seg["memo"] or "",
                     # No label of its own: an applied AI coding's memo
                     # already says it in words (owner ruling 21)
-                ))
-        project_name = project_display_name(current_project_path)
-        if not suggestions:
-            result = {"error": "The project has no text codings to export"}
-            if skipped_invalid:
-                result["error"] = (
-                    "The project has no text codings to export; all its "
-                    "codings were skipped as invalid (see skipped_details)"
                 )
-                result["skipped_invalid_codings"] = len(skipped_invalid)
-                result["skipped_details"] = skipped_invalid[:20]
-            return json.dumps(result, indent=2)
+                owners[suggestion.guid] = seg["owner"]
+                suggestions.append(suggestion)
+        project_name = project_display_name(current_project_path)
+        # Read before the file is made, as every read of the export is
+        media = read_for_export("codings", ro_db.count_media_codings)
 
     exporter = RefiQdaExporter(ro_db, ai_user_name=_default_owner())
+    whole_project = session_id is None
     result_path = exporter.export_to_qdpx(
-        suggestions, str(out_file), project_name=project_name
-    )
+        suggestions, str(out_file), project_name=project_name,
+        owners=owners, coder_name=coder_name, whole_project=whole_project,
+        mark_status=not whole_project, texts=texts, overwrite=overwrite)
+    counts = exporter.counts
 
     output = {
         "success": True,
         "output_path": result_path,
         "codings_exported": len(suggestions),
-        "codes_exported": len({s.code_id for s in suggestions}),
-        "files_exported": len({s.file_id for s in suggestions}),
-        # Where the single AI User's name came from: the project's own AI
+        "codes_exported": (counts["codes"] if whole_project
+                           else len({s.code_id for s in suggestions})),
+        "files_exported": (counts["text_sources"] if whole_project
+                           else len({s.file_id for s in suggestions})),
+        # Where the AI User's name came from: the project's own AI
         # coder name, the AI coder name in Exegete's settings (the value
         # "host_declaration"), or the built-in default.
         # The export never asks for one (B1.11).
         "ai_user_name_source": _ai_user_name_source(),
-        # The note used to say categories were left out, while the file
-        # nests them (v0.14, claims audit item 16)
-        "note": "Export includes codes, text sources and coded selections. "
-                "The categories above the exported codes are included, as "
-                "non-codable parent codes (QualCoder's own REFI-QDA "
-                "convention); cases, annotations and journals are not."
     }
+    if whole_project:
+        output.update({
+            "cases_exported": counts["cases"],
+            "journal_entries_exported": counts["journal_entries"],
+            "annotations_exported": counts["annotations"],
+            # What the file cannot hold faithfully, counted, never named
+            "case_links_left_out": counts["case_links_left_out"],
+            "attribute_values_left_out": counts["attribute_values_left_out"],
+            "annotations_left_out": counts["annotations_left_out"],
+            "note": REFI_EXPORT_PROJECT_NOTE,
+        })
+    else:
+        output["suggestions_by_status"] = counts["suggestions_by_status"]
+        output["note"] = REFI_EXPORT_SESSION_NOTE
+    output["part_files_removed"] = counts["part_files_removed"]
     if skipped_non_text:
         output["skipped_codings_on_non_text_sources"] = skipped_non_text
     if session_id is None:
-        media = ro_db.count_media_codings()
         if media["av"] or media["image"]:
             output["av_image_codings_not_exported"] = media
             output["note"] += (

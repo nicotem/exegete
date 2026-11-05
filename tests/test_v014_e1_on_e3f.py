@@ -270,8 +270,8 @@ class TestTheExportsAndTheMemoInWords:
         memo += "\n"
         out = host_json("export_refi_qda",
                         {"output_path": str(tmp_path / "p.qdpx")})
-        assert "categories above the exported codes are included" in \
-            out["note"]
+        # (v0.15.3: a project export writes every category)
+        assert "Every category is included" in out["note"]
         with zipfile.ZipFile(tmp_path / "p.qdpx") as z:
             root = ET.fromstring(z.read("project.qde"))
         described = [d.text for d in root.iter(

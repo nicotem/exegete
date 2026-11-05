@@ -7245,6 +7245,26 @@ class QualcoderDatabase:
             })
         return cases
 
+    def list_case_links(self) -> List[Dict[str, Any]]:
+        """Every link between a case and a file, as stored (the REFI-QDA
+        export's read, v0.15.3): a whole-file link and a link to part of
+        a file alike, from the base table, with no check of positions.
+
+        Raises:
+            RuntimeError: a read that failed (the busy text when the
+            database is busy)
+        """
+        try:
+            rows = self.conn.execute(
+                "SELECT id, caseid, fid, pos0, pos1 FROM case_text "
+                "ORDER BY caseid, fid, id").fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "list_case_links",
+                               "Failed to retrieve the case links")
+        return [{"id": row["id"], "case_id": row["caseid"],
+                 "file_id": row["fid"], "pos0": row["pos0"],
+                 "pos1": row["pos1"]} for row in rows]
+
     def get_case_details(self, case_id: int) -> Optional[Dict[str, Any]]:
         """Get detailed information about a specific case.
 
@@ -8507,6 +8527,24 @@ class QualcoderDatabase:
             return attributes
         except sqlite3.Error as e:
             _raise_query_error(e, "list_attribute_types", "Failed to retrieve attribute types")
+
+    def list_attribute_values(self) -> List[Dict[str, Any]]:
+        """Every attribute value, of cases, files and journal entries
+        alike, as stored (the REFI-QDA export's read, v0.15.3).
+
+        Raises:
+            RuntimeError: a read that failed (the busy text when the
+            database is busy)
+        """
+        try:
+            rows = self.conn.execute(
+                "SELECT name, attr_type, id, value FROM attribute "
+                "ORDER BY attr_type, id, name").fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "list_attribute_values",
+                               "Failed to retrieve the attribute values")
+        return [{"name": row["name"], "attr_type": row["attr_type"],
+                 "id": row["id"], "value": row["value"]} for row in rows]
 
     def get_file_attributes(self, file_id: int) -> List[Dict[str, Any]]:
         """Get all attributes for a specific file.
@@ -11822,6 +11860,27 @@ class QualcoderDatabase:
     # ANNOTATIONS (v0.8 D1 — memos-journals.md §4: the memo IS the
     # annotation; no empty state exists)
     # ========================================================================
+
+    def list_annotations(self) -> List[Dict[str, Any]]:
+        """Every annotation, as stored (the REFI-QDA export's read,
+        v0.15.3): from the base table, every coder's, positions unchecked
+        (a row may hold NULL, which the table allows).
+
+        Raises:
+            RuntimeError: a read that failed (the busy text when the
+            database is busy)
+        """
+        try:
+            rows = self.conn.execute(
+                "SELECT anid, fid, pos0, pos1, memo, owner, date "
+                "FROM annotation ORDER BY anid").fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "list_annotations",
+                               "Failed to retrieve the annotations")
+        return [{"annotation_id": row["anid"], "file_id": row["fid"],
+                 "position_start": row["pos0"], "position_end": row["pos1"],
+                 "memo": row["memo"] or "", "owner": row["owner"],
+                 "date": row["date"]} for row in rows]
 
     def get_annotation(self, annotation_id: int) -> Optional[Dict[str, Any]]:
         """Get one annotation by anid (with its file name)."""

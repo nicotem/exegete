@@ -2724,6 +2724,11 @@ def saved_display_values(tblrows: Any) -> List[str]:
 # any other word there is not in QualCoder's shape (fix round 4, F3B-3).
 _SAVED_FILTER_OPERATORS = ("<", ">", "<=", ">=", "=", "!=", "in", "not in",
                            "between", "like")
+# The two attribute types a condition carries (master
+# report_attributes.py:44, :292, :301; 3.8.2 :45, :291, :300): a
+# condition with any other word there is not in QualCoder's shape
+# (v0.15.3)
+_SAVED_FILTER_TYPES = ("character", "numeric")
 
 # A saved filter longer than this is read whole rather than parsed: a
 # filter QualCoder saves is a few hundred characters, and literal_eval's
@@ -2740,7 +2745,9 @@ def saved_filter_values(text: Any) -> List[str]:
     character values in single quotes (3.8.2 report_attributes.py:147,
     :269-309, the same). When the text has exactly that shape (the
     second item 'case' or 'file', the operator one of QualCoder's, the
-    name and the type text, the values a list of text; fix round 4,
+    name text, the type one of QualCoder's two, 'character' or 'numeric'
+    (master report_attributes.py:44, :292, :301; 3.8.2 :45, :291, :300;
+    v0.15.3), the values a list of text; fix round 4,
     F3B-3), only the values are read, so QualCoder's own words (BOOLEAN_OR, AND, case,
     character, like) are never read as a label. Anything else, a list of
     another shape included, is read whole, the conservative reading
@@ -2762,6 +2769,7 @@ def saved_filter_values(text: Any) -> List[str]:
         if not (isinstance(item, list) and len(item) == 5
                 and all(isinstance(part, str) for part in item[:4])
                 and item[1] in ("case", "file")
+                and item[2] in _SAVED_FILTER_TYPES
                 and item[3] in _SAVED_FILTER_OPERATORS
                 and isinstance(item[4], list)
                 and all(isinstance(value, str) for value in item[4])):
@@ -12658,8 +12666,8 @@ class QualcoderDatabase:
         QualCoder's own words where the row has QualCoder's exact saved
         shape and whole otherwise (fix rounds 2 and 3, R2-1, B-1 to B-3:
         a case called OR is not counted in every filter saved as
-        BOOLEAN_OR); a saved row that is not UTF-8 is decoded tolerantly
-        (B-6); file_ids are the
+        BOOLEAN_OR); a saved row that is not UTF-8, or that is stored as
+        a blob, is decoded tolerantly (B-6; v0.15.3); file_ids are the
         other files whose name holds the old name, for a file with a
         stored path without the stored file's extension ('Thomas.pdf'
         finds its pages 'Thomas_p1.jpg'), otherwise whole ('Thomas.Jones'
@@ -12691,15 +12699,25 @@ class QualcoderDatabase:
             stored as text in no valid encoding, fix round 3, B-6), the
             database's own bytes, decoded tolerantly with the codec its
             `PRAGMA encoding` names (fix round 4, F3B-1: a UTF-16
-            database's bytes are not UTF-8)."""
+            database's bytes are not UTF-8). A value the text read gives
+            as bytes, one stored as a blob, is decoded the same way
+            (v0.15.3), so it is counted too, and no byte can raise here,
+            inside the rename's write, after its backup."""
             try:
-                return self.conn.execute(
+                rows = self.conn.execute(
                     f"SELECT {columns} FROM {table_name}{where}",
                     args).fetchall()
             except sqlite3.Error:
-                pass
+                rows = None
+            if rows is not None and not any(
+                    isinstance(v, bytes) for row in rows for v in row):
+                return rows
             codec = sqlite_text_codec(
                 self.conn.execute("PRAGMA encoding").fetchone()[0])
+            if rows is not None:
+                return [tuple(v.decode(codec, "replace")
+                              if isinstance(v, bytes) else v for v in row)
+                        for row in rows]
             blobs = ", ".join(f"CAST({c.strip()} AS BLOB)"
                               for c in columns.split(","))
             return [tuple(v.decode(codec, "replace")

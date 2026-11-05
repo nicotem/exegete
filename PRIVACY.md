@@ -554,9 +554,9 @@ What stays local, always, unless a sync service copies the folder it is in
   says whether the check for mapping entries competing for the same
   characters stopped early (`overlap_conflicts_capped`), never where.
   No tool reads these files back: each is an audit record of which rows
-  a run changed and
-  where the pseudonyms now sit, kept so a run can be accounted for
-  afterwards. It is not a way back; the backup taken before the run is.
+  a run changed and where the pseudonyms now sit, kept so a run can be
+  accounted for afterwards. It is not a way back; the backup taken
+  before the run is.
 
 **Error answers and Exegete's log.** An error answer goes to the AI
 provider like any other result, and Exegete's log lines go to the host,
@@ -2701,7 +2701,7 @@ near the top of this document, set them out.
     copy), saved graph labels, saved table displays and filters, and
     QualCoder's saved SQL queries. Each rename's result counts the saved
     graph labels, table displays and filters for the case or file it
-    renamed; the saved SQL queries nothing in Exegete reads. Every
+    renamed; nothing in Exegete reads the saved SQL queries. Every
     backup, Exegete's session files, QualCoder's search index and
     QualCoder's AI chat history keep the old name too, and
     so do Exegete's pseudonymisation journal entries and run records,

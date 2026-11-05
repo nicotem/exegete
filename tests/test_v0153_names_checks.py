@@ -582,3 +582,48 @@ def test_the_capped_flag_is_repeated(tmp_path, monkeypatch):
         record = json.loads(Path(done["manifest_path"]).read_text(
             encoding="utf-8"))
         assert record["files"][0]["overlap_conflicts_capped"] is True
+
+
+# ---------------------------------------------------------------------------
+# From the rename check: saved rows stored as bytes, a filter's type
+# ---------------------------------------------------------------------------
+
+def _saved_places(project):
+    from test_v013_rename_tools import SAVED_PLACES_DDL
+    for ddl in SAVED_PLACES_DDL:
+        _sql(project, ddl)
+
+
+def test_saved_rows_stored_as_bytes_are_counted(project):
+    """A graph label, a display and a filter stored as blobs, as another
+    tool may write them, the label with a byte that is not UTF-8 beside
+    the old name: each is counted, and the rename goes through."""
+    _saved_places(project)
+    _sql(project, "INSERT INTO gr_case_text_item (grid, caseid, "
+                  "displaytext) VALUES (1, 1, ?)", (b"Case A \xff",))
+    _sql(project, "INSERT INTO manage_files_display (name, tblrows, "
+                  "tblcolumns, owner) VALUES ('Mine', ?, '', 'gui')",
+         (b"Case\tlike\tCase A",))
+    _sql(project, "INSERT INTO files_filter (name, filter, owner) VALUES "
+                  "('Mine', ?, 'gui')",
+         (b"[['BOOLEAN_OR'], ['case name', 'case', 'character', '=', "
+          b"[\"'Case A'\"]]]",))
+    _reload()
+    out = json.loads(server.rename_case(1, "P01"))
+    assert out.get("changed") is True, out
+    assert out["old_name_left_in"] == {"saved_graph_labels": 1,
+                                       "saved_table_displays": 1,
+                                       "saved_filters": 1}
+
+
+def test_a_filter_of_another_type_is_read_whole(project):
+    """A condition whose type is neither of QualCoder's two is not in its
+    shape, so the filter is read whole and the old name there counted."""
+    _saved_places(project)
+    _sql(project, "INSERT INTO files_filter (name, filter, owner) VALUES "
+                  "('Mine', ?, 'gui')",
+         ("[['BOOLEAN_OR'], ['Age', 'case', 'Case A', '=', ['30']]]",))
+    _reload()
+    out = json.loads(server.rename_case(1, "P01"))
+    assert out.get("changed") is True, out
+    assert out["old_name_left_in"] == {"saved_filters": 1}

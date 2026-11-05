@@ -150,7 +150,6 @@ SHIPPED = ["README.md", "TOOLS.md", "INSTALL.md",
            "docs/installing-from-the-terminal.md", "QUICKSTART.md",
            "PROJECT_SELECTION_GUIDE.md", "PRIVACY.md", "SUPPORT.md",
            "CONTRIBUTING.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
-           "docs/history/IMPORT_INSTRUCTIONS.md", "example_config.json",
            ".github/ISSUE_TEMPLATE/bug_report.yml",
            ".github/ISSUE_TEMPLATE/config.yml", "CITATION.cff", "NOTICE",
            "packaging/desktop-extension/manifest.in.json"]

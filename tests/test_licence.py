@@ -39,6 +39,8 @@ try:
 except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
     import tomli as tomllib
 
+from test_v0151_history_folder import AT_THE_TAG, THE_NINE
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
 EXPRESSION = "LGPL-3.0-or-later"
 HEADER = f"# SPDX-License-Identifier: {EXPRESSION}"
@@ -557,9 +559,12 @@ NOTICE_HERE = (
      "TestSavingTheMappingIntoPseudonymsJson.test_qualcoder_applying_the_written_file_gives_this_runs_text"),
     (75, "tests/test_v012_pseudonymise_tool.py",
      "TestSavingTheMappingIntoPseudonymsJson.test_pseudonyms_json_is_byte_identical_to_qualcoders_own_write"),
-    (76, "docs/history/QUALCODER_IMPORT_CAPABILITIES.md"),
-    (77, "docs/history/QUALCODER_IMPORT_CAPABILITIES.md"),
-    (78, "docs/history/RESEARCH_SUMMARY.md"),
+    # v0.15.3, the tidy-up: the early documents left the repository's
+    # files, and these three entries give their addresses at the tag
+    # of 0.15.2-alpha, which git keeps (test_v0151_history_folder.py)
+    (76, AT_THE_TAG + "QUALCODER_IMPORT_CAPABILITIES.md"),
+    (77, AT_THE_TAG + "QUALCODER_IMPORT_CAPABILITIES.md"),
+    (78, AT_THE_TAG + "RESEARCH_SUMMARY.md"),
     (79, "src/exegete/doc_readers.py", "getdocumenttext"),
     (80, "src/exegete/doc_readers.py", "_ODT_REPLACEMENTS",
      "_ODT_TAG_STARTS", "_ODT_ENTITIES", "odt_recipe"),
@@ -592,6 +597,13 @@ class TestNoticeStaysTrue:
         stale = []
         for number, where in sorted(_notice_entries().items()):
             for path, names in where:
+                if path.startswith(AT_THE_TAG):
+                    # a document git keeps at the tag, as a whole
+                    # file: one of the nine the folder held
+                    if names or path[len(AT_THE_TAG):] not in THE_NINE:
+                        stale.append(f"{number}: {path} (not one of "
+                                     f"the documents at the tag)")
+                    continue
                 target = REPO / path
                 if not target.is_file():
                     stale.append(f"{number}: {path} (no such file)")

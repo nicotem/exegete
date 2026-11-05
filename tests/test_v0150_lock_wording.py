@@ -116,8 +116,9 @@ class TestTheThreeTexts:
         assert f'"{qualcoder_open_message("...")}"' in flat
 
     def test_no_link_uses_the_old_heading(self):
-        # the documents at the top, and those in docs/history/ (v0.15.1)
-        for path in [*REPO.glob("*.md"), *REPO.glob("docs/history/*.md")]:
+        # the documents at the top (v0.15.3: those kept in docs/history/
+        # from v0.15.1 left the repository's files)
+        for path in REPO.glob("*.md"):
             assert "#close-qualcoder-first" not in path.read_text(
                 encoding="utf-8"), path
 

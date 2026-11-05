@@ -1498,11 +1498,11 @@ def _limits_codexs_reading(text):
 
 
 def _shipped_documents():
-    """The Markdown documents at the top of the repository, and the
-    older ones kept in docs/history/ (v0.15.1), by their paths in it."""
+    """The Markdown documents at the top of the repository, by their
+    paths in it (v0.15.3: the older ones kept in docs/history/ from
+    v0.15.1 left the repository's files)."""
     return [p.relative_to(REPO).as_posix()
-            for p in sorted(REPO.glob("*.md"))
-            + sorted(REPO.glob("docs/history/*.md"))]
+            for p in sorted(REPO.glob("*.md"))]
 
 
 def _privacy_hosts():

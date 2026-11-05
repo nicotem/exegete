@@ -2436,6 +2436,11 @@ NAME_SELECTOR_RANGES = (
 )
 
 
+# The controls (category Cc) and the lone surrogates (Cs), which are
+# fixed ranges in every Unicode version
+_NAME_CONTROLS = re.compile(r"[\x00-\x1f\x7f-\x9f\ud800-\udfff]")
+
+
 def _name_selector(code_point: int) -> bool:
     return any(low <= code_point <= high
                for low, high in NAME_SELECTOR_RANGES)
@@ -2447,9 +2452,18 @@ def _unseen_in_name(name: str) -> List[Tuple[int, bool]]:
     if name.isascii():
         # In ASCII such characters are the controls alone, which are
         # exactly the characters str.isprintable refuses there
+        if name.isprintable():
+            return []
         return [(index, False) for index, ch in enumerate(name)
                 if not ch.isprintable()]
     from . import pseudonymise
+    # Most names hold none: two searches, the controls and the lone
+    # surrogates, then the pseudonymiser's own class of the ignorable
+    # table and category Cf, find that faster than a look at each
+    # character, which a duplicate check makes for every row it reads
+    if _NAME_CONTROLS.search(name) is None and \
+            pseudonymise._unseen_pattern().search(name) is None:
+        return []
     unseen = [unicodedata.category(ch) in ("Cc", "Cf", "Cs")
               or pseudonymise.is_default_ignorable(ord(ch)) for ch in name]
     kept: List[bool] = []

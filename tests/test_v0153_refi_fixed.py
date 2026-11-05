@@ -722,15 +722,24 @@ def test_no_known_faults_left(setup_server, tmp_path):
     ]
     for answer in answers:
         assert "known_faults" not in answer and "deprecated" not in answer
-    for name in DOCUMENTS:
-        path = REPO / name
-        if not path.exists():
-            continue
-        text = " ".join(path.read_text(encoding="utf-8").split())
-        assert "Known faults" not in text and "known faults" not in text, name
-        on_export = [p for p in re.split(r"(?<=[.;!?])\s|\s\|\s", text)
+    served = [t.description or "" for t in
+              _host(lambda c: c.list_tools()).tools]
+    served += [server.mcp.instructions or "", server.BRIEF_FULL]
+    texts = {name: (REPO / name).read_text(encoding="utf-8")
+             for name in DOCUMENTS if (REPO / name).exists()}
+    texts.update({f"served {i}": text for i, text in enumerate(served)})
+    for name, text in texts.items():
+        flat = " ".join(text.split())
+        assert "Known faults" not in flat and "known faults" not in flat, name
+        on_export = [p for p in re.split(r"(?<=[.;!?])\s|\s\|\s", flat)
                      if "REFI" in p or "export_refi_qda" in p]
         assert not [p for p in on_export if REMOVAL.search(p)], name
+    # The CHANGELOG's entry for 0.15.1, a record, says the export stayed
+    changelog = " ".join((REPO / "CHANGELOG.md").read_text(
+        encoding="utf-8").split())
+    entry = changelog[changelog.index("## [0.15.1-alpha]"):
+                      changelog.index("## [0.15.0-alpha]")]
+    assert "`export_refi_qda` is no longer deprecated" in entry
 
 
 # ===========================================================================

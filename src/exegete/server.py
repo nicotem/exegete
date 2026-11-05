@@ -12954,7 +12954,7 @@ def import_documents(
     show_text: bool = False,
     memo: str = ""
 ) -> str:
-    """Bring documents from the researcher's computer into the selected project. Their text does not pass through the conversation, except one line of a file not in UTF-8, shown as each character set reads it. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
+    """Bring documents from the researcher's computer into the selected project. Their text never passes through the conversation, but one line of a file not in UTF-8, shown as each character set reads it. Never paste a document's text into a tool, or open it with your own file tools first: give its path.
 
     Two steps. Call with paths and no preview_token: nothing is written to the project; the answer is a preview (names, sizes, lengths and warnings, never other text) with a preview_token. Show the researcher the summary and every warning. Only on their word, call again with the same arguments and the token: one backup is taken, then each original and its text are stored.
 

@@ -1643,7 +1643,7 @@ class TestTheFileTextWarningsArithmetic:
             assert listed < 2 == block["totals"][
                 "files_showing_a_name_not_counted"], detail
             assert _file_text_warning(out) == self.PAST.format(n=2) + (
-                "See residue.file_text for the files' names."), detail
+                " See residue.file_text for the files' names."), detail
 
     def test_counted_and_uncounted_files_are_told_apart(self, project,
                                                         monkeypatch):
@@ -2416,8 +2416,8 @@ class TestACleanProjectPastBothBudgets:
         assert _file_text_warning(out) == (
             f"Warning: {unchecked} file(s) were not checked; preview them "
             f"one at a time, or use fewer names, to check them (see "
-            f"files_not_checked). See residue.file_text, which names the "
-            f"files.")
+            f"files_not_checked). See residue.file_text for the files' "
+            f"names.")
         assert elapsed < self.CEILING_SECONDS, elapsed
 
 
@@ -2705,7 +2705,7 @@ class TestEveryWordingThroughTheTool:
     file fits under one name make every file too large for this mapping
     and none for any; the question's budget is set per shape."""
 
-    END = "See residue.file_text for the files' names."
+    END = " See residue.file_text for the files' names."
     NAMED = ("the file this call rewrites is too large to count in full "
              "with this many names, {}. The rewrite still applies to it, "
              "and fewer names would let it be counted (see "

@@ -129,7 +129,7 @@ def test_the_guide_puts_the_check_before_the_backup():
     round: the steps in the code's order, the AI coder name first,
     before any check or backup, and the lock file before the backup.)"""
     served = " ".join(server.apply_codings.__doc__.split())
-    assert "re-validated BEFORE the backup and the write" in served
+    assert "checked again before the backup and the write" in served
     step = _between(_flat("AI_CODING_GUIDE.md"),
                     "When the assistant calls `apply_codings`, Exegete:",
                     "The answer then looks like this:")

@@ -57,15 +57,14 @@ DESCRIPTION = (
     "Make the names file for the researcher to fill in on their own "
     "computer, so that the real names do not pass through this "
     "conversation. Writes Names to replace.txt in the project's Exegete "
-    "folder (a few lines of instructions, then one line per name: Real "
-    "name = Pseudonym), with the entries of the project's names list "
-    "(pseudonyms.json) already in it when there is one; a names file "
-    "already there is kept as it is. Then shows it in its folder and opens "
-    "it in the computer's text editor. Exegete never fills in names from "
-    "the documents and never returns the file's contents. Tell the "
-    "researcher to fill it in, save it and say when the list is ready; "
-    # the files design, piece 4: the call that saves it
-    "then call save_names_list. Never open or read the file yourself.")
+    "folder: a few lines of instructions, then one line per name, Real name "
+    "= Pseudonym. When the project has a names list (pseudonyms.json), its "
+    "entries are in the file already. A names file already there is kept as "
+    "it is. Then shows it in its folder and opens it in the computer's text "
+    "editor. Exegete never fills in names from the documents and never "
+    "returns the file's contents. Tell the researcher to fill it in, save "
+    "it and say when the list is ready; then call save_names_list. Never "
+    "open or read the file yourself.")
 NEXT_STEP = (
     "Tell the researcher that the names file is open on their computer "
     "(or, when it could not be opened, where it is). They write each real "

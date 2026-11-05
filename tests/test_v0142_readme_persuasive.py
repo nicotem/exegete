@@ -621,7 +621,7 @@ def test_the_path_of_a_coding():
     apply = inspect.signature(server.apply_codings)
     assert apply.parameters["create_backup"].default is None
     doc = " ".join(server.apply_codings.__doc__.split())
-    assert "re-validated BEFORE the backup" in doc
+    assert "checked again before the backup" in doc
     assert "single all-or-nothing transaction" in doc
 
 

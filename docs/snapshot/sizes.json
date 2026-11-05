@@ -124,7 +124,7 @@
     "brief_characters": 14180,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 209705,
+    "tool_definitions_characters": 209701,
     "tools": {
       "add_annotation": {
         "definition_characters": 2238,
@@ -275,8 +275,8 @@
         "description_characters": 218
       },
       "import_documents": {
-        "definition_characters": 3181,
-        "description_characters": 2029
+        "definition_characters": 3177,
+        "description_characters": 2025
       },
       "import_text_file": {
         "definition_characters": 4395,

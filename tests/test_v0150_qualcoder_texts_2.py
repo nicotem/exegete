@@ -141,7 +141,7 @@ POINTED_TO = (
      "**Pseudonymising a project does not empty it of names.**"),
 )
 # The paragraph of the description that "listed above" refers to
-LISTED_ABOVE = "What this does NOT rewrite, and where the names will remain:"
+LISTED_ABOVE = "What this does not rewrite, so the names remain there:"
 # v0.15.3, the occurrences choice (its sixth design): what the
 # conversation carries when occurrences are chosen, and where the words
 # around them are (server.py: _occurrences_page; database.py:

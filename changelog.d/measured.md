@@ -7,7 +7,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 209,705 | 204,793 |
+| `full` (80 tools) | 209,701 | 204,793 |
 | `core` (28 tools) | 76,736 | 75,947 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,180 | 13,721 |
@@ -59,7 +59,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
   description. The other 17 are its new line breaks, escaped in the
   definition.
 - The second reading of the texts Exegete gives the assistant adds
-  1,038 characters to `full` and 471 to `core`. Most of it says where
+  1,034 characters to `full` and 471 to `core`. Most of it says where
   the real names stay: `list_backups` (+198) and
   `copy_project_to_workspace` (+206) name the names list and the names
   file that a backup and a copy carry, and the database a backup copies

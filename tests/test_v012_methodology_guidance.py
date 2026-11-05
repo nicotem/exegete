@@ -108,7 +108,7 @@ class TestPlacement:
     def test_propose_codes_and_read_tool_carry_their_paragraphs(self):
         d = _desc("propose_codes")
         assert server.GROUNDING_PROPOSE in d
-        assert d.index("WORKFLOW") < d.index(server.GROUNDING_PROPOSE) < d.index("Args:")
+        assert d.index("Workflow:") < d.index(server.GROUNDING_PROPOSE) < d.index("Args:")
         d = _desc("read_file_with_codings")
         assert server.GROUNDING_READ in d
         # v0.14 fix round 2: the opening is shorter; the block still sits

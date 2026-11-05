@@ -18,6 +18,7 @@ projects Exegete writes, and the commit or release beside each line
 TOOLS.md cites from QualCoder's code.
 """
 
+import inspect
 import re
 from pathlib import Path
 
@@ -124,15 +125,27 @@ class TestEveryReadChecksForCoderVisibility:
 def test_the_guide_puts_the_check_before_the_backup():
     """apply_codings checks every approved suggestion before the backup
     and writes nothing, and takes no backup, when one fails. (v0.15.3:
-    the workflow guide's step 5 is in the one coding guide.)"""
+    the workflow guide's step 5 is in the one coding guide. Its fix
+    round: the steps in the code's order, the AI coder name first,
+    before any check or backup, and the lock file before the backup.)"""
     served = " ".join(server.apply_codings.__doc__.split())
     assert "re-validated BEFORE the backup and the write" in served
     step = _between(_flat("AI_CODING_GUIDE.md"),
                     "When the assistant calls `apply_codings`, Exegete:",
                     "The answer then looks like this:")
-    assert step.index("1. Checks every approved suggestion") < \
-        step.index("2. Takes a backup")
+    said = [step.index(words) for words in (
+        "1. Looks up the project's AI coder name",
+        "2. Checks every approved suggestion",
+        "3. Checks the project's lock file",
+        "4. Takes a backup")]
+    assert said == sorted(said)
+    assert "stops here, before any check or backup" in step
     assert "no backup is taken" in step
+    body = inspect.getsource(server.apply_codings)
+    done = [body.index(call) for call in (
+        "_resolve_write_owner()", "_check_approved_codings(get_db()",
+        "_write_gate_error()", "_backup_before_change(")]
+    assert done == sorted(done)
 
 
 def test_tools_says_what_a_count_of_codings_is_not():

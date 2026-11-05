@@ -555,10 +555,14 @@ class TestTheDocuments:
         # holds, and pointed to from the guide, with the way without
         # QualCoder named)
         guide = _flat("AI_CODING_GUIDE.md")
-        # (v0.15.3, the readability reading: a sentence each)
-        assert ("Exegete refuses an older project. \"Supported QualCoder "
-                "versions\", in TOOLS.md, says how to bring one up to date, "
-                "with QualCoder or without it") in guide
+        # (v0.15.3, the readability reading: a sentence each; the fix
+        # round: an older project is read and not written, the oldest
+        # formats not read at all, as TOOLS.md says in TOOLS_SAYS)
+        assert ("Exegete reads an older project without writing to it, but "
+                "cannot read the oldest formats at all. \"Supported "
+                "QualCoder versions\", in TOOLS.md, says how to bring one up "
+                "to date, with QualCoder or without it") in guide
+        assert "Exegete refuses an older project" not in guide
         assert "## Supported QualCoder versions" in _flat("TOOLS.md")
         assert "open and save them in QualCoder 3.8" not in guide
 

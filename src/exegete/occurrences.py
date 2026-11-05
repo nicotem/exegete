@@ -341,11 +341,12 @@ def _line_direction(line: str) -> str:
 
 
 class _Read(NamedTuple):
-    """What a line's walk has read by the end of a label (`_mark_after`),
-    for the next label in the line: that place; the nearest character
-    before it that gives the neutral characters beside it a direction, as
-    `_directions_before` gives one, or None; and the class of the first
-    letter before it, as `_strong_before` gives it."""
+    """What a line's walk has read up to the end of the occurrence it gave
+    a label's mark for (`_mark_after`), for the next label in the line:
+    that place; the nearest character before it that gives the neutral
+    characters beside it a direction, as `_directions_before` gives one,
+    or None; and the class of the first letter before it, as
+    `_strong_before` gives it."""
     at: int
     nearest: Optional[Tuple[int, Optional[str], str]]
     letter: str
@@ -430,16 +431,16 @@ def _mark_after(line: str, start: int, end: int, line_direction: str,
     need: it then stands after its occurrence's last letter, beside it
     still.
 
-    A line's labels are walked in text order, each given what the walk of
+    A line's labels are walked in text order, each given what the walk for
     the one before it has read (`read`): a walk reads back from its
-    occurrence's end no further than the end of that label, where the
-    nearest character that sets a direction, and the first letter, before
-    it are known already. So a line's labels cost about one pass over the
-    line, whatever it holds: a few characters each in a line of names, and
-    no more where no letter stands before an occurrence (a name of digits
-    or signs alone, in a line that holds no letter). An occurrence that
-    overlaps the one before it, which no preview gives, is walked from the
-    line's start."""
+    occurrence's end no further than the end of the occurrence before it,
+    where the nearest character that sets a direction, and the first
+    letter, before that place are known already. So a line's labels cost
+    about one pass over the line, whatever it holds: a few characters each
+    in a line of names, and no more where no letter stands before an
+    occurrence (a name of digits or signs alone, in a line that holds no
+    letter). An occurrence that overlaps the one before it, which no
+    preview gives, is walked from the line's start."""
     if read is not None and min(start, end) < read.at:
         return _mark_after(line, start, end, line_direction,
                            explicit)[0], read

@@ -56,8 +56,8 @@ import hmac
 import re
 import unicodedata
 from datetime import datetime
-from typing import (Any, Collection, Dict, Iterator, List, Optional,
-                    Sequence, Tuple)
+from typing import (Any, Collection, Dict, Iterator, List, NamedTuple,
+                    Optional, Sequence, Tuple)
 
 from .reading_copy import BASE_STYLE, POLICY, esc
 from .reading_folder import PAGE_MARK
@@ -341,32 +341,53 @@ def _line_direction(line: str) -> str:
     return "L"
 
 
-def _strong_before(line: str, at: int, line_direction: str) -> str:
+class _Read(NamedTuple):
+    """What a line's walk has read by the end of a label (`_mark_after`),
+    for the next label in the line: that place; the nearest character
+    before it that gives the neutral characters beside it a direction, as
+    `_directions_before` gives one, or None; and the class of the first
+    letter before it, as `_strong_before` gives it."""
+    at: int
+    nearest: Optional[Tuple[int, Optional[str], str]]
+    letter: str
+
+
+def _strong_before(line: str, at: int, line_direction: str,
+                   read: Optional[_Read] = None) -> str:
     """The class of the first letter before `at`, "L", "R" or "AL", which
     sets the direction of the European digits after it (UAX 9, W2 and W7,
     which pass over everything else, Arabic digits included); past a
-    paragraph separator or the line's start, the line's direction."""
-    while at > 0:
+    paragraph separator or the line's start, the line's direction. With
+    `read`, what the walk has read up to its place, it reads back no
+    further than that place, where the answer is its `letter`."""
+    floor = 0 if read is None else read.at
+    while at > floor:
         at -= 1
         if line[at] in _SEPARATORS:
-            break
+            return line_direction
         kind = unicodedata.bidirectional(line[at])
         if kind in ("L", "R", "AL"):
             return kind
-    return line_direction
+    return line_direction if read is None else read.letter
 
 
-def _directions_before(line: str, at: int, line_direction: str
+def _directions_before(line: str, at: int, line_direction: str,
+                       read: Optional[_Read] = None
                        ) -> Iterator[Tuple[int, Optional[str], str]]:
     """Each character before `at` that gives the neutral characters beside
     it a direction (UAX 9, N1), nearest first: its place, "L" or "R", and
     the class of the letter that sets it. A letter sets its own, an Arabic
     digit is right to left, and a European digit takes the first letter
     before it (`_strong_before`), worked out once for each run of digits.
-    A paragraph separator ends the walk, given as its place, None and
-    ""."""
+    A paragraph separator ends the walk, given as its place, None and "".
+    With `read`, the walk reads back no further than its place and ends
+    with the nearest such character before it, its `nearest`: no reader
+    of the walk goes past the first such character before the occurrence
+    it walks from, which starts at that place or after it
+    (`_mark_after`)."""
+    floor = 0 if read is None else read.at
     digits = ""
-    while at > 0:
+    while at > floor:
         at -= 1
         if line[at] in _SEPARATORS:
             yield at, None, ""
@@ -379,14 +400,18 @@ def _directions_before(line: str, at: int, line_direction: str
             yield at, "R", "R"
         elif kind == "EN":
             if not digits:
-                digits = _strong_before(line, at, line_direction)
+                digits = _strong_before(line, at, line_direction, read)
             yield at, "L" if digits == "L" else "R", digits
+    if read is not None and read.nearest is not None:
+        yield read.nearest
 
 
 def _mark_after(line: str, start: int, end: int, line_direction: str,
-                explicit: bool) -> str:
+                explicit: bool, read: Optional[_Read] = None
+                ) -> Tuple[str, _Read]:
     """The mark that follows the label of the occurrence from `start` to
-    `end` in `line`, as a key of DIRECTION_MARKS, or "" for none.
+    `end` in `line`, as a key of DIRECTION_MARKS, or "" for none, with
+    what its walk has read, for the next label in the line.
 
     A label is a neutral to the line around it (an isolate), so where
     what stands on either side of it differs in direction it takes the
@@ -404,10 +429,35 @@ def _mark_after(line: str, start: int, end: int, line_direction: str,
     though the algorithm gives a pair the direction of what it holds or
     follows (N0), so beside brackets a label can take a mark it does not
     need: it then stands after its occurrence's last letter, beside it
-    still. Each walk stops at the first letter of the other direction, so
-    a line's labels cost about one pass over the line."""
-    walk = _directions_before(line, end, line_direction)
-    last, own, mark = next(walk, (-1, None, ""))
+    still.
+
+    A line's labels are walked in text order, each given what the walk of
+    the one before it has read (`read`): a walk reads back from its
+    occurrence's end no further than the end of that label, where the
+    nearest character that sets a direction, and the first letter, before
+    it are known already. So a line's labels cost about one pass over the
+    line, whatever it holds: a few characters each in a line of names, and
+    no more where no letter stands before an occurrence (a name of digits
+    or signs alone, in a line that holds no letter). An occurrence that
+    overlaps the one before it, which no preview gives, is walked from the
+    line's start."""
+    if read is not None and min(start, end) < read.at:
+        return _mark_after(line, start, end, line_direction,
+                           explicit)[0], read
+    walk = _directions_before(line, end, line_direction, read)
+    nearest = next(walk, None)
+    after = _Read(end, nearest,
+                  _strong_before(line, end, line_direction, read))
+    return _mark_from(nearest, walk, start, line_direction, explicit), after
+
+
+def _mark_from(nearest: Optional[Tuple[int, Optional[str], str]],
+               walk: Iterator[Tuple[int, Optional[str], str]], start: int,
+               line_direction: str, explicit: bool) -> str:
+    """`_mark_after`'s rule, read from its walk: `nearest`, the first
+    character the walk gives (None where it gives none), and the walk past
+    it."""
+    last, own, mark = nearest or (-1, None, "")
     if own is None:
         # Only signs since the line's start or a separator: they and the
         # label take the line's direction, beside the occurrence
@@ -468,6 +518,7 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
             line_text = text[start:end]
             direction = _line_direction(line_text)
             explicit = bool(_EXPLICIT.search(line_text))
+            read: Optional[_Read] = None
         at = start
         for cut_start, cut_end, index, last in marked:
             cut_start = max(cut_start, at)
@@ -476,8 +527,9 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
             parts.append(f'<mark class="{kind}">'
                          f"{esc(text[cut_start:cut_end])}</mark>")
             if last:
-                mark = _mark_after(line_text, cut_start - start,
-                                   cut_end - start, direction, explicit)
+                mark, read = _mark_after(line_text, cut_start - start,
+                                         cut_end - start, direction,
+                                         explicit, read)
                 parts.append(_label(marks[index][2], index in left, mark))
             at = max(at, cut_end)
         parts.append(esc(text[at:end]))

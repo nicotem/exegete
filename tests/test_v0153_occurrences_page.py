@@ -831,6 +831,36 @@ class TestRightToLeft:
         assert labels > 4000 and both_ways > 50
         assert faults == []
 
+    def test_a_line_without_letters_is_walked_about_once(self):
+        """Occurrences that hold no letter (a mapping entry of digits or of
+        signs alone, which a mapping may hold) in lines that hold none:
+        each label's walk reads back no further than the label before it
+        in the line, so the page is built in a time that grows with the
+        line's length, not with its square. Built on this Mac in about
+        0.08 seconds; at 57baf1c, whose walks went back to the line's
+        start for every label, these two lines took about 46 seconds
+        (four times as long at each doubling), so the bound of 5 leaves a
+        slow machine room on one side and the old walk far past it on
+        the other. Every label still takes the line's direction, with no
+        mark, as before."""
+        units = (("1984 ", "1984"), ("?? ", "??"))
+        text = "\n".join(unit * 12000 for unit, _word in units)
+        marks, at = [], 0
+        for _unit, word in units:
+            for _ in range(12000):
+                at = text.index(word, at)
+                marks.append((at, at + len(word), f"q{len(marks):05d}"))
+                at += len(word)
+        begun = time.perf_counter()
+        page, counts = occurrences.build_page(
+            project_name="p", file_id=1, file_name="f.txt", text=text,
+            marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0))
+        took = time.perf_counter() - begun
+        assert took < 5, f"{took:.1f} s"
+        assert counts == {"occurrences": 24000, "left": 0, "lines": 2}
+        labels = re.findall(r'<span class="(id[^"]*)">', page)
+        assert labels == ["id"] * 24000
+
 
 class TestTheAnswer:
     def test_the_safety_sentences(self, tmp_path):

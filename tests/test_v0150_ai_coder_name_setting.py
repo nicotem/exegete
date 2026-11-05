@@ -238,8 +238,9 @@ class TestTheWords:
 
     def test_the_exports_description(self):
         text = _flat(server.mcp.original_descriptions["export_refi_qda"])
-        assert ("The one export user is named after the project's AI coder "
-                "name, else the AI coder name in Exegete's settings "
+        # (v0.15.3: one user per coder, the AI coder name the last)
+        assert ("The AI coder name is the last, named after the project's AI "
+                "coder name, else the AI coder name in Exegete's settings "
                 "(EXEGETE_AI_CODER_NAME) or the built-in default; the result "
                 "says which (ai_user_name_source).") in text
         assert "declaration" not in text

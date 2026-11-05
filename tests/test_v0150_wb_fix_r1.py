@@ -110,17 +110,19 @@ class TestTheRemovalsInV0151:
                      "DEPRECATED_RENAME_BACK", "DEPRECATED_EDIT_PARITY"):
             assert not hasattr(server, gone), gone
 
-    def test_the_refi_export_is_kept_with_its_faults_named(self):
+    def test_the_refi_export_is_kept_and_its_faults_fixed(self):
         """The owner's decision of 20 October 2026 (ruling 85, item 2): the
-        REFI-QDA export stays, to be fixed, so its sentence names its known
-        faults and announces no removal (under a name of its own since
-        v0.15.1, REFI_EXPORT_KNOWN_FAULTS, until the piece that fixes
-        it)."""
-        sentence = server.REFI_EXPORT_KNOWN_FAULTS
-        assert sentence.startswith("Known faults (a later release is meant "
-                                   "to fix them): ")
-        assert "Deprecated" not in sentence and "removed" not in sentence
-        assert not BARE_V015.search(sentence)
+        REFI-QDA export stays, to be fixed. Its sentence named its known
+        faults, under a name of its own from v0.15.1,
+        REFI_EXPORT_KNOWN_FAULTS, until the piece that fixed it, v0.15.3's
+        (tests/test_v0153_refi_fixed.py): the sentence is gone, and the
+        description announces no removal."""
+        assert not hasattr(server, "REFI_EXPORT_KNOWN_FAULTS")
+        description = server.mcp._tool_manager._tools[
+            "export_refi_qda"].description
+        assert "Deprecated" not in description
+        assert "Known faults" not in description
+        assert not BARE_V015.search(description)
 
     @pytest.mark.parametrize("mode", ["full", "core"])
     def test_no_served_description_names_v015_alone(self, mode):

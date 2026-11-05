@@ -1896,10 +1896,8 @@ class TestFixRound2WhatGoesInV015:
         description = server.mcp._tool_manager._tools[tool].description
         assert sentence in description, tool
         # ruling 70 moved the removals to v0.15.1 (the whole-branch
-        # review of v0.15.0, round 1); ruling 85, item 2 keeps the
-        # REFI-QDA export, whose sentence names its known faults instead
-        if sentence is not server.REFI_EXPORT_KNOWN_FAULTS:
-            assert sentence.startswith("Deprecated, removed in v0.15.1: ")
+        # review of v0.15.0, round 1)
+        assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
         """v0.15.0 (ruling 78; the files design, piece 5): the name list
@@ -1917,37 +1915,28 @@ class TestFixRound2WhatGoesInV015:
         assert "deprecated" not in summary.lower()
 
     def test_the_refi_qda_exports(self, setup_server, tmp_path):
-        self._described("export_refi_qda", server.REFI_EXPORT_KNOWN_FAULTS)
-        # (v0.15.1: kept, its known faults named, ruling 85, item 2, in
-        # the answer's own field, known_faults, and no longer deprecated;
-        # tests/test_v0151_refi_known_faults.py)
-        for words in ("Known faults (a later release is meant to fix them)",
-                      "files every coding under the AI coder name",
-                      "leaves out cases, annotations, journals and media",
-                      "includes every suggestion, rejected ones too",
-                      "QualCoder's own export (Project, Export, REFI-QDA "
-                      "Project export)"):
-            assert words in server.REFI_EXPORT_KNOWN_FAULTS, words
-        assert "removed" not in server.REFI_EXPORT_KNOWN_FAULTS
+        # (v0.15.1: kept, its known faults named, ruling 85, item 2;
+        # v0.15.3: fixed but for media, the faults and their field gone,
+        # tests/test_v0153_refi_fixed.py)
+        assert not hasattr(server, "REFI_EXPORT_KNOWN_FAULTS")
+        description = server.mcp._tool_manager._tools[
+            "export_refi_qda"].description
+        assert "Known faults" not in description
+        assert "Deprecated" not in description
         sid = new_session()
         g = record(sid, item())["recorded"][0]["guid"]
         session_export = jcall("export_refi_qda", coding_session_id=sid,
                                output_path=str(tmp_path / "s.qdpx"))
         assert session_export["success"] is True
-        assert session_export["known_faults"] == \
-            server.REFI_EXPORT_KNOWN_FAULTS
-        assert "deprecated" not in session_export
         approve_and_apply(sid, [g])
         project_export = jcall("export_refi_qda",
                                output_path=str(tmp_path / "p.qdpx"))
         assert project_export["success"] is True
-        assert project_export["known_faults"] == \
-            server.REFI_EXPORT_KNOWN_FAULTS
-        assert "deprecated" not in project_export
         refused = jcall("export_refi_qda", output_path="relative.qdpx")
         assert "error" in refused
-        assert refused["known_faults"] == server.REFI_EXPORT_KNOWN_FAULTS
-        assert "deprecated" not in refused
+        for answer in (session_export, project_export, refused):
+            assert "known_faults" not in answer
+            assert "deprecated" not in answer
 
     def test_whole_tools_that_go(self, setup_server):
         """v0.15.1: the three tools went, as announced, with their

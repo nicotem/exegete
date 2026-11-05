@@ -478,7 +478,10 @@ class TestExportsReadBaseTables:
         assert out["codings_exported"] == 5  # 2 visible + 3 hidden
         with zipfile.ZipFile(out_file) as zf:
             qde = zf.read("project.qde").decode("utf-8")
-        assert qde.count("<PlainTextSelection") == 5
+        # (v0.15.3: the hidden coder's annotation is written too, as a
+        # Note with a selection of its own, so the codings are counted)
+        assert qde.count("<Coding ") == 5
+        assert qde.count("<PlainTextSelection") == 6
 
 
 # =============================================================================

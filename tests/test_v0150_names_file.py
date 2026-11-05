@@ -968,11 +968,9 @@ class TestExportsKeepOut:
         target = names if suffix == ".txt" else names.with_suffix(suffix)
         answer = json.loads(getattr(server, tool)(
             output_path=str(target), overwrite=True, **extra))
+        # (v0.15.1 to 0.15.2: the REFI-QDA export's answers named its
+        # known faults too, a field gone with them in v0.15.3)
         refusal = {"error": EXPORT_REFUSAL}
-        if tool == "export_refi_qda":
-            # every answer the tool itself gives names its known faults
-            # (v0.15.1, ruling 85, item 2)
-            refusal["known_faults"] = server.REFI_EXPORT_KNOWN_FAULTS
         assert answer == refusal, answer
         assert names.read_bytes() == before
         assert sorted(os.listdir(other / "Exegete")) == sorted(

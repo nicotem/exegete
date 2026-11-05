@@ -74,13 +74,12 @@ def test_the_help_rules_are_exegetes_own():
     assert "quoting a few of those words in the reason" in first
 
 
-def test_the_refi_qda_warning_names_a_hidden_coders_codings():
+def test_the_refi_qda_description_names_a_hidden_coders_codings():
     # (v0.15.1: the export's known faults, the hidden coder's codings
-    # among them, ruling 85, item 2)
-    warning = _flat(server.REFI_EXPORT_KNOWN_FAULTS)
-    assert ("every coding under the AI coder name, the researcher's own "
-            "and a hidden coder's included") in warning
-    assert "a hidden coder's included" in _description("export_refi_qda")
+    # among them, ruling 85, item 2; v0.15.3: each coding under its own
+    # coder, a hidden coder's included)
+    assert ("each coding under its own coder, a hidden coder's included"
+            ) in _description("export_refi_qda")
 
 
 def test_the_numeric_note_names_the_digits():

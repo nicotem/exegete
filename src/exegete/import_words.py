@@ -640,7 +640,7 @@ WARNINGS = {
         "view can."),
     "listed_name_in_file_name": ("information",
         "Its own name holds a name from your names list, and it comes in "
-        "under that name, as you said: the name reaches the AI provider "
+        "under that name, as you said. That name reaches the AI provider "
         "whenever an answer gives the file's name, and the project's copy "
         "of the original keeps it."),
     # v0.15.1: a plain text file read in the character set chosen for it.
@@ -706,11 +706,12 @@ NO_LINE_SHOWN = (
     "forms stay in the text once imported; a form written on one line "
     "can be added to the names file, so that the import replaces it.")
 NO_READING_OFFERED = (
-    "No character set offered here reads this file without letters it "
-    "cannot make or control codes no text holds, so no line is shown: it "
-    "may be saved in a set not offered (Turkish, Baltic, Hebrew, Arabic, "
-    "Thai or Vietnamese, say), or as UTF-16 or UTF-32 without the mark "
-    "at its start that tells which it is.")
+    "No line is shown, because none of the character sets offered here "
+    "reads this file cleanly: in each, the file holds bytes the set cannot "
+    "read as letters, or control codes that no text holds. It may be saved "
+    "in a set not offered here, such as Turkish, Baltic, Hebrew, Arabic, "
+    "Thai or Vietnamese, or as UTF-16 or UTF-32 without the mark at its "
+    "start that tells which it is.")
 READINGS_TOO_LONG = (
     "Read in any character set that can read it, this file is longer "
     "than Exegete's limit for a document's text, so no line is shown.")

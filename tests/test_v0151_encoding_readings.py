@@ -458,9 +458,10 @@ class TestTheDocuments:
         (description,) = [t.description for t in asyncio.run(
             server.mcp.list_tools()) if t.name == "import_documents"]
         flat = " ".join(description.split())
-        assert ("Their text never passes through the conversation, but one "
-                "line of a file not in UTF-8, shown as each character set "
-                "reads it.") in flat
+        # (the readability reading: "except", the plain word for it)
+        assert ("Their text never passes through the conversation, except "
+                "one line of a file not in UTF-8, shown as each character "
+                "set reads it.") in flat
         assert "never other text" in flat
 
     def test_readme_tools_and_privacy(self):

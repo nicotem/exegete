@@ -124,7 +124,9 @@ class TestTheDatabaseSideFilesAreADeparture:
         # The served texts' second batch: the one exception, a database
         # SQLite cannot read, which a backup copies as a file with its
         # side files (database._copy_database; _DATABASE_AS_FILE_NOTE)
-        assert ("unless SQLite cannot read the database: then it is "
+        # (the readability reading: the exception in a sentence of its
+        # own, the fact the same)
+        assert ("The exception is a database SQLite cannot read: it is "
                 "copied as a file, side files and all") in text
         assert "are never copied" not in text
         sentences = re.split(r"(?<=\.) (?=[A-Z])", text)

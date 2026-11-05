@@ -391,22 +391,25 @@ The copy holds the whole project folder, including ai_data/ (QualCoder's
 AI prompt library and chat history, the researcher's data) and any
 names list and names file (pseudonyms.json, Exegete/Names to
 replace.txt), with the real names in them. Like a backup, it leaves
-out ai_data/search.sqlite, which
-QualCoder 4.0 rebuilds when it opens the copy, the database's side
-files (its journal and WAL files among them) and lock files. Unlike a
-backup, it keeps the audio and video folders. A copy of a project
-without an ai_data folder gets an empty one, as a new project does.
+out lock files, the database's side files (its journal and WAL files
+among them) and ai_data/search.sqlite, which QualCoder 4.0 rebuilds
+when it opens the copy. Unlike a backup, it keeps the audio and video
+folders. A copy of a project without an ai_data folder gets an empty
+one, as a new project does.
+
 The database is copied with SQLite's own online backup, so a copy
 taken while another program is writing to the project holds what was
-last committed. That program's saves wait while the copy runs; on a
+last committed. That program's saves wait while the copy runs. On a
 database of about 4 GB or more, a save in an open QualCoder window can
 fail. A database SQLite cannot read is copied as a file, side files
-and all, and the answer says so. Symlinks that point outside
-the project folder, or lead nowhere, are not followed: they are skipped
-and reported (skipped_symlinks, with names), so a shared or untrusted
-project folder cannot pull outside files into the copy. A symlink loop
-(a link back into a folder already being copied) is skipped and
-reported the same way. Other symlinks inside the project are copied.
+and all, and the answer says so.
+
+Symlinks that point outside the project folder, or lead nowhere, are
+not followed: they are skipped and reported (skipped_symlinks, with
+names), so a shared or untrusted project folder cannot pull outside
+files into the copy. A symlink loop (a link back into a folder already
+being copied) is skipped and reported the same way. Other symlinks
+inside the project are copied.
 
 The copy is not opened automatically: use select_project on the
 returned path when you are ready to work on it.
@@ -2082,7 +2085,7 @@ Safety guarantees:
   to it) or another program is writing to the database; for
   QualCoder 4.0, get_current_project shows any signs of an open
   window, and if there are some, ask the researcher before writing.
-- The session must belong to the project open now; applying a
+- The session must belong to the project open now. Applying a
   session to a different project is refused.
 - If the success output contains `position_safety_warning`, relay it
   to the researcher: the file holds Windows line breaks or characters
@@ -2096,11 +2099,11 @@ Safety guarantees:
 - Applied suggestions are marked "applied", so the session cannot be
   applied twice by accident.
 - An approved suggestion whose identical coding (same code, file,
-  span and coder) is already in the project is not written again: it
-  is marked applied, listed in the result as already in the database
-  with its ctid, and the rest are written as one batch. When every
-  approved suggestion already exists, nothing is written and no
-  backup is made.
+  span and coder) is already in the project is not written again. It
+  is marked applied and listed in the result as already in the
+  database, with its ctid, and the rest are written as one batch.
+  When every approved suggestion already exists, nothing is written
+  and no backup is made.
 
 Args:
     coding_session_id: The session ID with approved suggestions
@@ -2286,12 +2289,12 @@ List the automatic backups of the currently open project.
 
 Exegete takes a backup before every change (apply_codings,
 import_text_file (not available in this tool set), delete_coding, restore_backup and the other write
-tools): a timestamped folder next to the project, named
+tools). Each is a timestamped folder next to the project, named
 '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
 together with QualCoder's own '<project>_BKUP_*' backups found next to
 the project (kind 'qualcoder'), newest first, so you can pick one for
 restore_backup. Each is dated by the time in its name, which is when
-it was taken; QualCoder's names give it to the hour. Backups taken in
+it was taken. QualCoder's names give it to the hour. Backups taken in
 the same second are listed in the order they were taken. `dated_from`
 is 'folder' for a name that carries no time, and 'folder (name in the
 future)' for a name dated more than five minutes ahead of this
@@ -2307,21 +2310,24 @@ QualCoder 4.0's own backups, they leave out ai_data/search.sqlite, the
 AI search index, and the side files of every .sqlite file. The index
 holds the text of every source, and QualCoder 4.0 rebuilds it when it
 opens the project. Those made from 0.15.1 on leave out the audio and
-video folders too; one made earlier may hold files in them
-(holds_audio_or_video, read from it). QualCoder's own backups copy the
-database as a file. Exegete copies it with SQLite's own online backup
-instead, so a backup taken while another program is writing to the
-project holds what was last committed, and the database's journal and
-WAL files are not copied, unless SQLite cannot read the database:
-then it is copied as a file, side files and all. A backup that holds them
-(copied mid-write, or made before v0.14) is marked `unclean`, and
-restore_backup refuses it. Unlike QualCoder's backups, symlinks that
-point outside the project folder, or lead nowhere, are not followed:
-they are skipped and the write result reports them
-(backup_skipped_symlinks), so a shared or untrusted project folder
-cannot pull outside files into a backup. A symlink loop inside the
-project (a link back into a folder already being copied) is skipped
-and reported the same way.
+video folders too. One made earlier may hold files in them:
+holds_audio_or_video, read from the backup itself, says whether it does.
+
+QualCoder's own backups copy the database as a file. Exegete copies it
+with SQLite's own online backup instead, so a backup taken while
+another program is writing to the project holds what was last
+committed, and the database's journal and WAL files are not copied.
+The exception is a database SQLite cannot read: it is copied as a
+file, side files and all. A backup that holds them (copied mid-write,
+or made before v0.14) is marked `unclean`, and restore_backup refuses
+it.
+
+Exegete's backups, unlike QualCoder's, do not follow symlinks that
+point outside the project folder or lead nowhere: such links are
+skipped, and the write result reports them (backup_skipped_symlinks),
+so a shared or untrusted project folder cannot pull outside files into
+a backup. A symlink loop inside the project (a link back into a folder
+already being copied) is skipped and reported the same way.
 
 Returns:
     JSON with the project name and an array of backups
@@ -2706,9 +2712,9 @@ per-category scope) and compared ignoring letter case. Without a
 colour, the code gets one picked at random from QualCoder's palette,
 as a code made in QualCoder does.
 
-Idempotent: if a code with this name already exists (ignoring letter
-case, spacing and Unicode form), nothing is written and no backup is
-made; the result is `created: false, reason: already_exists` with the
+If a code with this name already exists (ignoring letter case, spacing
+and Unicode form), nothing is written and no backup is made. The
+result is then `created: false, reason: already_exists`, with the
 existing row under `code` (use its id), `match` (exact or
 case_insensitive) and, under `requested`, only the arguments that
 differ from the stored row (spelling, category, parent, colour). A
@@ -2719,7 +2725,7 @@ the name collapse to one space.
 Sub-codes (projects with schema v16 or newer only): pass
 parent_code_id to nest the new code under an existing code instead of
 a category. A code has either a parent code or a category, never
-both; on projects without sub-code support the parameter is refused.
+both. On projects without sub-code support, the parameter is refused.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing

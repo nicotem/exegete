@@ -7,8 +7,8 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 209,120 | 204,793 |
-| `core` (28 tools) | 76,736 | 75,947 |
+| `full` (80 tools) | 209,280 | 204,793 |
+| `core` (28 tools) | 76,805 | 75,947 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,180 | 13,721 |
 | The brief in `core` | 1,923 | 1,923 |
@@ -31,7 +31,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
   run inside one file, for two people who share a name, adds 201 to
   its description and 204 to the whole definition. With the second
   reading of the texts (below), its description, the one longer than
-  16,384 characters, is 18,606 characters on 3.13 and 19,786 on
+  16,384 characters, is 18,658 characters on 3.13 and 19,838 on
   3.11.13.
 - The full brief's line on the pages Exegete opens for the researcher
   names the page for choosing occurrences too, which adds 75 characters
@@ -47,17 +47,20 @@ Python 3.13.5 with the libraries in `uv.lock`:
   `propose_codes`, with its sentence on `collides_with`, 35 in
   `update_proposal` and 43 in `create_proposed_codes`. None of these
   descriptions newly passes 2,048 characters: `create_category`'s, the
-  longest of them still under it, is 1,973.
+  longest of them still under it, is 1,973, and 1,966 with the second
+  reading of the texts (below).
 - The second reading of the texts Exegete gives the assistant adds
-  1,034 characters to `full` and 471 to `core`. Most of it says where
-  the real names stay: `list_backups` (+198) and
-  `copy_project_to_workspace` (+206) name the names list and the names
-  file that a backup and a copy carry, and the database a backup copies
-  as a file when SQLite cannot read it. `get_case_code_matrix` compares
-  its counts with QualCoder's two reports (+79), and
+  1,194 characters to `full` and 540 to `core`. Most of it says where
+  the real names stay: `list_backups` (+260) and
+  `copy_project_to_workspace` (+208) mention the names list and the
+  names file that a backup and a copy carry, and the database a backup
+  copies as a file when SQLite cannot read it. `get_case_code_matrix`
+  compares its counts with QualCoder's two reports (+100).
   `pseudonymise_source` says that a typed mapping's names reach the AI
   provider, that a preview with `choose_occurrences` writes a page
   into the reading folder, and that a pair refused on a preview is
-  refused on the execute too (+87). The rest comes from calling the
-  person "the researcher" and from sentences split in two. The briefs
-  and the opening text are unchanged.
+  refused on the execute call too (+139). The rest comes from calling
+  the person "the researcher" and from sentences split in two, one fact
+  to a sentence. `import_documents`' description is 1,986 characters on
+  3.13 and 2,046 on 3.11.13, within 2,048 on both. The briefs and the
+  opening text are unchanged.

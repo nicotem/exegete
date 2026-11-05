@@ -1068,7 +1068,7 @@ def _disclosure_text(now: float, tool_available: bool) -> str:
             "version of Exegete can tell them when a new version is out. "
             f"Once a week at most{when_asked} it fetches a small file "
             "from its website, which GitHub hosts. Nothing from their "
-            "projects is sent; GitHub records their computer's internet "
+            "projects is sent. GitHub records their computer's internet "
             "address and the time. It is switched on, and its first check "
             f"will be on or after {first}. {switch} PRIVACY.md, \"Checking "
             "for new versions\", says exactly what is sent.")

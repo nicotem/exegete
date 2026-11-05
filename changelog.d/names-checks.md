@@ -1,7 +1,7 @@
 ### Changed
 
-- **A new code, category or case name may not hold a character no one
-  sees on screen.** A control character, an invisible formatting
+- **A new code, category or case name may not hold a character that
+  usually shows nothing on screen.** A control character, an invisible formatting
   character such as a zero-width space, a soft hyphen or a byte order
   mark, or another character Unicode marks as ignorable, such as a
   Hangul filler, is refused in a name that `create_code`,

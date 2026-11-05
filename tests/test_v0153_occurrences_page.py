@@ -553,52 +553,72 @@ def _faults(bidi, text, spans, others=True, placed=True):
     drawn = "".join(character for character, role in zip(built, roles)
                     if role[0] == "text")
     alone, levels = bidi.lay_out(OBJECT + drawn, level)
-    levels = levels[1:]
     seen = [roles[at] for at in order if roles[at][0] != "mark"]
     faults = []
     if [role[1] for role in seen if role[0] == "text"] != [
             at - 1 for at in alone if at]:
         faults.append("the text laid out otherwise than alone")
-    for n, (begin, end) in enumerate(spans):
+    for n, span in enumerate(spans):
         where = [at for at, role in enumerate(seen) if role == ("label", n)]
-        first, final = where[0], where[-1]
-        assert where == list(range(first, final + 1))
-        before = seen[first - 1] if first else None
-        after = seen[final + 1] if final + 1 < len(seen) else None
-
-        def within(role, low=begin, high=end):
-            return (role is not None and role[0] == "text"
-                    and low <= role[1] < high)
-        if not (within(before) or within(after)):
-            faults.append(f"label {n} not beside its occurrence")
-        for other, (low, high) in enumerate(spans):
-            if others and other != n and (within(before, low, high)
-                                          or within(after, low, high)):
-                faults.append(f"label {n} beside occurrence {other}")
-        if not placed:
-            continue
-        last = end - 1
-        if levels[last] % 2 == level % 2:
-            line_reads = True
-        elif end < len(drawn) and levels[end] > level:
-            # The stretch goes on past the occurrence
-            line_reads = False
-        else:
-            start = last
-            while start > 0 and levels[start - 1] > level:
-                start -= 1
-            line_reads = start >= begin
-        own = [at for at, role in enumerate(seen) if within(role)]
-        if line_reads:
-            placed = (within(before) and max(own) < first if level == 0
-                      else within(after) and min(own) > final)
-        else:
-            placed = (before == ("text", last) if levels[last] % 2 == 0
-                      else after == ("text", last))
-        if not placed:
-            faults.append(f"label {n} not after its occurrence as "
-                          + ("the line reads" if line_reads else "it reads"))
+        label = (where[0], where[-1])
+        assert where == list(range(label[0], label[1] + 1))
+        faults += _beside(seen, spans, n, label, others)
+        if placed:
+            line_reads, right = _as_the_rule_puts_it(
+                levels[1:], level, span, seen, label)
+            if not right:
+                faults.append(
+                    f"label {n} not after its occurrence as "
+                    + ("the line reads" if line_reads else "it reads"))
     return faults
+
+
+def _beside(seen, spans, n, label, others):
+    """Whether label `n`, at `label` (its first and last places in `seen`,
+    the page's characters in visual order), stands beside its own
+    occurrence and, with `others`, beside no other."""
+    first, final = label
+    neighbours = [seen[at][1] for at in (first - 1, final + 1)
+                  if 0 <= at < len(seen) and seen[at][0] == "text"]
+    near = [any(low <= place < high for place in neighbours)
+            for low, high in spans]
+    faults = [] if near[n] else [f"label {n} not beside its occurrence"]
+    if others:
+        faults += [f"label {n} beside occurrence {other}"
+                   for other, close in enumerate(near)
+                   if close and other != n]
+    return faults
+
+
+def _as_the_rule_puts_it(levels, level, span, seen, label):
+    """Whether the label at `label` (its first and last places in `seen`,
+    the page's characters in visual order) stands where the rule puts it
+    for the occurrence at `span`, judged on `levels`, the line's own
+    levels laid out alone; and whether that place is after it as the
+    line reads (or else after its last letter as its stretch reads)."""
+    begin, end = span
+    first, final = label
+    last = end - 1
+    if levels[last] % 2 == level % 2:
+        line_reads = True
+    elif end < len(levels) and levels[end] > level:
+        # The stretch goes on past the occurrence
+        line_reads = False
+    else:
+        start = last
+        while start > 0 and levels[start - 1] > level:
+            start -= 1
+        line_reads = start >= begin
+    own = [at for at, role in enumerate(seen)
+           if role[0] == "text" and begin <= role[1] < end]
+    if line_reads:
+        right = (first - 1 in own and max(own) < first if level == 0
+                 else final + 1 in own and min(own) > final)
+    elif levels[last] % 2 == 0:
+        right = first > 0 and seen[first - 1] == ("text", last)
+    else:
+        right = final + 1 < len(seen) and seen[final + 1] == ("text", last)
+    return line_reads, right
 
 
 def _random_line(draw):

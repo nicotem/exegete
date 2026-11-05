@@ -23,7 +23,7 @@ fb8b7a24e517328b	AI_CODING_GUIDE.md	document	qualcoder	a step or heading for a r
 10923a6ed1d83610	AI_CODING_GUIDE.md	document	voice	a speaker label quoted in capitals, the example of letter case ignored	It compares labels by name, so "Respondent [00:01:09]:" and "RESPONDENT:" are on
 e24c5e621b067c12	AI_CODING_GUIDE.md	document	qualcoder	a step or heading for a researcher who uses QualCoder, as its section says	So it is for you to make sure that no QualCoder 4.0 window has the project open
 e2adb8f67467a1e0	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	The limit is in the other direction: a QualCoder 4.0 window does not display cha
-4d8112e2a7124500	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	With apply_project_pseudonyms=true, the real names that the project's own pseudo
+948aec49ef714192	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	With apply_project_pseudonyms=true, the real names that the project's own pseudo
 cbe4d2362378d85b	AI_CODING_GUIDE.md	document	qualcoder	the coder-visibility capability, named by the QualCoder releases that have it	Without the matching override, it refuses a coding whose memo carries a ##### pr
 d022c7d89745ffe6	AI_CODING_GUIDE.md	document	qualcoder	the lock file's causes, one of them QualCoder 3.8.2 having the project open	Writes are refused while the project's lock file is active: QualCoder 3.8.2 has 
 c97d71ad4c4438d3	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's releases and the formats Exegete reads and writes	Writes need a project schema from v14 to v17, the formats of QualCoder 3.8 to 4.

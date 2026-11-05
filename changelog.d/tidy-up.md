@@ -17,13 +17,13 @@
   SUPPORT.md lead to the guide.
 - The guide gives the choices for a coded passage's length as
   `start_coding_session` asks them: a phrase, whole sentences, or a
-  whole paragraph or answer. The workflow guide gave only a whole
-  answer. The guide's account of what an interpretive reading may draw
-  on no longer presumes that your documents are interviews. Near its
-  start, the guide now says that what the assistant reads through
-  Exegete passes through the conversation to the AI provider, unless
-  the assistant runs on your own computer. It points to PRIVACY.md for
-  more.
+  whole paragraph or answer. The workflow guide gave the same first
+  two, and a whole answer as the third. The guide's account of what an
+  interpretive reading may draw on no longer presumes that your
+  documents are interviews. Near its start, the guide now says that
+  what the assistant reads through Exegete passes through the
+  conversation to the AI provider, unless the assistant runs on your
+  own computer. It points to PRIVACY.md for more.
 - The early plans, analyses, research notes and security review kept
   in `docs/history/` since 0.15.1 are no longer among the repository's
   files. Git's history keeps them, and the folder is still there at the

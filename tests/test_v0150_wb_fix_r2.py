@@ -336,10 +336,12 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
         prerequisites = prerequisites[:prerequisites.index("## Quick start")]
         # (v0.15.2: told once, in TOOLS.md, and pointed to; the way
         # without QualCoder stays named there; v0.15.3, the readability
-        # reading: a sentence each)
-        assert ("Exegete refuses an older project. \"Supported QualCoder "
-                "versions\", in TOOLS.md, says how to bring one up to date, "
-                "with QualCoder or without it") in prerequisites
+        # reading: a sentence each; the fix round: read, never written)
+        assert ("Exegete reads an older project without writing to it, but "
+                "cannot read the oldest formats at all.") in prerequisites
+        assert ("\"Supported QualCoder versions\", in TOOLS.md, says how to "
+                "bring one up to date, with QualCoder or without it") \
+            in prerequisites
         tools = _flat(_read("TOOLS.md"))
         assert ("Without QualCoder at all, a new project made in Exegete "
                 "from the original documents is a way on, without the old "

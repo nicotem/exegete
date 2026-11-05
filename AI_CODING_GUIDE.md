@@ -73,7 +73,9 @@ approved.
    through the conversation. If you use QualCoder, opening the project
    there shows them too
 
-You can undo a mistake: `delete_coding` removes one coding, and
+You can undo a mistake. For a day after codings are applied,
+`undo_changes` can take back the whole batch and leave the rest of the
+project as it is. `delete_coding` removes one coding, and
 `restore_backup` returns the whole project to a backup. Exegete takes a
 backup before every change to the project's database.
 
@@ -123,7 +125,8 @@ to say and what comes back.
   codebook from the conversation, such as `create_code`, `rename_code`
   and `move_code_to_category`
 - A project in the format of QualCoder 3.8 to 4.0 (schema v14 to
-  v17). Exegete refuses an older project. "Supported QualCoder
+  v17). Exegete reads an older project without writing to it, but
+  cannot read the oldest formats at all. "Supported QualCoder
   versions", in TOOLS.md, says how to bring one up to date, with
   QualCoder or without it
 
@@ -174,10 +177,10 @@ shown here are examples of what an answer holds.
 
 ### Step 1: Open the project, or a copy of it
 
-A project made with Exegete is already in the workspace: ask the
-assistant to open it, and go on to step 2. For a project made in
-another program, or one you want to keep as it is, ask the assistant to
-copy it first:
+A project made with Exegete is in the workspace, unless you asked for
+another folder when it was made. Ask the assistant to open it, and go
+on to step 2. For a project made in another program, or one you want
+to keep as it is, ask the assistant to copy it first:
 
 ```
 Copy my project "Interview Study.qda" to the workspace for AI coding
@@ -390,21 +393,27 @@ Apply the approved codings to the project
 
 When the assistant calls `apply_codings`, Exegete:
 
-1. Checks every approved suggestion against the project. Its file must
+1. Looks up the project's AI coder name, which each coding will carry
+   as its owner ("Which coder name do AI codings carry?", below). If
+   the project has none yet, Exegete stops here, before any check or
+   backup, and asks you rather than guessing
+2. Checks every approved suggestion against the project. Its file must
    still be there and hold text, and its code must still exist under
    the same name. Its passage must still match the text at its place.
    If one fails, nothing is written and no backup is taken, and the
    answer lists what failed. Exegete leaves out a suggestion that is
    already in the project as the same coding. If every one is, nothing
    is written either
-2. Takes a backup, as before every change
-3. Writes the rest as codings, all of them or none
-4. Writes each coding's reading (explicit or interpretive) first in its
-   memo, then the reasoning
-5. Records the project's AI coder name as each coding's owner ("Which
-   coder name do AI codings carry?", below). Until the project has one,
-   the write stops and asks you rather than guessing
-6. Reports the new codings' IDs, called ctids
+3. Checks the project's lock file. If it is active, nothing is written
+   and no backup is taken ("Prerequisites", above)
+4. Takes a backup, as before every change
+5. Writes the rest as codings, all of them or none, each under the
+   project's AI coder name
+6. Writes each coding's reading (explicit or interpretive) first in its
+   memo, then the reasoning. A suggestion without a reading, such as one
+   whose code was changed without a new reading, gets the reasoning
+   alone
+7. Reports the new codings' IDs, called ctids
 
 The answer then looks like this:
 
@@ -441,9 +450,10 @@ QualCoder 4.0 had the project open already, close it there and open it
 again to see the new codings. Under **Coding > Code text**, select the
 files you analysed. Each of the assistant's codings has the project's
 AI coder name as its owner. That name is `AI Coding Assistant` if you
-chose Exegete's built-in default. Each coding's memo begins
+chose Exegete's built-in default. A coding's memo begins
 "Reading: explicit" or "Reading: interpretive", then gives the
-reasoning.
+reasoning. A coding without a reading has the reasoning alone
+(step 5).
 
 ## Example conversations
 
@@ -672,7 +682,7 @@ Applied 12 codings (ctid 445-456)
 | `apply_codings(coding_session_id, create_backup)` | **Write** the approved suggestions, all or none, after checking them again, and only to the session's own project. An approved suggestion whose identical coding already exists is left alone and reported by its id. That check sees every coding, a hidden coder's included. So on a project that hides the AI coder, the report reveals that one such coding exists (PRIVACY.md) |
 | `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coding. Without the matching override, it refuses a coding whose memo carries a `#####` private note, and, on a project that can hide coders (QualCoder 3.8.2 and 4.0, schema v14 and later), a hidden coder's coding |
 | `list_backups()` / `restore_backup(backup_path, preview_token)` | List the backups / restore the project from one (a preview first, then the call with the preview's token) |
-| `import_text_file(filename, content, memo, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add a new transcript, linked to a case if you choose. With `apply_project_pseudonyms=true`, the real names that the project's own `pseudonyms.json` lists are replaced with their pseudonyms as the text comes in, as QualCoder does |
+| `import_text_file(filename, content, memo, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add text typed or pasted in the conversation as a new text file, linked to a case if you choose. The text passes through the conversation, so it reaches the AI provider before any name in it is replaced. With `apply_project_pseudonyms=true`, the real names that the project's own `pseudonyms.json` lists are replaced with their pseudonyms as the text comes in, as QualCoder does. The replacement changes what the project stores, and so what you share from it |
 | `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, character_sets, show_text, memo)` | **Write**: bring documents in from your computer, by their paths or a folder's. Their text does not pass through the conversation. The exception is a file not saved as UTF-8: the preview shows one line of it, as each character set reads it, so that you can choose. A preview comes first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
 | `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
@@ -808,9 +818,11 @@ Delete session abc123
 ```
 
 The file stays, outside the project, until `delete_coding_session`
-removes it. If you later replace names in the project's files, the
-session file still holds the real names in its passages ("Can I
-pseudonymise transcripts that are already coded?", below).
+removes it. The list of your sessions shows those changed in the last
+30 days, unless you ask for more. An older one is left out of the
+list, but its file stays. If you later replace names in the project's
+files, the session file still holds the real names in its passages
+("Can I pseudonymise transcripts that are already coded?", below).
 
 ### Backups
 
@@ -919,8 +931,9 @@ ones, the instruction can say more ("During a session", above):
 If you use QualCoder, it may open the project from a folder other than
 the workspace. Open the project at the path the answer to
 `copy_project_to_workspace` gave. Step 1 says where the workspace is. A
-project of the same name in another folder is an older copy, from an
-earlier install, for example: open the one in the workspace.
+project of the same name in another folder is another project, such as
+the original that step 1 copied, or a copy from an earlier install. The
+codings are in the one in the workspace.
 
 In QualCoder:
 - Project > Open Project
@@ -943,10 +956,18 @@ closed and reopened there.
   ctid is in the answer to `apply_codings` and in `get_coded_segments`.
   The tool reference, above, says which codings it refuses without an
   override
-- The whole batch: `restore_backup`, with the backup taken before the
-  codings were applied (`list_backups` lists it). It shows a preview
-  first, and backs up the project as it is before restoring
-  ("Backups", above)
+- The whole batch, within a day: `Undo the codings just applied`
+  (`undo_changes`). It works from the `undo_receipt` in the answer to
+  `apply_codings`, and shows a preview first, with anything that
+  blocks it. It takes back that batch alone, and leaves the rest of the
+  project as it is. Its suggestions go back to approved in the session,
+  so the next `apply_codings` would write them again, unless you reject
+  them first
+- After a day, or for the whole project: `restore_backup`, with the
+  backup taken before the codings were applied (`list_backups` lists
+  it). This also takes back anything else changed since that backup. It
+  shows a preview first, and backs up the project as it is before
+  restoring ("Backups", above)
 - By hand, if you use QualCoder: open the project there, and find the
   codings by the project's AI coder name. Delete the ones you do not
   want
@@ -956,7 +977,9 @@ closed and reopened there.
 When a session cannot be loaded, its file,
 `~/.exegete/sessions/session_ID.json`, may be damaged or gone
 ("Sessions", above). The list of your sessions (`list_coding_sessions`)
-leaves out a file that Exegete cannot read. Codings already applied
+leaves out a file that Exegete cannot read. The list also leaves out
+sessions not changed in the last 30 days, unless you ask for more. A
+session missing from it may be an older one. Codings already applied
 stay in the project, so you can start a new session and go on.
 
 ## FAQ

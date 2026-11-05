@@ -47,8 +47,8 @@ approved.
 
 1. **You** ask the assistant to analyse some files for some of your
    codes. Exegete tells the assistant to ask you three questions first
-   ("Before you start", below). Your answers become the session's
-   instruction. `start_coding_session` creates the session, and
+   ("Step 2", below). Your answers become the session's instruction.
+   `start_coding_session` creates the session, and
    `get_coding_session_info` shows the instruction it recorded
 2. **The assistant** reads the files and records its suggestions in the
    session (`record_suggestions`). Exegete checks each suggestion
@@ -541,7 +541,7 @@ The codings are in the project now: ask to see them, or, if you use
 QualCoder, open the project there.
 ```
 
-### A longer file, reviewed code by code
+### Reviewing a longer file one code at a time
 
 **You:**
 ```

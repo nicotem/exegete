@@ -2102,12 +2102,24 @@ of its first check; and the newest version of Exegete that has run on
 this computer, which it keeps even with checking off (so that it can
 say once that an update worked). Nothing from your projects.
 
-**What enters the conversation.** Notes for the assistant to pass on,
-each once: that the check exists (the first time Exegete is used),
-that a newer version is out, and that an update worked. Each goes first
-in a successful answer of 20,000 characters or fewer, and counts as
-given once it is there: whether it reaches you depends on the assistant
-passing it on. When you ask, the answer gives the installed and newest versions, how Exegete was
+**What enters the conversation.** Notes for the assistant to pass on:
+that the check exists (the first time Exegete is used), that a newer
+version is out, and that an update worked. Each goes first in a
+successful answer of 20,000 characters or fewer. The note after an
+update carries a paragraph on what is new, written with the release and
+built into Exegete, and a link to that release's notes on GitHub, which
+Exegete never opens. A note, and what the answer tells when you
+ask (that the check exists, that a newer version is out), counts as
+given once that answer has gone out to the app. One cut short before
+then, by a stop or by the app cancelling the request, comes in a later
+answer or at the next start. Each comes once, except that it can come
+again when two copies of Exegete run on the same computer, when
+Exegete cannot write its file (a full disk, or on Windows another
+program reading the file at that moment), or when Exegete stops in the
+instant after the answer has gone out. Whether a note reaches you
+depends on the assistant passing it on, and on the app showing the
+answer: an app that has cancelled a request may not show its answer.
+When you ask, the answer gives the installed and newest versions, how Exegete was
 installed, and the steps, with any folder in your home folder written
 from it (`$HOME`); a folder outside your home folder is written in
 full. These go to your AI provider like any other tool answer.

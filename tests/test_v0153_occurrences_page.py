@@ -1230,3 +1230,50 @@ class TestNoRunSpokenOf:
         assert "this run" not in without
         assert "this run" in server._pseudonymise_file_text_warning(
             {"totals": totals})
+
+    @staticmethod
+    def _fields_warning(out):
+        found = [w for w in out["warnings"]
+                 if "label(s) or attribute value(s) may still show" in w]
+        assert len(found) == 1, out["warnings"]
+        return found[0]
+
+    def test_the_fields_warning_speaks_of_a_run_only_with_one(self, tmp_path):
+        """The warning on the notes, labels and attribute values that may
+        still show a name speaks of no run where an execute would rewrite
+        nothing, as the file-text warning does: no name of the mapping in
+        the file named and no note to rewrite, with rewrite_memos off or
+        on, and a list that leaves every occurrence. Its whole-word count
+        stands. Where a note is rewritten, a run happens, and it says
+        so."""
+        with fresh(tmp_path, "Nobody is named in this one.\n") as folder:
+            self._another_file_says(folder, "Nothing here.",
+                                    memo="Thomas called back.")
+            warning = self._fields_warning(preview_of(mapping=MAPPING))
+            assert "1 of those match" in warning, warning
+            assert "this run" not in warning, warning
+            out = preview_of(mapping=MAPPING, rewrite_memos=True)
+            assert out["preview"]["memo_rewrites"]["totals"]["rows"] == 1
+            warning = self._fields_warning(out)
+            assert "this run rewrites only the notes" in warning, warning
+            assert "this run's own whole-word rule" in warning, warning
+            # A note in which the wide reading alone finds a name: with
+            # rewrite_memos on, no note to rewrite
+            self._another_file_says(folder, "Nothing here.",
+                                    memo="Thomasina called back.")
+            out = preview_of(mapping=MAPPING, rewrite_memos=True)
+            assert out["preview"]["memo_rewrites"]["totals"]["rows"] == 0
+            warning = self._fields_warning(out)
+            assert "0 of those match" in warning, warning
+            assert "this run" not in warning, warning
+        with fresh(tmp_path / "every one left", TOMS) as folder:
+            self._another_file_says(folder, "Nothing here.",
+                                    memo="Tom called back.")
+            ids = [row["id"] for row in block(preview_of(
+                mapping=TOM, choose_occurrences=True))["listed"]]
+            out = preview_of(mapping=TOM, choose_occurrences=True,
+                             leave_occurrences=ids)
+            assert server._EVERY_OCCURRENCE_LEFT in out["warnings"]
+            warning = self._fields_warning(out)
+            assert "1 of those match" in warning, warning
+            assert "this run" not in warning, warning

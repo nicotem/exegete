@@ -2589,11 +2589,13 @@ class TestTheLabelsAndMemosTheResidueCounts:
         assert len(warning) == 1, out["warnings"]
         warning = warning[0]
         # v0.13, ruling 5: "note(s)" under the fixed vocabulary, and the
-        # whole-word count beside the wide one, in one sentence.
+        # whole-word count beside the wide one, in one sentence. No name of
+        # this mapping is in the file, so an execute would rewrite nothing
+        # and the sentence speaks of no run (v0.15.3)
         assert warning.startswith(
             "Warning: 1 note(s), label(s) or attribute value(s) may still "
             "show one of these names, and this tool does not rewrite any "
-            "of them; 0 of those match this run's own whole-word rule.")
+            "of them; 0 of those match the rewrite's own whole-word rule.")
         assert ("The rest are the wide reading, which is a heuristic and "
                 "deliberately wide: it reports anything a reader might see "
                 "in the spelling you gave, including inside a longer word "

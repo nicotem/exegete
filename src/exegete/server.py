@@ -20828,6 +20828,11 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         QualcoderDatabase.PSEUDONYMISE_RESIDUE_LABEL_KEYS if key in residue]
     residue_total = sum(count["wide"] for count in field_counts)
     whole_word_total = sum(count["whole_word"] for count in field_counts)
+    # An execute that would rewrite nothing, as the preview says (no name
+    # in this file, or every occurrence left by a list, and no note to
+    # rewrite), runs nothing, so neither residue warning speaks of a run
+    rewrites_notes = (memo_block or {}).get("totals", {}).get("rows", 0)
+    run = bool(totals.get("replacements") or rewrites_notes)
     # Either reading non-zero is a reason to speak (lead's ruling on
     # QA-1). The wide reading is the union of the two matchers, so it is
     # never below the whole-word one here; the `or` keeps the warning
@@ -20845,18 +20850,24 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
         # researcher can see how much of the count is the wide reading.
         # With rewrite_memos on (Brief 2, 5.6) one clause changes: the
         # notes among them are rewritten where the whole-word rule
-        # matches, and nothing else is.
-        rewritten = (
-            "this run rewrites only the notes among them, and only where "
-            "the whole-word rule matches (see memo_rewrites); labels and "
-            "attribute values are never rewritten"
-            if memo_block is not None else
-            "this tool does not rewrite any of them")
+        # matches, and nothing else is. Where an execute would rewrite
+        # nothing, neither clause speaks of a run (v0.15.3)
+        if memo_block is None:
+            rewritten = "this tool does not rewrite any of them"
+        elif run:
+            rewritten = (
+                "this run rewrites only the notes among them, and only "
+                "where the whole-word rule matches (see memo_rewrites); "
+                "labels and attribute values are never rewritten")
+        else:
+            rewritten = ("an execute would rewrite none of them (see "
+                         "memo_rewrites)")
+        rule = "this run's own" if run else "the rewrite's own"
         warnings.append(
             f"Warning: {residue_total} note(s), label(s) or attribute "
             f"value(s) may still show one of these names, and "
             f"{rewritten}; {whole_word_total} of those "
-            f"match this run's own whole-word rule. The rest are the "
+            f"match {rule} whole-word rule. The rest are the "
             f"wide reading, which is a heuristic and deliberately wide: "
             f"it reports anything a reader might see in the spelling you "
             f"gave, including inside a longer word and in any letter "
@@ -20866,14 +20877,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     file_text = residue.get("file_text")
     left, counted_left, chosen_alone = _occurrences_left(preview, file_text)
     if file_text:
-        # An execute that would rewrite nothing, as the preview says below
-        # (no name in this file, or every occurrence left by a list, and
-        # no note to rewrite), runs nothing, so no run is spoken of
-        rewrites_notes = (memo_block or {}).get("totals", {}).get("rows", 0)
         text_warning = _pseudonymise_file_text_warning(
-            file_text, chosen_alone,
-            run=bool(preview.get("totals", {}).get("replacements")
-                     or rewrites_notes))
+            file_text, chosen_alone, run=run)
         if text_warning:
             warnings.append(text_warning)
     unreadable = residue.get("unreadable") or []

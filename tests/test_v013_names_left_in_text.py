@@ -2105,10 +2105,12 @@ class TestTheUnionForLabelsAndAttributeValues:
         attribute = residue["attribute_values"]
         assert attribute == {"wide": 1, "whole_word": 1}
         fields = [w for w in out["warnings"] if "note(s), label(s)" in w]
+        # No name of this mapping is in the file, so an execute would
+        # rewrite nothing and the sentence speaks of no run (v0.15.3)
         assert fields[0].startswith(
             "Warning: 2 note(s), label(s) or attribute value(s) may still "
             "show one of these names, and this tool does not rewrite any of "
-            "them; 2 of those match this run's own whole-word rule.")
+            "them; 2 of those match the rewrite's own whole-word rule.")
 
 
 class TestTwoUnreadablePartsAreNamed:

@@ -1340,8 +1340,9 @@ def tool_answer(now: Optional[float] = None,
         else:
             how = (f"To let Exegete check, set "
                    f"{names.NEW_ONLY_SETTINGS['update_check']} to on in "
-                   f"the settings of the app that starts it (the Terminal "
-                   f"guide, \"Environment variables Exegete reads\").")
+                   f"the settings of the app that starts it. The guide "
+                   f"\"Installing Exegete from the Terminal\" says how, "
+                   f"under \"Environment variables Exegete reads\".")
         return done("Checking for new versions is switched off, so Exegete "
                     f"made no connection. {have} You can look yourself at "
                     f"{UPDATE_PAGE}. {how}")

@@ -139,7 +139,7 @@
   number with a mapping typed into the call, and counts. The words
   around each occurrence are on the page in the researcher's browser,
   which the assistant is told never to open or read. TOOLS.md lists the
-  arguments the preview token binds and the refusals: with
+  arguments the preview token binds. It gives the refusals: with
   `rewrite_memos` or `include_context`, ids that match no occurrence in
   the text as it is now, and more than 500 ids in one run. With the
   names list, it gives the two routes left for a name most of whose
@@ -153,13 +153,14 @@
   Exegete changes the file's text or name, or at the first tidy once it
   is an hour old, which can be later. PRIVACY.md also says that the run
   record and the journal entry give how many occurrences were left,
-  never where, and that with the names list the preview gives no
-  position of a match. The reading folder's note, `About this
+  never where. It says too that, with the names list, the preview
+  gives no position of a match. The reading folder's note, `About this
   folder.txt`, says that the page marks the names.
 - For two people who share a name, the documents, the brief and the
   tool's description give a second run inside one file. A first run
   leaves the second person's occurrences as they are, and a second run,
   with a mapping typed into the call, replaces them with the second
   person's pseudonym. The brief also says when to preview with
-  `choose_occurrences`, that the page is the researcher's and is never
-  to be opened, read or looked at, and that the ids come back alone.
+  `choose_occurrences`. It says that the page is the researcher's,
+  never to be opened, read or looked at, and that the ids come back
+  alone.

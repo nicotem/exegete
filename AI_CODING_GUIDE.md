@@ -341,8 +341,8 @@ those of a second person with the same name. Ask the assistant to
 preview with `choose_occurrences`: a page opens in your browser with an
 id beside each occurrence, and you tell the assistant which ids to leave
 (`leave_occurrences`). The page is for you alone, and the assistant is
-told never to read it. A second run, with a list you type and keep
-yourself, can then give the second person a pseudonym of their own,
+told never to read it. A second run can then give the second person a
+pseudonym of their own. It takes a list you type and keep yourself,
 since the names list holds one pseudonym for each name.
 
 The rest of the project is treated in other ways:

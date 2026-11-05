@@ -1158,14 +1158,14 @@ Finder instead, without opening it.
 
 **The page for choosing occurrences.** A pseudonymisation preview asked
 to list the occurrences of names (`pseudonymise_source` with
-`choose_occurrences`) writes a page of its own into the reading folder,
-in that file's folder, and opens it in your browser. It holds the file's
+`choose_occurrences`) writes a page into the reading folder, in that
+file's folder, and opens it in your browser. It holds the file's
 whole text as stored, with every occurrence of the names you asked to
 replace marked and labelled with its id, and no pseudonym. So while it
 stays, anyone who can read the reading folder can see which words of
 that file are those names. It goes when Exegete changes the file's text
-or name, as a run on the file, an undo or a restore does, or at
-Exegete's first tidy once it is an hour old, which can be later
+or name, as a run on the file, an undo or a restore does. Otherwise it
+goes at Exegete's first tidy once it is an hour old, which can be later
 (below). The preview's answer gives the page's place only when the page
 did not open, and with the names list it withholds that place where it
 carries a name from the list.
@@ -1192,7 +1192,7 @@ Three cautions:
   to call it only when you ask to read a file: a participant's words
   opening unasked, in a shared office or a meeting with your screen
   shared, would be a disclosure. The page for choosing occurrences opens
-  in the same way, and the brief and the tool's description tell the
+  in the same way. The brief and the tool's description tell the
   assistant to ask for it when you want to leave some occurrences of a
   name as they are.
 
@@ -2570,7 +2570,7 @@ near the top of this document, set them out.
     typed mapping with `save_mapping_to_project` off and
     `researcher_keeps_mapping` on, because `pseudonyms.json` holds one
     pseudonym per name. The names list then holds one pseudonym for the
-    name while the file holds two: what leads back from the second
+    name while the file holds two. What leads back from the second
     person's pseudonym to their name is your own record of that mapping,
     and the backup taken before the second run. The count is in the
     preview's `residue` block, and a name that occurs only in a
@@ -2599,8 +2599,8 @@ near the top of this document, set them out.
     does not touch, and the PDF sources, which are never rewritten. In
     the file this call rewrites, the occurrences a run leaves by choice
     are counted under a kind of their own, `left_by_choice`, where the
-    count reads them as the rewrite matched them: that is a heuristic,
-    and the number left that the preview gives is exact. The
+    count reads them as the rewrite matched them. That count is a
+    heuristic, and the number left that the preview gives is exact. The
     block names every file in which a name still shows, including the
     files this run does not touch, on both mapping paths, so name your
     files accordingly. By default it gives full detail for the file this
@@ -2739,10 +2739,10 @@ near the top of this document, set them out.
     the mapping is the researcher's own reverse key and the model never
     supplied it, so no diagnostic and no refusal quotes a name from it
     and `include_context` returns nothing at all. Nor does the preview
-    give the position of any match there: each entry's block gives its
-    number, its pseudonym and its count, the list of names that overlap
-    gives the two entries, and the occurrences listed for choosing are
-    ids without line numbers. A position beside a pseudonym, in a text
+    give the position of any match there. Each entry's block gives its
+    number, its pseudonym and its count, and the list of names that
+    overlap gives the two entries. The occurrences listed for choosing
+    are ids without line numbers. A position beside a pseudonym, in a text
     the assistant has read, would pair a name with it. This protects the key
     ("How your data flows"). Four things are still returned as they
     stand, because a preview whose files cannot be named cannot be
@@ -2753,9 +2753,9 @@ near the top of this document, set them out.
     failure after the backup was taken as well as on success; any of
     these can itself contain one of those names. The tool's description
     says so. The place of the page for choosing occurrences is not among
-    them: the preview gives it only when the page did not open, and on
-    this path withholds it where it carries one of those names, with a
-    note that says which folder the page is in.
+    them. The preview gives it only when the page did not open, and on
+    this path withholds it where it carries one of those names. A note
+    then says which folder the page is in.
 - **Check that a project's consent covers third-party processing**
   before you work on it with an assistant whose AI runs on its maker's
   computers.

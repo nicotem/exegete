@@ -19810,6 +19810,24 @@ _CONTEXT_WITH_OCCURRENCES = (
     "occurrences are chosen or left: the choice is made by their ids, and "
     "the words around a name stay out of the conversation. Call again "
     "without include_context.")
+# A list that leaves more occurrences than one run leaves (v0.15.3,
+# ruling 116), refused before any read of the project: the call carries
+# the list, and its execute_with repeats it. With a typed mapping it says
+# what taking the name out of the mapping for the run does: the count of
+# the names left reads the mapping's names, so it does not count those of
+# a name taken out. With the names list no argument leaves an entry out
+# of one run and each other route costs something to weigh (the names
+# and pseudonyms in the conversation, or a names list that later imports
+# follow), so it names none
+_TOO_MANY_LEFT = (
+    f"Leaving more than {occurrence_ids.MAX_OCCURRENCES_LEFT} occurrences "
+    f"in one run is not offered.")
+_TOO_MANY_LEFT_TYPED = _TOO_MANY_LEFT + (
+    " If most occurrences of a name in this file should stay, take the "
+    "name out of the mapping for this run: every occurrence of it then "
+    "stays, those that should change among them, and the count of the "
+    "names left in the file text does not count them, since it counts "
+    "the mapping's names only.")
 # A list to leave whose ids the preview cannot place (v0.15.3): refused
 # on a preview, never on the execute, where the token answers. The
 # causes are every one that gives other ids (occurrences.py); a change
@@ -22102,6 +22120,13 @@ def pseudonymise_source(
         leave = occurrence_ids.canonical_leave(leave_occurrences)
     except ValueError as e:
         return json.dumps({"error": str(e), "reason": "occurrence_id_form"},
+                          indent=2)
+    # At most MAX_OCCURRENCES_LEFT, counted as read, in words that follow
+    # the mapping's source; still before any read
+    if len(leave) > occurrence_ids.MAX_OCCURRENCES_LEFT:
+        return json.dumps({"error": (_TOO_MANY_LEFT_TYPED if typed
+                                     else _TOO_MANY_LEFT),
+                           "reason": "too_many_occurrences_to_leave"},
                           indent=2)
     # Choosing or leaving occurrences with a note rewrite (v0.15.3): the
     # rewrite would give the pseudonym to the notes about whoever the

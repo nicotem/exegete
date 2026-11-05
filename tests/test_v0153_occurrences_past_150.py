@@ -6,7 +6,13 @@ A preview with `choose_occurrences` lists the first 150 occurrences in a
 file and says how many more there are. Where it lists them in part and
 the page for choosing was written, opened or not, the occurrences block
 gains a note: the page shows every occurrence with its id, and the
-researcher may give any of them, listed in the preview or not.
+researcher may give any of them, listed in the preview or not. A list of
+more than MAX_OCCURRENCES_LEFT occurrences to leave, counted once each
+id is read, is refused before anything of the project is read: after the
+refusals of two mapping sources and of keeping a mapping on the names
+list's path, and after each id's form is checked. With a mapping typed
+into the call the refusal says what taking the name out of the mapping
+for the run does; with the names list it gives the limit alone.
 
 The fixtures and helpers are the flagship's own
 (`test_v012_pseudonymise_tool.py`), the first part's
@@ -16,6 +22,7 @@ which opens no window (tests/conftest.py); where a page must be seen to
 open, `opener.open_file` is replaced by a recorder that opens nothing.
 """
 
+import json
 import sqlite3
 import sys
 from pathlib import Path
@@ -27,6 +34,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
 from exegete import occurrences  # noqa: E402
+from exegete.database import QualcoderDatabase  # noqa: E402
 from test_v012_pseudonymise_tool import (  # noqa: E402
     call, execute_from, preview_of)
 from test_v0153_occurrence_ids import block, names_list  # noqa: E402
@@ -35,7 +43,14 @@ from test_v0153_occurrences_page import (  # noqa: E402
 
 # More occurrences than a preview lists: 160, one on each line
 MANY = "".join(f"Line {number}: Tom was there.\n" for number in range(160))
+# As many as one run may leave, one on each line
+MOST = "".join(f"Line {number}: Tom was there.\n" for number in range(
+    occurrences.MAX_OCCURRENCES_LEFT))
 NOTE = server._OCCURRENCES_LISTED_IN_PART_NOTE
+# Ids in the form a preview lists them, none of which names an occurrence
+# here: the cap is counted before any text is read to place them
+TOO_MANY = [f"{number:05d}"
+            for number in range(occurrences.MAX_OCCURRENCES_LEFT + 1)]
 
 
 def by_the_names_list(**kwargs):
@@ -117,3 +132,109 @@ class TestTheNoteBesideThePage:
             assert all(line == f"Line {number}: Alex was there."
                        for number, line in enumerate(lines) if number != 154)
 
+
+@pytest.fixture
+def reads(monkeypatch):
+    """Each read of the project the cap comes before, counted: the names
+    list, the project's files and the plan."""
+    counted = {"names list": 0, "files": 0, "plan": 0}
+
+    def counting(name, function):
+        def counted_call(*args, **kwargs):
+            counted[name] += 1
+            return function(*args, **kwargs)
+        return counted_call
+    monkeypatch.setattr(server, "read_project_pseudonyms", counting(
+        "names list", server.read_project_pseudonyms))
+    monkeypatch.setattr(QualcoderDatabase, "pseudonymise_sources", counting(
+        "files", QualcoderDatabase.pseudonymise_sources))
+    monkeypatch.setattr(QualcoderDatabase, "pseudonymise_plan", counting(
+        "plan", QualcoderDatabase.pseudonymise_plan))
+    return counted
+
+
+class TestTheLimit:
+    @pytest.mark.parametrize("path", ["typed", "names list"])
+    def test_more_than_the_cap_refused(self, tmp_path, reads, path):
+        """MAX_OCCURRENCES_LEFT + 1 distinct ids are refused, on a preview
+        and with a token, before the names list, the project's files or
+        the plan is read. With a typed mapping the refusal says what
+        taking the name out of the mapping for the run does; with the
+        names list it gives the limit alone, naming no route. The figure
+        is the constant's. Red with the cap taken out or placed after
+        either read."""
+        with fresh(tmp_path, MANY) as folder:
+            if path == "typed":
+                arguments = {"mapping": TOM}
+            else:
+                names_list(folder, TOM)
+                arguments = {"mapping": None, "use_project_pseudonyms": True}
+            for token in (None, "not.a.token"):
+                out = call(leave_occurrences=TOO_MANY, preview_token=token,
+                           **arguments)
+                assert out.get("reason") == "too_many_occurrences_to_leave", \
+                    out
+                assert set(out) == {"error", "reason"}
+                assert reads == {"names list": 0, "files": 0, "plan": 0}
+                error = out["error"]
+                assert str(occurrences.MAX_OCCURRENCES_LEFT) in error
+                if path == "typed":
+                    assert error == server._TOO_MANY_LEFT_TYPED
+                    assert "take the name out of the mapping" in error
+                else:
+                    assert error == server._TOO_MANY_LEFT
+                    for route in ("mapping", "names", "pseudonyms.json",
+                                  "list"):
+                        assert route not in error, route
+
+    def test_the_limit_counts_ids_as_read(self, tmp_path, reads):
+        """The limit counts each id once as read, the same id in another
+        case or with white space around it once: such a list is placed
+        against the text, not refused by the limit."""
+        with fresh(tmp_path, MANY):
+            # Each of the three spellings of the one id, and of another,
+            # as Crockford's decoding reads them (O as 0)
+            given = [one for _ in range(100) for one in (
+                "0bcde", "OBCDE", " 0bcde ", "fghjk", "FGHJK", "fghjk\t")]
+            assert len(given) > occurrences.MAX_OCCURRENCES_LEFT
+            out = preview_of(mapping=TOM, leave_occurrences=given)
+            assert out.get("reason") == "occurrences_not_issued", out
+            assert reads["plan"] >= 1
+
+    def test_as_many_as_the_limit_are_left(self, tmp_path):
+        """A list of MAX_OCCURRENCES_LEFT ids, every occurrence in a file
+        of that many, is taken; one id more is refused by the limit, before
+        the text is read to place it."""
+        with fresh(tmp_path, MOST) as folder:
+            preview_of(mapping=TOM, choose_occurrences=True)
+            ids = page_ids(folder)
+            assert len(ids) == occurrences.MAX_OCCURRENCES_LEFT
+            out = preview_of(mapping=TOM, choose_occurrences=True,
+                             leave_occurrences=ids)
+            assert "preview_token" in out, out
+            assert block(out)["left"] == occurrences.MAX_OCCURRENCES_LEFT
+            assert server._EVERY_OCCURRENCE_LEFT in out["warnings"]
+            out = preview_of(mapping=TOM, leave_occurrences=ids + ["zzzzz"])
+            assert out.get("reason") == "too_many_occurrences_to_leave", out
+
+    @pytest.mark.parametrize("before", ["two sources", "kept on the list",
+                                        "an id's form"])
+    def test_the_refusals_before_the_limit(self, tmp_path, before):
+        """The refusals the limit comes after keep their place: two mapping
+        sources, a mapping kept on the names list's path, and an id no
+        preview could have listed."""
+        with fresh(tmp_path, MANY) as folder:
+            names_list(folder, TOM)
+            if before == "two sources":
+                out = call(mapping=TOM, use_project_pseudonyms=True,
+                           leave_occurrences=TOO_MANY)
+                assert "give one mapping source" in out["error"], out
+            elif before == "kept on the list":
+                out = by_the_names_list(save_mapping_to_project=True,
+                                        leave_occurrences=TOO_MANY)
+                assert out["error"] == server._RETENTION_ON_THE_SIDECAR_PATH
+            else:
+                out = preview_of(mapping=TOM,
+                                 leave_occurrences=TOO_MANY + ["u0000"])
+                assert out.get("reason") == "occurrence_id_form", out
+            assert "too_many_occurrences_to_leave" not in json.dumps(out)

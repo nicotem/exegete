@@ -553,10 +553,14 @@ def _faults(bidi, text, spans, others=True, placed=True):
     drawn = "".join(character for character, role in zip(built, roles)
                     if role[0] == "text")
     alone, levels = bidi.lay_out(OBJECT + drawn, level)
-    seen = [roles[at] for at in order if roles[at][0] != "mark"]
+    # What a reader sees, in visual order: invisible characters (the
+    # marks, the isolates' own and any in the text) have no place to see
+    seen = [roles[at] for at in order
+            if unicodedata.category(built[at]) != "Cf"]
     faults = []
     if [role[1] for role in seen if role[0] == "text"] != [
-            at - 1 for at in alone if at]:
+            at - 1 for at in alone
+            if at and unicodedata.category(drawn[at - 1]) != "Cf"]:
         faults.append("the text laid out otherwise than alone")
     for n, span in enumerate(spans):
         where = [at for at, role in enumerate(seen) if role == ("label", n)]

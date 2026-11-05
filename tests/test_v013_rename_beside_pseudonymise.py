@@ -134,11 +134,13 @@ def test_privacy_says_what_a_rename_cannot_reach():
 
 
 def test_the_guide_readme_and_changelog_name_the_tools():
-    # (v0.15.3, the readability reading: a sentence each)
+    # (v0.15.3, the readability reading: a sentence each; the guide's
+    # fix round: "the original", the guide's one word for the stored
+    # copy, as the paragraph on what leads back to the names calls it)
     guide = _flat("AI_CODING_GUIDE.md")
     assert "is renamed with `rename_case` or `rename_file`." in guide
-    assert ("The copy of an imported file that the project stores keeps "
-            "its original name and text.") in guide
+    assert ("The original of each imported file, which the project stores, "
+            "keeps its name and text as they were.") in guide
     readme = _flat("TOOLS.md")   # v0.14.1: the tool list moved there
     # (v0.15.2: the mark in sentence case, no longer in capitals)
     assert "- `rename_case(case_id, new_name, create_backup)` - **Writes " \

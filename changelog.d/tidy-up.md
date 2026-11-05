@@ -23,7 +23,9 @@
   documents are interviews. Near its start, the guide now says that
   what the assistant reads through Exegete passes through the
   conversation to the AI provider, unless the assistant runs on your
-  own computer. It points to PRIVACY.md for more.
+  own computer. It also says that the app keeps its own record of the
+  conversation on your computer, and that some assistants open files by
+  themselves. It points to PRIVACY.md for more.
 - The early plans, analyses, research notes and security review kept
   in `docs/history/` since 0.15.1 are no longer among the repository's
   files. Git's history keeps them, and the folder is still there at the

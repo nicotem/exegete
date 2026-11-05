@@ -275,9 +275,12 @@ def test_the_guide_decides_each_item():
             "Professional Development suggestions.") in guide
     assert "Show me 1, 3, 4 and 5 too" in guide
     # (v0.15.3, the readability reading: the conversation, the guide's
-    # one word for it)
-    assert ("Exegete keeps the session in a file of its own "
-            "(`~/.exegete/sessions/`), not in the conversation") in guide
+    # one word for it; the fix round: the file is on the computer, and
+    # its passages went through the conversation too)
+    assert ("Exegete keeps the session in a file of its own on your "
+            "computer (`~/.exegete/sessions/`)") in guide
+    assert "The passages are in the conversation as well." in guide
+    assert "not in the conversation" not in guide
 
 
 def test_the_guide_s_examples_quote_their_words():

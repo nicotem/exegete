@@ -124,8 +124,8 @@ def test_privacy_says_what_a_rename_cannot_reach():
             "exports ship that copy), saved graph labels, saved table "
             "displays and filters, and QualCoder's saved SQL queries. Each "
             "rename's result counts the saved graph labels, table displays "
-            "and filters for the case or file it renamed; the saved SQL "
-            "queries nothing in Exegete reads.") in flat
+            "and filters for the case or file it renamed; nothing in "
+            "Exegete reads the saved SQL queries.") in flat
     # Fix round 4, F3B-5: the three lists name the same places.
     unreleased = _flat("CHANGELOG.md").split("## [0.12")[0]
     assert "imported file's stored copy and stored path, saved graph " \

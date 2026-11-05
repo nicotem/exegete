@@ -910,11 +910,21 @@ class TestTheRelease:
         # written by hand at each release, which the note after an update
         # gives as written and the update page shows; the link is the
         # note's own, never the paragraph's
-        assert forbidden_display_char(release.SUMMARY) is None
-        assert release.SUMMARY.isprintable()
-        assert 0 < len(release.SUMMARY) <= 800
-        assert "\n" not in release.SUMMARY and "\r" not in release.SUMMARY
-        assert "http" not in release.SUMMARY
+        summary = release.SUMMARY
+        assert forbidden_display_char(summary) is None
+        assert summary.isprintable()
+        assert 0 < len(summary) <= 800
+        assert "\n" not in summary and "\r" not in summary
+        # No link, with its scheme or without: a web address, a site's
+        # name with a path after it, an email address
+        assert not re.search(
+            r"(?i)https?:|://|\bwww\.|@|"
+            r"\b[a-z0-9-]+\.(com|org|net|io|dev|ai|uk|eu)\b|"
+            r"\b[\w-]+\.[\w.-]+/", summary)
+        # No Markdown or HTML: the marks of a link, of emphasis or of
+        # code, a heading, a tag
+        assert not re.search(r"\]\(|\*\*|__|`|^#|<[a-z/!]", summary,
+                             re.I)
 
 
 # ---------------------------------------------------------------------------

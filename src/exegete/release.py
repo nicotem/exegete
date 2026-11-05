@@ -10,9 +10,11 @@ release is prepared, and nowhere else: nothing about a version's
 contents is ever read from the network (the owner's ruling of 5 October
 2026, and the security review of the update check). tests/test_updates.py
 pins VERSION to pyproject.toml's version and RELEASED to the CHANGELOG
-heading of that version, so a release cannot be cut with last release's
-words; SUMMARY must pass the same character rule as everything else
-Exegete echoes, and stay one plain paragraph.
+heading of that version, so neither can be left at the last release's;
+SUMMARY must pass the same character rule as everything else Exegete
+echoes, and stay one plain paragraph. No test can tell that SUMMARY
+describes this release rather than the last one: writing it is a step
+of release preparation (CONTRIBUTING.md, "The check for new versions").
 """
 
 # pyproject.toml's version, as written there

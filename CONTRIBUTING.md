@@ -667,11 +667,12 @@ the date to the other two. The paragraph is written by hand at release
 preparation, from the CHANGELOG entry's opening and its "Upgrading
 from" part. It says what is new for a researcher and what changes for
 them, such as what to do and what behaves differently. It is one plain
-paragraph of at most 800 characters, with no link and no line break,
-which a test holds; the note adds the link to the release's notes on
-GitHub. Read the note whole before the release, as the assistant will
-receive it: its frame is `_after_update_text` in
-`src/exegete/updates.py`.
+paragraph of at most 800 characters, with no link, no Markdown and no
+line break, which a test holds; the note adds the link to the release's
+notes on GitHub. No test can tell whether the paragraph describes this
+release or the last one, so this step is the only guard. Read the note
+whole before the release, as the assistant will receive it: its frame
+is `_after_update_text` in `src/exegete/updates.py`.
 
 The version file, and the update page Exegete's notes point to
 (`https://nicotem.github.io/exegete/update/`), live in `pages/`. Each

@@ -494,13 +494,15 @@ def test_the_workflow_guides_rule_is_the_lock_file():
     documents put the two causes before the rule, in the section now
     called "One program at a time" (tests/test_v0150_lock_wording.py).
     Since 0.15.3 the one coding guide gives the rule in its
-    prerequisite for those who also use QualCoder."""
+    prerequisite for those who also use QualCoder, and the causes in a
+    sentence of their own."""
     guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
         encoding="utf-8"))
-    assert ("Writes are refused while the project's lock file is active "
-            "(QualCoder 3.8.2 has the project open, or another "
-            "conversation using Exegete is writing to it). The refusal "
-            "gives both causes and the way through for each") in guide
+    assert ("Exegete refuses to write while the project's lock file is "
+            "active. The lock file is active while QualCoder 3.8.2 has the "
+            "project open, or while another conversation using Exegete is "
+            "writing to it. The refusal gives both causes and the way "
+            "through for each") in guide
 
 
 class TestTheMemoIsNotSaidToBeSeeded:

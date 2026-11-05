@@ -243,15 +243,20 @@ def test_the_guide_reads_every_suggestion():
             "turn, so to read a passage drawn on from elsewhere, open the "
             "file the reason gives.") in guide
     assert "not yet show" not in guide
-    assert ("How many readings are interpretive follows from the lens "
-            "chosen") in guide
+    # (v0.15.3, the readability reading: the lens in the reader's words,
+    # what was asked, the fact unchanged)
+    assert ("How many readings are interpretive depends on what you asked "
+            "the assistant to look for, not on the quality of the "
+            "coding.") in guide
     for gone in ("Spot check the explicit ones", "Read the interpretive "
                  "ones closely", "in so many words"):
         assert gone not in guide, gone
     # the three questions as what Claude is told, the default named
-    assert "there is no default instruction." in guide
-    assert ("Exegete refuses a session without an instruction but "
-            "cannot tell whether it holds your answers") in guide
+    # (v0.15.3, the readability reading: a sentence each)
+    assert ("There is no default instruction: Exegete refuses to start a "
+            "session without one.") in guide
+    assert ("It cannot tell whether the instruction holds your answers, "
+            "though, so check what the session records.") in guide
     assert ("The instruction is where you say what counts as stated for "
             "your study") in guide
 
@@ -269,8 +274,10 @@ def test_the_guide_decides_each_item():
     assert ("All five look good. Show me the Career Satisfaction and "
             "Professional Development suggestions.") in guide
     assert "Show me 1, 3, 4 and 5 too" in guide
+    # (v0.15.3, the readability reading: the conversation, the guide's
+    # one word for it)
     assert ("Exegete keeps the session in a file of its own "
-            "(`~/.exegete/sessions/`), not in the chat") in guide
+            "(`~/.exegete/sessions/`), not in the conversation") in guide
 
 
 def test_the_guide_s_examples_quote_their_words():

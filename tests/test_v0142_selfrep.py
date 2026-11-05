@@ -596,10 +596,12 @@ class TestTheDocumentsSayExegete:
     the pass was complete; they are pinned here word for word."""
 
     SAY_EXEGETE = {
-        # (v0.15.2: the guide's answer not tied to Claude)
+        # (v0.15.2: the guide's answer not tied to Claude; v0.15.3, the
+        # readability reading: said once, in "How it works", and gone
+        # from the answer on API keys, which it did not answer)
         "AI_CODING_GUIDE.md": (
-            "Exegete only stores and applies what is marked approved, and "
-            "cannot see who approved it (\"How it works\", above).",),
+            "Exegete records the approval that the assistant reports, and "
+            "it cannot tell whether you gave it.",),
         "INSTALL.md": (
             "Exegete records the approval the assistant reports: it cannot "
             "tell whether you gave it.",

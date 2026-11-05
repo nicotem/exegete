@@ -778,10 +778,10 @@ carries. Its README records where it came from.
 Documents
 ---------
 
-These three are in early documents that the repository held up to
-its release 0.15.2-alpha, and that no package contained. Git's
-history keeps the documents: each address below opens one as it was
-at that release.
+The three items below are in early documents that the repository
+held up to its release 0.15.2-alpha. No package contained those
+documents. Git's history keeps the documents: each address below opens
+one as it was at that release.
 
 76. A REFI-QDA coded-segment example (copied verbatim)
     Here: https://github.com/nicotem/exegete/blob/v0.15.2-alpha/docs/history/QUALCODER_IMPORT_CAPABILITIES.md.

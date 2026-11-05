@@ -850,8 +850,9 @@ class TestTheDocuments:
         # (v0.15.2: the heading in sentence case; v0.15.3: the workflow
         # guide's steps, in the one coding guide)
         assert "### Step 2: Start a coding session" in guide
-        assert ("1. starts a coding session with its own ID "
-                "(`start_coding_session`),") in guide
+        # (v0.15.3, the readability reading: the same step, reworded)
+        assert ("1. starts a coding session, which has an ID of its own "
+                "(`start_coding_session`).") in " ".join(guide.split())
 
 
 # ---------------------------------------------------------------------------

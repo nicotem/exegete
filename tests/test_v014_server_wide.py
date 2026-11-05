@@ -236,7 +236,13 @@ class TestToolAnnotations:
             "import_documents": {
                 "anthropic/requiresUserInteraction": True},
             "save_names_list": {
-                "anthropic/requiresUserInteraction": True}}
+                "anthropic/requiresUserInteraction": True},
+            # v0.15.3: a result limit for Claude Code, not this mark, on
+            # the tool and on its earlier name, the same function
+            "read_file_with_codings": {
+                "anthropic/maxResultSizeChars": 200_000},
+            "analyze_file_with_coding": {
+                "anthropic/maxResultSizeChars": 200_000}}
         wire = next(t for t in listed
                     if t.name == "save_names_list").model_dump(
                         by_alias=True, exclude_none=True)

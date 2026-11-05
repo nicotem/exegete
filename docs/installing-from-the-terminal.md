@@ -893,6 +893,15 @@ What the lines do:
   take more than a minute. These two values are suggestions, which this
   project has not measured with Codex.
 
+Codex gives the model a tool's answer cut to the model's budget: about
+48,000 bytes for the models Codex 0.166.0 lists, with the middle of the
+answer left out (Codex's source, read on 4 November 2026). A part of a
+long file from `read_file_with_codings` is about 60,000 characters of
+English, so in Codex the assistant can miss the middle of each part
+without being told. Codex's setting `tool_output_token_limit` raises
+that budget (its source); Codex's own documentation says where to set
+it, and this project has not tried a value with Codex.
+
 If the file already has an entry named `exegete` (because you added it
 in the app's settings screen or with `codex mcp add`, below), do not
 paste a second one: a second `[mcp_servers.exegete]` line makes the

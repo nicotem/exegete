@@ -187,11 +187,15 @@ class TestTheMarks:
         """Item 2: requiresUserInteraction for import_documents and
         save_names_list, over the host's path too."""
         mark = {"anthropic/requiresUserInteraction": True}
-        assert server.TOOL_META == {"import_documents": mark,
-                                    "save_names_list": mark}
+        key = "anthropic/requiresUserInteraction"
+        # (v0.15.3: read_file_with_codings carries a result limit of its
+        # own, not this mark)
+        asked = {name: meta for name, meta in server.TOOL_META.items()
+                 if key in meta}
+        assert asked == {"import_documents": mark, "save_names_list": mark}
         server._apply_toolset("full")
         marked = {name: tool.meta for name, tool in _listed().items()
-                  if tool.meta}
+                  if tool.meta and key in tool.meta}
         assert marked == {"import_documents": mark, "save_names_list": mark}
 
     def test_no_tool_that_changes_nothing_is_marked_as_writing(self):

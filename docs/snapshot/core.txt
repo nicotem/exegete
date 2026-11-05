@@ -1254,6 +1254,9 @@ get_coded_segments(coder=...) reads one coder's segments.
     "destructiveHint": false,
     "idempotentHint": true,
     "openWorldHint": false
+  },
+  "_meta": {
+    "anthropic/maxResultSizeChars": 200000
   }
 }
 
@@ -2967,6 +2970,9 @@ The earlier name of read_file_with_codings, which a later release removes: call 
     "destructiveHint": false,
     "idempotentHint": true,
     "openWorldHint": false
+  },
+  "_meta": {
+    "anthropic/maxResultSizeChars": 200000
   }
 }
 

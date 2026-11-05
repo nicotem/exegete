@@ -1126,6 +1126,13 @@ TOOL_META = {
     # import, so the researcher approves both calls (the lead's answer to
     # the design's open point 1)
     "save_names_list": {"anthropic/requiresUserInteraction": True},
+    # read_file_with_codings (v0.15.3, ruling 117): a part of a long file
+    # is about 60,000 characters of English (parts.py), over the 50,000 at
+    # which Claude Code saves a text answer to a file under
+    # ~/.claude/projects/ and gives the assistant its path instead; this
+    # raises the tool's threshold, under Claude Code's ceiling of 500,000
+    # (code.claude.com's MCP page, read on 5 November 2026)
+    "read_file_with_codings": {"anthropic/maxResultSizeChars": 200_000},
 }
 
 def _argument_name_for_display(name: Any) -> str:
@@ -26036,7 +26043,7 @@ async def check_for_updates() -> str:
 # The earlier names are still listed, with one sentence, until the release
 # on method (planned as v0.15.5) removes them, so that an instruction or a
 # conversation that names one still reaches the tool. Each runs the very
-# same function, with the same arguments, annotations and answer;
+# same function, with the same arguments, annotations, marks and answer;
 # registered after the last tool, so the others keep their order. An
 # error inside it is answered as the new name answers it (_tool_guard's
 # answer names no tool), and logged under the new name.
@@ -26054,6 +26061,8 @@ for _old_name, _new_name in RENAMED_TOOLS.items():
     mcp.add_tool(_renamed.fn, name=_old_name,
                  description=OLD_NAME_DESCRIPTION.format(new=_new_name),
                  annotations=_renamed.annotations)
+    if _new_name in TOOL_META:
+        TOOL_META[_old_name] = TOOL_META[_new_name]
 del _old_name, _new_name, _renamed
 
 

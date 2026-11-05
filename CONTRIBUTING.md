@@ -275,8 +275,7 @@ at first.
    something to another release, change its row in the plan in the same
    commit as any text that gives its new release. At release preparation, the rows of that
    release leave the plan. When you remove a tool or an argument, add
-   it, with the release, to the test's `RETIRED` table. When you add a
-   module or a script, add it to the map.
+   it, with the release, to the test's `RETIRED` table.
 
    Every push also lists the documents' promises and their dated
    readings of other programs, in the documents job's summary
@@ -472,6 +471,16 @@ CI, and expect requests for more tests rather than fewer.
 
 ### Project structure
 
+The map below names the files and folders at the top of the
+repository, the package's modules and the scripts. Two tests hold it
+to the tree. The facts check, above, holds its lists of modules and
+scripts to the Python files that git tracks in `src/exegete/` and
+`scripts/`. `tests/test_v0153_project_map.py` holds the rest: every
+path the map names must be one that git tracks, and each file or
+folder at the top must be in the map, or among those the test leaves
+out, each with its reason. A change that adds, moves or removes one of
+them changes the map in the same commit.
+
 ```
 exegete/                     # the clone (its folder's name does not matter)
 ├── src/
@@ -511,7 +520,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
-│   │   ├── occurrences.py       # pseudonymise_source: the short id and line number of each occurrence of a name (0.15.3)
+│   │   ├── occurrences.py       # pseudonymise_source: the short id and line number of each occurrence of a name, and the page for choosing them (0.15.3)
 │   │   ├── refi_export.py       # REFI-QDA XML export
 │   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
 │   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once
@@ -519,6 +528,8 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── standard_output.py   # Standard output, as the MCP library writes it: what Exegete tells once counts as told once its answer has gone out (0.15.3)
 │   │   └── release.py           # This release's version, date and paragraph on what is new, for the note after an update and the update page
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
+├── tests/                   # The suite, and conftest.py, which gives each test a home folder of its own
+│   └── fixtures/               # Made-up documents and records for the tests, and the REFI-QDA standard's schema
 ├── scripts/
 │   ├── ci_tier.py              # Which tier of CI a run takes, and whether the extension's jobs run
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
@@ -542,27 +553,36 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── make_timing_documents.py  # Made-up Word files for timing how long an import's preview reads
 │   ├── structure_table.py      # The structural table kept per release in docs/structure/
 │   └── create_test_project.py  # Test project generator
+├── changelog.d/             # The next release's CHANGELOG entry, in files of their own (step 6)
 ├── docs/
 │   ├── brand/                  # Exegete's mark
-│   ├── history/                # Early plans and analyses, kept as a record
 │   ├── installing-from-the-terminal.md  # Installing from the Terminal: every route but the desktop extension
 │   ├── snapshot/               # The texts Exegete gives the assistant that are the same for every project, with their sizes
 │   ├── structure/              # The structural table of each release (scripts/structure_table.py)
-│   └── update-check/           # The design of the check for new versions, as a record
+│   ├── update-check/           # The design of the check for new versions, as a record
+│   └── WRITING.md              # The writing guide: who reads Exegete's texts, and how to write them
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/
 │   ├── desktop-extension/      # The extension's manifest template and its validator
 │   └── pypi-old-name/          # The old name's package, qualcoder-mcp, released until v1.0
 ├── legal/
 │   └── GPL-3.0.txt         # The GNU GPL, version 3, which the LGPL incorporates
+├── .github/                 # The workflows GitHub runs, the issue forms and Dependabot's settings
 ├── pyproject.toml           # Package configuration
+├── uv.lock                  # The libraries' lock: each library's release, with its hashes
+├── MANIFEST.in             # What the source distribution leaves out: the tests and the earlier name's files
 ├── README.md               # What it is, where data goes, how to start
+├── QUICKSTART.md           # Exegete set up by hand in Claude Desktop
 ├── TOOLS.md                # Every tool, what it reads and writes
+├── AI_CODING_GUIDE.md      # Coding with the assistant, step by step, with example conversations
+├── PROJECT_SELECTION_GUIDE.md  # Choosing the project Exegete works on, for installs from the Terminal
 ├── CHANGELOG.md            # Version history
 ├── INSTALL.md              # Installing the desktop extension for Claude Desktop
 ├── PRIVACY.md              # Where your data goes, and who can read it there
 ├── CONTRIBUTING.md         # How to report, propose and review changes
+├── CLAUDE.md               # For AI coding agents: what they most often get wrong here
 ├── CITATION.cff            # Citation metadata
+├── .zenodo.json            # How Zenodo describes each release it archives
 ├── SUPPORT.md              # Support policy (GitHub Issues only)
 ├── COPYING.LESSER          # The licence: GNU LGPL, version 3
 └── NOTICE                  # Copyright, licence, and the code derived from QualCoder

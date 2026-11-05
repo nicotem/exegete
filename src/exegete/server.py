@@ -107,6 +107,10 @@ from .database import (
     normalize_name,
     name_key,
     nfc_ordered,
+    name_character_problem,
+    name_without_refused,
+    name_shown_with_codes,
+    visible_name_key,
     position_safe as db_position_safe,
     read_project_pseudonyms,
     MAX_TEXT_CONTENT_LENGTH,
@@ -2595,11 +2599,35 @@ def _find_existing_by_name(rows, name: str, kind: str, plural: str):
 def _rename_collision(rows, row_id: int, new_name: str, kind: str):
     """Error dict when new_name collides with ANOTHER row's name (X2), or
     None. Mirrors 4.0's rename rule: lower(name)=lower(?) AND id != ?
-    (ai_mcp_server.py:1836-1843 at 9bddf17), under name_key."""
+    (ai_mcp_server.py:1836-1843 at 9bddf17), under name_key.
+
+    Then, since v0.15.3, the twin refusal: another row whose name matches
+    new_name only once characters no one sees on screen are left out
+    (`visible_name_key`). It is skipped when the rename leaves this row's
+    own visible spelling as it was (a respelling in letter case, or a
+    name cleaned of such a character), so a rename that keeps what the
+    name looks like is never newly refused."""
     key = name_key(new_name)
     others = [r for r in rows if r["id"] != row_id and name_key(r["name"]) == key]
     if not others:
-        return None
+        own = next((r for r in rows if r["id"] == row_id), None)
+        if own is not None and \
+                visible_name_key(own["name"]) == visible_name_key(new_name):
+            return None
+        twins = _name_twins(rows, new_name, row_id)
+        if not twins:
+            return None
+        ids = ", ".join(str(r["id"]) for r in twins)
+        label = "id" if len(twins) == 1 else "ids"
+        return {
+            "error": f"Another {kind} already uses the name "
+                     f"'{name_shown_with_codes(twins[0]['name'])}' "
+                     f"({label} {ids}) once characters no one sees on "
+                     f"screen are left out, so the two would look the "
+                     f"same in every list.",
+            "candidates": [{"id": r["id"], "name": r["name"]}
+                           for r in twins],
+        }
     ids = ", ".join(str(r["id"]) for r in others)
     label = "id" if len(others) == 1 else "ids"
     return {
@@ -2607,6 +2635,86 @@ def _rename_collision(rows, row_id: int, new_name: str, kind: str):
                  f"({label} {ids}).",
         "candidates": [{"id": r["id"], "name": r["name"]} for r in others],
     }
+
+
+# The tool that gives a code, a category or a case another name, which a
+# twin refusal offers (v0.15.3)
+_RENAME_TOOL = {"code": "rename_code", "category": "rename_category",
+                "case": "rename_case"}
+_KIND_PLURAL = {"code": "codes", "category": "categories", "case": "cases"}
+
+
+def _name_character_refusal(name: str, field: str
+                            ) -> Optional[Dict[str, Any]]:
+    """The refusal of a new code, category or case name that holds a
+    character no one sees on screen (v0.15.3; the rule is
+    `name_character_problem`'s), or None. It gives the argument, the
+    character's code and its position, and the name without such
+    characters. `name` is normalised already; nothing is logged."""
+    problem = name_character_problem(name)
+    if problem is None:
+        return None
+    position, code = problem
+    cleaned = name_without_refused(name)
+    return {
+        "error": f"The {field} '{name_shown_with_codes(name)}' holds "
+                 f"{code} at position {position} (counting from 1), a "
+                 f"character no one sees on screen. A new name may not "
+                 f"hold one: on screen it would look like a name it is "
+                 f"not."
+                 + (f" Without such characters it reads '{cleaned}'."
+                    if cleaned else ""),
+        "character": code,
+        "position": position,
+    }
+
+
+def _name_twins(rows, name: str, row_id: Optional[int] = None):
+    """The rows, other than `row_id`'s, whose names match `name` once
+    characters no one sees on screen are left out (`visible_name_key`;
+    v0.15.3). A name with no other character matches nothing."""
+    key = visible_name_key(name)
+    if not key:
+        return []
+    return [r for r in rows if r["id"] != row_id
+            and isinstance(r["name"], str)
+            and visible_name_key(r["name"]) == key]
+
+
+def _new_name_refusal(rows, name: str, kind: str
+                      ) -> Optional[Dict[str, Any]]:
+    """A create's refusal of a new name (v0.15.3), or None: the character
+    refusal, then the twin refusal, the rows of `kind` whose names match
+    `name` only once characters no one sees on screen are left out, with
+    their ids and the way on. Called once the already_exists answer has
+    found nothing, before any lock and again under SQLite's write lock,
+    so a name a row holds exactly, or in other letter case, keeps that
+    answer."""
+    refusal = _name_character_refusal(name, "name")
+    if refusal is not None:
+        return refusal
+    twins = _name_twins(rows, name)
+    if not twins:
+        return None
+    rename = _mark_unregistered(_RENAME_TOOL[kind])
+    shown = ", ".join(f"'{name_shown_with_codes(r['name'])}'" for r in twins)
+    if len(twins) == 1:
+        row = twins[0]
+        message = (f"The {kind} {shown} (id {row['id']}) has the name "
+                   f"'{name}' once characters no one sees on screen are "
+                   f"left out, so the two would look the same in every "
+                   f"list; nothing was created. Use id {row['id']}, or give "
+                   f"that {kind} this name with {rename}.")
+    else:
+        message = (f"{len(twins)} {_KIND_PLURAL[kind]} ({shown}; ids "
+                   f"{', '.join(str(r['id']) for r in twins)}) have the "
+                   f"name '{name}' once characters no one sees on screen "
+                   f"are left out, so they would look the same in every "
+                   f"list; nothing was created. Use one of their ids, or "
+                   f"give one of them this name with {rename}.")
+    return {"error": message,
+            "candidates": [{"id": r["id"], "name": r["name"]}
+                           for r in twins]}
 
 
 def _unchanged(message: str, **ref) -> Dict[str, Any]:
@@ -10567,7 +10675,13 @@ def _code_name_collisions(name: str, codes=None) -> Optional[str]:
         return exact[0]
     key = name_key(name)
     ci = [c["name"] for c in codes if name_key(c["name"]) == key]
-    return ", ".join(ci) if ci else None
+    if ci:
+        return ", ".join(ci)
+    # Then the codes it matches only once characters no one sees on
+    # screen are left out (v0.15.3), which creation refuses as it refuses
+    # the others: two codes that look the same in every list
+    twins = [c["name"] for c in _name_twins(codes, name)]
+    return ", ".join(twins) if twins else None
 
 
 def _validate_proposal_evidence(ro_db, items, file_cache):
@@ -17001,6 +17115,14 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     # constraint are caught here rather than after the backup.
     seen_names = {name_key(p.name) for p in session.proposed_codes
                   if p.status not in ("rejected", "merged")}
+    # And by what they look like (v0.15.3): two proposals that match only
+    # once characters no one sees on screen are left out would be written
+    # as two codes that read alike, so the later one is rejected, naming
+    # the guid of the one before
+    seen_shown: Dict[str, str] = {}
+    for p in session.proposed_codes:
+        if p.status not in ("rejected", "merged"):
+            seen_shown.setdefault(visible_name_key(p.name), p.guid)
 
     for idx, item in enumerate(proposals):
         if not isinstance(item, dict):
@@ -17032,6 +17154,22 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
             rejected.append({"index": idx,
                              "reason": f"a proposal named '{name}' already "
                                        f"exists in this session"})
+            continue
+        unseen = _name_character_refusal(name, "name")
+        if unseen is not None:
+            rejected.append({"index": idx, "reason": unseen["error"],
+                             "character": unseen["character"],
+                             "position": unseen["position"]})
+            continue
+        twin = seen_shown.get(visible_name_key(name))
+        if twin is not None:
+            rejected.append({
+                "index": idx,
+                "reason": f"the proposal {twin} in this session has the "
+                          f"name '{name}' once characters no one sees on "
+                          f"screen are left out, so the two codes would "
+                          f"look the same in every list",
+                "proposal_guid": twin})
             continue
         color_requested = item.get("color")
         color = color_requested
@@ -17076,6 +17214,7 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
         )
         session.add_proposal(proposal)
         seen_names.add(name_key(name))
+        seen_shown.setdefault(visible_name_key(name), proposal.guid)
         entry = {"guid": proposal.guid, "name": name,
                  "category": category, "evidence_count": len(evidence)}
         if color_requested is not None:
@@ -17125,7 +17264,8 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     if any(e.get("collides_with") for e in recorded):
         result["collision_note"] = (
             "Proposals flagged collides_with match an existing code "
-            "(letter case, spacing and Unicode form ignored). Creation will "
+            "(letter case, spacing and Unicode form ignored, or characters "
+            "no one sees on screen left out). Creation will "
             "refuse them unless renamed; "
             "consider applying the existing code via the normal coding "
             "loop instead of creating a near-duplicate."
@@ -17340,6 +17480,25 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
                          f"'{new_name}'"
             })
         if new_name != proposal.name:
+            # Only a name that changes is checked (v0.15.3), as the six
+            # tools do, so a proposal recorded earlier keeps its name when
+            # it is sent back beside a new colour or category
+            unseen = _name_character_refusal(new_name, "name")
+            if unseen is not None:
+                return json.dumps(unseen)
+            shown = visible_name_key(new_name)
+            twin = None if shown == visible_name_key(proposal.name) else next(
+                (p for p in session.proposed_codes
+                 if p.guid != proposal.guid
+                 and p.status not in ("rejected", "merged")
+                 and visible_name_key(p.name) == shown), None)
+            if twin is not None:
+                return json.dumps({
+                    "error": f"The proposal {twin.guid} in this session has "
+                             f"the name '{new_name}' once characters no one "
+                             f"sees on screen are left out, so the two "
+                             f"codes would look the same in every list.",
+                    "proposal_guid": twin.guid})
             changes["name"] = (proposal.name, new_name)
             proposal.name = new_name
             proposal.collides_with = _code_name_collisions(new_name)
@@ -17517,6 +17676,9 @@ def _check_approved_proposals(db_, approved):
     codes = db_.list_codes()
     failures = []
     batch_names: set = set()
+    # The batch's names by what they look like (v0.15.3), each with the
+    # guid of the first proposal that holds it
+    batch_shown: Dict[str, str] = {}
     category_ids: Dict[str, int] = {}
 
     for p in approved:
@@ -17537,7 +17699,9 @@ def _check_approved_proposals(db_, approved):
         # collide on the insert, after the backup (D5 section 3.3 promises
         # validation before the backup and the write).
         key = name_key(p.name)
+        shown = visible_name_key(p.name)
         collision = _code_name_collisions(p.name, codes)
+        unseen = name_character_problem(normalize_name(p.name))
         marker = private_marker_refusal(p.memo, "its definition (memo)")
         if marker is not None:
             # a session recorded before v0.14 refused the marker
@@ -17546,6 +17710,13 @@ def _check_approved_proposals(db_, approved):
             problem = (f"name collides with existing code '{collision}'; "
                        f"rename the proposal (update_proposal) or apply the "
                        f"existing code instead")
+        elif unseen is not None:
+            # v0.15.3: a session recorded earlier, or edited by hand, can
+            # hold a name propose_codes would now refuse
+            problem = (f"its name holds {unseen[1]} at position "
+                       f"{unseen[0]} (counting from 1), a character no one "
+                       f"sees on screen, which a new name may not hold; set "
+                       f"the name again with update_proposal")
         elif p.color is not None and not (
                 isinstance(p.color, str)
                 and re.fullmatch(r"#[0-9A-Fa-f]{6}", p.color)):
@@ -17562,6 +17733,14 @@ def _check_approved_proposals(db_, approved):
                        f"colour with update_proposal, or re-propose the code")
         elif key in batch_names:
             problem = "another approved proposal in this batch has the same name"
+        elif shown in batch_shown:
+            # v0.15.3: two that match only once characters no one sees are
+            # left out would be written as two codes that read alike
+            problem = (f"the approved proposal {batch_shown[shown]} in this "
+                       f"batch has the same name once characters no one "
+                       f"sees on screen are left out, so the two codes "
+                       f"would look the same in every list; reject one, or "
+                       f"rename it with update_proposal")
         elif p.category is not None:
             match = next((c for c in cats
                           if c["name"].lower() == p.category.lower()), None)
@@ -17574,6 +17753,7 @@ def _check_approved_proposals(db_, approved):
             failures.append({"guid": p.guid, "name": p.name, "reason": problem})
         else:
             batch_names.add(key)
+            batch_shown.setdefault(shown, p.guid)
 
     if failures:
         return {
@@ -17987,10 +18167,15 @@ def create_code(name: str, category: Optional[str] = None,
     has_supercid = bool(caps is not None and caps.has_supercid)
 
     def _existing(rows):
-        return _existing_code_result(
+        """The already_exists answer, or else the refusal of a new name
+        (v0.15.3), or None to write."""
+        dup = _existing_code_result(
             rows, norm_name, has_supercid=has_supercid, category=category,
             category_id=category_id, parent_code_id=parent_code_id,
             color_requested=color, color_target=color_target, memo=memo)
+        if dup is not None:
+            return dup
+        return _new_name_refusal(rows, norm_name, "code")
 
     # Read-only pre-check: a duplicate costs no lock, upgrade or backup
     dup = _existing(ro_db.list_codes())
@@ -18083,6 +18268,9 @@ def rename_code(code_id: int, new_name: str,
                 f"Code '{row['name']}' (id {code_id}) already has that name; "
                 f"nothing was written.",
                 code={"id": code_id, "name": row["name"]}), None
+        refusal = _name_character_refusal(new_name, "new_name")
+        if refusal is not None:
+            return refusal, None
         clash = _rename_collision(rows, code_id, new_name, "code")
         if clash is not None:
             return clash, None
@@ -18335,9 +18523,14 @@ def create_category(name: str, parent_category: Optional[str] = None,
             return json.dumps(err, indent=2)
 
     def _existing(rows):
-        return _existing_category_result(
+        """The already_exists answer, or else the refusal of a new name
+        (v0.15.3), or None to write."""
+        dup = _existing_category_result(
             rows, norm_name, parent_category=parent_category,
             supercatid=supercatid, memo=memo)
+        if dup is not None:
+            return dup
+        return _new_name_refusal(rows, norm_name, "category")
 
     def _check(db_):
         """The duplicate, then the parent (resolved by name before any
@@ -18422,6 +18615,9 @@ def rename_category(category_id: int, new_name: str,
                 f"Category '{row['name']}' (id {category_id}) already has "
                 f"that name; nothing was written.",
                 category={"id": category_id, "name": row["name"]})
+        refusal = _name_character_refusal(new_name, "new_name")
+        if refusal is not None:
+            return refusal
         return _rename_collision(rows, category_id, new_name, "category")
 
     gate = _write_gate_error()
@@ -23119,7 +23315,12 @@ def create_case(name: str, memo: Optional[str] = None,
         return json.dumps({"error": "name must be a non-empty string"})
 
     def _existing(rows):
-        return _existing_case_result(rows, norm_name, memo=memo)
+        """The already_exists answer, or else the refusal of a new name
+        (v0.15.3), or None to write."""
+        dup = _existing_case_result(rows, norm_name, memo=memo)
+        if dup is not None:
+            return dup
+        return _new_name_refusal(rows, norm_name, "case")
 
     gate = _write_gate_error()
     if gate is not None:
@@ -23328,6 +23529,9 @@ def rename_case(case_id: int, new_name: str,
                 f"Case '{row['name']}' (id {case_id}) already has that name; "
                 f"nothing was written.",
                 case={"id": case_id, "name": row["name"]})
+        refusal = _name_character_refusal(new_name, "new_name")
+        if refusal is not None:
+            return refusal
         return _rename_collision(rows, case_id, new_name, "case")
 
     gate = _write_gate_error()

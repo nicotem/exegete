@@ -2408,6 +2408,124 @@ def _forbidden_coder_name_char(name: str) -> Optional[str]:
     return forbidden_display_char(name)
 
 
+# The names of codes, categories and cases (v0.15.3). A NEW name, one a
+# create or a rename would write, may not hold a character no one sees
+# on screen, and one that matches another name of its kind only once
+# such characters are left out is refused (server._new_name_refusal and
+# server._rename_collision); names already in a project are never
+# checked, so they are read, listed and renamed as they are.
+#
+# The characters: controls (Cc), format characters (Cf) and lone
+# surrogates (Cs), by the running interpreter's tables, and Unicode's
+# Default_Ignorable_Code_Point, by the pseudonymiser's table, which is
+# one Unicode version on every interpreter (pseudonymise.py,
+# DEFAULT_IGNORABLE_RANGES). Two kinds are kept where they shape the
+# characters beside them: U+200C and U+200D between two characters
+# outside ASCII that are themselves kept (Persian and Indic spelling,
+# emoji sequences), and a variation selector, or the Mongolian vowel
+# separator, straight after a visible character outside ASCII (a CJK
+# variant, a symbol's emoji form, a Mongolian letter's form). A name of
+# such characters alone is refused at its first, which has nothing
+# before it.
+NAME_JOINERS = frozenset("\u200c\u200d")       # ZWNJ, ZWJ
+NAME_SELECTOR_RANGES = (
+    (0x180B, 0x180F),      # the Mongolian free variation selectors and
+                           # the Mongolian vowel separator between them
+    (0xFE00, 0xFE0F),      # VARIATION SELECTOR-1 to -16
+    (0xE0100, 0xE01EF),    # VARIATION SELECTOR-17 to -256
+)
+
+
+def _name_selector(code_point: int) -> bool:
+    return any(low <= code_point <= high
+               for low, high in NAME_SELECTOR_RANGES)
+
+
+def _unseen_in_name(name: str) -> List[Tuple[int, bool]]:
+    """Each character of `name` that no one sees on screen, as (its
+    index, whether the rule above keeps it there), in order."""
+    if name.isascii():
+        # In ASCII such characters are the controls alone, which are
+        # exactly the characters str.isprintable refuses there
+        return [(index, False) for index, ch in enumerate(name)
+                if not ch.isprintable()]
+    from . import pseudonymise
+    unseen = [unicodedata.category(ch) in ("Cc", "Cf", "Cs")
+              or pseudonymise.is_default_ignorable(ord(ch)) for ch in name]
+    kept: List[bool] = []
+    found: List[Tuple[int, bool]] = []
+    last = len(name) - 1
+    for index, ch in enumerate(name):
+        if not unseen[index]:
+            kept.append(True)
+            continue
+        keep = False
+        if ch in NAME_JOINERS:
+            keep = (0 < index < last
+                    and ord(name[index - 1]) > 0x7F and kept[index - 1]
+                    and ord(name[index + 1]) > 0x7F
+                    and not unseen[index + 1])
+        elif _name_selector(ord(ch)):
+            keep = (index > 0 and ord(name[index - 1]) > 0x7F
+                    and not unseen[index - 1])
+        kept.append(keep)
+        found.append((index, keep))
+    return found
+
+
+def name_character_problem(value: str) -> Optional[Tuple[int, str]]:
+    """The first character of a new code, category or case name that no
+    one sees on screen and the rule above does not keep, as (its
+    position, counting from 1, and its code, such as "U+200B"), or None.
+
+    `value` is the name as normalize_name leaves it, so a tab or a line
+    break between two words is a space by then, as it is in the name
+    stored."""
+    for index, keep in _unseen_in_name(value):
+        if not keep:
+            return index + 1, f"U+{ord(value[index]):04X}"
+    return None
+
+
+def name_without_refused(value: str) -> str:
+    """`value` without the characters name_character_problem refuses,
+    its spacing normalised again: what a refusal offers instead."""
+    drop = {index for index, keep in _unseen_in_name(value) if not keep}
+    return normalize_name("".join(ch for index, ch in enumerate(value)
+                                  if index not in drop))
+
+
+def name_shown_with_codes(value: Any) -> str:
+    """`value` with each character no one sees on screen written as its
+    code in angle brackets ("Cop<U+200B>ing"), for a refusal's words; a
+    value that is not text is shown as ''."""
+    if not isinstance(value, str):
+        return ""
+    unseen = {index for index, _ in _unseen_in_name(value)}
+    if not unseen:
+        return value
+    return "".join(f"<U+{ord(ch):04X}>" if index in unseen else ch
+                   for index, ch in enumerate(value))
+
+
+def visible_name_key(value: Any) -> str:
+    """The duplicate-name rule's key with every character no one sees on
+    screen left out, the joiners and selectors the rule above keeps
+    included: two names with one such key look the same in every list.
+
+    In this order: normalize_name, so that a tab between two words is a
+    space and never joins them ("Coping\\tStrategies" keys as "coping
+    strategies"); then the removal; then name_key, which normalises the
+    spacing again and applies NFC after the removal, so that "e", U+200B
+    and U+0301, which NFC leaves as they are, key as "é"."""
+    name = normalize_name(value)
+    drop = {index for index, _ in _unseen_in_name(name)}
+    if drop:
+        name = "".join(ch for index, ch in enumerate(name)
+                       if index not in drop)
+    return name_key(name)
+
+
 # File names (v0.13, rename dossier 3.3, items 1 to 4): one rule set for
 # every file name this server writes, shared by import_text_file and
 # rename_file. QualCoder's own rename dialog checks only that the name is

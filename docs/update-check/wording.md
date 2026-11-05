@@ -67,6 +67,8 @@ A1 is in packaging/desktop-extension/manifest.in.json, A2 is the docstring of ch
 
 **How the notes (A4 to A6) are delivered.** Each note is added to the next successful answer from another tool (a JSON object without an `error` field), as its last field, `exegete_notice`, so that it reaches the structured content too (design 3.5; server.py, _ExegeteMCP.call_tool; updates.attach). A refusal or an error carries none, and the note waits for the next answer; check_for_updates' own answers never carry one. An answer carries one note at most, in this order: the disclosure note (A4), then the after-update note (A6), then the new-version notice (A5). No note is given when Exegete cannot tell which version it is (for example, a copy of the source that was not installed).
 
+**Since 0.15.3:** each note, and what check_for_updates' own answer tells (the disclosure, a newer version), is recorded as given only once the answer carrying it has been written to standard output and flushed (src/exegete/standard_output.py; updates.give and updates.written). One cut short before then, by a stop or the app's cancel, comes in a later answer or at the next start. In process, where nothing writes the answers out (the test suite, the snapshot's in-memory session), a note is recorded as it is added, as before. The after-update note (A6) carries release.py's paragraph as written, and the link to the release's notes.
+
 ### A1. The setting in the extension
 
 Built in packaging/desktop-extension/manifest.in.json as `user_config.update_check`, word for word as below: type boolean, default true, not required. The manifest's `env` passes it to the server as EXEGETE_UPDATE_CHECK (`"${user_config.update_check}"`) and sets EXEGETE_INSTALLED_AS to `extension`; its `privacy_policies` list PRIVACY.md, "Checking for new versions", and GitHub's general privacy statement.
@@ -223,9 +225,9 @@ No notice can be given until the GitHub Pages site is published (planned, outsid
 
 ### A6. After an update (once per update on this computer, no network, whether checking is on or off)
 
-> Note for the user, who sees it only if you pass it on. Pass it on once, briefly, after answering their request: Exegete has been updated to <installed> on this computer, so the update worked. What's new: <summary> The full notes: <installed notes>.
+> Note for the user, who sees it only if you pass it on. Pass it on once, after answering their request, in the release's own words and with the link: Exegete has been updated to <installed> on this computer, so the update worked. What's new: <summary> The release's notes, with each change and what to do: <installed notes>.
 
-`<summary>` is release.SUMMARY in src/exegete/release.py and ends with its own full stop. When the version running is not the one release.py describes (release.VERSION), the "What's new" sentence is left out.
+`<summary>` is release.SUMMARY in src/exegete/release.py and ends with its own full stop. Since 0.15.3 it is one plain paragraph of at most 800 characters, with no link and no line break, on what is new and what changes for the researcher, written by hand at each release; the update page's "What's new" shows the same words. When the version running is not the one release.py describes (release.VERSION), the "What's new" sentence is left out, and the note asks only that it be passed on with the link.
 
 It is given when the version running is newer than the newest version recorded as having run on this computer (`highest_version_run`). It is not given on a new installation or after a downgrade. The record is raised only once the note has been given, so a restart before any answer keeps it due. After an update from 0.14.1 or earlier (which kept no such record), it is given only with checking off; with checking on, the disclosure note takes its place.
 

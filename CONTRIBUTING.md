@@ -516,7 +516,8 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
 │   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once
 │   │   ├── standard_input.py    # Standard input, read a line at a time in a daemon thread, so that one Ctrl+C stops Exegete
-│   │   └── release.py           # This release's version, date and summary, for the note after an update
+│   │   ├── standard_output.py   # Standard output, as the MCP library writes it: what Exegete tells once counts as told once its answer has gone out (0.15.3)
+│   │   └── release.py           # This release's version, date and paragraph on what is new, for the note after an update and the update page
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
 ├── scripts/
 │   ├── ci_tier.py              # Which tier of CI a run takes, and whether the extension's jobs run
@@ -657,29 +658,59 @@ custom domain set for the account's own site is used for all its
 project sites as well (GitHub's page on custom domains, read on
 4 November 2026). The file keeps
 `"format": 1`; a change it cannot keep is published beside it under
-another name. Each release updates `src/exegete/release.py` (the
-version, its date and the summary the note after an update shows) with
-`pyproject.toml` and the CHANGELOG heading; tests hold the three
-together. The file, and the update page Exegete's notes point to
-(`https://nicotem.github.io/exegete/update/`), live in `pages/`, and
-each release updates both with `release.py` (`latest.json`'s version as
-PyPI spells it, its date, and the page's version, date, summary, links
-and commands); `tests/test_v0142_pages.py` holds them to `release.py`.
+another name.
+
+Each release updates `src/exegete/release.py` with `pyproject.toml` and
+the CHANGELOG heading: the version, its date, and the paragraph that
+the note after an update gives (`SUMMARY`). Tests hold the version and
+the date to the other two. The paragraph is written by hand at release
+preparation, from the CHANGELOG entry's opening and its "Upgrading
+from" part. It says what is new for a researcher and what changes for
+them, such as what to do and what behaves differently. It is one plain
+paragraph of at most 800 characters, with no link and no line break,
+which a test holds; the note adds the link to the release's notes on
+GitHub. Read the note whole before the release, as the assistant will
+receive it: its frame is `_after_update_text` in
+`src/exegete/updates.py`.
+
+The version file, and the update page Exegete's notes point to
+(`https://nicotem.github.io/exegete/update/`), live in `pages/`. Each
+release updates both with `release.py`: in `latest.json`, the version
+as PyPI spells it and its date; on the page, the version, its date, the
+links and the commands, and under "What's new" the same paragraph as
+the note, word for word. `tests/test_v0142_pages.py` holds them to
+`release.py`.
+
+What Exegete tells once (the check's disclosure and a new version,
+whether on another tool's answer or in `check_for_updates`' own, and
+the note after an update) is recorded as told only after the answer
+carrying it has been written to standard output and flushed
+(`src/exegete/standard_output.py`). This relies on the MCP library
+writing each message with one write and one flush. A release of the
+library that wrote otherwise would leave every note held: each would
+come again at every start, and with checking on, the disclosure would
+never be recorded, so the check would never run.
+`tests/test_v0153_update_note.py` holds this, and the
+`newest-libraries` job, which runs the suite on the newest releases,
+is where such a change would show first.
+
 Each release's notes on GitHub list what the desktop extension
 installs, under "What the extension installs": the table in the summary
 of the Linux desktop extension job in the release commit's CI run
 (`scripts/extension_libraries.py`, from the lock's dry run on each
-computer). The site is published by `.github/workflows/pages.yml`,
+computer).
+
+The site is published by `.github/workflows/pages.yml`,
 deployed from GitHub Actions and never from a branch (the maintainer's
 decision of 5 October 2026, recorded in `docs/update-check/design.md`):
-a branch would let
-any token that can push rewrite `latest.json` without a release. Once
-the release is published, with its extension file, and both packages
-are on PyPI, start the workflow by hand from the release's tag. It
-checks the site against the release (`scripts/check_pages_site.py`)
-and that the release is out, and the deploy waits in the
-`github-pages` environment for the maintainer's approval: the last step of
-each release, and a hold switch for a bad file.
+a branch would let any token that can push rewrite `latest.json`
+without a release. Once the release is published, with its extension
+file, and both packages are on PyPI, start the workflow by hand from
+the release's tag. It checks the site against the release
+(`scripts/check_pages_site.py`) and that the release is out. The deploy
+then waits in the `github-pages` environment for the maintainer's
+approval: the last step of each release, and a hold switch for a bad
+file.
 
 ## The record on Zenodo
 

@@ -367,7 +367,12 @@ What stays local, always, unless a sync service copies the folder it is in
   confirmed restore_backup takes first: timestamped
   `<project>_backup_<timestamp>.qda` folders (the safety backup's name
   ends `_prerestore.qda`) placed next to the project folder
-- exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
+- exported files (CSV/txt/md reports, REFI-QDA `.qdpx`). A REFI-QDA
+  export is written first beside its destination, as a part file named
+  `.<name>.<digits>-<digits>.part`, and moved into place when complete.
+  The part file holds the export's texts and memos. Its name starts with
+  a dot, so Finder does not show one that an export stopped midway
+  leaves behind; the next export to that name that completes removes it
 - new projects made by create_project and project copies made by
   copy_project_to_workspace, in
   `~/Documents/Exegete projects/` by default (before 0.14.1,
@@ -1092,7 +1097,13 @@ convention, whichever program made the project, Exegete or QualCoder:
   export_coded_segments_report) keep memos in full, private zone
   included, because QualCoder's own exports do, and Exegete keeps its
   exports the same. The export tools say so in their descriptions. Treat
-  exported files with the same care as the project itself.
+  exported files with the same care as the project itself. A whole
+  project's REFI-QDA `.qdpx` holds, besides, the name and the work of
+  every coder, those hidden in QualCoder's view included, as Exegete's
+  other file exports do ("Coder visibility", below); the cases, with
+  their attributes; the journal entries in full, their private part
+  included, which Exegete's reads keep from the assistant; and the
+  annotations.
 
 The private zone stays in your project database on disk; this
 convention controls only what enters the AI conversation through

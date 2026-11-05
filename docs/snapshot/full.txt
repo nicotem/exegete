@@ -1302,14 +1302,10 @@ Returns:
 }
 
 ==== Tool export_refi_qda: its description ====
-Export codings as a REFI-QDA .qdpx file for other QDA software.
-
-Known faults (a later release is meant to fix them): this export files every coding under the AI coder name, the researcher's own and a hidden coder's included, so another program shows them as the AI's; it leaves out cases, annotations, journals and media; and a session's export includes every suggestion, rejected ones too, with nothing to say which. Exegete has no other REFI-QDA export yet; QualCoder's own export (Project, Export, REFI-QDA Project export), for researchers who have QualCoder, keeps each coder, the cases, notes and media.
+Export the project, or one AI coding session, as a REFI-QDA .qdpx file for other QDA software.
 
 REFI-QDA is the interchange standard supported by QualCoder, NVivo,
-ATLAS.ti, MAXQDA and others. The export contains the referenced codes,
-the text sources, and the coded selections (with coding memos as
-descriptions).
+ATLAS.ti, MAXQDA and others.
 
 Full memos on export (as in QualCoder's own exports): the exported
 FILE keeps memo text in full, including any private '#####' section
@@ -1318,28 +1314,44 @@ Mention this to the user if they plan to share the exported
 file.
 
 Two modes:
-- Default (no coding_session_id): exports ALL text codings of the currently
-  open project.
-- With coding_session_id: exports that AI coding session's suggestions
-  (all statuses), useful for reviewing suggestions in another tool
-  before applying them.
+- Default (no coding_session_id): the whole project, each coding
+  under its own coder, a hidden coder's included: every code and
+  category (categories as non-codable parent codes), every text
+  source, the cases with their attributes and whole-file links, the
+  journal entries in full, their private part included, and the
+  annotations.
+- With coding_session_id: that AI coding session's suggestions, each
+  description starting with its status, with the codes they name
+  and their text sources, under the AI coder name; useful for
+  reviewing suggestions in another tool before applying them.
+
+Left out and counted, never named: images, audio, video and areas
+of a PDF page; a case's link to part of a file; a numeric
+attribute's value that is not a number; codings and annotations
+whose positions do not fit their text.
+
+The project's coder name is the first user, which QualCoder's
+importer takes as its own coder name. The AI coder name is the last,
+named after the project's AI coder name, else the AI coder name in
+Exegete's settings (EXEGETE_AI_CODER_NAME) or the built-in default;
+the result says which (ai_user_name_source). Where it is the first
+(a project with no coder name set), suggest checking QualCoder's
+coder name after importing the file there.
 
 Position convention (QualCoder's): selections are character offsets
 into the plain text exactly as exported (verbatim, UTF-8, no BOM,
 newlines as single \n), 0-based, end-exclusive. Tools that count \r\n
 as two characters (e.g. NVivo) may show shifted boundaries.
 
-The categories above the exported codes are included, as non-codable
-parent codes. The one export user is named after the project's AI
-coder name, else the AI coder name in Exegete's settings
-(EXEGETE_AI_CODER_NAME) or the built-in default; the result says which
-(ai_user_name_source).
+The file is written beside output_path and moved into place when
+complete, so with overwrite an earlier file stays whole until then;
+an earlier file Exegete cannot write is refused.
 
 Args:
     output_path: Where to write the .qdpx file (must end in .qdpx; the
                  directory must already exist)
     coding_session_id: Optional AI coding session to export instead of the
-                project's codings
+                project
     overwrite: Allow replacing an existing file (default: False)
 
 Returns:

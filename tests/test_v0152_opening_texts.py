@@ -30,11 +30,12 @@ readers, 28 October 2026).
 - README, the comparison table the owner's word of 29 October 2026
   brought back: its Exegete column as the code has it (the kinds the
   import reads, the PDF it refuses, whole files linked to a case, what
-  it cannot delete or change, the reports, the REFI-QDA export before
-  the fix the plan gives 0.15.2, names replaced in coded text).
-- README, the lead's reading of 29 October 2026: the REFI-QDA
-  export's known faults given once, in the table's row, with the
-  paragraph on exchange pointing at it; one aim on the page; the
+  it cannot delete or change, the reports, the REFI-QDA export, fixed
+  in 0.15.3 but for media, names replaced in coded text).
+- README, the lead's reading of 29 October 2026: what the REFI-QDA
+  file holds given once, in the table's row (its known faults until
+  0.15.3), with the paragraph on exchange pointing at it; one aim on
+  the page; the
   map's line on docs/snapshot/ bounded to what Exegete sends before
   a project opens, as the script that writes the folder says.
 """
@@ -263,10 +264,11 @@ def test_readme_comparison_rows_hold_against_the_code():
                  "export_frequencies_csv", "export_case_code_matrix_csv",
                  "find_cooccurring_codes"):
         assert callable(getattr(server, tool)), tool
-    # REFI-QDA: the export alone, before the fix the plan gives 0.15.2
+    # REFI-QDA: the export alone; since the fix of v0.15.3 every part of
+    # a project but its media (tests/test_v0153_refi_fixed.py)
     assert exegete["REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo)"] == (
-        "Export only, with known faults: every coding under the AI coder "
-        "name, and cases, annotations, journals and media left out")
+        "Export only: each coder's codings, the codebook, texts, cases, "
+        "attributes, journal and annotations; no media")
     assert callable(server.export_refi_qda)
     assert not [name for name in dir(server) if name.startswith(
         "import_refi")]
@@ -293,20 +295,22 @@ def test_readme_comparison_rows_hold_against_the_code():
 # README: a fact said once and pointed to (the lead's reading, 29 October)
 # ---------------------------------------------------------------------------
 
-def test_readme_gives_the_refi_qda_faults_once():
-    """The REFI-QDA export's known faults are given in the comparison
-    table's row; the paragraph on exchange with other programs, after the
-    table, points at the row instead of giving them again."""
+def test_readme_gives_what_the_refi_qda_file_holds_once():
+    """What the REFI-QDA file holds is given in the comparison table's
+    row; the paragraph on exchange with other programs, after the table,
+    points at the row instead of giving it again (v0.15.3: the known
+    faults that row gave are fixed, but for media)."""
     readme = _flat(_read("README.md"))
-    faults = ("every coding under the AI coder name, and cases, "
-              "annotations, journals and media left out")
-    assert readme.count(faults) == 1
+    holds = ("each coder's codings, the codebook, texts, cases, "
+             "attributes, journal and annotations")
+    assert readme.count(holds) == 1
     row = readme.index("| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) |")
     exchange = readme.index("**Exchange with other programs.**")
-    assert row < readme.index(faults) < exchange
+    assert row < readme.index(holds) < exchange
     paragraph = _between(readme, "**Exchange with other programs.**",
                          "If you use QualCoder,")
-    assert "with the known faults the table above gives" in paragraph
+    assert "as the table above gives it" in paragraph
+    assert "known faults" not in readme
 
 
 def test_readme_states_one_aim():

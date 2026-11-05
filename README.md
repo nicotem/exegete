@@ -467,16 +467,16 @@ checked on 10 October 2026, beside Exegete 0.15.2.
 | Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting. Exegete does not nest an existing code under another ("What comes next", below, gives the plans) |
 | Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, setting an attribute on a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
 | Reports | Many, in its Reports menu | Some: the codebook, a coding report, coding counts, the case-by-code matrix and codes that occur together |
-| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, with known faults: every coding under the AI coder name, and cases, annotations, journals and media left out |
+| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only: each coder's codings, the codebook, texts, cases, attributes, journal and annotations; no media |
 | Comparing two coders | Per code, with a figure QualCoder labels Kappa | The same figure, with Cohen's kappa beside it. Against the AI coder name, the figures do not measure agreement between independent coders |
 | Replacing names | When a file is imported | When a file is brought in, and in text already coded |
 | AI suggestions for coding | 3.8.2: an AI search finds passages, which you code. 4.0: its assistant codes as it works, within the AI permission you set (Read-only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
 
 **Exchange with other programs.** The tool `export_refi_qda` writes the
-REFI-QDA file that ATLAS.ti, MAXQDA and NVivo read, with the known
-faults the table above gives ("What comes next" says when a fix is
-planned). If you use QualCoder, its own export (Project, Export,
-REFI-QDA Project export) keeps each coder, the cases, notes and media.
+REFI-QDA file that ATLAS.ti, MAXQDA and NVivo read: the whole project,
+as the table above gives it, or one coding session's suggestions, each
+marked with its status. If you use QualCoder, its own export (Project,
+Export, REFI-QDA Project export) also carries the media.
 If you use QualCoder 3.8.2, read
 [its edit-mode caution](https://github.com/nicotem/exegete/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution)
 before you edit transcripts in its coding view. QualCoder 4.0's own MCP

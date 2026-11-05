@@ -10,24 +10,21 @@ approved.
 > so it can also be opened in QualCoder. QualCoder is free software for
 > qualitative analysis.
 >
-> Exegete's REFI-QDA export, `export_refi_qda`, has three known faults,
-> which a later release is meant to fix. REFI-QDA is the standard that
-> qualitative analysis programs such as NVivo, ATLAS.ti and MAXQDA use
-> to exchange projects. The export:
->
-> - files every coding under the AI coder name, yours and a hidden
->   coder's included;
-> - leaves out cases, annotations, journals and media;
-> - includes the suggestions you rejected, without marking them, when it
->   exports a single coding session.
+> Exegete's REFI-QDA export, `export_refi_qda`, writes your project in
+> REFI-QDA, the standard that qualitative analysis programs such as
+> NVivo, ATLAS.ti and MAXQDA use to exchange projects. The file holds
+> each coding under its own coder, the codebook, the text sources, the
+> cases with their attributes, the journal entries in full and the
+> annotations. It leaves out images, audio, video and areas of a PDF
+> page. Exported from a single coding session, it marks each suggestion
+> with its status, the ones you rejected included.
 >
 > The file keeps memos in full, a private part after `#####` included.
 > Exegete never shows that part to the assistant, but anyone you send
 > the file to can read it.
 >
-> Exegete has no other REFI-QDA export yet. If you use QualCoder, its
-> own export (Project, Export, REFI-QDA Project export) keeps each
-> coder, the cases, the notes and the media.
+> If you use QualCoder, its own export (Project, Export, REFI-QDA
+> Project export) also carries the media.
 
 ## Contents
 
@@ -690,7 +687,7 @@ Applied 12 codings (ctid 445-456)
 | `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, character_sets, show_text, memo)` | **Write**: bring documents in from your computer, by their paths or a folder's. Their text does not pass through the conversation. The exception is a file not saved as UTF-8: the preview shows one line of it, as each character set reads it, so that you can choose. A preview comes first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
 | `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
-| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export codings as a REFI-QDA .qdpx, with the known faults given at the top of this guide |
+| `export_refi_qda(output_path, coding_session_id, overwrite)` | Export the project, or a single coding session's suggestions, as a REFI-QDA .qdpx, as the top of this guide describes |
 | `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` | Session management |
 | `copy_project_to_workspace(source_path, new_name)` | Copy a project into Exegete's workspace |
 

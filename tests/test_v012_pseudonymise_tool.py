@@ -4142,7 +4142,8 @@ class TestTheNotesOfHiddenCoders:
         assert ("A note that rewrite_memos rewrites needs no override "
                 "either, whoever owns it, because it changes no coding "
                 "decision; the preview counts those of hidden coders "
-                "(memo_rewrites.memos_of_hidden_coders), never naming them."
+                "(memo_rewrites.memos_of_hidden_coders), never giving their "
+                "names."
                 in flat)
 
 
@@ -4350,9 +4351,9 @@ class TestKeepingTheMapping:
         assert refused["reason"] == "mapping_retention_required"
         assert refused["nothing_changed"] is True
         assert refused["error"].startswith(
-            "This run applies a mapping you typed, and that mapping is half "
-            "of the reverse key: without it nobody can say later who each "
-            "pseudonym was. Nothing was written.")
+            "This run applies a mapping you typed, and without a record of "
+            "it nobody can say later who each pseudonym was. Nothing was "
+            "written.")
         _house_rules([refused["error"]])
         assert backups(project) == []
         assert query(project, "SELECT fulltext FROM source WHERE id=1"
@@ -4993,12 +4994,12 @@ class TestSavingTheMappingIntoPseudonymsJson:
             _written(project))
         note = [n for n in result["notes"] if n.startswith("1 entr(ies)")]
         assert note == [
-            "1 entr(ies) of the mapping use a pseudonym that pseudonyms.json "
-            "already gives to another name, or that another entry of the "
-            "mapping uses too. QualCoder's Pseudonyms dialog (the button in "
-            "Manage Files) would have refused to add them by hand; this tool "
-            "wrote them, so those people share one pseudonym in the file as "
-            "they do in the rewritten text."]
+            "1 entr(ies) of the mapping use a pseudonym that "
+            "pseudonyms.json already gives to another name, or that another "
+            "entry of the mapping uses too. QualCoder's Pseudonyms dialog "
+            "(the button in Manage Files) would have refused to add them by "
+            "hand. Exegete wrote them, so those people share one pseudonym "
+            "in the file as they do in the rewritten text."]
         assert "Peter" not in json.dumps(result)
 
     def test_two_typed_entries_sharing_a_pseudonym_are_reported(self,

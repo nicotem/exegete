@@ -126,7 +126,7 @@ def test_the_guide_puts_the_check_before_the_backup():
     and writes nothing, and takes no backup, when one fails. (v0.15.3:
     the workflow guide's step 5 is in the one coding guide.)"""
     served = " ".join(server.apply_codings.__doc__.split())
-    assert "re-validated BEFORE the backup and the write" in served
+    assert "checked again before the backup and the write" in served
     step = _between(_flat("AI_CODING_GUIDE.md"),
                     "When the assistant calls `apply_codings`, Exegete:",
                     "The answer then looks like this:")

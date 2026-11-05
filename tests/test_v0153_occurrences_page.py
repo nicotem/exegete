@@ -960,7 +960,8 @@ class TestTheAnswer:
             "pseudonymise_source"].split())
         args = text[text.index("choose_occurrences: "):
                     text.index("leave_occurrences: ")]
-        assert "The preview then opens a page for the researcher." in args
+        assert ("The preview then writes a page for the researcher into "
+                "the reading folder and opens it.") in args
 
 
 class TestTheNamesListsPath:

@@ -1579,7 +1579,7 @@ class TestApplyCodingsAlreadyExisting:
         before = _backups(qualcoder_db_path)
         n_before = _count(qualcoder_db_path, "code_text")
         out = server.apply_codings(sid)  # default create_backup=True
-        assert "EVERY APPROVED CODING IS ALREADY IN THE DATABASE" in out
+        assert "every approved coding is already in the database" in out
         assert "No backup was made and nothing was written" in out
         assert _backups(qualcoder_db_path) == before
         assert _count(qualcoder_db_path, "code_text") == n_before
@@ -1614,7 +1614,7 @@ class TestApplyCodingsAlreadyExisting:
         finally:
             lock.unlink()
 
-        assert "EVERY APPROVED CODING IS ALREADY IN THE DATABASE" in out
+        assert "every approved coding is already in the database" in out
         assert "gui_user" not in out            # not the lock refusal
         assert _backups(qualcoder_db_path) == before
         assert _count(qualcoder_db_path, "code_text") == n_before

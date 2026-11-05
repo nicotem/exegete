@@ -82,6 +82,13 @@ assistant, called its host, can ask you before each tool call: choose
 "allow once" for the tools that decide and write. And you can check the
 counts that the approval step reports against what you said.
 
+What the assistant reads through Exegete, such as the text of a file,
+passes through the conversation. The app you use with the assistant
+sends the conversation to the AI provider, the company that runs the
+assistant's model, unless that model runs on your own computer.
+[PRIVACY.md](PRIVACY.md) says where your data goes, and what to check
+before you use participants' data.
+
 "Step by step", below, gives each of these steps in detail, with what
 to say and what comes back.
 

@@ -36,6 +36,7 @@ from pydantic import Field
 
 from . import env_settings, names, state_folder, updates
 from .standard_input import StandardInputLines
+from .standard_output import StandardOutputLines
 from . import database as _database_module
 from .database import (
     QualcoderDatabase,
@@ -1200,7 +1201,9 @@ def current_resource_address(uri: Any) -> Any:
 class _ExegeteMCP(FastMCP):
     """FastMCP, with every tool refusing an argument it does not declare
     (v0.14, server-wide), the resources' earlier addresses answered
-    (v0.14.1), and one Ctrl+C stopping Exegete (v0.15.2: `run` and
+    (v0.14.1), one Ctrl+C stopping Exegete (v0.15.2: `run` and
+    `run_stdio_async`), and what Exegete tells once counted as told once
+    its answer has gone out (v0.15.3: `call_tool` and
     `run_stdio_async`).
 
     The check sits on the host's own path: `call_tool` is the method the
@@ -1227,6 +1230,15 @@ class _ExegeteMCP(FastMCP):
             self.original_descriptions.setdefault(tool.name,
                                                   tool.description)
 
+    def _request_id(self):
+        """The id of the request being answered, or None outside one (in
+        process, as the suite calls the tools). The library sets it for
+        each request (mcp 1.30.0, `server/lowlevel/server.py` 759)."""
+        try:
+            return self._mcp_server.request_context.request_id
+        except LookupError:
+            return None
+
     async def call_tool(self, name, arguments):
         tool = self._tool_manager.get_tool(name)
         if tool is not None:
@@ -1248,7 +1260,9 @@ class _ExegeteMCP(FastMCP):
         # `exegete_notice`, so that it reaches the structured content too,
         # which is all some hosts read, and is met before the data
         # (updates.attach says why). check_for_updates says these things
-        # itself.
+        # itself. Since 0.15.3 the note counts as given once this answer
+        # has been written out (updates.give, standard_output.py), so a
+        # stop or the app's cancel before then leaves it due.
         # Nothing about the check may fail a tool: each step that could
         # raise is read as "no note".
         try:
@@ -1267,7 +1281,7 @@ class _ExegeteMCP(FastMCP):
             try:
                 joined = updates.attach(raw, note)
                 if joined is not None:
-                    updates.mark_given(note)
+                    updates.give(note, self._request_id())
                     raw = joined
             except Exception as error:
                 logger.debug("The note was not added: %s",
@@ -1326,8 +1340,11 @@ class _ExegeteMCP(FastMCP):
     async def run_stdio_async(self) -> None:
         """The library's own (mcp 1.30.0, `FastMCP.run_stdio_async`), with
         standard input read in a daemon thread of Exegete's own
-        (standard_input.py), so that a stop waits for no line."""
-        async with stdio_server(stdin=StandardInputLines()) as (
+        (standard_input.py), so that a stop waits for no line, and
+        standard output written through standard_output.py, so that what
+        Exegete tells once counts as told once its answer has gone out."""
+        async with stdio_server(stdin=StandardInputLines(),
+                                stdout=StandardOutputLines()) as (
                 read_stream, write_stream):
             await self._mcp_server.run(
                 read_stream, write_stream,
@@ -25677,16 +25694,32 @@ def create_project(name: str, directory: Optional[str] = None,
 @mcp.tool(annotations=TOOL_CHECKS_ONLINE)
 async def check_for_updates() -> str:
     """Call only when the user asks whether Exegete is up to date, how to update it, or which version they have. Give the user the message and the steps as returned, and do not suggest other ways to update, such as GitHub's Releases page. The steps are for the user to follow: the app that started Exegete must be closed while Exegete changes, so do not run them yourself. Returns the installed version and its date, the newest version and its date, numbered steps for this computer, and links. While checking is on, it may fetch Exegete's version file from its website, which GitHub hosts, at most once a day; when checking is switched off in Exegete's settings, it makes no connection and returns the installed version and where to look."""
-    # The fetch runs in a worker thread under updates.DEADLINE, so the
-    # server keeps answering while it waits (every other tool is plain
+    # The fetch runs in a worker thread under updates.DEADLINE, so
+    # Exegete keeps answering while it waits (every other tool is plain
     # and runs on the event loop). The guard every tool has, written out:
     # _tool_guard wraps plain functions only.
+    # What the answer tells once (the disclosure, a newer version) comes
+    # back from the worker and is given here, on the event loop, once the
+    # worker has returned its answer (v0.15.3). A stop or the app's
+    # cancel during the worker raises at the await, which abandons it, so
+    # nothing is given; nor on the error path, whose answer tells none of
+    # it, though the list may hold what the worker had reached.
+    notes: List[updates.Note] = []
     try:
-        return await anyio.to_thread.run_sync(
-            functools.partial(updates.tool_answer, tool_available=True),
+        answer = await anyio.to_thread.run_sync(
+            functools.partial(updates.tool_answer, tool_available=True,
+                              notes=notes),
             abandon_on_cancel=True)
     except Exception as e:
         return _error_answer("check_for_updates", e)
+    request_id = mcp._request_id()
+    for note in notes:
+        try:
+            updates.give(note, request_id)
+        except Exception as error:
+            logger.debug("What the check told was not recorded: %s",
+                         error_label(error))
+    return answer
 
 
 # ============================================================================

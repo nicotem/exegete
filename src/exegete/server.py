@@ -390,10 +390,11 @@ FREQUENCIES_COUNT_NOTE = (
 # and the refusal of an earlier file it cannot write, which the write in
 # place refused and the replace would not
 REFI_EXPORT_PROJECT_NOTE = (
-    "Export includes every code and category, every text source, the "
-    "cases, the journal entries and the annotations, with each coding "
-    "under its own coder. Every category is included, as a non-codable "
-    "parent code (QualCoder's own REFI-QDA convention).")
+    "Export includes every code and category, every text source and the "
+    "cases, with their attributes, the journal entries and the "
+    "annotations, with each coding under its own coder. Every category "
+    "is included, as a non-codable parent code (QualCoder's own REFI-QDA "
+    "convention).")
 REFI_EXPORT_SESSION_NOTE = (
     "Export includes the session's suggestions, each description starting "
     "with its status, the codes they name and their text sources. The "
@@ -8381,26 +8382,31 @@ def export_refi_qda(
     - Default (no coding_session_id): the whole project, each coding
       under its own coder, a hidden coder's included: every code and
       category (categories as non-codable parent codes), every text
-      source, the cases with their attributes and whole-file links, the
-      journal entries in full, their private part included, and the
-      annotations.
+      source with its attributes, the cases with their attributes and
+      whole-file links, the journal entries in full, their private part
+      included, and the annotations.
     - With coding_session_id: that AI coding session's suggestions, each
       description starting with its status, with the codes they name
       and their text sources, under the AI coder name; useful for
       reviewing suggestions in another tool before applying them.
 
-    Left out and counted, never named: images, audio, video and areas
-    of a PDF page; a case's link to part of a file; a numeric
-    attribute's value that is not a number; codings and annotations
-    whose positions do not fit their text.
+    Left out, counted but never named: the codings of images, audio,
+    video and areas of a PDF page; a case's link to part of a file; a
+    numeric attribute's value that is not a number; annotations whose
+    positions do not fit their text. The counts also take in the case
+    links, values and annotations of files left out, and journal
+    entries' attribute values. Codings whose positions do not fit their
+    text are left out and counted too, the first 20 named in
+    skipped_details.
 
     The project's coder name is the first user, which QualCoder's
     importer takes as its own coder name. The AI coder name is the last,
     named after the project's AI coder name, else the AI coder name in
     Exegete's settings (EXEGETE_AI_CODER_NAME) or the built-in default;
-    the result says which (ai_user_name_source). Where it is the first
-    (a project with no coder name set), suggest checking QualCoder's
-    coder name after importing the file there.
+    the result says which (ai_user_name_source). Where the project has
+    no coder name set, another coder's name or the AI coder name comes
+    first, so suggest checking QualCoder's coder name after importing
+    the file there.
 
     Position convention (QualCoder's): selections are character offsets
     into the plain text exactly as exported (verbatim, UTF-8, no BOM,

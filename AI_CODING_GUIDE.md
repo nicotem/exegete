@@ -13,11 +13,11 @@ approved.
 > Exegete's REFI-QDA export, `export_refi_qda`, writes your project in
 > REFI-QDA, the standard that qualitative analysis programs such as
 > NVivo, ATLAS.ti and MAXQDA use to exchange projects. The file holds
-> each coding under its own coder, the codebook, the text sources, the
-> cases with their attributes, the journal entries in full and the
-> annotations. It leaves out images, audio, video and areas of a PDF
-> page. Exported from a single coding session, it marks each suggestion
-> with its status, the ones you rejected included.
+> each coding under its own coder, the codebook, the text sources and
+> the cases (both with their attributes), the journal entries in full
+> and the annotations. It leaves out images, audio, video and areas of
+> a PDF page. Exported from a single coding session, it marks each
+> suggestion with its status, the ones you rejected included.
 >
 > The file keeps memos in full, a private part after `#####` included.
 > Exegete never shows that part to the assistant, but anyone you send

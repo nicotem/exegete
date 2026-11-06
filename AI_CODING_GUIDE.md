@@ -180,12 +180,13 @@ shown here are examples of what an answer holds.
 
 A project made with Exegete is in the workspace, unless you asked for
 another folder when it was made, or the workspace was another folder
-then. Exegete never moves a project when the workspace changes, and
-`list_available_projects` still finds the projects in its earlier
-folders ("Starting a project from the conversation" in TOOLS.md says
-where those are). Ask the assistant to open it, and go on to step 2.
-For a project made in another program, or one you want to keep as it
-is, ask the assistant to copy it first:
+then. Exegete never moves a project when the workspace changes.
+`list_available_projects` still finds the projects in the workspace's
+earlier default folders, which "Where", under "Starting a project from
+the conversation" in TOOLS.md, names. For a folder you chose yourself
+before, ask the assistant to search it. Ask the assistant to open the
+project, and go on to step 2. For a project made in another program,
+or one you want to keep as it is, ask the assistant to copy it first:
 
 ```
 Copy my project "Interview Study.qda" to the workspace for AI coding
@@ -868,28 +869,30 @@ workspace (step 1).
 Each backup is a copy of the project, its text included. Exegete keeps
 each of its own until you remove it: `prune_backups` removes them on
 your word, after a preview, and keeps the newest unless you ask it to
-keep none. After you replace names, every backup taken before the run
-holds the real names in the text, and every backup holds the originals
-of imported files, `pseudonyms.json` and the names file, when the
-project has them ("Can I pseudonymise transcripts that are already
-coded?", below). A prune that keeps the newest backup keeps those
-copies beside the project. Asking it to keep none removes every way
-back that Exegete's backups give, so you may prefer to wait until you
-have checked the run.
+keep none. After you replace names in a file, every earlier backup
+that holds the file holds its real names. Every backup also holds the
+originals of imported files, `pseudonyms.json` and the names file,
+when the project has them ("Can I pseudonymise transcripts that are
+already coded?", below). A prune that keeps the newest backup keeps
+those copies beside the project. Asking it to keep none removes every
+way back that Exegete's backups give, so you may prefer to wait until
+you have checked the names you replaced.
 
 QualCoder, if you use it, makes `_BKUP_` backups of its own, each a
 copy of the project, and `prune_backups` never removes them. QualCoder
-4.0 makes one beside the project each time it opens it, as its
-settings do by default. When it closes the project, it removes that
-one if nothing was changed, and the oldest beyond the number set under
-"Backups" in its settings (five by default). QualCoder 3.8.2 makes
-them in the "Default project directory" of its settings, your home
-folder unless you changed it. When it closes the project, it removes
-the one made at opening if nothing was changed, but it looks for the
-oldest only beside the project, so its other backups of a project in
-the workspace stay in that folder, and `list_backups` does not show
-them. The `_BKUP_` backups that stay, and copies of the project, are
-yours to delete.
+4.0, by default, makes one beside the project when it opens it. When
+it closes the project, it removes that one if nothing was changed in
+QualCoder, and the oldest beyond the number set under "Backups" in its
+settings (five by default). QualCoder 3.8.2 makes them in the folder
+its settings show under "Default project directory", which creating a
+project in QualCoder, in either release, sets to the folder that holds
+that project. When it closes the project, it removes the one made at
+opening if nothing was changed in QualCoder, but it looks for the
+oldest only beside the project. So when that folder is not the one
+that holds the project, as is usual for a copy in the workspace, its
+backups stay there, and `list_backups` does not show them. The
+`_BKUP_` backups that stay, and copies of the project, are yours to
+delete.
 
 ## Safety model
 

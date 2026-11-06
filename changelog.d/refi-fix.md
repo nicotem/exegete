@@ -13,20 +13,19 @@
   `annotations_exported`), and `codes_exported` and `files_exported`
   now count every code and every text source written, not only those
   with codings.
-- **What the file cannot hold faithfully is left out and counted,
-  never named.** Images, audio, video and areas of a PDF page stay out,
-  as before, and their codings are counted in
-  `av_image_codings_not_exported`. A case's link to part of a file is
-  counted in `case_links_left_out`, since QualCoder's importer would
-  read such a link as an empty annotation, and so is a link to a file
-  not written.
-  A numeric attribute's value that is not a number, such as "n/a", is
-  counted in `attribute_values_left_out`, with the values of files not
-  written and of journal entries; a number is written in plain decimal
-  notation ("1e3" as 1000). An annotation whose positions do not fit
-  its text, or that sits on a file not written, is counted in
-  `annotations_left_out`. Codings whose positions do not fit their text
-  are named, the first 20, as before.
+- **What the file cannot hold faithfully is left out and counted.**
+  Images, audio, video and areas of a PDF page stay out, as before, and
+  their codings are counted in `av_image_codings_not_exported`. A case's
+  link to part of a file is counted in `case_links_left_out`, since
+  QualCoder's importer would read such a link as an empty annotation,
+  and so is a link to a file not written. A numeric attribute's value
+  that is not a number, such as "n/a", is counted in
+  `attribute_values_left_out`, with the values of files not written and
+  of journal entries; a number is written in plain decimal notation
+  ("1e3" as 1000). An annotation whose positions do not fit its text, or
+  that sits on a file not written, is counted in `annotations_left_out`.
+  Codings whose positions do not fit their text are named, the first 20,
+  as before.
 - **A coding session's export marks each suggestion's status.** Each
   description starts with the suggestion's status, pending, approved,
   rejected, applied or removed, and the answer counts them in
@@ -40,6 +39,10 @@
 
 ### Fixed
 
+- **A refused session export names each suggestion by its GUID.** It
+  also gives the suggestion's place counted from 1, as
+  review_suggestions numbers a whole session, where 0.15.2 counted from
+  0.
 - **A failed REFI-QDA export no longer leaves a half-written file.**
   The file is written beside its destination, under a name starting
   with a dot, and moved into place in one step only when complete. With

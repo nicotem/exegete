@@ -15,9 +15,11 @@
   with codings.
 - **What the file cannot hold faithfully is left out and counted,
   never named.** Images, audio, video and areas of a PDF page stay out,
-  as before. A case's link to part of a file is counted in
-  `case_links_left_out`, since QualCoder's importer would read such a
-  link as an empty annotation, and so is a link to a file not written.
+  as before, and their codings are counted in
+  `av_image_codings_not_exported`. A case's link to part of a file is
+  counted in `case_links_left_out`, since QualCoder's importer would
+  read such a link as an empty annotation, and so is a link to a file
+  not written.
   A numeric attribute's value that is not a number, such as "n/a", is
   counted in `attribute_values_left_out`, with the values of files not
   written and of journal entries; a number is written in plain decimal

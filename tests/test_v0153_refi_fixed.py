@@ -849,6 +849,31 @@ def test_codings_that_do_not_fit_are_named_as_the_description_says(
                     sentence
 
 
+def test_a_session_suggestion_that_does_not_fit_refuses_the_export(
+        setup_server, qualcoder_db_path, tmp_path):
+    """In a session's export a suggestion whose positions no longer fit
+    its text is not left out, as a project's coding is: the export is
+    refused, saying which suggestion, with nothing written, as the
+    description says."""
+    sid = new_session()
+    record(sid, item())
+    # The text shortened after the suggestion was made, as another
+    # program could
+    _exec(qualcoder_db_path,
+          "UPDATE source SET fulltext = 'Short.' WHERE id = 1")
+    _reopen(qualcoder_db_path)
+    out = tmp_path / "s.qdpx"
+    answer = _export(coding_session_id=sid, output_path=str(out))
+    assert "success" not in answer, answer
+    assert answer["error"].startswith(
+        "Export validation failed: Suggestion 0: End position 56 is "
+        "beyond the file text (length 6)"), answer
+    assert not out.exists() and _parts(tmp_path) == []
+    flat = " ".join(_description().split())
+    assert ("In a session's export such a suggestion is not left out: "
+            "the export is refused, saying which one.") in flat
+
+
 def test_a_coding_on_a_source_without_text_is_counted_apart(
         setup_server, qualcoder_db_path, tmp_path):
     """A coding on a PDF with no text layer: the file holds no such

@@ -7,7 +7,7 @@ Python 3.13.5 with the libraries in `uv.lock`:
 
 | | 0.15.3, Python 3.13.5 | 0.15.2, Python 3.13.5 |
 |---|---|---|
-| `full` (80 tools) | 210,146 | 204,793 |
+| `full` (80 tools) | 210,265 | 204,793 |
 | `core` (28 tools) | 76,805 | 75,947 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,180 | 13,721 |
@@ -49,16 +49,17 @@ Python 3.13.5 with the libraries in `uv.lock`:
   descriptions newly passes 2,048 characters: `create_category`'s, the
   longest of them still under it, is 1,973, and 1,966 with the second
   reading of the texts (below).
-- `export_refi_qda`, which is in `full` alone, is 578 characters
+- `export_refi_qda`, which is in `full` alone, is 700 characters
   longer, now that the REFI-QDA export is fixed but for media. Its
-  description, 2,873 characters, is 561 longer: it says what the file
+  description, 2,994 characters, is 682 longer: it says what the file
   holds in each mode, what is left out and counted and what the counts
   take in, that the answer lists the codings whose positions do not
-  fit their text, the order of the coders' names, and that the file is
-  written beside its destination, and it no longer names the known
-  faults. It stays within the 4,096 characters Claude Code keeps of a
-  description. The other 17 are its new line breaks, escaped in the
-  definition.
+  fit their text and that a session's export holding such a
+  suggestion is refused, the order of the coders' names, and that the
+  file is written beside its destination, and it no longer names the
+  known faults. It stays within the 4,096 characters Claude Code keeps
+  of a description. The other 18 are its new line breaks, escaped in
+  the definition.
 - The second reading of the texts Exegete gives the assistant adds
   1,479 characters to `full` and 540 to `core`. Most of it says where
   the real names stay. `list_backups` (+260),

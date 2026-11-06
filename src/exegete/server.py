@@ -8408,14 +8408,15 @@ def export_refi_qda(
       and their text sources, under the AI coder name; useful for
       reviewing suggestions in another tool before applying them.
 
-    Left out, counted but never named: the codings of images, audio,
-    video and areas of a PDF page; a case's link to part of a file; a
-    numeric attribute's value that is not a number; annotations whose
-    positions do not fit their text. The counts also take in the case
-    links, values and annotations of files left out, and journal
-    entries' attribute values. Codings whose positions do not fit their
-    text are left out and counted too, the first 20 named in
-    skipped_details.
+    Left out of a project's file, counted but never named: the codings
+    of images, audio, video and areas of a PDF page; a case's link to
+    part of a file; a numeric attribute's value that is not a number;
+    annotations whose positions do not fit their text. The counts also
+    take in the case links, values and annotations of files left out,
+    and journal entries' attribute values. Codings whose positions do
+    not fit their text are left out and counted too, the first 20 named
+    in skipped_details. In a session's export such a suggestion is not
+    left out: the export is refused, saying which one.
 
     The project's coder name is the first user, which QualCoder's
     importer takes as its own coder name. The AI coder name is the last,

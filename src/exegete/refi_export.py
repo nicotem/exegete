@@ -1387,16 +1387,21 @@ class RefiQdaExporter:
 
         # Validate each suggestion
         for i, suggestion in enumerate(suggestions):
+            # Named by its place counted from 1, as review_suggestions
+            # counts, and by its GUID, which every session tool takes
+            which = f"Suggestion {i + 1}" + (
+                f" (GUID {suggestion.guid})"
+                if getattr(suggestion, "guid", None) else "")
             # Check code exists
             if suggestion.code_id not in code_ids:
                 warnings.append(
-                    f"Suggestion {i}: Code ID {suggestion.code_id} not found in project"
+                    f"{which}: Code ID {suggestion.code_id} not found in project"
                 )
 
             # Check file exists
             if suggestion.file_id not in file_ids:
                 warnings.append(
-                    f"Suggestion {i}: File ID {suggestion.file_id} not found in project"
+                    f"{which}: File ID {suggestion.file_id} not found in project"
                 )
             else:
                 if suggestion.file_id not in content_lengths:
@@ -1411,12 +1416,12 @@ class RefiQdaExporter:
                 length = content_lengths[suggestion.file_id]
                 if length == 0:
                     warnings.append(
-                        f"Suggestion {i}: File ID {suggestion.file_id} has no "
+                        f"{which}: File ID {suggestion.file_id} has no "
                         f"text content; selections cannot be exported for it"
                     )
                 elif isinstance(suggestion.end_pos, int) and suggestion.end_pos > length:
                     warnings.append(
-                        f"Suggestion {i}: End position {suggestion.end_pos} is "
+                        f"{which}: End position {suggestion.end_pos} is "
                         f"beyond the file text (length {length})"
                     )
 
@@ -1427,7 +1432,7 @@ class RefiQdaExporter:
                     or not isinstance(suggestion.end_pos, int)
                     or isinstance(suggestion.end_pos, bool)):
                 warnings.append(
-                    f"Suggestion {i}: missing or non-integer positions "
+                    f"{which}: missing or non-integer positions "
                     f"(start={suggestion.start_pos!r}, end={suggestion.end_pos!r}) "
                     f"; the coding row may be damaged"
                 )
@@ -1435,12 +1440,12 @@ class RefiQdaExporter:
 
             if suggestion.start_pos < 0:
                 warnings.append(
-                    f"Suggestion {i}: Invalid start position {suggestion.start_pos}"
+                    f"{which}: Invalid start position {suggestion.start_pos}"
                 )
 
             if suggestion.end_pos <= suggestion.start_pos:
                 warnings.append(
-                    f"Suggestion {i}: End position {suggestion.end_pos} must be greater than start position {suggestion.start_pos}"
+                    f"{which}: End position {suggestion.end_pos} must be greater than start position {suggestion.start_pos}"
                 )
 
         return warnings

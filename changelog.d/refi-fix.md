@@ -25,7 +25,8 @@
   written and of journal entries; a number is written in plain decimal
   notation ("1e3" as 1000). An annotation whose positions do not fit
   its text, or that sits on a file not written, is counted in
-  `annotations_left_out`.
+  `annotations_left_out`. Codings whose positions do not fit their text
+  are named, the first 20, as before.
 - **A coding session's export marks each suggestion's status.** Each
   description starts with the suggestion's status, pending, approved,
   rejected, applied or removed, and the answer counts them in

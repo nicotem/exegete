@@ -124,7 +124,7 @@
     "brief_characters": 14180,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 210265,
+    "tool_definitions_characters": 210292,
     "tools": {
       "add_annotation": {
         "definition_characters": 2238,
@@ -227,8 +227,8 @@
         "description_characters": 1301
       },
       "export_refi_qda": {
-        "definition_characters": 3508,
-        "description_characters": 2994
+        "definition_characters": 3535,
+        "description_characters": 3021
       },
       "find_cooccurring_codes": {
         "definition_characters": 2977,

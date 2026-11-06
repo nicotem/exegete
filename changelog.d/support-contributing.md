@@ -26,15 +26,15 @@
   selected and one is set in the configuration, a selection that fails
   opens that project, and the guide now says so.
 - CONTRIBUTING.md's untrue sentences were corrected. The MCP Inspector
-  now starts with its own command, since `mcp dev` cannot load
-  Exegete's server file. `docs/snapshot/` keeps the texts that are the
-  same for every project, and no tool's answer but the brief. Three
-  tools' texts give the lock paragraph's words, typed by hand, four
-  texts give a shorter form of it, and CONTRIBUTING.md names each. The account of CI says
+  now starts with its own command, since `mcp dev` cannot load Exegete's
+  server file. `docs/snapshot/` keeps the texts that are the same for
+  every project, and no tool's answer but the brief. Three tools' texts
+  give the lock paragraph's words, typed by hand, and six texts give a
+  shorter form of it; CONTRIBUTING.md names each. The account of CI says
   what the comparison of the import's text, the documents job and the
   weekly watch also check. The facts check holds the map's Python files
-  alone, and two opt-in scale tests share one build. The span walk is
-  no longer given as copied code, since 0.15.1 removed it. The map says
+  alone, and two opt-in scale tests share one build. The span walk is no
+  longer given as copied code, since 0.15.1 removed it. The map says
   that the reading tool shows or opens a read-only copy of an original,
   never the original itself. What Zenodo, GitHub and PyPI say is now
   dated, read on 4 November 2026.

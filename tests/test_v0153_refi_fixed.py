@@ -853,10 +853,10 @@ def test_a_session_suggestion_that_does_not_fit_refuses_the_export(
         setup_server, qualcoder_db_path, tmp_path):
     """In a session's export a suggestion whose positions no longer fit
     its text is not left out, as a project's coding is: the export is
-    refused, saying which suggestion, with nothing written, as the
+    refused, naming it by its GUID, with nothing written, as the
     description says."""
     sid = new_session()
-    record(sid, item())
+    guid = record(sid, item())["recorded"][0]["guid"]
     # The text shortened after the suggestion was made, as another
     # program could
     _exec(qualcoder_db_path,
@@ -865,13 +865,15 @@ def test_a_session_suggestion_that_does_not_fit_refuses_the_export(
     out = tmp_path / "s.qdpx"
     answer = _export(coding_session_id=sid, output_path=str(out))
     assert "success" not in answer, answer
-    assert answer["error"].startswith(
-        "Export validation failed: Suggestion 0: End position 56 is "
-        "beyond the file text (length 6)"), answer
+    # Named by its GUID, which review_suggestions gives, and by its place
+    # counted from 1, as review_suggestions counts
+    assert answer["error"] == (
+        f"Export validation failed: Suggestion 1 (GUID {guid}): End "
+        f"position 56 is beyond the file text (length 6)"), answer
     assert not out.exists() and _parts(tmp_path) == []
     flat = " ".join(_description().split())
     assert ("In a session's export such a suggestion is not left out: "
-            "the export is refused, saying which one.") in flat
+            "the export is refused, naming it by its GUID.") in flat
 
 
 def test_a_coding_on_a_source_without_text_is_counted_apart(

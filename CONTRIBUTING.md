@@ -198,12 +198,15 @@ its fix. Describe it there without copying data, as above.
    constant in `src/exegete/server.py`, and `_with_paragraphs` puts it
    back into each tool's docstring, so a change to it is made there.
    Three tool texts also give the lock paragraph's words, typed by hand:
-   `apply_codings`'s safety guarantees, `restore_backup`'s list of
+   `apply_codings`' safety guarantees, `restore_backup`'s list of
    safeguards, and the key features in `explain_ai_coding_tools`'
-   overview. Four texts give a shorter form of the same rule: the brief,
-   which `read_brief` returns, the descriptions of `select_project` and
-   `set_project_coder_name`, and `import_documents`' list of what it
-   refuses. A rewording is made in each of them too.
+   overview. Six texts give a shorter form of the same rule: the brief,
+   which `read_brief` returns; the descriptions of `select_project` and
+   `set_project_coder_name`; `get_current_project`'s account of
+   `qualcoder_open`; `start_coding_session`'s paragraph on a project in
+   use; and `import_documents`' list of what it refuses. Rule 9 of the
+   opening text says what the assistant does when a tool reports another
+   program. A rewording is made in each of them too.
 
    For each tool set, `full` and `core`, `docs/snapshot/` keeps the
    texts Exegete gives the assistant that are the same for every

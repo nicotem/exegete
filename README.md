@@ -613,9 +613,9 @@ Plans, not promises: the order may change with what testers report.
 [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md) says what each release changed.
 
 - v0.15.3: stricter checks on the names of codes, categories and
-  cases; when replacing names, choose which mentions to keep; the
-  REFI-QDA export fixed, except for media; PyMuPDF 2.0, the newer
-  library that reads PDFs, on Apple silicon Macs; other small
+  cases; when replacing names, choosing which occurrences to leave as
+  they are; PyMuPDF 2.0, the newer library that reads PDFs, on Apple
+  silicon Macs; a note after an update on what is new; other small
   corrections
 - v0.15.4: coding sessions kept with their project
 - v0.15.5, method: a review of how the assistant supports a study's

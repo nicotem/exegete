@@ -3684,8 +3684,6 @@ ROW_SENTENCES = {
     "the occurrences choice": (
         "when replacing names, choose which mentions to keep",
         "the occurrences choice"),
-    "the REFI-QDA fix": ("the REFI-QDA export fix",
-                         "fixes to the REFI-QDA export"),
     "PyMuPDF 2.0 on Apple silicon": ("PyMuPDF 2.0 on Apple silicon Macs",),
     "coding sessions kept with their project": (
         "coding sessions kept with their project",),

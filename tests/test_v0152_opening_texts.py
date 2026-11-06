@@ -278,9 +278,12 @@ def test_readme_comparison_rows_hold_against_the_code():
     # v0.15.2's release preparation: the fix moved to v0.15.3, the week
     # having no room for it; the date line's clause on the fix went, since
     # the README names a release to come in "What comes next" alone, to
-    # which the paragraph after the table points
-    assert plan["PLANNED"]["the REFI-QDA fix"][1] == "0.15.3"
+    # which the paragraph after the table points. v0.15.3's release
+    # preparation: the fix shipped, but for media, so its row left the
+    # plan, and "What comes next" names it no more (the fix's design)
+    assert "the REFI-QDA fix" not in plan["PLANNED"]
     readme = _flat(_read("README.md"))
+    assert "REFI-QDA export fixed" not in readme
     assert "as checked on 10 October 2026, beside Exegete 0.15.2." in readme
     assert "REFI-QDA fix." not in readme
     # names replaced as a file comes in, and in text already coded

@@ -1304,7 +1304,10 @@ def test_what_comes_next_is_plans():
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
-    for words in ("when replacing names, choose which mentions to keep",
+    # (v0.15.3's release preparation: its item says what shipped, in the
+    # owner's word "occurrences", ruling 116)
+    for words in ("when replacing names, choosing which occurrences to "
+                  "leave as they are",
                   "more of the analysis shown in the conversation, as tables",
                   # v0.14.2, the README's second round of checks: the rest
                   # in the reader's terms too (the roadmap's "What it is

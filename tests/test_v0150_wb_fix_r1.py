@@ -158,8 +158,12 @@ class TestTheRemovalsInV0151:
         # room for them
         assert list(items)[:5] == ["v0.15.3", "v0.15.4", "v0.15.5", "v0.16",
                                    "v0.17"]
-        assert "choose which mentions to keep" in items["v0.15.3"]
-        assert "the REFI-QDA export fixed" in items["v0.15.3"]
+        # v0.15.3's release preparation: its item says what shipped, in
+        # the owner's word "occurrences" (ruling 116), and the REFI-QDA
+        # fix leaves it, having shipped but for media (the fix's design)
+        assert "choosing which occurrences to leave as they are" \
+            in items["v0.15.3"]
+        assert "REFI-QDA" not in items["v0.15.3"]
         assert "on Apple silicon Macs" in items["v0.15.3"]
         assert "coding sessions kept with their project" in items["v0.15.4"]
         assert "method" in items["v0.15.5"]

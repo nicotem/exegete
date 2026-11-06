@@ -481,9 +481,11 @@ repository, the package's modules and the scripts. Two tests check it
 against the files that git tracks. The facts check, above, checks its
 lists of modules and scripts against the Python files in
 `src/exegete/` and `scripts/`. `tests/test_v0153_project_map.py`
-checks the rest. Every path in the map must be one that git tracks.
-Each file or folder at the top must be in the map, or in the test's
-list of those it leaves out, with its reason. When a change adds, moves
+checks the rest. Every path in the map must be one that git tracks,
+but `changelog.d/`, which a release's preparation leaves empty until
+the next change adds its file (step 6). Each file or folder at the top
+must be in the map, or in the test's list of those it leaves out, with
+its reason. When a change adds, moves
 or removes one of them, change the map in the same commit.
 
 ```

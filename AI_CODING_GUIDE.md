@@ -179,9 +179,11 @@ shown here are examples of what an answer holds.
 ### Step 1: Open the project, or a copy of it
 
 A project made with Exegete is in the workspace, unless you asked for
-another folder when it was made. Ask the assistant to open it, and go
-on to step 2. For a project made in another program, or one you want
-to keep as it is, ask the assistant to copy it first:
+another folder when it was made, or the workspace was another folder
+then (projects from before Exegete took its present name stay in
+`~/Documents/Qualcoder MCP Projects/`). Ask the assistant to open it,
+and go on to step 2. For a project made in another program, or one you
+want to keep as it is, ask the assistant to copy it first:
 
 ```
 Copy my project "Interview Study.qda" to the workspace for AI coding
@@ -396,7 +398,8 @@ When the assistant calls `apply_codings`, Exegete:
 
 1. Looks up the project's AI coder name, which each coding will carry
    as its owner ("Which coder name do AI codings carry?", below). If
-   the project has none yet, Exegete stops here, before any check or
+   the project has none yet, or the AI coder name in Exegete's settings
+   differs from it, Exegete stops here, before the checks below or any
    backup, and asks you rather than guessing
 2. Checks every approved suggestion against the project. Its file must
    still be there and hold text, and its code must still exist under
@@ -432,6 +435,8 @@ Applied coding ctid=554
 
 The codings are in the project now: ask to see them, or, if you
 use QualCoder, open the project there.
+
+undo_receipt: 4f7d2c9a1e8b4d6f9a3c5e7b1d2f4a6c
 ```
 
 ### Step 6: Read the codings back
@@ -683,6 +688,8 @@ Applied 12 codings (ctid 445-456)
 | `apply_codings(coding_session_id, create_backup)` | **Write** the approved suggestions, all or none, after checking them again, and only to the session's own project. An approved suggestion whose identical coding already exists is left alone and reported by its id. That check sees every coding, a hidden coder's included. So on a project that hides the AI coder, the report reveals that one such coding exists (PRIVACY.md) |
 | `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coding. Without the matching override, it refuses a coding whose memo carries a `#####` private note, and, on a project that can hide coders (QualCoder 3.8.2 and 4.0, schema v14 and later), a hidden coder's coding |
 | `list_backups()` / `restore_backup(backup_path, preview_token)` | List the backups / restore the project from one (a preview first, then the call with the preview's token) |
+| `prune_backups(keep_last, older_than_days, preview_token)` | Remove Exegete's own backups by a rule, on your word (a preview first, then the call with the preview's token). It keeps the newest unless asked to keep none, and never removes QualCoder's `_BKUP_` backups |
+| `undo_changes(receipts, preview_token)` | **Write**: take back a change Exegete made, such as a batch of applied codings, whole and within a day, from the `undo_receipt` in its answer (a preview first, then the call with the preview's token) |
 | `import_text_file(filename, content, memo, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add text typed or pasted in the conversation as a new text file, linked to a case if you choose. The text passes through the conversation, so it reaches the AI provider before any name in it is replaced. With `apply_project_pseudonyms=true`, the real names that the project's own `pseudonyms.json` lists are replaced with their pseudonyms as the text comes in, as QualCoder does. The replacement changes what the project stores, and so what you share from it |
 | `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, character_sets, show_text, memo)` | **Write**: bring documents in from your computer, by their paths or a folder's. Their text does not pass through the conversation. The exception is a file not saved as UTF-8: the preview shows one line of it, as each character set reads it, so that you can choose. A preview comes first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
@@ -852,10 +859,15 @@ the project as it is, so a restore can itself be undone. To keep a
 copy of your own, apart from Exegete's backups, copy the project to the
 workspace (step 1).
 
-Each backup is a copy of the project, its text included, and it stays
-until you remove it. `prune_backups` removes Exegete's own backups on
-your word, after a preview, and never the `_BKUP_` ones. Those, and
-copies of the project, are yours to delete.
+Each backup is a copy of the project, its text included. Exegete
+keeps each of its own until you remove it: `prune_backups` removes
+them on your word, after a preview, and keeps the newest unless you
+ask it to keep none. After a pseudonymisation run, that newest one is
+often the backup that holds the real names. QualCoder, if you use it,
+removes its own oldest `_BKUP_` backups when it closes a project,
+beyond the number its settings keep (five by default), and
+`prune_backups` never removes them. The `_BKUP_` backups it keeps,
+and copies of the project, are yours to delete.
 
 ## Safety model
 
@@ -863,10 +875,10 @@ copies of the project, are yours to delete.
   for writing during its own call, and opens it read-only again
   afterwards
 - Writes need a project schema from v14 to v17, the formats of
-  QualCoder 3.8 to 4.0. An older project is refused. Exegete refuses
-  to write to a newer one until it has been verified against that
-  format. "Supported QualCoder versions" in TOOLS.md says what can be
-  done with either
+  QualCoder 3.8 to 4.0. Writes to an older project are refused.
+  Exegete refuses to write to a newer one until it has been verified
+  against that format. "Supported QualCoder versions" in TOOLS.md says
+  what can be done with either
 - Writes are refused while the project's lock file is active:
   QualCoder 3.8.2 has the project open, or another conversation using
   Exegete is writing to it. Exegete holds the project lock itself
@@ -884,15 +896,16 @@ copies of the project, are yours to delete.
 - Exegete takes a backup, named with its date and time, before every
   change ("Backups", above)
 - A session applies only to the project it was created in
-- Exegete marks each applied suggestion, and never applies it twice
+- Exegete marks each applied suggestion, and does not apply it again
+  unless an undo of its batch sets it back to approved
 
 ## Troubleshooting
 
 ### "No approved suggestions to apply: N suggestion(s) in this session were already applied"
 
 The assistant called `apply_codings` again on a session that was
-already written. Exegete marks applied suggestions and never applies
-one twice, so there is nothing to fix. To code more passages, ask the
+already written. Exegete marks applied suggestions and does not apply
+them again, so there is nothing to fix. To code more passages, ask the
 assistant for new suggestions, or start a new session.
 
 ### "already_existing_count" in the apply result
@@ -946,7 +959,7 @@ the workspace. Open the project at the path the answer to
 `copy_project_to_workspace` gave. Step 1 says where the workspace is. A
 project of the same name in another folder is another project, such as
 the original that step 1 copied, or a copy from an earlier install. The
-codings are in the one in the workspace.
+codings are in the project at that path.
 
 In QualCoder:
 - Project > Open Project

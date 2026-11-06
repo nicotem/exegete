@@ -29,8 +29,8 @@
   now starts with its own command, since `mcp dev` cannot load
   Exegete's server file. `docs/snapshot/` keeps the texts that are the
   same for every project, and no tool's answer but the brief. Three
-  tools' texts and the brief give the lock paragraph's words, typed by
-  hand, and CONTRIBUTING.md names each. The account of CI says
+  tools' texts give the lock paragraph's words, typed by hand, four
+  texts give a shorter form of it, and CONTRIBUTING.md names each. The account of CI says
   what the comparison of the import's text, the documents job and the
   weekly watch also check. The facts check holds the map's Python files
   alone, and two opt-in scale tests share one build. The span walk is

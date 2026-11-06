@@ -46,7 +46,7 @@
 ### For contributors
 
 - A comment in `server.py` lists the three tool texts that repeat the
-  lock paragraph's words, and the three that give a shorter form of the
+  lock paragraph's words, and the four that give a shorter form of the
   rule.
 - `tests/test_v0153_occurrences_past_150.py` holds that a call with no
   mapping is refused past the limit in the limit's words alone.

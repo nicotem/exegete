@@ -280,7 +280,10 @@ def test_the_guide_decides_each_item():
     assert ("Exegete keeps the session in a file of its own on your "
             "computer (`~/.exegete/sessions/`)") in guide
     assert "The passages are in the conversation as well." in guide
-    assert "not in the conversation" not in guide
+    # (the fix round's reader: the ban is the Sessions section's fact)
+    sessions = guide[guide.index("### Sessions "):]
+    sessions = sessions[:sessions.index(" ### ", 1)]
+    assert "not in the conversation" not in sessions
 
 
 def test_the_guide_s_examples_quote_their_words():

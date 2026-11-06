@@ -200,8 +200,10 @@ its fix. Describe it there without copying data, as above.
    Three tool texts also give the lock paragraph's words, typed by hand:
    `apply_codings`'s safety guarantees, `restore_backup`'s list of
    safeguards, and the key features in `explain_ai_coding_tools`'
-   overview. The brief, which `read_brief` returns, gives a shorter form
-   of the same rule. A rewording is made in each of them too.
+   overview. Four texts give a shorter form of the same rule: the brief,
+   which `read_brief` returns, the descriptions of `select_project` and
+   `set_project_coder_name`, and `import_documents`' list of what it
+   refuses. A rewording is made in each of them too.
 
    For each tool set, `full` and `core`, `docs/snapshot/` keeps the
    texts Exegete gives the assistant that are the same for every

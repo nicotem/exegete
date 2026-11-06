@@ -127,7 +127,8 @@ def test_the_guide_puts_the_check_before_the_backup():
     and writes nothing, and takes no backup, when one fails. (v0.15.3:
     the workflow guide's step 5 is in the one coding guide. Its fix
     round: the steps in the code's order, the AI coder name first,
-    before any check or backup, and the lock file before the backup.)"""
+    before the checks below it or any backup, and the lock file before
+    the backup; the session's own checks come before the name.)"""
     served = " ".join(server.apply_codings.__doc__.split())
     assert "checked again before the backup and the write" in served
     step = _between(_flat("AI_CODING_GUIDE.md"),
@@ -139,11 +140,12 @@ def test_the_guide_puts_the_check_before_the_backup():
         "3. Checks the project's lock file",
         "4. Takes a backup")]
     assert said == sorted(said)
-    assert "stops here, before any check or backup" in step
+    assert "stops here, before the checks below or any backup" in step
     assert "no backup is taken" in step
     body = inspect.getsource(server.apply_codings)
     done = [body.index(call) for call in (
-        "_resolve_write_owner()", "_check_approved_codings(get_db()",
+        "_check_session_project(session)", "_resolve_write_owner()",
+        "_check_approved_codings(get_db()",
         "_write_gate_error()", "_backup_before_change(")]
     assert done == sorted(done)
 

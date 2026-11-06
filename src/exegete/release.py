@@ -18,19 +18,28 @@ of release preparation (CONTRIBUTING.md, "The check for new versions").
 """
 
 # pyproject.toml's version, as written there
-VERSION = "0.15.2-alpha"
+VERSION = "0.15.3-alpha"
 # The release date, as the CHANGELOG heading gives it (set again on the
 # day if the release moves: the CHANGELOG heading, CITATION.cff and the
 # update site's two files hold the same date)
-RELEASED = "2026-10-30"
+RELEASED = "2026-11-09"
 # One plain paragraph of at most 800 characters, with no link and no line
 # break (v0.15.3): what is new for a researcher and what changes for them
 # (what to do, what behaves differently). Written by hand at each release
 # preparation from the CHANGELOG entry's opening and its "Upgrading from"
 # part. The note after an update gives it as written, and the update
 # page's "What's new" shows the same words (scripts/check_pages_site.py).
-# 0.15.2's sentences stand here until 0.15.3's release preparation.
-SUMMARY = ("Exegete can now undo most changes it makes to a project, whole "
-           "or not at all, for a day after each one, showing first what it "
-           "would take back. Its main documents are rewritten in plainer "
-           "words, and installing from a Terminal has a guide of its own.")
+# 0.15.3's paragraph, 796 characters.
+SUMMARY = ("When Exegete replaces names, you can now choose which occurrences "
+           "of a name to leave as they are, such as where it names another "
+           "person. The preview opens a page in your browser that marks each "
+           "occurrence with a short id. A new code, category or case name "
+           "may no longer hold a character that usually shows nothing on "
+           "screen. The REFI-QDA export now carries the whole project but "
+           "its media: each coder's codings, the codebook, texts, cases, "
+           "attributes, journal entries and annotations. On a Mac with Apple "
+           "silicon, PDFs are read with a newer library, PyMuPDF 2. The "
+           "extension there needs macOS 14 or later, and its first start "
+           "after the update needs the internet. After an update, Exegete "
+           "now gives the assistant a paragraph on what is new. The two "
+           "guides to coding with the assistant are now one.")

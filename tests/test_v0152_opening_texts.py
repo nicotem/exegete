@@ -284,7 +284,7 @@ def test_readme_comparison_rows_hold_against_the_code():
     assert "the REFI-QDA fix" not in plan["PLANNED"]
     readme = _flat(_read("README.md"))
     assert "REFI-QDA export fixed" not in readme
-    assert "as checked on 10 October 2026, beside Exegete 0.15.2." in readme
+    assert "as checked on 10 October 2026, beside Exegete 0.15.3." in readme
     assert "REFI-QDA fix." not in readme
     # names replaced as a file comes in, and in text already coded
     assert "apply_project_pseudonyms" in inspect.signature(

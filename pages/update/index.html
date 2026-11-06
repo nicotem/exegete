@@ -40,18 +40,25 @@ footer { margin-top: 3rem; color: var(--muted); font-size: 0.9rem; }
 
 <h1>Install or update Exegete</h1>
 
-<p>The newest version is <strong>0.15.2-alpha</strong>, from 30 October 2026.</p>
+<p>The newest version is <strong>0.15.3-alpha</strong>, from 9 November 2026.</p>
 
-<p><strong>What's new:</strong> Exegete can now undo most changes it makes to a
-project, whole or not at all, for a day after each one, showing first what it
-would take back. Its main documents are rewritten in plainer words, and
-installing from a Terminal has a guide of its own.
-<a href="https://github.com/nicotem/exegete/releases/tag/v0.15.2-alpha">The full
-notes for 0.15.2-alpha</a> say what changes for you, in their "Upgrading"
+<p><strong>What's new:</strong> When Exegete replaces names, you can now choose
+which occurrences of a name to leave as they are, such as where it names
+another person. The preview opens a page in your browser that marks each
+occurrence with a short id. A new code, category or case name may no longer
+hold a character that usually shows nothing on screen. The REFI-QDA export now
+carries the whole project but its media: each coder's codings, the codebook,
+texts, cases, attributes, journal entries and annotations. On a Mac with Apple
+silicon, PDFs are read with a newer library, PyMuPDF 2. The extension there
+needs macOS 14 or later, and its first start after the update needs the
+internet. After an update, Exegete now gives the assistant a paragraph on what
+is new. The two guides to coding with the assistant are now one.
+<a href="https://github.com/nicotem/exegete/releases/tag/v0.15.3-alpha">The full
+notes for 0.15.3-alpha</a> say what changes for you, in their "Upgrading"
 part.</p>
 
-<p><a class="download" href="https://github.com/nicotem/exegete/releases/download/v0.15.2-alpha/exegete-0.15.2-alpha.mcpb">Download Exegete 0.15.2-alpha for Claude Desktop</a></p>
-<p class="note">The file is called exegete-0.15.2-alpha.mcpb. Every version
+<p><a class="download" href="https://github.com/nicotem/exegete/releases/download/v0.15.3-alpha/exegete-0.15.3-alpha.mcpb">Download Exegete 0.15.3-alpha for Claude Desktop</a></p>
+<p class="note">The file is called exegete-0.15.3-alpha.mcpb. Every version
 before 1.0 is marked "alpha", meaning an early version.</p>
 
 <p>To find out which version you have, ask Claude: "Is Exegete up to date?"
@@ -64,10 +71,21 @@ connecting to anything.</p>
 
 <p>Updating leaves your projects and your conversations as they are.</p>
 
+<p><strong>On a Mac with Apple silicon, 0.15.3 needs macOS 14 or later.</strong>
+Its newer library for reading PDFs, PyMuPDF 2, needs it there. On macOS 13 or
+earlier the updated extension does not start, so you could update macOS first,
+or keep the version you have until then. Installing 0.15.2-alpha's file again
+brings Exegete back, as
+<a href="https://github.com/nicotem/exegete/blob/main/INSTALL.md#exegete-is-not-listed-or-does-not-answer">INSTALL.md's
+troubleshooting</a> says. Until Exegete starts again, it removes nothing it
+keeps on the computer, such as the texts an import's preview read. The first
+start after the update needs the internet, and downloads up to about 105 MB of
+libraries for reading PDFs.</p>
+
 <ol>
 <li><strong>Download.</strong> Click the button above. When the download has
 finished, your browser shows the file in its list of downloads. Its name starts
-with exegete-0.15.2-alpha.</li>
+with exegete-0.15.3-alpha.</li>
 <li><strong>Open it.</strong> Click the file there, or double-click it in your
 Downloads folder. Claude Desktop opens and shows Exegete. As at the first
 install, it reminds you to install only extensions you trust. Click
@@ -87,7 +105,7 @@ Wait until the Claude Desktop icon has gone, then open the app again. If you
 are not sure it has quit, restarting the computer always works.</li>
 <li><strong>Check.</strong> In a new conversation, ask Claude: "Is Exegete up
 to date?" If Claude asks whether it may use Exegete, allow it. The answer
-should say that you have 0.15.2-alpha. The assistant may need to open your
+should say that you have 0.15.3-alpha. The assistant may need to open your
 project again.</li>
 </ol>
 
@@ -122,7 +140,7 @@ it.</strong> Open Claude Desktop's Settings, then Extensions, then Advanced
 settings, click <strong>Install Extension...</strong>, and choose the
 file.</li>
 <li><strong>There are several Exegete files in my Downloads folder.</strong>
-Use the one with 0.15.2-alpha in its name.</li>
+Use the one with 0.15.3-alpha in its name.</li>
 <li><strong>Claude Desktop refuses the extension.</strong> The extension is not
 signed by its developer, and a computer or Claude account managed by your
 university or employer may refuse it. The decision is your IT team's: you
@@ -201,15 +219,15 @@ list the new settings, such as <code>EXEGETE_CODER_NAME</code>.</p>
 
 <h3>pip, in a virtual environment</h3>
 <p>Run the environment's own Python, for example:</p>
-<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "exegete==0.15.2a0"</code></pre>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "exegete==0.15.3a0"</code></pre>
 <p>In PowerShell on Windows:</p>
-<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "exegete==0.15.2a0"</code></pre>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "exegete==0.15.3a0"</code></pre>
 
 <h3>pipx</h3>
-<pre><code>pipx install --force "exegete==0.15.2a0"</code></pre>
+<pre><code>pipx install --force "exegete==0.15.3a0"</code></pre>
 
 <h3>uv tool</h3>
-<pre><code>uv tool install --force "exegete==0.15.2a0"</code></pre>
+<pre><code>uv tool install --force "exegete==0.15.3a0"</code></pre>
 
 <h3>uvx</h3>
 <p>uvx keeps running the version it fetched first until the command asks for
@@ -217,7 +235,7 @@ another, so there is nothing to type in Terminal. Instead, find Exegete's
 entry among the app's MCP servers, the one whose command is uvx. In it, change
 <code>exegete</code> (with any version after an @), or
 <code>qualcoder-mcp</code>, Exegete's earlier name, to
-<code>exegete@0.15.2a0</code>. The app fetches the new version the next time it
+<code>exegete@0.15.3a0</code>. The app fetches the new version the next time it
 starts, which needs the internet that once.</p>
 
 <h3>A copy of the source (git)</h3>
@@ -226,21 +244,21 @@ again with the copy's own Python. The merge keeps you on your branch, and
 refuses if the copy has changes of its own.</p>
 <pre><code>cd "$HOME/Documents/exegete"
 git fetch --tags
-git merge --ff-only v0.15.2-alpha
+git merge --ff-only v0.15.3-alpha
 "$HOME/Documents/exegete/venv/bin/python" -m pip install -e .</code></pre>
 <p>In PowerShell on Windows:</p>
 <pre><code>cd "$HOME\Documents\exegete"
 git fetch --tags
-git merge --ff-only v0.15.2-alpha
+git merge --ff-only v0.15.3-alpha
 &amp; "$HOME\Documents\exegete\venv\Scripts\python.exe" -m pip install -e .</code></pre>
 <p>Use your own folder if the copy is elsewhere.</p>
 
 <h3>Under the earlier name, qualcoder-mcp</h3>
 <p>In a virtual environment, update both names together, with the
 environment's own Python:</p>
-<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "qualcoder-mcp==0.15.2a0" "exegete==0.15.2a0"</code></pre>
+<pre><code>"$HOME/exegete-venv/bin/python" -m pip install "qualcoder-mcp==0.15.3a0" "exegete==0.15.3a0"</code></pre>
 <p>In PowerShell on Windows:</p>
-<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "qualcoder-mcp==0.15.2a0" "exegete==0.15.2a0"</code></pre>
+<pre><code>&amp; "$HOME\exegete-venv\Scripts\python.exe" -m pip install "qualcoder-mcp==0.15.3a0" "exegete==0.15.3a0"</code></pre>
 <p>With pipx or uv tool, move to the new name first:
 <a href="https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#coming-from-qualcoder-mcp">the Terminal guide,
 "Coming from qualcoder-mcp"</a>, has the steps. The earlier name's last release

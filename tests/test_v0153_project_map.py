@@ -24,6 +24,14 @@ LEFT_OUT = {
     ".gitignore": "the list of files git leaves untracked, which only git "
                   "reads",
 }
+# The folders the map names in which git may track no file, each with its
+# reason (v0.15.3's release preparation)
+MAY_BE_EMPTY = {
+    "changelog.d": "the folder of the next release's fragments: a release's "
+                   "preparation assembles and deletes every one, and the "
+                   "next change makes the folder again (CONTRIBUTING.md, "
+                   "step 6, \"Make the folder if it is absent\")",
+}
 
 
 def _named(text):
@@ -67,7 +75,10 @@ def test_every_path_the_map_names_is_tracked():
                  "docs/WRITING.md", "legal/GPL-3.0.txt", "tests/fixtures",
                  "uv.lock", "NOTICE"):
         assert path in named, path
-    assert sorted(named - _tree(_tracked_here())) == []
+    assert sorted(named - _tree(_tracked_here()) - set(MAY_BE_EMPTY)) == []
+    # a folder that may be empty is still one the map names
+    assert sorted(set(MAY_BE_EMPTY) - named) == []
+    assert all(reason.strip() for reason in MAY_BE_EMPTY.values())
 
 
 def test_every_entry_at_the_top_is_in_the_map_or_left_out():

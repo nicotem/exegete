@@ -155,16 +155,9 @@ class TestTheRemovalsInV0151:
         # released; what it brought is in the CHANGELOG's entry. So does
         # v0.15.2's, whose preparation moved the occurrences choice, the
         # REFI-QDA fix and Apple silicon to v0.15.3, the week having no
-        # room for them
-        assert list(items)[:5] == ["v0.15.3", "v0.15.4", "v0.15.5", "v0.16",
-                                   "v0.17"]
-        # v0.15.3's release preparation: its item says what shipped, in
-        # the owner's word "occurrences" (ruling 116), and the REFI-QDA
-        # fix leaves it, having shipped but for media (the fix's design)
-        assert "choosing which occurrences to leave as they are" \
-            in items["v0.15.3"]
-        assert "REFI-QDA" not in items["v0.15.3"]
-        assert "on Apple silicon Macs" in items["v0.15.3"]
+        # room for them; and v0.15.3's, which brought those three with the
+        # stricter checks on names
+        assert list(items)[:4] == ["v0.15.4", "v0.15.5", "v0.16", "v0.17"]
         assert "coding sessions kept with their project" in items["v0.15.4"]
         assert "method" in items["v0.15.5"]
         assert "the earlier names of the two renamed tools" \

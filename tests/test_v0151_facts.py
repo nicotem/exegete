@@ -3681,15 +3681,8 @@ def test_future_releases_in_a_sentence(name, text, verdict):
 
 # For each row of the plan, a sentence for each of its words, in order
 ROW_SENTENCES = {
-    "the occurrences choice": (
-        "when replacing names, choose which mentions to keep",
-        "the occurrences choice"),
-    "PyMuPDF 2.0 on Apple silicon": ("PyMuPDF 2.0 on Apple silicon Macs",),
     "coding sessions kept with their project": (
         "coding sessions kept with their project",),
-    "the housekeeping that touches data": (
-        "the housekeeping that touches data",
-        "stricter checks on the names of codes, categories and cases"),
     "the review of method": (
         "how the assistant supports a study's method, reviewed",
         "the review of method"),

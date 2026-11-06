@@ -456,7 +456,7 @@ so that its results match QualCoder's exactly.
 Exegete's commitment is that whatever analytic work QualCoder offers
 should also be possible from the conversation. Today the two programs
 differ in both directions. The table sets QualCoder 3.8.2 and 4.0, as
-checked on 10 October 2026, beside Exegete 0.15.2.
+checked on 10 October 2026, beside Exegete 0.15.3.
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
@@ -612,11 +612,6 @@ under "Project structure", lists every module and script.
 Plans, not promises: the order may change with what testers report.
 [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md) says what each release changed.
 
-- v0.15.3: stricter checks on the names of codes, categories and
-  cases; when replacing names, choosing which occurrences to leave as
-  they are; PyMuPDF 2.0, the newer library that reads PDFs, on Apple
-  silicon Macs; a note after an update on what is new; other small
-  corrections
 - v0.15.4: coding sessions kept with their project
 - v0.15.5, method: a review of how the assistant supports a study's
   method; shorter tool descriptions; and retiring the earlier names of

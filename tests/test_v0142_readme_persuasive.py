@@ -1298,17 +1298,14 @@ def test_what_comes_next_is_plans():
     # 105: coding sessions kept with their project in v0.15.3, method in
     # v0.15.4; the plan of 3 November, ruling 115: coding sessions in
     # v0.15.4, method in v0.15.5)
-    # (v0.15.2's release preparation takes its own item out too)
+    # (v0.15.2's release preparation takes its own item out too, and so
+    # does v0.15.3's)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15.3", "v0.15.4", "v0.15.5", "v0.16", "v0.17", "Later"]
+        "v0.15.4", "v0.15.5", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
-    # (v0.15.3's release preparation: its item says what shipped, in the
-    # owner's word "occurrences", ruling 116)
-    for words in ("when replacing names, choosing which occurrences to "
-                  "leave as they are",
-                  "more of the analysis shown in the conversation, as tables",
+    for words in ("more of the analysis shown in the conversation, as tables",
                   # v0.14.2, the README's second round of checks: the rest
                   # in the reader's terms too (the roadmap's "What it is
                   # for": graphs the assistant can show, PDFs labelled

@@ -238,10 +238,11 @@ def test_the_three_commitments():
     # checked, beside the Exegete the column describes, which the owner's
     # word of 29 October 2026 makes 0.15.2 (v0.15.2's release
     # preparation: the clause on the REFI-QDA fix went with the fix's move
-    # to v0.15.3; "What comes next" names its release)
+    # to v0.15.3; "What comes next" names its release), and v0.15.3's
+    # release preparation 0.15.3, whose REFI-QDA row the table gives
     dated = section.index("The table sets QualCoder 3.8.2 and 4.0, as "
                           "checked on 10 October 2026, beside Exegete "
-                          "0.15.2.")
+                          "0.15.3.")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table

@@ -17,15 +17,16 @@ name as they are, such as those of a second person with the same name.
 You choose them on a page in your browser, which marks each occurrence
 with a short id. The words around each occurrence stay on that page,
 and the conversation carries the ids and counts. A new code, category
-or case name may no longer hold a character that usually shows nothing
-on screen. The REFI-QDA export now carries the whole project except its
-media, and a failed export no longer leaves a half-written file. On a
-Mac with Apple silicon, PDFs are now read with PyMuPDF 2, as on Windows
-x64 and Linux, so the desktop extension there needs macOS 14 or later.
-After an update, the first answer now carries a paragraph on what is
-new and a link to the release's notes. The two guides to coding with
-the assistant are now one, and every text Exegete gives the assistant
-was read in full.
+or case name may no longer hold most characters that usually show
+nothing on screen. The REFI-QDA export now carries the whole project
+except its media, and a failed export no longer leaves a half-written
+file. On a Mac with Apple silicon, PDFs are now read with PyMuPDF 2, as
+on Windows x64 and Linux, so the desktop extension there needs macOS 14
+or later. After an update, the first answer from a tool other than the
+check for new versions now carries a paragraph on what is new and a
+link to the release's notes. The two guides to coding with the
+assistant are now one. The texts Exegete gives the assistant were read
+in full, apart from those of the REFI-QDA export.
 
 Coding sessions kept with their project move to v0.15.4, and the
 release on method to v0.15.5 (README.md, "What comes next").
@@ -57,10 +58,12 @@ again, so that it loads the new tool list.
   releases by the macOS release and the Python ("Changed", below).
 - **New names are checked more strictly.** A new code, category or case
   name that holds a character that usually shows nothing on screen,
-  such as a zero-width space, is refused, and so is one that matches
-  another of its kind once such characters are left out ("Changed",
-  below). Names already in a project stay as they are until you rename
-  them.
+  such as a zero-width space, is refused. Joiners and variation
+  selectors are kept where they shape the characters beside them, as in
+  Persian and Indic spelling, emoji and CJK characters. A new name that
+  matches another of its kind once such characters are left out is
+  refused too ("Changed", below). Names already in a project stay as
+  they are until you rename them.
 - **Replacing names can leave chosen occurrences as they are.**
   `pseudonymise_source` has two new arguments, `choose_occurrences` and
   `leave_occurrences` ("Added", below). With `use_project_pseudonyms`,
@@ -72,7 +75,8 @@ again, so that it loads the new tool list.
   attributes, the file attributes, the journal entries in full, their
   private part included, and the annotations. Anyone you send it to can
   read all of this. A coding session's file names the project's coder
-  name as its first user, and marks each suggestion's status. The
+  name, when one is set, as its first user, and marks each suggestion's
+  status. The
   answers no longer carry `known_faults`. `files_exported` and
   `codes_exported` count every text source and every code written, and
   new counts say what was written and what was left out:
@@ -267,8 +271,8 @@ again, so that it loads the new tool list.
 
 ### Changed
 
-- **A new code, category or case name may not hold a character that
-  usually shows nothing on screen.** A control character, an invisible
+- **A new code, category or case name may not hold most characters that
+  usually show nothing on screen.** A control character, an invisible
   formatting character such as a zero-width space, a soft hyphen or a
   byte order mark, or another character Unicode marks as ignorable, such
   as a Hangul filler, is refused in a name that `create_code`,
@@ -383,13 +387,14 @@ again, so that it loads the new tool list.
   format facts taken from QualCoder's REFI-QDA export and importer, and
   entry 30 no longer names the export's menu.
 - **The note after an update gives a paragraph on what is new, and a
-  link.** After an update, the first answer carries a note for the
-  assistant to pass on: a paragraph, written with the release, on what
-  is new and what changes for you (what to do, and what behaves
-  differently), and a link to that release's notes on GitHub. It was a
-  sentence or two before. The paragraph is built into Exegete, so
-  nothing about it is fetched, and the update page's "What's new" shows
-  the same words.
+  link.** After an update, the first successful answer of 20,000
+  characters or fewer from a tool other than `check_for_updates`
+  carries a note for the assistant to pass on: a paragraph, written with
+  the release, on what is new and what changes for you (what to do, and
+  what behaves differently), and a link to that release's notes on
+  GitHub. It was a sentence or two before. The paragraph is built into
+  Exegete, so nothing about it is fetched, and the update page's "What's
+  new" shows the same words.
 - **In Claude Code, the parts of a long file that
   `read_file_with_codings` gives now reach the conversation as text.**
   The tool declares a result limit of 200,000 characters. Before, Claude
@@ -412,7 +417,11 @@ again, so that it loads the new tool list.
   in the project's folder: a file of your own with exactly such a name,
   an hour old, would go too. Until it goes, the copy is in every backup
   made, as `pseudonyms.json` is, and a restore of one of those backups
-  brings it back. If a pseudonymisation run was cut short, you could
+  brings it back. It also goes into every copy of the project that
+  `copy_project_to_workspace` makes meanwhile, whatever its age, since a
+  copy removes nothing. There it stays until a backup of that copy
+  removes it, once it is an hour old. If a pseudonymisation run was cut
+  short, you could
   check that the names list holds its mapping, and save the mapping
   again if it does not. PRIVACY.md says what the copy holds, how it
   travels into backups and when Exegete removes it.
@@ -574,16 +583,22 @@ again, so that it loads the new tool list.
 
 #### The texts Exegete gives the assistant
 
-- **Every text Exegete gives the assistant was read in full**, as the
-  documents were in 0.15.2, in two batches. The first read the
-  descriptions of the tools this release does not otherwise change, the
-  brief, the prompts, the resources, and the notes and refusals in the
-  answers. The second, once this release's changes to its tools were in,
-  read the texts of those tools and those of `apply_codings`,
-  `import_documents`, the code proposals and the renames, with the notes
-  and refusals they share. The tools this release changes are those for
-  replacing names and the names list, the checks on new names, the
-  removal of old backups and the note after an update.
+- **The texts Exegete gives the assistant were read in full, apart from
+  those of the REFI-QDA export**, as the documents were in 0.15.2, in
+  two batches. The first read the descriptions of the tools this release
+  does not otherwise change, the brief, the prompts, the resources, and
+  the notes and refusals in the answers. The second, once this release's
+  changes to its tools were in, read the texts of those tools and those
+  of `apply_codings`, `import_documents`, the code proposals and the
+  renames, with the notes and refusals they share. Those tools are the
+  ones for replacing names and the names list, the checks on new names,
+  the removal of old backups and the note after an update. The REFI-QDA
+  export changed after the second batch had begun, so neither batch read
+  its texts: `export_refi_qda`'s description, the notes and refusals of
+  its answers, and the paragraph on full memos that it shares with
+  `export_codebook` and `export_coded_segments_report`. Those texts still
+  hold some capitals for emphasis, and the paragraph on full memos still
+  calls the researcher "the user".
 - **They no longer take every document for an interview.** The rules on
   evidence speak of the same person or document; the rules for
   interviews apply to interviews. A coded passage can be "a whole
@@ -621,12 +636,13 @@ again, so that it loads the new tool list.
   it says that every copy of the file's text from before the run leads
   back to the names, as the mapping does: among them the backup taken
   first, every older backup and an imported document's stored copy.
-- **They call the person whose study it is "the researcher".** Capitals
-  for emphasis are gone, and so are phrases such as "Perfect for" and
-  the emoji, those in `apply_codings`' answer among them, which now
-  begins "Codings applied to the database". The tools that write say
-  "It writes to the database". A coder hidden by the project's setting
-  is "a coder the project hides" in every refusal and note.
+- **The texts read call the person whose study it is "the
+  researcher".** In them, capitals for emphasis are gone, and so are
+  phrases such as "Perfect for" and the emoji, those in `apply_codings`'
+  answer among them, which now begins "Codings applied to the
+  database". The tools that write say "It writes to the database". A
+  coder hidden by the project's setting is "a coder the project hides"
+  in every refusal and note.
 - **They use plain words.** Words from Exegete's own code gave way to
   plain ones, among them "base tables", "echo", "reparent", "the reverse
   key", "snapshot", "rotated", "idempotent" and "this tool". Sentences

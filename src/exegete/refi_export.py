@@ -385,8 +385,8 @@ def write_beside_and_replace(destination: Path,
         if not isinstance(e, Exception):
             raise
         kept = (f" Exegete could not remove the unfinished file it was "
-                f"writing beside it, '{left}': it holds the export's texts "
-                f"and memos, and can be deleted." if left else "")
+                f"writing beside it, '{left}': it holds the export as far "
+                f"as it was written, and can be deleted." if left else "")
         if isinstance(e, _FileAppeared):
             raise ValueError(
                 f"'{destination.name}' already exists. Pass overwrite=true "

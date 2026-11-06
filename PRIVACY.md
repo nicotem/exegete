@@ -370,7 +370,9 @@ What stays local, always, unless a sync service copies the folder it is in
 - exported files (CSV/txt/md reports, REFI-QDA `.qdpx`). A REFI-QDA
   export is written first beside its destination, as a part file named
   `.<name>.<digits>-<digits>.part`, and moved into place when complete.
-  The part file holds the export's texts and memos. Its name starts with
+  The part file holds what the export holds, as far as it was written:
+  for a whole project, every coder's name, the memos, the attribute
+  values and the journal entries in full among them. Its name starts with
   a dot, so Finder does not show one that an export stopped midway
   leaves behind; the next export to that name that completes removes it
 - new projects made by create_project and project copies made by
@@ -938,7 +940,14 @@ the list in the project's folder, with the real names in it: its name
 is `pseudonyms.json.`, eight letters, digits or underscores, then
 `.tmp`. The next backup of the project removes it once it is an hour
 old. Until then it goes into every backup made, as `pseudonyms.json`
-does, and a restore of one of those backups brings it back. A copy
+does, and a restore of one of those backups brings it back. It also
+goes into every copy of the project made with
+`copy_project_to_workspace` meanwhile, whatever its age, since a copy
+removes nothing. In such a copy it stays until a backup of that copy
+removes it, once it is an hour old. If you take `pseudonyms.json` and
+the names file out of a project before copying it to share, you could
+also look in the project's folder for a file whose name starts with
+`pseudonyms.json.` and ends with `.tmp`. A copy
 made with `copy_project_to_workspace` that fails part-way is removed
 too, unless that removal fails. A copy cut short, or one whose removal
 failed, stays in the folder for projects under its own name, with

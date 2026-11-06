@@ -29,12 +29,12 @@ RELEASED = "2026-11-09"
 # preparation from the CHANGELOG entry's opening and its "Upgrading from"
 # part. The note after an update gives it as written, and the update
 # page's "What's new" shows the same words (scripts/check_pages_site.py).
-# 0.15.3's paragraph, 796 characters.
+# 0.15.3's paragraph, 799 characters.
 SUMMARY = ("When Exegete replaces names, you can now choose which occurrences "
            "of a name to leave as they are, such as where it names another "
            "person. The preview opens a page in your browser that marks each "
            "occurrence with a short id. A new code, category or case name "
-           "may no longer hold a character that usually shows nothing on "
+           "may no longer hold most characters that usually show nothing on "
            "screen. The REFI-QDA export now carries the whole project but "
            "its media: each coder's codings, the codebook, texts, cases, "
            "attributes, journal entries and annotations. On a Mac with Apple "

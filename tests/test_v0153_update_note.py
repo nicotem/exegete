@@ -283,8 +283,11 @@ def test_a_call_the_app_cancels_leaves_its_note_due(
     major). The tool is plain and runs on the event loop, so the library
     reads the cancel only once the call has finished, and the answer,
     note included, can still go out; by MCP's rule the app does not show
-    it. Exegete reads the cancel as it arrives, so the note is not
-    recorded as given, and the next start's first answer carries it."""
+    it. The cancel comes straight after the call, so standard input's
+    thread reads it while the call still runs, the note is not recorded
+    as given, and the next start's first answer carries it. A cancel
+    behind several other lines can be read too late (CONTRIBUTING.md,
+    "The check for new versions")."""
     home = tmp_path / "home"
     _seed(home, highest_version_run=OLD)
     stalled = tmp_path / "attaching"

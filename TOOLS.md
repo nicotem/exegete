@@ -168,12 +168,12 @@ supported. Exegete can create them, move a code with its sub-codes, and
 merge codes (the source's sub-codes move under the target). Deleting a
 code deletes its sub-codes with it, and listings, reports, the codebook
 and REFI-QDA exports show the nesting.
-Exegete does not nest an existing code under another code. QualCoder,
-if you use it, can. The README's
+Exegete does not nest an existing code under another code, and the
+README's
 ["What comes next"](https://github.com/nicotem/exegete#what-comes-next)
-gives the plans. Moving a sub-code into a category, or out of every
-category, detaches it from its parent code, as in QualCoder, and the
-result says which parent it left.
+does not list it. QualCoder, if you use it, can. Moving a sub-code into
+a category, or out of every category, detaches it from its parent code,
+as in QualCoder, and the result says which parent it left.
 Exegete refuses to write to a project newer than schema v17 until it
 has been verified against that schema. Setting `EXEGETE_ALLOW_UNKNOWN_SCHEMA=1` in
 Exegete's environment lets writes go ahead at your own risk, and every

@@ -464,7 +464,7 @@ checked on 10 October 2026, beside Exegete 0.15.3.
 | Bring in files | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part, which the extension has), and text the assistant hands over |
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF that is only pictures of pages) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
-| Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting. Exegete does not nest an existing code under another ("What comes next", below, gives the plans) |
+| Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting. Exegete does not nest an existing code under another |
 | Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, setting an attribute on a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
 | Reports | Many, in its Reports menu | Some: the codebook, a coding report, coding counts, the case-by-code matrix and codes that occur together |
 | REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only: each coder's codings, the codebook, texts, cases, attributes, journal and annotations; no media |

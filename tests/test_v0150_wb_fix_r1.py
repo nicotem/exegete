@@ -499,15 +499,19 @@ class TestTheDocumentsOtherPoints:
                 ("Nesting an existing code under another code is done in "
                  "QualCoder", tools),
                 ("which is done in QualCoder", tools),
-                ("If you want a file under your own name in QualCoder", tools)):
+                ("If you want a file under your own name in QualCoder", tools),
+                # (v0.15.3's release preparation: "What comes next" gives
+                # no plan for nesting a code)
+                ("gives the plans", tools), ("gives the plans", readme)):
             assert gone not in text, gone
         # (v0.15.3: said as what Exegete does not do, with the plans'
         # place, and no promise, as docs/WRITING.md asks)
-        # (its readability reading: the pointer a sentence of its own)
-        assert ("Exegete does not nest an existing code under another code. "
-                "QualCoder, if you use it, can. The README's [\"What comes "
-                "next\"](https://github.com/nicotem/exegete#what-comes-next) "
-                "gives the plans.") in tools
+        # (its release preparation: "What comes next" gives no plan for
+        # it, so the pointer says that it is not listed there)
+        assert ("Exegete does not nest an existing code under another code, "
+                "and the README's [\"What comes next\"]"
+                "(https://github.com/nicotem/exegete#what-comes-next) does "
+                "not list it. QualCoder, if you use it, can.") in tools
         assert ("Exegete does not yet change an existing entry: QualCoder, "
                 "if you use it, can") in tools
 

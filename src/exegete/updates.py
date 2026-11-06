@@ -115,8 +115,11 @@ CHECK_EVERY = 7 * DAY          # the check on its own
 ASKED_REUSE = DAY              # the check when asked
 FIRST_CHECK_WAIT = 7 * DAY     # after the disclosure note
 ANNOUNCED_KEEP = 20
-# The app's cancels kept until an answer to each has been written out
-# (`cancelled`)
+# The most of the app's cancels kept (`cancelled`). One goes when the
+# answer to its request is read as written out, which happens only
+# while a note is held (standard_output.py); any other stays until
+# newer ones push it out, harmlessly, since MCP forbids reusing a
+# request id
 CANCELS_KEPT = 64
 # The longest answer a note rides on, in characters (about 5,000 tokens).
 # A note counts as given once the answer carrying it has gone out, so it
@@ -865,7 +868,9 @@ class _Run:
         self.held: Dict[Any, List[Tuple["Note", float]]] = {}
         self.after_writing = False
         # and the requests the app has cancelled, by id, in the order the
-        # cancels came, until an answer to each has been written out
+        # cancels were read, each until its answer is read as written out
+        # (only while a note is held) or CANCELS_KEPT newer ones push it
+        # out
         self.cancelled: Dict[Any, None] = {}
         self.thread: Optional[threading.Thread] = None
         self.windows = os.name == "nt"
@@ -1200,16 +1205,22 @@ def written(request_id: Any, delivered: bool) -> None:
 
 
 def cancelled(request_id: Any) -> None:
-    """The app has cancelled request `request_id`, read as the cancel
-    arrives (standard_output.read_cancel, in standard input's own
-    thread). By MCP's rule an app does not show the answer to a request
-    it has cancelled, so the notes that answer carries are due again
-    once it has been written out (`written`). Read there because every
-    tool but check_for_updates runs on the event loop: the library reads
-    the cancel only once such a tool has answered, and sends that answer
-    alone. Only while this run writes its answers through
-    standard_output.py; the oldest cancels are let go past CANCELS_KEPT,
-    since one that came after its answer had gone out is never settled.
+    """The app has cancelled request `request_id`, read as standard
+    input's own thread reads the line (standard_output.read_cancel). By
+    MCP's rule an app does not show the answer to a request it has
+    cancelled, so the notes that answer carries are due again once it
+    has been written out (`written`). Read there because every tool but
+    check_for_updates runs on the event loop: the library reads the
+    cancel only once such a tool has answered, and sends that answer
+    alone. While such a tool runs, that thread reads only the line after
+    the call, so a cancel sent behind several other lines is read once
+    the tool has answered, and can come too late. Only while this run
+    writes its answers through standard_output.py. A cancel is settled
+    when the answer to its request is read as written out, which happens
+    only while a note is held, so one for a request answered while
+    nothing was held, or one that came after its answer had gone out, is
+    never settled: the oldest are let go past CANCELS_KEPT, harmlessly,
+    since MCP forbids reusing a request id.
     """
     with _LOCK:
         if not _run.after_writing:

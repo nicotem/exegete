@@ -921,8 +921,10 @@ class TestTheRelease:
             r"(?i)https?:|://|\bwww\.|@|"
             r"\b[a-z0-9-]+\.(com|org|net|io|dev|ai|uk|eu)\b|"
             r"\b[\w-]+\.[\w.-]+/", summary)
-        # No Markdown or HTML: the marks of a link, of emphasis or of
-        # code, a heading, a tag
+        # No Markdown or HTML: the marks of a link, of bold or of code, a
+        # heading, a tag. A single * or _ passes, which a name such as
+        # update_check.json needs, so emphasis is left to release
+        # preparation's reading (CONTRIBUTING.md)
         assert not re.search(r"\]\(|\*\*|__|`|^#|<[a-z/!]", summary,
                              re.I)
 

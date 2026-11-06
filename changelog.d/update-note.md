@@ -27,9 +27,11 @@
   of Exegete on one computer, a file Exegete could not write, a stop in
   the instant after the answer has gone out, or another answer going out
   while Exegete checks for a new version at your request. One can still
-  be missed if the app's cancel reaches Exegete only after the answer
-  has gone out, as when the app cancels at the moment the answer is
-  sent.
+  be missed if Exegete reads the app's cancel only after the answer has
+  gone out. That happens when the app cancels at the moment the answer
+  is sent. It can also happen when, while a call runs, the app sends
+  several other messages and then its cancel, since Exegete may then
+  read the cancel only once the call has answered.
 
 ### For contributors
 
@@ -39,11 +41,16 @@
   (`updates.give`, `updates.written`). It relies on the library
   flushing standard output once each message has been written, and
   `tests/test_v0153_update_note.py` holds the bytes on the three
-  systems. The app's cancel is read as it arrives, in standard input's
-  own thread (`standard_output.read_cancel`, `updates.cancelled`):
-  every tool but `check_for_updates` runs on the event loop, so the
-  library reads a cancel only once such a tool has answered, and sends
-  that answer. `release.SUMMARY` is now one plain paragraph of at most
-  800 characters, with no link, no Markdown and no line break, which
-  `tests/test_updates.py` holds; CONTRIBUTING's "The check for new
-  versions" gives the release step.
+  systems. Every tool but `check_for_updates` runs on the event loop,
+  so the library reads a cancel only once such a tool has answered, and
+  sends that answer. Standard input's own thread reads the line after
+  the call while such a tool runs, and gives it to
+  `standard_output.read_cancel` (`updates.cancelled`), so a cancel sent
+  next is known before the answer goes out. A cancel sent behind
+  several other lines is read only once the tool has answered, and can
+  come too late. `release.SUMMARY` is now one plain paragraph of at
+  most 800 characters, with no link, no Markdown and no line break.
+  `tests/test_updates.py` holds its length and the line break, and
+  refuses a link, Markdown's marks for a link, bold, code and a heading,
+  and an HTML tag; CONTRIBUTING's "The check for new versions" gives the
+  release step.

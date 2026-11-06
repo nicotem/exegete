@@ -1361,8 +1361,10 @@ class _ExegeteMCP(FastMCP):
         (standard_input.py), so that a stop waits for no line, and
         standard output written through standard_output.py, so that what
         Exegete tells once counts as told once its answer has gone out.
-        That thread also reads the app's cancel as it arrives
-        (standard_output.read_cancel), since a tool holds the loop."""
+        That thread also gives each line it reads to
+        standard_output.read_cancel, since a tool holds the loop: the
+        line after the call is read while the tool runs, so a cancel sent
+        next is known before the answer goes out."""
         async with stdio_server(stdin=StandardInputLines(watch=read_cancel),
                                 stdout=StandardOutputLines()) as (
                 read_stream, write_stream):

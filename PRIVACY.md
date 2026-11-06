@@ -2194,9 +2194,12 @@ program reading the file at that moment), when Exegete stops in the
 instant after the answer has gone out, or when another answer goes out
 while Exegete checks for a new version at your request. Whether a note
 reaches you depends on the assistant passing it on, and on the app
-showing the answer: if the app's cancel reaches Exegete only after the
-answer has gone out, as when the app cancels at the moment the answer
-is sent, the note counts as given and the app does not show it.
+showing the answer. If Exegete reads the app's cancel only after the
+answer has gone out, the note counts as given and the app does not show
+it. That happens when the app cancels at the moment the answer is sent.
+It can also happen when, while a call runs, the app sends several other
+messages and then its cancel, since Exegete may then read the cancel
+only once the call has answered.
 When you ask, the answer gives the installed and newest versions, how Exegete was
 installed, and the steps, with any folder in your home folder written
 from it (`$HOME`); a folder outside your home folder is written in

@@ -694,8 +694,12 @@ preparation, from the CHANGELOG entry's opening and its "Upgrading
 from" part. It says what is new for a researcher and what changes for
 them, such as what to do and what behaves differently. It is one plain
 paragraph of at most 800 characters, with no link, no Markdown and no
-line break, which a test holds; the note adds the link to the release's
-notes on GitHub. No test can tell whether the paragraph describes this
+line break; the note adds the link to the release's notes on GitHub.
+A test holds the length and the line break, and refuses a link,
+Markdown's marks for a link, bold, code and a heading, and an HTML tag.
+It lets a single `*` or `_` through, since a name such as
+`update_check.json` holds one, so reading the paragraph is what keeps
+out Markdown's emphasis. No test can tell whether the paragraph describes this
 release or the last one, so this step is the only guard. Read the note
 whole before the release, as the assistant will receive it: its frame
 is `_after_update_text` in `src/exegete/updates.py`.
@@ -715,8 +719,12 @@ carrying it has been written to standard output and flushed
 (`src/exegete/standard_output.py`), and not when the app has cancelled
 the request. Every tool but `check_for_updates` runs on the event loop,
 so the library reads a cancel only once such a tool has answered, and
-that answer still goes out; standard input's own thread reads the
-app's cancel as it arrives instead (`src/exegete/standard_input.py`).
+that answer still goes out. Standard input's own thread
+(`src/exegete/standard_input.py`) reads the line after the call while
+such a tool runs, and gives it to `standard_output.read_cancel`, so a
+cancel sent next is known before the answer goes out. A cancel sent
+behind several other lines is read only once the tool has answered,
+and can come too late: the note then counts as given.
 This relies on the MCP library flushing standard output once each
 message has been written: a message written in two parts, or two
 messages to one flush, are read alike. A release of the library that

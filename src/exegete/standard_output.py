@@ -40,12 +40,14 @@ gives to standard input's reader, standard_input.py). Every tool but
 check_for_updates is plain and runs on the event loop, so the library
 reads a cancel only once such a tool has answered, and sends that
 answer alone, note included, which by MCP's rule the app does not show.
-Standard input's own thread reads the line the app sends while a tool
-runs, so the cancel is known before that answer goes out
+Standard input's own thread reads the line after the call while a tool
+runs, so a cancel sent next is known before that answer goes out
 (updates.cancelled), and its notes are due again. A cancel read only
-once the answer has gone out, as when the app cancels at that moment,
-or when the app sent other lines first while the tool ran, comes too
-late, and the note counts as given.
+once the answer has gone out comes too late, and the note counts as
+given: as when the app cancels at that moment. One the app sent behind
+several other lines while the tool ran is read only once the tool has
+answered, and can come too late too (measured: behind five, 3 of 3
+lost; behind one to three, 12 of 12 kept).
 
 A fault in the reading or the record is logged by its kind alone, as
 every log line is (database.error_label), since the line read may hold

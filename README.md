@@ -223,7 +223,8 @@ Before you use participants' data with Claude Desktop's chat, also
 where chat and Cowork are one conversation, go through five checks:
 
 1. **Computer use** lets Claude see your screen and use other apps. You
-   can keep computer use off, in Settings, General.
+   can keep computer use off, in Settings, Capabilities (or Settings,
+   System, if it is not there).
 2. **Connected folders and extensions.** Claude reads a connected folder
    by itself, and another extension that reads files can reach your
    project too. You could leave unconnected any folder that holds your
@@ -232,15 +233,19 @@ where chat and Cowork are one conversation, go through five checks:
    You could also add no other extension that reads files.
 3. **Training.** While training is on, Anthropic may use your
    conversations, with the participants' data in them, to train its
-   models. On a personal plan (Free, Pro or Max), the Model Improvement
-   setting at https://claude.ai/settings/data-privacy-controls switches
-   training off. Rating a reply, with a thumbs up or down, can still let
+   models. On a personal plan (Free, Pro or Max), the setting "Help
+   improve our AI models" at
+   https://claude.ai/settings/data-privacy-controls switches training
+   off. Rating a reply, with a thumbs up or down, can still let
    Anthropic train on that conversation (PRIVACY.md quotes the terms).
-4. **Your account, not Exegete, sets the terms.** An institution's
-   agreement with the AI provider sets the terms for its data, and a
-   personal account comes under the consumer terms. So institutions
-   should prefer organisational accounts. Whoever manages an account
-   your university or employer provides can tell you which terms apply.
+4. **Your account, not Exegete, sets the terms.** A personal account
+   comes under the AI provider's consumer terms. An account your
+   university or employer manages comes under the agreement it made
+   with the provider. Such agreements differ in what they let the
+   provider do with your data. Even so, an institution's account is
+   likely to give participants' data more protection than a personal
+   one, since the institution agreed its terms with its own interests in
+   mind. Whoever manages that account can tell you which terms apply.
 5. **Your ethics committee or data protection officer** may want to see
    [PRIVACY.md's checklist](https://github.com/nicotem/exegete/blob/main/PRIVACY.md#before-you-use-real-participant-data-check-these).
 
@@ -279,22 +284,24 @@ copies its folder (PRIVACY.md says where):
   (`Names to replace.txt`, in the project's `Exegete` folder), which
   Exegete never shows to the assistant
 - Claude Desktop's log of the extension, with every request and answer
-- Codex's session files, with what Codex read by itself
+- Codex's session files and databases, with what Codex read by itself
 
 ## Start here
 
 Claude Desktop with Exegete's extension needs no typed commands. It is
 the route this project suggests for participants' data.
 
-**What it costs.** Exegete costs nothing, but your assistant may. On 28
-October 2026, [Claude's pricing page](https://claude.com/pricing) listed
-desktop extensions in its Free plan, so the extension works on Free,
-which allows the least use. Pro, at $20 a month ($17 billed yearly),
-gives at least five times as much. Max is from $100, and Team and
-Enterprise go by the seat. Usage limits reset every five hours, and paid
-plans add weekly limits. At a limit you wait, move up a plan or, on a
-paid plan, pay for extra use. Longer conversations and more tool use
-count for more, so coding many transcripts uses far more than practice.
+**What it costs.** Exegete costs nothing, but your assistant may.
+[Claude's pricing page](https://claude.com/pricing), read on 4 November
+2026, lists desktop extensions in its Free plan, so the extension works
+on Free, which allows the least use. Pro, at $20 a month ($17 billed
+yearly), gives at least five times as much. Max is $100 a month, Ultra
+$200, and Team and Enterprise go by the seat. On most accounts, usage
+limits reset every five hours, and paid plans add weekly limits. Ultra
+has no five-hour limit for verified accounts. At a limit you wait, move
+up a plan or, on a paid plan, pay for extra use. Longer conversations
+and more tool use count for more, so coding many transcripts uses far
+more than practice.
 Other routes, such as OpenAI's apps and LM Studio, are compared in
 [Installing Exegete from the Terminal, "Choosing your AI host"](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#choosing-your-ai-host-data-governance-options-experimental).
 Their recipes there give OpenAI's plans and what LM Studio needs.
@@ -302,7 +309,8 @@ Their recipes there give OpenAI's plans and what LM Studio needs.
 ### One click in Claude Desktop
 
 1. **Get Claude Desktop** for macOS or Windows (not Claude in a
-   browser): https://claude.ai/download. Sign in.
+   browser): https://claude.ai/download. Sign in. On a Mac with Apple
+   silicon, the extension needs macOS 14 or later.
 2. **Download the extension**: on the
    [Releases page](https://github.com/nicotem/exegete/releases), take
    the file whose name starts with `exegete-` and ends in `.mcpb` from
@@ -315,11 +323,15 @@ Their recipes there give OpenAI's plans and what LM Studio needs.
 
 To check, click "+" in a new conversation, then Connectors: Exegete is
 listed. When Claude asks to use a tool, "Allow once" keeps it asking. If
-your message box offers no choice between "Chat" and "Cowork", the two
-are one conversation, on Pro and Max plans. Anthropic's page, read on 1
-October 2026, says this is reaching accounts gradually. That
-conversation's permission setting comes as Manual. On Auto, Claude does
-not ask. Before you use participants' data, go through
+your message box offers no choice between "Chat" and "Cowork", you have
+the version of Claude in which the two are one conversation. Anthropic's
+page, read on 4 November 2026, says that this version is reaching Pro,
+Max and Ultra plans gradually, and Team and Enterprise plans where it is
+turned on. Its permission setting, in the message box, starts on Auto,
+except on Enterprise plans, where it starts on Manual. On Auto, Claude
+does not stop to ask you before it uses a tool: automated safety checks
+run instead. For participants' data, you could set it to Manual. Before
+you use participants' data, go through
 [the five checks](https://github.com/nicotem/exegete#where-your-data-goes),
 which help keep your files out of Claude's reach and switch
 training off.
@@ -335,7 +347,7 @@ can keep Codex's own commands from reading outside the folder it works
 in; it has not been tested with Exegete. If you try it, you may want to
 check what Codex can still read before you bring in participants' data.
 This route is Experimental: we wrote it from OpenAI's documentation,
-read on 30 September 2026, and have not tried it.
+read again on 4 November 2026, and have not tried it.
 
 **Training.** While training is on, OpenAI may use your conversations,
 with the participants' data in them, to train its models. On a personal
@@ -445,7 +457,7 @@ so that its results match QualCoder's exactly.
 Exegete's commitment is that whatever analytic work QualCoder offers
 should also be possible from the conversation. Today the two programs
 differ in both directions. The table sets QualCoder 3.8.2 and 4.0, as
-checked on 10 October 2026, beside Exegete 0.15.2.
+checked on 10 October 2026, beside Exegete 0.15.3.
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|
@@ -453,24 +465,24 @@ checked on 10 October 2026, beside Exegete 0.15.2.
 | Bring in files | Text, documents, PDFs, images, audio, video | Documents from your computer (Word, OpenDocument, RTF, text, Markdown, web pages, subtitles; PDF and EPUB with the optional part, which the extension has), and text the assistant hands over |
 | Code text, a PDF's text included | Yes | Yes, once approved in the conversation, as the assistant reports it (not a PDF that is only pictures of pages) |
 | Code images, audio, video, an area of a PDF page; graphs | Yes | No |
-| Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting; not yet nesting an existing code under another |
+| Codebook: create, rename, move, merge, delete | Yes (4.0's assistant previews its deletions) | Yes, with a preview before merging or deleting. Exegete does not nest an existing code under another |
 | Cases, attributes, memos, annotations, journal | Yes | Yes, except deleting a case, an attribute or a journal entry, changing a journal entry, setting an attribute on a journal entry, renaming an attribute, linking part of a file (not the whole) to a case, and taking a file out of a case |
 | Reports | Many, in its Reports menu | Some: the codebook, a coding report, coding counts, the case-by-code matrix and codes that occur together |
-| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only, with known faults: every coding under the AI coder name, and cases, annotations, journals and media left out |
+| REFI-QDA exchange (for ATLAS.ti, MAXQDA, NVivo) | Import and export | Export only: each coder's codings, the codebook, texts, cases, attributes, journal and annotations; no media |
 | Comparing two coders | Per code, with a figure QualCoder labels Kappa | The same figure, with Cohen's kappa beside it. Against the AI coder name, the figures do not measure agreement between independent coders |
 | Replacing names | When a file is imported | When a file is brought in, and in text already coded |
 | AI suggestions for coding | 3.8.2: an AI search finds passages, which you code. 4.0: its assistant codes as it works, within the AI permission you set (Read-only stops it), with undo | Checked to quote the text word for word, and written only once approved in the conversation, as the assistant reports it |
 
 **Exchange with other programs.** The tool `export_refi_qda` writes the
-REFI-QDA file that ATLAS.ti, MAXQDA and NVivo read, with the known
-faults the table above gives ("What comes next" says when a fix is
-planned). If you use QualCoder, its own export (Project, Export,
-REFI-QDA Project export) keeps each coder, the cases, notes and media.
+REFI-QDA file that ATLAS.ti, MAXQDA and NVivo read: the whole project,
+as the table above gives it, or one coding session's suggestions, each
+marked with its status. If you use QualCoder, its own export (Project,
+Export, REFI-QDA Project export) also carries the media.
 If you use QualCoder 3.8.2, read
 [its edit-mode caution](https://github.com/nicotem/exegete/blob/main/TOOLS.md#qualcoder-382-and-edit-mode-a-caution)
 before you edit transcripts in its coding view. QualCoder 4.0's own MCP
-server calls itself "qualcoder-mcp", Exegete's former name, as checked
-on 6 October 2026. TOOLS.md gives the facts, and
+server calls itself "qualcoder-mcp", Exegete's former name. TOOLS.md
+gives the facts, and
 [the Terminal guide](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#coming-from-qualcoder-mcp)
 says how to keep the two apart. QualCoder's AI permission setting, such
 as Read-only, applies to that server and to QualCoder's own assistant,
@@ -548,7 +560,7 @@ which carry your project's texts. `lifecycle`, the earlier name of
   the rules that matter come within its first 2,048 characters, a few
   named exceptions apart (the Terminal guide gives Claude Code's
   figures). One description is longer than 16,384 characters,
-  `pseudonymise_source`'s (about 17,000 on Python 3.13, about 18,000
+  `pseudonymise_source`'s (about 18,000 on Python 3.13, about 19,000
   on 3.11 and 3.12): [the guide's section on Claude Code](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#claude-code) says how to let it through whole.
 - **Resources** (`exegete://...`) and prompts. The command
   `exegete --check-transition` lists what the change of name from
@@ -601,12 +613,8 @@ under "Project structure", lists every module and script.
 Plans, not promises: the order may change with what testers report.
 [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md) says what each release changed.
 
-- v0.15.3: coding sessions kept with their project; stricter checks on
-  the names of codes, categories and cases; when replacing names, choose
-  which mentions to keep; the REFI-QDA export fixed, except for media;
-  PyMuPDF 2.0, the newer library that reads PDFs, on Apple silicon Macs;
-  other small corrections
-- v0.15.4, method: a review of how the assistant supports a study's
+- v0.15.4: coding sessions kept with their project
+- v0.15.5, method: a review of how the assistant supports a study's
   method; shorter tool descriptions; and retiring the earlier names of
   the two renamed tools and the tools' backup option, which Exegete
   already ignores

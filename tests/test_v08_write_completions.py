@@ -257,7 +257,7 @@ class TestMergeCategory:
         """§9 cycle guard: target must not be the source's descendant."""
         project, ids = tree
         out = json.loads(H.execute_destructive(server.merge_category, ids["A"], into_category="C"))
-        assert "descendant" in out["error"]
+        assert "into a category below it" in out["error"]
         assert _row(project, "SELECT COUNT(*) FROM code_cat WHERE catid=1")[0] == 1
 
     def test_merge_into_self_refused(self, tree):

@@ -193,7 +193,7 @@ class TestTheRunsFingerprints:
 
     def test_the_does_not_rewrite_list_names_the_stored_copy(self):
         doc = " ".join(server.pseudonymise_source.__doc__.split())
-        start = doc.index("What this does NOT rewrite")
+        start = doc.index("What this does not rewrite")
         listed = doc[start:doc.index("Case and file names are changed",
                                      start)]
         assert "stored copy" in listed
@@ -1345,7 +1345,7 @@ class TestResourcesLogNothingOverTheWire:
         assert "Error reading resource" not in stderr
         first = json.loads(answers[0])
         assert first["error"].startswith("No project selected")
-        assert "The last project used on this machine was" in first["error"]
+        assert "The last project used on this computer was" in first["error"]
 
     def test_a_misconfigured_project_path(self, tmp_path):
         """QUALCODER_PROJECT_PATH set to the folder that holds the project,

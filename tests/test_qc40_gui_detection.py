@@ -196,7 +196,7 @@ class TestProcessFilter:
         """v0.14, the create-project study's finding: the old filter
         counted any command line holding "qualcoder" once this server's
         own names were blanked, so shells, logs and test runs on the
-        machine made every selection say the project APPEARS to be open
+        machine made every selection say the project appears to be open
         in QualCoder. These are the lines measured on the developer's
         Mac and the kinds around them."""
         lines = [
@@ -303,7 +303,7 @@ class TestProcessFilter:
             database._process_scan_cache["at"] = None
         assert signals == [
             "a process that looks like QualCoder is running on this "
-            "machine (2 match(es))"]
+            "computer (2 match(es))"]
 
     @pytest.mark.real_process_scan
     def test_scan_never_raises(self, monkeypatch):
@@ -331,7 +331,7 @@ class TestLadderWiring:
         out = json.loads(server.select_project(str(dest)))
         assert out["success"] is True
         assert out["qualcoder_gui_signals"]
-        assert "APPEARS to be open" in out["warning"]
+        assert "appears to be open" in out["warning"]
         assert "reopened" in out["warning"]  # the 4.0 refresh limitation
 
     def test_select_project_hot_journal_names_open_gui(
@@ -346,7 +346,7 @@ class TestLadderWiring:
         (dest / "data.qda-journal").write_bytes(b"j")
         out = json.loads(server.select_project(str(dest)))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert out["qualcoder_gui_signals"]
 
     def test_select_project_limitation_note_when_clean(
@@ -375,7 +375,7 @@ class TestLadderWiring:
         (ai / "chat_history.sqlite").write_bytes(b"c")
         out = json.loads(server.get_current_project())
         assert out["qualcoder_gui_signals"]
-        assert "APPEARS to be open" in out["qualcoder_gui_hint"]
+        assert "appears to be open" in out["qualcoder_gui_hint"]
         # Signals are WARN-level: the hard qualcoder_open stays false
         assert out["qualcoder_open"] is False
 
@@ -388,7 +388,7 @@ class TestLadderWiring:
         out = json.loads(server.start_coding_session([1], instruction="test"))
         assert out["qualcoder_open"] is False
         assert out["qualcoder_gui_signals"]
-        assert "ASK THE USER" in out["qualcoder_gui_hint"]
+        assert "ask the researcher" in out["qualcoder_gui_hint"]
 
     def test_restore_preview_reports_signals_and_asks(self, setup_server,
                                                       qualcoder_db_path,
@@ -408,8 +408,8 @@ class TestLadderWiring:
         out = json.loads(server.restore_backup(str(backup)))
         assert out["requires_confirmation"] is True
         assert out["qualcoder_gui_signals"]
-        assert "APPEARS to be open" in out["qualcoder_gui_hint"]
-        assert "ASK THE USER" in out["qualcoder_gui_hint"]
+        assert "appears to be open" in out["qualcoder_gui_hint"]
+        assert "ask the researcher" in out["qualcoder_gui_hint"]
 
     def test_signals_do_not_refuse_writes(self, setup_server,
                                           qualcoder_db_path,
@@ -447,7 +447,7 @@ class TestSelectProjectFailureWording:
         out = json.loads(server.select_project(str(tmp_path)))
         assert out["success"] is False
         assert "list_available_projects" in out["error"]
-        assert "APPEARS" not in out["error"]
+        assert "appears to be open" not in out["error"]
 
     def test_qda_folder_without_data_keeps_path_hint(
             self, setup_server, tmp_path, one_process_hit):
@@ -456,7 +456,7 @@ class TestSelectProjectFailureWording:
         out = json.loads(server.select_project(str(hollow)))
         assert out["success"] is False
         assert "list_available_projects" in out["error"]
-        assert "APPEARS" not in out["error"]
+        assert "appears to be open" not in out["error"]
 
     def test_corrupt_database_is_reported_as_damaged_not_open(
             self, setup_server, tmp_path, one_process_hit):
@@ -468,7 +468,7 @@ class TestSelectProjectFailureWording:
         assert "damaged" in out["error"]
         assert "backup" in out["error"]
         # a process hit alone is machine-wide evidence, not project-scoped
-        assert "APPEARS" not in out["error"]
+        assert "appears to be open" not in out["error"]
 
     def test_corrupt_database_with_stale_wal_keeps_damage_fallback(
             self, setup_server, tmp_path, no_process_hits):
@@ -480,7 +480,7 @@ class TestSelectProjectFailureWording:
         _old(wal)
         out = json.loads(server.select_project(str(proj)))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert "damaged database" in out["error"]
         assert "backup" in out["error"]
 
@@ -493,7 +493,7 @@ class TestSelectProjectFailureWording:
         (dest / "data.qda-journal").write_bytes(b"j")
         out = json.loads(server.select_project(str(dest)))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert "damaged database" in out["error"]
         assert out["qualcoder_gui_signals"]
 
@@ -562,7 +562,7 @@ class TestDatabaseOpenErrorIsGeneric:
         self._damage(qualcoder_db_path, "journal")
         out = json.loads(server.select_project(qualcoder_db_path))
         assert out["success"] is False
-        assert "APPEARS to be open" in out["error"]
+        assert "appears to be open" in out["error"]
         assert "sqlite" not in out["error"].lower()
         assert "readonly" not in out["error"].lower()
 
@@ -618,7 +618,8 @@ _TOOL_OF_HELPER = {"_select_project": "select_project",
                    # 0.14.3: the import's preview passes the signs on
                    "_import_documents_preview": "import_documents",
                    # v0.15.2: and undo's preview, as the restore's does,
-                   # the names list's undo with its own
+                   # the names list's undo with its own (v0.15.3: both
+                   # without the scan, so neither is a caller)
                    "_undo_preview": "undo_changes",
                    "_undo_names_list": "undo_changes"}
 
@@ -645,9 +646,9 @@ class TestProcessScanCallersAreDocumented:
                 # v0.15.0, the names list's save (its fix round 1): the
                 # preview, the call without a token, passes on the signs
                 # as restore_backup's and import_documents' do
-                "save_names_list",
-                # v0.15.2: undo's preview, the same
-                "undo_changes"}
+                "save_names_list"}
+    # v0.15.3: undo's previews give the files' signs without the process
+    # scan (the owner, 3 November 2026), so undo_changes is not here
 
     def test_callers_enumerated_from_the_code(self):
         # database.py has no other consumer of the scan; server.py's
@@ -671,8 +672,9 @@ class TestProcessScanCallersAreDocumented:
         # out the project's history, so the pointer says which, and that
         # only a count reaches the conversation)
         assert ("Most of the tools that report a `qualcoder_gui_signals` "
-                "field look at it, but `create_project` reports the field "
-                "without looking.") in bullet
+                "field look at it, but `create_project` and the "
+                "`undo_changes` previews report the field without "
+                "looking.") in bullet
         assert ("A few other tools look at it only when they work out the "
                 "project's history with QualCoder.") in bullet
         assert "TOOLS.md names these tools, and when each one looks." \

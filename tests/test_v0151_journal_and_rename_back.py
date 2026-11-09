@@ -40,7 +40,7 @@ REPO = Path(__file__).resolve().parent.parent
 SENTENCE = server.JOURNAL_ATTRIBUTES_REMOVED
 DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "SUPPORT.md", "QUICKSTART.md", "AI_CODING_GUIDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
+             "PROJECT_SELECTION_GUIDE.md",
              "CLAUDE.md", "packaging/pypi-old-name/README.md")
 
 # What 0.15.0 served

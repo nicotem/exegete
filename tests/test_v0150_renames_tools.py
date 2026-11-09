@@ -596,7 +596,7 @@ class TestExegetesBackups:
 # ---------------------------------------------------------------------------
 
 DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
-             "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md", "CONTRIBUTING.md")
+             "AI_CODING_GUIDE.md", "CONTRIBUTING.md")
 
 # The other direction of a host's remembered choice (fix round 1): a tool
 # blocked under its earlier name is not blocked under its new one.
@@ -741,7 +741,9 @@ class TestTheDocuments:
         # facts check, tests/test_v0151_facts.py, holds every name a
         # document calls a tool or an argument)
         text = _flat(_read("CONTRIBUTING.md"))
-        examples = re.search(r"never changed: tool names \(`(\w+)`\), "
+        # (v0.15.3, the readability reading: "Identifiers keep their exact
+        # spelling ... They include tool names (...), argument names (...)")
+        examples = re.search(r"include tool names \(`(\w+)`\), "
                              r"argument names \(`(\w+)`\),", text)
         assert examples, "CONTRIBUTING's examples of names"
         tool, argument = examples.groups()
@@ -844,11 +846,13 @@ class TestTheDocuments:
         assert ("| `start_coding_session(file_ids, code_names, "
                 "instruction)` | Start a coding session |") in \
             _read("AI_CODING_GUIDE.md")
-        workflow = _read("AI_CODING_WORKFLOW.md")
-        # (v0.15.2: the heading in sentence case)
-        assert "### Step 2: Start a coding session" in workflow
-        assert ("2. Starts a new coding session with its own ID "
-                "(`start_coding_session`),") in workflow
+        guide = _read("AI_CODING_GUIDE.md")
+        # (v0.15.2: the heading in sentence case; v0.15.3: the workflow
+        # guide's steps, in the one coding guide)
+        assert "### Step 2: Start a coding session" in guide
+        # (v0.15.3, the readability reading: the same step, reworded)
+        assert ("1. starts a coding session, which has an ID of its own "
+                "(`start_coding_session`).") in " ".join(guide.split())
 
 
 # ---------------------------------------------------------------------------

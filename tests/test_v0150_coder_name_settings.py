@@ -591,7 +591,7 @@ class TestTheDescription:
         server._apply_toolset("full")
         d = _flat(server.mcp.original_descriptions["create_project"])
         assert (
-            "THE RESEARCHER'S CODER NAME: do not ask for it before the first "
+            "The researcher's coder name: do not ask for it before the first "
             "call. Leave coder_name out: when the researcher has filled in "
             "their coder name in Exegete's settings, it is used without "
             "asking and the answer says so (coder_name_source); otherwise "
@@ -648,9 +648,9 @@ class TestTheSetter:
         server._apply_toolset("full")
         d = _flat(server.mcp.original_descriptions[
             "set_project_ai_coder_name"])
-        assert ("Refused if the name is the project's own coder name or the "
+        assert ("Refused if the name is the project's own coder name, the "
                 "researcher's own coder name in Exegete's settings, "
-                "QualCoder's literal default coder name \"default\", or "
+                "QualCoder's default coder name \"default\", or "
                 "QualCoder's speaker coder") in d
 
 

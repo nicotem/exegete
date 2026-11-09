@@ -868,7 +868,9 @@ class TestToken:
         refused = execute_from(out)
         assert refused["reason"] in ("token_other_operation",
                                      "project_changed")
-        assert "rotat" in refused["error"]
+        # (v0.15.3, the readability reading: "replaced", the word the
+        # undo's refusals use, for "rotated")
+        assert "secret has been replaced" in refused["error"]
 
     def test_an_unusable_state_home_refuses_rather_than_writing(
             self, project, monkeypatch):
@@ -2497,7 +2499,7 @@ class TestTheLabelsAndMemosTheResidueCounts:
                 "stored text as occurrences, under file_text." in note)
         assert "Each count is two readings, wide and whole-word." in note
         assert ("search_memos searches the public part of all twelve "
-                "fields and names each result's kind; it leaves out the "
+                "fields and gives each result's kind; it leaves out the "
                 "coding notes and annotations of a coder the project hides "
                 "(a visibility setting made in QualCoder); "
                 "get_coded_segments reads that coder's coding notes when "
@@ -2587,18 +2589,20 @@ class TestTheLabelsAndMemosTheResidueCounts:
         assert len(warning) == 1, out["warnings"]
         warning = warning[0]
         # v0.13, ruling 5: "note(s)" under the fixed vocabulary, and the
-        # whole-word count beside the wide one, in one sentence.
+        # whole-word count beside the wide one, in one sentence. No name of
+        # this mapping is in the file, so an execute would rewrite nothing
+        # and the sentence speaks of no run (v0.15.3)
         assert warning.startswith(
             "Warning: 1 note(s), label(s) or attribute value(s) may still "
             "show one of these names, and this tool does not rewrite any "
-            "of them; 0 of those match this run's own whole-word rule.")
+            "of them; 0 of those match the rewrite's own whole-word rule.")
         assert ("The rest are the wide reading, which is a heuristic and "
                 "deliberately wide: it reports anything a reader might see "
                 "in the spelling you gave, including inside a longer word "
                 "and in any letter case, so it over-reports rather than "
                 "under-reports; a look-alike letter from another script is "
                 "not caught." in warning)
-        assert "tell the user which fields to check" in warning
+        assert "tell the researcher which fields to check" in warning
         # The claim that is now false, in the exact words it used.
         assert "the names in this mapping also occur in" not in warning
         # Fix round 3: the absolute clause it used to make.
@@ -4076,7 +4080,7 @@ class TestTheNotesOfHiddenCoders:
         assert block["memos_of_hidden_coders"] == 4
         assert block["memos_of_hidden_coders_note"] == (
             "Of the rows above, this many are notes on codings or "
-            "annotations of a coder currently hidden in QualCoder; their "
+            "annotations of a coder the project hides; their "
             "names are not shown. Rewriting a note changes no coding "
             "decision, so it needs no allow_hidden_coder.")
         warning = [w for w in out["warnings"] if w.startswith(
@@ -4109,7 +4113,7 @@ class TestTheNotesOfHiddenCoders:
         out = preview_of(rewrite_memos=True)
         assert out["preview"]["memo_rewrites"]["memos_of_hidden_coders"] \
             == 0
-        assert not any("hidden in QualCoder; their names are not shown. "
+        assert not any("the project hides; their names are not shown. "
                        "Rewriting a note" in w for w in out["warnings"])
 
     def test_the_count_is_signed(self, project):
@@ -4138,7 +4142,8 @@ class TestTheNotesOfHiddenCoders:
         assert ("A note that rewrite_memos rewrites needs no override "
                 "either, whoever owns it, because it changes no coding "
                 "decision; the preview counts those of hidden coders "
-                "(memo_rewrites.memos_of_hidden_coders), never naming them."
+                "(memo_rewrites.memos_of_hidden_coders), never giving their "
+                "names."
                 in flat)
 
 
@@ -4346,9 +4351,8 @@ class TestKeepingTheMapping:
         assert refused["reason"] == "mapping_retention_required"
         assert refused["nothing_changed"] is True
         assert refused["error"].startswith(
-            "This run applies a mapping you typed, and that mapping is half "
-            "of the reverse key: without it nobody can say later who each "
-            "pseudonym was. Nothing was written.")
+            "This run applies a mapping you typed, and Exegete keeps no "
+            "record of who each pseudonym was. Nothing was written.")
         _house_rules([refused["error"]])
         assert backups(project) == []
         assert query(project, "SELECT fulltext FROM source WHERE id=1"
@@ -4409,7 +4413,7 @@ class TestKeepingTheMapping:
         out = call(mapping=None, use_project_pseudonyms=True, **{flag: True})
         assert out == {"error": (
             "save_mapping_to_project and researcher_keeps_mapping describe "
-            "what happens to a mapping you typed; with use_project_pseudonyms "
+            "what happens to a mapping you typed. With use_project_pseudonyms "
             "the mapping is already the project's own pseudonyms.json, which "
             "is the record. Give neither.")}
         assert reads == [], "the project was read before the refusal"
@@ -4421,30 +4425,31 @@ class TestKeepingTheMapping:
         assert block["required"] is True and block["chosen"] is None
         assert "if_saved" not in block
         assert block["note"] == (
-            "This run applies a mapping you typed. It is half of the reverse "
-            "key, and the execute is refused until the call says where it is "
-            "kept. To save it into the project's own pseudonyms.json in "
-            "QualCoder's format, preview again with "
-            "save_mapping_to_project=true: that argument is bound into the "
-            "token, and the preview then shows what the save would do. To "
-            "record that the researcher keeps their own copy, add "
-            "researcher_keeps_mapping=true to the execute call with this "
-            "token. Ask the user which.")
+            "This run applies a mapping you typed. Exegete keeps no record "
+            "of who each pseudonym was, so the run is refused until the call "
+            "says where the mapping is kept. To save it into "
+            "the project's own pseudonyms.json in QualCoder's format, "
+            "preview again with save_mapping_to_project=true: that argument "
+            "is bound into the token, and the preview then shows what the "
+            "save would do. To record that the researcher keeps their own "
+            "copy, add researcher_keeps_mapping=true to the execute call "
+            "with this token. Ask the researcher which.")
         warning = [w for w in out["warnings"] if w.startswith(
-            "Warning: the execute will be refused unless")]
+            "Warning: the run will be refused unless")]
         assert warning == [
-            "Warning: the execute will be refused unless the call says where "
+            "Warning: the run will be refused unless the call says where "
             "the mapping is kept. To save it into the project's own "
             "pseudonyms.json in QualCoder's format, preview again with "
-            "save_mapping_to_project=true, which the token binds; to record "
+            "save_mapping_to_project=true, which the token binds. To record "
             "that the researcher keeps their own copy, add "
             "researcher_keeps_mapping=true to the execute call with this "
-            "token. Ask the user which; see execute_with.mapping_retention."]
+            "token. Ask the researcher which (see "
+            "execute_with.mapping_retention)."]
         _house_rules([block["note"]] + warning)
         for given in ({"researcher_keeps_mapping": True},
                       {"save_mapping_to_project": True}):
             chosen = preview_of(**given)
-            assert not any(w.startswith("Warning: the execute will be "
+            assert not any(w.startswith("Warning: the run will be "
                                         "refused unless")
                            for w in chosen["warnings"])
 
@@ -4455,7 +4460,7 @@ class TestKeepingTheMapping:
         assert out["preview"]["mapping_retention"] == {
             "required": False, "chosen": "project_pseudonyms_json",
             "note": "The mapping is the project's own pseudonyms.json, which "
-                    "is the record; nothing needs choosing."}
+                    "is the record. Nothing needs choosing."}
         assert "mapping_retention" not in out["execute_with"]
         assert out["execute_with"]["arguments"][
             "save_mapping_to_project"] is False
@@ -4492,11 +4497,11 @@ class TestKeepingTheMapping:
                 "choose_one": ["save_mapping_to_project",
                                "researcher_keeps_mapping"],
                 "message": (
-                    "Ask the user which they want. To save the mapping, "
-                    "call the preview again with save_mapping_to_project="
-                    "true and execute from that preview. To attest that the "
-                    "researcher keeps their own record, add "
-                    "researcher_keeps_mapping=true to this execute call.")}
+                    "To save the mapping, call the preview again with "
+                    "save_mapping_to_project=true and execute from that "
+                    "preview. To record that the researcher keeps their own "
+                    "copy, add researcher_keeps_mapping=true to this "
+                    "execute call. Ask the researcher which they want.")}
         # The recipe, executed verbatim, goes through only with a choice.
         result = execute_strictly(out)
         assert (result.get("reason") == "mapping_retention_required") is ask
@@ -4533,12 +4538,14 @@ class TestKeepingTheMapping:
         note = [n for n in result["notes"]
                 if n.startswith("The mapping you gave")]
         assert note == [
-            "The mapping you gave is half of the reverse key for this run; "
-            "the backup is the other half and holds the real names. "
-            "Exegete does not keep the mapping unless asked. On this run the "
-            "call attested that the researcher keeps their own record; make "
-            "sure that is true now, because nothing else can say later who "
-            "each pseudonym was."]
+            "The mapping you gave leads back from each pseudonym of this "
+            "run to its name. So does every copy of the file's text from "
+            "before the run, among them the backup Exegete took first, "
+            "every older backup and, for an imported document, its stored "
+            "copy in the project's documents/ folder. Exegete does not keep "
+            "the mapping unless asked. On this run the call attested that "
+            "the researcher keeps their own record. Make sure that is true "
+            "now."]
         _house_rules(result["notes"])
 
     @pytest.mark.parametrize("source", ["typed", "sidecar"])
@@ -4617,15 +4624,18 @@ class TestSavingTheMappingIntoPseudonymsJson:
         notes = result["notes"]
         mapping_note = [n for n in notes if n.startswith("The mapping you")]
         assert mapping_note == [
-            "The mapping you gave is half of the reverse key for this run; "
-            "the backup is the other half and holds the real names. "
-            "Exegete does not keep the mapping unless asked. On this run it "
-            "was saved into the project's own pseudonyms.json (3 entries "
-            "added), which later imports apply (Exegete's import_documents "
-            "by default, import_text_file when asked; QualCoder's text and "
-            "transcript imports always) and which travels into every later "
-            "backup; "
-            "store that file securely once the import work is done."]
+            "The mapping you gave leads back from each pseudonym of this "
+            "run to its name. So does every copy of the file's text from "
+            "before the run, among them the backup Exegete took first, "
+            "every older backup and, for an imported document, its stored "
+            "copy in the project's documents/ folder. Exegete does not keep "
+            "the mapping unless asked. On "
+            "this run it was saved into the project's own pseudonyms.json "
+            "(3 entries added). Later imports apply it: Exegete's "
+            "import_documents by default, import_text_file when asked, and "
+            "QualCoder's text and transcript imports always. It travels "
+            "into every later backup, so store it securely once the import "
+            "work is done."]
         variants = [n for n in notes if n.startswith("The mapping had")]
         assert variants == [
             "The mapping had alternative spellings; each was written to "
@@ -4644,19 +4654,20 @@ class TestSavingTheMappingIntoPseudonymsJson:
         # imports first, then QualCoder's text and transcript imports;
         # what file order can do is said of QualCoder's alone.
         assert applying == [
-            "Later imports apply pseudonyms.json case-sensitively: "
+            "Later imports apply pseudonyms.json case-sensitively. "
             "Exegete's (import_documents by default, import_text_file when "
-            "asked) in one pass, longest name first, so nothing they write "
-            "is replaced again; QualCoder's text and transcript imports one "
-            "entry at a time, in file order. For QualCoder's imports, the "
-            "new entries were written longest name first, so a shorter name "
-            "inside a longer one does not pre-empt it; there an entry "
-            "already in the file still can (see the warnings), two names "
-            "that overlap without either containing the other (Mary Ann and "
-            "Ann Lee, in Mary Ann Lee) can come out differently from this "
-            "run, and a pseudonym that contains a name from the mapping is "
-            "rewritten again. In Exegete as in QualCoder, under an "
-            "insensitive case mode only the spellings saved are replaced."]
+            "asked) apply it in one pass, longest name first, so nothing "
+            "they write is replaced again. QualCoder's text and transcript "
+            "imports apply it one entry at a time, in file order. For "
+            "QualCoder's imports, the new entries were written longest name "
+            "first, so a shorter name inside a longer one does not pre-empt "
+            "it. There an entry already in the file still can (see the "
+            "warnings), two names that overlap without either containing "
+            "the other (Mary Ann and Ann Lee, in Mary Ann Lee) can come out "
+            "differently from this run, and a pseudonym that contains a "
+            "name from the mapping is rewritten again. In Exegete as in "
+            "QualCoder, under an insensitive case mode only the spellings "
+            "saved are replaced."]
         _house_rules(notes)
 
     # Security's ruling of 2026-09-24 (S-1, S-3), which supersedes the
@@ -4986,12 +4997,12 @@ class TestSavingTheMappingIntoPseudonymsJson:
             _written(project))
         note = [n for n in result["notes"] if n.startswith("1 entr(ies)")]
         assert note == [
-            "1 entr(ies) of the mapping use a pseudonym that pseudonyms.json "
-            "already gives to another name, or that another entry of the "
-            "mapping uses too. QualCoder's Pseudonyms dialog (the button in "
-            "Manage Files) would have refused to add them by hand; this tool "
-            "wrote them, so those people share one pseudonym in the file as "
-            "they do in the rewritten text."]
+            "1 entr(ies) of the mapping use a pseudonym that "
+            "pseudonyms.json already gives to another name, or that another "
+            "entry of the mapping uses too. QualCoder's Pseudonyms dialog "
+            "(the button in Manage Files) would have refused to add them by "
+            "hand. Exegete wrote them, so those people share one pseudonym "
+            "in the file as they do in the rewritten text."]
         assert "Peter" not in json.dumps(result)
 
     def test_two_typed_entries_sharing_a_pseudonym_are_reported(self,
@@ -5175,16 +5186,16 @@ class TestSavingTheMappingIntoPseudonymsJson:
         assert list(project.glob("pseudonyms.json.*")) == []
         note = [n for n in result["notes"] if n.startswith("The mapping")][0]
         assert note.endswith(
-            "On this run the save into the project's own pseudonyms.json was "
-            "requested, but the file could not be renamed into place after "
-            "the run committed (PermissionError); nothing else was lost: the "
-            "rewrite stands, the backup holds the real names, and the "
-            "journal entry and the run record say the save was requested, "
-            "not made. Make sure the researcher keeps the mapping now: save "
-            "it with a run on another file that still contains one of the "
-            "names, or write it into pseudonyms.json in the project folder "
-            "with a text editor, as a list of {original, pseudonym} "
-            "entries; or, if they use QualCoder, enter it in its "
+            "On this run the save into the project's own pseudonyms.json "
+            "was requested, but the file could not be renamed into place "
+            "after the run committed (PermissionError). Nothing else was "
+            "lost: the rewrite stands, the backup holds the real names, and "
+            "the journal entry and the run record say the save was "
+            "requested, not made. Make sure the researcher keeps the "
+            "mapping now: save it with a run on another file that still "
+            "contains one of the names, or write it into pseudonyms.json in "
+            "the project folder with a text editor, as a list of {original, "
+            "pseudonym} entries; or, if they use QualCoder, enter it in its "
             "Pseudonyms dialog (the button in Manage Files).")
         record = json.loads(Path(result["manifest_path"]).read_text(
             encoding="utf-8"))
@@ -5373,7 +5384,7 @@ class TestTheMappingAcrossARestore:
         assert result["pseudonyms_json_note"] == (
             f"This project had a pseudonyms.json before the restore and the "
             f"backup restored has none, so the project no longer has one. "
-            f"That file may be the only record of a pseudonymisation mapping "
+            f"That file may be the only record of a names list "
             f"(a pseudonymise_source run's save writes one). The one the "
             f"project had is in the safety backup {safety.name}; keep that "
             f"backup, or copy the file back into the project folder, while "
@@ -5388,8 +5399,8 @@ class TestTheMappingAcrossARestore:
             "The backup restored carries a pseudonyms.json that this project "
             "did not have before the restore; its names are replaced on "
             "later text or transcript imports: by Exegete's import_documents "
-            "unless apply_project_pseudonyms is false, and by QualCoder on "
-            "every one (not a PDF).")
+            "unless apply_project_pseudonyms is false, and by QualCoder, if "
+            "the researcher uses it, on every one (not a PDF).")
 
     def test_a_restore_that_changes_the_file_says_so(self, project):
         _sidecar_file(project, [{"original": "Peter", "pseudonym": "Pat"}])
@@ -5403,7 +5414,7 @@ class TestTheMappingAcrossARestore:
         assert result["pseudonyms_json_note"].startswith(
             "The backup restored carries a pseudonyms.json that differs from "
             "the one this project had before the restore, which may be the "
-            "only record of a pseudonymisation mapping. The one the project "
+            "only record of a names list. The one the project "
             f"had is in the safety backup {safety.name};")
 
     def test_no_note_when_the_file_is_the_same(self, project):
@@ -5417,36 +5428,37 @@ class TestTheMappingAcrossARestore:
         assert restored["success"] is True
         assert "pseudonyms_json_note" not in restored
 
+    # (the served texts' second batch, readability: the note in
+    # sentences of its own; the facts the same)
     ONLY_COPY = (
-        "{subject} a pseudonyms.json that the project "
-        "does not hold now, byte for byte, and that no backup Exegete "
-        "keeps holds: {names}. Once {pronoun} removed, Exegete knows of "
-        "no other lasting copy. It may be the only record of a "
-        "pseudonymisation mapping (a pseudonymise_source run's save writes "
-        "one, and a restore of an earlier backup leaves it in the "
-        "pre-restore safety backup){qualcoder}; copy it somewhere safe "
-        "first if it is still needed.")
+        "{subject} a pseudonyms.json that is not, byte for byte, in the "
+        "project now or in any backup Exegete keeps: {names}. Once "
+        "{pronoun} removed, Exegete knows of no other lasting copy. It may "
+        "be the only record of a names list. A pseudonymise_source run's "
+        "save writes such a file, and a restore of an earlier backup "
+        "leaves one in the pre-restore safety backup.{qualcoder} Copy that "
+        "file somewhere safe first if it is still needed.")
     # v0.13 release preparation (the mapping-gaps check, item 6): the
     # singular where one backup is named, the plural where several are.
     ONE = {"subject": "The backup this would remove holds", "pronoun": "it is"}
     SEVERAL = {"subject": "Backups this would remove hold",
                "pronoun": "they are"}
     DONE = (
-        "{subject} a pseudonyms.json that the project does not hold now, "
-        "byte for byte, and that no backup Exegete keeps holds: "
-        "{names}. Exegete now knows of no other lasting copy. {pronoun} "
-        "may have held the only record of a pseudonymisation mapping (a "
-        "pseudonymise_source run's save writes one, and a restore of an "
-        "earlier backup leaves it in the pre-restore safety "
-        "backup){qualcoder}.")
+        "{subject} a pseudonyms.json that is not, byte for byte, in the "
+        "project now or in any backup Exegete keeps: {names}. Exegete now "
+        "knows of no other lasting copy. {pronoun} may have held the only "
+        "record of a names list. A pseudonymise_source run's save writes "
+        "such a file, and a restore of an earlier backup leaves one in the "
+        "pre-restore safety backup.{qualcoder}")
     PRERESTORE_DONE = (
-        "This removed your most recent pre-restore safety snapshot, the "
-        "state saved just before the last restore_backup.")
+        "This removed the project's most recent pre-restore safety backup, "
+        "the state saved before the last restore_backup.")
 
     @staticmethod
     def _only(out):
         notes = out.get("preview", out).get("notes", [])
-        return [n for n in notes if "a pseudonyms.json that the project" in n]
+        return [n for n in notes
+                if "a pseudonyms.json that is not, byte for byte" in n]
 
     def test_a_prune_names_the_backup_that_holds_the_only_copy(self,
                                                                project):
@@ -5498,9 +5510,9 @@ class TestTheMappingAcrossARestore:
         only = self._only(out)
         assert only == [self.ONLY_COPY.format(
             names=safety.name,
-            qualcoder=f"; QualCoder's own backup {twin.name} holds a copy "
-                      f"for now, until QualCoder rotates it away when a "
-                      f"project closes", **self.ONE)]
+            qualcoder=f" QualCoder's own backup {twin.name} holds a copy "
+                      f"for now, until QualCoder deletes it among its "
+                      f"oldest backups when a project closes.", **self.ONE)]
         _house_rules(only)
         assert twin.exists()
 
@@ -5533,10 +5545,10 @@ class TestTheMappingAcrossARestore:
         for twin in twins:
             shutil.copytree(safety, twin)
         named = ", ".join(sorted([safety.name, older.name]))
-        clause = (f"; QualCoder's own backups "
+        clause = (f" QualCoder's own backups "
                   f"{', '.join(t.name for t in twins)} hold a copy for "
-                  f"now, until QualCoder rotates them away when a project "
-                  f"closes")
+                  f"now, until QualCoder deletes them among its oldest "
+                  f"backups when a project closes.")
         out = json.loads(server.prune_backups(keep_last=0))
         assert self._only(out) == [self.ONLY_COPY.format(
             names=named, qualcoder=clause, **self.SEVERAL)]
@@ -5817,8 +5829,8 @@ class TestTheInspectionRoutes:
             "note": (
                 "The project's pseudonyms.json (its list of real names and "
                 "their pseudonyms, applied when files are imported) is "
-                "present with 2 entr(ies). Its contents are the "
-                "researcher's reverse key and are never returned. To see "
+                "present with 2 entr(ies). It leads from each pseudonym "
+                "to a real name, so its contents are never returned. To see "
                 "or change the list, the researcher uses the names file on "
                 "their own computer: prepare_names_list makes it from the "
                 "list (or keeps one already there, and says if the list "
@@ -8453,66 +8465,72 @@ class TestTheDescriptionCarriesWhatD1Requires:
 
     # (label, the sentence D1 3.12 or a fix round requires)
     REQUIRED = [
+        # (the served texts' second batch: sentence case, "the
+        # researcher", plain words; the points the same)
         ("rewrites_source_text",
-         "THIS REWRITES SOURCE TEXT and moves every coding, annotation "
-         "and case link in the file it touches."),
+         "It rewrites the file's stored text, and moves every coding, "
+         "annotation and case link in the file it touches."),
         ("preview_first",
          "Preview first, relay the counts, the collisions and the residue "
-         "to the user, get an explicit yes, then execute with the token."),
+         "to the researcher, get an explicit yes, then execute with the "
+         "token."),
         ("deterministic",
-         "ONLY the names in the mapping are replaced, as whole words, "
+         "Only the names in the mapping are replaced, as whole words, "
          "case-sensitively unless case_mode says otherwise. There is no "
          "name detection and no guessing"),
         ("possessives_keep_their_suffix",
-         "\"Tom\" DOES match inside \"Tom's\" (the apostrophe is not a "
+         "\"Tom\" does match inside \"Tom's\" (the apostrophe is not a "
          "word character, so possessives keep their suffix)"),
         ("variants_are_needed",
          "Nicknames, inflections and spelling variants each need their own "
          "entry or a `variants` list."),
         ("what_is_not_rewritten",              # v0.13 Brief 2, and v0.14
-         "What this does NOT rewrite, and where the names will remain: case "
+         "What this does not rewrite, so the names remain there: case "
          "names, file names, attribute values, PDFs, media files, an "
          "imported document's stored copy in the project's documents/ "
-         "folder (the original text, which QualCoder's exports ship), "
+         "folder (the original text, which QualCoder's exports include), "
          "QualCoder 4.0's ai_data folder, speakers.json and "
-         "speaker_regex.json; notes "
-         "(the twelve kinds of note) and journal entries are rewritten only "
-         "when rewrite_memos is on, in their public part only and across "
-         "the whole project, and otherwise remain too."),
+         "speaker_regex.json. Notes "
+         "(the twelve kinds) and journal entries are rewritten only "
+         "when rewrite_memos is on, in their public part and across "
+         "the whole project; otherwise they remain too."),
         ("residue_says_where_names_remain",
-         "The preview's `residue` block counts where the names still occur "
-         "so you can tell the user"),
+         "The preview's `residue` block counts where the names still occur, "
+         "for you to tell the researcher."),
         ("residue_reads_wider_than_the_rewrite",         # D-15
-         "Its counts use a WIDER reading than the rewrite: any occurrence "
-         "a human would see, including inside a longer word and in any "
-         "case, so a case named Thomas_P01 is counted even under "
+         "Its counts use a wider reading than the rewrite: any occurrence "
+         "a person would see, inside a longer word and in any case "
+         "included, so a case named Thomas_P01 is counted even under "
          "case_mode=\"exact\"."),
         ("still_personal_data",
          "Pseudonymised data is still personal data and is often "
          "re-identifiable from context. This reduces risk; it does not "
          "anonymise (PRIVACY.md)."),
         ("the_backup_is_the_reverse_key",
-         "The backup keeps the real names, and so does pseudonyms.json if "
-         "the researcher keeps one; both are the reverse key and belong "
-         "somewhere secure."),
+         # (the served texts' second batch, fix round 1: the names file
+         # named beside the names list)
+         "The backup keeps the real names, and so do the names list and "
+         "names file (pseudonyms.json, Exegete/Names to replace.txt) when "
+         "the project has them. Each leads back from the pseudonyms to the "
+         "names, so they belong somewhere secure."),
         ("the_manifest_and_journal_hold_no_original",
-         "The run manifest this tool writes and the journal entry it can "
-         "add never contain an original name"),
+         "The run record Exegete writes, and the journal entry it can "
+         "add, never contain an original name"),
         ("re_read_every_touched_file",                   # QA F-6
          "After the run, re-read the file before any further coding: "
          "every position after the first replacement in it has changed, "
          "and any pending coding suggestion for it is stale."),
         ("qualcoder_does_not_refresh",
-         "an open QualCoder window does not refresh from this write on its "
-         "own"),
+         "If the researcher uses QualCoder: a QualCoder window open on the "
+         "project does not refresh from this write on its own"),
         ("the_40_search_index_is_stale",
          "QualCoder 4.0's AI search index keeps the previous text until it "
          "re-indexes on the next open with AI enabled."),
         ("the_sidecar_path_quotes_nothing",              # B4 / S3
-         "The original names in that file are the researcher's reverse "
-         "key and you did not supply them, so on this path no diagnostic "
-         "and no refusal quotes one, and include_context returns no "
-         "context at all rather than the text around each match."),
+         "The real names in that file did not come from you, so on this "
+         "path no diagnostic and no refusal quotes one, and include_context "
+         "returns no context at all rather than the text around each "
+         "match."),
         # (fix round 3, S5's sentence on the qualcoder_edit_parity walk
         # went with the policy in v0.15.1, as announced in 0.14; the one
         # policy left deletes nothing)
@@ -8527,37 +8545,42 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "set_project_ai_coder_name before executing, or execute with "
          "record_in_journal=false."),
         ("the_sidecar_path_still_returns_names_it_has",  # R-2; F4; Brief 1
-         "Four things are still returned exactly as they stand, because a "
-         "preview you cannot name the files in is not a preview you can "
-         "relay: the project path, each file's own name (including every "
-         "file the residue's file-text block names), the backup path and "
-         "the note that names the backup, the last two being named after "
-         "the project folder, and the backup path being reported on any "
-         "failure after the backup was taken as well as on success; any "
-         "of these can itself contain one of those names."),
+         # (the served texts' second batch: plain words, the same four)
+         "Four things are still returned as they stand, so that the "
+         "preview can be relayed: the project "
+         "path, each file's own name (every file the residue's file-text "
+         "block lists included), and the backup path and the note that "
+         "gives it, both named after the project folder. The backup path "
+         "is reported on any failure after the backup was taken, as on "
+         "success. Any of these can itself hold one of those names."),
         ("every_count_is_two_readings",                  # v0.13 Brief 1
-         "Every count is two readings, wide and whole-word, and the "
+         # (the readability reading: two sentences, the facts the same)
+         "Every count is two readings, wide and whole-word. The "
          "residue's file_text block counts the names left in the text of "
          "every file after the run, the files this run does not touch "
-         "included (not a PDF QualCoder 3.8.2 stored as the file itself, "
-         "which holds no text); a name inside a longer word is reported "
-         "and never substituted."),                      # v0.14 brief D
+         "included, but not a PDF QualCoder 3.8.2 stored as the file "
+         "itself, which holds no text. A name inside a longer word is "
+         "reported and never substituted."),                      # v0.14 brief D
         ("the_scan_residue_argument",                    # v0.13 Brief 1
          "scan_residue: Count where the names also occur in notes, labels "
          "and attribute values, and in the text of every file after the "
          "run (default true). Both readings, wide and whole-word, for "
          "every count."),
         ("the_override_rule_in_plain_words",             # rulings 7.3(3), 7.4
-         "a coding that covered a name, or contained one, and now covers "
+         # (the readability reading: the rule's two halves in sentences
+         # of their own)
+         "A coding that covered a name, or contained one, and now covers "
          "or contains its pseudonym needs no override, whatever the two "
-         "lengths, and neither does a pure position shift, because "
-         "neither changes a coding decision; a coding that grew to "
-         "swallow a pseudonym, one that would be deleted, or one that had "
-         "to be clamped because its stored end lay past the end of the "
-         "text, does."),
+         "lengths, and neither does a pure position shift: neither "
+         "changes a coding decision. The override is needed for a coding "
+         "that grew to swallow a pseudonym, one that would be deleted, and "
+         "one that had to be clamped because its stored end lay past the "
+         "end of the text."),
         ("one_file_per_call",                            # v0.13 decision A
-         "One file per call: file_id names the file, and a mapping that is "
-         "right for one participant is applied to that participant's file. "
+         # (the served texts' second batch: a file, not a participant's;
+         # fix round 1: what one file per call makes possible)
+         "One file per call: file_id gives the file, so that each file can "
+         "be given the mapping that is right for it. "
          "To pseudonymise a project, run it file by file; with "
          "use_project_pseudonyms the mapping is read from the project's "
          "own pseudonyms.json each time, and with a typed mapping the "
@@ -8569,46 +8592,52 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "file or a source with no stored text is refused with the reason "
          "(pdf_source, no_fulltext, unknown_file_id)."),
         ("repeat_the_same_bound_arguments",       # decision A; Brief 2
-         "call again with the SAME mapping, file_id, case_mode, "
-         "overlap_policy, rewrite_memos and save_mapping_to_project, plus "
-         "preview_token=<the token>."),
+         # v0.15.3: leave_occurrences joins them, "same" in lower case
+         "call again with the same mapping, file_id, case_mode, "
+         "overlap_policy, rewrite_memos, save_mapping_to_project and "
+         "leave_occurrences when given, plus preview_token=<the token>."),
         ("a_carrying_pseudonym_is_withheld",             # fix round 1, F1
          "A pseudonym that carries one of those names is withheld (null) "
          "wherever the preview would quote it, and its entry number stands "
          "in."),
         ("the_records_withhold_a_carrying_pseudonym",    # fix round 1, F1
          "a file name, folder name, path or pseudonym that carries one is "
-         "withheld from both and the file id or the entry number is used "
+         "withheld from both, and the file id or the entry number is used "
          "instead."),
         ("the_transport_coerces_file_id",   # fix round 1, QA-3; fix round 2, CORR-5
          "The transport turns anything Python reads as an integer into that "
-         "integer before this tool runs: \"1\", 1.0, true, \"01\" and \"+1\" "
-         "are file 1, and \"1_0\" is file 10."),
+         "integer before Exegete sees it: \"1\", 1.0, true, \"01\" and "
+         "\"+1\" are file 1, and \"1_0\" is file 10."),
         ("the_residue_detail_argument",     # fix round 1, F4; fix round 2, CORR-4
          "residue_detail: \"file\" (default): full detail for the file this "
-         "call names and, for up to 1,000 other files that still show a "
+         "call gives and, for up to 1,000 other files that still show a "
          "name, one row with its id, name and two counts; past that, their "
          "ids. \"project\": full detail for up to 200 files and one such row "
          "for up to 1,000 more; on a large mapping over many files that is "
          "megabytes. The totals and the warnings are the same either way."),
         ("the_file_text_budgets",                        # fix rounds 2, 5
-         "The file-text count has fixed budgets, and all it spends is "
-         "charged to them: past them a file is only asked whether a name "
-         "shows, and past a budget for that question it is not checked, "
-         "and the warning names it."),
+         # (the readability reading: one step to a sentence)
+         "The file-text count has fixed budgets, and all its work counts "
+         "against them. Past them, a file is only checked for whether a "
+         "name shows. Past a budget for that check, it is not checked, and "
+         "the warning says which file."),
         ("the_named_file_and_the_too_large",             # fix rounds 3, 5
-         "The file this call names is read first, with the first claim on "
+         "The file this call gives is read first, with the first claim on "
          "the budgets. A count that stops part-way found a name and gives a "
-         "lower bound; a file too large to count with this many names is "
-         "said to be, and fewer names would let a text file be counted, and "
-         "one too large for any mapping is said so."),
-        ("the_six_bound_arguments",               # decision A; Brief 2
-         "The six that ARE bound are mapping, file_id, case_mode, "
-         "overlap_policy, rewrite_memos and save_mapping_to_project, and "
-         "they must be repeated identically on the execute call."),
+         "lower bound. A file too large to count with this many names is "
+         "reported as such: with fewer names, a text file could be "
+         "counted. A file too large for any mapping is reported too."),
+        ("the_bound_arguments",                   # decision A; Brief 2
+         # v0.15.3: leave_occurrences joins them, named without a count
+         "The arguments that are bound are mapping, file_id, case_mode, "
+         "overlap_policy, rewrite_memos, save_mapping_to_project and "
+         "leave_occurrences when given, and they must be repeated "
+         "identically on the execute call."),
         ("the_unbound_arguments",                        # Brief 2, H.2.5
-         "The last five arguments, record_in_journal and "
-         "researcher_keeps_mapping are NOT bound into the token"),
+         # v0.15.3: choose_occurrences joins them, named without a count
+         "The arguments from include_context to choose_occurrences, "
+         "record_in_journal and researcher_keeps_mapping are not bound into "
+         "the token"),
         # Brief 2, 4.15: one pin per point the description must make.
         ("notes_are_rewritten_project_wide",             # point 1
          "rewrite_memos: Also rewrite the public part of every note (the "
@@ -8630,16 +8659,21 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "Not bound into the token: an attestation with no side effect, "
          "which may be added on the execute call."),
         ("a_typed_mapping_must_be_kept",                 # point 6
-         "The execute is REFUSED on a typed mapping unless one of these two "
-         "is true: the mapping is half of the reverse key and Exegete "
-         "does not keep it. With use_project_pseudonyms the file is the "
-         "record and neither may be given."),
+         # (the served texts' second batch: why, in plain words)
+         # (fix round 1: what Exegete keeps, since the backups and an
+         # imported document's stored copy lead back too)
+         "On a typed mapping the execute is refused unless one of these two "
+         "is true, since Exegete keeps no record of who each pseudonym "
+         "was. With use_project_pseudonyms the "
+         "file is the record and neither may be given."),
         ("the_save_preview_confirms_names",      # fix round 1, S-4; 2, RS-1
+         # (the readability reading: its two points in sentences of
+         # their own)
          "The preview run with it lists, by entry number, which typed "
          "names the file already maps, which typed pseudonyms it already "
-         "gives to another name and which typed names hold, as a word, a "
-         "name the file lists, so it confirms whether a name is in the "
-         "file; and an execute refused for a name the file already maps "
+         "gives to another name, and which typed names hold, as a word, a "
+         "name the file lists: so it confirms whether a name is in the "
+         "file. An execute refused for a name the file already maps "
          "says when the file holds every typed name under its typed "
          "pseudonym, which confirms an exact pair."),
         ("where_qualcoder_applies_the_file",     # fix round 2, B2P-N1; Q2-1
@@ -8653,8 +8687,8 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "not add by hand."),
         ("the_transport_coerces_the_switches",           # H.2.6
          "The transport turns 1, \"1\", \"true\", \"yes\", \"on\", \"t\" "
-         "and \"y\" into true for each of these three switches before this "
-         "tool runs"),
+         "and \"y\" into true for each of these three switches before "
+         "Exegete sees it"),
     ]
 
     @staticmethod
@@ -9396,7 +9430,7 @@ class TestTheOlderTokenGatedToolsRereadTheDeclarationToo:
         assert block["hidden_coder_codings"] == 2                # ctid 5, 7
         assert out["preview"]["hidden_coder_codings_affected"] == 2
         assert out["execute_with"]["arguments"]["allow_hidden_coder"] is True
-        assert any("hidden in QualCoder" in w for w in out["warnings"])
+        assert any("the project hides" in w for w in out["warnings"])
         refused = json.loads(server.delete_code(
             code_id=1, preview_token=out["preview_token"]))
         assert refused["reason"] == "hidden_coder_override_required"
@@ -9442,7 +9476,7 @@ class TestTheOlderTokenGatedToolsRereadTheDeclarationToo:
         # Auto-selection: one eligible coder, and one more hidden, said
         # as a count; the same count everywhere in one result.
         auto = json.loads(server.compare_coders())
-        assert "1 more coder hidden in QualCoder" in auto["error"]
+        assert "1 more coder the project hides" in auto["error"]
         assert "Hidden Helga" not in auto["error"]
         allowed = json.loads(server.compare_coders(
             coder_a="TestCoder", coder_b="Hidden Helga",

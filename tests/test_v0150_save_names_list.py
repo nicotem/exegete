@@ -102,14 +102,14 @@ NOTE = (
     "documents already in the project keep their text, and "
     "pseudonymise_source with use_project_pseudonyms replaces the names in "
     "them, a file at a time. Exegete applies the list in one pass, longest "
-    "name first, so nothing it writes is replaced again; QualCoder's text "
+    "name first, so nothing it writes is replaced again. QualCoder's text "
     "and transcript imports, for those who use them, apply it one entry at "
-    "a time in the file's order, which is why it is saved longest real "
-    "name first; there two names that overlap without either containing "
-    "the other (Mary Ann and Ann Lee, in Mary Ann Lee) can come out "
+    "a time in the file's order, which is why it is saved longest real name "
+    "first. There, two names that overlap without either containing the "
+    "other (Mary Ann and Ann Lee, in Mary Ann Lee) can come out "
     "differently, and a pseudonym that contains a name from the list is "
-    "rewritten again. The names file stays as the place to change the "
-    "list: edit it, save it, and call save_names_list again.")
+    "rewritten again. The names file stays as the place to change the list: "
+    "edit it, save it, and call save_names_list again.")
 # The token refused in the names file's words (fix round 1)
 TOKEN_CHANGED = (
     "preview_token did not verify for this save. The likeliest reason is "
@@ -913,10 +913,10 @@ class TestTheWarnings:
         assert server.SAVE_NAMES_LIST_PUT_BACK in answer["warnings"]
         # fix round 1: what Exegete's imports do, and what an import
         # applying the list entry by entry does
-        assert ("so where Exegete applies the list it puts that name back; "
-                "an import that applies the list one entry at a time, as "
-                "QualCoder's does, can replace it again, so the two store "
-                "different text.") in server.SAVE_NAMES_LIST_PUT_BACK
+        assert ("so where Exegete applies the list it puts that name back. "
+                "An import that applies the list one entry at a time, as "
+                "QualCoder's does, can replace it again, so the two imports "
+                "store different text.") in server.SAVE_NAMES_LIST_PUT_BACK
 
     def test_its_own_name_put_back(self, selected):
         _write_names(selected, "Quorvin = Quorvin Junior")
@@ -2168,7 +2168,9 @@ class TestTheDocuments:
         # Codex asking before the save, which changes what exists
         # (and no longer read_pseudonym_list, removed: the files design,
         # piece 5)
-        assert ("a tool marked `anthropic/requiresUserInteraction` (here, "
+        # (v0.15.3: the hosts' list, read again, begins the sentence with
+        # the mark, since Anthropic's page no longer gives the version)
+        assert ("A tool marked `anthropic/requiresUserInteraction` (here, "
                 "`import_documents` and `save_names_list`) is asked about in "
                 "every one of these modes but `dontAsk`, which refuses it."
                 ) in install

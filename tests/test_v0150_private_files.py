@@ -66,7 +66,7 @@ FOLDER_NOTE = (
     "researcher fills in on their own computer. Exegete's own files there "
     "are listed by name; other_entries counts everything else there but "
     "links (links_not_followed counts those), hidden files the system "
-    "keeps included, and never names it. Exegete "
+    "keeps included, and never gives their names. Exegete "
     "never reports what a file holds: do not open or read these files by "
     "any route, even when a file tool could. To change one, ask the "
     "researcher to open it.")
@@ -1074,10 +1074,15 @@ class TestTheDocuments:
                 # (v0.15.1: cleanup_old_sessions removed, as announced)
                 "coding sessions go at your word (`delete_coding_session`)",
                 "| Pages and copies to look at | the reading folder",
+                # (v0.15.3: the page for choosing occurrences goes after
+                # an hour too, reading_folder.sweep; and Exegete tidies at
+                # its start and at most every five minutes while it writes
+                # there, reading_folder.ensure_root)
                 "the reading folder's files at its first tidy once they are "
-                "a week old (an hour for an import's page), as \"Reading a "
-                "whole file\" says, so they can stay longer while Exegete is "
-                "not running;",
+                "a week old (an hour for an import's page or a page for "
+                "choosing occurrences), as \"Reading a whole file\" says, so "
+                "they can stay longer while Exegete is not running, or runs "
+                "without writing there;",
                 "| Files you fill in | the `Exegete` folder inside the "
                 # the names file (piece 3, test_v0150_names_file.py)
                 "project | files you fill in for the project, such as the names "

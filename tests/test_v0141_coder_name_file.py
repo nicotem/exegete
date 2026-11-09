@@ -449,7 +449,7 @@ def test_a_file_too_large_beside_an_unmarked_earlier_one(folder, beside):
         assert said == ps.OVERSIZED_MESSAGE
         assert "the next write will then ask for the name again" in said
         return
-    assert (f"Ask the user to remove the extra top-level keys in it, or to "
+    assert (f"Ask the researcher to remove the extra top-level keys in it, or to "
             f"move both {NEW} and {OLD} aside: {OLD} beside it is not "
             f"marked as moved and still holds \"Before\", so moving {NEW} "
             f"aside alone would bring that name back without asking. "
@@ -473,7 +473,7 @@ def test_a_newer_file_beside_an_unmarked_earlier_one(folder):
     with pytest.raises(ps.SidecarWriteError) as e:
         ps.write_ai_coder_name(folder, "Next")
     said = str(e.value)
-    assert (f"Upgrade Exegete, or ask the user to move both {NEW} and {OLD} "
+    assert (f"Upgrade Exegete, or ask the researcher to move both {NEW} and {OLD} "
             f"aside: {OLD} beside it is not marked as moved and still "
             f"holds \"Before\", so moving {NEW} aside alone would bring "
             f"that name back without asking. Nothing was written.") in said
@@ -673,7 +673,7 @@ class TestThroughTheServer:
             "ai_coder_name"]["hint"]
         for said in (refused, hint):
             assert f"({NEW} in the project folder) could not be read" in said
-            assert ("Ask the user to set the name again with "
+            assert ("Ask the researcher to set the name again with "
                     "set_project_ai_coder_name, which puts the damaged file "
                     f"aside, or to remove both {NEW} and {OLD}") in said
             assert (f'still holds "Before", so removing {NEW} alone would '

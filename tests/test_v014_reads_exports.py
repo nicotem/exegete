@@ -511,7 +511,7 @@ class TestAHiddenCoderIsNeverNamedInARefusal:
         _reopen(qualcoder_db_path)
         out = host("get_coding_frequencies", coder=HIDDEN.upper())
         assert HIDDEN not in json.dumps(out)
-        assert "1 more coder hidden in QualCoder" in out["error"]
+        assert "1 more coder the project hides" in out["error"]
         assert "did_you_mean" not in out
         # Named exactly, a hidden coder is read (the explicit filter's
         # bypass), not refused
@@ -774,15 +774,20 @@ class TestExportsSayWhatTheyHold:
                                                 tmp_path):
         path = tmp_path / "p.qdpx"
         out = host("export_refi_qda", output_path=str(path))
-        assert "cases, annotations and journals are not" in out["note"]
+        # (v0.15.3: the cases and the attributes, annotations and journals
+        # are written too, and every category)
+        for words in ("the cases", "with their attributes",
+                      "the journal entries", "the annotations"):
+            assert words in out["note"], words
         with zipfile.ZipFile(path) as z:
             name = next(n for n in z.namelist() if n.endswith(".qde"))
             root = ET.fromstring(z.read(name))
         parents = [e.get("name") for e in root.iter()
                    if e.tag.endswith("Code") and e.get("isCodable") == "false"]
         assert parents == ["Category A"]
-        assert "categories above the exported codes are included" in \
-            out["note"]
+        tags = {e.tag.split("}")[1] for e in root.iter()}
+        assert {"Cases", "Notes", "Variables"} <= tags
+        assert "Every category is included" in out["note"]
         assert "Categories, cases" not in out["note"]
 
     def test_the_markdown_codebook_puts_codes_where_they_belong(
@@ -1363,13 +1368,15 @@ class TestTheTextsSayWhatHappens:
 
     def test_co_occurrence_names_the_two_reports(self):
         text = _described("find_cooccurring_codes")
-        assert "co-occurrence report's overlap" in text
+        assert "the overlaps that QualCoder's co-occurrence report counts" \
+            in text
         assert "Code relations report" in text
         assert "overlap and proximity" not in text
 
     def test_search_memos_says_saved_graphs_are_not_searched(self):
         text = _described("search_memos")
-        assert "outside QualCoder's saved graphs" in text
+        assert "except the text on saved graphs" in text
+        assert "The text typed on graphs made in QualCoder" in text
         assert "every kind of note" not in text
 
     def test_a_character_attribute_note_does_not_speak_of_zero(

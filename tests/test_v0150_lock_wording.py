@@ -90,34 +90,42 @@ class TestTheThreeTexts:
                 "trying any repair, and keep that copy.") in privacy
         assert "with QualCoder closed" not in privacy
 
-    def test_the_workflow_s_section_and_its_name(self):
-        workflow = _read("AI_CODING_WORKFLOW.md")
-        assert "\n### One program at a time\n" in workflow
-        assert "Close QualCoder First" not in workflow
-        flat = _flat(workflow)
-        # (v0.15.2: the lock file, each cause and the rule, one sentence
-        # each)
-        assert ("A project's lock file, `project_in_use.lock`, shows that "
-                "the project is in use. It is active while another "
-                "conversation using Exegete is writing to the project, since "
-                "Exegete writes the file during each of its own writes. It "
-                "is also active while QualCoder 3.8.2 has the project open, "
-                "since QualCoder keeps the file as a heartbeat, a sign that "
-                "it still has the project open. **Every write operation is "
-                "refused while the project's lock file is active.** The "
-                "refusal gives both causes and the way through for each") \
-            in flat
-        assert ("if you also use QualCoder, make sure yourself that no "
-                "window has the project open before Exegete writes.") in flat
+    def test_the_coding_guide_gives_the_causes_and_the_rule(self):
+        # (v0.15.3: the workflow guide's section "One program at a time"
+        # is in the one coding guide's prerequisite for those who also
+        # use QualCoder, each cause before the rule, the ways through
+        # after it)
+        guide = _read("AI_CODING_GUIDE.md")
+        assert "Close QualCoder First" not in guide
+        flat = _flat(guide)
+        # (v0.15.3, the readability reading: the causes a sentence of
+        # their own, the facts unchanged)
+        assert ("**If you also use QualCoder**, close the project there "
+                "before Exegete writes to it. Exegete refuses to write "
+                "while the project's lock file is active. The lock file is "
+                "active while QualCoder 3.8.2 has the project open, or "
+                "while another conversation using Exegete is writing to "
+                "it. The refusal gives both causes and the way through for "
+                "each: closing the project in QualCoder, if you use it, or "
+                "waiting a moment and trying again.") in flat
+        assert ("So it is for you to make sure that no QualCoder 4.0 "
+                "window has the project open") in flat
         assert "make sure yourself that no QualCoder window" not in flat
 
-    def test_the_workflow_quotes_the_refusal_as_exegete_gives_it(self):
-        flat = _flat(_read("AI_CODING_WORKFLOW.md"))
-        assert f'"{qualcoder_open_message("...")}"' in flat
+    def test_a_document_quotes_the_refusal_whole_or_not_at_all(self):
+        # (v0.15.3: the workflow guide quoted it whole; the one coding
+        # guide gives its causes and ways through in its own words)
+        whole = qualcoder_open_message("...")
+        opening = whole[:whole.index(":")]
+        for name in DOCUMENTS:
+            flat = _flat(_read(name))
+            if opening in flat:
+                assert f'"{whole}"' in flat, name
 
     def test_no_link_uses_the_old_heading(self):
-        # the documents at the top, and those in docs/history/ (v0.15.1)
-        for path in [*REPO.glob("*.md"), *REPO.glob("docs/history/*.md")]:
+        # the documents at the top (v0.15.3: those kept in docs/history/
+        # from v0.15.1 left the repository's files)
+        for path in REPO.glob("*.md"):
             assert "#close-qualcoder-first" not in path.read_text(
                 encoding="utf-8"), path
 
@@ -135,13 +143,13 @@ NEW_WORDS = {
         "moment), or QualCoder 3.8.2 has it open (if the researcher uses "
         "it, ask them to close it there). Go on only when it is false."),
     "select_project": (
-        "The result may include a `warning`; RELAY it. While the lock file "
+        "The result may include a `warning`; relay it. While the lock file "
         "is active, every write is refused: another conversation using "
         "Exegete is writing (wait a moment), or QualCoder 3.8.2 has the "
         "project open (if the researcher uses it, ask them to close it "
         "there); re-check with get_current_project."),
     "start_coding_session": (
-        "IN USE: if `qualcoder_open` is true, STOP: wait a moment (another "
+        "In use: if `qualcoder_open` is true, stop: wait a moment (another "
         "conversation using Exegete is writing) or, if the researcher uses "
         "QualCoder 3.8.2, ask them to close it there; re-check with "
         "get_current_project. QualCoder 4.0 writes no lock file: a "
@@ -282,7 +290,7 @@ WAS = re.compile(r"rather than while QualCoder\s+3\.x has the project open")
 DOCUMENTS = (
     "README.md", "TOOLS.md", "PRIVACY.md", "SUPPORT.md", "INSTALL.md",
     "QUICKSTART.md", "PROJECT_SELECTION_GUIDE.md", "AI_CODING_GUIDE.md",
-    "AI_CODING_WORKFLOW.md", ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
     "packaging/desktop-extension/manifest.in.json",
     # fix round 1: the provenance record, in both packages
     "NOTICE", "packaging/pypi-old-name/NOTICE")
@@ -347,8 +355,9 @@ class TestOneSpelling:
 # 4. The CHANGELOG, true of each document it names
 # ---------------------------------------------------------------------------
 
+# (v0.15.3: AI_CODING_WORKFLOW.md, which it names, is in the coding guide)
 NAMED = ("README.md", "TOOLS.md", "PRIVACY.md", "SUPPORT.md",
-         "PROJECT_SELECTION_GUIDE.md", "AI_CODING_WORKFLOW.md",
+         "PROJECT_SELECTION_GUIDE.md",
          "AI_CODING_GUIDE.md", ".github/ISSUE_TEMPLATE/bug_report.yml")
 
 

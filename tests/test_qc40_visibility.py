@@ -478,7 +478,10 @@ class TestExportsReadBaseTables:
         assert out["codings_exported"] == 5  # 2 visible + 3 hidden
         with zipfile.ZipFile(out_file) as zf:
             qde = zf.read("project.qde").decode("utf-8")
-        assert qde.count("<PlainTextSelection") == 5
+        # (v0.15.3: the hidden coder's annotation is written too, as a
+        # Note with a selection of its own, so the codings are counted)
+        assert qde.count("<Coding ") == 5
+        assert qde.count("<PlainTextSelection") == 6
 
 
 # =============================================================================
@@ -522,14 +525,16 @@ class TestWriteEchoesRedactHiddenTargets:
         self._assert_no_leak(raw)
         out = json.loads(raw)
         assert "error" in out, out
-        assert "hidden in QualCoder" in out["error"]
+        assert "the project hides" in out["error"]
         assert "allow_hidden_coder" in out["error"]
         assert out["refused"] == ["hidden_coder"]
         assert out["nothing_changed"] is True
         # count-free: no digit other than the row id appears
         digits = {c for c in out["error"] if c.isdigit()}
         assert digits <= {"1", "3"}, out["error"]
-        assert "hides" not in out["error"]
+        # (the served texts' second batch: "a coder the project hides",
+        # the one wording; still no count of hidden coders)
+        assert "coders" not in out["error"]
         return out
 
     def _assert_redacted_success(self, raw: str):
@@ -581,7 +586,7 @@ class TestWriteEchoesRedactHiddenTargets:
                 lambda: wdb.delete_annotation(1),
                 lambda: wdb.set_memo("coding", 3, "x"),
             ):
-                with pytest.raises(ValueError, match="hidden in QualCoder"):
+                with pytest.raises(ValueError, match="the project hides"):
                     call()
         finally:
             wdb.close()
@@ -671,7 +676,7 @@ class TestWriteEchoesRedactHiddenTargets:
         assert "error" in out
         assert secret not in raw and "pub" not in out["error"]
         assert out["refused"] == ["hidden_coder", "private_note"]
-        assert "hidden in QualCoder" in out["error"]
+        assert "the project hides" in out["error"]
         assert "private note" in out["error"]
         assert "confirm_private_note_deletion" in out["error"]
 
@@ -844,7 +849,7 @@ class TestVisibilityGuardFailsClosed:
             assert needle not in raw, needle
         out = json.loads(raw)
         assert "error" in out and "success" not in out, out
-        assert "hidden in QualCoder" not in out["error"]
+        assert "the project hides" not in out["error"]
         assert "refused" not in out
         return out
 
@@ -1043,7 +1048,7 @@ class TestTheCapabilityIsNotAVersion:
     """
 
     DOCS = ("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
-            "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
+            "AI_CODING_GUIDE.md")
 
     # Sentences where 4.0 is genuinely about 4.0 and not a stand-in for
     # the capability: its own assistant, its own rebuilds, its own lock
@@ -1239,7 +1244,7 @@ class TestNoSiteDecidesVisibilityPermissively:
     def test_the_setter_refuses_a_hidden_name_and_takes_the_override(
             self, intact):
         refused = json.loads(server.set_project_ai_coder_name(HIDDEN))
-        assert "currently hidden in QualCoder" in refused["error"]
+        assert "a coder the project hides" in refused["error"]
         allowed = json.loads(
             server.set_project_ai_coder_name(HIDDEN, allow_hidden_coder=True))
         assert allowed["ai_coder_name"]["name"] == HIDDEN

@@ -209,7 +209,7 @@ jobs:
 
       - name: Upload pytest output
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           # a name used twice in one run is refused, so each part's own
           name: pytest-${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.os == 'windows-latest' && format('-part{0}', matrix.part) || '' }}
@@ -276,7 +276,7 @@ jobs:
       # Uploaded before any third-party tool runs, so nothing after this
       # step can change what was built.
       - name: Upload the extension
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: desktop-extension-${{ matrix.os }}
           path: dist/mcpb/*.mcpb
@@ -307,6 +307,14 @@ jobs:
       # report is also kept, for the table below; uv writes it, the
       # `+ name==version` lines included, to standard error, and bash runs
       # this with pipefail, so a failing uv still fails the step.
+      # v0.15.3: a Mac with Apple silicon takes PyMuPDF 2, whose
+      # onnxruntime (1.31.0 in the lock) has packages for macOS 14 or
+      # later alone there. uv 0.9.7 asks about a Mac at macOS 13.0 unless
+      # MACOSX_DEPLOYMENT_TARGET says otherwise, and stops on that
+      # computer with "no binary distribution"; so the Apple silicon Mac
+      # is asked at 14.0, the floor INSTALL.md states, and every other
+      # computer at uv's own default, the Intel Mac included. A lock that
+      # needed macOS 15 there would still turn this step red.
       - name: Check the lock has a wheel for every computer
         if: runner.os == 'Linux'
         shell: bash
@@ -315,6 +323,7 @@ jobs:
           cd dist/mcpb/exegete-*/
           for target in aarch64-apple-darwin x86_64-apple-darwin x86_64-pc-windows-msvc aarch64-pc-windows-msvc x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
             echo "== $target"
+            if [ "$target" = aarch64-apple-darwin ]; then export MACOSX_DEPLOYMENT_TARGET=14.0; else unset MACOSX_DEPLOYMENT_TARGET; fi
             uv sync --frozen --dry-run --no-install-project --no-build --extra pdf-epub --python "$(cat .python-version)" --python-platform "$target" 2>&1 | tee "$RUNNER_TEMP/dry-run/$target.txt"
           done
 
@@ -324,8 +333,9 @@ jobs:
       # the release commit's table under "What the extension installs".
       # --check-pymupdf: it also fails when a computer's report does not
       # install the PyMuPDF pyproject.toml gives it (2.x with onnxruntime
-      # on Windows x64 and Linux, 1.x elsewhere), since uv evaluates
-      # markers for a computer it is asked about, not the one it runs on.
+      # on Windows x64, Linux and Macs with Apple silicon, 1.x elsewhere),
+      # since uv evaluates markers for a computer it is asked about, not
+      # the one it runs on.
       - name: List what the extension installs
         if: runner.os == 'Linux'
         shell: bash
@@ -392,7 +402,7 @@ jobs:
 
     steps:
       - name: Download the three builds
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
         with:
           pattern: desktop-extension-*
           path: builds
@@ -574,6 +584,10 @@ jobs:
   # close it, or a plain breach of the writing conventions fails unless
   # a reader has accepted its sentence in scripts/check_texts_ledger.tsv;
   # the summary adds each document's readability, which never fails.
+  # v0.15.3: then the documents' promises and dated readings
+  # (scripts/check_promises.py), listed in the summary with the day each
+  # promise's line was written and each reading's age; on a push it
+  # never fails, and release preparation runs it with --release.
   # Then the facts the documents repeat (tests/test_v0151_facts.py): the
   # folders, the time per import call and the tool counts, held to the
   # code's constants, which needs the package; the answer comes in about
@@ -589,6 +603,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
+          # The whole history: git blame gives the day each promise's
+          # line was written.
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up Python 3.13
@@ -601,6 +618,11 @@ jobs:
 
       - name: Mentions of QualCoder and the voice in the texts
         run: python scripts/check_texts.py
+
+      # Standard library only, before the install; the script writes the
+      # summary itself, so no pipe can lose its exit code.
+      - name: Promises and dated readings (a report)
+        run: python scripts/check_promises.py
 
       # From the lock, as the libraries' install does: uv, at the version
       # the extension job uses, in an environment of its own, so it never

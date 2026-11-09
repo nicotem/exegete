@@ -15,9 +15,10 @@
   report with no install line fails rather than give an empty table.
   Each release's notes copy the release commit's table. In CI it also
   checks that each computer's report installs the PyMuPDF pyproject.toml
-  gives it (2.x with onnxruntime on Windows x64 and Linux from Python
-  3.11 to 3.14, 1.x elsewhere): uv, asked about Windows x64 from Linux,
-  names its processor "x86_64", where Windows' own Python says "AMD64".
+  gives it (2.x with onnxruntime on Windows x64, Linux and, from v0.15.3,
+  Macs with Apple silicon, from Python 3.11 to 3.14, 1.x elsewhere): uv,
+  asked about Windows x64 from Linux, names its processor "x86_64",
+  where Windows' own Python says "AMD64".
 
 No test reaches the network: the request is replaced, and the reports
 are small samples in uv's own form.
@@ -299,7 +300,8 @@ def test_one_row_for_a_library_alike_everywhere_one_per_release(
         ("cryptography", "46.0.3", "Windows on Arm"),
         ("cryptography", "48.0.1", "Mac (Intel)"),
         ("cryptography", "50.0.2",
-         "Mac (Apple silicon), Windows (x64), Linux (x86-64), Linux (Arm)"),
+         "Mac (Apple silicon, macOS 14 or later), Windows (x64), "
+         "Linux (x86-64), Linux (Arm)"),
         ("mcp", "1.30.0", "all"),
         ("pymupdf", "1.28.2", "all"),
         ("pywin32", "312", "Windows (x64), Windows on Arm"),
@@ -335,9 +337,10 @@ def test_a_python_uv_installed_itself_is_named(tmp_path):
 
 
 # Where pyproject.toml gives PyMuPDF 2, written out here rather than read
-# from the script, so that a change to either is seen.
-PYMUPDF_TWO = ("x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu",
-               "aarch64-unknown-linux-gnu")
+# from the script, so that a change to either is seen (the Apple silicon
+# Mac from v0.15.3).
+PYMUPDF_TWO = ("aarch64-apple-darwin", "x86_64-pc-windows-msvc",
+               "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu")
 
 
 def _pymupdf_reports(tmp_path, python, changed=None):
@@ -373,8 +376,10 @@ def test_each_computer_with_the_pymupdf_pyproject_gives_it_passes(
     # what CI's dry run gave Windows x64 before both lines named "x86_64"
     ("x86_64-pc-windows-msvc", ("1.28.2", False)),
     ("aarch64-unknown-linux-gnu", ("2.0", False)),
-    ("aarch64-apple-darwin", ("1.28.2", True)),
+    # what it gave the Apple silicon Mac before v0.15.3
+    ("aarch64-apple-darwin", ("1.28.2", False)),
     ("aarch64-pc-windows-msvc", ("2.0", True)),
+    ("x86_64-apple-darwin", ("2.0", True)),
 ])
 def test_a_computer_given_another_pymupdf_fails_the_check(
         tmp_path, monkeypatch, capsys, target, given):
@@ -392,9 +397,10 @@ def test_a_computer_given_another_pymupdf_fails_the_check(
 # Each computer's system and processor as its own Python names them, and
 # as uv names them when asked about it from another computer (CI's dry
 # run, on Linux): Windows x64 is "AMD64" to Windows' Python, "x86_64" to
-# uv.
+# uv. The Apple silicon Mac is "arm64" to both (v0.15.3: the second line
+# names it so, and "aarch64" on darwin keeps 1.x).
 MACHINE_NAMES = {
-    "aarch64-apple-darwin": ("darwin", ("arm64", "aarch64")),
+    "aarch64-apple-darwin": ("darwin", ("arm64",)),
     "x86_64-apple-darwin": ("darwin", ("x86_64",)),
     "x86_64-pc-windows-msvc": ("win32", ("AMD64", "x86_64")),
     "aarch64-pc-windows-msvc": ("win32", ("ARM64", "aarch64")),

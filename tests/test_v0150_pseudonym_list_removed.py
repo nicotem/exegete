@@ -71,7 +71,8 @@ OPENING = ("The project's pseudonyms.json (its list of real names and their "
 # or kept (and so perhaps older than it), and where the entries the file
 # cannot hold are seen
 NOTE_FULL = OPENING + (
-    "Its contents are the researcher's reverse key and are never returned. "
+    "It leads from each pseudonym to a real name, so its contents are "
+    "never returned. "
     "To see or change the list, the researcher uses the names file on "
     "their own computer: prepare_names_list makes it from the list (or "
     "keeps one already there, and says if the list holds entries it "
@@ -82,8 +83,8 @@ NOTE_FULL = OPENING + (
 # `core`, which serves neither names list tool: the words of 0.15.0 before
 # this piece, unchanged
 NOTE_CORE = OPENING + (
-    "Its contents are the researcher's reverse key and are not returned "
-    "here; the researcher can read the file in the project folder, or in "
+    "It leads from each pseudonym to a real name, so its contents are not "
+    "returned here; the researcher can read the file in the project folder, or in "
     "QualCoder's Pseudonyms dialog if they use QualCoder.")
 # Fix round 1 (the major): imports read pseudonyms.json, never the names
 # file, so the note names the save that makes the file the list
@@ -186,11 +187,15 @@ class TestTheMarks:
         """Item 2: requiresUserInteraction for import_documents and
         save_names_list, over the host's path too."""
         mark = {"anthropic/requiresUserInteraction": True}
-        assert server.TOOL_META == {"import_documents": mark,
-                                    "save_names_list": mark}
+        key = "anthropic/requiresUserInteraction"
+        # (v0.15.3: read_file_with_codings carries a result limit of its
+        # own, not this mark)
+        asked = {name: meta for name, meta in server.TOOL_META.items()
+                 if key in meta}
+        assert asked == {"import_documents": mark, "save_names_list": mark}
         server._apply_toolset("full")
         marked = {name: tool.meta for name, tool in _listed().items()
-                  if tool.meta}
+                  if tool.meta and key in tool.meta}
         assert marked == {"import_documents": mark, "save_names_list": mark}
 
     def test_no_tool_that_changes_nothing_is_marked_as_writing(self):

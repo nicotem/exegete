@@ -3,12 +3,13 @@
 ruling of 21 October 2026), with a larger memory cap for PDFs.
 
 - The optional part `pdf-epub` names PyMuPDF in two lines: 2.x on
-  Windows x64 and Linux (x86-64 and Arm) with Python 3.11 to 3.14, 1.x
-  everywhere else, each line the exact complement of the other, so every
-  computer takes one; neither reads the system's release.
+  Windows x64, Linux (x86-64 and Arm) and, from v0.15.3, Macs with Apple
+  silicon, with Python 3.11 to 3.14, 1.x everywhere else, each line the
+  exact complement of the other, so every computer takes one; neither
+  reads the system's release.
 - The lock agrees: its walk from the project with the part reaches 2.0
-  on those three computers and 1.28.2 on the other three, at each
-  Python; uv is told never to build PyMuPDF.
+  on those four computers and 1.28.2 on the other two (Intel Macs and
+  Windows on Arm), at each Python; uv is told never to build PyMuPDF.
 - A PDF's reading is given 2 GiB, every other kind 1 GiB, and a PDF
   refused for memory names the cap that applied. On Linux the reading
   process starts with three fixed settings, and a child started as it
@@ -70,8 +71,11 @@ PYTHONS = ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15")
 # Windows x64 twice: "AMD64" as Windows' own Python names its processor,
 # "x86_64" as uv does when asked about Windows x64 from another computer
 # (CI's dry run, whose table and wheel check must see what Windows sees).
+# A Mac with Apple silicon from v0.15.3, as "arm64" alone, which both
+# macOS's Python and uv's aarch64-apple-darwin say ("aarch64" on darwin
+# keeps 1.x).
 TWO_X = {("win32", "AMD64"), ("win32", "x86_64"), ("linux", "x86_64"),
-         ("linux", "aarch64")}
+         ("linux", "aarch64"), ("darwin", "arm64")}
 TWO_X_PYTHONS = ("3.11", "3.12", "3.13", "3.14")
 FIRST, SECOND = "1.28.2", "2.0"
 
@@ -167,7 +171,7 @@ class TestTheLockAgrees:
                 else FIRST
             assert reached["pymupdf"] == wanted, (system, machine, python)
 
-    def test_at_the_extensions_python_three_computers_each(self):
+    def test_at_the_extensions_python_four_computers_take_2(self):
         lock = _lock()
         found = {}
         for system, machine in ENVIRONMENTS:
@@ -175,10 +179,10 @@ class TestTheLockAgrees:
                 lock, ROOT, system, machine, root_extras=("pdf-epub",),
                 python="3.13")["pymupdf"]
         # the six computers by their own Pythons' names (Windows x64 as
-        # "AMD64")
+        # "AMD64"); from v0.15.3 the Apple silicon Mac among the four
         assert {k for k, v in found.items() if v == SECOND} \
             == TWO_X & set(ENVIRONMENTS)
-        assert sorted(found.values()) == [FIRST] * 3 + [SECOND] * 3
+        assert sorted(found.values()) == [FIRST] * 2 + [SECOND] * 4
 
     def test_the_locked_releases_are_exactly_the_two(self):
         assert sorted(p["version"] for p in _lock()["package"]
@@ -365,7 +369,9 @@ def test_onnxruntime_is_loaded_only_where_pymupdf_2_or_later_is(
 @pytest.mark.skipif(not OPTIONAL, reason="PyMuPDF needed")
 def test_the_installed_pymupdf_is_read_by_its_own_release():
     """The release read where the reading process looks it up is the one
-    that loads: 2.0 in CI's Ubuntu and Windows 3.13, 1.28.2 elsewhere."""
+    that loads: 2.0 in each of CI's suite jobs (Ubuntu, Windows x64 and,
+    from v0.15.3, macOS on Apple silicon), 1.28.2 on Intel Macs and
+    Windows on Arm."""
     import pymupdf
     major = int(pymupdf.__version__.split(".", 1)[0])
     assert import_reading._pymupdf_loads_onnxruntime() is (major >= 2)
@@ -402,9 +408,15 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
             "its own. On Windows x64, a library Exegete installs to read "
             "PDFs reports its use to Windows' diagnostic data each time a "
             "PDF is read, with nothing from your documents.") in flows
+    # (v0.15.3: the Mac with Apple silicon, switched off before the
+    # library starts, as on Linux; what was checked there is that a
+    # reading keeps nothing, its connections having been watched on Linux
+    # alone)
     assert ("Exegete switches its reports off: on Linux before the library "
-            "starts, so it reports nothing there, and on Windows once it "
-            "has loaded, after its first few reports") in flows
+            "starts, so it reports nothing there; on a Mac with Apple "
+            "silicon before it starts too, where a reading was checked to "
+            "keep nothing in a home folder of its own; and on Windows once "
+            "it has loaded, after its first few reports") in flows
     # (the fix round: "nothing there" holds for the release the lock
     # gives, so the pointer names the switch's limits, which say so)
     assert ("\"A library's usage reports\", below, says what they hold, "
@@ -450,7 +462,14 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
             "can switch its reports on again for that reading",
             "you could read no PDFs through Exegete on Windows",
             "what the computer's diagnostic data setting lets Windows "
-            "send"):
+            "send",
+            # (v0.15.3) the Mac with Apple silicon: the setting before
+            # onnxruntime loads, nothing kept, connections watched on
+            # Linux alone
+            "Exegete gives the setting there before onnxruntime loads",
+            "A reading was checked to keep nothing in a home folder of its "
+            "own",
+            "has been watched on Linux alone"):
         assert fact in part, fact
     # and where reading is, no longer "no network" alone
     reading = _flat_section("PRIVACY.md", "## Bringing documents in")
@@ -525,9 +544,12 @@ def test_contributing_says_exegetes_code_imports_onnxruntime():
     text = " ".join((REPO / "CONTRIBUTING.md").read_text(
         encoding="utf-8").split())
     assert "never by Exegete's own code" not in text
-    assert ("loaded only inside the reading process, never at Exegete's "
-            "start, where Exegete's own code imports onnxruntime only to "
-            "switch its usage reports off") in text
+    # (v0.15.3, the readability reading: where the import happens has a
+    # sentence of its own, so that "where" cannot read as the start)
+    assert ("they are loaded only inside the reading process, never at "
+            "Exegete's start. In the reading process, Exegete's own code "
+            "imports onnxruntime only to switch its usage reports off") \
+        in text
 
 
 def test_the_parity_script_switches_onnxruntimes_reports_off(tmp_path):
@@ -739,6 +761,14 @@ def test_notice_names_each_library_pymupdf_2_brings():
                       .split())
     for name, words in NOTICE_ENTRIES.items():
         assert words in notice, name
+    # the computers that take them, as the lines give them (v0.15.3: Macs
+    # with Apple silicon among them)
+    start = notice.index("With Python 3.11 to 3.14 on ")
+    computers = notice[start:notice.index("the part brings PyMuPDF 2",
+                                          start)]
+    for computer in ("Windows x64", "Linux (x86-64 and Arm)",
+                     "Macs with Apple silicon"):
+        assert computer in computers, computer
     assert ("under PyMuPDF's statement, \"Dual Licensed - GNU AFFERO GPL "
             "3.0 or Artifex Commercial License\"") in notice
     assert (REPO / "NOTICE").read_bytes() == \
@@ -750,7 +780,11 @@ def test_notice_names_what_numpys_packages_bundle_where_they_do():
     C++ runtime (numpy.libs/msvcp140-....dll) in every Windows package,
     though their LICENSE.txt does not name it; libquadmath in the Linux
     x86-64 packages alone (the Arm packages' LICENSE.txt names it, but
-    they hold no such file)."""
+    they hold no such file). v0.15.3: the packages for macOS 14 on Apple
+    silicon hold no bundled library at all (no numpy/.dylibs) and link
+    Apple's Accelerate framework, though their LICENSE.txt names OpenBLAS
+    and the GCC runtime (read in numpy 2.4.6's package for Python 3.11
+    and 2.5.4's for 3.13, 3 November 2026)."""
     notice = " ".join((REPO / "NOTICE").read_text(encoding="utf-8")
                       .split())
     start = notice.index("- numpy:")
@@ -759,6 +793,7 @@ def test_notice_names_what_numpys_packages_bundle_where_they_do():
         "library (msvcp140.dll)" in entry
     assert "on Linux x86-64 libquadmath (LGPL-2.1-or-later)" in entry
     assert "on Linux libquadmath" not in entry
+    assert "use Apple's Accelerate framework, part of macOS" in entry
 
 
 def test_the_advisory_check_asks_about_both_releases():

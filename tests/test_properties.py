@@ -393,7 +393,7 @@ def test_duplicate_apply_is_idempotent_no_write_no_backup():
         raw = server.apply_codings(sess.session_id, create_backup=True)
         _assert_read_only()
         assert not _is_error(raw), f"duplicate apply must not error: {raw}"
-        assert "EVERY APPROVED CODING IS ALREADY IN THE DATABASE" in raw
+        assert "every approved coding is already in the database" in raw
         assert H.row_counts(path)["code_text"] == before, "duplicate apply changed row count"
         assert sorted(folder.parent.glob(f"{folder.stem}_backup_*")) == backups_before
         _assert_core(path)

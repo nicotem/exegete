@@ -170,7 +170,7 @@ class TestThePlacesAndTheTable:
                 "`~/.exegete`, as \"How your data flows\" says.") in section
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
-        # folder chosen by hand not yet checked (the staleness audit of 20
+        # folder chosen by hand said to be unchecked (the staleness audit of 20
         # October 2026: one account in every document, held by its parts
         # in tests/test_v0150_last_blockers.py; its fix round: the folders
         # by their names in the code, both among the usual places)
@@ -178,8 +178,10 @@ class TestThePlacesAndTheTable:
         from exegete import names
         earlier = f"`~/{names.OLD_EXTENSION_WORKSPACE_FOLDER}`"
         now = f"`~/{names.EXTENSION_WORKSPACE_FOLDER}`"
+        # (v0.15.3, the readability reading: each earlier folder a sentence
+        # of its own)
         account = section[section.index(
-            f"the extension's was {earlier} before 0.15.0"):]
+            f"The extension's was {earlier} before 0.15.0."):]
         account = account[:account.index("| Kind |")]
         _says_the_account(account)
         assert now in account
@@ -307,7 +309,7 @@ class TestTheNotes:
         assert ("Exegete's own files there are listed by name; other_entries "
                 "counts everything else there but links (links_not_followed "
                 "counts those), hidden files the system keeps included, and "
-                "never names it.") in note
+                "never gives their names.") in note
         assert "These are the files the researcher keeps" not in note
         private_files.ensure_folder(project)
         (project / "Exegete" / ".DS_Store").write_bytes(b"\0")

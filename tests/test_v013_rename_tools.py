@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import exegete.server as server
 from exegete.database import (QUALCODER_LOCK_FILENAME, name_key,
+                                    name_character_problem,
                                     normalize_name, validate_qda_path)
 
 
@@ -453,6 +454,11 @@ def _case_departure(up, ours, typed, others):
         return "whitespace runs collapse"
     if ours is None and any(name_key(o) == name_key(typed) for o in others):
         return "duplicate-names rule"
+    # v0.15.3: a new name may not hold a character no one sees on screen,
+    # which Manage Cases writes as it is
+    if ours is None and name_character_problem(
+            normalize_name(typed)) is not None:
+        return "no invisible characters"
     raise AssertionError(f"unlisted departure: {up!r} -> {ours!r}")
 
 
@@ -474,7 +480,7 @@ def test_rename_case_differs_from_manage_cases_only_as_listed(
         assert "error" in out or out.get("reason") == "unchanged", out
     departure = _case_departure(up, ours, typed, others)
     assert departure in (None, "whitespace runs collapse",
-                         "duplicate-names rule")
+                         "duplicate-names rule", "no invisible characters")
 
 
 def _documents_file(project, name):

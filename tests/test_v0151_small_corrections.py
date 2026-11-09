@@ -182,13 +182,14 @@ class TestTheRestartIsSaid:
 class TestTheMethodRelease:
 
     def test_no_text_plans_the_earlier_number(self):
-        # the owner's form of 27 October (ruling 105): method is v0.15.4
-        assert _method_release() == "v0.15.4"
+        # the owner's form of 27 October (ruling 105): method was v0.15.4;
+        # the plan of 3 November (ruling 115): method is v0.15.5
+        assert _method_release() == "v0.15.5"
         sources = [str(p.relative_to(REPO)) for p in
                    sorted((REPO / "src" / "exegete").rglob("*.py"))]
         for name in DOCUMENTS + tuple(sources):
             text = _flat(_read(name))
-            for earlier in ("v0.15.2", "v0.15.3"):
+            for earlier in ("v0.15.2", "v0.15.3", "v0.15.4"):
                 assert f"planned as {earlier}" not in text, name
                 assert f"{earlier}, the method release" not in text, name
 

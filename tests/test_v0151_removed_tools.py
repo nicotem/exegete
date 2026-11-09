@@ -56,11 +56,11 @@ GONE_CONSTANTS = ("CODE_REPORT_SEGMENT_LIMIT", "DEPRECATED_CODE_REPORT",
                   "_help_topic")
 TOPICS = ("analyze_for_coding", "apply_codings", "edit_suggestion",
           "coding_style_guidance")
-# The shipped documents; docs/history/ records earlier designs, and the
-# CHANGELOG records the removal itself
+# The shipped documents; git's history keeps the earlier designs, and
+# the CHANGELOG records the removal itself
 DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "SUPPORT.md", "QUICKSTART.md", "AI_CODING_GUIDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
+             "PROJECT_SELECTION_GUIDE.md",
              "CONTRIBUTING.md", "CLAUDE.md",
              "packaging/pypi-old-name/README.md",
              "packaging/desktop-extension/manifest.in.json",
@@ -199,7 +199,7 @@ class TestMergedProposalsStayMerged:
         assert session.get_proposal_by_guid(source).status == "merged"
         assert session.get_proposal_by_guid(source).merged_into == target
         review = server.review_proposals(sid, [source])
-        assert "MERGED into 'Deadline stress'" in review
+        assert "merged into 'Deadline stress'" in review
 
     def test_update_proposal_status_skips_it(self, merged_session):
         sid, source, _ = merged_session

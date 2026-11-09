@@ -172,7 +172,7 @@ class TestEndToEndLoop:
         review = server.review_suggestions(sid, show_context=True)
         for guid in guids:
             assert guid in review
-        assert "PENDING" in review
+        assert "Status: pending" in review
 
         # 4. approve both
         upd = server.update_suggestion_status(sid, approve=guids)
@@ -180,7 +180,7 @@ class TestEndToEndLoop:
 
         # 5. apply
         result = server.apply_codings(sid)
-        assert "CODINGS APPLIED TO DATABASE" in result
+        assert "Codings applied to the database" in result
         assert "Backup created" in result
 
         # DB ground truth: rows written exactly as QualCoder would
@@ -320,7 +320,7 @@ class TestUnhappyPaths:
             # stale after 31s: heartbeat aging is what unblocks writes
             lock.write_text(f"livecoder\n{time.time() - 31}", encoding="utf-8")
             result = server.apply_codings(sid)
-            assert "CODINGS APPLIED" in result
+            assert "Codings applied" in result
             # the stale foreign lock file was left alone
             assert lock.exists()
             assert lock.read_text(encoding="utf-8").startswith("livecoder")
@@ -407,7 +407,7 @@ class TestUnhappyPaths:
         t0 = time.perf_counter()
         result = server.apply_codings(sid, create_backup=False)
         apply_ms = (time.perf_counter() - t0) * 1000
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
 
         bad = _rows(
             qualcoder_db_path,

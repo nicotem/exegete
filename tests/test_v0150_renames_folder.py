@@ -327,10 +327,10 @@ class TestTheTexts:
 
 DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
              "QUICKSTART.md", "SUPPORT.md", "CONTRIBUTING.md", "CLAUDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md")
+             "AI_CODING_GUIDE.md", "PROJECT_SELECTION_GUIDE.md")
 # The folder's own spelling, letter case kept: "Qualcoder projects",
-# meaning projects in the format (docs/history/IMPORT_INSTRUCTIONS.md),
-# is not it
+# meaning projects in the format (IMPORT_INSTRUCTIONS.md, an early
+# document git's history keeps), is not it
 EARLIER_FOLDER = re.compile(r"QualCoder projects")
 
 
@@ -397,7 +397,7 @@ class TestTheDocuments:
         item = item[:item.index("- Up to 0.15.1")]
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
-        # folder chosen by hand not yet checked (the staleness audit of 20
+        # folder chosen by hand said to be unchecked (the staleness audit of 20
         # October 2026; tests/test_v0150_last_blockers.py holds the account
         # in every place that tells it; its fix round: here, the folders by
         # their names in the code, both among the usual places)
@@ -436,10 +436,14 @@ class TestTheDocuments:
         text = (REPO / "PROJECT_SELECTION_GUIDE.md").read_text(
             encoding="utf-8")
         start = text.index("Exegete searches these places by default:")
-        section = text[start:text.index("You'll get a list like", start)]
+        section = text[start:text.index("The answer lists each project",
+                                        start)]
         items = [b for b in _blocks(section) if b.startswith("- ")]
+        # (v0.15.3, the readability reading: "given in the setting", not
+        # the setting "names", which reads as a noun)
         assert items[0].startswith(
-            "- the folder `EXEGETE_WORKSPACE` names, when it is set")
+            "- the folder given in the setting `EXEGETE_WORKSPACE`, when "
+            "it is set")
         assert items[0].endswith(
             "at its top level only, unless it is one of the places below")
         listed = [p.rstrip("/") for item in items[1:]
@@ -455,11 +459,14 @@ class TestTheDocuments:
         `/Users/YOUR_NAME/`), not counting the Terminal routes' folder
         in Documents (fix round 1: that one was counted too). Nine until
         v0.15.2, when the workflow told the folders once, in "The
-        workspace", and pointed there."""
-        guide = (REPO / "AI_CODING_WORKFLOW.md").read_text(encoding="utf-8")
+        workspace", and pointed there. Since 0.15.3 the workflow guide's
+        text is in the one coding guide, which tells the folders once,
+        in its step 1, beside its examples: held, it names the new
+        folder and never the earlier one."""
+        guide = (REPO / "AI_CODING_GUIDE.md").read_text(encoding="utf-8")
         home_level = re.findall(r"(?:~|/Users/YOUR_NAME)/Exegete projects/",
                                 guide)
-        assert len(home_level) == 7
+        assert home_level
         assert "QualCoder projects" not in guide
 
     def test_the_readmes_first_session_says_by_default(self):

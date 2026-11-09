@@ -173,8 +173,8 @@ class TestSessionStartQualcoderCheck:
         env = json.loads(out)
         assert env["qualcoder_open"] is False
         assert "action_required" not in env
-        assert "STOP" not in out
-        assert "CODING SESSION STARTED" in out
+        assert "Stop: this project is in use" not in out
+        assert "Coding session started" in out
 
     def test_stale_lock_consistent_shape(self, setup_server, qualcoder_db_path):
         lock = _lock_file(qualcoder_db_path)
@@ -184,7 +184,7 @@ class TestSessionStartQualcoderCheck:
             env = json.loads(out)
             assert env["qualcoder_open"] is False
             assert "action_required" not in env
-            assert "CODING SESSION STARTED" in out
+            assert "Coding session started" in out
         finally:
             lock.unlink()
 
@@ -220,7 +220,7 @@ class TestSessionStartQualcoderCheck:
     def test_docstring_mandates_the_stop(self):
         doc = server.start_coding_session.__doc__ or ""
         assert "qualcoder_open" in doc
-        assert "STOP" in doc
+        assert "stop: wait a moment" in doc
         assert "get_current_project" in doc
 
 
@@ -366,7 +366,7 @@ class TestApplyCodingsSafety:
     def test_applied_status_prevents_double_apply(self, setup_server, qualcoder_db_path):
         session = self._approved_session(setup_server, qualcoder_db_path)
         out = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         # second run: clean explanation, not a unique-constraint blowup
         result = json.loads(server.apply_codings(session.session_id, create_backup=False))
         assert "already applied" in result["error"]

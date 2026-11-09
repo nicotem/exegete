@@ -523,7 +523,7 @@ class TestTheWorkBudget:
             "large to count in a preview with any mapping, even of one name "
             "(3 of them would still show one of these names); no preview "
             "can count them (see files_too_large_for_any_mapping). See "
-            "residue.file_text, which names the files.")
+            "residue.file_text for the files' names.")
         assert "fewer names" not in warning
 
     def test_the_other_files_take_what_the_named_file_leaves(
@@ -693,7 +693,7 @@ class TestTheWarnings:
         assert "The split by kind is a heuristic; the total is not." in \
             warning
         assert warning.endswith(
-            "See residue.file_text, which names the files.")
+            "See residue.file_text for the files' names.")
         _house_rules([warning], ["file-text warning"])
 
     def test_a_clause_at_zero_is_dropped(self, project):
@@ -701,11 +701,11 @@ class TestTheWarnings:
         warning = _file_text_warning(preview_of())
         assert warning == (
             "Warning: after this run, 1 occurrence(s) of these names would "
-            "still be in the text of 1 file(s), because the rewrite replaces "
-            "whole words only and in one file per call. 1 of those are a "
-            "name inside a longer word (usually a different word, left as it "
-            "is). The split by kind is a heuristic; the total is not. See "
-            "residue.file_text, which names the files.")
+            "still be in the text of 1 file(s), because the rewrite "
+            "replaces whole words only and in one file per call. 1 of those "
+            "are a name inside a longer word (usually a different word, "
+            "left as it is). The split by kind is a heuristic; the total is "
+            "not. See residue.file_text for the files' names.")
 
     def test_two_clauses_are_joined_with_and(self, project):
         _set_text(project, 4, "Thomas_P01 and THOMAS.")
@@ -1479,8 +1479,8 @@ class TestTheBlockIsBounded:
             "of these names in their text, and were not counted in full "
             "because the files before them spent this preview's budget; "
             "preview each on its own to count more of it (see "
-            "files_not_counted). See residue.file_text, which names the "
-            "files.")
+            "files_not_counted). See residue.file_text for the files' "
+            "names.")
         note = block["files_counted_in_part_note"]
         assert note.startswith("1 file(s) were counted in part: each count "
                                "stopped at this preview's budget")
@@ -1643,7 +1643,7 @@ class TestTheFileTextWarningsArithmetic:
             assert listed < 2 == block["totals"][
                 "files_showing_a_name_not_counted"], detail
             assert _file_text_warning(out) == self.PAST.format(n=2) + (
-                " See residue.file_text, which names the files."), detail
+                " See residue.file_text for the files' names."), detail
 
     def test_counted_and_uncounted_files_are_told_apart(self, project,
                                                         monkeypatch):
@@ -1660,15 +1660,15 @@ class TestTheFileTextWarningsArithmetic:
         out = preview_of()
         assert _file_text_warning(out) == (
             "Warning: after this run, 1 occurrence(s) of these names would "
-            "still be in the text of 1 file(s), because the rewrite replaces "
-            "whole words only and in one file per call. 1 of those are a "
-            "name inside a longer word (usually a different word, left as it "
-            "is). The split by kind is a heuristic; the total is not. 5 "
-            "further file(s) would still show one of these names in their "
-            "text, and were not counted in full because the files before "
-            "them spent this preview's budget; preview each on its own to "
-            "count more of it (see files_not_counted). See residue.file_text, "
-            "which names the files.")
+            "still be in the text of 1 file(s), because the rewrite "
+            "replaces whole words only and in one file per call. 1 of those "
+            "are a name inside a longer word (usually a different word, "
+            "left as it is). The split by kind is a heuristic; the total is "
+            "not. 5 further file(s) would still show one of these names in "
+            "their text, and were not counted in full because the files "
+            "before them spent this preview's budget; preview each on its "
+            "own to count more of it (see files_not_counted). See "
+            "residue.file_text for the files' names.")
 
     def test_a_counted_file_shows_a_name_on_either_reading(self, project,
                                                            monkeypatch):
@@ -1700,7 +1700,7 @@ class TestTheFileTextWarningsArithmetic:
             "Warning: after this run, this run's own whole-word rule would "
             "still match 1 occurrence(s) of these names in the text of 1 "
             "file(s), which the wide reading did not count. See "
-            "residue.file_text, which names the files.")
+            "residue.file_text for the files' names.")
 
     def test_a_file_with_more_whole_words_than_wide_ones_is_said(
             self, project):
@@ -1891,8 +1891,8 @@ class TestTheCheckBudget:
             "preview each on its own to count more of it (see "
             "files_not_counted). 2 file(s) were not checked; preview them "
             "one at a time, or use fewer names, to check them (see "
-            "files_not_checked). See residue.file_text, which names the "
-            "files.")
+            "files_not_checked). See residue.file_text for the files' "
+            "names.")
 
     def test_the_default_detail_names_them_by_id_only(self, project,
                                                       monkeypatch):
@@ -2105,10 +2105,12 @@ class TestTheUnionForLabelsAndAttributeValues:
         attribute = residue["attribute_values"]
         assert attribute == {"wide": 1, "whole_word": 1}
         fields = [w for w in out["warnings"] if "note(s), label(s)" in w]
+        # No name of this mapping is in the file, so an execute would
+        # rewrite nothing and the sentence speaks of no run (v0.15.3)
         assert fields[0].startswith(
             "Warning: 2 note(s), label(s) or attribute value(s) may still "
             "show one of these names, and this tool does not rewrite any of "
-            "them; 2 of those match this run's own whole-word rule.")
+            "them; 2 of those match the rewrite's own whole-word rule.")
 
 
 class TestTwoUnreadablePartsAreNamed:
@@ -2414,8 +2416,8 @@ class TestACleanProjectPastBothBudgets:
         assert _file_text_warning(out) == (
             f"Warning: {unchecked} file(s) were not checked; preview them "
             f"one at a time, or use fewer names, to check them (see "
-            f"files_not_checked). See residue.file_text, which names the "
-            f"files.")
+            f"files_not_checked). See residue.file_text for the files' "
+            f"names.")
         assert elapsed < self.CEILING_SECONDS, elapsed
 
 
@@ -2539,12 +2541,22 @@ class TestALargeFileUnderALargeMapping:
         assert row["checked"] is False and "shows_a_name" not in row
         assert row["too_large_for_this_mapping"] is True
         assert row["rewritten_by_this_run"] is left
-        assert _file_text_warning(out).startswith(
-            "Warning: the file this call rewrites is too large to count in "
-            "full with this many names, or to check whether a name would "
-            "still show in it after this run. The rewrite still applies to "
-            "it, and fewer names would let it be counted (see "
-            "files_too_large_for_this_mapping).")
+        if left:
+            assert _file_text_warning(out).startswith(
+                "Warning: the file this call rewrites is too large to count "
+                "in full with this many names, or to check whether a name "
+                "would still show in it after this run. The rewrite still "
+                "applies to it, and fewer names would let it be counted (see "
+                "files_too_large_for_this_mapping).")
+        else:
+            # No name of the mapping in it: the preview says that an
+            # execute would rewrite nothing, so this warning speaks of no
+            # run (v0.15.3)
+            assert _file_text_warning(out).startswith(
+                "Warning: the file this call names is too large to count in "
+                "full with this many names, or to check whether a name would "
+                "still show in it, and fewer names would let it be counted "
+                "(see files_too_large_for_this_mapping).")
         assert "preview them one at a time" not in _file_text_warning(out)
         assert "1 other file(s)" not in _file_text_warning(out)
         note = block["files_too_large_note"]
@@ -2616,9 +2628,12 @@ class TestALargeFileUnderALargeMapping:
         assert block["totals"]["files_showing_a_name"] == 1
         assert block["totals"]["named_file_too_large"] is False
         warning = _file_text_warning(out)
+        # No name of the mapping in file 1, the file named, so an execute
+        # would rewrite nothing and no run is spoken of (v0.15.3)
+        assert out["preview"]["totals"]["replacements"] == 0
         assert warning.startswith(
-            "Warning: after this run, 1 occurrence(s) of these names would "
-            "still be in the text of 1 file(s)")
+            "Warning: 1 occurrence(s) of these names would still be in the "
+            "text of 1 file(s)")
         # Fix round 5 (CORR3-1): the clause "and previewing one on its own
         # checks it" was false for this file (its question passes the
         # question's budget alone, named or not) and is gone.
@@ -2690,7 +2705,7 @@ class TestEveryWordingThroughTheTool:
     file fits under one name make every file too large for this mapping
     and none for any; the question's budget is set per shape."""
 
-    END = " See residue.file_text, which names the files."
+    END = " See residue.file_text for the files' names."
     NAMED = ("the file this call rewrites is too large to count in full "
              "with this many names, {}. The rewrite still applies to it, "
              "and fewer names would let it be counted (see "
@@ -3218,7 +3233,7 @@ class TestTheWarningsGrammar:
             "Warning: after this run, this run's own whole-word rule would "
             "still match 2 occurrence(s) of these names in the text of 1 "
             "file(s), which the wide reading did not count. See "
-            "residue.file_text, which names the files.")
+            "residue.file_text for the files' names.")
 
 class TestTheBoundsLanesPins:
     """The third bounds lane's candidate pins (its probes/test_zz_b3_pins.py),

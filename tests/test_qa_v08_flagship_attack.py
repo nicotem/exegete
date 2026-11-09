@@ -140,7 +140,7 @@ class TestInductiveLoop:
         rec = _record_one(sid, 1, "I cope by exercising",
                           code="Recovery practices")
         server.update_suggestion_status(sid, approve=[rec["guid"]])
-        assert "CODINGS APPLIED" in server.apply_codings(sid,
+        assert "Codings applied" in server.apply_codings(sid,
                                                          create_backup=False)
 
     def test_evidence_comes_back_to_suggest_not_coded(self, setup_server,
@@ -166,7 +166,7 @@ class TestInductiveLoop:
         guids = [_record_one(sid, 1, x["segment_text"],
                              code="Evidence code")["guid"] for x in passages]
         server.update_suggestion_status(sid, approve=guids)
-        assert "CODINGS APPLIED" in server.apply_codings(sid,
+        assert "Codings applied" in server.apply_codings(sid,
                                                          create_backup=False)
         # P1 invariant on the applied passages
         bad = _one(qualcoder_db_path,
@@ -356,7 +356,8 @@ class TestEditSuggestionContract:
         out = json.loads(server.edit_suggestion(sid, r3["guid"],
                                                 segment_text="This is"))
         assert "error" in out
-        assert "APPLIED" in out["error"] and "delete_coding" in out["error"]
+        assert "this one is applied" in out["error"] \
+            and "delete_coding" in out["error"]
 
     def test_mutual_exclusion_and_miss_contract(self, setup_server):
         sid = _sid()

@@ -69,8 +69,8 @@ class TestTheExportsTogether:
                 report["selection"]["total_segments"]) == (1, 1)
         refi = host_json("export_refi_qda", {
             "output_path": str(tmp_path / "p.qdpx")})
-        assert "categories above the exported codes are included" in \
-            refi["note"]
+        # (v0.15.3: a project export writes every category)
+        assert "Every category is included" in refi["note"]
         assert "relative" in host_json("export_refi_qda", {
             "output_path": "p.qdpx"})["error"].lower()
 

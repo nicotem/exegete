@@ -541,7 +541,7 @@ class TestAfterCreation:
 
     def test_no_process_scan_so_no_false_alarm(self, monkeypatch):
         """A machine where the scan would match: select_project warns
-        that the project APPEARS to be open; create_project never runs
+        that the project appears to be open; create_project never runs
         the scan for the project it has just made."""
         calls = []
 
@@ -554,9 +554,9 @@ class TestAfterCreation:
         answer = create("Quiet")
         assert calls == []
         assert answer["qualcoder_gui_signals"] == []
-        assert "APPEARS" not in json.dumps(answer)
+        assert "appears to be open" not in json.dumps(answer)
         selected = json.loads(server.select_project(answer["project_path"]))
-        assert "APPEARS to be open" in selected["warning"]
+        assert "appears to be open" in selected["warning"]
 
     def test_the_previous_project_is_named(self):
         server.db, server.current_project_path = None, None
@@ -926,7 +926,8 @@ class TestRoundTrip:
             lambda: database.ProcessScan(("/usr/bin/python3 -m qualcoder",),
                                          True))
         made = create("Round trip", coder_name="carol")
-        assert made["selected"] and "APPEARS" not in json.dumps(made)
+        assert made["selected"]
+        assert "appears to be open" not in json.dumps(made)
         folder = Path(made["project_path"])
         # the first write asks for the AI coder name, as on any project
         asked = json.loads(server.create_code("Coping"))
@@ -958,7 +959,7 @@ class TestRoundTrip:
         assert "error" not in server.update_suggestion_status(
             sid, approve=guids).lower()
         applied = server.apply_codings(sid)
-        assert "CODINGS APPLIED" in applied, applied
+        assert "Codings applied" in applied, applied
         for code in (parent, child):
             segments = json.loads(server.get_coded_segments(
                 code["code"]["id"]))

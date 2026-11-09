@@ -327,7 +327,7 @@ OFFERS = [
 ]
 
 DOCUMENTS = ["README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
-             "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md", "QUICKSTART.md",
+             "AI_CODING_GUIDE.md", "QUICKSTART.md",
              "PROJECT_SELECTION_GUIDE.md", "SUPPORT.md", "CONTRIBUTING.md",
              "pages/index.html"]
 

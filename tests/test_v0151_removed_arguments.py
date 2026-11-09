@@ -53,11 +53,11 @@ GONE_CONSTANTS = ("DEPRECATED_CASCADE", "DEPRECATED_OWNER",
                   "DEPRECATED_MEMO_SEARCH", "_owner_argument_refusal")
 AI_NAME = "AI-Test"
 # The shipped documents the design names, and the others a researcher
-# reads; docs/history/ records earlier designs, and the CHANGELOG records
-# the removal itself
+# reads; git's history keeps the earlier designs, and the CHANGELOG
+# records the removal itself
 DOCUMENTS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
              "SUPPORT.md", "QUICKSTART.md", "AI_CODING_GUIDE.md",
-             "AI_CODING_WORKFLOW.md", "PROJECT_SELECTION_GUIDE.md",
+             "PROJECT_SELECTION_GUIDE.md",
              "CLAUDE.md", "packaging/pypi-old-name/README.md")
 
 

@@ -58,7 +58,7 @@ COMMIT_AS_VERIFIED = ("verified against QualCoder master",
                       "additionally verified against the QualCoder 4.0-Beta")
 READ_BY_RESEARCHERS = ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
                        "SUPPORT.md", "AI_CODING_GUIDE.md",
-                       "AI_CODING_WORKFLOW.md", "QUICKSTART.md")
+                       "QUICKSTART.md")
 
 
 def test_the_documents_name_the_release_as_verified():
@@ -126,11 +126,15 @@ def test_privacy_says_what_its_verification_covers():
             "as in its development tree at commit 9bddf17 (25 August 2026), "
             "where they were first checked, and the line numbers cited from "
             "QualCoder's code are still that commit's.",
+            # (v0.15.3: named by the release it is true of, which no
+            # longer changes, as docs/WRITING.md allows)
+            # (its readability reading: the correction a sentence of its
+            # own)
             "What these sections say of QualCoder's own assistant and AI "
             "server, whose code changed a good deal in the release, was read "
-            "again in the released code on 6 October 2026, and one statement "
-            "was corrected: what QualCoder's server answers about an "
-            "annotation (under \"Coder visibility\").",
+            "again in 4.0's released code. One statement was corrected: "
+            "what QualCoder's server answers about an annotation (under "
+            "\"Coder visibility\").",
             "TOOLS.md, \"Supported QualCoder versions\", says what else was "
             "checked at the release."):
         assert words in note, words
@@ -169,10 +173,11 @@ def test_tools_says_what_the_full_re_check_found():
     versions = _between(_flat("TOOLS.md"), "## Supported QualCoder versions",
                         "A project from a QualCoder older than 3.8")
     for words in (
-            "A full check against the release, on 6 October 2026, found "
-            "the same project schema (v17) and the same format for a new "
-            "project. The format tests now compare every project Exegete "
-            "creates with one made by 4.0's own New Project",
+            # (v0.15.3: named by the release it is true of)
+            "A full check against the 4.0 release found the same project "
+            "schema (v17) and the same format for a new project. The format "
+            "tests now compare every project Exegete creates with one made "
+            "by 4.0's own New Project",
             "the same backups, private memo sections, coder visibility, "
             "\"AI Agent\" coder name, reports, merges and deletes, and the "
             "same fix for the 3.8.2 edit-mode caution (below)",
@@ -210,9 +215,10 @@ def test_the_readme_table_is_checked_against_the_release():
     assert "QualCoder 3.8.2 to 4.0" in readme
     assert "TOOLS.md#supported-qualcoder-versions" in readme
     # the owner's word of 29 October 2026: the table back, its QualCoder
-    # column as checked against the release on 10 October 2026
+    # column as checked against the release on 10 October 2026, beside the
+    # release the table describes (0.15.3 from its release preparation)
     assert ("The table sets QualCoder 3.8.2 and 4.0, as checked on 10 "
-            "October 2026, beside Exegete 0.15.2.") in readme
+            "October 2026, beside Exegete 0.15.3.") in readme
     assert ("3.8.2: an AI search finds passages, which you code. 4.0: its "
             "assistant codes as it works, within the AI permission you set "
             "(Read-only stops it), with undo") in readme
@@ -245,9 +251,10 @@ def test_the_code_no_longer_calls_4_0_unreleased_or_a_beta():
             "4.0's;") in doc
     contributing = _flat("CONTRIBUTING.md")
     assert "VERIFIED_MASTER_COMMIT" not in contributing
-    assert ("What researchers are told Exegete is verified against is the "
-            "release itself, QualCoder 4.0 (`VERIFIED_QUALCODER` in "
-            "`database.py`).") in contributing
+    # (v0.15.3, the readability reading: the documents as the subject)
+    assert ("The documents tell researchers that Exegete is verified "
+            "against the release itself, QualCoder 4.0 "
+            "(`VERIFIED_QUALCODER` in `database.py`).") in contributing
 
 
 def test_the_bug_report_form_names_the_release():
@@ -293,8 +300,10 @@ def test_the_readme_gives_both_new_facts():
     # pointers are one of their own, and the setting applies to the server)
     # (v0.15.2, the merge onto the integration branch: the Terminal
     # guide's "Coming from qualcoder-mcp" says how to keep the two apart)
-    assert ("calls itself \"qualcoder-mcp\", Exegete's former name, as "
-            "checked on 6 October 2026. TOOLS.md gives the facts, and "
+    # (v0.15.3: named by the release it is true of, QualCoder 4.0, which
+    # no longer changes, as docs/WRITING.md allows)
+    assert ("QualCoder 4.0's own MCP server calls itself \"qualcoder-mcp\", "
+            "Exegete's former name. TOOLS.md gives the facts, and "
             "[the Terminal guide](https://github.com/nicotem/exegete/blob/"
             "main/docs/installing-from-the-terminal.md#coming-from-"
             "qualcoder-mcp) says how to keep the two apart.") in facts
@@ -312,8 +321,9 @@ def test_the_readme_gives_both_new_facts():
 
 def test_tools_gives_both_new_facts():
     tools = _flat("TOOLS.md")
-    assert "Four facts about how the tools relate (checked 6 October " \
-        "2026)." in tools
+    # (v0.15.3: named by the release they are true of)
+    assert "Four facts about how the tools relate, as the 4.0 release has " \
+        "them." in tools
     # (v0.15.2: the earlier name, without its last release)
     # (v0.15.2: each fact in a sentence of its own)
     assert ("That server calls itself `qualcoder-mcp`, Exegete's earlier "

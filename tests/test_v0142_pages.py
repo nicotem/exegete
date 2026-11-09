@@ -97,8 +97,9 @@ def _edit(path, old, new):
      "1 October 2026", "does not give the version"),
     # words of this release's summary (0.14.2's named QualCoder 4.0,
     # 0.14.3's "Word, PDF and other", 0.15.0's "reads each document once",
-    # 0.15.1's "a restore's preview says")
-    ("update/index.html", "showing first what it", "showing what it",
+    # 0.15.1's "a restore's preview says", 0.15.2's "showing first what
+    # it")
+    ("update/index.html", "opens a page in your browser", "opens a page",
      "does not give the summary"),
     ("update/index.html", "/releases/download/v", "/releases/tag/v",
      "does not link the download link"),

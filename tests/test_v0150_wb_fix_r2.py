@@ -223,20 +223,12 @@ class TestClaudeCodesLimitsOnEveryPython:
 # 2. No note sends the researcher to QualCoder as the only way
 # ===========================================================================
 
-# The three notes' new ending, each said as Exegete's gap or on a condition
-NOTES = {
-    # (v0.15.1: the export is kept, its known faults named, ruling 85,
-    # item 2, under a name of its own; the ending the review asked for is
-    # unchanged)
-    "REFI_EXPORT_KNOWN_FAULTS": (
-        "Exegete has no other REFI-QDA export yet; QualCoder's own export "
-        "(Project, Export, REFI-QDA Project export), for researchers who "
-        "have QualCoder, keeps each coder, the cases, notes and media."),
-    # (v0.15.1: the journal attributes' and the rename back's notes went
-    # with what they announced; tests/test_v0151_journal_and_rename_back.py)
-}
-# Which tools' descriptions carry each
-CARRIERS = {"REFI_EXPORT_KNOWN_FAULTS": ("export_refi_qda",)}
+# The three notes' new ending, each said as Exegete's gap or on a
+# condition. (v0.15.1: the journal attributes' and the rename back's
+# notes went with what they announced,
+# tests/test_v0151_journal_and_rename_back.py; v0.15.3: the REFI-QDA
+# export's, which named its known faults, went with them,
+# tests/test_v0153_refi_fixed.py)
 # What they said, with no condition
 UNCONDITIONAL = ("unmarked; QualCoder's own export",
                  "QualCoder's Journals window sets them",
@@ -250,66 +242,58 @@ CONDITIONS = ("for researchers who have QualCoder",
 
 class TestNoNoteSendsTheResearcherToQualCoderAlone:
 
-    @pytest.mark.parametrize("constant", sorted(NOTES))
-    def test_the_note_and_the_descriptions_that_carry_it(self, constant):
-        note = _flat(getattr(server, constant))
-        assert NOTES[constant] in note
-        served = {name: _flat(text) for name, text in _served("full").items()}
-        for tool in CARRIERS[constant]:
-            assert note in served[tool], tool
+    def test_the_refi_export_sends_no_one_to_qualcoder_alone(self):
+        """(v0.15.3: the export fixed but for media, its note on
+        QualCoder's own export gone with its faults)"""
+        assert not hasattr(server, "REFI_EXPORT_KNOWN_FAULTS")
+        served = _flat(_served("full")["export_refi_qda"])
+        assert "REFI-QDA Project export" not in served
+        assert "QualCoder's own export (" not in served
         for old in UNCONDITIONAL:
-            assert old not in note, old
+            assert old not in served, old
 
-    # (the REFI-QDA export's sentence, no longer a deprecation since
-    # v0.15.1, is still a note that names QualCoder)
-    @pytest.mark.parametrize("constant",
-                             DEPRECATIONS + ["REFI_EXPORT_KNOWN_FAULTS"])
-    def test_every_deprecation_names_qualcoder_on_a_condition(self,
-                                                             constant):
-        text = getattr(server, constant)
-        if "QualCoder" in text:
-            assert any(words in text for words in CONDITIONS), constant
+    def test_every_deprecation_names_qualcoder_on_a_condition(self):
+        # (none since v0.15.1, and the REFI-QDA export's sentence, which
+        # named QualCoder on a condition, went with its faults in v0.15.3;
+        # a deprecation added later is read here)
+        for constant in DEPRECATIONS:
+            text = getattr(server, constant)
+            if "QualCoder" in text:
+                assert any(words in text for words in CONDITIONS), constant
 
     def test_the_documents(self):
         # the guide's opening box, without its quotation marks
         guide = _flat(_read("AI_CODING_GUIDE.md").replace("\n> ", "\n"))
         # (v0.15.1: the export kept, its faults named, ruling 85, item 2;
-        # v0.15.2: the three faults the served text gives, told once in
-        # the guide, and QualCoder's own export on its condition)
+        # v0.15.2: the three faults told once in the guide; v0.15.3: the
+        # faults fixed, and QualCoder's own export, on its condition, for
+        # the media alone)
         for fault in ("yours and a hidden coder's included",
                       "leaves out cases, annotations, journals and media",
-                      # (v0.15.2: the third fault read plainly)
                       "includes the suggestions you rejected, without "
-                      "marking them, when it exports a single coding "
-                      "session"):
-            assert fault in guide, fault
+                      "marking them"):
+            assert fault not in guide, fault
         assert ("If you use QualCoder, its own export (Project, Export, "
-                "REFI-QDA Project export) keeps each coder, the cases, the "
-                "notes and the media.") in guide
-        assert ("with the known faults given at the top of this guide") \
-            in guide
+                "REFI-QDA Project export) also carries the media.") in guide
+        assert "known faults" not in guide
         assert "removed in v0.15.1; QualCoder's own export" not in guide
         tools = _flat(_read("TOOLS.md"))
         for words in (
-                # (v0.15.2: the faults as the served text gives them, and
-                # QualCoder's own export on its condition)
-                "a session's export includes rejected suggestions, unmarked. "
-                "Exegete has no other REFI-QDA export yet. If you use "
-                "QualCoder, its own export (Project, Export, REFI-QDA "
-                "Project export) keeps each coder, the cases, the notes and "
-                "the media",
+                # (v0.15.3: the faults fixed; QualCoder's own export on its
+                # condition, for the media alone)
+                "or one coding session's suggestions, each marked with its "
+                "status. Images, audio, video and areas of a PDF page are "
+                "left out. If you use QualCoder, its own export (Project, "
+                "Export, REFI-QDA Project export) also carries the media",
                 # (v0.15.1: the rename back and journal attributes removed)
                 "A name the project's backups show is not looked for: "
                 "`restore_backup`, or QualCoder's own Rename if you use it, "
                 "can put an earlier name back",
                 "attributes on journal entries are refused, and those "
                 "already in a project stay (QualCoder's Journals window, if "
-                "you use QualCoder, sets and shows them)",
-                "it files every coding under the AI coder name, yours and a "
-                "hidden coder's included, it leaves out cases, annotations, "
-                "journals and media, and a session's export includes "
-                "rejected suggestions, unmarked"):
+                "you use QualCoder, sets and shows them)"):
             assert words in tools, words
+        assert "it files every coding under the AI coder name" not in tools
         for text in (guide, tools):
             for old in UNCONDITIONAL + (
                     "QualCoder's own Rename makes it",
@@ -335,10 +319,13 @@ class TestNoNoteSendsTheResearcherToQualCoderAlone:
         prerequisites = guide[guide.index("## Prerequisites"):]
         prerequisites = prerequisites[:prerequisites.index("## Quick start")]
         # (v0.15.2: told once, in TOOLS.md, and pointed to; the way
-        # without QualCoder stays named there)
-        assert ("An older project is refused; \"Supported QualCoder "
-                "versions\" in TOOLS.md says how to bring one up to date, "
-                "with QualCoder or without it") in prerequisites
+        # without QualCoder stays named there; v0.15.3, the readability
+        # reading: a sentence each; the fix round: read, never written)
+        assert ("Exegete reads an older project without writing to it, but "
+                "cannot read the oldest formats at all.") in prerequisites
+        assert ("\"Supported QualCoder versions\", in TOOLS.md, says how to "
+                "bring one up to date, with QualCoder or without it") \
+            in prerequisites
         tools = _flat(_read("TOOLS.md"))
         assert ("Without QualCoder at all, a new project made in Exegete "
                 "from the original documents is a way on, without the old "

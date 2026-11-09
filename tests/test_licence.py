@@ -39,6 +39,8 @@ try:
 except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
     import tomli as tomllib
 
+from test_v0151_history_folder import AT_THE_TAG, THE_NINE
+
 REPO = pathlib.Path(__file__).resolve().parents[1]
 EXPRESSION = "LGPL-3.0-or-later"
 HEADER = f"# SPDX-License-Identifier: {EXPRESSION}"
@@ -406,8 +408,8 @@ NOTICE_HERE = (
      "_stored_copy_block"),
     (30, "src/exegete/database.py", "PDF_PROBLEM_MESSAGES",
      "QualcoderDatabase.search_files"),
-    (30, "src/exegete/server.py", "REFI_EXPORT_KNOWN_FAULTS",
-     "get_project_summary", "_opening_in_qualcoder_40"),
+    (30, "src/exegete/server.py", "get_project_summary",
+     "_opening_in_qualcoder_40"),
     (31, "src/exegete/reading_copy.py", "QUALCODER_WHITE_TEXT",
      "text_colour"),
     (32, "src/exegete/database.py", "QUALCODER_LOCK_FILENAME",
@@ -460,8 +462,12 @@ NOTICE_HERE = (
     (43, "src/exegete/server.py", "discover_projects",
      "_collect_backups", "restore_backup", "_create_project_place_refusal",
      "_workspace_start_problem"),
-    (44, "src/exegete/refi_export.py",
-     "RefiQdaExporter._add_codebook_section"),
+    (44, "src/exegete/refi_export.py", "_Users",
+     "RefiQdaExporter._add_codebook_section",
+     "RefiQdaExporter._read_attributes",
+     "RefiQdaExporter._add_cases_section",
+     "RefiQdaExporter._add_sources_section",
+     "RefiQdaExporter._add_notes_section"),
     (45, "src/exegete/database.py", "saved_display_values",
      "saved_filter_values", "_SAVED_DISPLAY_OPERATORS",
      "_SAVED_FILTER_OPERATORS", "QualcoderDatabase.old_name_left_in"),
@@ -557,9 +563,12 @@ NOTICE_HERE = (
      "TestSavingTheMappingIntoPseudonymsJson.test_qualcoder_applying_the_written_file_gives_this_runs_text"),
     (75, "tests/test_v012_pseudonymise_tool.py",
      "TestSavingTheMappingIntoPseudonymsJson.test_pseudonyms_json_is_byte_identical_to_qualcoders_own_write"),
-    (76, "docs/history/QUALCODER_IMPORT_CAPABILITIES.md"),
-    (77, "docs/history/QUALCODER_IMPORT_CAPABILITIES.md"),
-    (78, "docs/history/RESEARCH_SUMMARY.md"),
+    # v0.15.3, the tidy-up: the early documents left the repository's
+    # files, and these three entries give their addresses at the tag
+    # of 0.15.2-alpha, which git keeps (test_v0151_history_folder.py)
+    (76, AT_THE_TAG + "QUALCODER_IMPORT_CAPABILITIES.md"),
+    (77, AT_THE_TAG + "QUALCODER_IMPORT_CAPABILITIES.md"),
+    (78, AT_THE_TAG + "RESEARCH_SUMMARY.md"),
     (79, "src/exegete/doc_readers.py", "getdocumenttext"),
     (80, "src/exegete/doc_readers.py", "_ODT_REPLACEMENTS",
      "_ODT_TAG_STARTS", "_ODT_ENTITIES", "odt_recipe"),
@@ -592,6 +601,13 @@ class TestNoticeStaysTrue:
         stale = []
         for number, where in sorted(_notice_entries().items()):
             for path, names in where:
+                if path.startswith(AT_THE_TAG):
+                    # a document git keeps at the tag, as a whole
+                    # file: one of the nine the folder held
+                    if names or path[len(AT_THE_TAG):] not in THE_NINE:
+                        stale.append(f"{number}: {path} (not one of "
+                                     f"the documents at the tag)")
+                    continue
                 target = REPO / path
                 if not target.is_file():
                     stale.append(f"{number}: {path} (no such file)")

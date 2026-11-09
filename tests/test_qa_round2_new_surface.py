@@ -547,10 +547,19 @@ class TestExportRefiQda:
             str(tmp_path / "empty_session.qdpx"), coding_session_id=sid))
         assert "no suggestions" in out["error"]
 
+        # (v0.15.3: a project without codings exports; only one holding
+        # nothing the file can carry is refused, in words naming that)
         _exec(qualcoder_db_path, "DELETE FROM code_text")
         server.switch_project(qualcoder_db_path)
+        out = json.loads(server.export_refi_qda(str(tmp_path / "uncoded.qdpx")))
+        assert out["success"] is True and out["codings_exported"] == 0
+        for table in ("code_name", "code_cat", "source", "cases", "journal"):
+            _exec(qualcoder_db_path, f"DELETE FROM {table}")
+        server.switch_project(qualcoder_db_path)
         out = json.loads(server.export_refi_qda(str(tmp_path / "empty.qdpx")))
-        assert "no text codings" in out["error"]
+        assert "no codes, categories, text sources, cases or journal " \
+            "entries" in out["error"]
+        assert not (tmp_path / "empty.qdpx").exists()
 
 
 # =============================================================================
@@ -683,6 +692,6 @@ class TestHeartbeatProtocol:
             "segment_text": FULLTEXT[24:55]}]))
         server.update_suggestion_status(sid, approve=[rec["recorded"][0]["guid"]])
         result = server.apply_codings(sid)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
         assert seen == {"exists": True, "holder": getpass.getuser()}
         assert not _lock(qualcoder_db_path).exists()

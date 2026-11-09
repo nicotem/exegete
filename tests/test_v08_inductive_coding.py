@@ -204,7 +204,7 @@ class TestA2ReviewProposals:
         out = server.review_proposals(sid)
         assert "stress" in out
         assert "Collides with existing code: Stress" in out
-        assert "PENDING" in out
+        assert "Status: pending" in out
 
     def test_specific_guids_and_examples(self, setup_server):
         sid = _make_session(setup_server)

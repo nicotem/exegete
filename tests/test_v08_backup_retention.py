@@ -81,7 +81,7 @@ class TestPruneBackupsPolicy:
 
     def test_policy_required(self, setup_server, qualcoder_db_path):
         out = json.loads(server.prune_backups())
-        assert "Refusing a policy-less prune" in out["error"]
+        assert "A prune without one is refused" in out["error"]
 
     def test_invalid_params(self, setup_server, qualcoder_db_path):
         assert "non-negative integer" in json.loads(

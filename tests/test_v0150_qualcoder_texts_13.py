@@ -106,9 +106,9 @@ SECTION_4_AROUND = (
     + " - Only one program should change a project at a time.")
 SECTION_14_LINE = (
     "- explain_ai_coding_tools() gives an overview of the coding loop; "
-    "exegete://guidance/methods gives the methods notes and approaches to "
-    "prompting (two published). For using QualCoder itself, point to its "
-    "own manual.")
+    "exegete://guidance/methods gives methods notes and three ways to "
+    "prompt, two of them published. For using QualCoder itself, point to "
+    "its own manual.")
 OLD_SECTION_14_LINE = (
     "- explain_ai_coding_tools() gives an overview of the coding loop; "
     "exegete://guidance/methods gives the methods notes and the literature "
@@ -225,9 +225,11 @@ class TestTheGuard:
         notice = _flat((REPO / "NOTICE").read_text(encoding="utf-8"))
         assert ("11. QualCoder 4.0's methodology vocabulary (closely "
                 "ported)") in notice
-        assert ("to offer the model QualCoder 4.0's four-way methodological "
-                "gate (allow, allow_with_caveat, reframe_and_ask, refuse) in "
-                "QualCoder's terms; the four labels are QualCoder's") in notice
+        # v0.15.3, NOTICE read in full: "the assistant" for "the model"
+        assert ("to offer the assistant QualCoder 4.0's four-way "
+                "methodological gate (allow, allow_with_caveat, "
+                "reframe_and_ask, refuse) in QualCoder's terms. The four "
+                "labels are QualCoder's") in notice
 
     def test_the_topic_on_the_earlier_name_is_still_reachable(self):
         topic = json.loads(server.explain_ai_coding_tools(

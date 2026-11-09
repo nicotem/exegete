@@ -39,7 +39,8 @@ NAMED_IN_THE_CHANGELOG = {
     "SUPPORT.md": "SUPPORT.md",
     "PROJECT_SELECTION_GUIDE.md": "PROJECT_SELECTION_GUIDE.md",
     "the AI coding guide": "AI_CODING_GUIDE.md",
-    "AI_CODING_WORKFLOW.md": "AI_CODING_WORKFLOW.md",
+    # (v0.15.3: its text is in the one coding guide)
+    "AI_CODING_WORKFLOW.md": "AI_CODING_GUIDE.md",
     "the bug report form": ".github/ISSUE_TEMPLATE/bug_report.yml",
 }
 
@@ -83,15 +84,25 @@ def _section(text, start, end):
 class TestTheRefusalNamesBothCauses:
 
     def test_support(self):
+        # v0.15.3, SUPPORT read in full: the README's account, in its
+        # facts: the request is made of those who use QualCoder, the lock
+        # file has its two causes, 4.0 writes none and its signs can miss
+        # a window, and a write while QualCoder has the project open can
+        # lose work
         support = _flat(_read("SUPPORT.md"))
-        assert ("- If you also use QualCoder, close the project there before "
-                "any writing. Writes are refused while the project's lock "
-                "file is active (QualCoder 3.8.2 has the project open, or "
-                "another conversation using Exegete is writing to it). "
-                "QualCoder 4.0 writes no lock file, so there Exegete can "
-                "only report signs that the project may be open, which can "
-                "miss an open window; a write into a project open in any "
-                "QualCoder window can lose work.") in support
+        bullet = support[support.index("- If you also use QualCoder, close "
+                                       "the project there"):]
+        bullet = bullet[:bullet.index(" - ", 4)]
+        assert ("refuses every change to the project's database while the "
+                "project's lock file is active: while QualCoder 3.8.2 has the "
+                "project open, or while another conversation using Exegete "
+                "is writing to it.") in bullet
+        assert "QualCoder 4.0 writes no lock file." in bullet
+        assert "it can miss one" in bullet
+        # (the readability reading of v0.15.3 gave the loss a sentence of
+        # its own)
+        assert ("change made while QualCoder has the project open can lose "
+                "work") in bullet
 
     # v0.15.2, the tools and guides piece: each place that gives the
     # refusal still gives both causes; the guide tells the 4.0 caveat once,
@@ -103,11 +114,14 @@ class TestTheRefusalNamesBothCauses:
         guide = _flat(_section(_read("AI_CODING_GUIDE.md"),
                                "## Prerequisites", "\n## "))
         # (v0.15.2: the request in a sentence, and the 4.0 caveat in
-        # three)
-        assert ("- **If you also use QualCoder**, the project needs to be "
-                "closed there before Exegete writes to it. Writes are "
-                "refused while the project's lock file is active ("
-                + self.BOTH + ").") in guide
+        # three; v0.15.3, the readability reading: the causes a sentence
+        # of their own, each with "while")
+        assert ("- **If you also use QualCoder**, close the project there "
+                "before Exegete writes to it. Exegete refuses to write "
+                "while the project's lock file is active. The lock file is "
+                "active while QualCoder 3.8.2 has the project open, or "
+                "while another conversation using Exegete is writing to "
+                "it.") in guide
         assert ("QualCoder 4.0 writes no lock file. With 4.0, Exegete can "
                 "only report signs that the project may be open "
                 "(`qualcoder_gui_signals`), and those signs can miss an idle "
@@ -195,11 +209,18 @@ class TestTheRefusalNamesBothCauses:
 
     def test_the_project_selection_guide(self):
         guide = _flat(_read("PROJECT_SELECTION_GUIDE.md"))
-        assert ("Shows which project is currently open, whether the "
-                "project's lock file is active (`qualcoder_open`: QualCoder "
-                "3.8.2 has the project open, or another conversation using "
-                "Exegete is writing to it) and the signs of an open "
-                "QualCoder 4.0 window (`qualcoder_gui_signals`)") in guide
+        # v0.15.3: "selected", the guide's word for the project in use;
+        # the readability reading made the two fields a list, each with
+        # its fact: the lock file's two causes, and 4.0's signs
+        tool = guide[guide.index("### 3. `get_current_project`"):]
+        tool = tool[:tool.index("## ", 4)]
+        assert "Shows which project is selected" in tool
+        assert ("- `qualcoder_open`: whether the project's lock file is "
+                "active. It is active while QualCoder 3.8.2 has the project "
+                "open, or while another conversation using Exegete is "
+                "writing to it.") in tool
+        assert ("- `qualcoder_gui_signals`: the signs of an open QualCoder "
+                "4.0 window") in tool
 
     @pytest.mark.parametrize("name", sorted(set(
         NAMED_IN_THE_CHANGELOG.values())))
@@ -236,8 +257,8 @@ class TestTheChangelogHoldsWhatItSays:
         assert "If you also use QualCoder, close the project there" \
             in support
         guide = _flat(_read("AI_CODING_GUIDE.md"))
-        assert ("**If you also use QualCoder**, the project needs to be "
-                "closed there") in guide
+        assert ("**If you also use QualCoder**, close the project "
+                "there") in guide
         tools = _flat(_read("TOOLS.md"))
         assert ("if you also use QualCoder, make sure no window has the "
                 "project open before a write") in tools

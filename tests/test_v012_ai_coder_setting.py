@@ -359,7 +359,7 @@ class TestUpstreamParity:
 
 EXPECTED_ASK = (
     "No AI coder name is set for this project yet, so nothing was written. "
-    "Ask the user which coder name this project's AI codings and other AI "
+    "Ask the researcher which coder name this project's AI codings and other AI "
     "writes should be stored under, then call set_project_ai_coder_name "
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
@@ -768,10 +768,10 @@ class TestSetterValidation:
         _reopen(qualcoder_db_path)
         out = json.loads(server.set_project_ai_coder_name(HIDDEN))
         assert out["error"] == (
-            f"\"{HIDDEN}\" is a coder currently hidden in QualCoder; rows "
+            f"\"{HIDDEN}\" is a coder the project hides; rows "
             f"written under it would not be shown in QualCoder or in "
             f"Exegete's default reads. Pass allow_hidden_coder=true to "
-            f"store it anyway, or ask the user to unhide the coder in "
+            f"store it anyway, or ask the researcher to unhide the coder in "
             f"QualCoder. Nothing was changed.")
         assert read_sidecar(qualcoder_db_path).name == DEFAULT_AI_CODER_NAME
 
@@ -1320,7 +1320,7 @@ class TestRestartResilience:
         del data["ai_coder_name_at_record"]
         path.write_text(json.dumps(data), encoding="utf-8")
         out = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         assert "were recorded while the project's AI coder name" not in out
 
 
@@ -1646,6 +1646,8 @@ class TestSurfacePins:
         _house_rules(texts, labels)
 
     def test_the_setter_docstring_states_the_exact_comparison_rule(self):
-        doc = server.set_project_ai_coder_name.__doc__ or ""
+        doc = " ".join((server.set_project_ai_coder_name.__doc__ or "").split())
         assert "compared exactly" in doc
-        assert "never case-insensitively" in doc
+        # the served text's readability reading (v0.15.3): the rule said
+        # as letter case counting, not as a double negative
+        assert "letter case counts" in doc

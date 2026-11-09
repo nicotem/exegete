@@ -130,14 +130,14 @@ def names_note(count, core=False):
         f"{count} entr(ies). ")
     if core:
         return opening + (
-            "Its contents are the researcher's reverse key and are not "
-            "returned here; the researcher can read the file in the "
+            "It leads from each pseudonym to a real name, so its contents "
+            "are not returned here; the researcher can read the file in the "
             "project folder, or in QualCoder's Pseudonyms dialog if they "
             "use QualCoder.")
     # the files design, piece 5, and its fix round 1
     return opening + (
-        "Its contents are the researcher's reverse key and are never "
-        "returned. To see or change the list, the researcher uses the "
+        "It leads from each pseudonym to a real name, so its contents are "
+        "never returned. To see or change the list, the researcher uses the "
         "names file on their own computer: prepare_names_list makes it "
         "from the list (or keeps one already there, and says if the list "
         "holds entries it lacks), shows and opens it, and save_names_list "
@@ -256,8 +256,9 @@ def f(holder):
         for phrase in OLD_IN_PRIVACY:
             assert phrase not in privacy, phrase
 
-    def test_no_old_phrase_is_in_the_workflow_guide(self):
-        guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+    def test_no_old_phrase_is_in_the_coding_guide(self):
+        # (v0.15.3: the workflow guide's text is in the one coding guide)
+        guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
             encoding="utf-8"))
         for phrase in OLD_IN_WORKFLOW:
             assert phrase not in guide, phrase
@@ -354,7 +355,7 @@ class TestTheActiveLockFile:
             "re-check via get_current_project (the `qualcoder_open` field "
             "must be false) and only then proceed with the coding "
             "workflow.")
-        assert ("**STOP: THIS PROJECT IS IN USE BY ANOTHER PROGRAM**"
+        assert ("**Stop: this project is in use by another program**"
                 in answer["instructions"])
 
 
@@ -472,12 +473,17 @@ class TestTheNamesListIsTheProjects:
         assert "Pnine" not in json.dumps(out)
 
 
-def test_the_workflow_guide_quotes_the_whole_refusal():
+def test_the_coding_guide_gives_the_ways_through():
     """Fix round 1: AI_CODING_WORKFLOW.md quoted the refusal without the
-    ways through; it now quotes the whole message."""
-    guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+    ways through; it then quoted the whole message. Since 0.15.3 the one
+    coding guide holds the workflow guide's text, and gives the
+    refusal's causes and both ways through in its own words."""
+    guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
         encoding="utf-8"))
-    assert f'"{refusal("...")}"' in guide
+    assert "close it in QualCoder, or wait a moment" in refusal("...")
+    assert ("The refusal gives both causes and the way through for each: "
+            "closing the project in QualCoder, if you use it, or waiting "
+            "a moment and trying again.") in guide
 
 
 def test_the_workflow_guides_rule_is_the_lock_file():
@@ -486,11 +492,16 @@ def test_the_workflow_guides_rule_is_the_lock_file():
     named another conversation using Exegete; the rule is now the lock
     file, which the next sentence explains. The fourth reading of the
     documents put the two causes before the rule, in the section now
-    called "One program at a time" (tests/test_v0150_lock_wording.py)."""
-    guide = _flat((REPO / "AI_CODING_WORKFLOW.md").read_text(
+    called "One program at a time" (tests/test_v0150_lock_wording.py).
+    Since 0.15.3 the one coding guide gives the rule in its
+    prerequisite for those who also use QualCoder, and the causes in a
+    sentence of their own."""
+    guide = _flat((REPO / "AI_CODING_GUIDE.md").read_text(
         encoding="utf-8"))
-    assert ("**Every write operation is refused while the project's lock "
-            "file is active.** The refusal gives both causes and the way "
+    assert ("Exegete refuses to write while the project's lock file is "
+            "active. The lock file is active while QualCoder 3.8.2 has the "
+            "project open, or while another conversation using Exegete is "
+            "writing to it. The refusal gives both causes and the way "
             "through for each") in guide
 
 
@@ -519,8 +530,8 @@ class TestTheMemoIsNotSaidToBeSeeded:
 REMOVED = "read_pseudonym_list"
 NEW_WORDS = {
     "get_current_project": "the project's pseudonyms.json (its names "
-                           "list, applied at import; the researcher's "
-                           "reverse key)",
+                           "list of real names and their pseudonyms, "
+                           "applied at import)",
     # Fix round 1: "the project's" said once, not twice
     "pseudonymise_source": "the project's own pseudonyms.json instead (its "
                            "names list).",

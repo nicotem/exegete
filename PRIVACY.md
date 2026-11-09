@@ -56,35 +56,41 @@ project is **your responsibility to decide**, and the answer belongs in:
   below).
 
 Anthropic's own privacy documentation, <https://www.anthropic.com/privacy>,
-says what Anthropic does with conversation content: how long it keeps
-it, how it processes it, and how the terms differ between consumer
-plans, the API and enterprise offerings. Those terms vary by product and
-change over time. So this document quotes them, with the date each was
-read, rather than describing them in its own words ("Your governance
-options"; "OpenAI's apps" for OpenAI's terms).
+says what Anthropic does with the content of conversations. It says how
+long Anthropic keeps that content, how it processes it, and how the
+terms differ between consumer plans, the API and enterprise offerings.
+Those terms vary by product and change over time. So this document
+quotes them, with the date each was read, rather than describing them in
+its own words ("Your governance options"; "OpenAI's apps" for OpenAI's
+terms).
 
 ## Before you use real participant data, check these
 
 These are the questions your ethics committee or data protection
 officer will ask, and the summary above depends on them:
 
-- **Your Claude plan's terms differ, and they matter.** For *your*
+- **Your Claude plan's terms.** For *your*
   account, check three things: whether your inputs may be used to train
   or improve models, how long they are kept, and whether people can
   review them. The answers differ between consumer plans (Free, Pro and
   Max) and Team, Enterprise and API terms. Existing participant consent
   would almost never cover inputs used for model training, and an ethics
-  board asks this first.
+  board asks this first. An account your university or employer manages
+  comes under the agreement it made with the AI provider, and such
+  agreements differ. Even so, that account is likely to give
+  participants' data more protection than a personal one ("Your
+  governance options", below, says why). Whoever manages that account
+  can give you the three answers.
 - **Training, with either AI provider.** Switch training off before
   participants' data: while it is on, the AI provider may use your
-  conversations to train its models. With Anthropic it is the Model
-  Improvement setting (rung 1, the first of the governance options in
-  "Your governance options", below). With OpenAI it is "Improve the
-  model for everyone", and Codex's separate "Include environments"
-  ("OpenAI's apps"). Rating a reply (thumbs up or down) can still let
-  either provider train on that conversation ("Cross-rung cautions";
-  "OpenAI's apps"). By its terms, Anthropic can also train on a
-  conversation flagged for a safety review (rung 1).
+  conversations to train its models. With Anthropic it is the setting
+  "Help improve our AI models" (rung 1, the first of the governance
+  options in "Your governance options", below). With OpenAI it is
+  "Improve the model for everyone", and Codex's separate "Include
+  environments" ("OpenAI's apps"). Rating a reply (thumbs up or down)
+  can still let either provider train on that conversation ("Cross-rung
+  cautions"; "OpenAI's apps"). By its terms, Anthropic can also train on
+  a conversation flagged for a safety review (rung 1).
 - **Controller and processor, and a written agreement.** Your
   institution is normally the data controller, which decides how the
   data is used, and the AI provider a processor, which handles it for
@@ -93,8 +99,8 @@ officer will ask, and the summary above depends on them:
   also needs a valid safeguard: the UK's international data transfer
   agreement (IDTA), standard contractual clauses (SCCs), or an adequacy
   or data-bridge decision. A personal or consumer account almost
-  certainly has **no such agreement**, so this is an institution-level
-  decision you cannot clear alone.
+  certainly has **no such agreement**. So the decision is your
+  institution's, not yours alone.
 - **Special-category data.** Interviews routinely carry health,
   sexuality, religion, ethnicity, political opinion and similar, often
   disclosed incidentally, which has a higher legal bar (GDPR Art. 9).
@@ -129,10 +135,14 @@ officer will ask, and the summary above depends on them:
   themselves", below). For participants' data this project suggests
   Claude Desktop's chat with the extension, with computer use off, no
   folder that holds your projects or transcripts connected to it, and
-  no other extension that reads files. Codex reads well beyond its
-  folder without asking. OpenAI documents a setting, marked Beta, that
-  can keep Codex's own commands from reading outside the folder it
-  works in; it has not been tested with Exegete. Practising, too, leaves
+  no other extension that reads files. Where chat and Cowork are one
+  conversation, that conversation's permission setting starts on Auto
+  on Pro, Max, Ultra and Team plans. On Auto, Claude does not stop to
+  ask you before it uses Exegete's tools, so you could set it to Manual
+  ("Assistants that open files by themselves", below). Codex reads well
+  beyond its folder without asking. OpenAI documents a setting, marked
+  Beta, that can keep Codex's own commands from reading outside the
+  folder it works in; it has not been tested with Exegete. Practising, too, leaves
   a real study on the same computer within reach of Codex and Claude
   Code ("While you practise", below). A local model keeps the data on
   your computer. We expect it to do the analysis less well than the
@@ -148,14 +158,17 @@ officer will ask, and the summary above depends on them:
     (`~/.exegete/import-texts.noindex`), until the import or, when none
     follows, until Exegete's next start, or the next import it
     prepares, an hour or more later;
-  - the reading folder's pages, with a file's whole text and its
-    codings, its read-only copies of originals and an import's pages for
-    checking letters (macOS `~/Library/Caches/Exegete/Reading.noindex`,
+  - the reading folder's pages and copies: pages with a file's whole
+    text and its codings, read-only copies of originals, an import's
+    pages for checking letters, and the pages for choosing occurrences,
+    which mark the names in a file's text (macOS
+    `~/Library/Caches/Exegete/Reading.noindex`,
     Windows `%LOCALAPPDATA%\Exegete\Reading`, Linux
     `~/.cache/exegete/reading`, or `exegete/reading` under
     `$XDG_CACHE_HOME` if it is set). They stay until Exegete's first
-    tidy once they are a week old (an hour for an import's page), and
-    longer while Exegete is not running;
+    tidy once they are a week old (an hour for an import's page or a
+    page for choosing occurrences), and longer while Exegete is not
+    running, or runs without writing there;
   - the records of changes kept for undo (`~/.exegete/changes/`): ids
     and digests, never a name or a text. They stay until Exegete's next
     start, or its next record of a change to the same project, once
@@ -165,15 +178,19 @@ officer will ask, and the summary above depends on them:
   - Claude Desktop's log of the extension, which keeps every request and
     answer, names and quoted text included (INSTALL.md, "Reading the
     server log");
-  - Codex's session files (`~/.codex/sessions`) and Claude Code's
-    transcripts (`~/.claude/projects/`).
+  - Codex's session files (`~/.codex/sessions`), its two databases
+    of conversations, `~/.codex/thread_history_1.sqlite` and
+    `~/.codex/state_5.sqlite`, the text you typed,
+    `~/.codex/history.jsonl`, and its log database,
+    `~/.codex/logs_2.sqlite` ("OpenAI's apps", below);
+  - Claude Code's transcripts (`~/.claude/projects/`).
 
   Say where each is kept, whether a sync or backup service copies it,
   who else can reach the computer, and when you will delete them.
 
 The rest of this document gives the detail. Two tools were renamed in
 0.15.0, and their earlier names are still listed until a later release
-(planned as v0.15.4) removes them (TOOLS.md, "Earlier names"). What
+(planned as v0.15.5) removes them (TOOLS.md, "Earlier names"). What
 this document says of either tool holds under both its names.
 
 ## How your data flows
@@ -184,11 +201,13 @@ or another). It adds **no telemetry, no analytics, and no separate cloud
 path** of its own. On Windows x64, a library Exegete installs to read
 PDFs reports its use to Windows' diagnostic data each time a PDF is
 read, with nothing from your documents. Left as it comes, that library
-would report on Linux too. Exegete switches its reports off: on Linux
-before the library starts, so it reports nothing there, and on Windows
-once it has loaded, after its first few reports. "A library's usage
-reports", below, says what they hold, the switch's limits, and what you
-can do.
+would report on Linux and on a Mac with Apple silicon too. Exegete
+switches its reports off: on Linux before the library starts, so it
+reports nothing there; on a Mac with Apple silicon before it starts
+too, where a reading was checked to keep nothing in a home folder of
+its own; and on Windows once it has loaded, after its first few
+reports. "A library's usage reports", below, says what they hold, the
+switch's limits, and what you can do.
 
 Exegete opens your project's database read-only by default. The one
 thing it fetches from the internet itself, while switched on, is a
@@ -213,7 +232,7 @@ Exegete works with the assistant, and it has a consequence:
 > Claude hosts that provider is Anthropic; for OpenAI's apps (the
 > ChatGPT desktop app and Codex) it is OpenAI; with a fully local host
 > (rung 4 below) there is no external provider at all. Reading a
-> transcript through this tool sends the returned portions of that
+> transcript through Exegete sends the returned portions of that
 > transcript to that provider.
 
 **What the rules here protect.** Your AI provider has whatever you let
@@ -228,9 +247,16 @@ protect three other things, each with its own readers:
 
 - **The key.** The names list pairs each real name with its pseudonym.
   No tool returns the names on it: you can fill it in on your own
-  computer, in the names file, and what Exegete says of the list and
-  the file is counts and line or entry numbers. A mapping you type into
-  the conversation reaches the provider as you type it ("What
+  computer, in the names file. What Exegete says of the list and the
+  file is counts, line or entry numbers, and short ids for choosing
+  occurrences. A pseudonymisation preview also gives each entry's
+  pseudonym, unless the pseudonym itself carries a name from the list.
+  Some of its figures can then tell an assistant that has read a file's
+  text which name a pseudonym replaces. Among them are how often each
+  entry occurs, how long a short name is and how many codings the run
+  would move. Replacing the names before the assistant reads a file
+  leaves it no text to match these against. A mapping you type into the
+  conversation reaches the provider as you type it ("What
   pseudonymisation is for", below).
 - **What stays on the computer, and who else reads it.** Several things
   stay on your disk: the project, its backups and copies, Exegete's own
@@ -256,9 +282,9 @@ protect three other things, each with its own readers:
 Where a rule below serves one of these three, it says which.
 
 **A library's usage reports (what Microsoft can learn about the library
-being used on this computer, with no participant data).** Where PDFs
-are read with PyMuPDF 2 (Windows x64 and Linux, with Python 3.11 to
-3.14, the desktop extension's Python among them;
+being used on this computer, with no participant data).** Where PDFs are
+read with PyMuPDF 2 (Windows x64, Linux and Macs with Apple silicon,
+with Python 3.11 to 3.14, the desktop extension's Python among them;
 INSTALL.md), PyMuPDF loads onnxruntime, Microsoft's library for running
 trained models. onnxruntime reports on its own use to Microsoft unless
 it is switched off. Its reports hold facts about the computer and the
@@ -269,10 +295,17 @@ committee or a data protection officer may want to know of them:
   events in your home folder, and send them to Microsoft over the
   internet. Exegete switches this off in the process that reads a
   document, before onnxruntime loads (with onnxruntime's own setting,
-  `ORT_DISABLE_TELEMETRY`), so nothing is kept and nothing is sent. On
-  a Mac, Exegete's installs keep PyMuPDF 1, which does not load
-  onnxruntime; should it load there, the setting switches it off in the
-  same way.
+  `ORT_DISABLE_TELEMETRY`), so nothing is kept and nothing is sent.
+- **On a Mac with Apple silicon**, from 0.15.3, onnxruntime would do the
+  same: the notes in the package Exegete installs (1.31.0) say it
+  reports over the internet on macOS too, and that this setting, given
+  before it starts, stops its device id, its events and its uploads.
+  Exegete gives the setting there before onnxruntime loads, as on
+  Linux. A reading was checked to keep nothing in a home folder of its
+  own; what a reading sends over the network has been watched on Linux
+  alone. On an Intel Mac, Exegete's installs keep PyMuPDF 1, which does
+  not load onnxruntime; should it load there, the setting switches it
+  off in the same way.
 - **On Windows**, onnxruntime does not read that setting: it reports
   through Windows' own diagnostic data, and its switch can be reached
   only once it has loaded, by which time it has made a few reports. So
@@ -300,7 +333,8 @@ What the switch cannot promise:
   and the Windows package Exegete installs (1.31.0). It has not been
   watched on a Windows computer, and which of Windows' settings keeps
   the reports back has not been checked. On Linux and on a Mac, readings
-  given a home folder of their own were checked to keep nothing there.
+  given a home folder of their own were checked to keep nothing there;
+  a reading's network connections were watched on Linux alone.
 - A program that starts or changes its listening to onnxruntime's
   events through Windows' event tracing while a PDF is read, Windows'
   own diagnostic service among them, can switch its reports on again
@@ -333,7 +367,14 @@ What stays local, always, unless a sync service copies the folder it is in
   confirmed restore_backup takes first: timestamped
   `<project>_backup_<timestamp>.qda` folders (the safety backup's name
   ends `_prerestore.qda`) placed next to the project folder
-- exported files (CSV/txt/md reports, REFI-QDA `.qdpx`)
+- exported files (CSV/txt/md reports, REFI-QDA `.qdpx`). A REFI-QDA
+  export is written first beside its destination, as a part file named
+  `.<name>.<digits>-<digits>.part`, and moved into place when complete.
+  The part file holds what the export holds, as far as it was written:
+  for a whole project, every coder's name, the memos, the attribute
+  values and the journal entries in full among them. Its name starts with
+  a dot, so Finder does not show one that an export stopped midway
+  leaves behind; the next export to that name that completes removes it
 - new projects made by create_project and project copies made by
   copy_project_to_workspace, in
   `~/Documents/Exegete projects/` by default (before 0.14.1,
@@ -374,8 +415,10 @@ What stays local, always, unless a sync service copies the folder it is in
   is there, as a folder or a link, to point the assistant to the topic
   on the earlier name; nothing inside it is listed or read.
 - the reading folder (v0.14.3), where Exegete writes the
-  pages and read-only copies it opens for you to read a file, and the
-  page on which you check an import's letters that look garbled:
+  pages and read-only copies it opens for you to read a file, the
+  page on which you check an import's letters that look garbled, and
+  the page on which you choose the occurrences of a name that a
+  pseudonymisation run leaves as they are:
   `~/Library/Caches/Exegete/Reading.noindex` on a Mac,
   `%LOCALAPPDATA%\Exegete\Reading` on Windows,
   `~/.cache/exegete/reading` on Linux; out of iCloud and OneDrive, not
@@ -406,16 +449,20 @@ What stays local, always, unless a sync service copies the folder it is in
 - the preview-token secret (`~/.exegete/preview_secret`): 64
   random hex characters, created owner-only on POSIX systems, used to
   sign the tokens that approve a two-step operation, to key the digests
-  in the pseudonymisation run manifests, and to name and sign the texts
-  an import's preview keeps. It never leaves your machine, never
-  appears in a result, a log line or an error, and holds nothing about
-  your project. Deleting it has three effects, and nothing else:
+  in the pseudonymisation run manifests, to key the ids a
+  pseudonymisation preview gives for choosing occurrences, and to name
+  and sign the texts an import's preview keeps. It never leaves your
+  machine, never appears in a result, a log line or an error, and holds
+  nothing about your project. Deleting it has four effects, and nothing
+  else:
   - it invalidates outstanding preview tokens, so the next execute asks
     for a fresh preview;
   - the keyed digests in the run manifests already written can then no
     longer be checked;
   - the texts an import's preview kept can no longer be used, so the
-    next preview reads the documents again.
+    next preview reads the documents again;
+  - every occurrence gets a new id, so the ids to give in
+    `leave_occurrences` are those of a preview made since.
 
   Exegete replaces the secret by itself, with the same effects, when it
   finds the file malformed or, on macOS and Linux, readable by other
@@ -508,10 +555,15 @@ What stays local, always, unless a sync service copies the folder it is in
   (`mapping_retention`: saved into the project's `pseudonyms.json`, which
   it records as requested, never as done; attested as kept by the
   researcher; or read from that file). A length does not reconstruct a
-  note, and no note text, old or new, is in it. No tool reads these
-  files back: each is an audit record of which rows a run changed and
-  where the pseudonyms now sit, kept so a run can be accounted for
-  afterwards. It is not a way back; the backup taken before the run is.
+  note, and no note text, old or new, is in it. A run that leaves
+  occurrences of a name as they are records how many it left
+  (`occurrences_left`), never where they are, and each file's entry
+  says whether the check for mapping entries competing for the same
+  characters stopped early (`overlap_conflicts_capped`), never where.
+  No tool reads these files back: each is an audit record of which rows
+  a run changed and where the pseudonyms now sit, kept so a run can be
+  accounted for afterwards. It is not a way back; the backup taken
+  before the run is.
 
 **Error answers and Exegete's log.** An error answer goes to the AI
 provider like any other result, and Exegete's log lines go to the host,
@@ -595,7 +647,7 @@ each backup's, a whole copy of the project, as does every change's
 answer with the backup taken before it, and `restore_backup` with the
 backup restored and the one it took first).
 
-What follows was checked on 30 September 2026 against each maker's
+What follows was checked on 4 November 2026 against each maker's
 documentation (and, for Codex, its source code), assistant by
 assistant. These pages change often, and the linked pages govern.
 
@@ -608,8 +660,8 @@ assistant. These pages change often, and the linked pages govern.
   dated: "Codex's own file access", in "OpenAI's apps" below.
 - **Claude Code** (the terminal app, and local sessions in Claude
   Desktop's Code tab): **yes**. It has file tools of its own and runs
-  shell commands. <https://code.claude.com/docs/en/permissions> (read 30
-  September 2026): "By default, Claude has access to files in the
+  shell commands. <https://code.claude.com/docs/en/permissions> (read 4
+  November 2026): "By default, Claude has access to files in the
   directory where you launched it." Reading there needs no approval (the
   page's table: none "within the working directory and additional
   directories"), and "Claude Code recognizes a built-in set of Bash
@@ -618,17 +670,19 @@ assistant. These pages change often, and the linked pages govern.
   `permissions.blockReadsOutsideWorkingDirectories` changes for paths
   outside your working directories." (the set includes `cat`, `grep` and
   `find`). Beyond that folder,
-  <https://code.claude.com/docs/en/permission-modes> (the same day):
-  "With Claude Code v2.1.283 or later, auto mode is the built-in
+  <https://code.claude.com/docs/en/permission-modes> (the same day)
+  says: "With Claude Code v2.1.283 or later, auto mode is the built-in
   starting permission mode for interactive terminal and VS Code
-  sessions.", and, while
+  sessions." The same page says that, while
   `permissions.blockReadsOutsideWorkingDirectories` is off, "file reads
-  run without a prompt in auto mode, including reads outside the working
-  directories", apart from one question the first time its Read, Grep or
-  Glob tool goes outside them. In Manual mode, Claude Code "asks you
-  before reading paths outside this boundary with the Read, Grep, and
-  Glob tools" (<https://code.claude.com/docs/en/security>, the same
-  day); the read-only shell commands above are not in that list.
+  other than reads from network paths run without a prompt in auto mode,
+  including reads outside the working directories". Claude Code asks
+  one question, the first time its Read, Grep or Glob tool goes outside
+  those directories. In Manual mode, Claude Code "asks you before its
+  file tools read or write outside the folder where it was started and
+  its subfolders" (<https://code.claude.com/docs/en/security>, the same
+  day). The read-only shell commands above are not among its file
+  tools.
   Anthropic documents settings that narrow this: `Read` deny rules for
   your projects folder,
   `permissions.blockReadsOutsideWorkingDirectories` (version 2.1.257 or
@@ -647,7 +701,7 @@ assistant. These pages change often, and the linked pages govern.
 - **Claude's Cowork** (in Claude Desktop): **yes, in the folders you
   connect to it.**
   <https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>
-  (read 30 September 2026): "Since Claude can read, write, and
+  (read 4 November 2026): "Since Claude can read, write, and
   permanently delete these files, be cautious about granting access to
   sensitive information like financial documents, credentials, or
   personal records." Anthropic's pages document no question before each
@@ -660,18 +714,18 @@ assistant. These pages change often, and the linked pages govern.
   fetches a copy of just that file"
   (<https://support.claude.com/en/articles/15520349-use-claude-cowork-on-web-desktop-and-mobile>,
   the same day). In the version of Claude where chat and Cowork are
-  one conversation, which Anthropic is rolling out to Pro and Max plans
-  first, "everything Claude Cowork does is available from any
-  conversation", and "Folders you gave Cowork access to are listed
+  one conversation, which Anthropic is rolling out to Pro, Max and
+  Ultra plans first, "everything Claude Cowork does is available from
+  any conversation", and "Folders you gave Cowork access to are listed
   under Trusted folders."
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
-  the same day). The same page, read again on 1 October 2026, says how
-  to tell: "If you're on a Pro or Max plan and your message box still
-  shows "Chat" and "Cowork" options, you don't have it yet." So a
-  project, a transcript or your projects folder inside a
-  folder connected to Claude is within its reach; kept out of every
-  connected folder, with computer use off and no other extension that
-  reads files (both below), they stay out of it.
+  the same day). The same page says how to tell: "If you're on a Pro,
+  Max, or Ultra plan and your message box still shows "Chat" and
+  "Cowork" options, you don't have it yet." So a project, a transcript
+  or your projects folder inside a folder connected to Claude is within
+  its reach. Kept out of every connected folder, with computer use off
+  and no other extension that reads files (both below), they stay out
+  of it.
 - **Claude Desktop's chat, with the extension**: **not by itself, as far
   as Anthropic's pages say.** They document no way for the older,
   separate chat to open a file on your computer other than one you
@@ -684,34 +738,37 @@ assistant. These pages change often, and the linked pages govern.
   run."
   (<https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>,
   the same day), so another extension that reads files can read your
-  project. And computer use, once switched on (Settings, General,
-  "Enable computer use"): "It can work in your browser, open files, and
-  run your dev tools automatically", and "Claude asks for your
-  permission before accessing each application."
+  project. And computer use, once switched on (the "Enable computer
+  use" toggle, in Settings, Capabilities, or Settings, System, under
+  This computer): "It can work in your browser, open files, and run
+  your dev tools automatically", and "Claude asks for your permission
+  before accessing each application."
   (<https://support.claude.com/en/articles/14128542-let-claude-use-your-computer-in-cowork>,
-  the same day); it is in Cowork and Claude Code, and in the version
-  where chat and Cowork are one conversation any conversation has it
-  ("Computer use: In beta on Pro and Max plans, Claude can use apps on
-  your computer directly by clicking, typing, and navigating your
-  screen.", the article on that version above). It works from
-  screenshots, and sees more than the applications you allow: "Claude
-  takes screenshots of your computer to understand how to navigate the
-  screen and the apps to which you've given permission." and "This means
-  Claude can see any information visible on your screen or those apps,
-  including personal data, sensitive documents, or private information
-  belonging to you or others." (the article on computer use above, read
-  1 October 2026). So through any window on the screen, a file
+  the same day). Computer use is in Cowork and Claude Code. In the
+  version where chat and Cowork are one conversation, any conversation
+  has it ("Computer use: In beta on Pro, Max, and Ultra plans, Claude
+  can use apps on your computer directly by clicking, typing, and
+  navigating your screen.", the article on that version above). The
+  article on computer use says that Team and Enterprise plans do not
+  have it. It
+  works from screenshots, and sees more than the applications you
+  allow: "Claude takes screenshots of your computer to understand how to
+  navigate the screen and the apps to which you've given permission."
+  and "This means Claude can see any information visible on your screen
+  or those apps, including personal data, sensitive documents, or
+  private information belonging to you or others." (the same article).
+  So through any window on the screen, a file
   viewer's, or QualCoder's if you use it, it can see a project, the
   private part of memos
   included. With no other extension that reads files, computer use off,
   and no folder that holds your projects or transcripts connected (your
   home folder, Documents or a whole drive included), the assistant
   reaches your project only through Exegete.
-- **LM Studio** (0.4.25, its chat window): **not by itself.** Its
-  pages document no file tool of its own for the chat (its MCP page,
-  <https://lmstudio.ai/docs/app/mcp>, read 30 September 2026, lists
+- **LM Studio** (0.4.28, its chat window): **not by itself.** Its
+  pages document no file tool of its own for the chat. Its MCP page,
+  <https://lmstudio.ai/docs/app/mcp>, read 4 November 2026, lists
   none, and its changelog, <https://lmstudio.ai/changelog/lmstudio>,
-  adds none up to 0.4.25): a file reaches the model when you attach one
+  adds none up to 0.4.28. A file reaches the model when you attach one
   (<https://lmstudio.ai/docs/app/basics/rag>, the same day) or through
   a tool, and "When a model calls a tool, LM Studio
   will show a confirmation dialog to the user."
@@ -756,7 +813,13 @@ that reads files, stay out of its reach. Claude Code reads the folder
 it starts in without asking: an empty folder of its own keeps your
 projects out of that folder, but does not stop its read-only commands
 reading them, or its file tools in auto mode (above). That is why, for
-participants' data, this project suggests the chat above instead.
+participants' data, this project suggests the chat above instead. In
+the version of Claude where chat and Cowork are one conversation,
+Anthropic's page, read on 4 November 2026, says that the permission
+setting in the message box starts on Auto on Pro, Max, Ultra and Team
+plans. On Auto, Claude does not stop to ask you before it uses
+Exegete's tools: automated safety checks run instead. On Manual, which
+you could choose, Claude asks before it takes actions.
 
 ## Files Exegete keeps on your computer
 
@@ -786,18 +849,19 @@ log files under the extension's earlier name (the Terminal guide,
 versions. Exegete's own folder was `~/.qualcoder_mcp` before 0.14.1:
 since then Exegete keeps a link under that name pointing at
 `~/.exegete`, as "How your data flows" says. The folder for projects was
-`~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was; the
-extension's was `~/QualCoder projects` before 0.15.0: on the
+`~/Documents/Qualcoder MCP Projects` before 0.14.1, left as it was. The
+extension's was `~/QualCoder projects` before 0.15.0. On the
 maintainer's Mac on 19 October 2026, the update moved a setting left at
-that default to `~/Exegete projects`, and a folder chosen by hand should
-be kept (not yet checked), so after updating, look at the setting. No
-project is moved, both folders are searched, and setting it back to
+that default to `~/Exegete projects`. Whether the update keeps a folder
+chosen by hand has not been checked, so after updating, look at the
+setting. No project is moved, both folders are searched, and setting it
+back to
 `~/QualCoder projects` keeps new projects beside the earlier ones.
 
 | Kind | Where | What | Who deletes it |
 |---|---|---|---|
 | Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read, and the records of the changes Exegete makes to projects (`changes/`, below); the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as "How your data flows" says, and a change's record once it is a day old; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the records of changes (those changes can then no longer be undone), the pseudonymisation run records, and the secret that keys their digests |
-| Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page), as "Reading a whole file" says, so they can stay longer while Exegete is not running; the working folder as each reading ends; you, at any time |
+| Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled, the page for choosing occurrences of a name | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page or a page for choosing occurrences), as "Reading a whole file" says, so they can stay longer while Exegete is not running, or runs without writing there; the working folder as each reading ends; you, at any time |
 | Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
 | Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word). At your word, `undo_changes` also removes the originals an import stored, when it takes the import back, and `pseudonyms.json`, when it takes back the save that made it |
 
@@ -869,7 +933,21 @@ backup that fails part-way is removed. A backup cut short, because
 Exegete's process ended during the copy (when the app quit, for
 example), stays beside the project under a hidden name, with whatever
 it had copied, the names file and `pseudonyms.json` among them. The
-next backup of the project removes it once it is an hour old. A copy
+next backup of the project removes it once it is an hour old. A save
+of the names list cut short the same way, or a pseudonymisation run
+ended before its mapping took its place, can leave a temporary copy of
+the list in the project's folder, with the real names in it: its name
+is `pseudonyms.json.`, eight letters, digits or underscores, then
+`.tmp`. The next backup of the project removes it once it is an hour
+old. Until then it goes into every backup made, as `pseudonyms.json`
+does, and a restore of one of those backups brings it back. It also
+goes into every copy of the project made with
+`copy_project_to_workspace` meanwhile, whatever its age, since a copy
+removes nothing. In such a copy it stays until a backup of that copy
+removes it, once it is an hour old. If you take `pseudonyms.json` and
+the names file out of a project before copying it to share, you could
+also look in the project's folder for a file whose name starts with
+`pseudonyms.json.` and ends with `.tmp`. A copy
 made with `copy_project_to_workspace` that fails part-way is removed
 too, unless that removal fails. A copy cut short, or one whose removal
 failed, stays in the folder for projects under its own name, with
@@ -926,8 +1004,9 @@ replaced, what Exegete's tools return of the replaced text carries the
 pseudonyms. Not everything is replaced, though; among what still
 reaches the assistant through
 Exegete: a PDF's text, file and case names, attribute values, any name,
-or form of a name, that the list or the mapping does not match, and
-notes and journal entries unless you ask for them to be rewritten.
+or form of a name, that the list or the mapping does not match,
+occurrences left by choice, and notes and journal entries unless you
+ask for them to be rewritten.
 Names you type into the conversation for a mapping reach the assistant
 as you type them. "What is not pseudonymised", in "Bringing documents
 in", and "Pseudonymising a project does not empty it of names", in
@@ -936,6 +1015,16 @@ assistant is set up, an assistant that meets a problem may work round
 it by a route outside Exegete, and what it reads that way goes to its
 AI provider in full ("Assistants that open files by themselves",
 above).
+
+A run can also leave chosen occurrences of a name as they are, such as
+those of a second person with the same name. For that choice, the
+preview gives the conversation a short id for each of the first 150
+occurrences, and counts. When the mapping was typed into the
+conversation, each id comes with its line number. It gives none of the
+words around an occurrence: those are on a page that Exegete opens in
+your browser, where you choose. The assistant is told never to open or read that page, and you
+give it the ids to leave. "Reading a whole file", below, says where the
+page is kept and when it goes.
 
 An imagined example. You bring ten interview transcripts into a project,
 meaning to replace the names before any coding starts. One file is
@@ -1017,7 +1106,14 @@ convention, whichever program made the project, Exegete or QualCoder:
   export_coded_segments_report) keep memos in full, private zone
   included, because QualCoder's own exports do, and Exegete keeps its
   exports the same. The export tools say so in their descriptions. Treat
-  exported files with the same care as the project itself.
+  exported files with the same care as the project itself. A whole
+  project's REFI-QDA `.qdpx` holds, besides, the name and the work of
+  every coder, those hidden in QualCoder's view included, as Exegete's
+  other file exports do ("Coder visibility", below); the cases; the
+  attributes of the cases and of the files; the journal entries in
+  full, their private part included, which Exegete's reads keep from
+  the assistant; and the annotations. A coding session's `.qdpx` holds
+  the project's coder name too, as its first user.
 
 The private zone stays in your project database on disk; this
 convention controls only what enters the AI conversation through
@@ -1033,9 +1129,9 @@ same there as in its development tree at commit 9bddf17 (25 August
 2026), where they were first checked, and the line numbers cited from
 QualCoder's code are still that commit's. What these sections say of
 QualCoder's own assistant and AI server, whose code changed a good deal
-in the release, was read again in the released code on 6 October 2026,
-and one statement was corrected: what QualCoder's server answers about
-an annotation (under "Coder visibility"). TOOLS.md, "Supported
+in the release, was read again in 4.0's released code. One statement
+was corrected: what QualCoder's server answers about an annotation
+(under "Coder visibility"). TOOLS.md, "Supported
 QualCoder versions", says what else was checked at the release. The
 coder visibility section was also verified against the 3.8.2 tag,
 which already creates the `coder_names` table, its `visibility` column
@@ -1095,16 +1191,33 @@ Apple Books, which adds it to its library and, with Books' iCloud Drive
 setting on, keeps a copy in iCloud; `show="in_folder"` shows it in
 Finder instead, without opening it.
 
+**The page for choosing occurrences.** You can choose occurrences of a
+name for a pseudonymisation run to leave as they are
+(`pseudonymise_source` with `choose_occurrences`). For that, the run's
+preview writes a page into the reading folder, in that file's own
+folder, and opens it in your browser. It holds the file's
+whole text as stored, with every occurrence of the names you asked to
+replace marked and labelled with its id, and no pseudonym. So while it
+stays, anyone who can read the reading folder can see which words of
+that file are those names. It goes when Exegete changes the file's text
+or name, as a run on the file, an undo that changes it or a restore
+does. Otherwise it goes at Exegete's first tidy once it is an hour old,
+which can be later (below). The preview's answer says where the page
+is only when the page did not open. With the names list, the answer withholds the page's
+place when the place itself holds a name from the list.
+
 Three cautions:
 
 - **Assistants with file tools of their own** can read the pages and
   copies: Claude Code and Codex, any file your account can; Cowork, any
   file in a folder connected to it, so the reading folder too when
   your home folder or its drive is connected ("Assistants that open
-  files by themselves", above). The page, the tool's description and the assistant's brief
-  ask the assistant not to; nothing enforces it. In Claude Code, a
-  permission rule that denies its file-reading tool on the reading
-  folder narrows this, for example `"deny":
+  files by themselves", above). The page, the tool's description and
+  the assistant's brief ask the assistant not to. For the page for
+  choosing occurrences, the page itself, the brief and the preview's
+  answer ask it. Nothing enforces it. In Claude Code, a permission rule
+  that denies its file-reading tool on the reading folder narrows this,
+  for example `"deny":
   ["Read(~/Library/Caches/Exegete/**)"]` in the `permissions` of its
   settings on a Mac; a shell command could still read the file, so it
   narrows the reach without closing it.
@@ -1115,7 +1228,10 @@ Three cautions:
 - **A page opens when it is written**, and the tool's description says
   to call it only when you ask to read a file: a participant's words
   opening unasked, in a shared office or a meeting with your screen
-  shared, would be a disclosure.
+  shared, would be a disclosure. The page for choosing occurrences opens
+  in the same way. The brief and the tool's description tell the
+  assistant to request it when you want to leave some occurrences of a
+  name as they are.
 
 **Where a transcript's text can end up** on your computer:
 
@@ -1130,13 +1246,22 @@ Three cautions:
   of the folder once it is an hour old (it tidies when it starts, and at
   most every five minutes while it writes there, so in an app that keeps
   Exegete running such a page can stay longer);
+- the page on which you choose the occurrences of a name to leave as
+  they are (`choose_occurrences`), which marks every occurrence of the
+  names you asked to replace. It goes after a run on that file, after an
+  undo that changes it or after a restore, and otherwise at Exegete's
+  first tidy once it is an hour old. Like the import's page, it can stay
+  longer;
 - any backup of the whole disk, such as Time Machine or File History,
   that copies those folders.
 
 Exegete tidies the reading folder itself:
 
-- a file's page and copy go whenever Exegete changes that file's text or
-  name (renaming, pseudonymising, restoring a backup over the project);
+- a file's pages and copy go whenever Exegete changes that file's text
+  or name (renaming, pseudonymising, undoing a change, restoring a
+  backup over the project);
+- a page for choosing occurrences goes at Exegete's first tidy once it
+  is an hour old;
 - a page left for a file deleted in QualCoder goes when a new file that
   takes its number comes in through Exegete, or when Exegete next writes
   a page or a copy for that file;
@@ -1489,7 +1614,12 @@ Seven cautions:
   allow", the import would run without asking, and such instructions
   could then bring in another file unasked; allowing it once, after
   reading the preview, keeps you asked each time. Codex's default mode
-  runs it without asking.
+  runs it without asking. Where chat and Cowork are one conversation,
+  that conversation's permission setting starts on Auto on Pro, Max,
+  Ultra and Team plans, and on Auto automated safety checks run instead
+  of asking you. Anthropic's page, read on 4 November 2026, does not say
+  what either of its modes does with the mark (INSTALL.md, "What hosts
+  do with the tools' read and write marks").
 - **A file imported by mistake** stays in every backup taken after it,
   since a backup copies the project (all but its audio and video
   folders). Restoring the backup taken
@@ -1533,21 +1663,23 @@ limit and a memory cap, handed the file's bytes rather than its path;
 it runs without a sandbox (one, where the system offers it, is on the
 list of later work, with no release set). Import and reading make no
 request over the network of their own. Where PDFs are read with
-PyMuPDF 2 (Windows x64 and Linux, with Python 3.11 to 3.14; INSTALL.md),
-PyMuPDF loads onnxruntime, Microsoft's library for running trained
-models, whose usage reports to Microsoft are on by default; Exegete
-switches them off in the reading process. On Linux they are off before
-onnxruntime starts, so it keeps nothing on the computer and sends
-nothing. On Windows, its switch can be reached only once it has loaded:
-by then it has made a few reports to Windows' diagnostic data, about
-the computer (the names and driver versions of its graphics adapters
-and of any NPU among them) and onnxruntime (that it registered its
-processor part, with any error), with nothing from your documents.
-Windows adds its own identifiers to what it sends, and passes the
-reports to Microsoft or not as the computer's diagnostic data setting
-says. Every later report is switched off ("A library's usage reports",
-under "How your data flows", says what the reports hold, the switch's
-limits, and what you can do). A document converted with
+PyMuPDF 2 (Windows x64, Linux and Macs with Apple silicon, with Python
+3.11 to 3.14; INSTALL.md), PyMuPDF loads onnxruntime, Microsoft's
+library for running trained models, whose usage reports to Microsoft
+are on by default; Exegete switches them off in the reading process. On
+Linux they are off before onnxruntime starts, so it keeps nothing on
+the computer and sends nothing. On a Mac with Apple silicon they are
+off before it starts too, and a reading was checked to keep nothing in
+a home folder of its own. On Windows, its switch can be reached only
+once it has loaded: by then it has made a few reports to Windows'
+diagnostic data, about the computer (the names and driver versions of
+its graphics adapters and of any NPU among them) and onnxruntime (that
+it registered its processor part, with any error), with nothing from
+your documents. Windows adds its own identifiers to what it sends, and
+passes the reports to Microsoft or not as the computer's diagnostic
+data setting says. Every later report is switched off ("A library's
+usage reports", under "How your data flows", says what the reports
+hold, the switch's limits, and what you can do). A document converted with
 another tool, such as a pandoc server, should be converted file to
 file, never into the conversation
 (`explain_ai_coding_tools('converted_documents')`).
@@ -1685,9 +1817,10 @@ Two further rules touch files on your disk:
   have a project open (4.0 writes no lock file), some tools look at the
   list of processes running on this machine (`ps` or `tasklist`, or
   psutil when installed). Most of the tools that report a
-  `qualcoder_gui_signals` field look at it, but `create_project`
-  reports the field without looking. A few other tools look at it only
-  when they work out the project's history with QualCoder. TOOLS.md
+  `qualcoder_gui_signals` field look at it, but `create_project` and
+  the `undo_changes` previews report the field without looking. A few
+  other tools look at it only when they work out the project's history
+  with QualCoder. TOOLS.md
   names these tools, and when each one looks. Whichever tool looks, only
   the number of matches is reported into the conversation. The listing
   is filtered in memory for
@@ -1715,6 +1848,12 @@ Two further rules touch files on your disk:
   - without psutil, a QualCoder run through Python, or one of
     QualCoder's Linux downloads, from a folder whose path holds a space
     is not counted as running;
+  - on a Mac with psutil, which comes with PyMuPDF 2 on Apple silicon
+    from 0.15.3, a QualCoder run through Python by another account on
+    the same Mac is not seen, since the command lines of another
+    account's programs cannot be read there; QualCoder's app is still
+    seen by its name, and the chat history's recent change is then still
+    given as a sign;
   - in a Linux sandbox whose process list holds only its own programs,
     such as a Flatpak app's or a container's, a QualCoder outside it is
     not seen, and with Exegete inside WSL (Windows Subsystem for Linux),
@@ -1825,13 +1964,13 @@ Two further rules touch files on your disk:
 
 ## Your governance options, from default to fully local (Experimental)
 
-Which terms govern the AI processing is decided by the host you run and
-the account you sign into, not by Exegete. The four options below,
+The host you run and the account you sign into decide which terms
+govern the AI's processing of your data. Exegete does not. The four options below,
 called rungs here, go from the default to a fully local model. Each says
 what changes and what to check. The official pages are quoted word for
 word with their addresses, never described in our own words. The terms
-below were quoted on 17 August 2026 and the passages on feedback on
-1 October 2026, and the linked pages govern. On every rung, Claude Code opens
+below were quoted again on 4 November 2026, and the linked pages
+govern. On every rung, Claude Code opens
 files by itself, outside Exegete, and the terms do not change what it
 reads ("Assistants that open files by themselves").
 
@@ -1839,22 +1978,22 @@ reads ("Assistants that open files by themselves").
 
 Switch training off before participants' data: while it is on, Anthropic
 may use your conversations to train its models. Your account's default
-is worth checking yourself, in the Model Improvement setting at
-<https://claude.ai/settings/data-privacy-controls>. The governing
-documents:
+is worth checking yourself, in the setting "Help improve our AI
+models" at <https://claude.ai/settings/data-privacy-controls>. The
+governing documents:
 
 - Consumer Terms of Service (effective date shown: October 8, 2025),
   <https://www.anthropic.com/legal/consumer-terms>, which state:
   > "We may use Materials to provide, maintain, and improve the
   > Services, including training our models, unless you opt out of
   > training through your account settings"
-- Privacy Policy (effective date shown: July 8, 2026):
+- Privacy Policy (effective date shown: September 10, 2026):
   <https://www.anthropic.com/legal/privacy>
 - Privacy Center article "Is my data used for model training?":
   <https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training>
 
-Exceptions that apply whatever the setting (Consumer Terms, quoted 17
-August 2026):
+Exceptions that apply whatever the setting (Consumer Terms, quoted 4
+November 2026):
 
 > "Even if you opt out, we will use Materials for model training when:
 > (1) you provide Feedback to us regarding any Materials, or (2) your
@@ -1872,43 +2011,55 @@ The commercial-products Privacy Center article
 (<https://privacy.claude.com/en/articles/7996885-how-do-you-use-personal-data-in-model-training>)
 states: "We will not use your chats or coding sessions to train our
 models, unless you choose to participate in our Development Partner
-Program." A Data Processing Addendum exists on the commercial side
-(<https://www.anthropic.com/legal/data-processing-addendum>, effective
-date shown: February 24, 2025): it is the instrument an institution's
-data protection officer will ask about.
+Program." On the commercial side, Anthropic also has a Data Processing
+Addendum (<https://www.anthropic.com/legal/data-processing-addendum>,
+effective date shown: February 24, 2025). It is the document an
+institution's data protection officer will ask about.
 
-**A question about individual accounts, set out without settling it.**
-The Consumer Terms' scope clause includes:
+**A question about individual accounts.** The Consumer Terms' scope
+clause, which says what they cover, includes:
 
 > "Claude.ai, Claude Pro, and other products and services that we may
 > offer for individuals (including any Anthropic API key and the
 > Anthropic Console, when used by individuals)"
 
 while the Commercial Terms state "Services under these Terms are not for
-consumer use." For unambiguous commercial-terms coverage, use a Console
-account created for the institution or research group, and let your data
-protection officer read the current versions of both pages. The Terminal
-guide's recipe "Claude Code with an Anthropic API key" gives the steps;
-for participants' data under commercial terms, rung 3 says what this
-project suggests.
+consumer use." Which of the two covers a Console account used by an
+individual is a question this document sets out without settling. To be
+sure that the Commercial Terms cover your use, you could use a Console
+account created for the institution or research group. You could also
+ask your data protection officer to read the current versions of both
+pages. The Terminal guide's recipe "Claude Code with an Anthropic API
+key" gives the steps. For participants' data under commercial terms,
+rung 3 says what this project suggests.
 
 ### Rung 3: Team/Enterprise (Claude for Work)
 
-The same commercial-terms footing. The August 2025 consumer
-announcement (<https://www.anthropic.com/news/updates-to-our-consumer-terms>,
-quoted 17 August 2026; the page shows the items as a list, joined here
-with semicolons) lists what the consumer training changes leave alone:
+Team and Enterprise plans also come under the Commercial Terms.
+Anthropic's announcement of August 2025 on its consumer terms
+(<https://www.anthropic.com/news/updates-to-our-consumer-terms>, quoted
+4 November 2026) says which services its changes on training leave
+alone. The page shows them as a list, joined here with semicolons:
 
 > "These updates do not apply to services under our Commercial Terms,
 > including: Claude for Work, which includes our Team and Enterprise
 > plans; Our API, Amazon Bedrock, or Google Cloud's Vertex API; Claude
 > Gov and Claude for Education"
 
-If your institution has a Team or Enterprise deployment, using Exegete
-through Claude Desktop or Claude Code under that account is already
-under commercial terms, with no API key. For participants' data, this
-project suggests Claude Desktop's chat with Exegete under that account,
-set up as "Assistants that open files by themselves" says.
+If your institution has a Team or Enterprise plan, using Exegete on it,
+through Claude Desktop or Claude Code, already comes under the
+Commercial Terms, with no API key. Beyond those terms, what
+Anthropic may do with your data depends on the agreement your
+institution made with Anthropic, and such agreements differ. Even so,
+an institution's account is likely to give participants' data more
+protection than a personal one, since the institution agreed its terms
+with its own interests in mind. Whoever manages the account can tell
+you which terms apply. Exegete's extension is not signed, and an
+institution that manages your computer or your Claude account may block
+unsigned extensions, or extensions altogether (INSTALL.md, "Installing
+the extension"). For participants' data, this project suggests
+Claude Desktop's chat with Exegete under that account, set up as
+"Assistants that open files by themselves" says.
 
 ### Rung 4: fully local models (Experimental)
 
@@ -1918,7 +2069,7 @@ while its check for new versions stays off, as it is on this route
 unless you switch it on ("Checking for new versions", below), though on Windows x64
 a library it installs for PDFs reports its use to Windows, with nothing
 from your projects ("A library's usage reports", under "How your data
-flows"). LM Studio's documentation states (quoted 17 August 2026,
+flows"). LM Studio's documentation states (quoted 4 November 2026,
 <https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
 entirely offline" and that "Nothing you enter into LM Studio when
 chatting with LLMs leaves your device". That is the maker's statement,
@@ -1945,7 +2096,7 @@ model's room than the full set, and gives the steps.
 - **Feedback, safety flagging and opt-in programmes** reach past every
   Anthropic route. A thumbs up or down sends the conversation it rates.
   <https://privacy.claude.com/en/articles/10023580-is-my-data-used-for-model-training>
-  (read 1 October 2026): "When you provide us feedback via our thumbs
+  (read 4 November 2026): "When you provide us feedback via our thumbs
   up/down button, we will store the entire related conversation,
   including any content, custom styles or conversation preferences, in
   our secured back-end for up to 5 years. Feedback data does not include
@@ -1965,10 +2116,9 @@ model's room than the full set, and gives the steps.
   `/feedback` retention, and local plaintext transcripts under
   `~/.claude/projects/`. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and
   `cleanupPeriodDays` narrow them (<https://code.claude.com/docs/en/data-usage>).
-- **Commercial terms are not GDPR compliance.** The Data Processing
-  Addendum (DPA) exists, but deciding who is controller and who is
-  processor, and signing or relying on the DPA, remain the
-  institution's work.
+- **Commercial terms are not GDPR compliance.** Anthropic has a Data
+  Processing Addendum (DPA), but it is for the institution to decide who
+  is controller and who is processor, and to sign or rely on the DPA.
 - The Privacy Center now lives at privacy.claude.com; older
   privacy.anthropic.com links lead there.
 
@@ -2001,14 +2151,12 @@ request, it shows your computer's internet address (IP address), which
 data-protection law may treat as personal data, and the time to the
 company that hosts the file, GitHub. GitHub, "What is GitHub Pages?",
 <https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages>
-(read on 5 October 2026 through GitHub's own source for its
-documentation, github/docs, since docs.github.com could not be opened
-where this was written): "When a GitHub Pages site is visited, the
+(read on 4 November 2026): "When a GitHub Pages site is visited, the
 visitor's IP address is logged and stored for security purposes,
 regardless of whether the visitor has signed into GitHub or not."
 GitHub's privacy statement,
 <https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement>
-("Effective date: April 27, 2026", read the same way on the same day),
+("Effective date: April 27, 2026", read the same day),
 says that "It applies to the Personal Data that GitHub, Inc. or GitHub
 B.V., processes as the “Data Controller” when you interact with
 websites, applications, and services that display this Statement"; that
@@ -2036,12 +2184,32 @@ of its first check; and the newest version of Exegete that has run on
 this computer, which it keeps even with checking off (so that it can
 say once that an update worked). Nothing from your projects.
 
-**What enters the conversation.** Notes for the assistant to pass on,
-each once: that the check exists (the first time Exegete is used),
-that a newer version is out, and that an update worked. Each goes first
-in a successful answer of 20,000 characters or fewer, and counts as
-given once it is there: whether it reaches you depends on the assistant
-passing it on. When you ask, the answer gives the installed and newest versions, how Exegete was
+**What enters the conversation.** Notes for the assistant to pass on:
+that the check exists (the first time Exegete is used), that a newer
+version is out, and that an update worked. Each goes first in a
+successful answer of 20,000 characters or fewer. The note after an
+update carries a paragraph on what is new, written with the release and
+built into Exegete, and a link to that release's notes on GitHub, which
+Exegete never opens. A note, and what the answer tells when you
+ask (that the check exists, that a newer version is out), counts as
+given once that answer has gone out to the app, unless the app has
+cancelled the request: an app is meant to ignore the answer to a
+request it has cancelled. One cut short, by a stop before the answer
+has gone out or by the app cancelling the request, comes in a later
+answer or at the next start. Each comes once, except that it can come
+again when two copies of Exegete run on the same computer, when
+Exegete cannot write its file (a full disk, or on Windows another
+program reading the file at that moment), when Exegete stops in the
+instant after the answer has gone out, or when another answer goes out
+while Exegete checks for a new version at your request. Whether a note
+reaches you depends on the assistant passing it on, and on the app
+showing the answer. If Exegete reads the app's cancel only after the
+answer has gone out, the note counts as given and the app does not show
+it. That happens when the app cancels at the moment the answer is sent.
+It can also happen when, while a call runs, the app sends several other
+messages and then its cancel, since Exegete may then read the cancel
+only once the call has answered.
+When you ask, the answer gives the installed and newest versions, how Exegete was
 installed, and the steps, with any folder in your home folder written
 from it (`$HOME`); a folder outside your home folder is written in
 full. These go to your AI provider like any other tool answer.
@@ -2060,30 +2228,32 @@ Blocked, Exegete says nothing about new versions.
 With the ChatGPT desktop app, or Codex's command line or editor
 extension (the Terminal guide's recipe, "ChatGPT's desktop app and
 Codex"), what a tool returns goes to OpenAI, and OpenAI's terms apply.
-The same discipline as above: OpenAI's pages are quoted verbatim with
-their addresses, never characterised in our own voice, and the linked
-pages govern. OpenAI's Help Center and openai.com refuse automated
-reading, so those pages were read on 30 September 2026 from the Internet
-Archive's captures of them, named with each quote: open the live page
-before you rely on it. (The recipe itself is Experimental, and not tried
-by this project. This project gives no steps for ChatGPT in a web
-browser, which could reach Exegete through OpenAI's Secure MCP Tunnel,
-or, in an enterprise workspace that switches on local computer access
-with Work Cloud, perhaps through a computer connected to the account,
-which OpenAI does not document for servers like Exegete; the Terminal
-guide says why.)
+As above, OpenAI's pages are quoted word for word with their addresses,
+never described in our own words, and the linked pages govern. OpenAI's
+Help Center and openai.com refuse automated reading, so those pages
+were read on 4 November 2026 in the Internet Archive's newest captures
+of them. Each quote below names its capture and gives the day the
+capture was made. The live page may have changed since, so you could
+open it before you rely on the quote. The recipe itself is
+Experimental, and this project has not tried it. This project gives no
+steps for ChatGPT in a web browser, which could reach Exegete through
+OpenAI's Secure MCP Tunnel. Nor does it give steps for an enterprise
+workspace that switches on local computer access with Work Cloud. Such
+a workspace could perhaps reach Exegete through a computer connected to
+the account, which OpenAI does not document for servers like Exegete.
+The Terminal guide says why.
 
 **Codex's own file access.** Besides calling Exegete's tools, Codex
 runs commands of its own, outside Exegete, which change files in the
 folder it works in and read files well beyond it.
-<https://learn.chatgpt.com/docs/sandboxing> (read 30 September 2026),
+<https://learn.chatgpt.com/docs/sandboxing> (read 4 November 2026),
 on the mode in which it may edit (`workspace-write`):
 
 > "The agent can read files, edit within the workspace, and run
 > routine local commands inside that boundary."
 
 <https://learn.chatgpt.com/docs/agent-approvals-security> (read
-30 September 2026), the table "Common sandbox and approval
+4 November 2026), the table "Common sandbox and approval
 combinations", row "Auto (preset)":
 
 > "Codex can read files, make edits, and run commands in the workspace.
@@ -2103,24 +2273,25 @@ approval policy":
 
 `on-request` is the approval setting behind both "Ask for approval" and
 the read-only mode, and what is accessible reaches well beyond Codex's
-folder. In Codex's source code (release 0.159.2, 29 September 2026,
-read 30 September 2026, <https://github.com/openai/codex/tree/rust-v0.159.2/codex-rs>),
+folder. In Codex's source code (release 0.166.0, 29 October 2026,
+read 4 November 2026, <https://github.com/openai/codex/tree/rust-v0.166.0/codex-rs>),
 the two modes' presets both use `on-request`
-(`utils/approval-presets/src/lib.rs`), and both of their sandboxes let
+(`utils/approval-presets/src/lib.rs`). Both of their sandboxes let
 Codex's commands read from the root of the disk
-(`protocol/src/permissions.rs`): on macOS and Linux, any file your
-account can read (`sandboxing/src/seatbelt.rs`,
-`linux-sandbox/src/bwrap.rs`); on Windows, with its preferred sandbox,
-the system's folders, the working folder and every folder at the top of
-your home folder except a short list that holds keys and credentials,
-such as `.ssh` and `.aws` (`windows-sandbox-rs/src/setup.rs`), and with
-its fallback sandbox, which limits only writing, any file your account
-can read. That takes in the extension's folder for projects
+(`protocol/src/permissions.rs`). On macOS and Linux, the commands can
+read any file your account can read (`sandboxing/src/seatbelt.rs`,
+`linux-sandbox/src/bwrap.rs`). On Windows, the preferred sandbox lets
+them read the system's folders, the working folder and every folder at
+the top of your home folder except a short list that holds keys and
+credentials, such as `.ssh` and `.aws`
+(`windows-sandbox-rs/src/setup.rs`). The fallback sandbox, which limits
+only writing, lets them read any file your account can read. That takes
+in the extension's folder for projects
 (`~/Exegete projects`, or `~/QualCoder projects`, the earlier default),
 Documents and wherever
 else you keep projects and transcripts. OpenAI's page on permission
-modes (<https://learn.chatgpt.com/docs/permission-modes>, read 30
-September 2026) describes "Ask for approval" in words a reader may take
+modes (<https://learn.chatgpt.com/docs/permission-modes>, read 4
+November 2026) describes "Ask for approval" in words a reader may take
 to cover reading:
 
 > "It lets ChatGPT work within the current workspace and pauses before
@@ -2140,30 +2311,30 @@ passes on, not the approval before anything is written, not the preview
 or the backup. Codex changes files in the folder it works in without
 asking, so a study's folder, the projects folder or the home folder
 given to it as that folder would be open to its changes as well as its
-reads. The Terminal guide's recipe gives it an empty folder of its own, which
-keeps a study's files out of the place Codex works in, so that it does
-not change them without asking, and does not keep Codex from reading
-them, or from searching other folders for them. Practising, too,
+reads. The Terminal guide's recipe gives it an empty folder of its own.
+That keeps a study's files out of the place Codex works in, so that it
+does not change them without asking. It does not keep Codex from
+reading them, or from searching other folders for them. Practising, too,
 leaves a real study on the same computer within its reach ("While you
 practise", above). OpenAI documents a setting, marked Beta, that can
 keep Codex's own commands from reading outside the folder it works in,
 a "permission profile" (<https://learn.chatgpt.com/docs/permissions>,
-read 30 September 2026: "Beta. Permission profiles are under active
-development and may change."); it has not been tested with Exegete,
+read 4 November 2026: "Beta. Permission profiles are under active
+development and may change."). It has not been tested with Exegete,
 and this project gives no steps for it. If you try it, you may want to
-check what Codex can still read before bringing in participants' data;
-for participants' data, this project suggests an assistant with no
+check what Codex can still read before bringing in participants' data.
+For participants' data, this project suggests an assistant with no
 file access of its own, such as Claude Desktop's chat.
 
-**Phones, through a connected computer.** OpenAI's Remote,
-<https://learn.chatgpt.com/docs/remote> (read 30 September 2026):
+**Phones, through a connected computer.** OpenAI's page on Codex on
+mobile, <https://learn.chatgpt.com/docs/mobile> (read 4 November 2026):
 
 > "Follow progress, approve actions, and send instructions from your
-> phone. Codex runs each task on your connected computer."
+> phone. Codex runs tasks in the cloud or on a connected computer."
 
 The connected computer runs the ChatGPT desktop app on macOS or Windows
 (the Terminal guide lists what Remote needs, from OpenAI's pages).
-<https://learn.chatgpt.com/docs/remote-connections> (read 30 September
+<https://learn.chatgpt.com/docs/remote-connections> (read 4 November
 2026):
 
 > "MCP servers, skills, browser access, and Computer Use come from that
@@ -2187,7 +2358,7 @@ Connections in the desktop app ("In the app on the host, use
 page), and remove any device paired there. For enterprise
 workspaces with local computer access switched on,
 <https://learn.chatgpt.com/docs/enterprise/cloud-local-access> (read
-30 September 2026):
+4 November 2026):
 
 > "Conversations, tool results, and other task context do not stay
 > exclusively on the connected computer."
@@ -2199,13 +2370,13 @@ train its models. The settings, Codex's separate one included, and the
 exception for feedback are quoted below. Help Center, "How your data is
 used to improve model performance",
 <https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>
-(Archive capture of 28 September 2026,
-<https://web.archive.org/web/20260928102458/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
-it shows "Updated: 4 hours ago", which the capture's own data dates to
-28 September 2026):
+(Archive capture of 1 November 2026,
+<https://web.archive.org/web/20261101232003/https://help.openai.com/en/articles/5722486-how-your-data-is-used-to-improve-model-performance>;
+it shows "Updated: 13 days ago", which the capture's own data dates to
+20 October 2026):
 
-> "When you use our services for individuals, such as ChatGPT and
-> Codex, we may use your content to train our models. You can choose
+> "When you use our services for individuals (Free, Plus, Pro), we may
+> use your content to train our models. You can choose
 > whether your conversations help improve our models. To opt out, turn
 > off Improve the model for everyone under Settings > Data controls in
 > ChatGPT, or select Do not train on my content in our Privacy Portal."
@@ -2237,8 +2408,8 @@ The Privacy Portal is <https://privacy.openai.com/>.
 
 "Enterprise privacy at OpenAI", <https://openai.com/enterprise-privacy/>
 (the page shows "Updated: January 8, 2026"; Archive capture of
-29 September 2026,
-<https://web.archive.org/web/20260929211725/https://openai.com/enterprise-privacy/>):
+3 November 2026,
+<https://web.archive.org/web/20261103120300/https://openai.com/enterprise-privacy/>):
 
 > "Yes, we are able to execute a Data Processing Addendum (DPA) with
 > customers for their use of ChatGPT Business, ChatGPT Enterprise, and
@@ -2247,14 +2418,14 @@ The Privacy Portal is <https://privacy.openai.com/>.
 
 **Codex: how you sign in decides.** Codex can be signed in to with a
 ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>
-(read 30 September 2026):
+(read 4 November 2026):
 
 > "Your sign-in method also determines which admin controls and
 > data-handling policies apply."
 
 **Codex keeps session transcripts on your computer.**
 <https://learn.chatgpt.com/docs/agent-approvals-security> (read
-30 September 2026):
+4 November 2026):
 
 > "Review local data retention settings (for example,
 > `history.persistence` / `history.max_bytes`) if you don't want Codex
@@ -2265,20 +2436,44 @@ Codex's `config.toml`. A session's transcript can hold what Exegete's
 tools returned in it, and what Codex's own commands read, participants'
 words included, as Claude Code's
 local transcripts can ("Cross-rung cautions", above). The `history`
-settings are not enough to stop that (Codex's source code, `main` on
-30 September 2026: `history.persistence` governs only
-`~/.codex/history.jsonl`, the text you typed, while every session is
-also written in full, tool results included, under `~/.codex/sessions`,
-and later `~/.codex/archived_sessions`, whichever `history` setting you
-choose). So delete those session files after any work on study data,
-and keep `~/.codex` out of folders that a sync or backup service
-copies. These files are part of what stays on the computer ("How your
-data flows").
+settings are not enough to stop that. In Codex's source code at release
+0.166.0, read on 4 November 2026, `history.persistence` governs only
+`~/.codex/history.jsonl`, the text you typed. Every session is also
+written in full, tool results included, under `~/.codex/sessions`, and
+later `~/.codex/archived_sessions`, whichever `history` setting you
+choose. In the same source, Codex also copies each new conversation
+into a database in that folder, `~/.codex/thread_history_1.sqlite`. It
+keeps your messages, the assistant's answers and each tool's result
+there, up to 64 KiB of each result, with the middle of a longer one
+left out. So participants' words that Exegete returned are kept there
+too. A second database, `~/.codex/state_5.sqlite`, keeps each
+conversation's title, its first message and a preview of it. Deleting
+the session files by hand leaves both databases as they were. Codex's
+own way of deleting a conversation removes its session files and its
+rows in both databases. In Codex's command line, `/delete` does this
+for the conversation you are in, and `codex delete` with a session's
+name does it for another. OpenAI's page on these commands,
+<https://learn.chatgpt.com/docs/cli/slash-commands> (read 4 November
+2026), describes `/delete` as "Permanently delete the current session."
+and `/archive` as removing a session from the lists "without deleting
+its transcript." Codex's source shows two files that this deletion
+leaves. `~/.codex/history.jsonl` keeps the text you typed, unless
+`history.persistence` is set to `"none"`. In the command line, Codex's
+log database, `~/.codex/logs_2.sqlite`, keeps pieces of the assistant's
+latest answers, word for word, and those answers can quote
+participants. These pieces belong to no conversation, so deleting a
+conversation leaves them. Codex removes log entries once they are ten
+days old, but only while it runs. So, after any work on study data, you
+could delete its conversations that way, and keep `~/.codex` out of
+folders that a sync or backup service copies. With Codex quit, you could
+also delete `history.jsonl` and the files whose names begin
+`logs_2.sqlite`. Codex makes them again when it needs them. These files
+are part of what stays on the computer ("How your data flows").
 
 **The UK, the EEA and Switzerland.** "Europe Terms of Use",
 <https://openai.com/policies/eu-terms-of-use/> (the page shows "Updated:
-January 16, 2026"; Archive capture of 26 September 2026,
-<https://web.archive.org/web/20260926195745/https://openai.com/policies/eu-terms-of-use/>):
+January 16, 2026"; Archive capture of 28 October 2026,
+<https://web.archive.org/web/20261028153406/https://openai.com/policies/eu-terms-of-use/>):
 
 > "These Terms of Use apply if you reside in the European Economic Area
 > (EEA), Switzerland, or UK."
@@ -2355,13 +2550,21 @@ near the top of this document, set them out.
     copies, so a prune whose set changed after its preview (the
     project's own file removed outside Exegete, for example) is refused
     as a changed project and removes nothing, and the execute's note
-    says, in the past tense, which backups held the copy. Since v0.13 a
+    says, in the past tense, which of the backups it removed held the
+    copy. A backup it could not remove whole, as when another program
+    has one of its files open, is named apart: it may still hold the
+    copy, and it keeps its name, so `list_backups` lists it and
+    `restore_backup` accepts it while its database remains, though it
+    may lack some of its files, which a restore from it would not bring
+    back. You could remove it by hand once nothing holds it open. Since v0.13 a
     run on a mapping you typed is refused unless the call either asks
     for the mapping to be saved into this file
     (`save_mapping_to_project`, which the preview must be run with) or
     attests that the researcher keeps their own record
-    (`researcher_keeps_mapping`), because a typed mapping exists nowhere
-    else and is half of the reverse key. A save merges with what is
+    (`researcher_keeps_mapping`), because Exegete keeps no copy of a
+    typed mapping: outside this file it is only in the conversation and
+    the host's records of it, and it is half of the reverse key. A save
+    merges with what is
     there by QualCoder's own rules, and is written only once the run has
     committed. A file the save creates is owner-only (0600) on macOS and
     Linux, where QualCoder's own write would leave it readable by other
@@ -2421,16 +2624,29 @@ near the top of this document, set them out.
     rewrites the journal entries Exegete wrote for earlier runs,
     which the preview counts and warns about. **Two people who share a
     name:** one file per call gives each their own pseudonym in the file
-    text only. With `rewrite_memos` on, whichever run carries it
-    rewrites that name in notes across the whole project, the other
+    text only. Inside one file, a first run can leave the second
+    person's occurrences as they are (`choose_occurrences`, then
+    `leave_occurrences`), and a second run then replaces them with the
+    second person's pseudonym. With `rewrite_memos` on, whichever run
+    carries it rewrites that name in notes across the whole project, the other
     person's notes included, whatever the order of the runs, so a note
     about one person can end up carrying the other person's pseudonym.
     Keep `rewrite_memos` off on every run of a shared name and change
     the notes that name either person by hand; give the second person a
     typed mapping with `save_mapping_to_project` off and
     `researcher_keeps_mapping` on, because `pseudonyms.json` holds one
-    pseudonym per name. The count is in the
-    preview's `residue` block, and a name that occurs only in a
+    pseudonym per name. The names list then holds one pseudonym for that
+    name, while the file's text holds two. Several things lead back from
+    the second person's pseudonym to their name. One is the mapping you
+    typed for the second run, which is in the conversation. The
+    conversation reaches your AI provider, unless the model runs on your
+    own computer, and the host keeps its own records of it. Another is
+    your own record of that mapping. And every copy of the file's text
+    from before the second run holds the name where that pseudonym now
+    stands. Those copies include every backup taken before that run, the
+    first run's among them, and, for an imported document, its original
+    in the project's folder of originals. The count is in the preview's
+    `residue` block, and a name that occurs only in a
     `#####` private note is neither read nor counted. Those counts are a
     heuristic that reads wider than the rewrite does: the rewrite
     replaces whole words only, as QualCoder's own import does, while
@@ -2453,7 +2669,12 @@ near the top of this document, set them out.
     name inside a longer word, in another letter case, joined another
     way or spelled with an invisible character, or where a pseudonym
     puts one back), every other file with stored text, which this call
-    does not touch, and the PDF sources, which are never rewritten. The
+    does not touch, and the PDF sources, which are never rewritten. In
+    the file this call rewrites, the occurrences a run leaves by choice
+    are counted under a kind of their own, `left_by_choice`, where the
+    count reads them as the rewrite matched them. That count is a
+    heuristic. The number of occurrences left, which the preview gives,
+    is exact. The
     block names every file in which a name still shows, including the
     files this run does not touch, on both mapping paths, so name your
     files accordingly. By default it gives full detail for the file this
@@ -2504,7 +2725,7 @@ near the top of this document, set them out.
     copy), saved graph labels, saved table displays and filters, and
     QualCoder's saved SQL queries. Each rename's result counts the saved
     graph labels, table displays and filters for the case or file it
-    renamed; the saved SQL queries nothing in Exegete reads. Every
+    renamed; nothing in Exegete reads the saved SQL queries. Every
     backup, Exegete's session files, QualCoder's search index and
     QualCoder's AI chat history keep the old name too, and
     so do Exegete's pseudonymisation journal entries and run records,
@@ -2545,7 +2766,10 @@ near the top of this document, set them out.
   - The run manifest in `~/.exegete/pseudonymisation/` (the
     pseudonyms, the replacement spans, the row ids and offsets) and the
     journal entry inside the project (the pseudonyms and counts) never
-    carry an original name. When a run rewrites notes, the
+    carry an original name. Where a run leaves occurrences as they are,
+    both give how many, never where they are. The manifest also says, for
+    each file, whether the check for mapping entries competing for the
+    same characters stopped early, never where. When a run rewrites notes, the
     manifest names each note by its table and key, with the lengths of
     its public part, and the journal entry gives counts only; an
     attribute type is keyed by its own name, which is withheld where a
@@ -2590,8 +2814,17 @@ near the top of this document, set them out.
   - **The preview's own reply.** On the `use_project_pseudonyms` path
     the mapping is the researcher's own reverse key and the model never
     supplied it, so no diagnostic and no refusal quotes a name from it
-    and `include_context` returns nothing at all. This protects the key
-    ("How your data flows"). Four things are still returned as they
+    and `include_context` returns nothing at all. Nor does the preview
+    give the position of any name it matches there. Each entry's block
+    gives its number, its pseudonym and its count, and the list of names
+    that overlap gives each overlap as its two entry numbers. The
+    occurrences listed for choosing are ids without line numbers. Given
+    a position beside a pseudonym, an assistant that has read the text
+    could find the name there, and so learn which name the pseudonym
+    replaces. This protects the key, though not wholly: some of the
+    preview's figures can still let such an assistant learn that ("How
+    your data flows"). Four things are still
+    returned as they
     stand, because a preview whose files cannot be named cannot be
     relayed: the project path, each file's own name (including every
     file the residue's file-text block lists), the backup path and the
@@ -2599,7 +2832,10 @@ near the top of this document, set them out.
     the project folder, and the backup path being reported on any
     failure after the backup was taken as well as on success; any of
     these can itself contain one of those names. The tool's description
-    says so.
+    says so. The place of the page for choosing occurrences is not among
+    them. The preview gives it only when the page did not open, and on
+    this path withholds it when the place itself holds one of those
+    names. A note then says which folder the page is in.
 - **Check that a project's consent covers third-party processing**
   before you work on it with an assistant whose AI runs on its maker's
   computers.

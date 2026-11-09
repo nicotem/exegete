@@ -92,8 +92,9 @@ NEW_TEXTS = (PROJECT, LEFTOVER_LOCK, SAID_YES, COMPUTER)
 # which this piece held to its length before, is no longer pinned here;
 # docs/snapshot/ holds the description as Exegete serves it)
 DESCRIPTION_SENTENCE = (
-    "When none are present, it warns only if this project or computer "
-    "shows QualCoder or the setting says yes.")
+    "When none are present, it warns only if this project or this "
+    "computer shows signs of QualCoder, or the researcher's setting says "
+    "they use it.")
 NEW_LAST_SENTENCE = ("If the researcher opens it in QualCoder, suggest "
                      "4.0, which avoids these changes.")
 ONE_LINE = ("The project is in QualCoder's format, so QualCoder 4.0 can "
@@ -241,8 +242,8 @@ class TestSelectProjectsWarning:
             con.close()
         out = json.loads(server.select_project(str(folder)))
         assert out["warning"].startswith(
-            "This database does not identify itself as a QualCoder "
-            "project")
+            "This database does not identify itself as a project in "
+            "QualCoder's format")
         assert " | " not in out["warning"]
         for text in NEW_TEXTS:
             assert text not in out["warning"]
@@ -322,7 +323,7 @@ class TestSelectProjectsGuards:
         if setting is not None:
             monkeypatch.setenv(SETTING, setting)
         out = json.loads(server.select_project(str(folder)))
-        assert "APPEARS to be open" in out["warning"]
+        assert "appears to be open" in out["warning"]
         for text in NEW_TEXTS:
             assert text not in out["warning"]
 
@@ -336,7 +337,7 @@ class TestSelectProjectsGuards:
             monkeypatch.setenv(SETTING, setting)
         out = json.loads(server.select_project(str(folder)))
         assert server._qualcoder_history().level == "computer"
-        assert "APPEARS to be open" in out["warning"]
+        assert "appears to be open" in out["warning"]
 
 
 # ---------------------------------------------------------------------------

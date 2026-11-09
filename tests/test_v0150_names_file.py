@@ -57,15 +57,14 @@ DESCRIPTION = (
     "Make the names file for the researcher to fill in on their own "
     "computer, so that the real names do not pass through this "
     "conversation. Writes Names to replace.txt in the project's Exegete "
-    "folder (a few lines of instructions, then one line per name: Real "
-    "name = Pseudonym), with the entries of the project's names list "
-    "(pseudonyms.json) already in it when there is one; a names file "
-    "already there is kept as it is. Then shows it in its folder and opens "
-    "it in the computer's text editor. Exegete never fills in names from "
-    "the documents and never returns the file's contents. Tell the "
-    "researcher to fill it in, save it and say when the list is ready; "
-    # the files design, piece 4: the call that saves it
-    "then call save_names_list. Never open or read the file yourself.")
+    "folder: a few lines of instructions, then one line per name, Real name "
+    "= Pseudonym. When the project has a names list (pseudonyms.json), its "
+    "entries are in the file already. A names file already there is kept as "
+    "it is. Then shows it in its folder and opens it in the computer's text "
+    "editor. Exegete never fills in names from the documents and never "
+    "returns the file's contents. Tell the researcher to fill it in, save "
+    "it and say when the list is ready; then call save_names_list. Never "
+    "open or read the file yourself.")
 NEXT_STEP = (
     "Tell the researcher that the names file is open on their computer "
     "(or, when it could not be opened, where it is). They write each real "
@@ -932,7 +931,7 @@ class TestListedAndLogged:
 
 EXPORT_REFUSAL = (
     "This is a project's Exegete folder, or is in one. That folder holds "
-    "files you fill in for the project; Exegete does not write exports "
+    "files the researcher fills in for the project; Exegete does not write exports "
     "there. Choose a location outside it. Nothing was written.")
 
 # Each export tool given a file name, a place for it and its suffix
@@ -968,11 +967,9 @@ class TestExportsKeepOut:
         target = names if suffix == ".txt" else names.with_suffix(suffix)
         answer = json.loads(getattr(server, tool)(
             output_path=str(target), overwrite=True, **extra))
+        # (v0.15.1 to 0.15.2: the REFI-QDA export's answers named its
+        # known faults too, a field gone with them in v0.15.3)
         refusal = {"error": EXPORT_REFUSAL}
-        if tool == "export_refi_qda":
-            # every answer the tool itself gives names its known faults
-            # (v0.15.1, ruling 85, item 2)
-            refusal["known_faults"] = server.REFI_EXPORT_KNOWN_FAULTS
         assert answer == refusal, answer
         assert names.read_bytes() == before
         assert sorted(os.listdir(other / "Exegete")) == sorted(

@@ -136,9 +136,9 @@ CYCLE = ("That move would make the category its own ancestor (a cycle), "
 OVERLAP_RULE = (
     "A candidate is excluded when it overlaps a coding of one of these "
     "codes in the same file. Spans are half-open, so a candidate that "
-    "starts exactly where an excluded coding ends is NOT excluded.")
+    "starts exactly where an excluded coding ends is not excluded.")
 NEWER = ("was written by a newer version of Exegete and this one cannot "
-         "write it safely. Upgrade Exegete, or ask the user to move")
+         "write it safely. Upgrade Exegete, or ask the researcher to move")
 HOLLOW = ("which may be the researcher's own files (a project keeps copies "
           "of its imported documents, and any recordings, in its folders) "
           "or a project a sync service has not downloaded yet, so check "
@@ -282,10 +282,10 @@ class TestMergeCategory:
         shown = json.loads(server.merge_category(2))["preview"]
         assert shown["source_memo_carried_to_target"] is False
         assert shown["note"] == (
-            "Merging a category reparents its codes and direct "
-            "sub-categories to the target (codings are untouched; they key "
-            "on the code, not the category), then deletes the source "
-            "category." + TOP_LEVEL)
+            "Merging a category moves its codes and direct "
+            "sub-categories under the target (codings are untouched, since "
+            "a coding belongs to a code, not to a category), then deletes "
+            "the source category." + TOP_LEVEL)
 
     def test_into_another_category(self, ladder):
         """Fix round 1, beside entries 3 and 5: the memo carried, the
@@ -295,10 +295,10 @@ class TestMergeCategory:
             2, into_category="Category A"))["preview"]
         assert shown["source_memo_carried_to_target"] is True
         assert shown["note"] == (
-            "Merging a category reparents its codes and direct "
-            "sub-categories to the target (codings are untouched; they key "
-            "on the code, not the category), then deletes the source "
-            "category." + CARRIED)
+            "Merging a category moves its codes and direct "
+            "sub-categories under the target (codings are untouched, since "
+            "a coding belongs to a code, not to a category), then deletes "
+            "the source category." + CARRIED)
         for word in ("parity", "code_tree", "QualCoder"):
             assert word not in shown["note"], word
 
@@ -434,7 +434,7 @@ class TestTheEarlierSettingsFile:
         said = " ".join(out["warnings"])
         assert (f"Until it is marked, {EARLIER}, in another host or on "
                 f"another computer sharing this project, would still write "
-                f"rows under \"Before\", the name it holds. Tell the user"
+                f"rows under \"Before\", the name it holds. Tell the researcher"
                 ) in said
         hint = json.loads(server.get_current_project())[
             "earlier_file_not_marked"]["hint"]

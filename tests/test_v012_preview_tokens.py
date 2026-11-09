@@ -1024,7 +1024,7 @@ class TestTheConfirmArgumentIsGone:
     # it at a model. The docstrings are swept above; these are the texts
     # a human hands over, and they are where the instruction survived a
     # round that had already corrected the docstrings and the README.
-    SHIPPED_GUIDES = ("AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
+    SHIPPED_GUIDES = ("AI_CODING_GUIDE.md",
                       "README.md", "TOOLS.md", "QUICKSTART.md",
                       "INSTALL.md")
 
@@ -1638,7 +1638,7 @@ class TestWhatTheRefusalSaysWhenATokenDoesNotVerify:
                        preview_token=self._forge_mac(token))
         error = out["error"]
         assert "the project changed since the preview" in error
-        assert "preview secret has been rotated" in error
+        assert "preview secret has been replaced" in error
         assert "not one Exegete issued for this state" in error
         assert "the remedy is the same for all of them" in error
         assert "without preview_token for a fresh preview" in error

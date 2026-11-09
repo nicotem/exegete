@@ -10,6 +10,1016 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The changes since the last release are added here when the next
 release is prepared.
 
+## [0.15.3-alpha] - 2026-11-09
+
+This release lets a replacement of names leave chosen occurrences of a
+name as they are, such as those of a second person with the same name.
+You choose them on a page in your browser, which marks each occurrence
+with a short id. The words around each occurrence stay on that page,
+and the conversation carries the ids and counts. A new code, category
+or case name may no longer hold most characters that usually show
+nothing on screen. The REFI-QDA export now carries the whole project
+except its media, and a failed export no longer leaves a half-written
+file. On a Mac with Apple silicon, PDFs are now read with PyMuPDF 2, as
+on Windows x64 and Linux, so the desktop extension there needs macOS 14
+or later. After an update, the first answer from a tool other than the
+check for new versions now carries a paragraph on what is new and a
+link to the release's notes. The two guides to coding with the
+assistant are now one. The texts Exegete gives the assistant were read
+in full, apart from those of the REFI-QDA export.
+
+Coding sessions kept with their project move to v0.15.4, and the
+release on method to v0.15.5 (README.md, "What comes next").
+"Upgrading from 0.15.2-alpha" comes first and says what changes for
+you. The account then follows the choice of occurrences, the other
+changes, the fixes, security, the documents and the known limits, then
+a part for contributors and the measurements.
+
+### Upgrading from 0.15.2-alpha
+
+Coming from a release before 0.15.2-alpha, read the "Upgrading" part
+of each release in between as well, below.
+
+Your projects and their backups are untouched, and the settings you
+chose stay as they were. After updating, quit your AI app and open it
+again, so that it loads the new tool list.
+
+- **On a Mac with Apple silicon, the extension needs macOS 14 or
+  later.** PDFs are now read there with PyMuPDF 2, which brings
+  onnxruntime, and onnxruntime's packages need macOS 14 or later on
+  such a Mac. On macOS 13 or earlier the updated extension does not
+  start, and 0.15.2's extension is the last that starts there. You
+  could update macOS first, or keep the release you have until then.
+  Installing 0.15.2's extension again brings Exegete back (INSTALL.md,
+  "Exegete is not listed, or does not answer"). The first start after
+  the update needs the internet, and downloads up to about 105 MB of
+  libraries for reading PDFs, where 0.15.2 needed about 33 MB. Intel
+  Macs keep PyMuPDF 1.x. Installs from PyPI on such a Mac choose their
+  releases by the macOS release and the Python ("Changed", below).
+- **New names are checked more strictly.** A new code, category or case
+  name that holds a character that usually shows nothing on screen,
+  such as a zero-width space, is refused. Joiners and variation
+  selectors are kept where they shape the characters beside them, as in
+  Persian and Indic spelling, emoji and CJK characters. A new name that
+  matches another of its kind once such characters are left out is
+  refused too ("Changed", below). Names already in a project stay as
+  they are until you rename them.
+- **Replacing names can leave chosen occurrences as they are.**
+  `pseudonymise_source` has two new arguments, `choose_occurrences` and
+  `leave_occurrences` ("Added", below). With `use_project_pseudonyms`,
+  its preview no longer gives where each match starts and ends.
+- **The REFI-QDA export carries the whole project, and its answers
+  change.** Without a coding session, the file now holds each coder's
+  name and work, those of a coder the project hides included, every
+  code and category, every text source, the cases with their
+  attributes, the file attributes, the journal entries in full, their
+  private part included, and the annotations. Anyone you send it to can
+  read all of this. A coding session's file names the project's coder
+  name, when one is set, as its first user, and marks each suggestion's
+  status. The
+  answers no longer carry `known_faults`. `files_exported` and
+  `codes_exported` count every text source and every code written, and
+  new counts say what was written and what was left out:
+  `cases_exported`, `journal_entries_exported`, `annotations_exported`,
+  `case_links_left_out`, `attribute_values_left_out`,
+  `annotations_left_out`, `part_files_removed` and, for a session,
+  `suggestions_by_status`. With `overwrite`, the earlier file stays as
+  it was, with its permissions, until the new one is complete. A
+  project without codings exports. On Windows with long paths off, an
+  export whose path comes within about 35 characters of the limit is
+  refused, with a suggestion ("Changed" and "Fixed", below).
+- **`apply_codings` checks that each suggestion's code still has its
+  name.** Each approved suggestion's code must still have the name it had
+  when the suggestion was recorded. A suggestion approved before its
+  code was renamed, or before the code was deleted and its number given
+  to a code of another name, is refused, with nothing written ("Fixed",
+  below). To keep it under the code as it is now, it is reopened, the
+  code is named again with `edit_suggestion`, and you approve it again.
+- **The note after an update gives a paragraph on what is new, and a
+  link** to the release's notes on GitHub ("Changed", below).
+- **One guide to coding with the assistant.** AI_CODING_WORKFLOW.md is
+  removed. AI_CODING_GUIDE.md holds what it said, and the links to the
+  workflow guide in TOOLS.md and SUPPORT.md now lead there ("Documents",
+  below).
+- **`docs/history/` and `example_config.json` are no longer in the
+  repository.** Git's history keeps the folder, which is still there at
+  the tag of 0.15.2-alpha, and NOTICE gives the address there of each of
+  the three items it lists from it. `example_config.json` was an early
+  example configuration that no document mentioned.
+- **Contributors meet three changes.** A fault that could expose
+  participants' data or damage a project is reported privately, as
+  SECURITY.md says ("Security", below). At release preparation,
+  `scripts/check_promises.py --release` refuses an old promise that no
+  row of the plan stands behind, and an old dated reading.
+  `tests/test_v0153_project_map.py` holds CONTRIBUTING.md's map to the
+  tree ("For contributors", below).
+
+### Added: choosing which occurrences a replacement leaves
+
+- **A preview can list each occurrence of a name by a short id.** With
+  `choose_occurrences`, the preview of `pseudonymise_source` lists every
+  occurrence in the file of a name the run would replace, in the order
+  they appear, each as a short id beside the number of its line (the id
+  alone with `use_project_pseudonyms`): the first 150, and how many
+  more. The list holds no name, no pseudonym and no words of the file.
+  Each id is made from the file, its text and where its occurrence
+  starts and ends, and keyed with the project's place on disk and the
+  preview-token secret of the account that runs Exegete. So an id
+  changes when the text changes, in a copy of the project in another
+  folder, when the project is moved or renamed, under another account
+  and after the secret is replaced. The ids are shown at the shortest
+  length, from five characters, at which all of the file's ids differ,
+  so a preview that finds more or fewer occurrences can show them with
+  more or fewer characters. The choice cannot be made with
+  `rewrite_memos` on, since a note rewrite replaces the name in the
+  public part of the notes about everyone who has it.
+- **A page shows you each occurrence where it stands.** A preview with
+  `choose_occurrences` also writes a page into the reading folder and
+  opens it in your browser. The page holds the file's whole text, each
+  line numbered (as the preview numbers it, where the preview gives
+  lines) and laid out in the direction of its own first letter. Every
+  occurrence of a name the preview looked for is marked with its id
+  beside it. In a line that mixes directions, such as English names in a
+  line of Hebrew, each id stands beside its own name rather than at the
+  far end of a stretch written the other way. The page shows no
+  pseudonym and nothing else of the mapping. Its head says that words
+  copied from it into the conversation go to the AI provider, names
+  included, unless the model runs on your own computer. A page that
+  cannot be written or opened never stops the preview, and a file in
+  which no name of the mapping occurs gets none.
+- **The assistant is told never to open the page.** You tell the
+  assistant the ids to leave. The preview's answer gives, under `occurrences_page`,
+  whether the page opened, its counts and a note asking the assistant
+  never to open, read or look at it. The answer gives the page's place
+  only when it did not open. With `use_project_pseudonyms`, that place,
+  and the words of an error that gives one, are withheld where they
+  carry a name from the list, as the project folder's name can, and a
+  note says where the page is, naming the reading folder as it stands on
+  that kind of computer (`~/Library/Caches/Exegete/Reading.noindex` on a
+  Mac). Where a page was written, the occurrences block's next note
+  tells the assistant that it shows each id, so that you need not count
+  occurrences in the order they appear. Where the preview lists only the
+  first 150, the block adds that the page shows every occurrence with
+  its id and that you may give any of them, listed in the preview or
+  not. The brief says when to preview with `choose_occurrences`, that
+  the page is the researcher's, never to be opened, read or looked at,
+  and that the assistant gives the ids alone, in `leave_occurrences`.
+  Its line on the pages Exegete opens for the researcher now names this
+  one.
+- **Where the page is kept and when it goes.** It is kept in the file's
+  folder in the reading folder, one for each file. It goes when
+  Exegete changes the file's text or name, as a run does, and otherwise
+  at Exegete's first tidy once it is an hour old, which can be later.
+  The page marks the names in the file's text, so anyone who can read
+  the reading folder can see which words are names. The reading
+  folder's note, `About this folder.txt`, names the page, says that it
+  marks the names and when it goes, and Exegete writes the note again
+  where an earlier release left other words there. PRIVACY.md lists the
+  page wherever it lists what the reading folder holds and where a
+  transcript's text can end up.
+- **A run can leave chosen occurrences of a name as they are.**
+  `leave_occurrences` takes the ids, from a preview with
+  `choose_occurrences`, of the occurrences the run leaves, and the run
+  replaces every other one. The list is bound into the preview token: a
+  preview given it lists every occurrence again, the ones left marked,
+  on the page too, for you to check before the run. An id that matches
+  no occurrence in the file's text as it is now is refused at the
+  preview. So after any change to the text, or a change of mapping or of
+  `case_mode` that moves an occurrence, the occurrences are chosen
+  again. An occurrence left is left whole, with any name of the mapping
+  inside or overlapping it. The run record and the journal entry say how
+  many occurrences were left, never where. A list that leaves every
+  occurrence rewrites nothing, and the preview and the answer say that
+  the occurrences were left by choice. Neither `rewrite_memos` nor
+  `include_context` can be used while occurrences are chosen or left,
+  and a pair of arguments refused on a preview is refused on the execute
+  call too.
+- **One run leaves at most 500 occurrences.** A longer list is refused
+  before anything in the project is read. The refusal counts ids, and
+  asks for each occurrence by one id, since an id from an earlier
+  preview and a longer one from a later preview can name the same
+  occurrence. With a mapping typed into the call, the refusal says that
+  taking the name out of the mapping for the run leaves every occurrence
+  of it, those that should change among them, and that the count of the
+  names left in the file text then does not count them. With
+  `use_project_pseudonyms`, and in a call with no mapping at all, it
+  gives the limit alone. On the names list's path, TOOLS.md gives the two
+  routes that leave a name out of a run, each with its cost. A mapping
+  typed into the call
+  puts names and their pseudonyms in the conversation, and a name taken
+  out of the names list is not replaced by later imports either.
+- **The count of the names left in the file text tells occurrences left
+  by choice from a name put back.** After a preview given
+  `leave_occurrences`, the residue's count of the names still in the
+  file text charges the occurrences left that it reads as the rewrite
+  matched them to a kind of their own, `left_by_choice`, and no longer
+  to `put_back_by_a_pseudonym`, whose warning advised changing a
+  pseudonym that was fine. One it reads otherwise (joined to the next
+  word by an invisible character, for instance) stays under the kind it
+  reads, and a name put back beside it is still reported. Word,
+  OpenDocument and RTF files are counted the same way, without the
+  markers of their notes and comments. The count's totals by kind gain
+  the key, and so does each entry's row with a mapping given in the
+  call, at 0 where nothing is left. The count's reading note says that
+  occurrences left are in both of its counts. A warning says how many
+  occurrences are left and that they are real names that stay in the
+  file's text, whether or not the file was counted. The warning on the
+  names left in the file text gives them their own reason, and neither
+  repeats the other. With `use_project_pseudonyms`, the rows per entry
+  leave out the occurrences counted under `left_by_choice`, and each
+  file's row gives their number, since a row per entry would tell which
+  name an occurrence left is.
+- **With `use_project_pseudonyms`, the preview no longer gives where
+  each match starts and ends.** Those positions, given beside each
+  entry's pseudonym and in the warning about names that overlap, could
+  pair a name in a text the assistant had read with its pseudonym. The
+  counts and the entry numbers stay, and a preview of a mapping typed
+  into the call still gives the positions. With `choose_occurrences`,
+  the preview on this path lists each occurrence's id alone, with no
+  line. A pseudonym withheld because
+  it carries one of the names keeps its entry number and count where it
+  already occurs in the file, and no longer its positions. With
+  occurrences left, the preview and the run's answer on this path leave
+  out the new text's length, and the preview's residue leaves out its
+  count of the characters it read, which holds that length. The journal
+  entry names the pseudonyms of the names found without counting them.
+  PRIVACY.md says that, with the names list, the preview gives no
+  position of a name it matches. It also warns that some of the
+  preview's figures, such as each entry's count, can still tell an
+  assistant that has read the file's text which name a pseudonym
+  replaces.
+- **Two people who share a name in one file.** The documents and
+  the tool's description give a second run. A first run leaves the
+  second person's occurrences as they are, and a second run, with a
+  mapping typed into the call, replaces them with the second person's
+  pseudonym. PRIVACY.md says what then leads back from that pseudonym to
+  the name: the mapping typed for the second run, which is in the
+  conversation, and the researcher's own record of it. Every copy of the
+  file's text from before that run leads back too, the first run's
+  backup among them.
+- **The documents describe the choice.** TOOLS.md, PRIVACY.md and
+  AI_CODING_GUIDE.md say what the conversation carries: an id for each
+  of the first 150 occurrences, and counts. With a mapping typed into
+  the call, each id comes with its line number. The words around each
+  occurrence are on the page in your browser, which the assistant is
+  told never to open or read. TOOLS.md lists the arguments the preview
+  token binds, and gives the refusals: with `rewrite_memos` or
+  `include_context`, an id that matches no occurrence in the text as it
+  is now, or more than one, and more than 500 ids in one run. PRIVACY.md
+  says that the run manifest and the journal entry give how many
+  occurrences were left, never where.
+
+### Changed
+
+- **A new code, category or case name may not hold most characters that
+  usually show nothing on screen.** A control character, an invisible
+  formatting character such as a zero-width space, a soft hyphen or a
+  byte order mark, or another character Unicode marks as ignorable, such
+  as a Hangul filler, is refused in a name that `create_code`,
+  `create_category`, `create_case` or one of the three renames would
+  write. The refusal gives the character's code, its position and the
+  name without it. It says that such a character usually shows nothing
+  on screen, since some, such as the Arabic number signs, do show. Two
+  kinds are kept where they shape the characters beside them: the
+  joiners ZWNJ and ZWJ between two characters outside ASCII (Persian and
+  Indic spelling, emoji), and a variation selector straight after a
+  visible character outside ASCII (a CJK character's form, an emoji, a
+  Mongolian letter). A keycap emoji, a flag written with tag characters
+  and the Arabic number signs are refused with the rest.
+- **A new name that matches another of its kind only once such
+  characters are left out is refused, with that one's id.** Use that
+  code, category or case, or give it the new name with its rename tool.
+  The refusal says that two such names could look the same in a list,
+  since some pairs, such as a heart with and without its emoji selector,
+  look different. A name that matches another exactly, or in other
+  letter case, keeps the answer it had, `already_exists` or `unchanged`,
+  and a rename that keeps what a name looks like is never refused for
+  this. Names already in a project are read, listed, coded, merged and
+  exported as they are, and change only when you rename them. Look-alike
+  letters from another script, a blank such as U+2800, and a joiner kept
+  between two letters it does not join are not caught.
+- **Proposals in a coding session follow the same rule.**
+  `propose_codes` rejects such a name, and `update_proposal` refuses one
+  when the name changes, so a proposal recorded earlier keeps its name
+  when it is sent back beside a new colour or category. Two proposals
+  that match only once such characters are left out are refused within
+  a session, naming the first. `create_proposed_codes` refuses an
+  approved batch holding two, or a name with such a character, with
+  nothing written and no backup. A proposal that matches an existing
+  code that way is flagged in `collides_with`, and its creation is
+  refused. TOOLS.md says what a new name may not hold, which characters
+  are kept, what is not caught, and how a name already in a project is
+  kept.
+- **On a Mac with Apple silicon (M1 or later), PDFs are now read with
+  PyMuPDF 2**, as on Windows x64 and Linux, with Python 3.11 to 3.14.
+  Intel Macs keep PyMuPDF 1.x. PyMuPDF 2 brings onnxruntime, whose
+  packages need macOS 14 or later on such a Mac, so there the desktop
+  extension needs macOS 14 or later ("Upgrading from 0.15.2-alpha",
+  above). Exegete switches onnxruntime's usage reports off there before
+  it loads, as on Linux. INSTALL.md says what such a Mac needs: macOS 14
+  or later for the extension, where Anthropic's help page asks for
+  macOS 13 or later for Claude Desktop itself. It also gives what the
+  update fetches there, and what to do when the extension does not start
+  on macOS 13 or earlier. The README's one-click steps and the
+  extension's description state the same floor. The Terminal guide,
+  PRIVACY.md, TOOLS.md, CONTRIBUTING.md and NOTICE count Macs with Apple
+  silicon among the computers on PyMuPDF 2.
+- **On such a Mac, the scan of running programs for signs of QualCoder
+  goes through psutil**, which comes with PyMuPDF 2, rather than `ps`.
+  The scan now reads a program whose path holds a space whole. It can
+  no longer read the command lines of another account's programs, which
+  macOS keeps from it. So a program run through Python by another
+  account on the same Mac is no longer among the signs of QualCoder,
+  while an app is still recognised by its name, and the chat history's
+  recent change is then still given as a sign.
+- **Installs from PyPI (pip, pipx, uv tool and uvx) on such a Mac choose
+  the releases by the macOS release and the Python.** macOS 14 or later
+  takes PyMuPDF 2 with the newest onnxruntime. macOS 13 with Python 3.11
+  to 3.13 takes onnxruntime 1.23.2, and macOS 11 or 12 with Python 3.11
+  or 3.12 takes 1.19.2, older releases not tried with Exegete. On macOS
+  13 with Python 3.14, and on macOS 11 or 12 with Python 3.13 or 3.14,
+  the install stops before anything is installed or removed, and an
+  update with pip or pipx that stops was seen to leave the install as it
+  was. The Terminal guide gives the ways round.
+- **The REFI-QDA export carries the whole project, except its media.**
+  `export_refi_qda` without a coding session writes each coding under
+  its own coder, a hidden coder's included, with one user per coder:
+  the project's coder name first, which QualCoder's importer takes as
+  its own coder name, and the AI coder name last. The file holds every
+  code and category, used or not, and every text source, transcripts as
+  plain text. It holds the cases with their memos, attributes and links
+  to whole files, the file attributes, the journal entries in full,
+  their private part included, and the annotations. The answer counts
+  them (`cases_exported`, `journal_entries_exported`,
+  `annotations_exported`), and `codes_exported` and `files_exported` now
+  count every code and every text source written, not only those with
+  codings.
+- **What the file cannot hold faithfully is left out and counted.**
+  Images, audio, video and areas of a PDF page stay out, as before, and
+  their codings are counted in `av_image_codings_not_exported`. A case's
+  link to part of a file is counted in `case_links_left_out`, since
+  QualCoder's importer would read such a link as an empty annotation,
+  and so is a link to a file not written. A numeric attribute's value
+  that is not a number, such as "n/a", is counted in
+  `attribute_values_left_out`, with the values of files not written and
+  of journal entries. A number is written in plain decimal notation
+  ("1e3" as 1000). An annotation whose positions do not fit its text, or
+  that sits on a file not written, is counted in `annotations_left_out`.
+  Codings whose positions do not fit their text are named, the first 20,
+  as before.
+- **A coding session's export marks each suggestion's status.** Each
+  description starts with the suggestion's status, pending, approved,
+  rejected, applied or removed, and the answer counts them in
+  `suggestions_by_status`. The project's coder name, when set, is the
+  file's first user, and every suggestion stays under the AI coder name.
+- **A project without codings exports.** The refusal now comes only when
+  the project holds no code, category, text source, case or journal
+  entry.
+- **The answers no longer carry `known_faults`.** The three faults it
+  named are fixed, and the description no longer lists them. TOOLS.md,
+  README.md and AI_CODING_GUIDE.md say what the REFI-QDA file holds and
+  leaves out, and keep one sentence for those who use QualCoder: its own
+  export also carries the media. PRIVACY.md says what a whole project's
+  file holds (every coder's name and work, the cases, the attributes of
+  cases and files, the journal entries in full, the annotations), that a
+  session's file names the project's coder name, and describes the part
+  file written beside it ("Fixed", below). NOTICE's entry 44 lists the
+  format facts taken from QualCoder's REFI-QDA export and importer, and
+  entry 30 no longer names the export's menu.
+- **The note after an update gives a paragraph on what is new, and a
+  link.** After an update, the first successful answer of 20,000
+  characters or fewer from a tool other than `check_for_updates`
+  carries a note for the assistant to pass on: a paragraph, written with
+  the release, on what is new and what changes for you (what to do, and
+  what behaves differently), and a link to that release's notes on
+  GitHub. It was a sentence or two before. The paragraph is built into
+  Exegete, so nothing about it is fetched, and the update page's "What's
+  new" shows the same words.
+- **In Claude Code, the parts of a long file that
+  `read_file_with_codings` gives now reach the conversation as text.**
+  The tool declares a result limit of 200,000 characters. Before, Claude
+  Code saved an answer longer than 50,000 characters to a file under
+  `~/.claude/projects/` and gave the assistant its path instead. TOOLS.md
+  and the Terminal guide warn that Codex 0.166.0 gives the model about
+  48,000 bytes of a tool's answer and leaves out its middle, so with
+  Codex the middle of a part of a long file can be missed.
+- **A temporary copy of the names list left behind is now removed.** A
+  save of the names list, its undo and a pseudonymisation run each write
+  the list to a temporary copy in the project's folder before putting it
+  in place: `pseudonyms.json.`, eight letters, digits or underscores,
+  then `.tmp`, with the real names in it. A save and its undo now remove
+  their copy on every way out, a Ctrl+C included. A copy left by a
+  process that ended mid-write is removed by the next backup of the
+  project once it is an hour old, as a backup cut short is. Such a
+  process can be the app quitting, a power cut, a Ctrl+C under an
+  earlier version, or a pseudonymisation run stopped after saving its
+  changes and before its mapping took its place. This is a new removal
+  in the project's folder: a file of your own with exactly such a name,
+  an hour old, would go too. Until it goes, the copy is in every backup
+  made, as `pseudonyms.json` is, and a restore of one of those backups
+  brings it back. It also goes into every copy of the project that
+  `copy_project_to_workspace` makes meanwhile, whatever its age, since a
+  copy removes nothing. There it stays until a backup of that copy
+  removes it, once it is an hour old. If a pseudonymisation run was cut
+  short, you could
+  check that the names list holds its mapping, and save the mapping
+  again if it does not. PRIVACY.md says what the copy holds, how it
+  travels into backups and when Exegete removes it.
+- **Started by hand in a terminal, Exegete prints its note in short
+  sentences**, one to a line. It says that an app, such as Claude
+  Desktop, normally starts Exegete and talks to it, where it said that
+  an MCP host speaks JSON-RPC over standard input and output. The
+  Terminal guide describes the note in its new words.
+- **The `undo_changes` preview no longer looks at the list of programs
+  running on the computer.** It looks for signs of QualCoder in the
+  project's files alone, as `create_project` does. An idle window leaves
+  no such sign, so if you use QualCoder, closing the project there
+  before undoing a change keeps the two programs from writing to it at
+  once.
+
+### Fixed
+
+- **`apply_codings` no longer writes a suggestion under a code it was
+  not made for.** A suggestion keeps its code by number, and SQLite can
+  give a deleted code's number to the next code made. So a suggestion
+  approved before its code was deleted could be written under the new
+  code that took the number. Each approved suggestion's code must now
+  still have the name it had when the suggestion was recorded. One whose
+  code was renamed since, or deleted and its number given to a code of
+  another name, is refused, with nothing written and no backup made. The
+  refusal gives both names, so you can look at the code. To keep the
+  suggestion under the code as it is now, it is reopened, the code is
+  named again with `edit_suggestion`, which now records the name the
+  code has, and you approve it again. It can also be moved to another
+  code, or rejected. A code renamed since is refused too, which keeps to
+  the safe side. TOOLS.md says what `apply_codings` checks of each code.
+- **A failed REFI-QDA export no longer leaves a half-written file.** The
+  file is written beside its destination, under a name starting with a
+  dot, and moved into place in one step only when complete. With
+  `overwrite`, an earlier file stays whole, with its permissions, until
+  then, and the part file's permission bits are never wider than the
+  earlier file's. If the write fails, the part file is removed, or named
+  in the answer when it cannot be, and the answer says the earlier file
+  is unchanged only when it is. An export stopped midway leaves at most
+  its part file, which the next completed export to that name removes,
+  counted in `part_files_removed`.
+- **An earlier file Exegete cannot write is refused, unchanged.** With
+  `overwrite`, a file made read-only or locked is refused before
+  anything is read, as writing in place refused it. With `overwrite`
+  false, a file that appears while the export is written is refused too.
+  On Windows with long paths off, an export whose path would pass 259
+  characters once the part file's longer name is added is refused before
+  anything is read.
+- **Each text and journal entry is read once in a REFI-QDA export.** A
+  file's selections, its text in the archive and its reference agree
+  even when another program writes to the project during the export. A
+  row the export cannot read, such as a journal entry stored in an
+  encoding other than UTF-8, stops it before any file is made, in words
+  naming the kind of row, never its text.
+- **A refused session export names each suggestion by its GUID.** It
+  also gives the suggestion's place counted from 1, as
+  `review_suggestions` numbers a whole session, where 0.15.2 counted
+  from 0.
+- **A note Exegete gives once is no longer lost to a stop or to the app
+  cancelling a request.** The note that the check for new versions
+  exists, a new version's notice and the note after an update were each
+  recorded as given when they were added to an answer, before the answer
+  was sent, and so was what `check_for_updates` tells when you ask. A
+  Ctrl+C before the answer went out lost the note for good. So did the
+  app cancelling the request: the answer could still come, but an app is
+  meant to ignore the answer to a request it has cancelled. For the note
+  that the check exists, the first check then came a week later without
+  you having been told of it. Each is now recorded as given only once
+  the answer carrying it has gone out to the app, and not when the app
+  has cancelled the request. One cut short comes in a later answer or at
+  the next start. A note can still come twice in rare cases: two copies
+  of Exegete on one computer, a file Exegete could not write, a stop in
+  the instant after the answer has gone out, or another answer going out
+  while Exegete checks for a new version at your request. One can still
+  be missed if Exegete reads the app's cancel only after the answer has
+  gone out. That happens when the app cancels at the moment the answer
+  is sent. It can also happen when, while a call runs, the app sends
+  several other messages and then its cancel, since Exegete may then
+  read the cancel only once the call has answered.
+- **On Windows, the project's lock file is removed at the end of a write
+  once another copy of Exegete has finished reading it.** A removal
+  refused while that copy reads it is tried again for about a second,
+  the file read again before each try and removed only while it still
+  holds Exegete's lines. Before, the file stayed and refused every
+  copy's writes for 30 seconds.
+- **A file whose reading library did not load is no longer called
+  damaged.** When the library Exegete reads a kind of file with
+  (PyMuPDF for PDFs, EbookLib for EPUBs, defusedxml for Word, striprtf
+  for RTF) cannot load on the computer, the file is now refused with
+  words saying that the file is not at fault and that installing Exegete
+  again may help, for a PDF or EPUB file with its optional part for PDF
+  and EPUB. Before, it was called damaged, and saving a fresh copy was
+  suggested. Exegete's log names the kind of error and the library's
+  release, never the file.
+- **The note after a prune says only what was removed.** Its notes on
+  the only copies of a `pseudonyms.json`, on recordings only a backup
+  held and on the newest pre-restore backup now name the backups the
+  prune removed. A backup it could not remove whole, as when another
+  program has one of its files open, is named apart. It may still hold
+  what the note was about, and it keeps its name, so `list_backups`
+  lists it and `restore_backup` accepts it while its database remains.
+  It may also lack some of its files, which a restore from it would not
+  bring back. You could remove it by hand once nothing holds it open.
+  PRIVACY.md says the same.
+- **A pseudonymisation run's answer and its run record say whether the
+  check for mapping entries competing for the same characters stopped
+  early.** The preview has said so since 0.13. Each file of the
+  execute's answer and of the run record now carries
+  `overlap_conflicts_capped` too, never where the check stopped. The run
+  record's format stays 3. PRIVACY.md says so.
+- **A rename's count of where the old name stays reads saved rows stored
+  as bytes.** A saved graph label, table display or filter that another
+  program stored as bytes rather than text is now counted in
+  `old_name_left_in`, and a byte that is not valid text no longer fails
+  the rename. A saved filter with a condition whose type is neither
+  `character` nor `numeric` is now read whole, as a filter not in
+  QualCoder's format is. PRIVACY.md says that nothing in Exegete reads
+  the saved SQL queries.
+- **A pseudonymisation preview that would rewrite nothing no longer
+  speaks of a run in its warnings on the names left.** Where no name of
+  the mapping occurs in the file the preview names and no note is to be
+  rewritten, the warning on the names left in the file text, which
+  counts the names in the other files' text, no longer opens "after this
+  run", as where a list leaves every occurrence: the preview says that
+  an execute would rewrite nothing. In both cases it now counts the
+  whole words in other files as words in files "this call does not
+  rewrite", not "this run did not rewrite". The warning on the notes,
+  labels and attribute values that may still show a name counts those
+  that match "the rewrite's own whole-word rule", not "this run's". With
+  `rewrite_memos` on and no note to rewrite, it says that an execute
+  would rewrite none of them.
+- **Four descriptions were wrong in part.** `list_backups` said that a
+  database's journal and WAL files are never copied, but a database
+  SQLite cannot read is copied as a file, side files and all. The three
+  tools that count codings by case said that they count as QualCoder's
+  reports do. QualCoder's coding report selects a case's codings the
+  same way, but its report "Code counts by file/case" counts the whole
+  of each linked file.
+
+### Security
+
+- **A fault that could expose participants' data or damage a project
+  can now be reported privately**, through GitHub's private
+  vulnerability reporting. The new SECURITY.md says how, and asks that
+  the report describe the data rather than copy it. CONTRIBUTING.md
+  points to it instead of to a public issue.
+- **Four of the MCP library's log lines no longer quote what the app
+  sent.** A line the library does not take (one that is not an MCP
+  message, or a response to no request), and a request or a
+  notification it does not take, each left part of what was sent in the
+  log the app keeps: the start and end of each value the library
+  rejected, part of a memo say, or the whole notification. A response
+  whose id is text that is not a number left that id. Each now holds a
+  fixed sentence instead. INSTALL.md's "Reading the server log" gives
+  the two cases where the library's lines still carry text the app
+  sent.
+
+### Documents
+
+#### The texts Exegete gives the assistant
+
+- **The texts Exegete gives the assistant were read in full, apart from
+  those of the REFI-QDA export**, as the documents were in 0.15.2, in
+  two batches. The first read the descriptions of the tools this release
+  does not otherwise change, the brief, the prompts, the resources, and
+  the notes and refusals in the answers. The second, once this release's
+  changes to its tools were in, read the texts of those tools and those
+  of `apply_codings`, `import_documents`, the code proposals and the
+  renames, with the notes and refusals they share. Those tools are the
+  ones for replacing names and the names list, the checks on new names,
+  the removal of old backups and the note after an update. The REFI-QDA
+  export changed after the second batch had begun, so neither batch read
+  its texts: `export_refi_qda`'s description, the notes and refusals of
+  its answers, and the paragraph on full memos that it shares with
+  `export_codebook` and `export_coded_segments_report`. Those texts still
+  hold some capitals for emphasis, and the paragraph on full memos still
+  calls the researcher "the user".
+- **They no longer take every document for an interview.** The rules on
+  evidence speak of the same person or document; the rules for
+  interviews apply to interviews. A coded passage can be "a whole
+  paragraph or answer" long, and the examples vary.
+- **They no longer take it that you use QualCoder.** A copy or a backup
+  taken while another program is writing to the project holds what was
+  last saved. Putting an existing code under another code is not in
+  Exegete yet, and is done in QualCoder, if you use it.
+- **Untrue sentences were corrected**, beside the four descriptions
+  under "Fixed", above. The export of coded segments said it follows a
+  "File > Reports" menu, which QualCoder does not have: it follows the
+  coding report, Code retrieval in QualCoder 4.0's Analysis menu. A
+  merge of categories credited a note in the target's memo to
+  QualCoder's development branch, though QualCoder 4.0 writes it.
+  QualCoder's dialog for deleting a code gives the number of its
+  sub-codes, not their names, and QualCoder 3.8.2 keeps its AI prompt
+  library and chat history in the project's ai_data folder, as 4.0
+  does. The tool that sets the AI coder name said Exegete compares code
+  names as QualCoder 4.0 does. That holds of QualCoder 4.0's own
+  assistant, for the letters A to Z only. QualCoder's dialogs compare
+  code names letter for letter.
+- **They say more about where your data and the real names go.** When
+  the names list cannot be read, the advice after an import says that
+  names given in a call reach the AI provider with the conversation, and
+  that the researcher can correct the names list in a text editor.
+  `pseudonymise_source` says the same of the names in a mapping typed
+  into the call. The tool that deletes a coding session says that a
+  backup of the whole disk may still hold a copy. `list_backups`,
+  `copy_project_to_workspace` and `prune_backups` mention the names list
+  and the names file, which a backup and a copy hold, and
+  `prune_backups` says that a prune leaves the project's own two.
+- **On a typed mapping, `pseudonymise_source` no longer says that
+  without it nobody could tell later who each pseudonym was.** It says
+  that Exegete keeps no record of who each pseudonym was. After the run,
+  it says that every copy of the file's text from before the run leads
+  back to the names, as the mapping does: among them the backup taken
+  first, every older backup and an imported document's stored copy.
+- **The texts read call the person whose study it is "the
+  researcher".** In them, capitals for emphasis are gone, and so are
+  phrases such as "Perfect for" and the emoji, those in `apply_codings`'
+  answer among them, which now begins "Codings applied to the
+  database". The tools that write say "It writes to the database". A
+  coder hidden by the project's setting is "a coder the project hides"
+  in every refusal and note.
+- **They use plain words.** Words from Exegete's own code gave way to
+  plain ones, among them "base tables", "echo", "reparent", "the reverse
+  key", "snapshot", "rotated", "idempotent" and "this tool". Sentences
+  that held several facts are split, one fact to a sentence, and a
+  condition comes before what follows from it. The rules the texts state
+  are the same. The hint that gives the last project used says "this
+  computer", as INSTALL.md quotes it.
+
+#### Other programs' pages read again
+
+- **Most of the other programs' pages and releases that the documents
+  quote were read again on 4 November 2026**, and each reading now gives
+  its day in one form. A page that refuses automated reading is quoted
+  from the Internet Archive's newest capture, with the day of that
+  capture. Where a page had changed, the documents now say what it says.
+  SUPPORT.md, INSTALL.md and the Terminal guide give the day of three
+  more claims about other programs in that form, so that the new check
+  for contributors ages them ("For contributors", below). Five claims
+  about a named release of another program now name that release
+  instead of a day. The writing guide, docs/WRITING.md, says in what
+  form to write the day a claim was checked, and when a release's name
+  may stand instead.
+- **In the version of Claude where chat and Cowork are one
+  conversation, the permission setting now starts on Auto** on Pro, Max,
+  Ultra and Team plans, and on Manual only on Enterprise plans. On Auto,
+  Claude does not stop to ask before it uses Exegete's tools. The
+  README, INSTALL.md and PRIVACY.md say so, and suggest Manual for
+  participants' data.
+- **The switch for computer use is now in Claude Desktop's Settings,
+  Capabilities** (or Settings, System). Anthropic's page says that Team
+  and Enterprise plans do not have computer use.
+- **The README gives Claude's plans as the pricing page now lists
+  them**, Ultra among them, which has no five-hour limit for verified
+  accounts. TOOLS.md says that Claude Code keeps a text answer longer
+  than 50,000 characters in a file under `~/.claude/projects/`, as
+  Anthropic's page on MCP in Claude Code now says.
+- **PRIVACY.md quotes Claude Code's read rules, OpenAI's page on
+  training and its page on Codex from a phone in their new words.**
+  Codex's source was read at its release 0.166.0, and LM Studio's
+  changelog up to 0.4.28.
+- **Codex copies each new conversation, each tool's result included,
+  into a database in `~/.codex`** as well as into its session files, and
+  keeps the conversation's title and first message in a second one. So
+  deleting the session files by hand leaves participants' words on the
+  computer. PRIVACY.md and the Terminal guide now name both databases,
+  and the README mentions them. PRIVACY.md suggests Codex's own command
+  for deleting a conversation, which removes its files and its rows in
+  both. It also names two files that this command leaves: the text you
+  typed, and, from Codex's command line, pieces of the assistant's
+  answers in Codex's log database.
+- **Ten sentences that implied a later check or feature without a plan
+  for it now say plainly what Exegete does not do**, or what this
+  project has not checked. Among them: Exegete does not nest an existing
+  code under another code, and whether an update of the extension keeps
+  a folder for projects chosen by hand has not been checked.
+
+#### Accounts that an institution manages
+
+- **The README's checks before participants' data, PRIVACY.md and the
+  Terminal guide now say the same of an account that a university or
+  employer manages.** It comes under the agreement the institution made
+  with the AI provider, and such agreements differ. Even so, it is likely
+  to give participants' data more protection than a personal account,
+  since the institution agreed its terms with its own interests in mind.
+  Whoever manages the account can say which terms apply. This warning and
+  suggestion replace the README's "So institutions should prefer
+  organisational accounts". PRIVACY.md's passage on Team and Enterprise
+  plans also says, as INSTALL.md does, that Exegete's extension is not
+  signed. An institution that manages your computer or your Claude
+  account may block it.
+
+#### SUPPORT, CONTRIBUTING, the guide to choosing a project and NOTICE
+
+- **SUPPORT.md, CONTRIBUTING.md, the guide to choosing a project
+  (PROJECT_SELECTION_GUIDE.md) and NOTICE were read in full**, as the
+  other documents were in 0.15.2. They no longer take it that you use
+  QualCoder or that your documents are interviews, and their quips,
+  emoji and exclamation marks are gone. They were also read for plain
+  words. Long sentences were split, and words a newcomer meets first,
+  such as an issue, a lock file, a backup, a log and PyPI, are explained
+  where they are used.
+- **SUPPORT.md says that an issue is public**, so participants' data or
+  a project put into one is published with it, and suggests a made-up
+  example instead. It says that opening an issue needs a GitHub account,
+  and that a line of the names file pairs a real name with its
+  pseudonym, so a name is best described rather than copied. It warns
+  that Claude Desktop's log of Exegete keeps every request and every
+  answer, the text of your documents included, so a log is best read
+  before any of it goes into an issue. It warns too that a sync service
+  such as iCloud or OneDrive copies a project off the computer when it
+  keeps the project's folder. It also says that `exegete --version`
+  gives the version as PyPI writes it, with "a0" for "-alpha", rather
+  than giving one release as an example.
+- **The guide to choosing a project no longer shows sizes that Exegete
+  does not give**: the size in the listing is that of the project
+  folder's own entry, not of its files. A project set in the
+  configuration opens with the first tool that needs it, and Exegete
+  stops at start when that project does not exist. A project missing
+  from the list can be selected by its path. When no project was
+  selected and one is set in the configuration, a selection that fails
+  opens that project, and the guide now says so.
+- **CONTRIBUTING.md's untrue sentences were corrected.** The MCP
+  Inspector now starts with its own command, since `mcp dev` cannot load
+  Exegete's server file. `docs/snapshot/` keeps the texts that are the
+  same for every project, and no tool's answer but the brief. Three
+  tools' texts give the lock paragraph's words, typed by hand, and six
+  texts give a shorter form of it, and CONTRIBUTING.md names each. The
+  account of CI says what the comparison of the import's text, the
+  documents job and the weekly watch also check. The facts check holds
+  the map's Python files alone, and two opt-in scale tests share one
+  build. The span walk is no longer given as copied code, since 0.15.1
+  removed it. The map says that the reading tool shows or opens a
+  read-only copy of an original, never the original itself. What Zenodo,
+  GitHub and PyPI say is now dated, read on 4 November 2026.
+- **CONTRIBUTING.md also names Exegete's reading folder beside
+  `~/.exegete`**, and says how to try the tools in the MCP Inspector on
+  a made-up project, in an empty home folder, leaving out every setting
+  whose name begins with `EXEGETE_` or `QUALCODER_`, as the test suite
+  does: a project or a folder for projects set in that environment would
+  point the trial at real projects. It says that on Windows onnxruntime
+  makes a few usage reports as it loads, before Exegete can switch them
+  off.
+- **NOTICE, in both packages, lists six (MIT)**, which EbookLib 0.20,
+  the release in the lock, needs, and the libraries that lxml's packages
+  contain. It calls the program Exegete throughout. Entry 73 points to
+  entry 45, the one it describes, where it gave 44.
+
+#### The coding guides, docs/history and example_config.json
+
+- **The two guides to coding with the assistant are now one**,
+  [AI_CODING_GUIDE.md](https://github.com/nicotem/exegete/blob/main/AI_CODING_GUIDE.md).
+  It takes from AI_CODING_WORKFLOW.md what it did not already say, and
+  says each thing once:
+  - each step of a session, with what to say and what comes back
+  - the two example conversations
+  - where the folder for projects is, and what a sync service can do to
+    it
+  - how the review finds the earlier speaker turn
+  - what Exegete checks, in order, before it applies codings
+  - sessions and backups
+  - answers to common problems
+
+  AI_CODING_WORKFLOW.md is removed, and the links to it in TOOLS.md and
+  SUPPORT.md lead to the guide.
+- **The guide gives the choices for a coded passage's length as
+  `start_coding_session` asks them**: a phrase, whole sentences, or a
+  whole paragraph or answer. The workflow guide gave the same first two,
+  and a whole answer as the third. The guide's account of what an
+  interpretive reading may draw on no longer presumes that your
+  documents are interviews.
+- **Near its start, the guide now says where your data goes.** What the
+  assistant reads through Exegete passes through the conversation to
+  the AI provider, unless the assistant runs on your own computer. The
+  app keeps its own record of the conversation on your computer, and
+  some assistants open files by themselves. The guide points to
+  PRIVACY.md for more.
+- **The early plans, analyses, research notes and security review kept
+  in `docs/history/` since 0.15.1 are no longer among the repository's
+  files.** Git's history keeps them, and the folder is still there at
+  the tag of 0.15.2-alpha:
+  <https://github.com/nicotem/exegete/tree/v0.15.2-alpha/docs/history>.
+  NOTICE, in both packages, gives the address there of each of the
+  three items it lists from them. The CHANGELOG's earlier entries that
+  mention the folder are records, and keep their words.
+- **`example_config.json`**, an early example configuration that no
+  document mentioned, is removed.
+
+### Known limits
+
+- **The REFI-QDA export leaves out the project's media**: images,
+  audio, video and areas of a PDF page, with their codings, which the
+  answer counts. If you use QualCoder, its own export also carries the
+  media.
+- **QualCoder's importer may read a journal entry's letters beyond
+  ASCII wrongly on Windows.** It reads a journal entry's text in the
+  computer's own encoding, not UTF-8, so on a Windows computer without
+  UTF-8 as its default, such letters in a journal entry exported by
+  Exegete may come back wrong, as they can from a file of QualCoder's
+  own export. This is read in QualCoder's code (`refi.py` 1801), not
+  tried on Windows.
+- **A coding session's REFI-QDA export checks each suggestion's
+  positions against the text's length only.** It does not compare the
+  passage, so after an edit to the text a selection can sit on other
+  words, with nothing said in the answer. `apply_codings` compares the
+  passage.
+- **Direction marks are refused in new names.** U+200E, U+200F and
+  U+061C, which a Hebrew, Arabic or Persian name beside Latin letters or
+  brackets can carry, are refused in a new code, category or case name,
+  as they have been in coder names since 0.15.0. The name given without
+  the mark may display in another order.
+
+### For contributors
+
+- **CI and its checks.** The workflows use actions/upload-artifact
+  v7.0.2 and actions/download-artifact v8.0.2, the versions Dependabot
+  proposed on 14 October, and each pin was checked against its tag. The
+  advisory check accepts eleven advisories on node-forge 1.4.0,
+  published on 30 October. node-forge is a library of the official
+  validator that CI alone installs to check the extension's manifest,
+  and Exegete installs none of it.
+- **A new script, `scripts/check_promises.py`, lists the documents'
+  promises**, the sentences that say something is still to come, with
+  the day each one's line was written and the row of the plan it names.
+  It also lists their dated readings of other programs, with their age
+  in days. CI's documents job prints both lists in its summary on every
+  push, and now checks out the whole history for them. At release
+  preparation, `python scripts/check_promises.py --release`, run in a
+  full clone, fails on a promise older than the script's `MAX_AGE_DAYS`
+  when no row of the plan stands behind it, and on a reading older than
+  `MAX_AGE_DAYS`. It does not list `docs/history/` among the folders it
+  leaves unread, since the folder is gone.
+- **CONTRIBUTING.md's map of the clone now lists every file and folder
+  at the top of the repository but `.gitignore`.** `tests/`,
+  `changelog.d/`, `.github/`, `uv.lock`, `MANIFEST.in`, QUICKSTART.md,
+  AI_CODING_GUIDE.md, PROJECT_SELECTION_GUIDE.md, CLAUDE.md and
+  `.zenodo.json` join it, and `docs/WRITING.md` joins the documents
+  under `docs/`. The line for `occurrences.py` now mentions the page for
+  choosing occurrences, which the module builds.
+  `tests/test_v0153_project_map.py` checks the map against the files
+  that git tracks. Every path in the map must be one that git tracks,
+  but `changelog.d/`, which is empty from a release's preparation until
+  the next change adds its fragment. Each file or folder at the top must
+  be in the map, or in the test's list of those it leaves out, with its
+  reason.
+- **The tests that read or mentioned `docs/history/` or the workflow
+  guide follow their removal.** `tests/test_v0151_history_folder.py` now
+  checks that the folder is gone and that NOTICE's addresses lead to the
+  tag. In a clone that has the tag, it also checks the folder there.
+- **The rule on characters in a new name** is
+  `database.name_character_problem`, and the key
+  `database.visible_name_key` (`normalize_name`, then the removal, then
+  `name_key`, so that a tab between two words stays a space and NFC runs
+  after the removal). Categories Cc, Cf and Cs come from the running
+  interpreter's Unicode tables (14.0 on Python 3.11, 15.1 on 3.13, 16.0
+  on 3.14), and the ignorable code points from the table in
+  `pseudonymise.py`, one Unicode version everywhere. The tests use
+  characters every one of those versions agrees on. set_attribute's own
+  refusal of a duplicate value is not built: since 0.15.1 its read and
+  its insert run under one write lock, and the read checks the key of
+  QualCoder's schema on attribute, unique(name, attr_type, id), so the
+  generic arm would answer only a rule a project added itself.
+- **The REFI-QDA exporter.** `refi_export.RefiQdaExporter.export_to_qdpx`
+  and `create_project_xml` take `owners`, `coder_name`,
+  `whole_project`, `mark_status`, `texts` and, for the first,
+  `overwrite`. Left out, they keep the earlier file's shape for a direct
+  caller. The counts of the last export are in the exporter's `counts`.
+  The database gains three reads from the base tables,
+  `list_case_links`, `list_annotations` and `list_attribute_values`.
+  `tests/test_v0151_refi_known_faults.py` is replaced by
+  `tests/test_v0153_refi_fixed.py`, and `tests/test_refi_xsd_validation.py`
+  imports `xmlschema` plainly, so a missing validator fails rather than
+  skips.
+- **What Exegete tells once, recorded once written out.**
+  `src/exegete/standard_output.py` writes standard output as the MCP
+  library does, over the library's own stream, and records what an
+  answer told once that answer's line has been written and flushed
+  (`updates.give`, `updates.written`). It relies on the library flushing
+  standard output once each message has been written, and
+  `tests/test_v0153_update_note.py` holds the bytes on the three
+  systems. Every tool but `check_for_updates` runs on the event loop, so
+  the library reads a cancel only once such a tool has answered, and
+  sends that answer. Standard input's own thread reads the line after
+  the call while such a tool runs, and gives it to
+  `standard_output.read_cancel` (`updates.cancelled`), so a cancel sent
+  next is known before the answer goes out. A cancel sent behind several
+  other lines is read only once the tool has answered, and can come too
+  late. `release.SUMMARY` is now one plain paragraph of at most 800
+  characters, with no link, no Markdown and no line break.
+  `tests/test_updates.py` holds its length and the line break, and
+  refuses a link, Markdown's marks for a link, bold, code and a heading,
+  and an HTML tag. CONTRIBUTING's "The check for new versions" gives the
+  release step.
+- **PyMuPDF 2 on Apple silicon.** The optional part's second line adds
+  Macs with Apple silicon (`sys_platform == 'darwin' and
+  platform_machine == 'arm64'`), and the first line keeps every other
+  computer. `uv.lock` adds the macOS packages these need, with no
+  release moved. CI's dry run asks about that Mac at macOS 14.0, the
+  table of what the extension installs expects PyMuPDF 2 there, and the
+  tests hold each Mac's floor (14.0 on Apple silicon, 10.15 on Intel)
+  and the texts that state it. CI's macOS jobs now run the suite with
+  PyMuPDF 2, so the tests of onnxruntime and a home folder, and of the
+  scan through psutil, run there too.
+- **Comments and tests.** A comment in `server.py` lists the three tool
+  texts that repeat the lock paragraph's words, and the six that give a
+  shorter form of the rule. `tests/test_v0153_occurrences_past_150.py`
+  holds that a call with no mapping is refused past the limit in the
+  limit's words alone. `tests/test_v0153_served_texts_2.py` holds the
+  facts behind four of the texts the second batch changed: which backup
+  `prune_backups` keeps when names are dated ahead of the clock, that a
+  prune leaves the project's names list and names file, what still holds
+  the names after a run with a typed mapping, and that `apply_codings`'
+  answer has no emoji. The test of two copies of Exegete keeps its wait
+  as a margin, and its comment says that the lock file's removal is now
+  tried again on Windows. A comment in the Ctrl+C tests says when the
+  end of input ends the lines without another read.
+
+### Measured
+
+What a host is sent with every request, beside 0.15.2's published
+figures, in characters (the tool sets' names, descriptions and input
+schemas together; the brief as `read_brief` returns it), measured on
+Python 3.13 with the libraries in `uv.lock`:
+
+| | 0.15.3, Python 3.13 | 0.15.2, Python 3.13 |
+|---|---|---|
+| `full` (80 tools) | 210,397 | 204,793 |
+| `core` (28 tools) | 76,805 | 75,947 |
+| The opening text | 2,042 | 2,042 |
+| The full brief | 14,180 | 13,721 |
+| The brief in `core` | 1,923 | 1,923 |
+
+- The reading of the texts Exegete gives the assistant adds 663
+  characters to `full` and 192 to `core`. In `core`, most of it comes
+  from calling the person whose study it is "the researcher"; in
+  `full`, about a third does. The rest comes from sentences corrected or
+  split in two, most of all in export_coded_segments_report,
+  restore_backup, merge_category, list_backups and merge_codes. The full
+  brief is 63 characters longer, from the rules on evidence, written for
+  any document rather than for interviews alone, and the title of its
+  last section.
+- `pseudonymise_source`, which is in `full` alone, is 1,641
+  characters longer: its two new arguments, `choose_occurrences` and
+  `leave_occurrences`, add 1,117 to its description and 256 to its
+  schema, and the sentence that says a preview with
+  `choose_occurrences` opens a page for the researcher adds 63 to its
+  description and 64 to the whole definition. The sentence on a second
+  run inside one file, for two people who share a name, adds 201 to
+  its description and 204 to the whole definition. With the second
+  reading of the texts (below), its description, the one longer than
+  16,384 characters, is 18,691 characters on 3.13 and 19,867 on
+  3.11.13.
+- The full brief's line on the pages Exegete opens for the researcher
+  names the page for choosing occurrences too, which adds 75 characters
+  to it. Three sentences on choosing occurrences add 321: when to
+  preview with `choose_occurrences`, that the page is the
+  researcher's, and that the assistant gives the ids alone.
+- The rule on characters that usually show nothing on screen in a new
+  name adds 989
+  characters to `full` and 126 to `core`, all in the tools'
+  descriptions: 124 to 134 in `create_code`, `create_category` and
+  `create_case` (`create_code` is the one in `core`), 137 to 151 in
+  `rename_code`, `rename_category` and `rename_case`, 86 in
+  `propose_codes`, with its sentence on `collides_with`, 35 in
+  `update_proposal` and 43 in `create_proposed_codes`. None of these
+  descriptions newly passes 2,048 characters: `create_category`'s, the
+  longest of them still under it, is 1,973, and 1,966 with the second
+  reading of the texts (below).
+- `export_refi_qda`, which is in `full` alone, is 832 characters longer,
+  now that the REFI-QDA export is fixed but for media. Its description,
+  3,124 characters, is 812 longer: it says what the file holds in each
+  mode, what is left out and counted and what the counts take in, that
+  the answer lists the first 20 codings whose positions do not fit their
+  text and that a session's export holding such a suggestion is refused,
+  the order of the coders' names, and that the file is written beside
+  its destination, and it no longer names the known faults. The other 20
+  of the 832 are its new line breaks, escaped in the definition. It
+  stays within the 4,096 characters Claude Code keeps of a description.
+- The second reading of the texts Exegete gives the assistant adds
+  1,479 characters to `full` and 540 to `core`. Most of it says where
+  the real names stay. `list_backups` (+260),
+  `copy_project_to_workspace` (+208) and `prune_backups` (+243)
+  mention the names list and the names file that a backup and a copy
+  carry. The first two also mention the database a backup copies as a
+  file when SQLite cannot read it, and the last says that a prune
+  leaves the project's own two. `get_case_code_matrix` compares its
+  counts with QualCoder's two reports (+100). `pseudonymise_source`
+  (+172) says that a typed mapping's names reach the AI provider, and
+  that the names file holds the real names as the names list does. It
+  also says that a preview with `choose_occurrences` writes a page into
+  the reading folder, and that a pair refused on a preview is refused
+  on the execute call too. The rest comes from calling the person "the
+  researcher", from sentences split in two, one fact to a sentence, and
+  from the renames and the code proposals saying what makes two names
+  the same. `import_documents`' description is 1,986 characters on 3.13
+  and 2,046 on 3.11.13, within 2,048 on both. The briefs and the
+  opening text are unchanged.
+
 ## [0.15.2-alpha] - 2026-10-30
 
 This release brings undo. Most changes Exegete makes to a project can

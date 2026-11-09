@@ -104,7 +104,7 @@ class TestT18ApplyCodingsPrecondition:
         server.update_suggestion_status(
             sid, approve=[out["recorded"][0]["guid"]])
         result = server.apply_codings(sid, create_backup=False)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
 
 
 class TestT18AnnotationPrecondition:
@@ -219,6 +219,6 @@ class TestT17DocsPosture:
         # signals the appears-open warning replaces it. Either way the
         # heuristic posture and 4.0 are named, never certainty.
         assert ("leaves no lock file" in warning
-                or "APPEARS to be open" in warning)
+                or "appears to be open" in warning)
         assert "4.0" in warning
         assert "qualcoder_gui_signals" in out

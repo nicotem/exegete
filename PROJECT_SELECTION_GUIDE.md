@@ -1,14 +1,21 @@
-# Project Selection Guide
+# Choosing a project
 
-Exegete (formerly qualcoder-mcp) supports **two ways** to work with projects:
+Exegete works on one project at a time. You can choose it in the
+conversation, or name one project in the configuration file of the app
+that starts Exegete. This guide is for installs from the Terminal, where
+you write that file by hand. With the desktop extension for Claude
+Desktop, you choose a project in the conversation.
 
-## Option 1: Auto-Discovery (Recommended for Multiple Projects)
+## Choosing a project in the conversation
 
-If you work with several projects, you can skip hardcoding the path and let Claude discover and switch between projects dynamically.
+If you work with several projects, you can leave the project out of the
+configuration and ask the assistant to find them and switch between
+them.
 
 ### Setup
 
-In your `claude_desktop_config.json`, **don't set** the `EXEGETE_PROJECT_PATH`:
+In Claude Desktop's configuration file, `claude_desktop_config.json`,
+leave out the setting `EXEGETE_PROJECT_PATH`:
 
 ```json
 {
@@ -21,21 +28,25 @@ In your `claude_desktop_config.json`, **don't set** the `EXEGETE_PROJECT_PATH`:
 }
 ```
 
-Note: No `env` section!
+This example is for an install from the source. For an install from
+PyPI, use the command that the Terminal guide gives in
+["Claude Desktop set up by hand"](docs/installing-from-the-terminal.md#claude-desktop-set-up-by-hand).
+The entry has no `env` section, the part where the example further down
+sets the project.
 
 ### Usage
 
-When you start Claude Desktop, ask:
+In a new conversation in Claude Desktop, ask:
 
 ```
 List my available projects
 ```
 
 Exegete searches these places by default:
-- the folder `EXEGETE_WORKSPACE` names, when it is set (with the
-  desktop extension, its "Folder for projects", by default
-  `~/Exegete projects/`), at its top level only, unless it is one of
-  the places below
+- the folder given in the setting `EXEGETE_WORKSPACE`, when it is set.
+  With the desktop extension, that is its setting "Folder for projects",
+  by default `~/Exegete projects/`. Exegete searches that folder at its
+  top level only, unless it is one of the places below
 - `~/Documents/QualCoder_projects/`
 - `~/Documents/QualCoder/`
 - `~/QualCoder/`
@@ -43,26 +54,33 @@ Exegete searches these places by default:
   extension's default folder for projects, and its earlier default)
 - `~/Documents/`
 
-You'll get a list like this one, where the first project is in the
-desktop extension's folder and the second in one of QualCoder's, as it
-would be if you use QualCoder:
+Each project is a folder whose name ends in `.qda`.
+The answer lists each project with its path, its name, the folder it is
+in, and when the project's own folder last changed, the most recently
+changed first. It also gives the project selected, if any, the folder
+where new projects go and the folders searched. The size it gives,
+`size_mb`, leaves out the files inside the project's folder, so it does
+not show how large the project is. In this example, the first project
+is in the desktop extension's folder and the second in one of
+QualCoder's, as it would be if you use QualCoder. The answer begins
+like this:
 
 ```json
 {
   "project_count": 2,
   "projects": [
     {
-      "name": "Interview Study 2024",
       "path": "/Users/you/Exegete projects/Interview Study 2024.qda",
+      "name": "Interview Study 2024",
       "directory": "/Users/you/Exegete projects",
-      "size_mb": 15.3,
+      "size_mb": 0.0,
       "modified": 1698765432.0
     },
     {
-      "name": "Focus Groups",
       "path": "/Users/you/Documents/QualCoder/Focus Groups/Focus Groups.qda",
+      "name": "Focus Groups",
       "directory": "/Users/you/Documents/QualCoder/Focus Groups",
-      "size_mb": 8.7,
+      "size_mb": 0.0,
       "modified": 1698654321.0
     }
   ]
@@ -75,33 +93,37 @@ Then select a project:
 Select the "Interview Study 2024" project
 ```
 
-Or use the full path:
+Or give its full path:
 
 ```
 Select the project at /Users/you/Exegete projects/Interview Study 2024.qda
 ```
 
-### Switch Projects Anytime
+### Switching projects
 
 ```
-Switch to "Focus Groups" project
+Switch to the "Focus Groups" project
 ```
 
 ```
-What project am I currently working with?
+Which project am I working with?
 ```
 
-### Custom Search Locations
+### Searching other folders
 
-If your projects are in a non-standard location:
+If your projects are somewhere else, name the folder:
 
 ```
 Search for projects in /Volumes/External/Research/Projects
 ```
 
-## Option 2: Fixed Project (Simpler Setup)
+Exegete then searches that folder alone, three levels deep: the folder
+itself, the folders inside it, and the folders inside those.
 
-If you only work with **one project**, you can hardcode it in the config for convenience.
+## One project set in the configuration
+
+If you work with one project, you can set it in the configuration, so
+that you do not select it at each start.
 
 ### Setup
 
@@ -121,13 +143,21 @@ In your `claude_desktop_config.json`:
 }
 ```
 
-Give your own project's path. The example's is in
-`~/Documents/Exegete projects`, where Exegete makes new projects when it
-is set up this way, unless `EXEGETE_WORKSPACE` names another folder.
+Give your own project's path: its folder, ending in `.qda`, or the
+`data.qda` file inside it. The example's project is in
+`~/Documents/Exegete projects`. Exegete makes new projects in that
+folder, unless the setting `EXEGETE_WORKSPACE` gives another. iCloud
+or OneDrive may sync Documents, and so copy your projects off this
+computer. The Terminal guide's
+["What you need"](docs/installing-from-the-terminal.md#what-you-need)
+says more, and suggests a folder outside Documents.
 
 ### Usage
 
-Claude will automatically connect to your project on startup. No need to select anything - just start asking questions:
+When it starts, Exegete checks that the project exists, and stops with
+an error if it does not. It opens the project the first time the
+assistant uses a tool that needs one, so there is nothing to select. You
+can start with a question:
 
 ```
 Give me a summary of my project
@@ -139,146 +169,148 @@ What are my most used codes?
 
 ## Comparison
 
-| Feature | Auto-Discovery | Fixed Project |
+| | Choosing in the conversation | One project in the configuration |
 |---------|---------------|---------------|
-| **Setup** | Easier (no paths to configure) | Requires full path |
-| **Multiple Projects** | ✅ Switch anytime | ✅ Switch anytime too (`select_project` works; the variable only sets the start-up project) |
-| **First Use** | Need to select project | Immediate access |
-| **Best For** | Researchers with multiple projects | Single project workflows |
+| **Setup** | No path to set | The project's full path |
+| **Several projects** | Switch at any time | Switch at any time too, since the setting chooses only the project Exegete starts with |
+| **First use** | Ask the assistant to select a project | The project opens with the first tool that needs it |
+| **Suits** | Work across several projects | Work on one project |
 
 ## Troubleshooting
 
 ### "No projects found in the usual places"
 
-If auto-discovery doesn't find your projects:
+If the assistant finds no project in the usual places:
 
-1. **Find where your projects are:** note the full path to a `.qda`
-   project folder (if you use QualCoder, its recent projects list shows
-   where they are stored)
+1. **Find where your projects are.** Note the full path of a `.qda`
+   project folder. If you use QualCoder, its list of recent projects
+   shows where they are.
 
-2. **Tell Claude to search there:**
+2. **Ask the assistant to search there:**
    ```
    Search for projects in /path/to/my/projects
    ```
 
-3. **Or switch to Fixed Project mode** (Option 2 above)
+3. **Or set the project in the configuration** ("One project set in
+   the configuration", above).
 
 ### "No projects found in the folders given"
 
-When you name a folder, Exegete searches that folder only (three levels
-deep), not the usual places. The answer says when the folder does not
-exist, which usually means a slip in the path. A project more than
-three levels down is not found; naming the folder just above it finds
+When you name a folder, Exegete searches that folder only, three levels
+deep, and not the usual places. The answer says when the folder does
+not exist, which usually means a slip in the path. A project more than
+three levels down is not found. Naming the folder that holds it finds
 it.
 
 ### "No project currently open"
 
-If you're using auto-discovery and haven't selected a project:
+The tool `get_current_project` gives this answer before a project is
+selected, and Exegete's other tools say "No project selected". Ask the
+assistant:
 
 ```
 List available projects
 Select the first project
 ```
 
-When a project was selected before on this machine and still exists, the
-error also names it ("The last project used on this machine was
-<path>"), so one `select_project` call with that path recovers. The
-pointer lives in `~/.exegete/mru_project.json`; nothing is
-selected automatically.
+When a project was selected or created before on this computer, and
+still exists, the answer also gives its path. To go back to that
+project, ask the assistant to select it. The assistant needs only that
+path. Exegete keeps the path in `~/.exegete/mru_project.json`, and
+never selects the project by itself.
 
-### Can't find a specific project
+### A project is missing from the list
 
-List all projects to see what Claude can find:
-
-```
-List all my projects
-```
-
-Then select by name or path:
+The list gives the projects Exegete finds in the places it searches by
+default, listed above, or in the folders you name. A project in another
+folder, or deeper than the search goes, is not in it. You can select it
+by its path:
 
 ```
-Select "MyProjectName"
+Select the project at /full/path/to/project.qda
 ```
 
-Or if there are multiple with similar names:
+Or ask the assistant to search the folder that holds it ("Searching
+other folders", above). If several projects have similar names, give
+the path.
 
-```
-Select the project in /full/path/to/project.qda
-```
+## The three tools
 
-## New MCP Tools
-
-The project selection feature adds three new tools:
+Three of Exegete's tools find a project, select it and report on it.
 
 ### 1. `list_available_projects`
-Discovers `.qda` project folders in common locations
+Lists the projects (`.qda` folders) in the usual places, or in the
+folders you name instead
 
-**Optional parameter:**
-- `search_directories`: List of custom paths to search
+**Optional argument:**
+- `search_directories`: a list of folders to search instead of the
+  usual places, each a full path or one starting with `~`, and each
+  searched three levels deep
 
 ### 2. `select_project`
-Opens a project (a `.qda` folder)
+Selects a project (a `.qda` folder) for the tools that follow
 
-**Required parameter:**
-- `project_path`: Path to the `.qda` project folder (or to the `data.qda` file inside it)
+**Required argument:**
+- `project_path`: the path of the `.qda` project folder, or of the
+  `data.qda` file inside it
 
-The result reports `qualcoder_gui_signals` (best-effort heuristics for an
-open QualCoder 4.0 window; QualCoder 3.8.2 is detected through the
-project's lock file) and remembers the selection as the last-used project.
+The answer includes `qualcoder_gui_signals`: the signs Exegete finds
+that QualCoder 4.0 may have the project open. QualCoder 3.8.2 shows
+that it has the project open with a lock file, a small file it writes
+in the project's folder. Exegete records the selection as the
+last project used on this computer. A selection that fails leaves the
+project selected before still selected. If no project was selected and
+one is set in the configuration, a selection that fails opens that
+project. The next tool would open it anyway, and the answer says so.
 
 ### 3. `get_current_project`
-Shows which project is currently open, whether the project's lock file
-is active (`qualcoder_open`: QualCoder 3.8.2 has the project open, or
-another conversation using Exegete is writing to it) and the signs of
-an open QualCoder 4.0 window (`qualcoder_gui_signals`)
+Shows which project is selected, and whether something else may be
+using it:
+- `qualcoder_open`: whether the project's lock file is active. It is
+  active while QualCoder 3.8.2 has the project open, or while another
+  conversation using Exegete is writing to it.
+- `qualcoder_gui_signals`: the signs of an open QualCoder 4.0 window
 
-**No parameters**
+**No arguments**
 
-## Example Workflow
+## An example conversation
+
+The assistant's words vary. A conversation might go like this:
 
 ```
-# Start fresh
 You: List my projects
 
-Claude: I found 3 projects:
-1. Interview Study 2024 (15.3 MB, last modified today)
-2. Focus Groups (8.7 MB, last modified yesterday)
-3. Pilot Study (3.2 MB, last modified last week)
+Assistant: I found three projects, the most recently changed first:
+1. Interview Study 2024
+2. Focus Groups
+3. Pilot Study
 
-Which would you like to work with?
+Which one would you like to work with?
 
-# Select project
 You: Open the Interview Study project
 
-Claude: ✓ Switched to "Interview Study 2024"
+Assistant: Interview Study 2024 is now selected. What would you like
+to look at?
 
-This project contains:
-- 15 source files
-- 47 codes in 8 categories
-- 342 coded segments
-- Last updated: 2024-10-28
-
-What would you like to analyse?
-
-# Now you can work normally
 You: Show me the most frequently used codes
 
-Claude: Here are your top codes:
-1. "participant motivation" - 67 segments
-2. "workplace culture" - 54 segments
+Assistant: These are the codes used most often:
+1. "participant motivation", 67 codings
+2. "workplace culture", 54 codings
 ...
 
-# Switch projects without restarting Claude
 You: Switch to the Focus Groups project
 
-Claude: ✓ Switched to "Focus Groups"
+Assistant: Focus Groups is now selected.
 ...
 ```
 
-## Recommendation
+## Which way to choose
 
-- **If you have multiple projects**: Use Option 1 (Auto-Discovery)
-- **If you have one main project**: Use Option 2 (Fixed Project)
-- **If unsure**: Start with Option 1 - it's more flexible!
-
-You can always change your config later by editing `claude_desktop_config.json` and restarting Claude Desktop.
+Choosing in the conversation works with one project or many, and needs
+no path in the configuration. Setting one project saves selecting it at
+each start, and the assistant can still switch to another. To change
+the configuration later, edit `claude_desktop_config.json` again, then
+quit Claude Desktop fully and open it again. The Terminal guide says
+how, in
+["Claude Desktop set up by hand"](docs/installing-from-the-terminal.md#claude-desktop-set-up-by-hand).

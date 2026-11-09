@@ -175,9 +175,25 @@ class TestTtyNotice:
         assert server.TTY_NOTICE.startswith(
             "Exegete is a qualitative analysis application that runs as an "
             "MCP server.")
-        assert "\n" not in server.TTY_NOTICE   # one paragraph
         # Exegete, never "the server" (v0.15.2)
         assert "the server" not in server.TTY_NOTICE
+
+    def test_notice_in_short_sentences_one_to_a_line(self):
+        """v0.15.3, as the owner read it at the sitting: one sentence to
+        a line, the guide's address alone on the last, and no other line
+        over 80 characters; the protocol's jargon dropped."""
+        *sentences, address = server.TTY_NOTICE.split("\n")
+        assert address.startswith("https://") and " " not in address
+        assert len(sentences) > 1
+        for line in sentences:
+            assert 0 < len(line) <= 80, line
+            assert line == line.strip(), line
+            assert line[-1] in ".:" and ". " not in line, line
+        assert sentences[-1].endswith(":")
+        for jargon in ("JSON-RPC", "standard input and output", "stdio",
+                       "MCP host"):
+            assert jargon not in server.TTY_NOTICE, jargon
+        assert "Press Ctrl+C to stop" in server.TTY_NOTICE
 
     def test_the_guide_the_notice_names_sets_up_each_host_it_names(self):
         """v0.15.2: the hosts' configurations moved from INSTALL.md to

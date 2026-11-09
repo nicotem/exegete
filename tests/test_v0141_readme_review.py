@@ -94,11 +94,11 @@ def _without_the_dated_record(name, text):
 
 
 def _documents():
-    """Every Markdown document at the top of the repository, and the
-    older ones kept in docs/history/ (v0.15.1), by their paths in it."""
+    """Every Markdown document at the top of the repository, by its
+    path in it (v0.15.3: the older ones kept in docs/history/ from
+    v0.15.1 left the repository's files)."""
     return [path.relative_to(REPO).as_posix()
-            for path in sorted(REPO.glob("*.md"))
-            + sorted(REPO.glob("docs/history/*.md"))]
+            for path in sorted(REPO.glob("*.md"))]
 
 
 def test_no_document_says_qualcoders_ai_keeps_the_private_part():
@@ -174,8 +174,9 @@ def _flat_quotes(name):
 def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     """v0.14.2, the README review: the quotation moved to PRIVACY.md's
     rung 1, which quotes it with its address and the exceptions; the
-    README keeps the settings address, what Model Improvement does in
-    plain words, and the check before participants' data."""
+    README keeps the settings address, what the setting "Help improve
+    our AI models" does in plain words, and the check before
+    participants' data."""
     readme = _flat("README.md")
     quoted = "unless you opt out of training through your account settings"
     assert quoted not in readme
@@ -188,8 +189,8 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     # exception, as a warning with what to do, not an order)
     assert ("3. **Training.** While training is on, Anthropic may use your "
             "conversations, with the participants' data in them, to train "
-            "its models. On a personal plan (Free, Pro or Max), the Model "
-            "Improvement setting at "
+            "its models. On a personal plan (Free, Pro or Max), the setting "
+            "\"Help improve our AI models\" at "
             "https://claude.ai/settings/data-privacy-controls switches "
             "training off. Rating a reply, with a thumbs up or down, can "
             "still let Anthropic train on that conversation (PRIVACY.md "
@@ -238,10 +239,11 @@ def test_the_three_commitments():
     # checked, beside the Exegete the column describes, which the owner's
     # word of 29 October 2026 makes 0.15.2 (v0.15.2's release
     # preparation: the clause on the REFI-QDA fix went with the fix's move
-    # to v0.15.3; "What comes next" names its release)
+    # to v0.15.3; "What comes next" names its release), and v0.15.3's
+    # release preparation 0.15.3, whose REFI-QDA row the table gives
     dated = section.index("The table sets QualCoder 3.8.2 and 4.0, as "
                           "checked on 10 October 2026, beside Exegete "
-                          "0.15.2.")
+                          "0.15.3.")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table
@@ -274,9 +276,12 @@ def test_the_upstream_server_is_stated_as_dated_fact():
     # (v0.15.2, the opening texts: the README dates its sentence and points
     # to TOOLS.md, which gives the facts)
     # (the readability reading: the pointer a sentence of its own)
-    assert "as checked on 6 October 2026. TOOLS.md gives the facts" in readme
+    # (v0.15.3: the facts named by the release they are true of, QualCoder
+    # 4.0, which no longer changes, as docs/WRITING.md allows)
+    assert "Exegete's former name. TOOLS.md gives the facts" in readme
     for text in (tools,):
-        assert "(checked 6 October 2026)" in text
+        assert "Four facts about how the tools relate, as the 4.0 release " \
+            "has them." in text
         assert "[#1571](https://github.com/ccbogel/QualCoder/pull/1571)" \
             in text
         assert "10 September 2026" in text
@@ -411,8 +416,9 @@ def _misspelt(text):
             for m in re.finditer("Qualcoder", flat)]
 
 
+# (v0.15.3: the workflow guide's text is in the one coding guide)
 @pytest.mark.parametrize("name", ["README.md", "TOOLS.md", "INSTALL.md",
-                                  "AI_CODING_WORKFLOW.md"])
+                                  "AI_CODING_GUIDE.md"])
 def test_qualcoder_is_spelt_so_in_prose(name):
     assert _misspelt(_read(name)) == []
 
@@ -441,7 +447,7 @@ def test_the_folder_keeps_its_name_where_the_code_writes_it():
 # ---------------------------------------------------------------------------
 
 DOCS = ("README.md", "TOOLS.md", "INSTALL.md", "CONTRIBUTING.md",
-        "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md")
+        "AI_CODING_GUIDE.md")
 # v0.14.1, the rename: the repository's address. A link to the old one is reported: GitHub redirects it,
 # but the documents name the new address, and a link this check skips
 # is a link nobody checks.

@@ -267,7 +267,7 @@ def test_codings_written_meanwhile_are_found_under_the_lock(tmp_path,
     record, answer, _ = run(tmp_path, monkeypatch, arrange,
                             insert_trust_coding)
     assert record["broken"] == [] and not record["new_backups"], record
-    assert "NOTHING TO WRITE" in answer
+    assert "Nothing to write" in answer
     session, guid = sessions[0]
     stored = server.session_manager.load_session(session)
     assert stored.get_suggestion_by_guid(guid).status == "applied"
@@ -293,7 +293,7 @@ def test_only_the_codings_not_written_meanwhile_are_written(tmp_path,
     record, answer, folder = run(tmp_path, monkeypatch, arrange,
                                  insert_trust_coding)
     assert record["broken"] == [] and len(record["new_backups"]) == 1, record
-    assert "CODINGS APPLIED" in answer and "Already in the database: 1" in \
+    assert "Codings applied" in answer and "Already in the database: 1" in \
         answer
     assert sorted(rows(folder, "select cid from code_text")) == sorted(
         [(code_id(folder, "Trust"),), (code_id(folder, "Doubt"),)])

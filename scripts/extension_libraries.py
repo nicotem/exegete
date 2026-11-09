@@ -20,9 +20,12 @@ line, or holds fewer than the "Would install N packages" it announces,
 so that a changed or empty report never gives an empty or partial table.
 With `--check-pymupdf`, also when a computer's report does not install
 the PyMuPDF pyproject.toml gives it (PYMUPDF_TWO): 2.x with onnxruntime
-on Windows x64 and Linux from Python 3.11 to 3.14, 1.x and no
-onnxruntime everywhere else, so that a dry run reading the markers
-differently from the computer itself cannot pass unseen.
+on Windows x64, Linux and, from v0.15.3, Macs with Apple silicon, from
+Python 3.11 to 3.14, 1.x and no onnxruntime everywhere else, so that a
+dry run reading the markers differently from the computer itself cannot
+pass unseen. The Mac's report is uv's at macOS 14.0, the floor the
+lock's onnxruntime sets there (CI sets MACOSX_DEPLOYMENT_TARGET for it),
+so its label names the floor.
 Standard library only.
 """
 
@@ -38,7 +41,7 @@ from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 # The six computers pyproject.toml's [tool.uv] names, by uv's target.
 COMPUTERS = {
-    "aarch64-apple-darwin": "Mac (Apple silicon)",
+    "aarch64-apple-darwin": "Mac (Apple silicon, macOS 14 or later)",
     "x86_64-apple-darwin": "Mac (Intel)",
     "x86_64-pc-windows-msvc": "Windows (x64)",
     "aarch64-pc-windows-msvc": "Windows on Arm",
@@ -46,12 +49,13 @@ COMPUTERS = {
     "aarch64-unknown-linux-gnu": "Linux (Arm)",
 }
 
-# Where pyproject.toml's optional part gives PyMuPDF 2 (v0.15.1): these
-# computers, with a Python from the first to below the second; it brings
-# onnxruntime, which no other computer takes. Held to pyproject's lines
-# by tests/test_v0151_library_checks.py.
-PYMUPDF_TWO = ("x86_64-pc-windows-msvc", "x86_64-unknown-linux-gnu",
-               "aarch64-unknown-linux-gnu")
+# Where pyproject.toml's optional part gives PyMuPDF 2 (v0.15.1; Macs
+# with Apple silicon from v0.15.3): these computers, with a Python from
+# the first to below the second; it brings onnxruntime, which no other
+# computer takes. Held to pyproject's lines by
+# tests/test_v0151_library_checks.py.
+PYMUPDF_TWO = ("aarch64-apple-darwin", "x86_64-pc-windows-msvc",
+               "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu")
 PYMUPDF_TWO_PYTHONS = ((3, 11), (3, 15))
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")

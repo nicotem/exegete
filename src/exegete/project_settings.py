@@ -133,7 +133,7 @@ SIDECAR_NEWER_FORMAT = "newer_format"
 
 _UNREADABLE = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) could not be read. Ask the user to repair or remove "
+    "project folder) could not be read. Ask the researcher to repair or remove "
     "it; the next write will then ask for the name again. Nothing was "
     "written.")
 
@@ -142,13 +142,13 @@ _NEWER_FORMAT = (
     "project folder) was written by a newer version of Exegete and this "
     "one cannot write it safely. "
     f"Upgrade {names.SERVER_NAME}, or ask the "
-    "user to move the file aside; the next write will then ask for the "
+    "researcher to move the file aside; the next write will then ask for the "
     "name again. Nothing was written.")
 
 _OVERSIZED = (
     "The AI coder name file for this project ({file} in the "
     "project folder) is too large to write: even with one history entry "
-    "it would be bigger than Exegete can read back. Ask the user to "
+    "it would be bigger than Exegete can read back. Ask the researcher to "
     "remove the extra top-level keys in it, or to move the file aside; "
     "the next write will then ask for the name again. Nothing was "
     "written.")
@@ -162,7 +162,7 @@ def _naming(template: str, path: Any = None) -> str:
 
 _UNREADABLE_BESIDE_EARLIER = (
     "The AI coder name file for this project ({file} in the "
-    "project folder) could not be read. Ask the user to set the name "
+    "project folder) could not be read. Ask the researcher to set the name "
     "again with set_project_ai_coder_name, which puts the damaged file "
     "aside, or to remove both {file} and {old}: {old} beside it is not "
     "marked as moved and still holds \"{held}\", so removing {file} alone "
@@ -174,7 +174,7 @@ _NEWER_FORMAT_BESIDE_EARLIER = (
     "project folder) was written by a newer version of Exegete and this "
     "one cannot write it safely. "
     f"Upgrade {names.SERVER_NAME}, or ask the "
-    "user to move both {file} and {old} aside: {old} beside it is not "
+    "researcher to move both {file} and {old} aside: {old} beside it is not "
     "marked as moved and still holds \"{held}\", so moving {file} aside "
     "alone would bring that name back without asking. Nothing was "
     "written.")
@@ -182,7 +182,7 @@ _NEWER_FORMAT_BESIDE_EARLIER = (
 _OVERSIZED_BESIDE_EARLIER = (
     "The AI coder name file for this project ({file} in the "
     "project folder) is too large to write: even with one history entry "
-    "it would be bigger than Exegete can read back. Ask the user to "
+    "it would be bigger than Exegete can read back. Ask the researcher to "
     "remove the extra top-level keys in it, or to move both {file} and "
     "{old} aside: {old} beside it is not marked as moved and still holds "
     "\"{held}\", so moving {file} aside alone would bring that name back "

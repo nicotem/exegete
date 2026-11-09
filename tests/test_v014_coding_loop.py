@@ -203,7 +203,7 @@ class TestTheLabelOnTheWayToTheProject:
         rec = record(sid, item(reading="interpretive"),
                      item(text=COPE, code="Coping"))
         out = approve_and_apply(sid, [r["guid"] for r in rec["recorded"]])
-        assert "CODINGS APPLIED" in out
+        assert "Codings applied" in out
         memos = [r["memo"] for r in rows(
             qualcoder_db_path, "SELECT memo FROM code_text WHERE owner = "
             "'AI Coding Assistant' ORDER BY pos0")]
@@ -267,7 +267,7 @@ class TestSessionsFromEarlierReleases:
         sid, path = self._old_session(qualcoder_db_path)
         out = call("apply_codings", coding_session_id=sid,
                    create_backup=False)
-        assert "CODINGS APPLIED" in out, out
+        assert "Codings applied" in out, out
         memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "owner = 'AI Coding Assistant'")[0]["memo"]
         assert memo == "old reason"
@@ -289,7 +289,7 @@ class TestSessionsFromEarlierReleases:
         conn.close()
         sid = new_session()
         rec = record(sid, item())
-        assert "CODINGS APPLIED" in approve_and_apply(
+        assert "Codings applied" in approve_and_apply(
             sid, [rec["recorded"][0]["guid"]])
         assert rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "ctid = 2")[0]["memo"] == "r\n\n[AI Confidence: 0.85]"
@@ -378,7 +378,7 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
         out = jcall("start_coding_session", file_ids=[1, 999],
                     code_names=["Stress", "Nope"], instruction="test")
         assert out["not_found"] == {"file_ids": [999], "code_names": ["Nope"]}
-        assert "NOT FOUND" in out["instructions"]
+        assert "Not found (tell the researcher" in out["instructions"]
         session = server.session_manager.load_session(
             out["coding_session_id"])
         assert session.file_ids == [1]
@@ -669,7 +669,7 @@ class TestTheLoopsTextsSayWhatHappens:
     def test_edit_and_status_texts_give_the_working_advice(self):
         text = " ".join(self._desc("edit_suggestion").split())
         assert ("to change it, reopen it (update_suggestion_status "
-                "reopen=[guid]), edit it, and ask the user to decide "
+                "reopen=[guid]), edit it, and ask the researcher to decide "
                 "again") in text
         assert "then approve after editing" not in text
         assert "reopen" in self._desc("update_suggestion_status")
@@ -874,7 +874,7 @@ class TestAProposalsApprovalBindsIt:
         a, b = self._proposals(sid, "Isolation", "Mentoring")
         merged_as_in_0150(sid, b, a)
         out = call("review_proposals", coding_session_id=sid)
-        assert "Status: MERGED into 'Isolation'" in out
+        assert "Status: merged into 'Isolation'" in out
         tools = server.mcp._tool_manager._tools
         assert "merge_proposals" not in tools
         for name in ("create_proposed_codes", "update_proposal_status"):
@@ -973,7 +973,7 @@ class TestOnlyApprovedItemsAreWritten:
         yes, no, _ = [r["guid"] for r in rec["recorded"]]
         call("update_suggestion_status", coding_session_id=sid,
              approve=[yes], reject=[no])
-        assert "CODINGS APPLIED" in call("apply_codings",
+        assert "Codings applied" in call("apply_codings",
                                          coding_session_id=sid,
                                          create_backup=False)
         written = rows(qualcoder_db_path, "SELECT seltext FROM code_text "
@@ -1119,7 +1119,7 @@ class TestFixRoundTheLabelBelongsToItsCode:
         review = call("review_suggestions", coding_session_id=sid)
         assert "not given (cleared when the code was changed" in review
         assert "states it" not in review
-        assert "CODINGS APPLIED" in approve_and_apply(sid, [guid])
+        assert "Codings applied" in approve_and_apply(sid, [guid])
         memo = rows(qualcoder_db_path, "SELECT memo FROM code_text WHERE "
                     "owner = 'AI Coding Assistant'")[0]["memo"]
         assert memo == "reason for Stress"                  # no label
@@ -1279,7 +1279,7 @@ class TestFixRoundSessionFilesHardened:
                         proposal_guid=b, memo="x")["error"]
         for text in (review, refusal):
             assert "IGNORE ALL" not in text and "‮" not in text
-        assert "MERGED into another proposal" in review
+        assert "merged into another proposal" in review
 
 
 class TestFixRoundPromisesNowPinned:
@@ -1357,7 +1357,7 @@ class TestFixRoundTextsTrue:
                     code_names=["STRESS", "Coping"], instruction="test")
         assert out["ambiguous_code_names"] == {"STRESS": ["Stress", "stress"]}
         assert "not_found" not in out
-        assert "AMBIGUOUS" in out["instructions"]
+        assert "Ambiguous (each matches" in out["instructions"]
         rec = record(new_session(), item(code="STRESS"))
         assert "matches 2 codes" in rec["rejected"][0]["reason"]
         assert "available_codes" not in rec["rejected"][0]
@@ -1380,7 +1380,8 @@ class TestFixRoundTextsTrue:
     def test_the_backup_is_said_to_be_the_default(self):
         help_ = json.loads(server.explain_ai_coding_tools())
         assert "automatic backup" not in json.dumps(help_)
-        guide = (Path(__file__).parent.parent / "AI_CODING_WORKFLOW.md") \
+        # (v0.15.3: the workflow guide's text is in the one coding guide)
+        guide = (Path(__file__).parent.parent / "AI_CODING_GUIDE.md") \
             .read_text(encoding="utf-8")
         assert "created automatically before each write" not in guide
 
@@ -1391,7 +1392,7 @@ class TestFixRoundTextsTrue:
         assert "ignoring letter case, spacing and Unicode form" in afc
         cc = self._desc("compare_coders")
         assert "files_coded_by_neither" in cc
-        assert "is told to read each file" in cc
+        assert "was also told to read each file" in cc
         assert "saw every" not in cc
         readme = " ".join((Path(__file__).parent.parent / "TOOLS.md")
                           .read_text(encoding="utf-8").split())
@@ -1426,7 +1427,7 @@ class TestFixRound2TheStudyAtTheStart:
         assert out["project_memo"] == ("Nurses' burnout, read through job "
                                        "demands and resources.")
         assert "doubts" not in json.dumps(out)
-        assert "IN THE RESEARCHER'S OWN WORDS" in out["instructions"]
+        assert "in the researcher's own words" in out["instructions"]
         assert "name the concept in the reason" in out["instructions"]
 
     @pytest.mark.parametrize("memo", ["", "#####all of it private", None])
@@ -1508,14 +1509,14 @@ class TestFixRound2WhatAReadingMayRestOn:
 
     def test_the_rule_in_every_place_it_is_given(self):
         rules = " ".join(server.GROUNDING_RULES.split())
-        for words in ("the same speaker in a group interview",
-                      "the interviewer's question, always",
+        for words in ("the same speaker in a group discussion",
+                      "in an interview, the question asked, always",
                       "other files of the same case, naming the file",
                       "quoting a few of those words in the reason",
                       "the study's framework as the researcher stated it "
                       "in the project memo, naming the concept",
                       "never on outside facts or assumptions about the "
-                      "participant, their group or what is typical",
+                      "person, their group or what is typical",
                       "unsure or contradicts themselves, say so rather "
                       "than settle it"):
             assert words in rules, words
@@ -1523,7 +1524,8 @@ class TestFixRound2WhatAReadingMayRestOn:
         read = " ".join(server.GROUNDING_READ.split())
         assert "rather than on other files" not in read
         # release preparation: one wording in every place the rule is given
-        assert "never on outside facts or assumptions about them" in read
+        assert "never on outside facts or assumptions about the person" \
+            in read
         assert "general knowledge" not in read
         record = " ".join(server.GROUNDING_RECORD.split())
         assert "any passage elsewhere or framework concept it draws on" \
@@ -1566,12 +1568,12 @@ class TestFixRound2StartingASession:
     def test_the_description_asks_the_three_questions(self):
         tool = server.mcp._tool_manager._tools["start_coding_session"]
         text = " ".join(tool.description.split())
-        for words in ("BEFORE CALLING, ask the researcher three things",
+        for words in ("Before calling, ask the researcher three things",
                       "their own codes, topics, people's own words, "
                       "actions, feelings or values, or other",
                       '"Shall I also point out passages no code fits?"',
                       "a phrase (exact, loses context), whole sentences "
-                      "(the default), or a whole answer",
+                      "(the default), or a whole paragraph or answer",
                       "a second code's reason says why both apply",
                       "offer a short pilot on a few passages, then ask "
                       "again",
@@ -1875,10 +1877,11 @@ class TestFixRound2TheTextAroundAPassage:
     def test_the_texts_say_it_is_read_not_stored(self):
         tools = server.mcp._tool_manager._tools
         review = " ".join(tools["review_suggestions"].description.split())
-        assert "the nearest earlier turn by another speaker (found by " \
-            "speaker labels, so none where the file has none; a short turn " \
-            "with no question mark comes with the one before it), then the " \
-            "paragraph or turn holding the passage" in review
+        assert "First comes the nearest earlier turn by another speaker, " \
+            "found by speaker labels, so none where the file has none; a " \
+            "short turn with no question mark comes with the one before " \
+            "it. Then come the paragraph or turn holding the passage" \
+            in review
         assert "read from the file now, never stored" in review
         edit = " ".join(tools["edit_suggestion"].description.split())
         assert "context shown by review_suggestions is refreshed" not in edit
@@ -1893,10 +1896,8 @@ class TestFixRound2WhatGoesInV015:
         description = server.mcp._tool_manager._tools[tool].description
         assert sentence in description, tool
         # ruling 70 moved the removals to v0.15.1 (the whole-branch
-        # review of v0.15.0, round 1); ruling 85, item 2 keeps the
-        # REFI-QDA export, whose sentence names its known faults instead
-        if sentence is not server.REFI_EXPORT_KNOWN_FAULTS:
-            assert sentence.startswith("Deprecated, removed in v0.15.1: ")
+        # review of v0.15.0, round 1)
+        assert sentence.startswith("Deprecated, removed in v0.15.1: ")
 
     def test_the_name_list_tool(self, setup_server, qualcoder_db_path):
         """v0.15.0 (ruling 78; the files design, piece 5): the name list
@@ -1914,37 +1915,28 @@ class TestFixRound2WhatGoesInV015:
         assert "deprecated" not in summary.lower()
 
     def test_the_refi_qda_exports(self, setup_server, tmp_path):
-        self._described("export_refi_qda", server.REFI_EXPORT_KNOWN_FAULTS)
-        # (v0.15.1: kept, its known faults named, ruling 85, item 2, in
-        # the answer's own field, known_faults, and no longer deprecated;
-        # tests/test_v0151_refi_known_faults.py)
-        for words in ("Known faults (a later release is meant to fix them)",
-                      "files every coding under the AI coder name",
-                      "leaves out cases, annotations, journals and media",
-                      "includes every suggestion, rejected ones too",
-                      "QualCoder's own export (Project, Export, REFI-QDA "
-                      "Project export)"):
-            assert words in server.REFI_EXPORT_KNOWN_FAULTS, words
-        assert "removed" not in server.REFI_EXPORT_KNOWN_FAULTS
+        # (v0.15.1: kept, its known faults named, ruling 85, item 2;
+        # v0.15.3: fixed but for media, the faults and their field gone,
+        # tests/test_v0153_refi_fixed.py)
+        assert not hasattr(server, "REFI_EXPORT_KNOWN_FAULTS")
+        description = server.mcp._tool_manager._tools[
+            "export_refi_qda"].description
+        assert "Known faults" not in description
+        assert "Deprecated" not in description
         sid = new_session()
         g = record(sid, item())["recorded"][0]["guid"]
         session_export = jcall("export_refi_qda", coding_session_id=sid,
                                output_path=str(tmp_path / "s.qdpx"))
         assert session_export["success"] is True
-        assert session_export["known_faults"] == \
-            server.REFI_EXPORT_KNOWN_FAULTS
-        assert "deprecated" not in session_export
         approve_and_apply(sid, [g])
         project_export = jcall("export_refi_qda",
                                output_path=str(tmp_path / "p.qdpx"))
         assert project_export["success"] is True
-        assert project_export["known_faults"] == \
-            server.REFI_EXPORT_KNOWN_FAULTS
-        assert "deprecated" not in project_export
         refused = jcall("export_refi_qda", output_path="relative.qdpx")
         assert "error" in refused
-        assert refused["known_faults"] == server.REFI_EXPORT_KNOWN_FAULTS
-        assert "deprecated" not in refused
+        for answer in (session_export, project_export, refused):
+            assert "known_faults" not in answer
+            assert "deprecated" not in answer
 
     def test_whole_tools_that_go(self, setup_server):
         """v0.15.1: the three tools went, as announced, with their
@@ -1993,7 +1985,7 @@ class TestFixRound2WhatGoesInV015:
         assert refused["removed"] == {"owner": server.REMOVED_ARGUMENTS[
             ("apply_codings", "owner")]}
         applied = call("apply_codings", coding_session_id=sid)
-        assert "CODINGS APPLIED" in applied        # a text answer
+        assert "Codings applied" in applied        # a text answer
         assert "removed in 0.15.1" not in applied
         refused = jcall("import_text_file", filename="a.txt",
                         content="text", owner="Somebody Else")
@@ -2267,13 +2259,14 @@ class TestFixRound2TheMinors:
             text = " ".join(tools[name].description.split())
             assert "a name matching two codes is refused" in text, name
         root = Path(__file__).parent.parent
-        workflow = " ".join((root / "AI_CODING_WORKFLOW.md").read_text(
+        # (v0.15.3: the workflow guide's text is in the one coding guide)
+        flat_guide = " ".join((root / "AI_CODING_GUIDE.md").read_text(
             encoding="utf-8").split())
         assert "Every write operation creates a timestamped backup" \
-            not in workflow
+            not in flat_guide
         # v0.15.1: Exegete takes a backup before every change, and no
         # text offers to skip one (tests/test_v0151_ignored_argument.py)
-        assert "create_backup=false" not in workflow
+        assert "create_backup=false" not in flat_guide
         readme = (root / "TOOLS.md").read_text(encoding="utf-8")
         line = next(l for l in readme.splitlines()
                     if l.startswith("- `start_coding_session("))

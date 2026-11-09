@@ -102,8 +102,8 @@ class TestQualCoderFoursSigns:
         assert preview["qualcoder_gui_hint"].startswith(
             "This project appears to be open in QualCoder (the QualCoder "
             "4.0 AI search index shows recent activity")
-        assert "ask the researcher whether a QualCoder window has this " \
-            "project open, and import only once it is closed" in \
+        assert ("Ask the researcher whether a QualCoder window has this "
+                "project open, and import only once it is closed") in \
             preview["qualcoder_gui_hint"]
         assert "preview_token" in preview
         assert "stops_the_import" not in preview
@@ -412,9 +412,10 @@ class TestTheTexts:
         # column; v0.15.2, the opening texts: the comparison gave way to
         # the list of what is not in Exegete yet, which needs no stamp;
         # the owner's word of 29 October 2026: the comparison back, its
-        # stamp naming the release it describes
+        # stamp naming the release it describes (0.15.3 from its release
+        # preparation)
         assert "**Not in Exegete yet.**" in readme
-        assert ("as checked on 10 October 2026, beside Exegete 0.15.2."
+        assert ("as checked on 10 October 2026, beside Exegete 0.15.3."
                 in readme)
 
     def test_the_small_wording_points(self):

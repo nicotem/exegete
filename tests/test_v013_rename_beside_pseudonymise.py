@@ -124,8 +124,8 @@ def test_privacy_says_what_a_rename_cannot_reach():
             "exports ship that copy), saved graph labels, saved table "
             "displays and filters, and QualCoder's saved SQL queries. Each "
             "rename's result counts the saved graph labels, table displays "
-            "and filters for the case or file it renamed; the saved SQL "
-            "queries nothing in Exegete reads.") in flat
+            "and filters for the case or file it renamed; nothing in "
+            "Exegete reads the saved SQL queries.") in flat
     # Fix round 4, F3B-5: the three lists name the same places.
     unreleased = _flat("CHANGELOG.md").split("## [0.12")[0]
     assert "imported file's stored copy and stored path, saved graph " \
@@ -134,9 +134,13 @@ def test_privacy_says_what_a_rename_cannot_reach():
 
 
 def test_the_guide_readme_and_changelog_name_the_tools():
-    assert "is renamed with `rename_case` or `rename_file`; an imported " \
-           "file's stored copy keeps its original name and text." \
-           in _flat("AI_CODING_GUIDE.md")
+    # (v0.15.3, the readability reading: a sentence each; the guide's
+    # fix round: "the original", the guide's one word for the stored
+    # copy, as the paragraph on what leads back to the names calls it)
+    guide = _flat("AI_CODING_GUIDE.md")
+    assert "is renamed with `rename_case` or `rename_file`." in guide
+    assert ("The original of each imported file, which the project stores, "
+            "keeps its name and text as they were.") in guide
     readme = _flat("TOOLS.md")   # v0.14.1: the tool list moved there
     # (v0.15.2: the mark in sentence case, no longer in capitals)
     assert "- `rename_case(case_id, new_name, create_backup)` - **Writes " \

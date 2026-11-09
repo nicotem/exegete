@@ -18,6 +18,7 @@ projects Exegete writes, and the commit or release beside each line
 TOOLS.md cites from QualCoder's code.
 """
 
+import inspect
 import re
 from pathlib import Path
 
@@ -92,10 +93,12 @@ class TestTheBackupLeadsBackOnItsOwn:
                  if "AI provider" in sentence]
         assert typed and "passes through the conversation" in typed[0]
 
-    def test_the_guides_say_what_a_session_file_holds(self):
+    def test_the_guide_says_what_a_session_file_holds(self):
         """sessions.py keeps each suggestion's passage, segment_text,
-        and its reasoning in the session's file, outside the project."""
-        for name in ("AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md"):
+        and its reasoning in the session's file, outside the project.
+        (v0.15.3: one coding guide, which holds the workflow guide's
+        text.)"""
+        for name in ("AI_CODING_GUIDE.md",):
             text = _flat(name)
             assert "word for word" in _between(
                 text, "~/.exegete/sessions/", "delete_coding_session"), name
@@ -119,17 +122,32 @@ class TestEveryReadChecksForCoderVisibility:
         assert "PRIVACY.md's \"Coder visibility\" section" in paragraph
 
 
-def test_the_workflow_puts_the_check_before_the_backup():
+def test_the_guide_puts_the_check_before_the_backup():
     """apply_codings checks every approved suggestion before the backup
-    and writes nothing, and takes no backup, when one fails."""
+    and writes nothing, and takes no backup, when one fails. (v0.15.3:
+    the workflow guide's step 5 is in the one coding guide. Its fix
+    round: the steps in the code's order, the AI coder name first,
+    before the checks below it or any backup, and the lock file before
+    the backup; the session's own checks come before the name.)"""
     served = " ".join(server.apply_codings.__doc__.split())
-    assert "re-validated BEFORE the backup and the write" in served
-    step = _between(_flat("AI_CODING_WORKFLOW.md"),
-                    "**What Exegete does when the assistant calls "
-                    "`apply_codings`:**", "**What you'll see:**")
-    assert step.index("1. Checks every approved suggestion") < \
-        step.index("2. Takes a backup")
+    assert "checked again before the backup and the write" in served
+    step = _between(_flat("AI_CODING_GUIDE.md"),
+                    "When the assistant calls `apply_codings`, Exegete:",
+                    "The answer then looks like this:")
+    said = [step.index(words) for words in (
+        "1. Looks up the project's AI coder name",
+        "2. Checks every approved suggestion",
+        "3. Checks the project's lock file",
+        "4. Takes a backup")]
+    assert said == sorted(said)
+    assert "stops here, before the checks below or any backup" in step
     assert "no backup is taken" in step
+    body = inspect.getsource(server.apply_codings)
+    done = [body.index(call) for call in (
+        "_check_session_project(session)", "_resolve_write_owner()",
+        "_check_approved_codings(get_db()",
+        "_write_gate_error()", "_backup_before_change(")]
+    assert done == sorted(done)
 
 
 def test_tools_says_what_a_count_of_codings_is_not():

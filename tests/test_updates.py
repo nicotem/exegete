@@ -864,11 +864,11 @@ class TestTheServer:
         tool = server.mcp._tool_manager._tools["check_for_updates"]
         text = " ".join(tool.description.split())
         assert len(tool.description) <= 1000
-        rules = ("Call only when the user asks whether Exegete is up to "
-                 "date, how to update it, or which version they have.",
-                 "Give the user the message and the steps as returned, and "
-                 "do not suggest other ways to update",
-                 "The steps are for the user to follow: the app that "
+        rules = ("Call only when the researcher asks whether Exegete is up "
+                 "to date, how to update it, or which version they have.",
+                 "Give the researcher the message and the steps as "
+                 "returned, and do not suggest other ways to update",
+                 "The steps are for the researcher to follow: the app that "
                  "started Exegete must be closed while Exegete changes, so "
                  "do not run them yourself.")
         assert text.startswith(rules[0])
@@ -905,11 +905,28 @@ class TestTheRelease:
         assert versions == [release.VERSION]
         assert dates == [release.RELEASED]
 
-    def test_the_summary_is_plain_short_text(self):
-        assert forbidden_display_char(release.SUMMARY) is None
-        assert release.SUMMARY.isprintable()
-        assert 0 < len(release.SUMMARY) <= 300
-        assert "http" not in release.SUMMARY
+    def test_the_summary_is_one_plain_paragraph(self):
+        # v0.15.3 (the owner's answers of 3 November 2026): a paragraph
+        # written by hand at each release, which the note after an update
+        # gives as written and the update page shows; the link is the
+        # note's own, never the paragraph's
+        summary = release.SUMMARY
+        assert forbidden_display_char(summary) is None
+        assert summary.isprintable()
+        assert 0 < len(summary) <= 800
+        assert "\n" not in summary and "\r" not in summary
+        # No link, with its scheme or without: a web address, a site's
+        # name with a path after it, an email address
+        assert not re.search(
+            r"(?i)https?:|://|\bwww\.|@|"
+            r"\b[a-z0-9-]+\.(com|org|net|io|dev|ai|uk|eu)\b|"
+            r"\b[\w-]+\.[\w.-]+/", summary)
+        # No Markdown or HTML: the marks of a link, of bold or of code, a
+        # heading, a tag. A single * or _ passes, which a name such as
+        # update_check.json needs, so emphasis is left to release
+        # preparation's reading (CONTRIBUTING.md)
+        assert not re.search(r"\]\(|\*\*|__|`|^#|<[a-z/!]", summary,
+                             re.I)
 
 
 # ---------------------------------------------------------------------------

@@ -46,12 +46,12 @@ def _changelog_parts():
 def _live_texts():
     """Every document at the top of the repository (of the CHANGELOG,
     the entries above 0.14.2's alone: 0.14.3's and anything written
-    since, under Unreleased), the older ones kept in docs/history/
-    (v0.15.1), and every module of the code, which holds the tools'
-    descriptions, answers and refusals."""
+    since, under Unreleased), and every module of the code, which holds
+    the tools' descriptions, answers and refusals (v0.15.3: the older
+    documents kept in docs/history/ from v0.15.1 left the repository's
+    files)."""
     texts = {}
-    for path in (sorted(REPO.glob("*.md"))
-                 + sorted(REPO.glob("docs/history/*.md"))):
+    for path in sorted(REPO.glob("*.md")):
         name = path.relative_to(REPO).as_posix()
         if name == "CHANGELOG.md":
             texts[name] = _changelog_parts()[0]

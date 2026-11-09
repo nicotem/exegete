@@ -441,14 +441,26 @@ def _args_pseudonymise_source(kwargs):
     that did reach this binding would fail as `token_other_operation`,
     which is what it is. The `bool()` on each switch is so that a truthy
     value that is not `True` cannot bind differently from `True`.
+
+    `leave_occurrences` (v0.15.3) names the occurrences the run leaves
+    as they are, so it changes what happens to the text and is bound,
+    as the server settled it (occurrences.canonical_leave: each id read
+    as Crockford's decoding reads it, sorted, each once). It joins the
+    binding only when the list is not empty, so a run without it binds
+    exactly as before and a token issued before the update still
+    verifies.
     """
-    return {"file_id": int(kwargs["file_id"]),
-            "mapping": kwargs["mapping"],
-            "case_mode": str(kwargs["case_mode"]),
-            "overlap_policy": str(kwargs["overlap_policy"]),
-            "rewrite_memos": bool(kwargs["rewrite_memos"]),
-            "save_mapping_to_project": bool(
-                kwargs["save_mapping_to_project"])}
+    bound = {"file_id": int(kwargs["file_id"]),
+             "mapping": kwargs["mapping"],
+             "case_mode": str(kwargs["case_mode"]),
+             "overlap_policy": str(kwargs["overlap_policy"]),
+             "rewrite_memos": bool(kwargs["rewrite_memos"]),
+             "save_mapping_to_project": bool(
+                 kwargs["save_mapping_to_project"])}
+    leave = kwargs.get("leave_occurrences")
+    if leave:
+        bound["leave_occurrences"] = [str(one) for one in leave]
+    return bound
 
 
 def _args_import_documents(kwargs):

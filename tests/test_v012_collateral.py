@@ -167,7 +167,7 @@ class TestWarnings:
         assert warning == (
             f"Warning: 1 of the 1 affected coding(s) were not made under "
             f"Exegete's AI coder name(s) ({DEFAULT_AI_CODER_NAME}); they "
-            f"are other coders' work. Show the user the by_owner breakdown "
+            f"are other coders' work. Show the researcher the by_owner breakdown "
             f"and get an explicit go-ahead before executing.")
 
     def test_no_warning_when_every_row_is_ours(self, setup_server,

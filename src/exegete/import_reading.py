@@ -26,12 +26,13 @@ The contract, and why each part matters:
   strictly and dropped, the refusal standing, when they are not as
   Exegete writes them. Its error output is dropped; a library that
   writes to standard output inside the process writes nowhere. A
-  `damaged` refusal may carry `cause`, {"kind", "library", "version"}:
-  the class of the exception behind it, by module and qualified name
-  (`builtins.` left out), the library Exegete reads that kind of file
-  with (READER_LIBRARIES, null for none) and the release of it this
-  process loaded, so that Exegete's log can say what kind of error lay
-  behind the verdict (v0.15.1).
+  `damaged` refusal, and a `reader_library` one (a library the readers
+  import did not load, v0.15.3), may carry `cause`, {"kind",
+  "library", "version"}: the class of the exception behind it, by
+  module and qualified name (`builtins.` left out), the library Exegete
+  reads that kind of file with (READER_LIBRARIES, null for none) and
+  the release of it this process loaded, so that Exegete's log can say
+  what kind of error lay behind the verdict (v0.15.1).
 - Usage reports off: PyMuPDF 2.0 loads onnxruntime, whose reports to
   Microsoft are on by default. The small environment carries the setting
   that stops them on Linux and macOS, and before a PDF is read with
@@ -71,10 +72,11 @@ from typing import Any, Dict, Optional, Tuple
 # gives a file a margin over it.
 READ_TIMEOUT_SECONDS = 30.0
 MEMORY_CAP_BYTES = 1024 * 1024 * 1024
-# A PDF's reading is given more (v0.15.1): PyMuPDF 2.0, which Windows x64
-# and Linux read PDFs with from Python 3.11, loads onnxruntime and numpy,
-# whose address space reached 1,242 MiB on Linux in the trial of 21
-# October 2026, where 1 GiB stopped it; 2 GiB keeps a PDF's own content
+# A PDF's reading is given more (v0.15.1): PyMuPDF 2.0, which Windows x64,
+# Linux and (from v0.15.3) Macs with Apple silicon read PDFs with from
+# Python 3.11, loads onnxruntime and numpy, whose address space reached
+# 1,242 MiB on Linux in the trial of 21 October 2026, where 1 GiB
+# stopped it; 2 GiB keeps a PDF's own content
 # about the room 1.x has under 1 GiB. One figure for PDFs on every
 # system, whichever release reads them; every other kind keeps 1 GiB.
 PDF_MEMORY_CAP_BYTES = 2 * 1024 * 1024 * 1024
@@ -92,6 +94,9 @@ _CAUSE_KIND = re.compile(
     r"[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*){0,7}")
 _CAUSE_KIND_MAX = 100
 _CAUSE_VERSION = re.compile(r"[0-9A-Za-z.+!_-]{1,40}")
+# The refusals a cause is kept beside: a file read as damaged, and one
+# not read because a library the readers import did not load (v0.15.3)
+CAUSED_REFUSALS = frozenset({"damaged", "reader_library"})
 
 _CHILD_CODE = ("import sys; sys.path.insert(0, sys.argv[1]); "
                "from exegete.import_reading import child_main; child_main()")
@@ -107,8 +112,9 @@ class ReadFailed(Exception):
         super().__init__(code)
         self.code = code
         self.numbers = numbers or {}
-        # What lay behind a "damaged" verdict, for Exegete's log alone:
-        # never in args or str(), so no answer carries it.
+        # What lay behind a "damaged" or "reader_library" refusal, for
+        # Exegete's log alone: never in args or str(), so no answer
+        # carries it.
         self.cause = cause
         # A plain text file not saved as UTF-8: its readings, checked
         # (checked_readings); never in `numbers`.
@@ -281,6 +287,12 @@ def _read(header: Dict[str, Any], raw: bytes) -> Dict[str, Any]:
         return {"ok": False, "refusal": "reader_memory"}
     except RecursionError as error:
         return _damaged(type(error), kind)
+    except ImportError as error:
+        # A library the readers import as they read (PyMuPDF, EbookLib,
+        # defusedxml, striprtf) did not load on this computer: the file is
+        # not at fault (v0.15.3). ModuleNotFoundError is one of these.
+        return _damaged(type(error), kind,
+                        {"ok": False, "refusal": "reader_library"})
     except Exception as error:
         return _damaged(type(error), kind)
     limit = int(header.get("max_characters", 0))
@@ -563,13 +575,13 @@ def _checked_answer(raw: bytes, kind: Optional[str] = None
 
 def _checked_cause(cause: Any, code: str,
                    kind: Optional[str]) -> Optional[Dict[str, Any]]:
-    """A refusal's cause, kept only beside `damaged` and only in its own
-    shape: exactly its three keys, a dotted name of at most 100
-    characters, the library READER_LIBRARIES gives the kind asked for
-    (none for no kind), and a release's spelling or null (null whenever
-    the library is). None otherwise: the cause is dropped whole and the
-    refusal stands as sent."""
-    if code != "damaged" or not isinstance(cause, dict) \
+    """A refusal's cause, kept only beside `damaged` and `reader_library`
+    (v0.15.3) and only in its own shape: exactly its three keys, a
+    dotted name of at most 100 characters, the library READER_LIBRARIES
+    gives the kind asked for (none for no kind), and a release's
+    spelling or null (null whenever the library is). None otherwise: the
+    cause is dropped whole and the refusal stands as sent."""
+    if code not in CAUSED_REFUSALS or not isinstance(cause, dict) \
             or set(cause) != {"kind", "library", "version"}:
         return None
     label, library, version = (cause["kind"], cause["library"],
@@ -591,9 +603,10 @@ def checked_result(answer: Any, kind: Optional[str] = None
                    ) -> Dict[str, Any]:
     """A parsed answer, its shape checked: the text, signs, notes,
     character set and counts, or ReadFailed with the child's own code (or
-    `reader_failed`) and, beside `damaged`, its cause as `_checked_cause`
-    keeps it for the file's `kind`. The import checks a kept answer the
-    same way (kept_texts), wrapped as the child sends it."""
+    `reader_failed`) and, beside `damaged` or `reader_library`, its cause
+    as `_checked_cause` keeps it for the file's `kind`. The import checks
+    a kept answer the same way (kept_texts), wrapped as the child sends
+    it."""
     if not isinstance(answer, dict) or not isinstance(answer.get("ok"), bool):
         raise ReadFailed("reader_failed")
     if not answer["ok"]:

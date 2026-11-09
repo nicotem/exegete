@@ -714,7 +714,7 @@ class Route:
     def made(self, text):
         """The change answered as made, its backup named."""
         if self.name == "apply_codings":
-            return "CODINGS APPLIED" in text and "Backup created" in text
+            return "Codings applied" in text and "Backup created" in text
         done = answer(text)
         return "error" not in done and bool(done.get("backup_path"))
 
@@ -832,12 +832,14 @@ def test_nothing_after_the_commit_reads_the_secret(route, monkeypatch):
 # sometimes cannot remove it at the end of its write (database.py, the
 # lock's end: "Could not remove project lock file: PermissionError
 # EACCES"); the file then refuses both copies' writes until it is
-# QUALCODER_LOCK_TIMEOUT seconds old, after which both write over it. That
-# behaviour is a point on the v0.15.2 sprint's deferred table, a code piece
-# for v0.15.3 (the lock's removal retried); until then the test waits it
-# out. The evidence: the full tier's first attempt on Windows failed here
-# in runs 40902304805 and 40923488784 (3.11) and 40935833967 (3.11 and
-# 3.13), each passing on rerun. The test's 500 tries ran out 16 to 18
+# QUALCODER_LOCK_TIMEOUT seconds old, after which both write over it. Since
+# v0.15.3 a removal refused on Windows is tried again for about a second,
+# the file read again before each try (database.py, the lock's end), which
+# outlasts a read by the other copy; the wait stays as the margin, should a
+# removal still be refused throughout. The evidence before that change:
+# the full tier's first attempt on Windows failed here in runs
+# 40902304805 and 40923488784 (3.11) and 40935833967 (3.11 and 3.13),
+# each passing on rerun. The test's 500 tries ran out 16 to 18
 # seconds after the failed removal ("A 03 never landed" on 3.13 in the
 # last), and twice on 3.11 the stdio client's BrokenResourceError took the
 # place of that failure.
@@ -1415,7 +1417,7 @@ def test_the_projects_names_run_nothing(project, monkeypatch):
     schema = schema_of(project)
     session, guid = approved_session()
     text = server.apply_codings(coding_session_id=session)
-    assert "CODINGS APPLIED" in text and receipt_of(text) in record_files()
+    assert "Codings applied" in text and receipt_of(text) in record_files()
     ctid = database_value(project, "SELECT ctid FROM code_text")
     assert len(ctid) == 1
     record = records()[receipt_of(text)]
@@ -1432,7 +1434,7 @@ def test_the_table_name_alone_runs_nothing(project):
                              "(id integer primary key)")
     session, guid = approved_session()
     text = server.apply_codings(coding_session_id=session)
-    assert "CODINGS APPLIED" in text and receipt_of(text) in record_files()
+    assert "Codings applied" in text and receipt_of(text) in record_files()
     assert database_value(project, "SELECT count(*) FROM code_text") == [(1,)]
 
 

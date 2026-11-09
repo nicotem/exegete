@@ -28,7 +28,14 @@ what changed.
 
 - **Claude Desktop**, the latest version, from
   https://claude.ai/download, and a Claude account to sign in with.
-- **A Mac or a Windows computer.** Claude Desktop runs on both.
+- **A Mac or a Windows computer.** Claude Desktop runs on both. On a
+  Mac, Anthropic's help page, read on 3 November 2026, asks for macOS 13
+  (Ventura) or later. On a Mac with Apple silicon (M1 or later), the
+  extension needs macOS 14 (Sonoma) or later, from 0.15.3: a library it
+  fetches to read PDFs has no package for earlier releases there. On
+  macOS 13 it does not start ("Troubleshooting", below, says what you
+  can do). On an Intel Mac, the extension needs no more than Claude
+  Desktop does.
 - **The internet when Exegete first starts**, and after each update.
   At those times Claude Desktop fetches a tool called uv, which fetches
   Python and the libraries Exegete needs, the ready-made code it builds
@@ -49,8 +56,8 @@ what changed.
   Exegete brings in documents itself with `import_documents`, PDF and
   EPUB among them ("PDF and EPUB: the optional part", below).
   QualCoder's releases are at
-  https://github.com/ccbogel/QualCoder/releases. When this was checked,
-  on 6 October 2026, 4.0 was at the top of the page, marked "Latest",
+  https://github.com/ccbogel/QualCoder/releases. When this was checked
+  on 4 November 2026, 4.0 was at the top of the page, marked "Latest",
   and 3.8.2 came next. Exegete works with both. It can tell that
   QualCoder has a project open only with 3.8.2, whose lock file shows
   it. Each release's downloads are under its notes, in Assets, for
@@ -192,28 +199,32 @@ on where you use Exegete:
   is, such as a tool that only reads. Claude Desktop 2.9939.2 was seen
   to pass on the mark of a tool that only reads (26 September 2026),
   and what the chat then does with it is not known.
-- **Chat and Cowork as one conversation.** In the version of Claude
-  where chat and Cowork are one conversation, which Anthropic is
-  rolling out to Pro and Max plans first, a permission setting in the
-  message box has two modes. Anthropic's page
+- **Chat and Cowork as one conversation.** In one version of Claude,
+  chat and Cowork are one conversation. Anthropic is rolling it out to
+  Pro, Max and Ultra plans first. In that version, a permission setting
+  in the message box has two modes. Anthropic's page
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
-  read 1 October 2026) describes them: "**Manual (default):** Claude
+  read 4 November 2026) describes them: "**Auto (default on Pro, Max,
+  Ultra, and Team plans):** Claude keeps working without stopping to
+  ask about each step, and automated safety checks run before it takes
+  an action." and "**Manual (default on Enterprise plans):** Claude
   asks before it takes actions, and you choose whether to allow each
-  one." and "**Auto:** Claude keeps working without stopping to ask
-  about each step, and automated safety checks run before it takes an
-  action." The same page says how to tell whether you have that
-  version: "If you're on a Pro or Max plan and your message box still
+  one." The same page says how to tell whether you have that version:
+  "If you're on a Pro, Max, or Ultra plan and your message box still
   shows "Chat" and "Cowork" options, you don't have it yet."
 
-On Manual, Claude keeps asking you, which suits work on real data.
+On Manual, Claude keeps asking you, which suits work on real data. On
+Pro, Max, Ultra and Team plans, such a conversation starts on Auto. On
+Auto, Claude does not stop to ask you before it uses Exegete's tools,
+so you could switch it to Manual before you use participants' data.
 ["What hosts do with the tools' read and write marks"](#what-hosts-do-with-the-tools-read-and-write-marks),
 below, says what each host does, from Anthropic's pages.
 
 **Switch training off** before participants' data: while it is on,
 Anthropic may use your conversations to train its models. On a personal
-plan (Free, Pro or Max) it is the Model Improvement setting, at
-https://claude.ai/settings/data-privacy-controls. Rating a reply (thumbs
-up or down) can still let Anthropic train on that conversation.
+plan (Free, Pro or Max) it is the setting "Help improve our AI models",
+at https://claude.ai/settings/data-privacy-controls. Rating a reply
+(thumbs up or down) can still let Anthropic train on that conversation.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
@@ -244,24 +255,32 @@ optional part, and the extension always has this part. The part is two
 libraries, PyMuPDF and EbookLib, with lxml, which EbookLib needs. They
 are the libraries QualCoder 4.0 reads these formats with.
 
-**Which PyMuPDF a computer takes.** On Windows x64, and on Linux on
-x86-64 and Arm, with Python 3.11 to 3.14, the part brings PyMuPDF 2.
-PyMuPDF 2 needs nine more libraries, which come with it: onnxruntime,
-numpy, networkx, protobuf, flatbuffers, psutil, PyYAML, tabulate and
-packaging. Everywhere else the part brings PyMuPDF 1.x: on Windows on
-Arm, with Python 3.15 and later, and on every Mac. Every Mac takes 1.x
-because onnxruntime needs macOS 14 on Apple silicon, and an install
-cannot tell macOS releases apart. The extension installs the releases
-the tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.20. Both
-releases of PyMuPDF read the test documents' PDFs to the same text, the
-text that QualCoder 4.0 stores.
+**Which PyMuPDF a computer takes.** On Windows x64, on Linux on x86-64
+and Arm, and on a Mac with Apple silicon, with Python 3.11 to 3.14, the
+part brings PyMuPDF 2. PyMuPDF 2 needs nine more libraries, which come
+with it: onnxruntime, numpy, networkx, protobuf, flatbuffers, psutil,
+PyYAML, tabulate and packaging. Everywhere else the part brings PyMuPDF
+1.x: on Intel Macs, on Windows on Arm, and with Python 3.15 and later.
+On a Mac with Apple silicon, the onnxruntime the extension installs has
+packages for macOS 14 or later alone, so there the extension needs
+macOS 14. The choice between PyMuPDF 2 and 1.x goes by the kind of
+computer and the Python, never by the macOS release, so on macOS 13 or
+earlier the extension's install stops rather than take PyMuPDF 1.x
+("Troubleshooting", below). The extension installs the releases the
+tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.20. Both releases
+of PyMuPDF read the test documents' PDFs to the same text, the text that
+QualCoder 4.0 stores.
 
 **What PyMuPDF 2 costs.** At the first start, the part adds about 98 MB
 to download on Windows, and about 210 MB more on disk. On Linux it
-adds 114 to 118 MB to download, and 250 to 260 MB on disk. With PyMuPDF
-1.28.2, on a Mac or Windows on Arm, it adds about 24 to 33 MB to
+adds 114 to 118 MB to download, and 250 to 260 MB on disk. On a Mac
+with Apple silicon, measured on 3 November 2026 with Python 3.13, it
+adds about 105 MB to download, and about 240 MB on disk. With PyMuPDF
+1.28.2, on an Intel Mac or Windows on Arm, it adds about 24 to 33 MB to
 download, and 62 to 77 MB on disk. PyMuPDF 2 also takes 0.4 to 1 second
-more to start reading each PDF.
+more to start reading each PDF on Windows and Linux. On one Mac with
+Apple silicon, measured on 3 November 2026, it took at most about 0.2
+seconds more.
 
 With PyMuPDF 2 comes onnxruntime, Microsoft's library for running
 trained models. On Windows, onnxruntime reports its use to Windows'
@@ -310,11 +329,16 @@ GitHub account, you can also be told of each release: on Exegete's
 page on GitHub, choose Watch, then Custom, then Releases.
 
 To update, download the newer `.mcpb` and install it the same way.
-Claude replaces the extension you have and keeps its settings. The
-first start after an update can take longer, and needs the internet,
-since Claude Desktop may fetch Exegete's libraries again. Your projects
-and their backups stay where they are, and so does Exegete's own
-folder, `~/.exegete`. An update from 0.14.0 or earlier moves that
+Claude replaces the extension you have and keeps its settings. The first
+start after an update can take longer, and needs the internet, since
+Claude Desktop may fetch Exegete's libraries again. On a Mac with Apple
+silicon, the update to 0.15.3 or later needs macOS 14 or later, and its
+first start downloads up to about 105 MB of libraries for reading PDFs,
+where 0.15.2 needed about 33 MB ("PDF and EPUB: the optional part",
+above). On macOS 13 or earlier the updated extension does not start: you
+could update macOS first, or keep the release you have until then. Your
+projects and their backups stay where they are, and so does Exegete's
+own folder, `~/.exegete`. An update from 0.14.0 or earlier moves that
 folder there once, from `~/.qualcoder_mcp`.
 
 After updating, look at the settings, since an update can change them:
@@ -327,9 +351,9 @@ After updating, look at the settings, since an update can change them:
 - On the maintainer's Mac on 19 October 2026, the update to 0.15.0
   changed "Folder for projects". The setting had been left at the
   earlier default, `~/QualCoder projects`, and the update set it to
-  `~/Exegete projects`. A folder chosen by hand should be kept, but this
-  is not yet checked, so after updating, look at the setting. No project
-  is moved, and both folders are searched, so the projects in the
+  `~/Exegete projects`. Whether the update keeps a folder chosen by
+  hand has not been checked, so after updating, look at the setting. No
+  project is moved, and both folders are searched, so the projects in the
   earlier folder are still found. To keep new projects beside the
   earlier ones, set it back to `~/QualCoder projects`.
 - Up to 0.15.1 the extension had two text boxes, "Tool set" and "Do you
@@ -403,9 +427,9 @@ describes it.
 
 If a new version causes a problem, you can install an earlier release's
 `.mcpb`, from https://github.com/nicotem/exegete/releases, the same way.
-On the maintainer's computer, installing an older extension over a
-newer one cleared its settings: 0.15.0 over a newer test build, on
-23 October 2026. A cleared setting goes back to its default. So after
+On the maintainer's computer, checked on 23 October 2026, installing an
+older extension, 0.15.0, over a newer test build cleared the
+extension's settings. A cleared setting goes back to its default. So after
 going back, look at each setting, and set again any you had changed.
 The settings this guide describes go back to these defaults:
 
@@ -498,6 +522,18 @@ how long".
   closing the window. Claude Desktop starts Exegete once, and reads its
   tools then, so this also brings in the tools after an update.
 - The first start needs the internet.
+- On a Mac with Apple silicon, from 0.15.3, the extension needs macOS
+  14 or later. On macOS 13 or earlier it stops before Exegete runs, so
+  Exegete cannot say why: Claude Desktop's log of the extension
+  ("Reading the server log", below) holds uv's message that a library,
+  onnxruntime, has no package for that macOS. Updating macOS to 14 or
+  later brings the extension back, and so does installing 0.15.2's
+  extension again ("Going back to an earlier version", below). While
+  Exegete cannot start, it removes nothing it keeps: the texts an
+  import's preview read, and the reading folder's pages and copies of
+  originals, stay where "Decide what to do with what stays", under
+  "Uninstalling", says. 0.15.2's extension, installed again, removes
+  them at its first start once their time has passed.
 - An empty "Folder for projects", or a coder name outside the rules
   under "The settings page", stops the extension from starting. The log
   says which setting is at fault, never its value ("Reading the server
@@ -544,7 +580,7 @@ and the coding-session tools end after "'select_project' to open one".
 Ask Claude to list your projects and select one.
 
 When a project was selected before on this computer and still exists,
-the same error ends with "The last project used on this machine was
+the same error ends with "The last project used on this computer was
 <path>. Use select_project with that path to continue with it." Exegete
 reads that path from `~/.exegete/mru_project.json`, which
 `select_project` writes on every selection and `create_project` for
@@ -590,14 +626,20 @@ The MCP library, the code Exegete uses to talk to the app, writes lines
 of its own beside them, giving the kind of each request. They carry
 text the app sent in two cases:
 
-- for a prompt called with an argument it does not declare, that
-  argument's value;
-- for a request the library cannot read (an address that is not a URL,
-  arguments that are not an object, a tool name Exegete does not list,
-  a line that is not JSON), what was sent.
+- a prompt: one asked for by a name Exegete does not have leaves that
+  name, and one given an argument it does not declare leaves that
+  argument's name and value;
+- a tool: a call of a tool Exegete does not list leaves that tool's
+  name.
 
 That text is what the app or the model sent, never anything read from
-the project, but it can hold a name the model wrote.
+the project, but it can hold a name the model wrote. When the library
+does not take a line, a request or a notification the app sent (a line
+that is not JSON, a response to no request, an address that is not a
+URL, arguments that are not an object, a request sent before the app
+had finished starting the session), or when a response's id is text
+that is not a number, its line about it holds a fixed sentence of
+Exegete's instead, and nothing of what was sent.
 
 Claude Desktop's log (the file Show Logs opens) also records every
 request and every answer in full. So it holds everything the tools
@@ -659,37 +701,39 @@ Exegete's own folder, so a host that asks before a tool runs asks
 before it. It is in the `full` tool set, the default on every route,
 not in `core`.
 
-What each host does, from Anthropic's pages as read on 27 September
-2026 ("Choose a permission mode" and the MCP page on code.claude.com;
+What each host does, from Anthropic's pages as read on 4 November 2026
+("Choose a permission mode" and the MCP page on code.claude.com;
 "Get started with Claude Cowork" on support.claude.com):
 
 - **Claude Code.** In **Manual** mode (its setting is `default`) it asks
   before a call unless you allowed the tool. In **auto** mode, read-only
   actions are approved, and everything else goes to a classifier: a
-  second model that approves or blocks the call instead of you. Auto is
-  the starting mode for interactive sessions from version 2.1.283, and
-  was before that on Pro, Max and Team plans. `bypassPermissions` runs
-  everything, and `dontAsk` refuses anything that would ask. From
-  2.1.199, a tool marked `anthropic/requiresUserInteraction` (here,
-  `import_documents` and `save_names_list`) is asked about in every one
-  of these modes but `dontAsk`, which refuses it.
+  second model that approves or blocks the call instead of you. From
+  version 2.1.283, an interactive session starts in auto mode. Before
+  that version, it started in auto mode on Pro, Max, Ultra and Team
+  plans. `bypassPermissions` runs everything, and `dontAsk` refuses anything
+  that would ask. A tool marked `anthropic/requiresUserInteraction`
+  (here, `import_documents` and `save_names_list`) is asked about in
+  every one of these modes but `dontAsk`, which refuses it.
 - **Cowork.** Each connector tool has its own setting (always allow,
-  needs approval, blocked). In **Manual** mode, the default, a tool that
-  needs approval is asked about. In **Auto**, a tool set to always allow
-  is approved if it is read-only. Otherwise it is left to Claude's
-  safety review, and so is a tool that needs approval: you are not
-  asked. **Skip all approvals** runs every tool that is not blocked. The
+  needs approval, blocked). In **Manual** mode, Claude asks you before
+  it uses a tool that needs approval. In **Auto**, a tool set to always
+  allow is approved if it is read-only. Any other tool set to always
+  allow, and any tool that needs approval, goes to Claude's safety
+  review instead of to you. **Skip all approvals** runs every tool that
+  is not blocked. The
   page does not say how a local server's tools are sorted into
   read-only and write or delete, nor whether Cowork honours
   `anthropic/requiresUserInteraction`.
-- **Claude, where chat and Cowork are one conversation** (rolling out
-  to Pro and Max plans first; "Claude Cowork and chat are one Claude"
-  on support.claude.com, read 1 October 2026): a permission setting in
-  the message box has two modes, **Manual**, the default, in which
-  Claude asks before it takes actions, and **Auto**, in which automated
-  safety checks run instead of asking ("The first start", above,
-  quotes the page). The page does not say what either does with the
-  marks.
+- **Chat and Cowork as one conversation.** Anthropic is rolling this
+  version of Claude out to Pro, Max and Ultra plans first ("Claude
+  Cowork and chat are one Claude" on support.claude.com, read 4 November
+  2026). A permission setting in the message box has two modes. In
+  **Auto**, the default on Pro, Max, Ultra and Team plans, automated
+  safety checks run instead of asking you. In **Manual**, the default on
+  Enterprise plans, Claude asks before it takes actions. "The first
+  start", above, quotes the page. The page does not say what either
+  mode does with the marks.
 - **Claude Desktop's chat.** Anthropic's pages do not say what it does
   with the marks. Claude Desktop 2.9939.2 was seen to pass the
   read-only mark on with each tool (26 September 2026, below); what
@@ -712,8 +756,8 @@ What the programs on the maintainer's computer did, read from them on
   asked, with no option to always allow.
 
 **Codex** (the ChatGPT desktop app, and Codex's command line and editor
-extension), from OpenAI's pages and Codex's source code as read on 30
-September 2026. OpenAI's page,
+extension), from OpenAI's pages and Codex's source code (release
+0.166.0) as read on 4 November 2026. OpenAI's page,
 <https://learn.chatgpt.com/docs/agent-approvals-security>, says:
 "Destructive app/MCP tool calls always require approval when the tool
 advertises a destructive annotation (unless the tool advertises a read

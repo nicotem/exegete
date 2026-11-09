@@ -279,8 +279,10 @@ class TestHowFarAFolderOfItsOwnGoes:
                                     "themselves"))
         assert ("runs them without a permission prompt in every mode"
                 ) in assistants
-        assert ("file reads run without a prompt in auto mode, including "
-                "reads outside the working directories") in assistants
+        # (v0.15.3: Anthropic's page, read again, sets network paths aside)
+        assert ("file reads other than reads from network paths run without "
+                "a prompt in auto mode, including reads outside the working "
+                "directories") in assistants
         assert "Claude can see any information visible on your screen" in \
             assistants
 
@@ -511,7 +513,7 @@ class TestTheTexts:
     def test_the_listings_note_on_links(self, project, tmp_path):
         assert ("other_entries counts everything else there but links "
                 "(links_not_followed counts those), hidden files the system "
-                "keeps included, and never names it.") in \
+                "keeps included, and never gives their names.") in \
             private_files.FOLDER_NOTE
         top = private_files.ensure_folder(project)
         (top / f"{TOKEN}.txt").write_bytes(b"x")
@@ -544,8 +546,11 @@ class TestTheTexts:
                 "behind.") in section
         assert ("A backup or a copy that leaves out a link kept there counts "
                 "it the same way.") in section
+        # (v0.15.3: and for a page for choosing occurrences,
+        # reading_folder.sweep)
         assert ("the reading folder's files at its first tidy once they are "
-                "a week old (an hour for an import's page)") in section
+                "a week old (an hour for an import's page or a page for "
+                "choosing occurrences)") in section
         assert "(a week at most)" not in section
         assert "—" not in section
 

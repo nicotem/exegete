@@ -7,37 +7,30 @@ has to meet before it is merged.
 
 ## Reporting issues
 
-Everything goes through
-[GitHub Issues](https://github.com/nicotem/exegete/issues): bug
-reports, questions and feature ideas alike. There is no email support.
-The author's email address in the package metadata is an authorship
-signature, not a support channel, and support requests sent there will
-not receive a reply. Issues are public and searchable, so every answer
-helps the next researcher who hits the same thing. [SUPPORT.md](SUPPORT.md)
-has the full policy.
+Bug reports, questions and ideas for features all go through
+[GitHub Issues](https://github.com/nicotem/exegete/issues). Requests
+for support sent by email receive no reply. Issues are public and
+searchable, so every answer helps the next researcher with the same
+problem. [SUPPORT.md](SUPPORT.md) gives the whole policy.
 
-When you report a bug, use the issue template. It asks for the
-Exegete version, the QualCoder version if you use QualCoder, the
-project's schema version (the `databaseversion` value in the `schema` block that
-`get_current_project` returns), your MCP host (Claude Desktop, Claude
-Code, LM Studio, other), the toolset (`EXEGETE_TOOLSET`: `core`, or
-`full` when the variable is not set; `lifecycle` is the earlier name of
-`full`, before 0.15.0) and your operating system.
-Never paste participant data, interview text or anything sensitive into
-an issue; describe the problem structurally ("a code name with an
-apostrophe", "a file of about 40k characters"). Security concerns take
-the same route: open an issue, describe the problem structurally, and
-say in the title that it concerns data exposure or write safety so it
-is looked at first.
+When you report a bug, use the issue template. It asks for the facts
+about your setup that SUPPORT.md lists under "Before you report", and
+for your operating system. An issue is public, so participants' data or
+a project put into one is published with it. Describe the data without
+copying it instead, such as "a code name with an apostrophe" or "a file
+of about 40,000 characters". SUPPORT.md says what a log can hold.
+A security concern, such as a fault that could expose participants'
+data or let a write damage a project, is best reported privately, as
+[SECURITY.md](SECURITY.md) describes, so that it is not public before
+its fix. Describe it there without copying data, as above.
 
 ## Proposing changes
 
 1. **Open an issue first** for anything beyond a small fix, so the
    scope can be agreed before you write code. The scope rule below
    explains what is likely to be accepted.
-2. **Fork and branch.** `main` is never committed to directly; every
-   change arrives on a branch and is merged from a pull request against
-   `main`.
+2. **Fork and branch.** Make your change on a branch of your fork, and
+   send it as a pull request against `main`.
 3. **Install for development** (Python 3.11 or newer):
 
    <!-- ci: run dev -->
@@ -49,7 +42,7 @@ is looked at first.
    pip install -e ".[dev,pdf-epub]"
    ```
 
-   `pdf-epub` is the optional part that reads PDF and EPUB; without it,
+   `pdf-epub` is the optional part that reads PDF and EPUB. Without it,
    the tests of PDF and EPUB import are skipped. Its libraries are under
    the AGPL (INSTALL.md, "PDF and EPUB: the optional part").
 
@@ -59,192 +52,281 @@ is looked at first.
    python -m pytest -q
    ```
 
-   The whole suite must pass, on your platform and on the CI. Every new
-   behaviour needs a test that fails without the change, including the
-   edge cases of any QualCoder behaviour you are matching. Do not add
-   skips without a stated reason in the test. One scale test (10k+
-   codings, a 500k-character document) is opt-in behind
-   `TRACK6_GIANT=1` and is not part of a normal run.
-5. **Continuous integration** runs on every pushed branch and on pull
-   requests to `main`, in one of two tiers, which its first job, `tier`,
-   chooses (`scripts/ci_tier.py` says how). The jobs that run tests,
-   all but the one on the newest releases below, install the libraries
-   from the lock, `uv.lock`, each release checked against its hash: the
-   releases the desktop extension installs, so a new release on PyPI
-   cannot turn a job red overnight, and a change to the requirements or
-   the version in `pyproject.toml` without `uv lock` fails on the push.
+   The whole suite must pass on your platform and in CI, the checks
+   that step 5 describes. Every new behaviour needs a test that fails
+   without the change, including the edge cases of any QualCoder
+   behaviour you are matching. Do not add skips without a stated reason
+   in the test. Two scale tests are not part of a normal run. They share one build, a project with more than
+   10,000 codings and a document of 500,000 characters, made only when
+   `TRACK6_GIANT=1` is set. The suite gives each test a home folder
+   of its own, inside pytest's temporary folder (`tests/conftest.py`).
+   At the end of a run, the suite fails if a test created anything in
+   your own folders for projects. It also fails if a test changed
+   `~/.exegete`, the folder where Exegete keeps its working files, or
+   `~/.qualcoder_mcp` from before the rename. A copy of Exegete that you
+   are running at the same time can change that folder too, so stop it
+   before you run the suite.
+5. **Continuous integration** (CI) is the set of checks GitHub runs on
+   every pushed branch and on pull requests to `main`. It runs in one of
+   two tiers, and its first job, `tier`, chooses which
+   (`scripts/ci_tier.py` says how). Every job that runs tests, except
+   the one on the newest releases described below, installs the
+   libraries from the lock, `uv.lock`, and checks each release against
+   its hash. These are the releases the desktop extension installs, so a
+   new release on PyPI cannot turn a job red overnight. A change to the
+   requirements or to the version in `pyproject.toml` fails on the push
+   unless `uv lock` was run with it.
+
    A push to `main` or to an integration branch, `feat/<name>`, a pull
    request and a run started by hand take the full tier: twenty-two
-   jobs. Eleven run the suite: on Python 3.11, the oldest Exegete
-   supports, and 3.13, one job each on Ubuntu and on macOS, and three on
-   Windows, where the suite is slowest and runs in three parts made of
-   whole test files (`tests/conftest.py`); on Python 3.14, the newest,
-   one on Ubuntu. To run one part on your own computer, set
-   `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
-   three; left empty, every test runs. Three build the desktop
-   extension, one on each system, and install and start it as Claude
-   Desktop does (the Linux one also validates it with the official
-   MCPB tool and checks that the lock has a wheel for every computer);
-   one checks that the three builds are the same bytes. One compares the
-   text the import stores with the text QualCoder 4.0's own extraction
-   gives. Two try the upgrade from the
-   package's earlier name, on Ubuntu and on Windows. One checks the
-   documents: their links (`scripts/check_links.py`), their texts
-   (`scripts/check_texts.py`, under Style rules) and the facts they
-   repeat (`tests/test_v0151_facts.py`, below); their links to
-   other sites are checked once a week instead, by a workflow of its
-   own (`external-links.yml`), where a page that is gone fails and a
-   site that turns robots away or answers slowly is a notice. One runs
-   the commands the documents mark, each set in a new, empty home
-   folder, and compares what they print with what the documents say.
-   `scripts/doc_commands.py` says how to mark a command. It installs the
-   newest releases from PyPI, as the documents tell readers to, so it
-   may fail and only reports. One runs
-   the suite on Ubuntu with Python 3.13 on the newest release of each
-   library `pyproject.toml` allows, what an install from PyPI takes
-   today; it may fail and only reports, and its summary gives the
-   releases it installed and the newest of each bounded library on
-   PyPI. A push to any other branch takes the fast tier: `tier`, the
-   suite on Ubuntu with Python 3.13 and the documents job, and the
-   desktop extension's jobs as well when the branch changed
-   `packaging/`, `pyproject.toml`, `uv.lock` or a script those jobs
-   run, counted from where the branch left its integration branch
+   jobs.
+   - Eleven run the suite. On Python 3.11, the oldest Exegete supports,
+     and on 3.13, the suite runs in one job each on Ubuntu and on macOS,
+     and in three on Windows. The suite is slowest on Windows, so there
+     it runs in three parts made of whole test files
+     (`tests/conftest.py`). On Python 3.14, the newest, it runs in one
+     job, on Ubuntu. To run one part on your own computer, set
+     `EXEGETE_TEST_SHARD` to "k/n", such as `2/3` for the second of
+     three. When it is empty, every test runs.
+   - Three build the desktop extension, one on each system, and install
+     and start it as Claude Desktop does. The Linux one also validates
+     it with the official MCPB tool, and checks that the lock has a
+     wheel for every computer. One more checks that the three builds are
+     the same bytes.
+   - One compares the text the import stores with the text QualCoder
+     4.0's own extraction gives. It also reads QualCoder 4.0's source
+     for two more facts. The first is that QualCoder's backup copies a
+     project's Exegete folder. The second is that QualCoder's import,
+     when it applies the names list that Exegete saves, gives the text
+     that Exegete stores.
+   - Two try the upgrade from the package's earlier name, on Ubuntu and
+     on Windows.
+   - One checks the documents: their links (`scripts/check_links.py`),
+     their texts (`scripts/check_texts.py`, under Style rules), the
+     facts they repeat (`tests/test_v0151_facts.py`, below) and the
+     snapshot (`tests/test_served_texts.py`, step 6). Its summary also
+     lists the documents' promises and dated readings
+     (`scripts/check_promises.py`, step 6). Their links to
+     other sites are checked once a week instead, by a workflow of its
+     own, `external-links.yml`. There, a page that is gone fails, and a
+     site that turns robots away or answers slowly is a notice.
+   - One runs the commands the documents mark, each set in a new, empty
+     home folder, and compares what they print with what the documents
+     say. `scripts/doc_commands.py` says how to mark a command. This
+     job installs Exegete from the commit, and the newest releases of
+     its libraries from PyPI, as the documents' commands do. So it may
+     fail, and only reports.
+   - One runs the suite on Ubuntu with Python 3.13, on the newest
+     release of each library that `pyproject.toml` allows, which is what
+     an install from PyPI takes today. It may fail, and only reports. Its
+     summary gives the releases it installed, and the newest release on
+     PyPI of each library that has an upper limit.
+   - The twenty-second is `tier` itself.
+
+   A push to any other branch takes the fast tier: `tier`, the suite on
+   Ubuntu with Python 3.13, and the documents job. The desktop
+   extension's jobs run as well when the branch changed `packaging/`,
+   `pyproject.toml`, `uv.lock` or a script those jobs run. The branch's
+   changes are counted from where it left its integration branch
    (`feat/<p>` for a branch `<p>/<key>`), or else from `main`. Every
    job that runs must be green, apart from the two that only report.
+
    Two more checks run once a week, on Mondays, each in a workflow of
    its own, and also on a push that changes that workflow.
-   `advisories.yml` asks
-   OSV's database of advisories about every release in `uv.lock` and in
-   the official validator's lock,
-   `packaging/desktop-extension/validator/package-lock.json` (also on a
-   push that changes its script or either lock): a new advisory fails,
-   and one already accepted, with its date and reason in
+   `advisories.yml` asks OSV's database of advisories about every
+   release in `uv.lock` and in the official validator's lock,
+   `packaging/desktop-extension/validator/package-lock.json`. It also
+   runs on a push that changes its script or either lock. A new advisory
+   fails. One already accepted, with its date and reason in
    `scripts/check_advisories.py`, is a notice. `qualcoder-watch.yml`
-   compares the text the import stores with what QualCoder's newest
-   code stores, and is red when that code stores a different text,
-   which the maintainer reads that day. A change to a workflow, to
-   `pyproject.toml` or to `uv.lock` also runs once on the full tier on
-   its own branch before it is merged: on GitHub, Actions, then CI,
-   then Run workflow, with the branch chosen. The workflow actions are pinned by commit SHA with a
-   version comment beside each pin; if you add or bump an action, keep that
-   shape (Dependabot maintains the pins). A bump also means recording
-   the new SHA against the tag it really is, in `VERIFIED_TAGS` in
-   `tests/test_v012_workflow_pins.py` (that module's docstring carries
-   the two API calls that resolve it), and naming the action with its
-   new version in the change log's current entry, where step 6 says a
-   change is described: the newest entry that names an action must name
-   the version it is pinned at.
-   The tests fail on an unrecorded SHA on purpose: Dependabot has left a
-   version comment stale beside a bumped SHA before, and nothing else
-   checks the comment against upstream. A new job declares the least
-   `permissions:` it needs beside itself, and a checkout passes
+   runs the test files of the comparison with QualCoder 4.0, above,
+   against QualCoder's newest code. It is red when one of them fails
+   there, as it does when that code stores a different text, and the
+   maintainer reads a red run that day.
+
+   A change to a workflow, to `pyproject.toml` or to `uv.lock` also runs
+   once on the full tier, on its own branch, before it is merged. To
+   start that run on GitHub, open Actions, then CI, then Run workflow,
+   and choose the branch.
+
+   Each action a workflow uses is pinned to a commit SHA, with a comment
+   beside the pin that gives its version. If you add or bump an action,
+   keep that form. Dependabot keeps the pins up to date. A bump also
+   needs two more steps. First, record the new SHA against the tag it
+   really is, in `VERIFIED_TAGS` in `tests/test_v012_workflow_pins.py`.
+   That module's docstring gives the two API calls that resolve it.
+   Second, name the action with its new version in the change log's
+   current entry, the file that step 6 describes. The newest entry that
+   names an action must name the version it is pinned at. The tests
+   fail on an unrecorded SHA on purpose: Dependabot has left a version
+   comment stale beside a bumped SHA before, and nothing else checks the
+   comment against upstream. A new job declares, in its own definition,
+   the least `permissions:` it needs. A checkout passes
    `persist-credentials: false` unless the job really uses git
-   credentials; both are pinned, and a workflow added as `.yaml`, or a
-   composite action under `.github/actions`, is scanned by the same
-   ledger.
+   credentials. The same tests check both. They also read a workflow
+   added as `.yaml`, and a composite action under `.github/actions`.
 6. **Document the change.** Describe it for the CHANGELOG in a file of
-   its own, `changelog.d/<key>.md`, `<key>` being your branch's name
-   without any prefix before a slash (make the folder when it is
-   absent), and never edit `CHANGELOG.md`: when a release is prepared,
+   its own, `changelog.d/<key>.md`. `<key>` is your branch's name
+   without any prefix before a slash. Make the folder if it is absent.
+   Never edit `CHANGELOG.md`. When a release is prepared,
    `scripts/assemble_changelog.py` writes the release's entry from
    these files and deletes them, so two changes never edit the same
    lines. The file holds one or more sections, each under one of these
-   headings, in this order: `### Added`, `### Changed`,
-   `### Deprecated`, `### Removed`, `### Fixed` and `### Security`, as
-   Keep a Changelog names them, then `### Documents` and
-   `### For contributors` (CI, scripts and tests). Under each, write as
-   the CHANGELOG does, and give every link its whole address: a
-   relative link would lead nowhere once the text moves. The
-   measurement of what a host is sent is kept in one file that every
-   change shares, `changelog.d/measured.md`, the only place for
-   `### Measured`, which holds nothing else: the first change that
-   moves a size writes it, each later one amends it, and of two written
-   at once the second to merge measures again. A change may amend or
-   remove an earlier file of the same release that it supersedes,
-   saying so in its pull request; a change made without a branch of its
-   own, such as a dependency update, adds a file named for its subject
-   in the same commit. A test pins facts from the code, never these
-   files' words, which the release deletes. Update the docstring of
-   every tool whose arguments or behaviour changed: the docstrings are
-   the documentation the AI model reads. A paragraph that several tools
-   share, such as the refusal while the project's lock file is active,
-   is written once, as a constant in `src/exegete/server.py` that
-   `_with_paragraphs` puts back into each of their docstrings, and is
-   changed there. Everything Exegete sends the assistant before a
-   project is open (the opening text, every tool's description and
-   schemas, the prompts, the resources and the brief) is kept in
-   `docs/snapshot/`, with the sizes the documents round in
-   `sizes.json`, and a test fails when the code and the snapshot
-   differ: when you change any of these texts, a tool's arguments or
-   the libraries in `uv.lock`, write the snapshot again with
+   headings, in this order. First come the six that Keep a Changelog
+   names: `### Added`, `### Changed`, `### Deprecated`, `### Removed`,
+   `### Fixed` and `### Security`. Then come `### Documents`, and
+   `### For contributors` for CI, scripts and tests. Under each, write
+   as the CHANGELOG does, and give every link its whole address: a
+   relative link would lead nowhere once the text moves.
+
+   The measurement of what Exegete sends to the app that starts it is
+   kept in one file that every change shares, `changelog.d/measured.md`.
+   It is the only place for `### Measured`, and holds nothing else. The
+   first change that moves a size writes it, and each later one amends
+   it. When two such changes are written at the same time, the second
+   to merge measures again. A change may amend or remove an earlier
+   file of the same release that it supersedes, saying so in its pull
+   request. A change made without a branch of its own, such as a
+   dependency update, adds a file named for its subject in the same
+   commit. A test may check facts from the code, but never the words of
+   these files, which the release deletes.
+
+   Update the docstring of every tool whose arguments or behaviour
+   changed: the docstrings are the descriptions the assistant reads.
+   Some paragraphs are shared by several tools, such as the refusal
+   while the project's lock file is active. Each is written once, as a
+   constant in `src/exegete/server.py`, and `_with_paragraphs` puts it
+   back into each tool's docstring, so a change to it is made there.
+   Three tool texts also give the lock paragraph's words, typed by hand:
+   `apply_codings`' safety guarantees, `restore_backup`'s list of
+   safeguards, and the key features in `explain_ai_coding_tools`'
+   overview. Six texts give a shorter form of the same rule: the brief,
+   which `read_brief` returns; the descriptions of `select_project` and
+   `set_project_coder_name`; `get_current_project`'s account of
+   `qualcoder_open`; `start_coding_session`'s paragraph on a project in
+   use; and `import_documents`' list of what it refuses. Rule 9 of the
+   opening text says what the assistant does when a tool reports another
+   program. A rewording is made in each of them too.
+
+   For each tool set, `full` and `core`, `docs/snapshot/` keeps the
+   texts Exegete gives the assistant that are the same for every
+   project:
+   - the opening text
+   - each tool's description, the schemas of its arguments and of its
+     answer, its annotations and its marks under `_meta`
+   - the prompts, with their texts
+   - the resources and resource templates, with the texts of the two
+     guidance resources
+   - the brief, which `read_brief` returns
+
+   No other tool's answer is in it.
+   `docs/snapshot/sizes.json` gives the sizes that the documents round,
+   and a test fails when the code and the snapshot differ. When you
+   change any of these texts, a tool's arguments or the libraries in
+   `uv.lock`, write the snapshot again. Run
    `python scripts/served_texts.py write` on Python 3.13, with the
-   releases of mcp and pydantic that `uv.lock` gives (the install of
-   step 3 may take newer ones;
-   `uv sync --frozen --extra dev --extra pdf-epub` installs the
-   lock's), and read its diff whole. Update `TOOLS.md`
-   (the tool reference), `README.md`, `INSTALL.md`, the Terminal guide
-   (`docs/installing-from-the-terminal.md`) and `PRIVACY.md` where they
-   describe the behaviour you changed; `PRIVACY.md` is the contract for
-   what a tool result may disclose. Links are checked on every push
-   (`scripts/check_links.py`): when you rename a heading, it names every
-   link to it, the update page's included. The facts the documents
-   repeat are checked too (`tests/test_v0151_facts.py`): the folders
-   (in full example paths too, such as
-   `/Users/YOUR_NAME/Exegete projects`), the reading folder, the time
-   per import call and the counts against the code's constants; the
-   sizes of the tool sets, within five per cent, against
-   `docs/snapshot/sizes.json`; the
-   libraries' releases against `uv.lock`, and the requirements against
-   `pyproject.toml`; the lists of the tools that preview first and of
-   those that report signs of a QualCoder window, what PRIVACY.md,
-   INSTALL.md and the Terminal guide say Exegete keeps on the computer,
-   and the map of the
-   clone below against the files git tracks; every install command of
-   Exegete names the optional part for PDF and EPUB, in its brackets or
-   its paragraph; an example in one of QualCoder's own folders has "if
-   you use QualCoder" in its paragraph; the extension's settings are
-   named by their titles, never by their place in the list; and every
-   name a document calls a tool or an argument is one Exegete has. When
-   you change one of them in the code, the check names every sentence
-   that still gives the old one, in the forms it reads. A release to
-   come, named in a document or in a text the code holds (a tool's
-   description, a note, a refusal or a log line, as
-   `scripts/code_texts.py` reads them), is held to the plan in
-   `scripts/release_plan.py`: its sentence names something planned for
-   that release, and README's "What comes next" keeps no release
-   already made. When a decision moves something to another release,
-   change its row in the plan, in the same commit as any text that
-   names its new release; at release preparation the rows of that
+   releases of mcp and pydantic that `uv.lock` gives, and read its diff
+   whole. The install of step 3 may take newer releases.
+   `uv sync --frozen --extra dev --extra pdf-epub` installs the lock's
+   releases, and on a Mac with Apple silicon it needs macOS 14 or
+   later.
+
+   Update `TOOLS.md` (the tool reference), `README.md`, `INSTALL.md`,
+   the Terminal guide (`docs/installing-from-the-terminal.md`) and
+   `PRIVACY.md` where they describe the behaviour you changed.
+   `PRIVACY.md` is the contract for what a tool result may disclose.
+   Links are checked on every push, by `scripts/check_links.py`. When
+   you rename a heading, the script lists every link to it, the update
+   page's included.
+
+   The facts the documents repeat are checked too, by
+   `tests/test_v0151_facts.py`. It checks:
+   - the folders, in full example paths too (such as
+     `/Users/YOUR_NAME/Exegete projects`), the reading folder, the time
+     per import call and the counts, against the code's constants
+   - the sizes of the tool sets, against `docs/snapshot/sizes.json`,
+     within five per cent
+   - the libraries' releases, against `uv.lock`, and the requirements,
+     against `pyproject.toml`
+   - the list of the tools that preview a change first, and the list of
+     those that report whether QualCoder 4.0 may have the project open
+   - what PRIVACY.md, INSTALL.md and the Terminal guide say Exegete
+     keeps on the computer
+   - the map below: its lists of the package's modules and of the
+     scripts must give exactly the Python files that git tracks in
+     `src/exegete/` and `scripts/`
+   - that every install command of Exegete names the optional part for
+     PDF and EPUB, in its brackets or in its paragraph
+   - that an example in one of QualCoder's own folders has "if you use
+     QualCoder" in its paragraph
+   - that the extension's settings are called by their titles, never by
+     their place in the list
+   - that every name a document gives a tool or an argument is one that
+     Exegete has
+
+   When you change one of these facts in the code, the check lists every
+   sentence that still gives the old one, in the forms it reads.
+
+   A release to come may be named in a document, or in a text the code
+   holds. Such a text is a tool's description, a note, a refusal or a
+   log line, as `scripts/code_texts.py` reads them. The check compares
+   each such mention with the plan in `scripts/release_plan.py`. The
+   sentence that names the release must name something the plan gives to
+   that release. When the sentence names nothing in the plan, its
+   paragraph must, and each list item counts as a paragraph of its own.
+   Something from the plan that is named beside a release to come must
+   be named beside the release the plan gives it. README's "What comes
+   next" must give no release already made. When a decision moves
+   something to another release, change its row in the plan in the same
+   commit as any text that gives its new release. At release preparation, the rows of that
    release leave the plan. When you remove a tool or an argument, add
-   it, with the release, to the test's `RETIRED` table; when you add a
-   module or a script, add it to the map.
+   it, with the release, to the test's `RETIRED` table.
+
+   Every push also lists the documents' promises and their dated
+   readings of other programs, in the documents job's summary
+   (`scripts/check_promises.py`). A promise says that something is
+   still to come, in words such as `not yet` or `is planned`. The list
+   gives each promise's line, the day that line was written, as
+   `git blame` gives it, and the row of the plan that its sentence or
+   paragraph names. A dated reading gives the day a claim about another
+   program was checked, in the form [docs/WRITING.md](docs/WRITING.md)
+   gives, and the list gives its age in days. At release preparation,
+   `python scripts/check_promises.py --release`, run in a full clone,
+   fails on a promise whose line is older than the script's
+   `MAX_AGE_DAYS` and that names no row of the plan, and on a reading
+   older than `MAX_AGE_DAYS`. Write what is missing as what Exegete
+   does not do, or give it a row in the plan. A sentence that uses a
+   promise's words for a state, such as
+   `a change previewed but not yet made`, goes into the script's
+   `NOT_PROMISES`, with its reason.
 
 ## Review before merge
 
 Nothing is merged on a green CI alone. Every change also goes through a
 QA review and a security review. The QA review checks that each new
-behaviour has a test that fails without it, that the edge cases of the
-matched QualCoder behaviour are covered, and that the tests are
-Windows-safe and encoding-safe. The security review looks at write
-paths, file and symlink handling, what a tool result discloses into the
-AI conversation, and what a hostile project folder, a hostile model
-input or a hostile network response (the version file of the check for
-new versions) could make Exegete do or put into the conversation.
-Findings from both are fixed and re-verified before the merge, and behaviour changes that come out of them
-are recorded in the CHANGELOG. The maintainer runs both reviews; expect
-them to take longer than the CI, and expect requests for more tests
-rather than fewer.
+behaviour has a test that fails without it. It checks that the edge
+cases of the QualCoder behaviour being matched are covered, and that
+the tests are safe on Windows and with any text encoding. The security
+review looks at write paths, file and symlink handling, and what a tool
+result discloses into the conversation. It also asks what a hostile
+project folder, hostile input from the assistant or a hostile network
+response could make Exegete do or put into the conversation. The network
+response here is the version file of the check for new versions.
+Findings from both are fixed and re-verified before the merge, and
+behaviour changes that come out of them are recorded in the CHANGELOG.
+The maintainer runs both reviews. Expect them to take longer than the
+CI, and expect requests for more tests rather than fewer.
 
 ## Style rules
 
-- **UTF-8 pinned on text IO.** Every `open()` of a text file passes
+- **UTF-8 for every text file.** Every `open()` of a text file passes
   `encoding="utf-8"` (or `utf-8-sig` where QualCoder's own export
   dialect writes a BOM). Never rely on the platform default encoding.
 - **Windows-safe tests.** Build paths with `pathlib`, build sqlite URIs
   with `Path.as_uri()`, and never assert on identical timestamps or wait
   on the wall clock: fabricate file ages with `os.utime`. Skip cleanly
-  where symlinks or POSIX permission bits are unavailable. Spawn the
-  server as a subprocess only when the transport or startup gating is
+  where symlinks or POSIX permission bits are unavailable. Start
+  Exegete as a subprocess only when the transport or startup gating is
   the thing under test, and give it an explicit environment. The suite
   has to pass on the Windows runner, not only on your machine.
 - **The writing guide.** [docs/WRITING.md](docs/WRITING.md) says who
@@ -255,95 +337,119 @@ rather than fewer.
   comma, parentheses or a new sentence.
 - **The texts check.** `python scripts/check_texts.py` reads the
   documents and the texts in the code, and fails on three kinds of
-  sentence. The first names QualCoder other than about QualCoder itself
-  or its format, on a sign that QualCoder is in use, or as a choice the
-  researcher may make. The second asks everyone to close QualCoder. The
-  third shows one of the plainest habits of style to leave out, such as
-  an exclamation mark, a word of praise or a word of our own work like
-  "pinned"; each habit is an entry of `VOICE`, at the script's head.
-  Rewrite the sentence it names. If the sentence is right as it stands,
-  a reader accepts it with a reason:
+  sentence. The first mentions QualCoder outside three cases: a
+  sentence about QualCoder itself or its format, a sign that QualCoder
+  is in use, and a choice the researcher may make. The second asks
+  everyone to close QualCoder. The third shows one of the plainest
+  habits of style to leave out, such as an exclamation mark, a word of
+  praise or a word of our own work like "pinned". Each habit is an
+  entry of `VOICE`, at the head of the script. Rewrite the sentence the
+  check reports. A few phrases are never accepted, whatever the reason:
+  the entries of `FRAMES`, beside `VOICE`. A reader can accept any
+  other sentence that is right as it stands, with a reason. The command
   `python scripts/check_texts.py --accept "<reason>" --file <file>`
   adds a line for each finding in that file to
   `scripts/check_texts_ledger.tsv`, and the review reads every line
   added. A line whose reason begins with "seeded" holds a sentence that
-  no reader has read yet: `--list seeded --file <file>` prints them, a
-  reader replaces the reason by hand with their own, and `--prune`
-  removes the lines of sentences since rewritten. `--readability`
-  prints each document's measures, which never fail. At release
-  preparation, `--release` also fails while a seeded line is left in
-  README.md, QUICKSTART.md, the update page or the extension's
-  manifest.
-- **Capability probes, never version strings.** Behaviour keys on the
-  existence of tables, columns and views (`SchemaCapabilities` in
-  `database.py`), the way QualCoder's own migration ladder does. The
-  version string is informational, with one exception: the forward
-  guard that refuses writes on a schema newer than the verified ceiling.
-- **Parity claims cite the pinned QualCoder commit.** Any statement that
+  no reader has read yet. `--list seeded --file <file>` prints those
+  sentences. A reader replaces the reason by hand with their own, and
+  `--prune` removes the lines of sentences rewritten since.
+  `--readability` prints each document's measures, which never make the
+  check fail. At release preparation, `--release` also fails while a
+  seeded line is left in README.md, QUICKSTART.md, the update page or
+  the extension's manifest.
+- **Capability probes, never version strings.** Exegete decides what it
+  can do from the tables, columns and views a project has
+  (`SchemaCapabilities` in `database.py`), the way QualCoder's own
+  migration ladder does. The version string only informs, with one
+  exception: the forward guard, which refuses writes on a schema newer
+  than the newest one Exegete is verified against.
+- **Claims about QualCoder cite QualCoder's code.** Any statement that
   "QualCoder does X" in a comment, docstring, CHANGELOG entry or
-  document names QualCoder's file and line at the pinned commit
-  (currently QualCoder master `9bddf17`, version string "QualCoder 4.0
-  Beta", whose project format the release keeps). What researchers are
-  told Exegete is verified against is the release itself, QualCoder 4.0
-  (`VERIFIED_QUALCODER` in `database.py`). When the pin moves, the
-  claims are re-verified and re-cited, not carried forward.
+  document gives QualCoder's file and line, and the commit or release
+  they were read at. The code's citations stay at one commit, QualCoder
+  master `9bddf17`, until they are read again. That commit's version
+  string is "QualCoder 4.0 Beta", and the 4.0 release keeps its project
+  format. Newer citations may cite the release, tag `4.0` at `b95e021`.
+  The documents tell researchers that Exegete is verified against the
+  release itself, QualCoder 4.0 (`VERIFIED_QUALCODER` in `database.py`).
+  When the commit cited changes, the claims are verified and cited
+  again, not carried forward.
 - **Heuristics are phrased as heuristics.** A result that reports a
   guess (a project that "appears to be open" in QualCoder) says so.
   Never word a heuristic as a certainty.
 - **Disclosure is existence-only.** A tool result may say that
   something exists (a private note on a row, a hidden coder's row, a
   count), never what it contains or whose it is. If a change alters what
-  leaves the project into the conversation, or anything Exegete sends
-  beyond this computer (an address it contacts, what a request carries,
-  when it is made), `PRIVACY.md` changes in the same pull request.
-- **No tool argument named `session_id`.** Some MCP middleware strips
-  that name before the call reaches the server; the session tools use
-  `coding_session_id`. Check new argument names against other
-  routing-flavoured names (`request_id`, `conversation_id`, `user_id`,
-  `context`, `metadata`) as well.
+  passes from the project into the conversation, `PRIVACY.md` changes
+  in the same pull request. It changes too when a change alters anything
+  Exegete sends beyond this computer: an address it contacts, what a
+  request carries, or when a request is made.
+- **No tool argument named `session_id`.** In August 2026, Anthropic's
+  bridge to remote devices removed an argument of that name before the
+  call reached Exegete (the CHANGELOG's entry for 0.10.1). So the
+  session tools use `coding_session_id`. Check a new argument's name
+  against the other names a host may use for its own routing as well:
+  `request_id`, `conversation_id`, `user_id`, `context` and `metadata`.
 - **Runtime dependencies stay minimal.** The package has five runtime
-  dependencies: the MCP library, `mcp>=1.17.0,<2` (the floor is the
-  first release with `FastMCP.remove_tool`, which the core toolset
-  needs, and the limit keeps out mcp 2.x, which removed
-  `mcp.server.fastmcp`); pydantic and anyio, which the MCP library
-  brings and Exegete imports itself; and the two small libraries the
-  document import reads with, defusedxml and striprtf. PDF and EPUB
-  come through the optional part `pdf-epub`. A new dependency needs a
-  reason in the pull request; anything optional must stay optional and
-  import-guarded (the way `psutil` is used). A library Exegete imports
-  is named among its requirements (`tests/test_v0151_libraries.py`
-  checks). Such a library, or one the MCP library loads at start
-  without a limit of its own, takes an upper limit at its next major
-  release when it is large or fast-moving, so an install from PyPI
-  meets a new major release only with a release of Exegete tried with
-  it. Not bounded today: cryptography (never loaded by Exegete, held per
-  computer by `[tool.uv]`), onnxruntime and numpy (which PyMuPDF 2
-  brings on Windows x64 and Linux; large, but loaded only inside the
-  reading process, never at Exegete's start, where Exegete's own code
-  imports onnxruntime only to switch its usage reports off; a new major
-  release of either could stop PDFs being read
-  there, which the `newest-libraries` job would show), pywin32
-  (Windows only), uvicorn, python-multipart and sse-starlette (a limit
-  at their next minor release would hold back routine fixes),
-  defusedxml, striprtf (already exact), EbookLib (small, about one
-  release a year) and Starlette (neither large nor imported by
-  Exegete). If you change a dependency or a limit in `pyproject.toml`,
-  regenerate `uv.lock` with `uv lock` in the same commit, so that
-  `uv lock --check` passes and the lock file agrees with the package.
+  dependencies. The first is the MCP library, `mcp>=1.17.0,<2`. Its
+  lower limit is the first release with `FastMCP.remove_tool`, which
+  the core tool set needs. Its upper limit keeps out mcp 2.x, which
+  removed `mcp.server.fastmcp`. Then come pydantic and anyio, which the
+  MCP library brings and Exegete imports itself, and the two small
+  libraries the document import reads with, defusedxml and striprtf.
+  PDF and EPUB come through the optional part `pdf-epub`. A new
+  dependency needs a reason in the pull request. Anything optional must
+  stay optional, behind a guarded import, the way `psutil` is used. A
+  library Exegete imports is named among its requirements
+  (`tests/test_v0151_libraries.py` checks). Such a library takes an
+  upper limit at its next major release when it is large or changes
+  fast. So does a library that the MCP library loads at start without a
+  limit of its own. Then an install from PyPI takes a library's new
+  major release only once a release of Exegete has been tried with it.
+  These libraries have no upper limit today:
+  - cryptography, which Exegete never loads. `[tool.uv]` keeps it, on
+    each computer, to a release that has a wheel there;
+  - onnxruntime and numpy, which PyMuPDF 2 brings on Windows x64, Linux
+    and Macs with Apple silicon. They are large, but they are loaded
+    only inside the reading process, never at Exegete's start. In the
+    reading process, Exegete's own code imports onnxruntime only to
+    switch its usage reports off. On Windows, onnxruntime makes a few
+    reports as it loads, before the switch can be reached, and
+    PRIVACY.md, "How your data flows", says what they hold. A new major
+    release of either could stop PDFs being read there, which the
+    `newest-libraries` job would show;
+  - pywin32, on Windows only;
+  - uvicorn, python-multipart and sse-starlette, since a limit at their
+    next minor release would hold back routine fixes;
+  - defusedxml;
+  - striprtf, already required at one exact release;
+  - EbookLib, which is small and has had six releases since 2018, the
+    latest on 1 November 2026 (PyPI, read on 4 November 2026);
+  - and Starlette, neither large nor imported by Exegete.
+
+  If you change a dependency or a limit in `pyproject.toml`, run
+  `uv lock` in the same commit to write `uv.lock` again. Then
+  `uv lock --check` passes, and the lock file agrees with the package.
 - **Synthetic test data only.** Never commit a `.qda` project, a real
-  transcript or any research text. Test fixtures are built in code.
+  transcript or any research text. Test projects are built in code. The
+  files under `tests/fixtures/` hold no research data. They are made-up
+  documents for the import's tests, most of them saved by other
+  programs, and records kept as JSON, such as the facts of a new
+  project made in QualCoder 4.0. The REFI-QDA standard's own schema is
+  there too.
 - **British English in all prose.** Documentation, docstrings, tool
   and prompt descriptions, error strings, result notes, CHANGELOG
   entries and commit messages use British spelling (behaviour, colour,
-  analyse, organise, initialise, licence as a noun). Identifiers are
-  never changed: tool names (`recolor_code`), argument names
-  (`sanitize_formulas`), JSON result keys, environment
-  variable names, file names, SQL, and proper names such as "GNU
-  Lesser General Public License" keep their exact spelling, including
-  when a sentence mentions them. Code comments follow the same rule when a line is
-  touched.
+  analyse, organise, initialise, licence as a noun). Identifiers keep
+  their exact spelling, even when a sentence mentions them. They
+  include tool names (`recolor_code`), argument names
+  (`sanitize_formulas`), JSON result keys, environment variable names,
+  file names and SQL. Proper names, such as "GNU Lesser General Public
+  License", keep theirs too. Code comments follow the same rule when a
+  line is touched.
 
-## How the server is built
+## How Exegete is built
 
 ```
 ┌──────────────────────────────┐
@@ -369,6 +475,18 @@ rather than fewer.
 ```
 
 ### Project structure
+
+The map below shows the files and folders at the top of the
+repository, the package's modules and the scripts. Two tests check it
+against the files that git tracks. The facts check, above, checks its
+lists of modules and scripts against the Python files in
+`src/exegete/` and `scripts/`. `tests/test_v0153_project_map.py`
+checks the rest. Every path in the map must be one that git tracks,
+but `changelog.d/`, which a release's preparation leaves empty until
+the next change adds its file (step 6). Each file or folder at the top
+must be in the map, or in the test's list of those it leaves out, with
+its reason. When a change adds, moves
+or removes one of them, change the map in the same commit.
 
 ```
 exegete/                     # the clone (its folder's name does not matter)
@@ -398,7 +516,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── import_words.py      # What the import says, in fixed plain words
 │   │   ├── import_page.py       # The page for checking letters that look garbled
 │   │   ├── garbled_text.py      # Letters that came out wrong, read back through common sets
-│   │   ├── reading.py           # open_file_for_reading: native first (0.14.3)
+│   │   ├── reading.py           # open_file_for_reading: the reading page by default, or a read-only copy of the original, shown in its folder or opened in its own app (0.14.3)
 │   │   ├── reading_copy.py      # The reading page: a file's whole text and its codings
 │   │   ├── reading_folder.py    # The private reading folder, and its tidying
 │   │   ├── opener.py            # Opening a file in its own app, or showing it in its folder
@@ -409,12 +527,16 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
+│   │   ├── occurrences.py       # pseudonymise_source: the short id and line number of each occurrence of a name, and the page for choosing them (0.15.3)
 │   │   ├── refi_export.py       # REFI-QDA XML export
 │   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
 │   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once
 │   │   ├── standard_input.py    # Standard input, read a line at a time in a daemon thread, so that one Ctrl+C stops Exegete
-│   │   └── release.py           # This release's version, date and summary, for the note after an update
+│   │   ├── standard_output.py   # Standard output, as the MCP library writes it: what Exegete tells once counts as told once its answer has gone out (0.15.3)
+│   │   └── release.py           # This release's version, date and paragraph on what is new, for the note after an update and the update page
 │   └── qualcoder_mcp/           # the earlier name's two-file stand-in
+├── tests/                   # The suite, and conftest.py, which gives each test a home folder of its own
+│   └── fixtures/               # Made-up documents and records for the tests, and the REFI-QDA standard's schema
 ├── scripts/
 │   ├── ci_tier.py              # Which tier of CI a run takes, and whether the extension's jobs run
 │   ├── build_desktop_extension.py  # Builds the Claude Desktop extension (.mcpb)
@@ -424,11 +546,12 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── check_links.py          # Checks the links in the documents (other sites once a week)
 │   ├── check_texts.py          # Checks the texts for mentions of QualCoder and for the voice
 │   ├── check_texts_ledger.tsv  # The sentences a reader has accepted as they stand
+│   ├── check_promises.py       # Lists the documents' promises and dated readings, and refuses old ones at release preparation
 │   ├── doc_commands.py         # Runs the commands the documents mark, and checks what they print
 │   ├── release_plan.py         # What comes in which release: the table the texts are held to
 │   ├── code_texts.py           # The texts the package's code holds, read without running it
 │   ├── check_advisories.py     # Asks OSV's database of advisories about every release in uv.lock and the validator's lock
-│   ├── served_texts.py         # What Exegete sends the assistant before a project is open, and the brief, written to docs/snapshot/ or compared with it
+│   ├── served_texts.py         # The texts Exegete gives the assistant that are the same for every project, written to docs/snapshot/ or compared with it
 │   ├── extension_libraries.py  # What the desktop extension installs on each computer, as one table
 │   ├── compare_release_surface.py  # Compares what two releases offer an assistant and a researcher
 │   ├── release_version.py      # What a published release builds, read from its tag
@@ -437,47 +560,78 @@ exegete/                     # the clone (its folder's name does not matter)
 │   ├── make_timing_documents.py  # Made-up Word files for timing how long an import's preview reads
 │   ├── structure_table.py      # The structural table kept per release in docs/structure/
 │   └── create_test_project.py  # Test project generator
+├── changelog.d/             # The next release's CHANGELOG entry, in files of their own (step 6)
 ├── docs/
 │   ├── brand/                  # Exegete's mark
-│   ├── history/                # Early plans and analyses, kept as a record
 │   ├── installing-from-the-terminal.md  # Installing from the Terminal: every route but the desktop extension
-│   ├── snapshot/               # What Exegete sends the assistant before a project is open, and the brief, with their sizes
+│   ├── snapshot/               # The texts Exegete gives the assistant that are the same for every project, with their sizes
 │   ├── structure/              # The structural table of each release (scripts/structure_table.py)
-│   └── update-check/           # The design of the check for new versions, as a record
+│   ├── update-check/           # The design of the check for new versions, as a record
+│   └── WRITING.md              # The writing guide: who reads Exegete's texts, and how to write them
 ├── pages/                   # The update site: latest.json and the update page
 ├── packaging/
 │   ├── desktop-extension/      # The extension's manifest template and its validator
 │   └── pypi-old-name/          # The old name's package, qualcoder-mcp, released until v1.0
 ├── legal/
 │   └── GPL-3.0.txt         # The GNU GPL, version 3, which the LGPL incorporates
+├── .github/                 # The workflows GitHub runs, the issue forms and Dependabot's settings
 ├── pyproject.toml           # Package configuration
+├── uv.lock                  # The libraries' lock: each library's release, with its hashes
+├── MANIFEST.in             # What the source distribution leaves out: the tests and the earlier name's files
 ├── README.md               # What it is, where data goes, how to start
+├── QUICKSTART.md           # Exegete set up by hand in Claude Desktop
 ├── TOOLS.md                # Every tool, what it reads and writes
+├── AI_CODING_GUIDE.md      # Coding with the assistant, step by step, with example conversations
+├── PROJECT_SELECTION_GUIDE.md  # Choosing the project Exegete works on, for installs from the Terminal
 ├── CHANGELOG.md            # Version history
 ├── INSTALL.md              # Installing the desktop extension for Claude Desktop
-├── PRIVACY.md              # Data-flow disclosure
+├── PRIVACY.md              # Where your data goes, and who can read it there
 ├── CONTRIBUTING.md         # How to report, propose and review changes
+├── CLAUDE.md               # For AI coding agents: what they most often get wrong here
 ├── CITATION.cff            # Citation metadata
+├── .zenodo.json            # How Zenodo describes each release it archives
 ├── SUPPORT.md              # Support policy (GitHub Issues only)
+├── SECURITY.md             # How to report a security fault privately
 ├── COPYING.LESSER          # The licence: GNU LGPL, version 3
 └── NOTICE                  # Copyright, licence, and the code derived from QualCoder
 ```
 
-### Using MCP Inspector for development
+### Trying the tools in the MCP Inspector
 
-For development and debugging, you can use the MCP Inspector:
+The MCP Inspector is a page in your browser from which you call a
+server's tools, prompts and resources by hand. It starts Exegete as an
+app would. It needs Node.js 22.19.0 or newer and runs through `npx`, as
+its page, <https://modelcontextprotocol.io/docs/tools/inspector>, says
+(read on 4 November 2026). In the environment of step 3:
 
 ```bash
-# Install uv if you haven't already
-pip install uv
-
-# Run the inspector
-export EXEGETE_PROJECT_PATH="/path/to/your/project.qda"
-uv run --with "mcp[cli]" mcp dev src/exegete/server.py
+npx @modelcontextprotocol/inspector python -m exegete.server
 ```
 
-This will open a web interface where you can test resources and tools.
-The server is built on the
+The MCP library's own command, `mcp dev src/exegete/server.py`, cannot
+start Exegete. It loads `server.py` as a file on its own, and the
+module's imports are relative to its package. Started from the
+Inspector, Exegete works in your own home folder, as it does however it
+is started. It keeps its working files in `~/.exegete`, and looks for
+projects in the usual places. If an earlier copy left a folder at
+`~/.qualcoder_mcp`, the first start moves it to `~/.exegete`. The
+pages and copies that Exegete opens for reading go into its reading
+folder, and a reading page holds a document's whole text and its
+codings. [PRIVACY.md](PRIVACY.md#reading-a-whole-file-what-leaves-the-computer)
+says where that folder is. To try the tools away from your own
+projects and these folders, start the Inspector with `HOME` set to an
+empty folder, as the suite does for each test. On Windows, set
+`USERPROFILE` to the same folder and `LOCALAPPDATA` to a folder inside
+it. On Linux, unset `XDG_CACHE_HOME` or set it inside that folder.
+Exegete also reads its settings from the environment it starts in. A
+project or a folder for projects set there would point the trial at
+your real projects, so leave out every setting whose name begins with
+`EXEGETE_` or `QUALCODER_`, as the suite does. `tests/conftest.py`
+shows how. Then make a made-up project there with
+`scripts/create_test_project.py`, which takes the path of a new folder
+ending in `.qda`, and select it by that path. In the page,
+`list_available_projects` and `select_project` choose a project.
+Exegete is built on the
 [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
 
 ## Scope
@@ -492,106 +646,161 @@ first. The same rule applies to the maintainer's own projects.
 
 ## The earlier name
 
-The program was called qualcoder-mcp until 0.14.0. Its Python module
+The program was called qualcoder-mcp until 0.14.1, the release that
+renamed it. Its Python module
 is now `exegete` (every runtime name is in `src/exegete/names.py`), and
 a local clone's folder name does not matter. Two things keep the
 earlier name working for people who already use it:
 
 - `packaging/pypi-old-name/` is the old name's package on PyPI: the
   `qualcoder-mcp` command and a two-file stand-in module, depending on
-  `exegete`. It is built and uploaded with every release until v1.0, by
-  the same workflow and in the same step (`publish.yml`), at the same
-  version; tests keep its version, its floor on `exegete`, its licence
-  files and its stand-in equal to the main ones. At v1.0 its last
-  release says plainly that it is the last, and none follows.
+  `exegete`. It is built and uploaded with every release until v1.0, at
+  the same version, by the same workflow and in the same step
+  (`publish.yml`). Tests keep its version, its floor on `exegete`, its
+  licence files and its stand-in equal to the main ones. At v1.0 its
+  last release says plainly that it is the last, and none follows.
 - `src/qualcoder_mcp/` is the same stand-in, kept in the source for
-  copies of it; it hands over to `exegete.server:main`, which is
+  copies of it. It hands over to `exegete.server:main`, which is
   therefore never removed or renamed. The `exegete` wheel never holds
   it (`pyproject.toml` says why).
 
-An early build of a coming release, to hold the name on PyPI before the
-release is ready, is a GitHub pre-release tagged with the release's
-version from `pyproject.toml` plus `.devN` (for example
-`v0.14.1-alpha.dev1`, which uploads `exegete` 0.14.1a0.dev1). It builds
-and uploads `exegete` alone, never the old name's package, so an
-upgrade through the old name never brings unfinished work; any tag
-other than `v<version>` or `v<version>.devN` stops the workflow before
-it builds anything (`scripts/release_version.py`).
+An early build of a coming release can hold the name on PyPI before the
+release is ready. It is a GitHub pre-release, tagged with the release's
+version from `pyproject.toml` plus `.devN`: for example,
+`v0.14.1-alpha.dev1` uploads `exegete` 0.14.1a0.dev1. It builds and
+uploads `exegete` alone, never the old name's package, so an upgrade
+through the old name never brings unfinished work. Any tag other than
+`v<version>` or `v<version>.devN` stops the workflow before it builds
+anything (`scripts/release_version.py`).
 
 ## The check for new versions
 
 Every installed copy with checking on fetches
 `https://nicotem.github.io/exegete/latest.json` (`src/exegete/updates.py`)
-and follows no redirect, so that address is permanent: never rename or
+and follows no redirect, so that address is permanent. Never rename or
 delete the `nicotem` account, the `exegete` repository or its Pages
-site, and never set a custom domain on this
-Pages site or on the account's own one (GitHub would then redirect, and
-every copy would stop hearing of new versions). The file keeps
+site, and never set a custom domain on this Pages site or on the
+account's own one. Each of these would remove the site or move it to
+another address, and every copy would stop hearing of new versions. A
+custom domain set for the account's own site is used for all its
+project sites as well (GitHub's page on custom domains, read on
+4 November 2026). The file keeps
 `"format": 1`; a change it cannot keep is published beside it under
-another name. Each release updates `src/exegete/release.py` (the
-version, its date and the summary the note after an update shows) with
-`pyproject.toml` and the CHANGELOG heading; tests hold the three
-together. The file, and the update page Exegete's notes point to
-(`https://nicotem.github.io/exegete/update/`), live in `pages/`, and
-each release updates both with `release.py` (`latest.json`'s version as
-PyPI spells it, its date, and the page's version, date, summary, links
-and commands); `tests/test_v0142_pages.py` holds them to `release.py`.
+another name.
+
+Each release updates `src/exegete/release.py` with `pyproject.toml` and
+the CHANGELOG heading: the version, its date, and the paragraph that
+the note after an update gives (`SUMMARY`). Tests hold the version and
+the date to the other two. The paragraph is written by hand at release
+preparation, from the CHANGELOG entry's opening and its "Upgrading
+from" part. It says what is new for a researcher and what changes for
+them, such as what to do and what behaves differently. It is one plain
+paragraph of at most 800 characters, with no link, no Markdown and no
+line break; the note adds the link to the release's notes on GitHub.
+A test holds the length and the line break, and refuses a link,
+Markdown's marks for a link, bold, code and a heading, and an HTML tag.
+It lets a single `*` or `_` through, since a name such as
+`update_check.json` holds one, so reading the paragraph is what keeps
+out Markdown's emphasis. No test can tell whether the paragraph describes this
+release or the last one, so this step is the only guard. Read the note
+whole before the release, as the assistant will receive it: its frame
+is `_after_update_text` in `src/exegete/updates.py`.
+
+The version file, and the update page Exegete's notes point to
+(`https://nicotem.github.io/exegete/update/`), live in `pages/`. Each
+release updates both with `release.py`: in `latest.json`, the version
+as PyPI spells it and its date; on the page, the version, its date, the
+links and the commands, and under "What's new" the same paragraph as
+the note, word for word. `tests/test_v0142_pages.py` holds them to
+`release.py`.
+
+What Exegete tells once (the check's disclosure and a new version,
+whether on another tool's answer or in `check_for_updates`' own, and
+the note after an update) is recorded as told only after the answer
+carrying it has been written to standard output and flushed
+(`src/exegete/standard_output.py`), and not when the app has cancelled
+the request. Every tool but `check_for_updates` runs on the event loop,
+so the library reads a cancel only once such a tool has answered, and
+that answer still goes out. Standard input's own thread
+(`src/exegete/standard_input.py`) reads the line after the call while
+such a tool runs, and gives it to `standard_output.read_cancel`, so a
+cancel sent next is known before the answer goes out. A cancel sent
+behind several other lines is read only once the tool has answered,
+and can come too late: the note then counts as given.
+This relies on the MCP library flushing standard output once each
+message has been written: a message written in two parts, or two
+messages to one flush, are read alike. A release of the library that
+stopped flushing would leave every note held: each would come again at
+every start, and with checking on, the disclosure would never be
+recorded, so the check would never run.
+`tests/test_v0153_update_note.py` holds this, and the
+`newest-libraries` job, which runs the suite on the newest releases,
+is where such a change would show first.
+
 Each release's notes on GitHub list what the desktop extension
 installs, under "What the extension installs": the table in the summary
 of the Linux desktop extension job in the release commit's CI run
 (`scripts/extension_libraries.py`, from the lock's dry run on each
-computer). The site is published by `.github/workflows/pages.yml`,
-deployed from GitHub Actions and never from a branch (the owner's decision of 5
-October 2026, `docs/update-check/design.md`, D3): a branch would let
-any token that can push rewrite `latest.json` without a release. Once
-the release is published, with its extension file, and both packages
-are on PyPI, start the workflow by hand from the release's tag. It
-checks the site against the release (`scripts/check_pages_site.py`)
-and that the release is out, and the deploy waits in the
-`github-pages` environment for the owner's approval: the last step of
-each release, and a hold switch for a bad file.
+computer).
+
+The site is published by `.github/workflows/pages.yml`,
+deployed from GitHub Actions and never from a branch (the maintainer's
+decision of 5 October 2026, recorded in `docs/update-check/design.md`):
+a branch would let any token that can push rewrite `latest.json`
+without a release. Once the release is published, with its extension
+file, and both packages are on PyPI, start the workflow by hand from
+the release's tag. It checks the site against the release
+(`scripts/check_pages_site.py`) and that the release is out. The deploy
+then waits in the `github-pages` environment for the maintainer's
+approval: the last step of each release, and a hold switch for a bad
+file.
 
 ## The record on Zenodo
 
-Zenodo archives each GitHub release, describes it from `.zenodo.json`
-alone and not from `CITATION.cff` (`tests/test_v0151_zenodo.py` keeps
-the two in step), and submits the record to the Exeter Data Studies
-community (`datastudies`), whose curators accept the request on
-Zenodo, unless the community's review policy lets its owners publish
-without review.
+Zenodo archives each GitHub release of a connected repository. When
+both `.zenodo.json` and `CITATION.cff` are present, it describes the
+release from `.zenodo.json` alone (Zenodo's help pages, read on
+4 November 2026). `tests/test_v0151_zenodo.py` keeps the two files in
+step. Zenodo submits the record to the community that `.zenodo.json`
+gives, the Exeter Data Studies community (`datastudies`). The
+community's curators accept the request on Zenodo, unless its review
+policy lets the account that submits the record publish without
+review.
 
 ## Licence
 
-From v0.13, Exegete (then called qualcoder-mcp) is licensed under the GNU Lesser General
-Public License, version 3 or (at your option) any later version
-(LGPL-3.0-or-later): see [COPYING.LESSER](COPYING.LESSER) and
-[legal/GPL-3.0.txt](legal/GPL-3.0.txt), the GNU General Public
-License text it incorporates. Releases up to 0.12.1 were published
-under the MIT License. By contributing you agree that your contribution
-is licensed under the same terms.
+From v0.13, Exegete (then called qualcoder-mcp) is licensed under the
+GNU Lesser General Public License, version 3 or (at your option) any
+later version (LGPL-3.0-or-later). Its text is in
+[COPYING.LESSER](COPYING.LESSER), and
+[legal/GPL-3.0.txt](legal/GPL-3.0.txt) holds the GNU General Public
+License, whose text it incorporates. Releases up to 0.12.1 were
+published under the MIT License. By contributing you agree that your
+contribution is licensed under the same terms.
 
-Every `.py` file under `src/`, `tests/` and `scripts/` opens with the line
-`# SPDX-License-Identifier: LGPL-3.0-or-later` (after a shebang or an
-encoding line, where the file has one), and `tests/test_licence.py`
-fails without it, so a new module needs it from its first commit.
+Every `.py` file under `src/`, `tests/` and `scripts/` opens with the
+line `# SPDX-License-Identifier: LGPL-3.0-or-later`, after a shebang or
+an encoding line where the file has one. `tests/test_licence.py` fails
+without it, so a new module needs it from its first commit.
 
 QualCoder is licensed under LGPL-3.0-or-later as well, and the rule for
-its code is the owner's (2026-09-23):
+its code is the maintainer's (23 September 2026):
 
 - **Write our own implementation by default,** and prove parity with
   tests against QualCoder's source. Cite QualCoder's file and line you
   matched in the docstring.
 - **Copy QualCoder's code only where identical results cannot be had
   otherwise,** as with the kappa expression, whose floating-point
-  result depends on the order of its operations, and the coding
-  editor's span walk.
+  result depends on the order of its operations.
 - **List every copy in [NOTICE](NOTICE) with its reason:** its file and
   function here, the QualCoder file and lines it comes from, and why it
   had to be copied. A test that carries QualCoder's code as its oracle
-  is listed there too, and `tests/test_licence.py` fails if a file or
-  name NOTICE gives no longer exists, so a rename or a rewrite updates
-  NOTICE in the same change. It also holds NOTICE's entries as a
-  snapshot, so an entry is removed only by editing the test as well.
+  is listed there too. `tests/test_licence.py` fails if a file or a
+  name that NOTICE gives no longer exists, so a rename or a rewrite
+  updates NOTICE in the same change. It also holds NOTICE's entries as
+  a snapshot, so an entry is removed only by editing the test as well.
+  NOTICE has a copy in `packaging/pypi-old-name/`, which a test holds
+  equal to it, byte for byte, so a change goes into both.
 
 Most of the items NOTICE lists were copied before this rule was made;
 some of them could be written afresh, and each is kept as it is until

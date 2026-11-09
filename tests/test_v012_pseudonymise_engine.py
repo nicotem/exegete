@@ -2066,7 +2066,8 @@ def _residue_form(draw, one_word=False):
 
 
 @st.composite
-def _residue_case(draw, max_entries=3, one_form=False):
+def _residue_case(draw, max_entries=3, one_form=False,
+                  before_the_run=False):
     """A mapping, a text built around its forms, and a case mode.
 
     The text is made of the forms themselves and the spellings the
@@ -2074,6 +2075,10 @@ def _residue_case(draw, max_entries=3, one_form=False):
     a letter attached, a soft hyphen inside, fullwidth), with letters
     and separators between, so every kind of occurrence is common
     rather than lucky.
+
+    With `before_the_run` (v0.15.3) the mapping and the text alone,
+    before any rewrite, for a run that leaves some occurrences; without
+    it the draws are the ones they always were.
     """
     mode = draw(st.sampled_from(P.CASE_MODES))
     count = 1 if one_form else draw(st.integers(1, max_entries))
@@ -2111,10 +2116,59 @@ def _residue_case(draw, max_entries=3, one_form=False):
             pieces.append(draw(st.sampled_from(_RESIDUE_SEPARATORS)))
         pieces.append(draw(st.sampled_from(tokens)))
     text = "".join(pieces)
+    if before_the_run:
+        return compiled, text
     rewritten = draw(st.booleans())
     if rewritten:
         text = P.apply_replacements(text, P.find_replacements(compiled, text))
     return compiled, text, rewritten
+
+
+@st.composite
+def _residue_case_with_left(draw):
+    """A run over `_residue_case`'s text that leaves some of the
+    occurrences it finds (v0.15.3): the mapping, the text after the run,
+    and the places in it of the occurrences left, as the plan places them
+    (`left_new_spans`)."""
+    compiled, text = draw(_residue_case(before_the_run=True))
+    found = P.find_replacements(compiled, text)
+    left = draw(st.lists(st.booleans(), min_size=len(found),
+                         max_size=len(found)))
+    replacements = [item for item, kept in zip(found, left) if not kept]
+    mapper = P.SpanMapper(replacements, len(text))
+    places = [(mapper.map_start(item.start), mapper.map_end(item.end))
+              for item, kept in zip(found, left) if kept]
+    return compiled, P.apply_replacements(text, replacements), places
+
+
+def _joined_to_a_letter(text, start, end):
+    """Whether the generator's invisible characters (a soft hyphen, a
+    zero-width space) join the span to a letter on either side, so that
+    the reader reads it inside a longer word (v0.15.3, fix round 1). Not
+    said of a span a combining mark follows, which the mark may join to
+    its last letter, hiding it from the reader's reading: such a whole
+    word is the rewriter's alone, in the share whatever stands around
+    it."""
+    invisible = "­​"
+    if end < len(text) and text[end] in "̀́̈":
+        return False
+    after, before = end, start
+    while after < len(text) and text[after] in invisible:
+        after += 1
+    while before > 0 and text[before - 1] in invisible:
+        before -= 1
+    return ((end < after < len(text) and P._is_word_char(text[after]))
+            or (0 < before < start and P._is_word_char(text[before - 1])))
+
+
+def _compiled_again(compiled):
+    """The same mapping compiled afresh. A count keeps what it learns of
+    each spelling on the compiled mapping and spends less the next time,
+    so two counts compared for what they spend each start afresh."""
+    return P.Compiled(P.validate_mapping(
+        [{"original": entry.original, "pseudonym": entry.pseudonym,
+          "variants": list(entry.variants)}
+         for entry in compiled.mapping.entries], compiled.case_mode))
 
 
 _RESIDUE_SETTINGS = settings(max_examples=300, deadline=None,
@@ -2771,6 +2825,95 @@ class TestNamesLeftInText:
         assert found["unattributed"] == 0
 
     @_RESIDUE_SETTINGS
+    @given(case=_residue_case_with_left())
+    def test_every_occurrence_is_in_exactly_one_kind_with_some_left(
+            self, case):
+        """v0.15.3: with random sets of the occurrences found left by a
+        run, the kinds still add up to each row's wide count, no kind is
+        negative, and left_by_choice is never more than the number left.
+        It comes out of the put-back share alone: every other kind, both
+        counts and the budget spent are what the same text gives counted
+        without the places, and a file the run did not rewrite charges
+        nothing to it. No occurrence left that an invisible character
+        joins to a letter, which the reader reads inside a longer word, is
+        charged to it, so none takes a put-back's place (fix round 1)."""
+        compiled, text, left = case
+        found = P.names_left_in_text(compiled, text, True, True,
+                                     left_spans=left)
+        plain = P.names_left_in_text(_compiled_again(compiled), text, True,
+                                     True)
+        readable = {}
+        for start, end in left:
+            if not _joined_to_a_letter(text, start, end):
+                index = compiled.entry_for(text[start:end])
+                readable[index] = readable.get(index, 0) + 1
+        total = found["unattributed"]
+        chosen = 0
+        for entry, before in zip(found["entries"], plain["entries"]):
+            assert entry["entry"] == before["entry"]
+            kinds = sum(entry[kind] for kind in P.TEXT_RESIDUE_REASONS)
+            assert kinds == entry["occurrences"]["wide"], entry
+            assert all(entry[kind] >= 0 for kind in P.TEXT_RESIDUE_REASONS)
+            assert entry["left_by_choice"] <= readable.get(
+                entry["entry"], 0), (text, left, entry)
+            total += kinds
+            chosen += entry["left_by_choice"]
+            assert (entry["put_back_by_a_pseudonym"] + entry["left_by_choice"]
+                    == before["put_back_by_a_pseudonym"]), entry
+            for kind in P.TEXT_RESIDUE_REASONS:
+                if kind not in ("put_back_by_a_pseudonym", "left_by_choice"):
+                    assert entry[kind] == before[kind], kind
+        assert len(found["entries"]) == len(plain["entries"])
+        assert total == found["occurrences"]["wide"]
+        assert chosen <= len(left)
+        assert found["occurrences"] == plain["occurrences"]
+        assert (found["matches"], found["extra_work"]) == (
+            plain["matches"], plain["extra_work"])
+        other = P.names_left_in_text(compiled, text, True, False,
+                                     left_spans=left)
+        assert all(entry["left_by_choice"] == 0 for entry in other["entries"])
+
+    def test_the_generator_reaches_left_by_choice(self, monkeypatch):
+        """The property above reaches the kind it is about: over its own
+        draws, derandomised and with the package's constants switched off
+        as in `test_the_generator_reaches_every_kind`, left_by_choice is
+        charged, and so is a put-back beside it."""
+        from hypothesis.internal.conjecture import providers
+
+        def no_local_constants():
+            return providers.Constants()
+
+        cache = getattr(providers, "CONSTANTS_CACHE", None)
+        if cache is not None:
+            assert hasattr(providers, "_get_local_constants"), (
+                "Hypothesis no longer has providers._get_local_constants; "
+                "find its new hook for local constants and patch that")
+            cache.cache.clear()
+        monkeypatch.setattr(providers, "_get_local_constants",
+                            no_local_constants, raising=False)
+        seen = {"left_by_choice": 0, "put_back_by_a_pseudonym": 0}
+
+        @settings(max_examples=300, deadline=None, derandomize=True,
+                  phases=[Phase.generate],
+                  suppress_health_check=[HealthCheck.too_slow,
+                                         HealthCheck.filter_too_much])
+        @given(case=_residue_case_with_left())
+        def count(case):
+            compiled, text, left = case
+            found = P.names_left_in_text(compiled, text, False, True,
+                                         left_spans=left)
+            for entry in found["entries"]:
+                for kind in seen:
+                    seen[kind] += bool(entry[kind])
+
+        try:
+            count()
+        finally:
+            if cache is not None:
+                cache.cache.clear()
+        assert all(value > 0 for value in seen.values()), seen
+
+    @_RESIDUE_SETTINGS
     @given(case=_residue_case())
     def test_wide_is_non_zero_exactly_where_either_matcher_sees_a_name(
             self, case):
@@ -2903,6 +3046,12 @@ class TestNamesLeftInText:
         finally:
             if cache is not None:
                 cache.cache.clear()
+        # v0.15.3: left_by_choice is charged only for the places a run
+        # leaves, which `count` never passes, so it is left out of this
+        # tally; `test_the_generator_reaches_left_by_choice` shows it
+        # reached. `count` is unchanged, since a derandomised test's seed
+        # is drawn from its source, and its draws are kept.
+        assert seen.pop("left_by_choice") == 0
         assert all(value > 0 for value in seen.values()), seen
 
 
@@ -2967,7 +3116,7 @@ class TestTheEstimateReadsWhatTheCountReads:
         monkeypatch.setattr(unicodedata, "decomposition", spelled)
         for name in ("_READING_EXTRA", "_READING_EXTRA_PATTERN",
                      "_UNSEEN_TABLE", "_UNSEEN_PATTERN", "_MARK_RANGES",
-                     "_NON_STARTER_RANGES"):
+                     "_NON_STARTER_RANGES", "_SECOND_PARTS"):
             monkeypatch.setattr(P, name, None)
         assert P.reading_length("\uac01 \ufdfa said") == 1 + 1 + 18 + 5
         assert P._reader_sees("Tho\u00admas") == "Thomas"

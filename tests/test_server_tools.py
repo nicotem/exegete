@@ -390,7 +390,7 @@ class TestAnalyzeForCoding:
             instruction="Find stress indicators"
         )
         # Returns formatted text
-        assert "SESSION STARTED" in result
+        assert "Coding session started" in result
         assert "Session ID" in result
 
     def test_invalid_file_ids(self, setup_server):
@@ -409,7 +409,7 @@ class TestAnalyzeForCoding:
 
     def test_all_codes_when_none_specified(self, setup_server):
         result = server.start_coding_session(file_ids=[1], instruction="test")
-        assert "SESSION STARTED" in result
+        assert "Coding session started" in result
         # Should use all available codes
         assert "2 codes" in result
 
@@ -499,7 +499,7 @@ class TestApplyCodings:
         server.update_suggestion_status(session.session_id, approve=[guid])
 
         result = server.apply_codings(session.session_id, create_backup=False)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
         assert "1 codings" in result
 
     def test_apply_with_no_approved(self, session_with_suggestions):
@@ -518,7 +518,7 @@ class TestApplyCodings:
         server.update_suggestion_status(session.session_id, approve=[guid])
 
         result = server.apply_codings(session.session_id, create_backup=True)
-        assert "CODINGS APPLIED" in result
+        assert "Codings applied" in result
         assert "Backup created" in result
 
 

@@ -14,7 +14,7 @@ Two questions, kept apart:
 - "Is QualCoder open on it now?" stays the live check, with one change:
   a recently changed chat history is not read as an open window when the
   process scan could read programs' command lines and found no QualCoder
-  (the owner's sitting of 11 October: a false "APPEARS to be open" a
+  (the owner's sitting of 11 October: a false "appears to be open" a
   minute after QualCoder had closed). A scan of program names only
   (Windows' tasklist; psutil when a Python withheld its command line; a
   Linux sandbox with a process list of its own) cannot see a QualCoder
@@ -314,7 +314,7 @@ class TestTheClosingWrite:
         _scan_gives(monkeypatch, A_HIT)
         signals = qualcoder_gui_signals(folder)
         assert [s[:len(CHAT_SIGN)] for s in signals[:1]] == [CHAT_SIGN]
-        assert signals[1] == (f"{PROCESS_SIGN} on this machine "
+        assert signals[1] == (f"{PROCESS_SIGN} on this computer "
                               f"(1 match(es))")
         assert len(signals) == 2
 
@@ -327,7 +327,7 @@ class TestTheClosingWrite:
         out = json.loads(server.select_project(str(dest)))
         assert out["success"] is True
         assert out["qualcoder_gui_signals"] == []
-        assert "APPEARS to be open" not in out["warning"]
+        assert "appears to be open" not in out["warning"]
         signs = out["qualcoder_history"]["signs_on_this_project"]
         assert CHAT_HISTORY_SIGN in signs and AI_DATA_SIGN in signs
         now = json.loads(server.get_current_project())
@@ -343,7 +343,7 @@ class TestTheClosingWrite:
         _chat_changed(dest)
         _scan_gives(monkeypatch, NAMES_ONLY)
         out = json.loads(server.select_project(str(dest)))
-        assert "APPEARS to be open" in out["warning"]
+        assert "appears to be open" in out["warning"]
         assert _starts(out["qualcoder_gui_signals"])
 
 

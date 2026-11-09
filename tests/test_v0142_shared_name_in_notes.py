@@ -190,8 +190,8 @@ class TestTheWarningCarriesTheRule:
     def test_a_yes_or_no_is_enough(self):
         """With the project's own list of real names, the assistant is
         never shown them; the question it asks must not need one."""
-        assert ("Ask the user whether anyone does (a yes or no is enough) "
-                "before executing" in _flat(WARNING))
+        assert ("Ask the researcher whether anyone does (a yes or no is "
+                "enough) before executing" in _flat(WARNING))
 
     def test_it_is_written_to_the_house_rules(self):
         assert "—" not in WARNING and "–" not in WARNING

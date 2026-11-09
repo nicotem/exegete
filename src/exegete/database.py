@@ -1401,7 +1401,7 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
                     signals.append(
                         "the QualCoder 4.0 AI search index shows recent "
                         f"activity ({sidecar} present and recently "
-                        "written: AI indexing appears to be in flight, "
+                        "written: AI indexing appears to be under way, "
                         "or the last exit was unclean)")
                 else:
                     signals.append(
@@ -1428,7 +1428,7 @@ def qualcoder_gui_signals(project_dir: Union[str, Path],
         if scan is not None and scan.hits:
             signals.append(
                 f"a process that looks like QualCoder is running on "
-                f"this machine ({len(scan.hits)} match(es))")
+                f"this computer ({len(scan.hits)} match(es))")
     except Exception as e:  # never let a heuristic break a tool
         logger.debug(f"GUI-open heuristics failed: {error_label(e)}")
     return signals
@@ -1454,9 +1454,11 @@ class ProjectLock:
     Departures from QualCoder's heartbeat (3.8.2 `__main__.py` 151 to
     159, and its removal, 2552 to 2560), named: QualCoder opens the file
     with "w" and writes `str(time.time())`, and removes whatever file is
-    there; Exegete opens it with "r+", never creating or emptying it,
-    writes the time to six decimals (which QualCoder's `float()` reads,
-    2643), and never writes over, or removes, another program's lines.
+    there, once; Exegete opens it with "r+", never creating or emptying
+    it, writes the time to six decimals (which QualCoder's `float()`
+    reads, 2643), never writes over, or removes, another program's
+    lines, and on Windows tries a refused removal again for about a
+    second (v0.15.3, `end`).
     """
 
     def __init__(self, path: Union[str, Path]):
@@ -1650,48 +1652,87 @@ class ProjectLock:
 
     def end(self) -> None:
         """Stop the refresh, then remove the file only if it still reads
-        as Exegete's; otherwise leave it, with one log line by kind."""
+        as Exegete's; otherwise leave it, with one log line by kind.
+
+        On Windows a removal refused with PermissionError, as it is while
+        another copy of Exegete reads the file, is tried again after each
+        of `_RENAME_WAITS`, about a second in all, the file read again
+        before each try and removed only while it still reads as
+        Exegete's (v0.15.3); gone meanwhile, the end is quiet. Nothing but
+        an interrupt leaves this method: it runs once the write has
+        committed."""
         self.stop()
         # Without the mutex if it is not taken: a stuck refresh never
         # creates the file, so the read before the removal still holds
         got = self._mutex.acquire(timeout=LOCK_WAIT_LIMIT_SECONDS)
         try:
-            try:
-                whose = self._whose()
-                if whose == "unreadable":
-                    time.sleep(0.5)
-                    whose = self._whose()
-            except _LockNotAFile as e:
-                # A named pipe, say, put at the name during the write:
-                # never waited on, never removed (v0.15.1). The kind is
-                # one of `kind_word`'s fixed words, never a path
-                kind = e.kind
-                logger.warning("The project lock file %s; it was left in "
-                               "place at the end of a write", is_kind(kind))
-                return
-            if whose == "unreadable":
-                logger.warning("The project lock file could not be read at "
-                               "the end of a write; it was left in place")
-            elif whose == "another":
-                logger.warning("The project lock file holds another "
-                               "program's lines at the end of a write; it "
-                               "was left in place")
-            elif whose == "gone":
-                logger.warning("The project lock file was already gone at "
-                               "the end of a write")
-            else:
-                # The read above has closed its file, so that on Windows
-                # the removal is not refused by Exegete's own handle
-                try:
-                    self.path.unlink()
-                except OSError as e:
-                    # The kind only (v0.14): the error's text is the lock
-                    # file's path, the project folder's name in it.
-                    logger.warning("Could not remove project lock file: %s",
-                                   error_label(e))
+            if self._reads_as_ours_at_end(again_if_unreadable=True,
+                                          gone_said=True):
+                self._remove_at_end()
         finally:
             if got:
                 self._mutex.release()
+
+    def _reads_as_ours_at_end(self, again_if_unreadable: bool,
+                              gone_said: bool) -> bool:
+        """Whether the file still reads as Exegete's at the end of a
+        write; when it does not, the one log line by kind (a file gone,
+        only when `gone_said`). Never raises but for an interrupt."""
+        try:
+            whose = self._whose()
+            if whose == "unreadable" and again_if_unreadable:
+                time.sleep(0.5)
+                whose = self._whose()
+        except _LockNotAFile as e:
+            # A named pipe, say, put at the name during the write:
+            # never waited on, never removed (v0.15.1). The kind is
+            # one of `kind_word`'s fixed words, never a path
+            kind = e.kind
+            logger.warning("The project lock file %s; it was left in "
+                           "place at the end of a write", is_kind(kind))
+            return False
+        except Exception:
+            whose = "unreadable"
+        if whose == "unreadable":
+            logger.warning("The project lock file could not be read at "
+                           "the end of a write; it was left in place")
+        elif whose == "another":
+            logger.warning("The project lock file holds another "
+                           "program's lines at the end of a write; it "
+                           "was left in place")
+        elif whose == "gone" and gone_said:
+            logger.warning("The project lock file was already gone at "
+                           "the end of a write")
+        return whose == "ours"
+
+    def _remove_at_end(self) -> None:
+        """The removal, once the file reads as Exegete's: tried again on
+        Windows alone (`_RETRY_LOCK_REMOVAL`), where a refusal while
+        another program reads the file passes in moments. On Linux and
+        macOS a refused removal comes from the folder's permissions or a
+        flag, which a second of tries would not change: one warning, at
+        once, as before."""
+        for wait in _RENAME_WAITS + (None,):
+            # The read before has closed its file, so that on Windows
+            # the removal is not refused by Exegete's own handle
+            try:
+                self.path.unlink()
+                return
+            except PermissionError as e:
+                refused = e
+                if wait is None or not _RETRY_LOCK_REMOVAL:
+                    break
+            except OSError as e:
+                refused = e
+                break
+            time.sleep(wait)
+            if not self._reads_as_ours_at_end(again_if_unreadable=False,
+                                              gone_said=False):
+                return
+        # The kind only (v0.14): the error's text is the lock file's
+        # path, the project folder's name in it.
+        logger.warning("Could not remove project lock file: %s",
+                       error_label(refused))
 
 
 @contextmanager
@@ -1958,7 +1999,7 @@ def workspace_setting_problem() -> Optional[str]:
     if not given.is_absolute():
         return (f"{name} must be a full path or one starting "
                 f"with ~ (the home folder); a relative path would be read "
-                f"from the server's own working folder. Check the folder "
+                f"from Exegete's own working folder. Check the folder "
                 f"in the host's configuration.")
     return None
 
@@ -2367,6 +2408,138 @@ def _forbidden_coder_name_char(name: str) -> Optional[str]:
     return forbidden_display_char(name)
 
 
+# The names of codes, categories and cases (v0.15.3). A NEW name, one a
+# create or a rename would write, may not hold a character no one sees
+# on screen, and one that matches another name of its kind only once
+# such characters are left out is refused (server._new_name_refusal and
+# server._rename_collision); names already in a project are never
+# checked, so they are read, listed and renamed as they are.
+#
+# The characters: controls (Cc), format characters (Cf) and lone
+# surrogates (Cs), by the running interpreter's tables, and Unicode's
+# Default_Ignorable_Code_Point, by the pseudonymiser's table, which is
+# one Unicode version on every interpreter (pseudonymise.py,
+# DEFAULT_IGNORABLE_RANGES). Two kinds are kept where they shape the
+# characters beside them: U+200C and U+200D between two characters
+# outside ASCII that are themselves kept (Persian and Indic spelling,
+# emoji sequences), and a variation selector, or the Mongolian vowel
+# separator, straight after a visible character outside ASCII (a CJK
+# variant, a symbol's emoji form, a Mongolian letter's form). A name of
+# such characters alone is refused at its first, which has nothing
+# before it.
+NAME_JOINERS = frozenset("\u200c\u200d")       # ZWNJ, ZWJ
+NAME_SELECTOR_RANGES = (
+    (0x180B, 0x180F),      # the Mongolian free variation selectors and
+                           # the Mongolian vowel separator between them
+    (0xFE00, 0xFE0F),      # VARIATION SELECTOR-1 to -16
+    (0xE0100, 0xE01EF),    # VARIATION SELECTOR-17 to -256
+)
+
+
+# The controls (category Cc) and the lone surrogates (Cs), which are
+# fixed ranges in every Unicode version
+_NAME_CONTROLS = re.compile(r"[\x00-\x1f\x7f-\x9f\ud800-\udfff]")
+
+
+def _name_selector(code_point: int) -> bool:
+    return any(low <= code_point <= high
+               for low, high in NAME_SELECTOR_RANGES)
+
+
+def _unseen_in_name(name: str) -> List[Tuple[int, bool]]:
+    """Each character of `name` that no one sees on screen, as (its
+    index, whether the rule above keeps it there), in order."""
+    if name.isascii():
+        # In ASCII such characters are the controls alone, which are
+        # exactly the characters str.isprintable refuses there
+        if name.isprintable():
+            return []
+        return [(index, False) for index, ch in enumerate(name)
+                if not ch.isprintable()]
+    from . import pseudonymise
+    # Most names hold none: two searches, the controls and the lone
+    # surrogates, then the pseudonymiser's own class of the ignorable
+    # table and category Cf, find that faster than a look at each
+    # character, which a duplicate check makes for every row it reads
+    if _NAME_CONTROLS.search(name) is None and \
+            pseudonymise._unseen_pattern().search(name) is None:
+        return []
+    unseen = [unicodedata.category(ch) in ("Cc", "Cf", "Cs")
+              or pseudonymise.is_default_ignorable(ord(ch)) for ch in name]
+    kept: List[bool] = []
+    found: List[Tuple[int, bool]] = []
+    last = len(name) - 1
+    for index, ch in enumerate(name):
+        if not unseen[index]:
+            kept.append(True)
+            continue
+        keep = False
+        if ch in NAME_JOINERS:
+            keep = (0 < index < last
+                    and ord(name[index - 1]) > 0x7F and kept[index - 1]
+                    and ord(name[index + 1]) > 0x7F
+                    and not unseen[index + 1])
+        elif _name_selector(ord(ch)):
+            keep = (index > 0 and ord(name[index - 1]) > 0x7F
+                    and not unseen[index - 1])
+        kept.append(keep)
+        found.append((index, keep))
+    return found
+
+
+def name_character_problem(value: str) -> Optional[Tuple[int, str]]:
+    """The first character of a new code, category or case name that no
+    one sees on screen and the rule above does not keep, as (its
+    position, counting from 1, and its code, such as "U+200B"), or None.
+
+    `value` is the name as normalize_name leaves it, so a tab or a line
+    break between two words is a space by then, as it is in the name
+    stored."""
+    for index, keep in _unseen_in_name(value):
+        if not keep:
+            return index + 1, f"U+{ord(value[index]):04X}"
+    return None
+
+
+def name_without_refused(value: str) -> str:
+    """`value` without the characters name_character_problem refuses,
+    its spacing normalised again: what a refusal offers instead."""
+    drop = {index for index, keep in _unseen_in_name(value) if not keep}
+    return normalize_name("".join(ch for index, ch in enumerate(value)
+                                  if index not in drop))
+
+
+def name_shown_with_codes(value: Any) -> str:
+    """`value` with each character no one sees on screen written as its
+    code in angle brackets ("Cop<U+200B>ing"), for a refusal's words; a
+    value that is not text is shown as ''."""
+    if not isinstance(value, str):
+        return ""
+    unseen = {index for index, _ in _unseen_in_name(value)}
+    if not unseen:
+        return value
+    return "".join(f"<U+{ord(ch):04X}>" if index in unseen else ch
+                   for index, ch in enumerate(value))
+
+
+def visible_name_key(value: Any) -> str:
+    """The duplicate-name rule's key with every character no one sees on
+    screen left out, the joiners and selectors the rule above keeps
+    included: two names with one such key look the same in every list.
+
+    In this order: normalize_name, so that a tab between two words is a
+    space and never joins them ("Coping\\tStrategies" keys as "coping
+    strategies"); then the removal; then name_key, which normalises the
+    spacing again and applies NFC after the removal, so that "e", U+200B
+    and U+0301, which NFC leaves as they are, key as "é"."""
+    name = normalize_name(value)
+    drop = {index for index, _ in _unseen_in_name(name)}
+    if drop:
+        name = "".join(ch for index, ch in enumerate(name)
+                       if index not in drop)
+    return name_key(name)
+
+
 # File names (v0.13, rename dossier 3.3, items 1 to 4): one rule set for
 # every file name this server writes, shared by import_text_file and
 # rename_file. QualCoder's own rename dialog checks only that the name is
@@ -2565,6 +2738,11 @@ def saved_display_values(tblrows: Any) -> List[str]:
 # any other word there is not in QualCoder's shape (fix round 4, F3B-3).
 _SAVED_FILTER_OPERATORS = ("<", ">", "<=", ">=", "=", "!=", "in", "not in",
                            "between", "like")
+# The two attribute types a condition carries (master
+# report_attributes.py:44, :292, :301; 3.8.2 :45, :291, :300): a
+# condition with any other word there is not in QualCoder's shape
+# (v0.15.3)
+_SAVED_FILTER_TYPES = ("character", "numeric")
 
 # A saved filter longer than this is read whole rather than parsed: a
 # filter QualCoder saves is a few hundred characters, and literal_eval's
@@ -2581,7 +2759,9 @@ def saved_filter_values(text: Any) -> List[str]:
     character values in single quotes (3.8.2 report_attributes.py:147,
     :269-309, the same). When the text has exactly that shape (the
     second item 'case' or 'file', the operator one of QualCoder's, the
-    name and the type text, the values a list of text; fix round 4,
+    name text, the type one of QualCoder's two, 'character' or 'numeric'
+    (master report_attributes.py:44, :292, :301; 3.8.2 :45, :291, :300;
+    v0.15.3), the values a list of text; fix round 4,
     F3B-3), only the values are read, so QualCoder's own words (BOOLEAN_OR, AND, case,
     character, like) are never read as a label. Anything else, a list of
     another shape included, is read whole, the conservative reading
@@ -2603,6 +2783,7 @@ def saved_filter_values(text: Any) -> List[str]:
         if not (isinstance(item, list) and len(item) == 5
                 and all(isinstance(part, str) for part in item[:4])
                 and item[1] in ("case", "file")
+                and item[2] in _SAVED_FILTER_TYPES
                 and item[3] in _SAVED_FILTER_OPERATORS
                 and isinstance(item[4], list)
                 and all(isinstance(value, str) for value in item[4])):
@@ -3556,6 +3737,13 @@ _PARTIAL_BACKUP_REST = re.compile(
 # reading a file just written) cannot be renamed for a moment: the waits
 # before each new try, about a second in all.
 _RENAME_WAITS = (0.05, 0.1, 0.2, 0.25, 0.4)
+# The same waits before each new try to remove the project's lock file
+# at the end of a write, on Windows alone (v0.15.3, `ProjectLock.end`):
+# there a removal is refused while another program, a second copy of
+# Exegete say, has the file open, which passes in moments. On Linux and
+# macOS a refused removal comes from the folder's permissions or a
+# flag, which waiting would not change. A switch the tests set.
+_RETRY_LOCK_REMOVAL = os.name == "nt"
 _BACKUP_NAME_TRIES = 1000
 
 
@@ -3601,6 +3789,60 @@ def sweep_partial_backups(project_path: Union[str, Path],
             removed += 1
     if removed:
         logger.info("Removed %d backup folder(s) left unfinished", removed)
+    return removed
+
+
+# The name of a temporary copy of the names list (v0.15.3): the copy a
+# save, its undo or a pseudonymisation run writes beside pseudonyms.json
+# (PSEUDONYMS_JSON_NAME) before renaming it into place, as tempfile names
+# it, its eight characters from tempfile's own alphabet. The name is
+# Exegete's alone: QualCoder writes pseudonyms.json in place, with no
+# temporary name (4.0, pseudonyms.py 92-93 and 111-112). Matched whole
+# and in lower case, so a file of another name, `.bak` after it say,
+# stays.
+_NAMES_LIST_LEFTOVER = re.compile(r"pseudonyms\.json\.[a-z0-9_]{8}\.tmp")
+
+
+def sweep_names_list_leftovers(project_path: Union[str, Path],
+                               now: Optional[float] = None) -> int:
+    """Remove, at the project folder's top, the temporary copies of the
+    names list left behind when a process ended while a save, its undo
+    or a pseudonymisation run had one (a pseudonymisation run's stays
+    too when it is stopped between its commit and its rename), once
+    last modified more than BACKUP_LEFTOVER_SECONDS ago, never sooner,
+    since another copy of Exegete may still be writing one; return how
+    many went (v0.15.3).
+
+    Only a regular file whose name is exactly a copy's goes: a link, a
+    folder and any other name stay. The age is the time since the epoch
+    less the file's own, never local times. Every failure (the folder
+    unreadable, a copy gone or held open meanwhile) is passed over, so
+    the sweep never raises and a leftover waits for the next backup. One
+    log line gives the count alone."""
+    folder = Path(project_path)
+    if folder.name == "data.qda":
+        folder = folder.parent
+    now = time.time() if now is None else now
+    removed = 0
+    try:
+        entries = list(os.scandir(folder))
+    except OSError:
+        return 0
+    for entry in entries:
+        if _NAMES_LIST_LEFTOVER.fullmatch(entry.name) is None:
+            continue
+        try:
+            found = entry.stat(follow_symlinks=False)
+            if not stat.S_ISREG(found.st_mode) \
+                    or now - found.st_mtime <= BACKUP_LEFTOVER_SECONDS:
+                continue
+            os.unlink(entry.path)
+        except OSError:
+            continue
+        removed += 1
+    if removed:
+        logger.info("Removed %d temporary copy file(s) of the names list "
+                    "left unfinished", removed)
     return removed
 
 
@@ -3727,7 +3969,9 @@ def start_backup(project_path: Union[str, Path],
     """The first of a backup's two steps (v0.15.1): claim a folder under
     a hidden name beside the project and copy into it everything
     `backup_project` copies but the database. Leftovers of earlier
-    backups are swept first.
+    backups are swept first, and the names list's temporary copies left
+    by a write that did not end (v0.15.3), so the backup holds none
+    over an hour old.
 
     Raises:
         FileNotFoundError: If project doesn't exist
@@ -3748,6 +3992,7 @@ def start_backup(project_path: Union[str, Path],
         raise ValueError(f"Project path must be a directory: {project_path}")
 
     sweep_partial_backups(project_path)
+    sweep_names_list_leftovers(project_path)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     partial = project_path.parent / (
         f".{project_path.stem}_backup_{timestamp}_partial_"
@@ -4212,9 +4457,10 @@ def hidden_coder_refusal(kind: str, row_id: int,
     the row belongs to a hidden coder, a trade the owner accepted and
     PRIVACY.md documents.
     """
-    return (f"{kind} {row_id} belongs to a coder currently hidden in "
-            f"QualCoder; nothing was changed. Pass {override}=true to change "
-            f"it anyway, or ask the user to unhide the coder in QualCoder.")
+    return (f"{kind} {row_id} belongs to a coder the project hides; "
+            f"nothing was changed. Pass {override}=true to change it "
+            f"anyway, or ask the researcher to unhide the coder in "
+            f"QualCoder.")
 
 
 def private_note_refusal(kind: str, row_id: int,
@@ -5099,7 +5345,7 @@ class QualcoderDatabase:
             return (False,
                     said +
                     "Writes are refused to protect the data. " + safer +
-                    f"Set {ALLOW_UNKNOWN_SCHEMA_ENV}=1 in the server "
+                    f"Set {ALLOW_UNKNOWN_SCHEMA_ENV}=1 in Exegete's "
                     f"environment to override at your own risk.",
                     False)
         return (True, None, False)
@@ -5110,14 +5356,14 @@ class QualcoderDatabase:
         if version is not None:
             # A schema newer than v17 is a sign: only a newer QualCoder
             # writes one (not presuming QualCoder, piece 7).
-            return (f"WARNING: this project reports database schema "
+            return (f"Warning: this project reports database schema "
                     f"'{version}', newer than the verified ceiling "
                     f"(v{MAX_VERIFIED_SCHEMA}, {VERIFIED_QUALCODER}); "
                     f"writes proceeded only because {variable}=1 is set. "
                     f"Verify results (in the newer QualCoder that upgraded "
                     f"the project, for example) and keep backups.")
         # A value not in QualCoder's form is no sign of a newer QualCoder.
-        return (f"WARNING: this project's database schema value is missing "
+        return (f"Warning: this project's database schema value is missing "
                 f"or not in QualCoder's form (`v` and up to four digits), "
                 f"so it is not repeated here, and Exegete cannot tell "
                 f"whether the project is within the verified ceiling "
@@ -6999,6 +7245,26 @@ class QualcoderDatabase:
             })
         return cases
 
+    def list_case_links(self) -> List[Dict[str, Any]]:
+        """Every link between a case and a file, as stored (the REFI-QDA
+        export's read, v0.15.3): a whole-file link and a link to part of
+        a file alike, from the base table, with no check of positions.
+
+        Raises:
+            RuntimeError: a read that failed (the busy text when the
+            database is busy)
+        """
+        try:
+            rows = self.conn.execute(
+                "SELECT id, caseid, fid, pos0, pos1 FROM case_text "
+                "ORDER BY caseid, fid, id").fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "list_case_links",
+                               "Failed to retrieve the case links")
+        return [{"id": row["id"], "case_id": row["caseid"],
+                 "file_id": row["fid"], "pos0": row["pos0"],
+                 "pos1": row["pos1"]} for row in rows]
+
     def get_case_details(self, case_id: int) -> Optional[Dict[str, Any]]:
         """Get detailed information about a specific case.
 
@@ -8262,6 +8528,24 @@ class QualcoderDatabase:
         except sqlite3.Error as e:
             _raise_query_error(e, "list_attribute_types", "Failed to retrieve attribute types")
 
+    def list_attribute_values(self) -> List[Dict[str, Any]]:
+        """Every attribute value, of cases, files and journal entries
+        alike, as stored (the REFI-QDA export's read, v0.15.3).
+
+        Raises:
+            RuntimeError: a read that failed (the busy text when the
+            database is busy)
+        """
+        try:
+            rows = self.conn.execute(
+                "SELECT name, attr_type, id, value FROM attribute "
+                "ORDER BY attr_type, id, name").fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "list_attribute_values",
+                               "Failed to retrieve the attribute values")
+        return [{"name": row["name"], "attr_type": row["attr_type"],
+                 "id": row["id"], "value": row["value"]} for row in rows]
+
     def get_file_attributes(self, file_id: int) -> List[Dict[str, Any]]:
         """Get all attributes for a specific file.
 
@@ -9243,7 +9527,7 @@ class QualcoderDatabase:
             self.conn.rollback()
             # Check for unique constraint violation
             if "unique" in str(e).lower():
-                raise ValueError(f"Coding already exists at this position for this user") from None
+                raise ValueError(f"Coding already exists at this position for this coder") from None
             raise RuntimeError(
                 f"Failed to add coding: {sqlite_error_label(e)}") from None
         except sqlite3.Error as e:
@@ -11517,10 +11801,10 @@ class QualcoderDatabase:
             # S-P2 (c): the only row removed is the category itself
             "private_notes_affected": self._count_private_notes(
                 "code_cat", "catid = ?", (category_id,)),
-            "note": "Deleting a category is SHALLOW: its codes and direct "
-                    "sub-categories move to the top level (never deleted, "
-                    "never reparented to a grandparent). Coded data is "
-                    "untouched.",
+            "note": "Deleting a category removes the category alone: "
+                    "its codes and direct sub-categories move to the top "
+                    "level (never deleted, never reparented to a "
+                    "grandparent). Coded data is untouched.",
         }
         graphs = self._saved_graph_preview(category_id)
         if graphs is not None:
@@ -11577,6 +11861,27 @@ class QualcoderDatabase:
     # annotation; no empty state exists)
     # ========================================================================
 
+    def list_annotations(self) -> List[Dict[str, Any]]:
+        """Every annotation, as stored (the REFI-QDA export's read,
+        v0.15.3): from the base table, every coder's, positions unchecked
+        (a row may hold NULL, which the table allows).
+
+        Raises:
+            RuntimeError: a read that failed (the busy text when the
+            database is busy)
+        """
+        try:
+            rows = self.conn.execute(
+                "SELECT anid, fid, pos0, pos1, memo, owner, date "
+                "FROM annotation ORDER BY anid").fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "list_annotations",
+                               "Failed to retrieve the annotations")
+        return [{"annotation_id": row["anid"], "file_id": row["fid"],
+                 "position_start": row["pos0"], "position_end": row["pos1"],
+                 "memo": row["memo"] or "", "owner": row["owner"],
+                 "date": row["date"]} for row in rows]
+
     def get_annotation(self, annotation_id: int) -> Optional[Dict[str, Any]]:
         """Get one annotation by anid (with its file name)."""
         annotation_id = validate_id(annotation_id, "annotation_id")
@@ -11626,8 +11931,8 @@ class QualcoderDatabase:
         file_id = validate_id(file_id, "file_id")
         if not isinstance(memo, str) or not memo.strip():
             raise ValueError(
-                "memo must be a non-empty string; an annotation IS its "
-                "note; there is no empty annotation"
+                "memo must be a non-empty string: an annotation is its "
+                "note, so there is no empty annotation"
             )
         _reject_if_too_long(memo, "memo")
         # Memo privacy ('#####'): new memos are public-text only (see
@@ -11969,8 +12274,8 @@ class QualcoderDatabase:
             if self.would_create_category_cycle(from_category_id,
                                                 into_category_id):
                 raise ValueError(
-                    "Cannot merge a category into its own descendant; "
-                    "that would orphan the subtree"
+                    "Cannot merge a category into a category below it; "
+                    "that would cut its branch off from the code tree"
                 )
             target_desc = {"id": into_category_id, "name": dest["name"]}
         else:
@@ -12012,10 +12317,11 @@ class QualcoderDatabase:
             "private_notes_affected": (
                 0 if carries_memo else self._count_private_notes(
                     "code_cat", "catid = ?", (from_category_id,))),
-            "note": "Merging a category reparents its codes and direct "
-                    "sub-categories to the target (codings are untouched; "
-                    "they key on the code, not the category), then deletes "
-                    "the source category." + memo_note,
+            "note": "Merging a category moves its codes and direct "
+                    "sub-categories under the target (codings are "
+                    "untouched, since a coding belongs to a code, not to "
+                    "a category), then deletes the source category."
+                    + memo_note,
         }
         graphs = self._saved_graph_preview(from_category_id)
         if graphs is not None:
@@ -12433,8 +12739,8 @@ class QualcoderDatabase:
         QualCoder's own words where the row has QualCoder's exact saved
         shape and whole otherwise (fix rounds 2 and 3, R2-1, B-1 to B-3:
         a case called OR is not counted in every filter saved as
-        BOOLEAN_OR); a saved row that is not UTF-8 is decoded tolerantly
-        (B-6); file_ids are the
+        BOOLEAN_OR); a saved row that is not UTF-8, or that is stored as
+        a blob, is decoded tolerantly (B-6; v0.15.3); file_ids are the
         other files whose name holds the old name, for a file with a
         stored path without the stored file's extension ('Thomas.pdf'
         finds its pages 'Thomas_p1.jpg'), otherwise whole ('Thomas.Jones'
@@ -12466,15 +12772,25 @@ class QualcoderDatabase:
             stored as text in no valid encoding, fix round 3, B-6), the
             database's own bytes, decoded tolerantly with the codec its
             `PRAGMA encoding` names (fix round 4, F3B-1: a UTF-16
-            database's bytes are not UTF-8)."""
+            database's bytes are not UTF-8). A value the text read gives
+            as bytes, one stored as a blob, is decoded the same way
+            (v0.15.3), so it is counted too, and no byte can raise here,
+            inside the rename's write, after its backup."""
             try:
-                return self.conn.execute(
+                rows = self.conn.execute(
                     f"SELECT {columns} FROM {table_name}{where}",
                     args).fetchall()
             except sqlite3.Error:
-                pass
+                rows = None
+            if rows is not None and not any(
+                    isinstance(v, bytes) for row in rows for v in row):
+                return rows
             codec = sqlite_text_codec(
                 self.conn.execute("PRAGMA encoding").fetchone()[0])
+            if rows is not None:
+                return [tuple(v.decode(codec, "replace")
+                              if isinstance(v, bytes) else v for v in row)
+                        for row in rows]
             blobs = ", ".join(f"CAST({c.strip()} AS BLOB)"
                               for c in columns.split(","))
             return [tuple(v.decode(codec, "replace")
@@ -13124,7 +13440,9 @@ class QualcoderDatabase:
     PSEUDONYMISE_HIDEABLE = ("code_text", "annotation")
 
     def pseudonymise_plan(self, compiled, overlap_policy: str,
-                          file_ids: Optional[Sequence[int]] = None
+                          file_ids: Optional[Sequence[int]] = None,
+                          occurrence_key: Optional[bytes] = None,
+                          leave: Optional[Sequence[str]] = None
                           ) -> Dict[str, Any]:
         """Everything one run would do, computed without writing anything.
 
@@ -13135,9 +13453,38 @@ class QualcoderDatabase:
         It is deliberately NOT cached between those calls: a cached plan
         is a plan computed against text that may have moved, which is the
         one failure this tool cannot afford.
+
+        Each file keeps the occurrences as found, `found` (every
+        replacement the mapping makes, in text order), beside
+        `replacements`, the ones the run makes. With `occurrence_key`
+        (occurrences.id_key, v0.15.3) each file gains `occurrence_ids`:
+        each occurrence's full id, in the order of `found`, from the
+        file's id, its text's SHA-256 and the span, so every phase that
+        builds the plan from the same text gives the same ids. Nothing
+        signed reads them.
+
+        With `leave` (occurrences.canonical_leave's list of ids, v0.15.3)
+        the occurrences the ids name are left as they are: each file
+        gains `left_at` (their places in `found`, each once), `left`
+        (their number), `unmatched` and `ambiguous` (the ids that name
+        no occurrence or more than one) and `left_new_spans` (each left
+        occurrence's place in the new text), and `replacements` is
+        `found` without them, so the signed effect, the rows' maps, the
+        new text, the write, the run record and the journal see the
+        shorter list alone. The overlap diagnostic reads `found`, the
+        same with a list as without. A file whose every occurrence is
+        left stays in the plan, with no replacement and its text as it
+        was; a file with no occurrence is not in it, as without a list.
+        A list needs the key the ids are made with, so a list without
+        one raises rather than being set aside unread.
         """
+        from . import occurrences
         from . import pseudonymise as engine
 
+        leave = list(leave or ())
+        if leave and occurrence_key is None:
+            raise ValueError("leave_occurrences needs a plan made with an "
+                             "occurrence key")
         eligible, skipped = self.pseudonymise_sources(file_ids)
         visibility = self.coder_visibility_map()
         files: List[Dict[str, Any]] = []
@@ -13151,14 +13498,25 @@ class QualcoderDatabase:
             # import's own names list reads it: a comment on a first name
             # puts "[Comment 1]" inside the full name (0.14.3).
             if source["through_markers"]:
-                replacements = engine.find_replacements_through(
+                found = engine.find_replacements_through(
                     compiled, text, doc_readers.NOTE_MARKER)
             else:
-                replacements = engine.find_replacements(compiled, text)
-            if not replacements:
+                found = engine.find_replacements(compiled, text)
+            if not found:
                 # A file with no match is not touched at all: no rewrite,
                 # no row update, no row read beyond the fingerprint.
                 continue
+            replacements = found
+            if occurrence_key is not None:
+                ids = occurrences.full_ids(
+                    occurrence_key, source["file_id"], sha,
+                    [(item.start, item.end) for item in found])
+            if leave:
+                left_at, unmatched, ambiguous = occurrences.match_each(
+                    leave, ids)
+                kept = set(left_at)
+                replacements = [item for place, item in enumerate(found)
+                                if place not in kept]
             mapper = engine.SpanMapper(replacements, len(text))
             rows = self._pseudonymise_rows(source["file_id"])
             for table, items in rows.items():
@@ -13168,8 +13526,11 @@ class QualcoderDatabase:
                         hideable and coder_is_hidden(visibility, row["owner"]))
                     row["map"] = mapper.map_row(row["pos0"], row["pos1"],
                                                 overlap_policy)
+            # Of the occurrences as found: a name of the mapping inside or
+            # overlapping an occurrence left is named here still, with a
+            # list as without one
             conflicts, truncated, capped = engine.overlap_conflicts(
-                compiled, text, replacements)
+                compiled, text, found)
             files.append({
                 "file_id": source["file_id"],
                 "name": source["name"],
@@ -13178,6 +13539,7 @@ class QualcoderDatabase:
                 "new_text": engine.apply_replacements(text, replacements),
                 "old_fingerprint": (length, sha),
                 "position_safe": position_safe(text),
+                "found": found,
                 "replacements": replacements,
                 "rows": rows,
                 "overlap_conflicts": conflicts,
@@ -13186,10 +13548,25 @@ class QualcoderDatabase:
                 "collisions": self._pseudonymise_collisions(
                     source["file_id"], rows),
             })
+            if occurrence_key is not None:
+                files[-1]["occurrence_ids"] = ids
+            if leave:
+                # Where each left occurrence stands in the new text, for
+                # the count of the names left (never shown or written)
+                files[-1].update({
+                    "left_at": left_at,
+                    "left": len(left_at),
+                    "unmatched": unmatched,
+                    "ambiguous": ambiguous,
+                    "left_new_spans": [
+                        [mapper.map_start(found[place].start),
+                         mapper.map_end(found[place].end)]
+                        for place in left_at]})
         return {"eligible": digest_files, "skipped": skipped, "files": files,
                 "overlap_policy": overlap_policy,
                 "case_mode": compiled.case_mode,
-                "compiled": compiled}
+                "compiled": compiled,
+                "leave": leave}
 
     def pseudonymise_memo_plan(self, compiled,
                                file_plan: Optional[Dict[str, Any]] = None
@@ -13694,7 +14071,11 @@ class QualcoderDatabase:
         "are joined. The whole-word count beside it is what this run's "
         "own rule matched, so on the file this run rewrote it is normally "
         "zero and the difference between the two numbers is the whole of "
-        "what the rewrite deliberately does not touch. by_reason says "
+        "what the rewrite deliberately does not touch. Occurrences chosen "
+        "to be left as they were are in both counts, under left_by_choice, "
+        "or under another kind where the wide count reads one differently "
+        "(joined to the next word by an invisible character, say). "
+        "by_reason says "
         "which kind each occurrence is; the split is a heuristic and the "
         "total is not, and so is the charging of an occurrence to one "
         "entry where two entries could claim it (the occurrence is "
@@ -13903,7 +14284,20 @@ class QualcoderDatabase:
         On the `use_project_pseudonyms` path (`may_echo_names=False`)
         every `form` is taken out and no longer word is collected. The
         file's own NAME is returned on both paths (ruling 12), as
-        `preview["files"][].name` always was.
+        `preview["files"][].name` always was. `scanned.characters` holds
+        the rewritten file's new length, so the preview takes it out
+        where it leaves that length out (v0.15.3).
+
+        The occurrences a run leaves by a list (the plan's
+        `left_new_spans`, v0.15.3) are passed to the count of the file it
+        rewrites, mapped through the import's markers where its text is
+        read without them, and counted under `left_by_choice` where the
+        reader's reading reads them as the rewrite matched them, or does
+        not see them at all (`names_left_in_text`). On the
+        `use_project_pseudonyms` path the rows per entry keep those out
+        and each full file row gives their number once, as
+        `left_by_choice`: beside the entries' pseudonyms, a row per entry
+        counting a left occurrence would tell which name it is.
         """
         from . import pseudonymise as engine
 
@@ -13912,6 +14306,10 @@ class QualcoderDatabase:
             "ORDER BY id").fetchall()
         rewritten = ({item["file_id"]: item["new_text"]
                       for item in plan["files"]} if plan else {})
+        # Where each occurrence the run leaves stands in the new text
+        left = ({item["file_id"]: item["left_new_spans"]
+                 for item in plan["files"] if item.get("left_new_spans")}
+                if plan else {})
         chosen = (plan["eligible"][0][0]
                   if plan and plan.get("eligible") else None)
         sources = []
@@ -13926,6 +14324,12 @@ class QualcoderDatabase:
                 # Word, OpenDocument or RTF file's names are counted with
                 # the markers taken out (0.14.3).
                 if fid in rewritten:
+                    if fid in left:
+                        # The places of the occurrences left move with the
+                        # markers before them, read over the same new text
+                        left[fid] = engine.spans_without_markers(
+                            rewritten[fid], left[fid],
+                            doc_readers.NOTE_MARKER)
                     rewritten[fid] = engine.without_markers(
                         rewritten[fid], doc_readers.NOTE_MARKER)
                 text = engine.without_markers(text, doc_readers.NOTE_MARKER)
@@ -14034,7 +14438,8 @@ class QualcoderDatabase:
                     max_matches=matches_left,
                     max_extra_work=(engine.MAX_RESIDUE_SCAN_WORK
                                     - work_done - work),
-                    stopped=stop)
+                    stopped=stop,
+                    left_spans=left.get(fid, ()) if reason is None else ())
                 # Everything spent is charged (rule 1), a count that
                 # stopped part-way as fully as one that finished.
                 spent = found if found is not None else stop
@@ -14065,8 +14470,10 @@ class QualcoderDatabase:
                         case_variants = found["case_variants_seen"]
                         spellings = found["normalisation_variants_seen"]
                     else:
-                        entries = self._pseudonymise_without_forms(
-                            found["entries"])
+                        entries, row_out["left_by_choice"] = \
+                            self._pseudonymise_entries_without_left(
+                                self._pseudonymise_without_forms(
+                                    found["entries"]))
                         case_variants = self._pseudonymise_without_forms(
                             found["case_variants_seen"])
                         spellings = self._pseudonymise_without_forms(
@@ -14462,7 +14869,7 @@ class QualcoderDatabase:
             "of every file with stored text as occurrences, under "
             "file_text. Each count is two readings, wide and whole-word. "
             "To find the notes a count points at, search_memos searches "
-            "the public part of all twelve fields and names each result's "
+            "the public part of all twelve fields and gives each result's "
             f"kind{hidden_coders}. "
             "search_files reads narrower than this block does (a plain "
             "substring, no normalisation), so a name it does not find may "
@@ -14576,6 +14983,138 @@ class QualcoderDatabase:
         return [{key: value for key, value in item.items() if key != "form"}
                 for item in items]
 
+    @staticmethod
+    def _pseudonymise_entries_without_left(entries: Sequence[Dict[str, Any]]
+                                           ) -> Tuple[List[Dict[str, Any]],
+                                                      int]:
+        """The residue's rows per entry on the `use_project_pseudonyms`
+        path (v0.15.3), the occurrences counted under `left_by_choice`
+        taken out, and their number, for the file's row.
+
+        Each row's `left_by_choice` comes out of both its counts and the
+        key goes; a row left with nothing is dropped, and the rest are
+        put back in `names_left_in_text`'s order, most first. Beside the
+        entries' pseudonyms and a text the assistant has read, a row per
+        entry counting a left occurrence would tell which name that
+        occurrence is, and with it the pseudonym (ruling 94); the file's
+        row gives their number instead. The kinds that remain still add
+        up to each row's wide count. An occurrence left that the count
+        reads as another kind stays in its row under that kind.
+        """
+        kept = []
+        total = 0
+        for entry in entries:
+            left = entry.get("left_by_choice", 0)
+            total += left
+            row = {key: value for key, value in entry.items()
+                   if key != "left_by_choice"}
+            if left:
+                row["occurrences"] = {
+                    **entry["occurrences"],
+                    "wide": entry["occurrences"]["wide"] - left,
+                    "whole_word": entry["occurrences"]["whole_word"] - left}
+                if not (row["occurrences"]["wide"]
+                        or row["occurrences"]["whole_word"]):
+                    continue
+            kept.append(row)
+        kept.sort(key=lambda row: (-row["occurrences"]["wide"],
+                                   -row["occurrences"]["whole_word"],
+                                   row["entry"]))
+        return kept, total
+
+    @staticmethod
+    def _pseudonymise_entries_only(conflicts: Sequence[Dict[str, Any]]
+                                   ) -> List[Dict[str, Any]]:
+        """The overlap diagnostic on the `use_project_pseudonyms` path
+        (v0.15.3): each conflict's two entries, one row a conflict, so the
+        count stands. Its form is a name, and its two spans, beside the
+        entries' pseudonyms and a text the assistant has read, would pair
+        names with their pseudonyms."""
+        return [{"entry": conflict["entry"],
+                 "loses_to_entry": conflict["loses_to_entry"]}
+                for conflict in conflicts]
+
+    @staticmethod
+    def _pseudonymise_pre_existing(row: Dict[str, Any], pseudonym_of,
+                                   withheld) -> Dict[str, Any]:
+        """One row of `pre_existing_pseudonym_occurrences`, its pseudonym
+        as the preview may quote it. A pseudonym withheld because it
+        carries a name (the `use_project_pseudonyms` path) keeps its entry
+        and count and loses its spans (v0.15.3): in a text the assistant
+        has read, the text at each span is that pseudonym."""
+        shown = {**row, "pseudonym": pseudonym_of(row["entry"])}
+        if row["entry"] in withheld:
+            shown.pop("spans", None)
+            shown.pop("spans_truncated", None)
+        return shown
+
+    # The fixed sentences of the `occurrences` block (v0.15.3): what a
+    # list of occurrences to leave does, and how to give one
+    PSEUDONYMISE_OCCURRENCES_LEFT_NOTE = (
+        "An occurrence left is left whole, with any name of the mapping "
+        "inside or overlapping it. The counts per entry, and the names "
+        "that overlap, are of the occurrences as found, before any is "
+        "left; the run makes the replacements counted in "
+        "totals.replacements.")
+    PSEUDONYMISE_OCCURRENCES_NEXT = (
+        "To leave some of these, ask the researcher which, then preview "
+        "again with choose_occurrences and leave_occurrences listing their "
+        "ids: that preview marks the ones left, for the researcher to "
+        "check, and its token is the one the run needs.")
+
+    @classmethod
+    def _pseudonymise_occurrences(cls, item: Dict[str, Any],
+                                  may_echo_names: bool = True,
+                                  leave_given: bool = False
+                                  ) -> Dict[str, Any]:
+        """A file's `occurrences` block (`choose_occurrences`, v0.15.3).
+
+        `count`, and in text order up to OCCURRENCES_LISTED rows of the
+        short id, with its line number when the mapping was typed into
+        the call; past them `listed_in_part` and how many `more`. On the
+        `use_project_pseudonyms` path (`may_echo_names` false) a row is
+        the id alone: beside the entries' pseudonyms and counts, lines in
+        a text the assistant has read would tell which name each
+        pseudonym replaces (ruling 94). No name, pseudonym, entry number,
+        span or word of the text, on either path. The ids are shown at
+        one length, the shortest at which all the file's ids are
+        distinct, the ones not listed included.
+
+        Drawn from the occurrences as found, with a list to leave too
+        (`leave_given`): each left one's row gains `"left": true`, and
+        the block `left` (their number, the ones not listed included)
+        and `left_note`. Without a list, `next` says how to give one.
+        """
+        from . import occurrences
+        full = item.get("occurrence_ids")
+        if full is None:
+            raise ValueError("choose_occurrences needs a plan made with an "
+                             "occurrence key")
+        found = item.get("found", item["replacements"])
+        shown = occurrences.shown_ids(full)[:occurrences.OCCURRENCES_LISTED]
+        left = set(item.get("left_at", ()))
+        rows: List[Dict[str, Any]] = [{"id": one} for one in shown]
+        if may_echo_names:
+            lines = occurrences.line_numbers(
+                item["old_text"],
+                [replacement.start for replacement in found[:len(shown)]])
+            for row, line in zip(rows, lines):
+                row["line"] = line
+        for place in left:
+            if place < len(rows):
+                rows[place]["left"] = True
+        block: Dict[str, Any] = {"count": len(full), "listed": rows}
+        if len(full) > len(shown):
+            block["listed_in_part"] = True
+            block["more"] = len(full) - len(shown)
+        if leave_given:
+            block["left"] = item.get("left", 0)
+            if block["left"]:
+                block["left_note"] = cls.PSEUDONYMISE_OCCURRENCES_LEFT_NOTE
+        else:
+            block["next"] = cls.PSEUDONYMISE_OCCURRENCES_NEXT
+        return block
+
     def pseudonymise_preview(self, plan: Dict[str, Any],
                              ai_coder_names: Sequence[str],
                              include_context: bool = False,
@@ -14584,7 +15123,8 @@ class QualcoderDatabase:
                              max_spans_per_entry: int = 50,
                              may_echo_names: bool = True,
                              residue_detail: str = "file",
-                             memo_plan: Optional[Dict[str, Any]] = None
+                             memo_plan: Optional[Dict[str, Any]] = None,
+                             choose_occurrences: bool = False
                              ) -> Dict[str, Any]:
         """What the researcher is shown before approving a run (D1 3.5).
 
@@ -14594,15 +15134,40 @@ class QualcoderDatabase:
         caller's entry indices and pseudonyms only, never note text and
         never a row key.
 
-        Read-only, and everything in it is a count, a span or a name the
-        caller already supplied. The only file CONTENT it can return is
-        the optional context around each match, which is off by default
-        and capped when it is on.
+        With `choose_occurrences` (v0.15.3) each file gains an
+        `occurrences` block (`_pseudonymise_occurrences`): short ids, each
+        beside its line number when the mapping was typed into the call,
+        from a plan built with an occurrence key. With a list of
+        occurrences to leave (the plan's `leave`) the block is given too,
+        and marks the occurrences left, for the researcher to check. The
+        entries' blocks and the overlap diagnostic are of the occurrences
+        as found, the same with a list as without; `totals.replacements`
+        counts the replacements the run makes. Without either the block is
+        absent and the preview is as before.
+
+        Read-only, and everything in it is a count, a span, a short id
+        with its line, or a name the caller already supplied. The only
+        file CONTENT it can return is the optional context around each
+        match, which is off by default and capped when it is on, and
+        refused while occurrences are chosen or left.
 
         `may_echo_names=False` when the mapping was read from the
         project's own `pseudonyms.json` rather than supplied by the
         caller: the two diagnostics that carry a surface form then carry
         the entry index alone, and `include_context` returns nothing.
+        Nor does any match's span come back on that path (v0.15.3,
+        ruling 94): the entries' blocks keep `entry`, `pseudonym` and
+        `count`, and the overlap diagnostic its two entries. Beside a text
+        the assistant has read, a match's span and its entry's pseudonym
+        pair a name with its pseudonym, and the occurrence ids, listed in
+        text order, would line up with the spans. For the same reason the
+        `occurrences` block gives the ids alone on that path, with no
+        line, and a pseudonym withheld because it carries a name keeps
+        its entry and count where it already occurs, with no span: the
+        text at that span is the pseudonym. With a list to leave, the new
+        text's length is left out on that path too, as `new_text_length`
+        and inside the residue's count of the characters it read: beside
+        a preview without the list it tells the left occurrences' entries.
         A context window is a slice of the file text around a match, so
         by construction it contains the name that matched: on this path
         that is the researcher's reverse key going into the conversation
@@ -14635,6 +15200,7 @@ class QualcoderDatabase:
 
         context_withheld = include_context and not may_echo_names
         include_context = include_context and may_echo_names
+        leave_given = bool(plan.get("leave"))
         files = []
         totals = {"replacements": 0, "files": 0, "codings_changed": 0,
                   "annotations_changed": 0, "case_links_changed": 0,
@@ -14647,8 +15213,11 @@ class QualcoderDatabase:
         context_budget = engine.MAX_CONTEXT_TOTAL_CHARS
         for item in plan["files"]:
             text = item["old_text"]
+            # Of the occurrences as found, so that a preview given a list
+            # to leave says per entry what one without it says, and ties
+            # no left occurrence to its entry
             per_entry: Dict[int, List[Dict[str, Any]]] = {}
-            for replacement in item["replacements"]:
+            for replacement in item.get("found", item["replacements"]):
                 per_entry.setdefault(replacement.entry, []).append(replacement)
             replacements = []
             for index in sorted(per_entry):
@@ -14658,10 +15227,12 @@ class QualcoderDatabase:
                     "entry": index,
                     "pseudonym": pseudonym_of(index),
                     "count": len(spans),
-                    "spans": [[s.start, s.end] for s in shown],
                 }
-                if len(spans) > len(shown):
-                    block["spans_truncated"] = True
+                if may_echo_names:
+                    # The typed path only: the caller typed the pairs
+                    block["spans"] = [[s.start, s.end] for s in shown]
+                    if len(spans) > len(shown):
+                        block["spans_truncated"] = True
                 if include_context:
                     windows = []
                     for span in shown:
@@ -14674,7 +15245,9 @@ class QualcoderDatabase:
                         windows.append(window)
                     block["context"] = windows
                 replacements.append(block)
-                totals["replacements"] += len(spans)
+            # The replacements the run makes: with a list, fewer than the
+            # entries' counts above by the occurrences left
+            totals["replacements"] += len(item["replacements"])
 
             codings = self._pseudonymise_counts(item["rows"]["code_text"],
                                                 has_seltext=True)
@@ -14715,12 +15288,13 @@ class QualcoderDatabase:
                 "position_safe": item["position_safe"],
                 "replacements": replacements,
                 "pre_existing_pseudonym_occurrences": [
-                    {**item, "pseudonym": pseudonym_of(item["entry"])}
-                    for item in engine.pre_existing_pseudonym_occurrences(
+                    self._pseudonymise_pre_existing(row, pseudonym_of,
+                                                    withheld)
+                    for row in engine.pre_existing_pseudonym_occurrences(
                         compiled, text, max_spans_per_entry)],
                 "overlap_conflicts": (
                     item["overlap_conflicts"] if may_echo_names else
-                    self._pseudonymise_without_forms(
+                    self._pseudonymise_entries_only(
                         item["overlap_conflicts"])),
                 "overlap_conflicts_truncated":
                     item["overlap_conflicts_truncated"],
@@ -14739,6 +15313,14 @@ class QualcoderDatabase:
                 "null_position_rows": self._pseudonymise_null_rows(item),
                 "unique_constraint_collisions": collisions,
             })
+            if leave_given and not may_echo_names:
+                # Beside a preview without the list, the new length tells
+                # the left occurrences' entries: it differs by each left
+                # occurrence's pseudonym's length less its name's
+                del files[-1]["new_text_length"]
+            if choose_occurrences or leave_given:
+                files[-1]["occurrences"] = self._pseudonymise_occurrences(
+                    item, may_echo_names, leave_given)
 
         preview: Dict[str, Any] = {
             "project": str(self.db_path),
@@ -14764,8 +15346,8 @@ class QualcoderDatabase:
                 "include_context was asked for and is not returned on this "
                 "run: the mapping came from the project's own "
                 "pseudonyms.json, so the text around each match would quote "
-                "names you did not supply. The counts, the spans and every "
-                "other part of this preview are unaffected.")
+                "names you did not supply. The counts and every other part "
+                "of this preview are unaffected.")
         if compiled.mapping.shared_pseudonyms:
             preview["shared_pseudonyms"] = [
                 {**item, "pseudonym": (
@@ -14802,6 +15384,12 @@ class QualcoderDatabase:
             preview["residue"] = self.pseudonymise_residue(
                 compiled, plan, may_echo_names=may_echo_names,
                 detail=residue_detail, memo_plan=memo_plan)
+            if leave_given and not may_echo_names:
+                # As `new_text_length` above: the count of the characters
+                # read sums every file's text after the run, the
+                # rewritten file's new length included
+                preview["residue"].get("file_text", {}).get(
+                    "scanned", {}).pop("characters", None)
         return preview
 
     # The fixed strings of the preview's `memo_rewrites` block (v0.13,
@@ -14826,7 +15414,7 @@ class QualcoderDatabase:
 
     PSEUDONYMISE_MEMO_HIDDEN_NOTE = (
         "Of the rows above, this many are notes on codings or annotations of "
-        "a coder currently hidden in QualCoder; their names are not shown. "
+        "a coder the project hides; their names are not shown. "
         "Rewriting a note changes no coding decision, so it needs no "
         "allow_hidden_coder.")
 
@@ -15053,6 +15641,9 @@ class QualcoderDatabase:
                 "annotations_deleted": len(deleted["annotation"]),
                 "case_links_deleted": len(deleted["case_text"]),
                 "position_safe": position_safe(new_text),
+                # Whether the overlap check stopped early, as the preview
+                # said (v0.15.3): never where, nor what it found
+                "overlap_conflicts_capped": item["overlap_conflicts_capped"],
             })
         written: Dict[str, Any] = {"files": report}
         if memo_plan is not None:

@@ -165,7 +165,13 @@ def test_the_uninstall_says_claude_desktop_s_log_stays(tmp_path):
 def test_the_uninstall_says_the_hosts_records_stay_as_privacy_lists():
     step = _guide_uninstall_step(3)
     listed = _what_stays()
-    for place in ("`~/.claude/projects/`", "`~/.codex/sessions`"):
+    # (v0.15.3, the fix round of the dated readings: Codex's two databases
+    # of conversations, which deleting the session files leaves; its
+    # second round: the typed text and the log, which Codex's deletion leaves)
+    for place in ("`~/.claude/projects/`", "`~/.codex/sessions`",
+                  "`~/.codex/thread_history_1.sqlite`",
+                  "`~/.codex/state_5.sqlite`", "`~/.codex/history.jsonl`",
+                  "`~/.codex/logs_2.sqlite`"):
         assert place in step and place in listed, place
     assert "the host's to remove" in step
     assert ("PRIVACY.md#before-you-use-real-participant-data-check-these"

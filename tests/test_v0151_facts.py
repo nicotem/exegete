@@ -64,7 +64,7 @@ except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
     import tomli as tomllib
 
 from exegete import (doc_import, env_settings, import_reading, names,
-                     preview_tokens, reading_folder, server)
+                     occurrences, preview_tokens, reading_folder, server)
 
 REPO = Path(__file__).resolve().parents[1]
 GB = 1024 * 1024 * 1024
@@ -81,7 +81,6 @@ UPDATE_PAGE = "pages/update/index.html"
 # The guide to installing from the Terminal (v0.15.2), which took
 # INSTALL.md's Terminal routes: their facts are stated there now
 GUIDE = "docs/installing-from-the-terminal.md"
-HISTORY = "docs/history/"
 LOCK = "uv.lock"
 SERVER_SOURCE = "src/exegete/server.py"
 # The sizes of what each tool set serves, which scripts/served_texts.py
@@ -94,15 +93,15 @@ SCRIPTS_FOLDER = "scripts"
 PLAN = "scripts/release_plan.py"
 # The files under the root the facts are read from
 FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN, SIZES)
-# Every document read. Not read: the CHANGELOG's released entries, the
-# other documents kept as a record of early versions in docs/history/
-# (FEATURE_ANALYSIS.md and the other plans and analyses) and
-# docs/update-check/ (a design record). IMPORT_INSTRUCTIONS.md, moved
-# to docs/history/ with them, is read there by the first five facts
-# alone: it names the state folder. The texts Exegete's code holds (its
+# Every document read. Not read: the CHANGELOG's released entries and
+# docs/update-check/ (a design record). The early plans and analyses
+# kept in docs/history/ from v0.15.1 left the repository's files in
+# v0.15.3, and git's history keeps them (test_v0151_history_folder.py).
+# The texts Exegete's code holds (its
 # tools' descriptions, its brief, its notes, refusals, help topics and
-# log lines, in every module of src/exegete) are read by one fact
-# alone, the releases to come (v0.15.2), through scripts/code_texts.py:
+# log lines, in every module of src/exegete) are read by the facts that
+# say so, the releases to come (v0.15.2) and the occurrences a preview
+# lists (v0.15.3), through scripts/code_texts.py:
 # each text is a document of its own, named by its module and the line
 # it starts on. Read besides, by the first five facts and for wrong
 # values alone: the CHANGELOG's `[Unreleased]` part and the fragments
@@ -110,8 +109,8 @@ FILES_READ = (PYPROJECT, MANIFEST, LOCK, SERVER_SOURCE, PLAN, SIZES)
 DOCUMENTS = (
     "README.md", "INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
     "QUICKSTART.md",
-    "SUPPORT.md", "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
-    "PROJECT_SELECTION_GUIDE.md", HISTORY + "IMPORT_INSTRUCTIONS.md",
+    "SUPPORT.md", "AI_CODING_GUIDE.md",
+    "PROJECT_SELECTION_GUIDE.md",
     "CLAUDE.md", "CONTRIBUTING.md", "NOTICE",
     ".github/ISSUE_TEMPLATE/bug_report.yml",
     ".github/ISSUE_TEMPLATE/feature_request.yml",
@@ -183,6 +182,12 @@ class Facts:
     # docs/snapshot/sizes.json's tool_definitions_characters
     full_characters: int
     core_characters: int
+    # v0.15.3: how many occurrences a pseudonymisation preview lists
+    # (occurrences.py)
+    occurrences_listed: int
+    # v0.15.3: the most occurrences one pseudonymisation run leaves as
+    # they are (occurrences.py)
+    occurrences_left: int
 
 
 def _pdf_epub_extra(project: dict) -> str:
@@ -422,7 +427,9 @@ def facts_from_the_code(root: Path = REPO,
             _, release, words, _) in plan.PLANNED.items()},
         releases=dict(plan.RELEASES),
         full_characters=sizes["full"]["tool_definitions_characters"],
-        core_characters=sizes["core"]["tool_definitions_characters"])
+        core_characters=sizes["core"]["tool_definitions_characters"],
+        occurrences_left=occurrences.MAX_OCCURRENCES_LEFT,
+        occurrences_listed=occurrences.OCCURRENCES_LISTED)
 
 
 # The counts the documents give, each with the constants it is held to.
@@ -438,6 +445,10 @@ QUANTITIES: Dict[str, Tuple[Tuple[str, ...], Callable[[Facts], float]]] = {
     "preview tools": (("preview_tools",), lambda f: len(f.preview_tools)),
     "runtime dependencies": (("runtime_dependencies",),
                              lambda f: len(f.runtime_dependencies)),
+    "occurrences listed": (("occurrences_listed",),
+                           lambda f: f.occurrences_listed),
+    "occurrences left": (("occurrences_left",),
+                         lambda f: f.occurrences_left),
 }
 for _field in ("extension_call_seconds", "terminal_call_seconds",
                "call_seconds_least", "call_seconds_most",
@@ -528,6 +539,18 @@ MEMORY_PATTERNS = (
      r"\s+\((?P<m>\d+)\s+GB\s+for\s+a\s+PDF\)",
      {"n": ("memory_cap_bytes",), "m": ("pdf_memory_cap_bytes",)}),
 )
+# How many occurrences of a name a pseudonymisation preview lists
+# (v0.15.3): "lists the first 150", in the tool's description
+OCCURRENCE_PATTERNS = (
+    (r"\blists\s+the\s+first\s+(?P<n>\d+)\b",
+     {"n": ("occurrences listed",)}),
+)
+# The most occurrences one pseudonymisation run leaves as they are
+# (v0.15.3): "at most 500 occurrences", in the tool's description
+LEFT_PATTERNS = (
+    (r"\bat\s+most\s+(?P<n>\d+)\s+occurrences\b",
+     {"n": ("occurrences left",)}),
+)
 # The size of each set's tool definitions, as the documents round it
 # (v0.15.2): a figure passes within SIZE_TOLERANCE of the snapshot's,
 # which leaves a figure rounded to two significant figures 2 to 5 per
@@ -613,9 +636,12 @@ DOT_FOLDER = r"~/\.(?P<name>[\w-]+(?:\.[\w-]+)*)"
 OTHER_PROGRAMS_FOLDERS = frozenset({"qualcoder", "claude", "codex",
                                     "cache", "local"})
 # Other programs' settings the documents quote beside "setting", in
-# lower case: QualCoder's, and the connectors' on claude.ai
+# lower case: QualCoder's, the connectors' on claude.ai, and Claude's
+# switch for training, by the name its Settings, Privacy shows (read by
+# the owner on 9 November 2026)
 OTHER_PROGRAMS_SETTINGS = frozenset({"current coder", "always allow",
-                                     "needs approval", "blocked"})
+                                     "needs approval", "blocked",
+                                     "help improve our ai models"})
 # Exegete's switches that are no setting of the extension, in lower
 # case: the reading page's (TOOLS.md)
 EXEGETE_SWITCHES = frozenset({"text only"})
@@ -778,7 +804,7 @@ class Fact:
     code: str            # the constants it reads
     documents: Tuple[str, ...]   # each states it at least once
     patterns: Tuple[str, ...]    # the patterns that find it
-    # read in docs/history/ and the CHANGELOG's [Unreleased] part too
+    # read in the CHANGELOG's [Unreleased] part and the fragments too
     history: bool = False
     # read in the texts Exegete's code holds too (read_code_texts)
     code_texts: bool = False
@@ -796,7 +822,7 @@ FACTS: Dict[str, Fact] = {
              "server.py: _USUAL_SEARCH_PLACES (its folders for projects "
              "in Documents)",
         documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
-                   "TOOLS.md", "AI_CODING_WORKFLOW.md", "QUICKSTART.md",
+                   "TOOLS.md", "AI_CODING_GUIDE.md", "QUICKSTART.md",
                    "PROJECT_SELECTION_GUIDE.md", "pages/update/index.html",
                    MANIFEST),
         patterns=(PROJECTS_FOLDER, DEFAULT_BEFORE, DEFAULT_AFTER,
@@ -810,9 +836,8 @@ FACTS: Dict[str, Fact] = {
     "the state folder": Fact(
         code="names.py: STATE_FOLDER, OLD_STATE_FOLDER",
         documents=("INSTALL.md", GUIDE, "PRIVACY.md", "TOOLS.md",
-                   "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md",
+                   "AI_CODING_GUIDE.md",
                    "PROJECT_SELECTION_GUIDE.md",
-                   "docs/history/IMPORT_INSTRUCTIONS.md",
                    "CLAUDE.md", "packaging/pypi-old-name/README.md"),
         patterns=(DOT_FOLDER,),
         history=True),
@@ -850,7 +875,7 @@ FACTS: Dict[str, Fact] = {
              "RENAMED_TOOLS, the prompts and each tool's input schema",
         documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
                    "TOOLS.md", "SUPPORT.md", "AI_CODING_GUIDE.md",
-                   "AI_CODING_WORKFLOW.md", "CONTRIBUTING.md"),
+                   "CONTRIBUTING.md"),
         patterns=(CALL_FORM,) + TOOL_CLAIMS + (TOOL_NAMES_LIST,)
         + ARGUMENT_CLAIMS + (ARGUMENT_NAMES_LIST,)),
     "the sizes": Fact(
@@ -901,6 +926,16 @@ FACTS: Dict[str, Fact] = {
                    "packaging/pypi-old-name/README.md", UPDATE_PAGE,
                    SERVER_SOURCE, "src/exegete/updates.py"),
         patterns=RELEASE_NAMED + (VERSION_NAMED, NAMES_EXEGETE, ADDRESS),
+        code_texts=True),
+    "the occurrences listed": Fact(
+        code="occurrences.py: OCCURRENCES_LISTED",
+        documents=(SERVER_SOURCE,),
+        patterns=tuple(p for p, _ in OCCURRENCE_PATTERNS),
+        code_texts=True),
+    "the occurrences left": Fact(
+        code="occurrences.py: MAX_OCCURRENCES_LEFT",
+        documents=(SERVER_SOURCE,),
+        patterns=tuple(p for p, _ in LEFT_PATTERNS),
         code_texts=True),
 }
 # The version and its date are held already: tests/test_updates.py and
@@ -2230,6 +2265,10 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
     "the reading folder": check_reading_folder,
     "QualCoder's folders": check_qualcoder_folders,
     "the releases to come": check_future_releases,
+    "the occurrences listed": lambda facts, document: _check_numbers(
+        "the occurrences listed", OCCURRENCE_PATTERNS, facts, document),
+    "the occurrences left": lambda facts, document: _check_numbers(
+        "the occurrences left", LEFT_PATTERNS, facts, document),
 }
 
 
@@ -2255,16 +2294,15 @@ class Outcome:
 
 
 def _reads(fact: Fact, document: Document) -> bool:
-    """Whether the fact reads the document: docs/history/, the CHANGELOG
-    and its fragments only for the first five facts, the code's texts
+    """Whether the fact reads the document: the CHANGELOG and its
+    fragments only for the first five facts, the code's texts
     only for the facts that say so, and none of a fact's documents left
     out."""
     if document.code_text:
         return fact.code_texts
     if document.name in fact.left_out:
         return False
-    return fact.history or not (document.name.startswith((HISTORY,
-                                                          FRAGMENTS))
+    return fact.history or not (document.name.startswith(FRAGMENTS)
                                 or document.name == CHANGELOG)
 
 
@@ -2400,6 +2438,10 @@ CHANGES = (
     # v0.15.2: each set's tool definitions a tenth larger
     ("full_characters", lambda f: round(f.full_characters * 1.1)),
     ("core_characters", lambda f: round(f.core_characters * 1.1)),
+    # v0.15.3: the occurrences a preview lists, fifty more
+    ("occurrences_listed", lambda f: f.occurrences_listed + 50),
+    # v0.15.3: the most occurrences a run leaves, fifty more
+    ("occurrences_left", lambda f: f.occurrences_left + 50),
 )
 
 
@@ -2793,6 +2835,8 @@ SOURCES = {
     "prompts": (server.mcp._prompt_manager, "_prompts"),
     "tool_arguments": (server.mcp._tool_manager, "_tools"),
     "preview_tools": (preview_tokens, "REGISTRY"),
+    "occurrences_listed": (occurrences, "OCCURRENCES_LISTED"),
+    "occurrences_left": (occurrences, "MAX_OCCURRENCES_LEFT"),
 }
 
 
@@ -3640,17 +3684,8 @@ def test_future_releases_in_a_sentence(name, text, verdict):
 
 # For each row of the plan, a sentence for each of its words, in order
 ROW_SENTENCES = {
-    "the occurrences choice": (
-        "when replacing names, choose which mentions to keep",
-        "the occurrences choice"),
-    "the REFI-QDA fix": ("the REFI-QDA export fix",
-                         "fixes to the REFI-QDA export"),
-    "PyMuPDF 2.0 on Apple silicon": ("PyMuPDF 2.0 on Apple silicon Macs",),
     "coding sessions kept with their project": (
         "coding sessions kept with their project",),
-    "the housekeeping that touches data": (
-        "the housekeeping that touches data",
-        "stricter checks on the names of codes, categories and cases"),
     "the review of method": (
         "how the assistant supports a study's method, reviewed",
         "the review of method"),

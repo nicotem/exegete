@@ -97,7 +97,7 @@ FOLDER_NOTE = (
     "researcher fills in on their own computer. Exegete's own files there "
     "are listed by name; other_entries counts everything else there but "
     "links (links_not_followed counts those), hidden files the system "
-    "keeps included, and never names it. Exegete "
+    "keeps included, and never gives their names. Exegete "
     "never reports what a file holds: do not open or read these files by "
     "any route, even when a file tool could. To change one, ask the "
     "researcher to open it.")

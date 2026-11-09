@@ -197,7 +197,9 @@ def test_the_changelog_says_what_the_assistant_is_told():
     assert "**What an interpretive reading may rest on.**" in entry
     assert ("never on outside facts or assumptions about the participant, "
             "their group or what is typical") in entry
-    assert ("never on outside facts or assumptions about the participant, "
+    # (0.15.3: the rule reads "the person" where 0.14's entry, above,
+    # says "the participant", so that it holds for any document)
+    assert ("never on outside facts or assumptions about the person, "
             "their group or what is typical") in _flat(server.GROUNDING_RULES)
     assert ("The review does not yet show a passage a reason draws on from "
             "elsewhere (planned for v0.15): open the file the reason "
@@ -241,43 +243,52 @@ def test_the_guide_reads_every_suggestion():
             "turn, so to read a passage drawn on from elsewhere, open the "
             "file the reason gives.") in guide
     assert "not yet show" not in guide
-    assert ("How many readings are interpretive follows from the lens "
-            "chosen") in guide
+    # (v0.15.3, the readability reading: the lens in the reader's words,
+    # what was asked, the fact unchanged)
+    assert ("How many readings are interpretive depends on what you asked "
+            "the assistant to look for, not on the quality of the "
+            "coding.") in guide
     for gone in ("Spot check the explicit ones", "Read the interpretive "
                  "ones closely", "in so many words"):
         assert gone not in guide, gone
     # the three questions as what Claude is told, the default named
-    assert "there is no default instruction." in guide
-    assert ("Exegete refuses a session without an instruction but "
-            "cannot tell whether it holds your answers") in guide
+    # (v0.15.3, the readability reading: a sentence each)
+    assert ("There is no default instruction: Exegete refuses to start a "
+            "session without one.") in guide
+    assert ("It cannot tell whether the instruction holds your answers, "
+            "though, so check what the session records.") in guide
     assert ("The instruction is where you say what counts as stated for "
             "your study") in guide
 
 
-def test_the_workflow_decides_each_item():
-    workflow = _doc("AI_CODING_WORKFLOW.md")
-    assert "You decide each item" in workflow
-    assert "full control" not in workflow
-    # (v0.15.2: in the opening, the tips and the checklist, read plainly)
-    lowered = workflow.lower()
-    assert lowered.count("decide on each suggestion") == 3
-    assert lowered.count("ask for details on any you want to read in "
-                         "context") == 2
+def test_the_guide_decides_each_item():
+    # (v0.15.3: the workflow guide's steps and examples are in the one
+    # coding guide, which says each thing once: the researcher decides
+    # on each suggestion, in its opening, rather than in three places)
+    guide = _doc("AI_CODING_GUIDE.md")
+    assert "you decide on each one in the conversation" in guide
+    assert "full control" not in guide
     for gone in ("at least a few suggestions", "at least some suggestions",
                  "The first 4 look good", "Claude remembers"):
-        assert gone not in workflow, gone
+        assert gone not in guide, gone
     assert ("All five look good. Show me the Career Satisfaction and "
-            "Professional Development suggestions.") in workflow
-    assert "Show me 1, 3, 4 and 5 too" in workflow
-    assert ("Exegete keeps the session in a file of its own "
-            "(`~/.exegete/sessions/`), not in the chat") in workflow
-    assert "there is no default instruction." in workflow
-    assert ("Exegete refuses a session without an instruction but "
-            "cannot tell whether it holds your answers") in workflow
+            "Professional Development suggestions.") in guide
+    assert "Show me 1, 3, 4 and 5 too" in guide
+    # (v0.15.3, the readability reading: the conversation, the guide's
+    # one word for it; the fix round: the file is on the computer, and
+    # its passages went through the conversation too)
+    assert ("Exegete keeps the session in a file of its own on your "
+            "computer (`~/.exegete/sessions/`)") in guide
+    assert "The passages are in the conversation as well." in guide
+    # (the fix round's reader: the ban is the Sessions section's fact)
+    sessions = guide[guide.index("### Sessions "):]
+    sessions = sessions[:sessions.index(" ### ", 1)]
+    assert "not in the conversation" not in sessions
 
 
-def test_the_workflow_examples_quote_their_words():
-    workflow = _doc("AI_CODING_WORKFLOW.md")
+def test_the_guide_s_examples_quote_their_words():
+    # (v0.15.3: the workflow guide's examples, in the one coding guide)
+    workflow = _doc("AI_CODING_GUIDE.md")
     # the explicit example names what the code names; the interpretive
     # one quotes the words it rests on (as record_suggestions' example)
     assert ('Text: "The workload is the main source of stress in my '
@@ -293,8 +304,9 @@ def test_the_workflow_examples_quote_their_words():
     assert "where the codes blur" not in workflow
     assert "# Review every suggestion: do you share each interpretive " \
         "reading?" in workflow
-    # (v0.15.2: told once, in the coding guide, and pointed to)
-    assert ("[AI_CODING_GUIDE.md](AI_CODING_GUIDE.md), under \"Reviewing "
-            "suggestions\", says what an interpretive reading may draw on "
-            "and how to read one.") in workflow
+    # (v0.15.2: told once, in the coding guide, and pointed to; v0.15.3:
+    # one guide, which tells it once, under "Reviewing suggestions")
+    assert workflow.count("may draw on") == 1
+    reviewing = workflow[workflow.index("### Reviewing suggestions"):]
+    assert "may draw on" in reviewing[:reviewing.index("### ", 4)]
     assert "not yet show" not in workflow

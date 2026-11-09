@@ -145,7 +145,7 @@ AI_DESCRIPTION_SAYS = ("kept apart from yours",
 
 ASK_WITH_SETTING = (
     "No AI coder name is set for this project yet, so nothing was written. "
-    "Ask the user which coder name this project's AI codings and other AI "
+    "Ask the researcher which coder name this project's AI codings and other AI "
     "writes should be stored under, then call set_project_ai_coder_name "
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
@@ -170,11 +170,11 @@ def _mismatch(declared, current, place):
 
 
 HELP_TOPIC = (
-    "Rows Exegete writes carry the PROJECT's AI coder name, which the "
+    "Rows Exegete writes carry the project's AI coder name, which the "
     "researcher chooses: in Exegete's settings, which give it to each "
     "project Exegete creates, or, in another project, when a write first "
     "needs it: that write stops and asks; relay the question, and call "
-    "set_project_ai_coder_name with the user's answer. A model name is a "
+    "set_project_ai_coder_name with the researcher's answer. A model name is a "
     "good answer, because codings by different models can then be compared "
     "later with compare_coders. Never pick the name yourself.")
 
@@ -238,8 +238,9 @@ class TestTheWords:
 
     def test_the_exports_description(self):
         text = _flat(server.mcp.original_descriptions["export_refi_qda"])
-        assert ("The one export user is named after the project's AI coder "
-                "name, else the AI coder name in Exegete's settings "
+        # (v0.15.3: one user per coder, the AI coder name the last)
+        assert ("The AI coder name is the last, named after the project's AI "
+                "coder name, else the AI coder name in Exegete's settings "
                 "(EXEGETE_AI_CODER_NAME) or the built-in default; the result "
                 "says which (ai_user_name_source).") in text
         assert "declaration" not in text
@@ -608,9 +609,11 @@ class TestTheDocuments:
                  "project that already has an AI coder name keeps it, and "
                  "Claude asks you once whether to switch.")) \
             in text
+        # (v0.15.3, the readability reading: "project's" without the
+        # capitals for emphasis)
         assert ("- `EXEGETE_AI_CODER_NAME`: the AI coder name in Exegete's "
                 "settings. The name that rows actually carry is each "
-                "PROJECT's own (see \"Choosing the AI coder name\" in "
+                "project's own (see \"Choosing the AI coder name\" in "
                 "TOOLS.md). Set, it is given by `create_project` to each "
                 "project it makes, without asking, and the answer says so "
                 "(`ai_coder_name`, with the source `settings`)") in text
@@ -698,9 +701,11 @@ class TestTheDocuments:
                 "name to each project it creates, without asking, and says "
                 "so;") in guide
         assert "only declares a name to offer first" not in guide
-        assert ("You choose that name in Exegete's settings, for the "
-                "projects Exegete creates, or the first time a write needs "
-                "it") in _doc("AI_CODING_WORKFLOW.md")
+        # (v0.15.3: the workflow guide's step on applying is in this
+        # guide, and points to these two ways rather than repeat them)
+        assert ("- in a project that has no AI coder name, the first time "
+                "a write needs one.") in guide
+        assert "\"Which coder name do AI codings carry?\", below" in guide
 
     def test_the_changelog(self):
         text = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")

@@ -164,7 +164,7 @@ AI_DATA_PREVIEW = (
     "hold the previous text.")
 SEARCH_MEMOS = (
     "To find the notes a count points at, search_memos searches the public "
-    "part of all twelve fields and names each result's kind")
+    "part of all twelve fields and gives each result's kind")
 HIDDEN_CLAUSE = ("; it leaves out the coding notes and annotations of a "
                  "coder the project hides (a visibility setting made in "
                  "QualCoder); get_coded_segments reads that coder's coding "
@@ -178,7 +178,7 @@ PLACES = {"saved_graphs": "saved graph labels",
           "saved_queries": "QualCoder's saved SQL queries"}
 MEMO_HIDDEN = (
     "Of the rows above, this many are notes on codings or annotations of a "
-    "coder currently hidden in QualCoder; their names are not shown. "
+    "coder the project hides; their names are not shown. "
     "Rewriting a note changes no coding decision, so it needs no "
     "allow_hidden_coder.")
 

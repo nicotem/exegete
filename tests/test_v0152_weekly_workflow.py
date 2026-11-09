@@ -103,15 +103,16 @@ def test_the_validators_lock_is_asked_with_the_libraries(actions):
 
 def test_a_new_validator_advisory_fails_and_a_known_one_is_a_notice(
         actions, tmp_path, monkeypatch, capsys):
-    """The four accepted on 27 October against the validator's lock as it
-    is: a notice each, exit 0. A fifth id fails, named; the summary's
-    rows begin with their registry."""
+    """Those accepted against the validator's lock as it is (four on 27
+    October, eleven more on 3 November): a notice each, exit 0. One more
+    id fails, named; the summary's rows begin with their registry."""
     pairs = advisories.locked_releases(VALIDATOR_LOCK)
     known = _known_npm_ids()
     assert advisories.main([str(VALIDATOR_LOCK)],
                            opener=_Opener(_answer_for(pairs, known))) == 0
     out = capsys.readouterr().out
-    assert out.count("::notice title=Known advisory::") == 4
+    assert out.count("::notice title=Known advisory::") == len(
+        advisories.KNOWN_NPM)
     assert "::error" not in out
 
     summary = tmp_path / "summary.md"
@@ -126,7 +127,8 @@ def test_a_new_validator_advisory_fails_and_a_known_one_is_a_notice(
                       f"GHSA-zzzz-zzzz-zzzz"]
     rows = [line for line in summary.read_text(encoding="utf-8").splitlines()
             if line.startswith("| ") and "GHSA-" in line]
-    assert len(rows) == 5 and all(row.startswith("| npm | ") for row in rows)
+    assert len(rows) == len(advisories.KNOWN_NPM) + 1
+    assert all(row.startswith("| npm | ") for row in rows)
     assert f"| npm | zod | {zod} | GHSA-zzzz-zzzz-zzzz | new |" in rows
 
 

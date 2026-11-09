@@ -1330,7 +1330,7 @@ class TestTheHelpTopic:
         check = " ".join(topic["the_check"].split())
         tidy = " ".join(topic["tidy"].split())
         assert "a desktop extension older than Exegete, to update" in check
-        assert ("For a copy of the source it names the folder and says to "
+        assert ("For a copy of the source it gives the folder and says to "
                 "quit the AI host before updating it") in check
         assert "or a desktop extension older than Exegete" in tidy
         assert ("cannot see an older copy started from a project's own "

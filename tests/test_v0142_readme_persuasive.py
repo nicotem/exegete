@@ -388,8 +388,20 @@ def _tools(mode="full"):
 # work in either program", the commitment said in the sentence after
 # it (2 characters more, in the same lines). The README's own figures,
 # held exactly: 40,809 in 635 lines.
-README_LIMIT = 40_809
-README_LINES = 635
+# The plan of 3 November (ruling 115): coding sessions kept with their
+# project in a v0.15.4 line of their own, and method in v0.15.5, take 10
+# characters and a line: 40,819 in 636 lines.
+# PyMuPDF 2 on Apple silicon (v0.15.3): the one-click steps say that the
+# extension needs macOS 14 or later on such a Mac, 71 characters and a
+# line: 40,890 in 637 lines.
+# Institutional accounts in check 4 take 204 characters and 3 lines:
+# 41,094 in 640 lines.
+# Their fix round: "manages" for "provides", one character fewer.
+# The readings read again (v0.15.3), 247 characters, 4 lines: 41,340 in 644.
+# Their readability reading, the one conversation said plainly: 41,470 in 646.
+# Their fix round, Codex's databases and Ultra's limit, 84 and a line: 41,554 in 647.
+README_LIMIT = 41_554
+README_LINES = 647
 
 
 def test_the_readme_stays_short():
@@ -609,7 +621,7 @@ def test_the_path_of_a_coding():
     apply = inspect.signature(server.apply_codings)
     assert apply.parameters["create_backup"].default is None
     doc = " ".join(server.apply_codings.__doc__.split())
-    assert "re-validated BEFORE the backup" in doc
+    assert "checked again before the backup" in doc
     assert "single all-or-nothing transaction" in doc
 
 
@@ -844,8 +856,9 @@ def test_the_assistants_table():
         "Nowhere outside your computer: the model runs on it"]
     assert ("For participants' data, this project suggests Claude Desktop's "
             "chat with Exegete under that account") in privacy
-    assert ("For unambiguous commercial-terms coverage, use a Console "
-            "account created for the institution or research group") \
+    # (v0.15.3: rung 2 offers the institution's Console account, as a
+    # suggestion)
+    assert "Console account created for the institution or research group" \
         in privacy
     # (ruling 108, 27 October 2026: an expected drop of unknown size, in
     # the Terminal guide's table of routes, where the routes moved)
@@ -954,11 +967,22 @@ def test_the_assistants_table():
     # costs")
     # (v0.15.2, the readability reading: the same sentence and reason,
     # each clause a sentence, the owner's words kept)
-    assert ("4. **Your account, not Exegete, sets the terms.** An "
-            "institution's agreement with the AI provider sets the terms for "
-            "its data, and a personal account comes under the consumer "
-            "terms. So institutions should prefer organisational "
-            "accounts.") in flat
+    # (v0.15.3, the owner's point of 3 November 2026: an institution's
+    # account comes under its agreement with the provider, and such
+    # agreements differ; it is still likely to give participants' data
+    # more protection, since the institution agreed its terms with its
+    # own interests in mind; whoever manages it can say which terms
+    # apply. A warning and a suggestion in place of "should prefer")
+    check = _between(flat, "4. **Your account, not Exegete, sets the "
+                     "terms.**", "5. **")
+    # (v0.15.3, the readers of check 4: an account the institution
+    # manages, since a personal plan that an employer only pays for stays
+    # under the consumer terms)
+    for fact in ("personal account", "consumer terms",
+                 "university or employer manages", "agreement", "differ",
+                 "interests in mind", "Whoever manages"):
+        assert fact in check, fact
+    assert "should prefer" not in check
     # (v0.15.2, the merge onto the integration branch: the table of
     # routes moved to the Terminal guide, which the link names by its
     # title)
@@ -970,9 +994,50 @@ def test_the_assistants_table():
     # accounts gives its reason, as ruling 108 has the README's do)
     assert ("| **Anthropic commercial-terms routes** (Claude Code with a "
             "Console API key; Team or Enterprise accounts) |") in install
-    assert ("An institution's agreement sets the terms for its data, and a "
-            "personal account the consumer terms, which is why "
-            "organisational accounts suit institutions.") in install
+    # (v0.15.3: the README check's facts in the guide's row and in PRIVACY's
+    # rung 3, with the reason; the recipe's step 5 and PRIVACY's checklist
+    # point to them for it; all four say who can tell the researcher)
+    row = _between(install, "| **Anthropic commercial-terms routes**",
+                   "| **Fully local models**")
+    step = _between(install, "**5. An organisational account.**",
+                    "Working in the Terminal")
+    item = _between(privacy, "**Your Claude plan's terms.**",
+                    "**Training, with either AI provider.**")
+    rung = _between(privacy, "### Rung 3", "### Rung 4")
+    for passage in (row, step, item, rung):
+        for fact in ("agreement", "differ", "Whoever manages"):
+            assert fact in passage, (fact, passage[:50])
+    for passage in (row, rung):
+        assert "interests in mind" in passage, passage[:50]
+    assert "suit institutions" not in row
+    # (v0.15.3, the readers of these passages: the account an institution
+    # manages, in the row, the recipe's step and the checklist as in check
+    # 4; the row names the personal plans, since it lists Claude Code with
+    # a Console key, and which terms cover an individual's Console key is
+    # the question PRIVACY.md's rung 2 leaves open)
+    for passage in (row, step, item):
+        assert "manages, rather than" in passage or \
+            "employer manages" in passage, passage[:50]
+    assert "A personal plan (Free, Pro or Max) comes under Anthropic's " \
+        "consumer terms." in row
+    assert "personal account comes under" not in row
+    # (v0.15.3, the fact reader of these passages: Exegete's extension is
+    # not signed, and a computer or Claude account that a university or
+    # employer manages may block unsigned extensions, as INSTALL.md says,
+    # so rung 3 gives the terms of Exegete on an institution's plan without
+    # saying that the plan allows it, and warns before it suggests the chat
+    # on that account)
+    extension = _between(_flat(_read("INSTALL.md")),
+                         "## Installing the extension", "## The settings page")
+    assert "**The extension is not signed.**" in extension
+    assert "may block unsigned extensions, or extensions altogether" \
+        in extension
+    assert "can use Exegete" not in rung
+    assert "Exegete's extension is not signed" in rung
+    warning = rung.index("may block unsigned extensions, or extensions "
+                         "altogether (INSTALL.md, \"Installing the "
+                         "extension\")")
+    assert warning < rung.index("this project suggests")
 
 
 # ---------------------------------------------------------------------------
@@ -1153,7 +1218,9 @@ def test_the_advanced_section_rests_on_the_code():
     for tool in ("get_coded_segments", "search_coded_text",
                  "find_cooccurring_codes"):
         doc = " ".join(getattr(server, tool).__doc__.split())
-        assert "bypassing the visibility filter" in doc, tool
+        # (the readability reading of v0.15.3: the same rule, said as
+        # whether the project hides that coder's codings or not)
+        assert "whether the project hides them or not" in doc, tool
     # (v0.15.2, undo: undoing a change is on the branch now, among the
     # guarded changes, which GUARDED holds to the code)
     assert "`undo_changes` (undoing a change)" in beyond
@@ -1229,15 +1296,16 @@ def test_what_comes_next_is_plans():
     # and method in v0.15.3; v0.15.1's release preparation takes its own
     # item out, as 0.14.3's did; the owner's form of 27 October, ruling
     # 105: coding sessions kept with their project in v0.15.3, method in
-    # v0.15.4)
-    # (v0.15.2's release preparation takes its own item out too)
+    # v0.15.4; the plan of 3 November, ruling 115: coding sessions in
+    # v0.15.4, method in v0.15.5)
+    # (v0.15.2's release preparation takes its own item out too, and so
+    # does v0.15.3's)
     assert [item.split(",")[0].split(":")[0] for item in items] == [
-        "v0.15.3", "v0.15.4", "v0.16", "v0.17", "Later"]
+        "v0.15.4", "v0.15.5", "v0.16", "v0.17", "Later"]
     assert "in development" not in section
     # v0.14.2, the README's first round of checks: each plan said as what
     # the reader will be able to do
-    for words in ("when replacing names, choose which mentions to keep",
-                  "more of the analysis shown in the conversation, as tables",
+    for words in ("more of the analysis shown in the conversation, as tables",
                   # v0.14.2, the README's second round of checks: the rest
                   # in the reader's terms too (the roadmap's "What it is
                   # for": graphs the assistant can show, PDFs labelled

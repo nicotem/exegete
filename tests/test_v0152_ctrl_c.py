@@ -464,8 +464,8 @@ def test_the_end_of_input_and_a_read_error_end_the_lines(monkeypatch):
         return await asyncio.wait_for(_collect(StandardInputLines(
             Broken(RuntimeError("a failure of another kind")))), 5)
 
-    # Once ended, the lines stay ended without another read, so a terminal
-    # is not read again after its end of input
+    # Once the end of input comes at a line's start, the lines stay ended
+    # without another read
     assert asyncio.run(after_the_end(_Raw([b"one\n"]))) == (["one\n"], 0)
     # A read error is raised in the library's reader, as before
     asyncio.run(read_error())

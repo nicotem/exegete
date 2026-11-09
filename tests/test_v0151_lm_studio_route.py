@@ -108,9 +108,10 @@ def test_the_route_table_no_longer_asks_for_a_guide_for_lm_studio():
     assert "considered on request" not in install
     sentence = install[install.index("The recipes for OpenAI's apps"):]
     sentence = sentence[:sentence.index("GitHub Issues")]
+    # (v0.15.3, the readability reading: the semicolon a full stop)
     assert sentence == ("The recipes for OpenAI's apps, for LM Studio and "
                         "for Claude Code with an Anthropic API key go step "
-                        "by step; Claude Code signed in with a Pro or Max "
+                        "by step. Claude Code signed in with a Pro or Max "
                         "plan follows \"Claude Code\", below. For another "
                         "host, ask in [")
     assert "## Claude Code with an Anthropic API key (Experimental)" in \

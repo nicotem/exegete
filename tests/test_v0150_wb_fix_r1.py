@@ -48,7 +48,7 @@ DEPRECATIONS = sorted(name for name in dir(server)
                       if name.startswith("DEPRECATED_")
                       and isinstance(getattr(server, name), str))
 DOCUMENTS = ("README.md", "TOOLS.md", "PRIVACY.md", "INSTALL.md",
-             "AI_CODING_GUIDE.md", "AI_CODING_WORKFLOW.md", "QUICKSTART.md")
+             "AI_CODING_GUIDE.md", "QUICKSTART.md")
 # A release number of the v0.15 series without its third part
 BARE_V015 = re.compile(r"v?0\.15(?![.\d])")
 
@@ -110,17 +110,19 @@ class TestTheRemovalsInV0151:
                      "DEPRECATED_RENAME_BACK", "DEPRECATED_EDIT_PARITY"):
             assert not hasattr(server, gone), gone
 
-    def test_the_refi_export_is_kept_with_its_faults_named(self):
+    def test_the_refi_export_is_kept_and_its_faults_fixed(self):
         """The owner's decision of 20 October 2026 (ruling 85, item 2): the
-        REFI-QDA export stays, to be fixed, so its sentence names its known
-        faults and announces no removal (under a name of its own since
-        v0.15.1, REFI_EXPORT_KNOWN_FAULTS, until the piece that fixes
-        it)."""
-        sentence = server.REFI_EXPORT_KNOWN_FAULTS
-        assert sentence.startswith("Known faults (a later release is meant "
-                                   "to fix them): ")
-        assert "Deprecated" not in sentence and "removed" not in sentence
-        assert not BARE_V015.search(sentence)
+        REFI-QDA export stays, to be fixed. Its sentence named its known
+        faults, under a name of its own from v0.15.1,
+        REFI_EXPORT_KNOWN_FAULTS, until the piece that fixed it, v0.15.3's
+        (tests/test_v0153_refi_fixed.py): the sentence is gone, and the
+        description announces no removal."""
+        assert not hasattr(server, "REFI_EXPORT_KNOWN_FAULTS")
+        description = server.mcp._tool_manager._tools[
+            "export_refi_qda"].description
+        assert "Deprecated" not in description
+        assert "Known faults" not in description
+        assert not BARE_V015.search(description)
 
     @pytest.mark.parametrize("mode", ["full", "core"])
     def test_no_served_description_names_v015_alone(self, mode):
@@ -140,9 +142,10 @@ class TestTheRemovalsInV0151:
         it whole to v0.15.2), method with the earlier tool names and the
         ignored backup option; the REFI-QDA export kept. His form of 27
         October (ruling 105): coding sessions kept with their project in
-        a v0.15.3 of their own, method in v0.15.4 (the releases
-        themselves are held to scripts/release_plan.py by the facts
-        check)."""
+        a v0.15.3 of their own, method in v0.15.4. The plan of 3 November
+        (ruling 115): coding sessions in v0.15.4, method in v0.15.5 (the
+        releases themselves are held to scripts/release_plan.py by the
+        facts check)."""
         readme = _flat(_read("README.md"))
         nxt = readme[readme.index("## What comes next"):]
         nxt = nxt[:nxt.index("## ", 5)]
@@ -152,16 +155,14 @@ class TestTheRemovalsInV0151:
         # released; what it brought is in the CHANGELOG's entry. So does
         # v0.15.2's, whose preparation moved the occurrences choice, the
         # REFI-QDA fix and Apple silicon to v0.15.3, the week having no
-        # room for them
-        assert list(items)[:4] == ["v0.15.3", "v0.15.4", "v0.16", "v0.17"]
-        assert "choose which mentions to keep" in items["v0.15.3"]
-        assert "the REFI-QDA export fixed" in items["v0.15.3"]
-        assert "on Apple silicon Macs" in items["v0.15.3"]
-        assert "coding sessions kept with their project" in items["v0.15.3"]
-        assert "method" in items["v0.15.4"]
+        # room for them; and v0.15.3's, which brought those three with the
+        # stricter checks on names
+        assert list(items)[:4] == ["v0.15.4", "v0.15.5", "v0.16", "v0.17"]
+        assert "coding sessions kept with their project" in items["v0.15.4"]
+        assert "method" in items["v0.15.5"]
         assert "the earlier names of the two renamed tools" \
-            in items["v0.15.4"]
-        assert "backup option" in items["v0.15.4"]
+            in items["v0.15.5"]
+        assert "backup option" in items["v0.15.5"]
         # the REFI-QDA export is kept (ruling 85, item 2): no removal
         # announced for it anywhere in the README
         assert "removed in 0.15" not in readme
@@ -225,10 +226,12 @@ class TestClaudeCodesLimits:
         long = install[install.index(
             "**Long tool descriptions in Claude Code.**"):]
         long = long[:long.index("**", 45)]
+        # (v0.15.3, the readability reading: the earlier limit a sentence
+        # of its own, out of the page's brackets)
         for words in ("Claude Code keeps the first 4,096 characters of a "
                       "tool's description, or 16,384 for a tool it finds "
                       "through its tool search, which it uses by default",
-                      "before Claude Code 2.1.296, 2,048",
+                      "Before Claude Code 2.1.296, it kept 2,048.",
                       "`CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` (version "
                       "2.1.280 or later) replaces both limits",
                       "not with `-e` on `claude mcp add`, which passes "
@@ -431,8 +434,8 @@ class TestTheDocumentsOtherPoints:
                 "pseudonymising a file, importing documents, saving the "
                 "names list and correcting the researcher's coder name take "
                 "two steps") in brief
-        assert ("gives the methods notes and approaches to prompting (two "
-                "published)") in brief
+        assert ("gives methods notes and three ways to prompt, two of them "
+                "published") in brief
         assert "some published approaches" not in brief
 
     def test_what_stays_on_your_computer(self):
@@ -496,10 +499,19 @@ class TestTheDocumentsOtherPoints:
                 ("Nesting an existing code under another code is done in "
                  "QualCoder", tools),
                 ("which is done in QualCoder", tools),
-                ("If you want a file under your own name in QualCoder", tools)):
+                ("If you want a file under your own name in QualCoder", tools),
+                # (v0.15.3's release preparation: "What comes next" gives
+                # no plan for nesting a code)
+                ("gives the plans", tools), ("gives the plans", readme)):
             assert gone not in text, gone
-        assert ("Exegete does not yet nest an existing code under another "
-                "code (QualCoder, if you use it, can)") in tools
+        # (v0.15.3: said as what Exegete does not do, with the plans'
+        # place, and no promise, as docs/WRITING.md asks)
+        # (its release preparation: "What comes next" gives no plan for
+        # it, so the pointer says that it is not listed there)
+        assert ("Exegete does not nest an existing code under another code, "
+                "and the README's [\"What comes next\"]"
+                "(https://github.com/nicotem/exegete#what-comes-next) does "
+                "not list it. QualCoder, if you use it, can.") in tools
         assert ("Exegete does not yet change an existing entry: QualCoder, "
                 "if you use it, can") in tools
 

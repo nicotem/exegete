@@ -9,6 +9,7 @@ hints other than the table's, fails.
 
 import asyncio
 import json
+import re
 import sqlite3
 from contextlib import closing
 from pathlib import Path
@@ -235,7 +236,13 @@ class TestToolAnnotations:
             "import_documents": {
                 "anthropic/requiresUserInteraction": True},
             "save_names_list": {
-                "anthropic/requiresUserInteraction": True}}
+                "anthropic/requiresUserInteraction": True},
+            # v0.15.3: a result limit for Claude Code, not this mark, on
+            # the tool and on its earlier name, the same function
+            "read_file_with_codings": {
+                "anthropic/maxResultSizeChars": 200_000},
+            "analyze_file_with_coding": {
+                "anthropic/maxResultSizeChars": 200_000}}
         wire = next(t for t in listed
                     if t.name == "save_names_list").model_dump(
                         by_alias=True, exclude_none=True)
@@ -264,10 +271,13 @@ class TestToolAnnotations:
         section = install.split(
             "## What hosts do with the tools' read and write marks")[1] \
             .split("## Other MCP hosts")[0]
+        # (v0.15.3: Anthropic's pages read again; the day is held by its
+        # form, the dates check's)
+        assert re.search(r"What each host does, from Anthropic's pages as "
+                         r"read on \d{1,2} [A-Z][a-z]+ 20\d\d", section)
         for needed in ("anthropic/requiresUserInteraction", "2.1.199",
                        "a classifier", "`bypassPermissions`",
                        "Skip all approvals", "2.1.283",
-                       "read on 27 September 2026",
                        # fix round 2: dontAsk refuses; the version
                        "in every one of these modes but `dontAsk`, which "
                        "refuses it",
@@ -822,8 +832,13 @@ async def call_every_tool(client, root, lock_check=False):
         import_paths.hidden_step = real_hidden_step
     await run("create_category", {"name": "Feelings"})
     await run("create_category", {"name": "Other"})
+    # A colour of its own: a code made without one takes a random pick from
+    # QualCoder's 120 colours, #EB7333 about one run in 120, and the recolour
+    # below then changes nothing, so the undo record's tests find no receipt
+    # for it (v0.15.3: one full run failed so).
     await run("create_code", {"name": "Trust", "category": "Feelings",
-                              "memo": "Reliance on others"})
+                              "memo": "Reliance on others",
+                              "color": "#F5F6CE"})
     await run("create_code", {"name": "Doubt"})
     await run("create_case", {"name": "P1", "memo": "First participant"})
     await run("link_file_to_case", {"file_id": 1, "case_name": "P1"})
@@ -1165,7 +1180,9 @@ class TestTextsThatSentTheAssistantNowhere:
             assert "three levels deep" in section, name
             assert "not the usual places" in section, name
             assert "does not exist" in section, name
-            assert "naming the folder just above it" in section, name
+            # v0.15.3: the guide says the same fact in its own words
+            assert ("naming the folder just above it" in section
+                    or "naming the folder that holds it" in section), name
         # what the sections say is what the search does
         assert "each searched three levels deep" in given
         assert "the usual places were not searched" in given
@@ -1192,7 +1209,7 @@ class TestTextsThatSentTheAssistantNowhere:
                    for folder in answer["searched"]["folders"])
         doc = server.mcp._tool_manager._tools[
             "list_available_projects"].description
-        assert "INSTEAD of" in doc
+        assert "instead of" in doc
 
     def test_search_files_says_match_count_is_what_it_lists(
             self, setup_server, qualcoder_db_path):
@@ -1208,7 +1225,7 @@ class TestTextsThatSentTheAssistantNowhere:
         assert row["content_matches_found"] == 8
         assert row["content_matches_shown"] == 5
         doc = server.mcp._tool_manager._tools["search_files"].description
-        assert "The number of matches LISTED for this file" in doc
+        assert "The number of matches listed for this file" in doc
         assert "content_matches_found" in doc
 
     def test_the_methods_notes_say_the_memo_must_be_read(self):
@@ -2501,7 +2518,7 @@ class TestOneProjectUnderTwoSpellings:
         assert session in {s["coding_session_id"]
                            for s in listed["sessions"]}
         assert "different project" not in str(applied), applied
-        assert "CODINGS APPLIED" in str(applied), applied
+        assert "Codings applied" in str(applied), applied
         assert session in done["stale_sessions"]
 
     def test_letter_case(self, tmp_path):

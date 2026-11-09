@@ -424,20 +424,20 @@ class TestNothingSaysExegeteOpensAQualCoderProject:
     def test_the_documents_read_include_the_ones_that_matter(self):
         docs = _documents()
         for name in ("README.md", "TOOLS.md", "INSTALL.md", "PRIVACY.md",
-                     "QUICKSTART.md", "AI_CODING_WORKFLOW.md",
+                     "QUICKSTART.md",
                      "AI_CODING_GUIDE.md", "CONTRIBUTING.md", "SUPPORT.md",
                      "CLAUDE.md", "PROJECT_SELECTION_GUIDE.md", "NOTICE",
                      "packaging/pypi-old-name/README.md",
                      "issue template bug_report.yml"):
             assert name in docs, name
-        # the historical ones carry their banner, and are records (in
-        # docs/history/ since v0.15.1)
+        # the historical ones are records, not documents read now: in
+        # docs/history/ from v0.15.1, and since v0.15.3 in git's history
+        # alone (tests/test_v0151_history_folder.py)
         for name in ("QUALCODER_IMPORT_CAPABILITIES.md",
                      "RESEARCH_SUMMARY.md", "SECURITY_FIXES.md",
                      "FEATURE_ANALYSIS.md", "SECURITY_REVIEW.md"):
             assert name not in docs, name
-            assert _historical((REPO / "docs" / "history" / name)
-                               .read_text(encoding="utf-8"))
+            assert not (REPO / name).exists(), name
 
 
 # ---------------------------------------------------------------------------
@@ -527,10 +527,11 @@ class TestExegeteNotTheServer:
         blocks = out[0] if isinstance(out, tuple) else out
         text = json.loads("".join(getattr(b, "text", "")
                                   for b in blocks))["instructions"]
-        for_the_user = _flat(text[text.index("**FOR THE USER:**"):])
-        assert ("record your decision on each one: Exegete writes only what "
-                "is marked approved, and cannot tell who approved it, so "
-                "check the counts it reports against what you said"
+        for_the_user = _flat(text[text.index("**For the researcher:**"):])
+        assert ("decide on each one, which you record with "
+                "`update_suggestion_status`: Exegete writes only what is "
+                "marked approved, and cannot tell who approved it, so they "
+                "can check the counts it reports against what they said"
                 ) in for_the_user
 
 
@@ -595,10 +596,12 @@ class TestTheDocumentsSayExegete:
     the pass was complete; they are pinned here word for word."""
 
     SAY_EXEGETE = {
-        # (v0.15.2: the guide's answer not tied to Claude)
+        # (v0.15.2: the guide's answer not tied to Claude; v0.15.3, the
+        # readability reading: said once, in "How it works", and gone
+        # from the answer on API keys, which it did not answer)
         "AI_CODING_GUIDE.md": (
-            "Exegete only stores and applies what is marked approved, and "
-            "cannot see who approved it (\"How it works\", above).",),
+            "Exegete records the approval that the assistant reports, and "
+            "it cannot tell whether you gave it.",),
         "INSTALL.md": (
             "Exegete records the approval the assistant reports: it cannot "
             "tell whether you gave it.",
@@ -669,9 +672,9 @@ class TestTheDocumentsSayExegete:
                            "Exegete works with any MCP host, over standard",
                            "Exegete tells you, through Claude, when"),
             "README.md": ("more work alongside QualCoder 4.0",),
-            "AI_CODING_WORKFLOW.md": ("ask for a random sample",),
+            # (v0.15.3: the workflow guide's phrase, held in the one guide)
             "AI_CODING_GUIDE.md": ("Exegete rejects any excerpt that is "
-                                   "not",),
+                                   "not", "ask for a random sample"),
         }
         for name, phrases in gone.items():
             flat = _flat((REPO / name).read_text(encoding="utf-8"))

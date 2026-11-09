@@ -160,11 +160,11 @@ Quit Claude Desktop completely, with Cmd+Q on a Mac, and open it again.
 codes, memos, names) goes to Anthropic, the AI provider that runs
 Claude's AI model. While training is on, Anthropic may use your
 conversations, with any participants' data in them, to train its models.
-On a personal plan (Free, Pro or Max), the Model Improvement setting at
-https://claude.ai/settings/data-privacy-controls switches training off,
-as Anthropic's pages said on 17 August 2026. The same pages said that
-rating a reply, with a thumbs up or down, can still let Anthropic train
-on that conversation, and so can its being flagged for a safety review.
+On a personal plan (Free, Pro or Max), the setting "Help improve our AI
+models" at https://claude.ai/settings/data-privacy-controls switches
+training off (Anthropic's pages, read on 4 November 2026). The same pages
+say that rating a reply, with a thumbs up or down, can still let Anthropic
+train on that conversation, and so can its being flagged for a safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
@@ -191,7 +191,7 @@ In a Terminal, go into Exegete's folder with `cd`, run `git pull`, then
 for PDF and EPUB as well. New tools appear once the app is open again.
 `venv/bin/python -m exegete.server --version` prints the installed
 version, and `venv/bin/pip show exegete` shows it too. Both spell it as
-PyPI does, with an a for alpha: `0.15.2a0` for `0.15.2-alpha`. An
+PyPI does, with an a for alpha: `0.15.3a0` for `0.15.3-alpha`. An
 update never touches your projects or their backups: it changes only
 Exegete's own code.
 

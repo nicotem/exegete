@@ -6,7 +6,9 @@ Pinned here:
 
 - the training advice, the same for both makers and in the same words:
   switch training off before participants' data, with its reason, the
-  settings by name (Claude's Model Improvement; ChatGPT's "Improve the
+  settings by name (Claude's "Help improve our AI models", the name its
+  Settings, Privacy shows, read by the owner on 9 November 2026;
+  ChatGPT's "Improve the
   model for everyone" and Codex's separate "Include environments") and
   the exception for a rated reply (README, INSTALL.md, PRIVACY.md), and
   where Claude Desktop is set up (INSTALL.md's one-click section,
@@ -116,7 +118,7 @@ def test_the_readme_gives_both_makers_the_same_advice():
         return text.replace(" (PRIVACY.md quotes the terms)", "").strip()
     assert shape(claude, "Anthropic") == shape(openai, "OpenAI")
     # each names its own settings, with Claude's address
-    assert ("the Model Improvement setting at "
+    assert ("the setting \"Help improve our AI models\" at "
             "https://claude.ai/settings/data-privacy-controls switches "
             "training off.") in claude
     assert ("\"Improve the model for everyone\" in ChatGPT's Settings, Data "
@@ -189,7 +191,8 @@ def test_install_and_privacy_give_the_same_advice():
     # the document sets out, at its first mention)
     item = _between(checklist, "- **Training, with either AI provider.**",
                     "- **Controller")
-    for words in (ADVICE.format(maker="the AI provider"), "Model Improvement",
+    for words in (ADVICE.format(maker="the AI provider"),
+                  "\"Help improve our AI models\"",
                   "\"Improve the model for everyone\"",
                   "\"Include environments\"",
                   "Rating a reply (thumbs up or down) can still let either "
@@ -231,7 +234,7 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
                         ("QUICKSTART, step 5", quickstart)):
         for words in ("Anthropic may use your conversations",
                       "to train its models", "(Free, Pro or Max)",
-                      "Model Improvement",
+                      "\"Help improve our AI models\"",
                       "https://claude.ai/settings/data-privacy-controls",
                       "thumbs up or down",
                       "can still let Anthropic train on that conversation"):
@@ -255,7 +258,8 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
 
 def test_quickstart_dates_the_setting_as_privacy_does():
     """v0.15.2, the lead's reading of 29 October: QUICKSTART's sentence on
-    the Model Improvement setting, a claim about Anthropic's product,
+    the setting "Help improve our AI models", a claim about Anthropic's
+    product,
     carries the date PRIVACY.md gives for the terms it quotes there."""
     governance = _between(_flat("PRIVACY.md"), "## Your governance options",
                           "### Rung 1:")

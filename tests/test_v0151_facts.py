@@ -636,9 +636,12 @@ DOT_FOLDER = r"~/\.(?P<name>[\w-]+(?:\.[\w-]+)*)"
 OTHER_PROGRAMS_FOLDERS = frozenset({"qualcoder", "claude", "codex",
                                     "cache", "local"})
 # Other programs' settings the documents quote beside "setting", in
-# lower case: QualCoder's, and the connectors' on claude.ai
+# lower case: QualCoder's, the connectors' on claude.ai, and Claude's
+# switch for training, by the name its Settings, Privacy shows (read by
+# the owner on 9 November 2026)
 OTHER_PROGRAMS_SETTINGS = frozenset({"current coder", "always allow",
-                                     "needs approval", "blocked"})
+                                     "needs approval", "blocked",
+                                     "help improve our ai models"})
 # Exegete's switches that are no setting of the extension, in lower
 # case: the reading page's (TOOLS.md)
 EXEGETE_SWITCHES = frozenset({"text only"})

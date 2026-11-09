@@ -233,9 +233,10 @@ where chat and Cowork are one conversation, go through five checks:
    You could also add no other extension that reads files.
 3. **Training.** While training is on, Anthropic may use your
    conversations, with the participants' data in them, to train its
-   models. On a personal plan (Free, Pro or Max), the Model Improvement
-   setting at https://claude.ai/settings/data-privacy-controls switches
-   training off. Rating a reply, with a thumbs up or down, can still let
+   models. On a personal plan (Free, Pro or Max), the setting "Help
+   improve our AI models" at
+   https://claude.ai/settings/data-privacy-controls switches training
+   off. Rating a reply, with a thumbs up or down, can still let
    Anthropic train on that conversation (PRIVACY.md quotes the terms).
 4. **Your account, not Exegete, sets the terms.** A personal account
    comes under the AI provider's consumer terms. An account your

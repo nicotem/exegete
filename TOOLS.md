@@ -911,8 +911,8 @@ Hosts differ in what they pass on to the assistant, so the brief
 reaches it four ways:
 
 - a short version, under 2,048 characters, as Exegete's opening
-  text, which Claude Code shows at the start of a session (seen on
-  9 October 2026);
+  text, which Claude Code shows at the start of a session (checked on
+  9 November 2026);
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
   project: it returns the full brief (about 14,200 characters), or in

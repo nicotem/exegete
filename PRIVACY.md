@@ -83,14 +83,14 @@ officer will ask, and the summary above depends on them:
   can give you the three answers.
 - **Training, with either AI provider.** Switch training off before
   participants' data: while it is on, the AI provider may use your
-  conversations to train its models. With Anthropic it is the Model
-  Improvement setting (rung 1, the first of the governance options in
-  "Your governance options", below). With OpenAI it is "Improve the
-  model for everyone", and Codex's separate "Include environments"
-  ("OpenAI's apps"). Rating a reply (thumbs up or down) can still let
-  either provider train on that conversation ("Cross-rung cautions";
-  "OpenAI's apps"). By its terms, Anthropic can also train on a
-  conversation flagged for a safety review (rung 1).
+  conversations to train its models. With Anthropic it is the setting
+  "Help improve our AI models" (rung 1, the first of the governance
+  options in "Your governance options", below). With OpenAI it is
+  "Improve the model for everyone", and Codex's separate "Include
+  environments" ("OpenAI's apps"). Rating a reply (thumbs up or down)
+  can still let either provider train on that conversation ("Cross-rung
+  cautions"; "OpenAI's apps"). By its terms, Anthropic can also train on
+  a conversation flagged for a safety review (rung 1).
 - **Controller and processor, and a written agreement.** Your
   institution is normally the data controller, which decides how the
   data is used, and the AI provider a processor, which handles it for
@@ -1978,9 +1978,9 @@ reads ("Assistants that open files by themselves").
 
 Switch training off before participants' data: while it is on, Anthropic
 may use your conversations to train its models. Your account's default
-is worth checking yourself, in the Model Improvement setting at
-<https://claude.ai/settings/data-privacy-controls>. The governing
-documents:
+is worth checking yourself, in the setting "Help improve our AI
+models" at <https://claude.ai/settings/data-privacy-controls>. The
+governing documents:
 
 - Consumer Terms of Service (effective date shown: October 8, 2025),
   <https://www.anthropic.com/legal/consumer-terms>, which state:

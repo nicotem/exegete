@@ -174,8 +174,9 @@ def _flat_quotes(name):
 def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     """v0.14.2, the README review: the quotation moved to PRIVACY.md's
     rung 1, which quotes it with its address and the exceptions; the
-    README keeps the settings address, what Model Improvement does in
-    plain words, and the check before participants' data."""
+    README keeps the settings address, what the setting "Help improve
+    our AI models" does in plain words, and the check before
+    participants' data."""
     readme = _flat("README.md")
     quoted = "unless you opt out of training through your account settings"
     assert quoted not in readme
@@ -188,8 +189,8 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     # exception, as a warning with what to do, not an order)
     assert ("3. **Training.** While training is on, Anthropic may use your "
             "conversations, with the participants' data in them, to train "
-            "its models. On a personal plan (Free, Pro or Max), the Model "
-            "Improvement setting at "
+            "its models. On a personal plan (Free, Pro or Max), the setting "
+            "\"Help improve our AI models\" at "
             "https://claude.ai/settings/data-privacy-controls switches "
             "training off. Rating a reply, with a thumbs up or down, can "
             "still let Anthropic train on that conversation (PRIVACY.md "

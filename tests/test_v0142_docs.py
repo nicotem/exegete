@@ -629,8 +629,8 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
     # v0.15.2, the opening texts: the risk, then the switch
     assert ("3. **Training.** While training is on, Anthropic may use your "
             "conversations, with the participants' data in them, to train "
-            "its models. On a personal plan (Free, Pro or Max), the Model "
-            "Improvement setting") in data
+            "its models. On a personal plan (Free, Pro or Max), the setting "
+            "\"Help improve our AI models\"") in data
     assert "the newer Claude app" not in _flat("README.md")
     # Anthropic's words for the rollout, as PRIVACY.md quotes the page
     # (read again in v0.15.3, with the Ultra plan)

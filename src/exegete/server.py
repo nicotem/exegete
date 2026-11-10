@@ -25356,7 +25356,9 @@ def export_coded_segments_report(
 
     Returns:
         JSON with output_path, row count, the filters applied, and the
-        counting rule + disclosures.
+        counting rule + disclosures. In case mode, repeated_rows counts
+        the rows of a coding written again for its case, since it lies
+        inside two or more overlapping spans of that case.
     """
     if format not in ("csv", "txt"):
         return json.dumps({"error": "format must be 'csv' or 'txt'"})
@@ -25512,6 +25514,15 @@ def export_coded_segments_report(
                                            is_csv=(format == "csv")),
     }
     if case_mode:
+        # A coding inside two or more overlapping spans of one case is
+        # written once for each, as QualCoder's own report writes it (its
+        # query has no DISTINCT: report_codes.py 1834-1855 at 4.0). The
+        # rows are kept as they are; the answer counts those that repeat
+        # a coding already written for the same case (v0.15.4, the claims
+        # audit's point 42), which the counts of get_codes_by_case,
+        # get_cases_by_code and get_case_code_matrix count once.
+        result["repeated_rows"] = len(rows) - len(
+            {(r["caseid"], r["ctid"]) for r in rows})
         result["counting_rule"] = (
             "Containment: a coding belongs to a case when, and only when, "
             "its span lies fully inside one of the case's text spans on "
@@ -25520,7 +25531,11 @@ def export_coded_segments_report(
             "with QualCoder's comparison table, which counts by file "
             "linkage, the numbers can differ. Whole-file links made in "
             "QualCoder end at len-1 or len depending on the dialog, which "
-            "can exclude a coding touching the file end."
+            "can exclude a coding touching the file end. A coding that "
+            "lies inside two or more overlapping spans of one case is "
+            "written once for each of them, as in QualCoder's own report; "
+            "repeated_rows counts the rows that repeat a coding already "
+            "written for the same case."
         )
     return json.dumps(result, indent=2)
 

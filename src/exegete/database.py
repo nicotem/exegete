@@ -9199,12 +9199,16 @@ class QualcoderDatabase:
             codes = [{"id": row["cid"], "name": row["name"]}
                     for row in codes_cursor.fetchall()]
 
-            # Get the matrix data
+            # Get the matrix data. Each coding counts once for a case: a
+            # coding inside two overlapping spans of one case joins two
+            # case_text rows, and COUNT(*) counted it twice (v0.15.4, the
+            # claims audit's point 42), as it did in get_codes_by_case and
+            # get_cases_by_code below
             matrix_cursor = self.conn.execute(f"""
                 SELECT
                     cs.caseid,
                     ct.cid,
-                    COUNT(*) as count
+                    COUNT(DISTINCT ct.ctid) as count
                 FROM case_text cs
                 JOIN {source} ct ON cs.fid = ct.fid{owner_sql}
                     -- full CONTAINMENT, matching QualCoder's own reports
@@ -9261,7 +9265,7 @@ class QualcoderDatabase:
                     c.name as code_name,
                     c.color,
                     cat.name as category_name,
-                    COUNT(*) as occurrence_count
+                    COUNT(DISTINCT ct.ctid) as occurrence_count
                 FROM case_text cs
                 JOIN {source} ct ON cs.fid = ct.fid
                     -- full CONTAINMENT, matching QualCoder's own reports
@@ -9319,7 +9323,7 @@ class QualcoderDatabase:
                     cs.caseid,
                     c.name as case_name,
                     c.memo,
-                    COUNT(*) as occurrence_count
+                    COUNT(DISTINCT ct.ctid) as occurrence_count
                 FROM case_text cs
                 JOIN {source} ct ON cs.fid = ct.fid
                     -- full CONTAINMENT, matching QualCoder's own reports

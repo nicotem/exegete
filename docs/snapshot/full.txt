@@ -2776,8 +2776,7 @@ speaker labels, so none where the file has none; a short turn with no
 question mark comes with the one before it. Then come the paragraph
 or turn holding the passage, with the passage marked, and the code,
 reading and reason. That text is read from the file now, never
-stored; if another project is selected, none is shown.
-edit_suggestion edits a span in place.
+stored. edit_suggestion edits a span in place.
 
 Span alternatives: a pending, unadjusted suggestion may carry
 shorter/longer spans (core sentence; paragraph or speaker turn).
@@ -4271,14 +4270,16 @@ Args:
     project_path: Filter by a project (optional): its folder or the
         data.qda inside it, as select_project takes it; either form
         finds the project's sessions
-    days_old: Only show sessions from last N days (default: 30)
+    days_old: Only show sessions from last N days (default: 30), a
+        whole number from 1 to the days back to the year 1 (about
+        740,000)
 
 Returns:
     JSON with list of sessions and their metadata, each with the
     project's name (its folder's)
 
 Example:
-    "List all my coding sessions"
+    "List my coding sessions of the last 30 days"
     "Show coding sessions from the last 7 days"
     "List sessions for this project"
 

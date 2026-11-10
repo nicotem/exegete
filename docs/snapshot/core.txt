@@ -1682,8 +1682,7 @@ speaker labels, so none where the file has none; a short turn with no
 question mark comes with the one before it. Then come the paragraph
 or turn holding the passage, with the passage marked, and the code,
 reading and reason. That text is read from the file now, never
-stored; if another project is selected, none is shown.
-edit_suggestion edits a span in place.
+stored. edit_suggestion edits a span in place.
 
 Span alternatives: a pending, unadjusted suggestion may carry
 shorter/longer spans (core sentence; paragraph or speaker turn).

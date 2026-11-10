@@ -18,7 +18,7 @@ import tempfile
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Callable, List, Dict, Optional, Any, Tuple
+from typing import Callable, List, Dict, NamedTuple, Optional, Any, Tuple
 
 from . import private_files
 from .database import error_label
@@ -28,6 +28,20 @@ logger = logging.getLogger(__name__)
 # Where a session's file is kept (v0.15.4), as the session tools say it
 KEPT_IN_PROJECT = "project"
 KEPT_ON_THIS_COMPUTER = "this computer"
+
+
+def _now() -> datetime:
+    """The time now, for the sessions' ages (one place, so that a test
+    can fix the clock)."""
+    return datetime.now()
+
+
+def days_back_to_year_one(now: Optional[datetime] = None) -> int:
+    """The most days a session list can count back (v0.15.4): the whole
+    days from the start of the year 1, the earliest date Python's dates
+    hold, to now. One more counts back past it, which Python cannot do
+    (739,929 on 10 November 2026, one more each day)."""
+    return ((now or _now()) - datetime.min).days
 
 
 class SessionFileError(ValueError):
@@ -802,6 +816,26 @@ class AICodingSession:
         return session
 
 
+class SessionsListing(NamedTuple):
+    """What a list of sessions found (v0.15.4,
+    SessionManager.sessions_listing)."""
+    # The sessions, as list_sessions lists them
+    sessions: List[Dict[str, Any]]
+    # Why the open project's sessions folder could not be read, in the
+    # words a lookup gives (a link or a file at its name, a folder its
+    # owner alone can read, a path past Windows' limit); None otherwise
+    project_folder_refusal: Optional[str]
+    # Entries at a session's name in the open project's sessions folder
+    # that could not be read, or hold another session's id
+    not_read_in_project: int
+    # Session files in the state folder that could not be read, or hold
+    # another session's id, whichever project they record
+    not_read_on_this_computer: int
+    # Whether the open project's own folder was read: False when no
+    # project is open, or the list was asked for another project
+    project_read: bool
+
+
 class SessionManager:
     """Manage AI coding sessions with disk persistence."""
 
@@ -1324,7 +1358,9 @@ class SessionManager:
         `project_path` only when that path names it. A file holding
         another session's id, a sync service's conflicted copy and a file
         that cannot be read are not listed, and the log counts them,
-        naming no file.
+        naming no file; `sessions_listing` gives those counts, and the
+        reason when the project's sessions folder cannot be read, beside
+        the list.
 
         Args:
             project_path: Filter by specific project path (optional)
@@ -1336,12 +1372,33 @@ class SessionManager:
             their own ``session_id`` key, which ``load_session`` continues
             to read.
         """
+        return self.sessions_listing(project_path, days_old).sessions
+
+    def sessions_listing(self, project_path: Optional[str] = None,
+                         days_old: int = 30) -> SessionsListing:
+        """The sessions `list_sessions` lists, with what could not be read
+        beside them (v0.15.4), so that an answer never says a project has
+        no sessions when its sessions folder, or a session in it, could
+        not be read: the folder's refusal in its own words, and the
+        entries at a session's name in each place that could not be read
+        or hold another session's id, counted, naming none. A sync
+        service's conflicted copy is not at a session's name, and is
+        neither listed nor counted.
+
+        A `days_old` that counts back past the year 1 raises
+        OverflowError, as before: the tool refuses one before it gets
+        here (days_back_to_year_one)."""
         sessions = []
-        cutoff_date = datetime.now() - timedelta(days=days_old)
+        cutoff_date = _now() - timedelta(days=days_old)
         # Compared as databases, whichever form or spelling either side
         # uses (same_project)
         wanted = self.canonical_database_path(project_path)
         skipped = {"another_id": 0, "unreadable": 0}
+        # By place, for the answer: the project's entries and the state
+        # folder's files that could not be read as their session
+        not_read = {KEPT_IN_PROJECT: 0, KEPT_ON_THIS_COMPUTER: 0}
+        folder_refusal: Optional[str] = None
+        project_read = False
 
         def listed(data: Dict[str, Any], expected_id: str,
                    project_db: str, kept_in: str) -> None:
@@ -1350,6 +1407,7 @@ class SessionManager:
             # listed, it showed the real session's id twice (fix round 2)
             if data.get('session_id') != expected_id:
                 skipped["another_id"] += 1
+                not_read[kept_in] += 1
                 return
             # Filter by project if specified
             if wanted and not self.same_project(project_db, wanted):
@@ -1381,12 +1439,18 @@ class SessionManager:
             if project is not None and (
                     not wanted or self.same_project(project / "data.qda",
                                                     wanted)):
+                project_read = True
                 project_db = str(project / "data.qda")
                 # Every entry at a session's name is that session, as a
                 # lookup takes it, though one that cannot be read (a link,
-                # past the cap) is not listed
-                for name in private_files.session_names(project,
-                                                        files_only=False):
+                # past the cap) is not listed. A folder there that cannot
+                # be read is refused with its reason, as a lookup gives it
+                try:
+                    names = private_files.session_names(
+                        project, files_only=False, refuse=True)
+                except private_files.PrivateFilesError as e:
+                    names, folder_refusal = [], str(e)
+                for name in names:
                     sid = name[len("session_"):-len(".json")]
                     in_project.add(sid)
                     try:
@@ -1395,6 +1459,7 @@ class SessionManager:
                         listed(data, sid, project_db, KEPT_IN_PROJECT)
                     except Exception:
                         skipped["unreadable"] += 1
+                        not_read[KEPT_IN_PROJECT] += 1
             for filepath in self.storage_dir.glob("session_*.json"):
                 # An id the project's folder holds is that session there,
                 # as a lookup takes it: a copy here is not listed again
@@ -1407,6 +1472,7 @@ class SessionManager:
                            data['project_path'], KEPT_ON_THIS_COMPUTER)
                 except Exception:
                     skipped["unreadable"] += 1
+                    not_read[KEPT_ON_THIS_COMPUTER] += 1
                     continue
 
             # Sort by last modified (most recent first)
@@ -1424,7 +1490,12 @@ class SessionManager:
         if skipped["unreadable"]:
             logger.warning("Skipped %d session file(s) that could not be "
                            "read", skipped["unreadable"])
-        return sessions
+        if folder_refusal is not None:
+            logger.warning("The open project's sessions folder could not be "
+                           "read, so its sessions were not listed")
+        return SessionsListing(sessions, folder_refusal,
+                               not_read[KEPT_IN_PROJECT],
+                               not_read[KEPT_ON_THIS_COMPUTER], project_read)
 
     def project_sessions(self, project_db: Any
                          ) -> List[Tuple[str, AICodingSession, bytes]]:

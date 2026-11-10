@@ -1052,19 +1052,33 @@ def read_session(project, name: str) -> bytes:
     return data
 
 
-def session_names(project, files_only: bool = True) -> list:
+def session_names(project, files_only: bool = True,
+                  refuse: bool = False) -> list:
     """The session files in the project's sessions folder, by name, every
     one (no stop at MAX_LISTED, as `listing` has): one listing of the held
     folder, `lstat` only, links never followed, only regular files at a
     session's name (`is_session_name`); with `files_only` False, every
     entry at a session's name, whatever it is, looked at by its name
     alone. Never raises: no folder, or one that cannot be read, lists
-    none. Names nothing in a log line."""
+    none. With `refuse` (v0.15.4, for the session list's answer), a
+    folder that is there but cannot be read raises its refusal, as a
+    lookup meets it (`_held_sessions`: a link or a file at its name, a
+    folder that cannot be read, on Windows a path past the limit), and no
+    folder still lists none. Names nothing in a log line."""
     top = sessions_folder(project)
     try:
-        top, _info, held = _held(top, _SESSIONS_FOLDER_WORDS)
-    except (OSError, PrivateFilesError):
+        if refuse:
+            top, _info, held = _held_sessions(project, FileNotFoundError())
+        else:
+            top, _info, held = _held(top, _SESSIONS_FOLDER_WORDS)
+    except FileNotFoundError:
         return []
+    except (OSError, PrivateFilesError) as exc:
+        if not refuse:
+            return []
+        if isinstance(exc, PrivateFilesError):
+            raise
+        raise _folder_unreadable(exc, _SESSIONS_FOLDER_WORDS) from None
     try:
         found = []
         for name in _names_in(held, top):
@@ -1081,7 +1095,9 @@ def session_names(project, files_only: bool = True) -> list:
                     held, top, name, info):
                 found.append(name)
         return sorted(found)
-    except OSError:
+    except OSError as exc:
+        if refuse:
+            raise _folder_unreadable(exc, _SESSIONS_FOLDER_WORDS) from None
         return []
     finally:
         _let_go(held)

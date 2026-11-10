@@ -1935,7 +1935,7 @@ lets you "Load models on remote machines and use them as if they are
 local", and "Works for local devices, LLM rigs, or cloud VMs"
 (<https://lmstudio.ai/link>, read on 10 November 2026). A model loaded
 on another machine reads the conversation there, what Exegete's tools
-return included, although the page says that your chats remain local.
+return included, although the page says "Your chats remain local".
 If an agreement confines the work to one computer, you could check in
 LM Studio that the model you use is loaded on this computer, or leave
 LM Link off.
@@ -1993,7 +1993,7 @@ less of a local model's room than the full set, and gives the steps.
   characters", in the session's `tool-results` folder there, unless the
   tool raises that threshold (<https://code.claude.com/docs/en/mcp>,
   read on 10 November 2026). `read_file_with_codings` raises it for its
-  parts, so a longer answer of another of Exegete's tools is kept in
+  parts; a longer answer from another of Exegete's tools is kept in
   such a file too. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and
   `cleanupPeriodDays` narrow these
   (<https://code.claude.com/docs/en/data-usage>).
@@ -2267,12 +2267,11 @@ admins control how long your data is retained", and that "workspace
 admins can access an audit log of conversations and GPTs through the
 Enterprise Compliance API". On ChatGPT Business, "Workspace admins have
 control over workspaces and can view, access, export, and delete end
-user conversations in the workspace." So, as with Anthropic, an account
-your institution manages comes under the agreement it made with
-OpenAI, and the people who run its workspace can reach your
-conversations, with what Exegete's tools returned in them. Whoever
-manages the account can tell you which terms apply, and who can read
-the conversations.
+user conversations in the workspace." So the people who run an
+institution's workspace can reach your conversations, with what
+Exegete's tools returned in them. As with Anthropic, whoever manages
+the account can tell you which terms apply, and who can read the
+conversations.
 
 **Codex: how you sign in decides.** Codex can be signed in to with a
 ChatGPT account or with an API key. <https://learn.chatgpt.com/docs/auth>

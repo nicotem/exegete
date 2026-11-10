@@ -605,11 +605,15 @@ class TestTheDocuments:
 
     def test_privacy_says_where_new_projects_go(self):
         flat = _flat("PRIVACY.md")
-        local = flat[flat.index("What stays local, always"):]
-        local = local[:local.index("- Exegete's own folder")]
-        assert ("- new projects made by create_project and project copies "
-                "made by copy_project_to_workspace, in `~/Documents/Exegete "
-                "projects/` by default") in local
+        # (v0.15.4, PRIVACY read whole: "What stays local, always" went
+        # into "Files Exegete keeps on your computer", whose list of places
+        # gives the folder for projects and its defaults)
+        local = flat[flat.index("## Files Exegete keeps on your "
+                                "computer"):]
+        local = local[:local.index("| Kind |")]
+        assert ("- the folder for projects (`~/Exegete projects` in the "
+                "desktop extension, `~/Documents/Exegete projects` "
+                "otherwise") in local
         item = flat[flat.index("- **Creating a project** (`create_project`"):]
         item = item[:item.index("## Your governance options")]
         assert ("A new project is made in the folder the researcher names, "
@@ -618,9 +622,10 @@ class TestTheDocuments:
                 "`~/Documents/Exegete projects`, unless `EXEGETE_WORKSPACE` "
                 "names another folder. iCloud (Desktop and Documents) or "
                 "OneDrive may sync Documents, and so copy the project, "
-                "imported originals included, off the computer: consider a "
-                "folder outside it (the Terminal guide, \"What you need\").") \
-            in item
+                # (v0.15.4: a suggestion in the conventions' form)
+                "imported originals included, off the computer: you could "
+                "choose a folder outside it (the Terminal guide, \"What you "
+                "need\").") in item
 
     def test_the_ai_coding_guide_on_every_route(self):
         flat = _flat("AI_CODING_GUIDE.md")
@@ -759,10 +764,12 @@ class TestTheDocuments:
 
     def test_privacy_a_new_project_is_not_a_backups_copy(self):
         flat = _flat("PRIVACY.md")
-        local = flat[flat.index("What stays local, always"):]
-        local = local[:local.index("- Exegete's own folder")]
-        assert ("(each copy carries the same content as a backup, so the "
-                "`ai_data/` and symlink rules below apply to it)") in local
+        # (v0.15.4, PRIVACY read whole: said in "Files Exegete keeps on your
+        # computer", a sentence of its own)
+        local = flat[flat.index("**Exports and copies.**"):]
+        local = local[:local.index("**Files you fill in.**")]
+        assert ("Each copy carries the same content as a backup, so the "
+                "`ai_data/` and symlink rules below apply to it") in local
         assert "(each carries the same content" not in local
 
     def test_quickstart_troubleshooting_without_a_project(self):

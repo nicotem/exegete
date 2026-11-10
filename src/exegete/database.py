@@ -13575,7 +13575,8 @@ class QualcoderDatabase:
                           occurrence_key: Optional[bytes] = None,
                           leave: Optional[Sequence[str]] = None,
                           leave_numbers: Optional[Sequence[int]] = None,
-                          numbering: Optional[str] = None
+                          numbering: Optional[str] = None,
+                          phrases: Optional[Sequence[Any]] = None
                           ) -> Dict[str, Any]:
         """Everything one run would do, computed without writing anything.
 
@@ -13621,12 +13622,27 @@ class QualcoderDatabase:
         the numbers name nothing and the file says `numbering_changed`.
         Numbers are a list as ids are (occurrences.list_given): whatever
         reads `left_at`, `left` or `left_new_spans` reads them alike.
+
+        With `phrases` (pseudonymise.validate_phrases' phrases to keep,
+        v0.15.4), matched afresh in each file's text as stored and, in a
+        Word, OpenDocument or RTF file, through its markers too, an
+        occurrence as found that lies wholly inside an occurrence of a
+        phrase is left as a list leaves one: each file gains `kept_at`
+        (their places in `found`), `kept` (the number of those no id or
+        number also leaves) and `phrases` (for each phrase, by its
+        number, `occurs`, `keeps` and `cut`, the names that overlap one of
+        its occurrences, lie inside none and are replaced), and
+        `left_new_spans` covers the occurrences kept as well as those a
+        list leaves. A name that runs past a phrase is still replaced.
+        The plan carries the phrases as `keep_phrases`, for the note
+        plan. Without phrases, or with none, nothing here changes.
         """
         from . import occurrences
         from . import pseudonymise as engine
 
         leave = list(leave or ())
         numbers = list(leave_numbers or ())
+        phrases = tuple(phrases or ())
         given = occurrences.list_given(leave, numbers)
         if given and occurrence_key is None:
             raise ValueError("A list of occurrences to leave needs a plan "
@@ -13653,6 +13669,7 @@ class QualcoderDatabase:
                 # no row update, no row read beyond the fingerprint.
                 continue
             replacements = found
+            left_at: List[int] = []
             if occurrence_key is not None:
                 ids = occurrences.full_ids(
                     occurrence_key, source["file_id"], sha,
@@ -13674,6 +13691,18 @@ class QualcoderDatabase:
                 left_at = sorted(kept)
                 replacements = [item for place, item in enumerate(found)
                                 if place not in kept]
+            if phrases:
+                # Phrases to keep (v0.15.4): the occurrences as found that
+                # lie wholly inside an occurrence of a phrase, in either
+                # reading of the text, leave `replacements` as those a
+                # list leaves do, and nothing else changes
+                spans = engine.phrase_spans(
+                    phrases, text, doc_readers.NOTE_MARKER
+                    if source["through_markers"] else None)
+                kept_at, each = engine.places_kept(found, spans, left_at)
+                inside = {found[place].start for place in kept_at}
+                replacements = [item for item in replacements
+                                if item.start not in inside]
             mapper = engine.SpanMapper(replacements, len(text))
             rows = self._pseudonymise_rows(source["file_id"])
             for table, items in rows.items():
@@ -13723,13 +13752,31 @@ class QualcoderDatabase:
                 if numbers:
                     files[-1].update({"numbers_past": past,
                                       "numbering_changed": changed})
-        return {"eligible": digest_files, "skipped": skipped, "files": files,
+            if phrases:
+                # The occurrences kept, and where each one kept or left by
+                # a list stands in the new text, for the count of the
+                # names left (never shown or written)
+                left = set(left_at)
+                files[-1].update({
+                    "kept_at": kept_at,
+                    "kept": sum(1 for place in kept_at if place not in left),
+                    "phrases": [{"number": phrase.number, **counts}
+                                for phrase, counts in zip(phrases, each)],
+                    "left_new_spans": [
+                        [mapper.map_start(found[place].start),
+                         mapper.map_end(found[place].end)]
+                        for place in sorted(left.union(kept_at))]})
+        plan = {"eligible": digest_files, "skipped": skipped, "files": files,
                 "overlap_policy": overlap_policy,
                 "case_mode": compiled.case_mode,
                 "compiled": compiled,
                 "leave": leave,
                 "leave_numbers": numbers,
                 "numbering": numbering}
+        if phrases:
+            # For the note plan, which keeps the same phrases in notes
+            plan["keep_phrases"] = phrases
+        return plan
 
     def pseudonymise_memo_plan(self, compiled,
                                file_plan: Optional[Dict[str, Any]] = None
@@ -13764,6 +13811,14 @@ class QualcoderDatabase:
         handling stays) takes its note with it, so that note is not in
         this plan, and nothing counts or records it as rewritten (Brief 2
         fix round 1, QA-B2-5).
+
+        The file plan's phrases to keep (`keep_phrases`, v0.15.4) are
+        matched in each note's public part right after the rewriter: a
+        match wholly inside an occurrence of a phrase is kept, counted in
+        `totals["kept_by_phrases"]` first, so a note whose every match is
+        kept leaves the plan as a note with no match does, neither
+        written nor dated nor counted as rewritten. Without phrases the
+        totals have no such key.
         """
         from . import pseudonymise as engine
 
@@ -13773,6 +13828,7 @@ class QualcoderDatabase:
                 deleted.setdefault(table, set()).update(
                     row["id"] for row in rows
                     if row["map"] is not None and row["map"].pos0 is None)
+        phrases = (file_plan or {}).get("keep_phrases") or ()
 
         fields: List[Dict[str, Any]] = []
         unreadable: List[str] = []
@@ -13781,6 +13837,8 @@ class QualcoderDatabase:
                   "not_rewritten_marker_risk": 0,
                   "journal_entries_from_earlier_runs": 0,
                   "of_hidden_coders": 0}
+        if phrases:
+            totals["kept_by_phrases"] = 0
         by_entry: Dict[int, int] = {}
         visibility = self.coder_visibility_map()
         for table, column in self.PSEUDONYMISE_MEMO_FIELDS:
@@ -13810,6 +13868,18 @@ class QualcoderDatabase:
                     continue
                 public, private = split_public_private_memo(value)
                 replacements = engine.find_replacements(compiled, public)
+                if phrases and replacements:
+                    # Phrases to keep (v0.15.4), in the public part alone:
+                    # the matches inside one are counted, then dropped
+                    # before the skip of a note with none
+                    kept_at, _each = engine.places_kept(
+                        replacements, engine.phrase_spans(phrases, public))
+                    if kept_at:
+                        totals["kept_by_phrases"] += len(kept_at)
+                        inside = {replacements[place].start
+                                  for place in kept_at}
+                        replacements = [item for item in replacements
+                                        if item.start not in inside]
                 if not replacements:
                     continue
                 has_private = private != ""

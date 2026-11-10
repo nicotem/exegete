@@ -150,6 +150,188 @@ def spans(items):
     return [(item.start, item.end) for item in items]
 
 
+def _spoke(folder):
+    """A coding over the phrase, one after both names, and a hidden
+    coder's coding that ends inside the kept name."""
+    add_coding(folder, 1, 1, 0, len("Theresa May"), text=SPOKE)
+    add_coding(folder, 2, 1, END, END + len("The end"), text=SPOKE)
+    add_coding(folder, 3, 2, 0, KEPT + 1, owner=HIDDEN, text=SPOKE)
+    hide_coder(folder, HIDDEN)
+
+
+class TestTheFileText:
+
+    def test_a_name_inside_a_phrase_is_kept_and_a_lone_one_replaced(
+            self, tmp_path):
+        """The name inside the phrase is left out of the replacements as
+        found: the coding over the phrase stays where it was, the one
+        after both names moves by the one replacement made, the hidden
+        coder's coding that ends inside the kept name is unchanged and
+        nothing asks for allow_hidden_coder. The entries count the
+        occurrences as found, the totals the replacements made."""
+        with project_with(tmp_path, SPOKE, setup=_spoke) as folder:
+            plan = plan_of()
+            item = plan["files"][0]
+            assert spans(item["found"]) == [(KEPT, KEPT + 3),
+                                            (LONE, LONE + 3)]
+            assert spans(item["replacements"]) == [(LONE, LONE + 3)]
+            assert item["kept_at"] == [0] and item["kept"] == 1
+            assert item["phrases"] == [
+                {"number": 1, "occurs": 1, "keeps": 1, "cut": 0}]
+            assert item["left_new_spans"] == [[KEPT, KEPT + 3]]
+            assert item["new_text"] == SPOKE.replace(
+                "Then May", "Then Participant B")
+            moved = (END + LONGER, END + len("The end") + LONGER)
+            assert maps(item) == {
+                1: (P.UNCHANGED, 0, len("Theresa May")),
+                2: (P.SHIFTED,) + moved,
+                3: (P.UNCHANGED, 0, KEPT + 1)}
+            preview = server.db.pseudonymise_preview(plan, [])
+            entry = preview["files"][0]
+            assert [(block["entry"], block["count"])
+                    for block in entry["replacements"]] == [(0, 2)]
+            assert preview["totals"]["replacements"] == 1
+            assert preview["totals"]["files"] == 1
+            assert preview["hidden_coder_rows"]["override_required"] is \
+                False
+            assert "rows_read" not in entry
+            _, _, written = write(folder)
+            assert [report["replacements"]
+                    for report in written["files"]] == [1]
+            assert stored(folder) == item["new_text"]
+            assert positions(folder) == {1: (0, len("Theresa May")),
+                                         2: moved, 3: (0, KEPT + 1)}
+
+    @pytest.mark.parametrize("case_mode, kept", [
+        ("exact", []), ("insensitive", [0]),
+        ("insensitive_preserve", [0])])
+    def test_matched_under_the_runs_case_mode(self, tmp_path, case_mode,
+                                              kept):
+        """The phrase is matched under the run's own flags."""
+        with project_with(tmp_path, SPOKE):
+            item = plan_of(["theresa May"], case_mode=case_mode)["files"][0]
+            assert item["kept_at"] == kept
+            assert len(item["replacements"]) == 2 - len(kept)
+
+    @pytest.mark.parametrize("between, kept", [
+        (" ", [0]), ("\N{NO-BREAK SPACE}", [0]), ("\t", [0]),
+        ("\x1f", [0]), (" \N{NO-BREAK SPACE}\N{EM SPACE} ", [0])] + [
+        (boundary, []) for boundary in LINE_BOUNDARIES + ("\r\n",)])
+    def test_its_white_space_as_read(self, tmp_path, between, kept):
+        """Its white space matches any run of white space that holds no
+        line boundary, and none of the ten line boundaries."""
+        text = f"Theresa{between}May spoke. Then May answered."
+        with project_with(tmp_path, text):
+            item = plan_of()["files"][0]
+            assert len(item["found"]) == 2
+            assert item["kept_at"] == kept
+
+    @pytest.mark.parametrize("mediapath, kept, after", [
+        ("/docs/P01.docx", [0, 1],
+         "Theresa[Comment 1] May spoke. Theresa May[Comment 1]day came. "
+         "Then Participant B left."),
+        (None, [1],
+         "Theresa[Comment 1] Participant B spoke. Theresa May[Comment 1]day "
+         "came. Then Participant B left.")])
+    def test_both_readings_of_a_word_file(self, tmp_path, mediapath, kept,
+                                          after):
+        """In a Word file the phrase is found without the import's
+        markers ("Theresa[Comment 1] May") and as stored ("Theresa
+        May[Comment 1]day", read "Theresa Mayday" without them), as the
+        names are; in a text file only as stored."""
+        text = ("Theresa[Comment 1] May spoke. Theresa May[Comment 1]day "
+                "came. Then May left.")
+        with project_with(tmp_path, text, mediapath) as folder:
+            item = plan_of()["files"][0]
+            assert item["through_markers"] is (mediapath is not None)
+            assert len(item["found"]) == 3
+            assert item["kept_at"] == kept
+            write(folder)
+            assert stored(folder) == after
+
+    def test_a_name_running_past_a_phrase_is_replaced(self, tmp_path):
+        """A name that overlaps an occurrence of a phrase without lying
+        inside it is replaced, and counted as cut: containment, not
+        overlap."""
+        mapping = [{"original": "May", "pseudonym": "Participant B"},
+                   {"original": "May Smith", "pseudonym": "Dana Field"}]
+        text = "Theresa May Smith arrived. Theresa May spoke."
+        with project_with(tmp_path, text) as folder:
+            item = plan_of(mapping=mapping)["files"][0]
+            assert [found.matched for found in item["found"]] == [
+                "May Smith", "May"]
+            assert item["kept_at"] == [1]
+            assert item["phrases"] == [
+                {"number": 1, "occurs": 2, "keeps": 1, "cut": 1}]
+            write(folder, mapping=mapping)
+            assert stored(folder) == ("Theresa Dana Field arrived. "
+                                      "Theresa May spoke.")
+
+    def test_occurrences_that_overlap(self, tmp_path):
+        """Two phrases over one name keep it once, counted in each
+        phrase's keeps; a phrase's own occurrences that overlap are each
+        found, so every name inside one of them is kept."""
+        text = "Theresa May Day was cold. May and May and May. Then May left."
+        with project_with(tmp_path, text):
+            item = plan_of(["Theresa May", "May Day", "May and May"]
+                           )["files"][0]
+            assert item["kept_at"] == [0, 1, 2, 3] and item["kept"] == 4
+            assert item["phrases"] == [
+                {"number": 1, "occurs": 1, "keeps": 1, "cut": 0},
+                {"number": 2, "occurs": 1, "keeps": 1, "cut": 0},
+                {"number": 3, "occurs": 2, "keeps": 3, "cut": 0}]
+            assert len(item["replacements"]) == 1
+            assert len(item["left_new_spans"]) == 4
+
+
+
+def _notes(folder):
+    """An annotation whose note is the phrase alone, and a code's note
+    with a lone name in its public part and the phrase in its private
+    part."""
+    add_annotation(folder, 1, 0, len("Theresa May"), memo="Theresa May")
+    set_note(folder, "UPDATE code_name SET memo=? WHERE cid=1",
+             "May agreed.\n#####Theresa May, privately")
+
+
+class TestTheNotes:
+
+    def test_a_note_whose_every_match_is_kept_is_not_written(self,
+                                                              tmp_path):
+        """With rewrite_memos the phrases are matched in each note's
+        public part right after the rewriter and before the skip of a
+        note with no match: the annotation whose note is the phrase alone
+        keeps its words and its date and is in no list of notes
+        rewritten, the code's note is rewritten in its public part, and
+        its private part is not read."""
+        with project_with(tmp_path, SPOKE, setup=_notes) as folder:
+            plan = plan_of()
+            memo_plan = server.db.pseudonymise_memo_plan(plan["compiled"],
+                                                         plan)
+            assert memo_plan["totals"]["kept_by_phrases"] == 1
+            assert memo_plan["totals"]["rows"] == 1
+            assert {field["table"]: len(field["rows"])
+                    for field in memo_plan["fields"] if field["rows"]} == {
+                "code_name": 1}
+            preview = server.db.pseudonymise_preview(plan, [],
+                                                     memo_plan=memo_plan)
+            assert preview["memo_rewrites"]["totals"]["rows"] == 1
+            plan, _, written = write(folder, rewrite_memos=True)
+            assert written["memos"]["totals"]["rows_updated"] == 1
+            assert [row["table"] for row in written["memos"]["rows"]] == [
+                "code_name"]
+            assert query(folder, "SELECT memo, date FROM annotation") == [
+                {"memo": "Theresa May", "date": "d"}]
+            assert query(folder, "SELECT memo FROM code_name WHERE cid=1"
+                         )[0]["memo"] == ("Participant B agreed.\n"
+                                          "#####Theresa May, privately")
+            body = server._pseudonymise_journal_body(
+                plan, written, plan["compiled"], None, "run.json")
+            assert "Notes rewritten: 1 (code_name 1)" in body
+            assert [row["table"] for row in record_of(plan, written)[
+                "memos"]] == ["code_name"]
+
+
 def refusal(raw, mapping=MAY, case_mode="exact"):
     """The rule a list of phrases breaks and the phrase's number, the
     text never quoting a phrase."""
@@ -236,3 +418,27 @@ class TestTheChecks:
         assert P.canonical_phrases(P.validate_phrases([decomposed], run)) \
             == [cafe]
 
+
+class TestWithoutPhrases:
+
+    def test_the_plans_are_as_before(self, tmp_path):
+        """No phrase, or an empty list, joins neither the plan nor the
+        note plan: the same keys, the same replacements, the same
+        effect."""
+        with project_with(tmp_path, SPOKE, setup=_notes):
+            run = compiled()
+            plain = server.db.pseudonymise_plan(run, "snap_to_pseudonym",
+                                                [1])
+            plain_memos = server.db.pseudonymise_memo_plan(run, plain)
+            assert "kept_by_phrases" not in plain_memos["totals"]
+            for empty in (None, [], ()):
+                plan = server.db.pseudonymise_plan(
+                    run, "snap_to_pseudonym", [1], phrases=empty)
+                assert set(plan) == set(plain)
+                assert set(plan["files"][0]) == set(plain["files"][0])
+                assert spans(plan["files"][0]["replacements"]) == spans(
+                    plain["files"][0]["replacements"])
+                memos = server.db.pseudonymise_memo_plan(run, plan)
+                assert memos["totals"] == plain_memos["totals"]
+                assert server.db.pseudonymise_effect(plan, memos) == \
+                    server.db.pseudonymise_effect(plain, plain_memos)

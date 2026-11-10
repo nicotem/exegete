@@ -331,3 +331,67 @@ class TestSearchFilesRefusesNothingToSearch:
         text = host("search_files", pattern="observation",
                     search_filename=False, search_content=True)
         assert [r["file_id"] for r in text["results"]] == [2]
+
+
+# ---------------------------------------------------------------------------
+# Point 49: a file counted as having every match coded is not listed
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def coded_stress(project):
+    """File 3 'stress-notes.txt', "I am stressed.", its one match for
+    "stress" coded with code 1, as file 1's is (coding 1, 24-55). Its
+    name matches "stress"; file 1's does not."""
+    _sql(project, "INSERT INTO source (id, name, fulltext, mediapath, memo, "
+                  "owner, date) VALUES (3, 'stress-notes.txt', "
+                  "'I am stressed.', NULL, '', 'TestCoder', '2024-01-17')")
+    _sql(project, "INSERT INTO code_text (ctid, cid, fid, seltext, pos0, "
+                  "pos1, owner, date, memo, important) VALUES (3, 1, 3, "
+                  "'stressed', 5, 13, 'TestCoder', '2024-01-17', '', 0)")
+    _reopen(project)
+    return project
+
+
+class TestAFileCountedAsCodedIsNotListed:
+
+    def test_a_file_listed_for_its_name_is_not_counted(self, coded_stress):
+        out = host("search_files", pattern="stress", search_content=True,
+                   exclude_code_ids=[1])
+        (entry,) = out["results"]
+        assert entry["file_id"] == 3
+        assert entry["matched_in"] == {"filename": True, "content": False}
+        assert (entry["content_matches_found"],
+                entry["content_matches_excluded"],
+                entry["content_matches_shown"]) == (1, 1, 0)
+        # File 1 alone: every match coded, and not listed
+        assert out["novelty_filter"]["files_with_all_matches_excluded"] == 1
+
+    def test_without_the_name_search_both_are_counted(self, coded_stress):
+        out = host("search_files", pattern="stress", search_content=True,
+                   search_filename=False, exclude_code_ids=[1])
+        assert out["results"] == []
+        assert out["novelty_filter"]["files_with_all_matches_excluded"] == 2
+
+    def test_the_count_is_the_pages_own(self, coded_stress):
+        _sql(coded_stress, "INSERT INTO source (id, name, fulltext, "
+                           "mediapath, memo, owner, date) VALUES (4, "
+                           "'fresh.txt', 'A stressed passage nobody has "
+                           "coded yet.', NULL, '', 'TestCoder', "
+                           "'2024-01-17')")
+        _reopen(coded_stress)
+        args = dict(pattern="stress", search_content=True,
+                    search_filename=False, exclude_code_ids=[1])
+        whole = host("search_files", **args)
+        assert [r["file_id"] for r in whole["results"]] == [4]
+        assert whole["novelty_filter"]["files_with_all_matches_excluded"] == 2
+        first = host("search_files", limit=1, **args)
+        second = host("search_files", limit=1,
+                      cursor=first["page"]["next_cursor"], **args)
+        counts = [page["novelty_filter"]["files_with_all_matches_excluded"]
+                  for page in (first, second)]
+        assert counts == [0, 2]
+
+    def test_the_help_names_the_content_search_alone(self):
+        topic = json.loads(server.explain_ai_coding_tools())["not_yet_coded"]
+        assert "search_files" in topic
+        assert "search_filename=false" in topic

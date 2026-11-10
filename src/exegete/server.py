@@ -8279,10 +8279,13 @@ def search_files(
     coding of one of those codes in the same file, which is how you ask
     "where is this word in a passage I have not already coded this way?".
     Spans are half-open, so a match that begins exactly where an excluded
-    coding ends is kept. A file whose every match is excluded (every
-    match already coded) is not a result and is counted in
-    files_with_all_matches_excluded; the files returned hold matches
-    outside that coding. It needs search_content=true.
+    coding ends is kept. A file whose every content match is excluded
+    (every match already coded) is counted in
+    files_with_all_matches_excluded, a count of the files this page
+    examined, and is not listed unless its name matches; the files
+    returned hold matches outside that coding, or, with
+    search_filename=true, a name that matches. It needs
+    search_content=true.
 
     Paging: the result carries a page block. Pass its next_cursor back as
     cursor with the same other arguments to continue; a cursor is bound
@@ -8432,12 +8435,17 @@ def search_files(
             block["files_with_all_matches_excluded"] = scan.get(
                 "files_with_all_matches_excluded", 0)
             if block["files_with_all_matches_excluded"]:
+                # Of the files this page examined, and none of them
+                # listed (v0.15.4, the claims audit's point 49)
                 block["note"] = (
                     f"{block['files_with_all_matches_excluded']} file(s) "
-                    f"have every match already coded with these codes; "
-                    f"the files listed hold matches outside that coding, "
-                    f"where coding has not yet reached. It does not mean "
-                    f"a code is complete.")
+                    f"examined for this page have every content match "
+                    f"already coded with these codes, and are not listed. "
+                    f"The files listed hold matches outside that coding, "
+                    f"where coding has not yet reached"
+                    + (", or a name that matches" if search_filename
+                       else "")
+                    + ". It does not mean a code is complete.")
             result["novelty_filter"] = block
         result["files_examined_this_page"] = scan.get("files_examined", 0)
         result["search_parameters"]["exclude_code_ids"] = exclude_ids
@@ -17187,13 +17195,17 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                              "codings by different models can then be "
                              "compared later with compare_coders. Never pick "
                              "the name yourself.",
-            "not_yet_coded": "To find where coding has not reached, search "
-                             "with exclude_code_ids set to the codes you "
-                             "have already applied: matches that overlap "
-                             "them are dropped, and a file whose every "
-                             "match is already coded is counted rather "
-                             "than silently omitted. That count does not "
-                             "mean a code is complete. Page with the page "
+            "not_yet_coded": "To find where coding has not reached, call "
+                             "search_files with search_content=true, "
+                             "search_filename=false and exclude_code_ids "
+                             "set to the codes you have already applied: "
+                             "matches that overlap them are dropped, and a "
+                             "file whose every match is already coded is "
+                             "counted, page by page, rather than silently "
+                             "omitted. With search_filename=true, a file "
+                             "whose name matches is listed all the same. "
+                             "That count does not mean a code is complete. "
+                             "Page with the page "
                              "block's next_cursor until exhaustive is true. "
                              "A page that comes back empty is a result, not "
                              "a failure: say so plainly rather than "

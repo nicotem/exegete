@@ -8294,11 +8294,16 @@ class QualcoderDatabase:
                     ("COALESCE(name,'')", "id")))
                 file_params = self._keyset_params(
                     ("COALESCE(name,'')", "id"), after)
+            # A file's text is read only for a content search (v0.15.4,
+            # the claims audit's point 51): a search of the names alone
+            # read every file's text, though only `name` is searched
+            text_column = ("fulltext" if search_content
+                           else "NULL AS fulltext")
             cursor = self.conn.execute(f"""
                 SELECT
                     id,
                     name,
-                    fulltext,
+                    {text_column},
                     mediapath,
                     owner,
                     date

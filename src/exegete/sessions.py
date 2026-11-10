@@ -1,5 +1,14 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Session management for AI coding suggestions with disk persistence."""
+"""Session management for AI coding suggestions with disk persistence.
+
+From 0.15.4 a new session is kept inside its project, in the project's
+`Exegete coding sessions` folder (private_files), and goes wherever the
+project goes; a file kept there records no project path, its place
+being its project. Sessions made before 0.15.4 stay in the state
+folder's `sessions`, tied to their project by the path they record, and
+nothing moves; so does a session whose project's folder could not hold
+it, with the reason.
+"""
 
 import json
 import logging
@@ -9,11 +18,27 @@ import tempfile
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Optional, Any
+from typing import Callable, List, Dict, Optional, Any, Tuple
 
+from . import private_files
 from .database import error_label
 
 logger = logging.getLogger(__name__)
+
+# Where a session's file is kept (v0.15.4), as the session tools say it
+KEPT_IN_PROJECT = "project"
+KEPT_ON_THIS_COMPUTER = "this computer"
+
+
+class SessionFileError(ValueError):
+    """A session's file that could not be read, saved or removed in the
+    project's sessions folder, or a start refused, with the reason in
+    plain words: no path, nothing the file holds. `code` says which. A
+    ValueError, so that a tool answers its message (v0.15.4)."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
 
 
 # How a suggested code reads the passage (owner rulings 21 and 25, v0.14):
@@ -364,6 +389,15 @@ class AICodingSession:
             "manual_edits": 0, "shorter_picks": 0, "longer_picks": 0}
         self.created_at = datetime.now().isoformat()
         self.last_modified = self.created_at
+        # Where the session's file is kept (v0.15.4), never written into
+        # it: KEPT_IN_PROJECT, in `kept_folder`'s sessions folder, or
+        # KEPT_ON_THIS_COMPUTER, in the state folder. None until it is
+        # first saved or read; a session is saved where it was read.
+        self.kept_in: Optional[str] = None
+        self.kept_folder: Optional[Path] = None
+        # Why a new session is kept on this computer although its project
+        # is open: the reason its project's folder could not hold it
+        self.kept_reason: Optional[str] = None
 
     @staticmethod
     def _clean_scope(scope: Any) -> Optional[Dict[str, Any]]:
@@ -700,13 +734,22 @@ class AICodingSession:
             "proposal_statistics": self.proposal_statistics()
         }
 
+    # The fields a session file in the state folder must hold; a file kept
+    # in a project holds no project_path (v0.15.4)
     _REQUIRED_FIELDS = {
         "project_path", "session_id", "created_at", "last_modified"
     }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'AICodingSession':
+    def from_dict(cls, data: Dict[str, Any],
+                  project_path: Optional[str] = None) -> 'AICodingSession':
         """Create session from dictionary.
+
+        `project_path` (v0.15.4): for a file kept in a project's sessions
+        folder, the database of the project it was read from, which takes
+        the place of any path the file holds; the file need not hold one.
+        Without it, the file's own `project_path` is required, as in the
+        state folder.
 
         Raises:
             ValueError: If required fields are missing
@@ -715,12 +758,15 @@ class AICodingSession:
         if not isinstance(data, dict):
             raise TypeError("AICodingSession data must be a dictionary")
 
-        missing = cls._REQUIRED_FIELDS - set(data.keys())
+        required = (cls._REQUIRED_FIELDS if project_path is None
+                    else cls._REQUIRED_FIELDS - {"project_path"})
+        missing = required - set(data.keys())
         if missing:
             raise ValueError(f"Missing required session fields: {missing}")
 
         session = cls(
-            project_path=data["project_path"],
+            project_path=(data["project_path"] if project_path is None
+                          else project_path),
             session_id=data["session_id"],
             description=data.get("description", ""),
             file_ids=data.get("file_ids", []),
@@ -764,7 +810,9 @@ class SessionManager:
         r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     )
 
-    def __init__(self, storage_dir: Optional[str] = None):
+    def __init__(self, storage_dir: Optional[str] = None,
+                 project: Optional[Callable[[], Optional[Any]]] = None,
+                 no_project: Optional[Callable[[], str]] = None):
         # Constructing a manager must not touch the disk: the server
         # builds one at import time, and `exegete --version` would
         # otherwise create the storage directory before it had even read
@@ -779,7 +827,30 @@ class SessionManager:
         # whose move could not be made uses the old one for everything.
         self._storage_dir = (None if storage_dir is None
                              else Path(storage_dir).expanduser())
+        # `project` (v0.15.4): a function giving the open project's
+        # folder, or None when no project is open, called at each lookup
+        # and never at construction. A new session of the open project is
+        # kept in that project's sessions folder, and a lookup by id reads
+        # that folder first. Without it, the state folder alone, as
+        # before 0.15.4. `no_project`: the words, with their way on, for
+        # a lookup made while no project is open, of a session not on
+        # this computer (the server's "No project selected" answer).
+        self._project = project
+        self._no_project = no_project
         logger.debug("SessionManager storage ready")
+
+    def open_project_folder(self) -> Optional[Path]:
+        """The open project's folder, from the function the manager was
+        built with; None when there is none or no project is open."""
+        if self._project is None:
+            return None
+        folder = self._project()
+        return None if folder is None else Path(folder)
+
+    @staticmethod
+    def file_name(session_id: str) -> str:
+        """A session's file name, in either place."""
+        return f"session_{session_id}.json"
 
     @property
     def storage_dir(self) -> Path:
@@ -821,7 +892,94 @@ class SessionManager:
         return session_id
 
     def save_session(self, session: AICodingSession) -> None:
-        """Save session to disk as JSON, atomically and owner-only.
+        """Save a session where it is kept (v0.15.4): back where it was
+        read; a new one in its project's sessions folder when its project
+        is the open one, else in the state folder.
+
+        A new session whose project's folder cannot hold it (a link or a
+        file at the folder's name, a read-only project, a path too long
+        on Windows) is kept on this computer instead, with the reason in
+        `kept_reason`, but only when that attempt left nothing at the
+        session's name in the project: otherwise SessionFileError, and
+        the session is kept nowhere else, so that no session is in two
+        places.
+
+        Raises:
+            ValueError: If session ID is not valid UUID4 format
+            SessionFileError: The project's sessions folder refused the
+                save, with the reason; the file as it was
+        """
+        self._validate_session_id(session.session_id)
+        if session.kept_in is None:
+            self._save_new(session)
+        elif session.kept_in == KEPT_IN_PROJECT:
+            self._save_in_project(session, session.kept_folder)
+        else:
+            self._save_on_this_computer(session)
+
+    def _save_new(self, session: AICodingSession) -> None:
+        project = self.open_project_folder()
+        if project is None or not self.same_project(
+                session.project_path, project / "data.qda"):
+            self._save_on_this_computer(session)
+            session.kept_in = KEPT_ON_THIS_COMPUTER
+            return
+        try:
+            private_files.ensure_sessions_folder(project)
+            self._save_in_project(session, project)
+        except (private_files.PrivateFilesError, SessionFileError,
+                OSError) as e:
+            reason = (str(e) if isinstance(
+                e, (private_files.PrivateFilesError, SessionFileError))
+                else "Exegete could not write in the project's Exegete "
+                     f"coding sessions folder ({error_label(e)}).")
+            place = (private_files.sessions_folder(project)
+                     / self.file_name(session.session_id))
+            if os.path.lexists(place):
+                logger.error("A new session could not be kept in its "
+                             "project, and something is at its name there")
+                raise SessionFileError(
+                    "left",
+                    "No session was started. Exegete could not finish "
+                    "saving it in the project's Exegete coding sessions "
+                    f"folder ({reason.rstrip('.')}), and something is now "
+                    "at the session's name there, so it was not kept on "
+                    "this computer as well. Asking again starts a new "
+                    "session.") from None
+            logger.warning("A new session is kept on this computer: its "
+                           "project's sessions folder could not hold it")
+            self._save_on_this_computer(session)
+            session.kept_in = KEPT_ON_THIS_COMPUTER
+            session.kept_folder = None
+            session.kept_reason = reason
+            return
+        session.kept_in = KEPT_IN_PROJECT
+        session.kept_folder = project
+
+    def _save_in_project(self, session: AICodingSession,
+                         project: Optional[Path]) -> None:
+        """Write a session into a project's sessions folder, without its
+        project path (private_files.replace_session: synced, owner-only,
+        capped)."""
+        if project is None:
+            raise SessionFileError(
+                "no_project", "This session's project is not known, so it "
+                              "was not saved.")
+        data = session.to_dict()
+        data.pop("project_path", None)
+        raw = json.dumps(data, indent=2).encode("utf-8")
+        try:
+            private_files.replace_session(
+                project, self.file_name(session.session_id), raw)
+        except private_files.PrivateFilesError as e:
+            logger.error(f"Failed to save session {session.session_id} in "
+                         f"its project: {error_label(e)}")
+            raise SessionFileError(e.code, str(e)) from None
+        logger.info(f"Saved session {session.session_id}")
+
+    def _save_on_this_computer(self, session: AICodingSession) -> None:
+        """Save session to the state folder as JSON, atomically and
+        owner-only.
 
         The MRU write discipline (server.py _open_mru_tmp), applied here
         because a session file holds the researcher's approvals and a
@@ -833,17 +991,12 @@ class SessionManager:
         the new one; a failure unlinks the temp and leaves the previous
         file intact. No fsync: sessions are re-creatable, and the one
         fsync in this server is the AI coder name sidecar, which is not
-        (H5, B4.5).
-
-        Args:
-            session: The AICodingSession to save
-
-        Raises:
-            ValueError: If session ID is not valid UUID4 format
+        (H5, B4.5). A session kept in its project is synced
+        (private_files.replace_session), since it travels on whatever
+        drive holds the project.
         """
-        self._validate_session_id(session.session_id)
         self._ensure_storage_dir()
-        filepath = self.storage_dir / f"session_{session.session_id}.json"
+        filepath = self.storage_dir / self.file_name(session.session_id)
         tmp = None
         try:
             fd, tmp_name = tempfile.mkstemp(dir=str(self.storage_dir),
@@ -887,6 +1040,57 @@ class SessionManager:
         """
         return self.load_session_and_bytes(session_id)[0]
 
+    def _from_project(self, session_id: str
+                      ) -> Tuple[Optional[bytes], Optional[Path],
+                                 Optional[SessionFileError]]:
+        """The open project's file of an id (v0.15.4): (its bytes, the
+        project's folder, None); (None, None, None) when nothing is at
+        the id's name there, or the manager keeps no project's sessions;
+        (None, None, a refusal) when no project is open or the project's
+        sessions folder cannot be read, so that the state folder is read
+        and, if it lacks the id too, the refusal given rather than "not
+        found", which would be untrue. An entry at the id's name that
+        cannot be read (a link, past the cap, unreadable, its path too
+        long on Windows) raises SessionFileError: it is that session, and
+        is never passed over for the state folder's file of that id."""
+        if self._project is None:
+            return None, None, None
+        project = self.open_project_folder()
+        if project is None:
+            return None, None, self._no_project_refusal()
+        try:
+            raw = private_files.read_session(project,
+                                             self.file_name(session_id))
+        except FileNotFoundError:
+            return None, None, None
+        except private_files.PrivateFilesError as e:
+            if e.about_folder:
+                return None, None, self._folder_refusal(e)
+            raise SessionFileError(e.code, str(e)) from None
+        return raw, project, None
+
+    @staticmethod
+    def _folder_refusal(error: private_files.PrivateFilesError
+                        ) -> SessionFileError:
+        """A session found in neither place while the project's sessions
+        folder could not be read: refused with that folder's reason,
+        rather than answered as not found."""
+        return SessionFileError(
+            error.code, "This session is not among those kept on this "
+                        f"computer, and the project's could not be read. "
+                        f"{error}")
+
+    def _no_project_refusal(self) -> SessionFileError:
+        """A session not on this computer, looked for while no project is
+        open: it may be kept in a project, found while that project is
+        selected."""
+        text = ("This session is not among those kept on this computer, "
+                "and no project is selected: a session kept in a project "
+                "is found while that project is selected.")
+        if self._no_project is not None:
+            text = f"{text} {self._no_project()}"
+        return SessionFileError("no_project", text)
+
     def load_session_and_bytes(self, session_id: str):
         """Load a session and return it with the file's bytes as read.
 
@@ -896,23 +1100,42 @@ class SessionManager:
         its name is refused: saving it would write the session its inner
         id names, not the file that was read (fix round 1).
 
+        The open project's sessions folder is read first (v0.15.4): a
+        file there is that project's session, its project the open one;
+        the state folder is read, as before, only when nothing is at the
+        id's name there or the folder cannot be read. The session keeps
+        the place it was read from, and is saved there.
+
         Raises:
             ValueError: If the id is not UUID4, or the file holds another id
+            SessionFileError: The project's file at the id's name could
+                not be read, with the reason
             FileNotFoundError: If session file doesn't exist
         """
         self._validate_session_id(session_id)
-        filepath = self.storage_dir / f"session_{session_id}.json"
-        if not filepath.exists():
-            raise FileNotFoundError(f"Session {session_id} not found at {filepath}")
-
         try:
-            raw = filepath.read_bytes()
-            data = json.loads(raw.decode("utf-8"))
-            session = AICodingSession.from_dict(data)
+            raw, project, refusal = self._from_project(session_id)
+            if raw is not None:
+                data = json.loads(raw.decode("utf-8"))
+                session = AICodingSession.from_dict(
+                    data, project_path=str(project / "data.qda"))
+                kept_in = KEPT_IN_PROJECT
+            else:
+                filepath = self.storage_dir / self.file_name(session_id)
+                if not filepath.exists():
+                    if refusal is not None:
+                        raise refusal
+                    raise FileNotFoundError(
+                        f"Session {session_id} not found at {filepath}")
+                raw = filepath.read_bytes()
+                data = json.loads(raw.decode("utf-8"))
+                session = AICodingSession.from_dict(data)
+                kept_in, project = KEPT_ON_THIS_COMPUTER, None
             if session.session_id != session_id:
                 raise ValueError(
                     f"Session file for {session_id} holds another session's "
                     f"id; it is refused rather than used or written")
+            session.kept_in, session.kept_folder = kept_in, project
             logger.info(f"Loaded session {session_id}")
             return session, raw
         except Exception as e:
@@ -926,12 +1149,19 @@ class SessionManager:
         False, and nothing written, when another writer saved it since;
         the caller reads it again and redoes its change on the new copy,
         so a change made meanwhile (a reopen, say) is not undone. The
-        window left is the one between this comparison and the replace."""
-        filepath = self.storage_dir / f"session_{session.session_id}.json"
+        window left is the one between this comparison and the replace.
+        The file compared is the one at the session's place (v0.15.4)."""
+        name = self.file_name(session.session_id)
         try:
-            if filepath.read_bytes() != raw:
-                return False
-        except OSError:
+            if session.kept_in == KEPT_IN_PROJECT:
+                if session.kept_folder is None:
+                    return False
+                now = private_files.read_session(session.kept_folder, name)
+            else:
+                now = (self.storage_dir / name).read_bytes()
+        except (OSError, private_files.PrivateFilesError):
+            return False
+        if now != raw:
             return False
         self.save_session(session)
         return True
@@ -944,14 +1174,42 @@ class SessionManager:
 
         Returns:
             True if session file exists, False otherwise.
-            Returns False for invalid session ID formats.
+            Returns False for invalid session ID formats. True also when
+            the open project's file at the id's name cannot be read, or
+            when the state folder lacks the id while the project's
+            sessions folder cannot be read or no project is open
+            (v0.15.4): loading it then gives the reason.
         """
         try:
             self._validate_session_id(session_id)
         except ValueError:
             return False
-        filepath = self.storage_dir / f"session_{session_id}.json"
-        return filepath.exists()
+        try:
+            raw, _project, refusal = self._from_project(session_id)
+        except SessionFileError:
+            return True
+        if raw is not None:
+            return True
+        filepath = self.storage_dir / self.file_name(session_id)
+        return filepath.exists() or refusal is not None
+
+    def session_file(self, session_id: str) -> Optional[Path]:
+        """Where the lookup finds a session's file: the open project's
+        sessions folder, else the state folder; None when it is in
+        neither. A path for Exegete's own code and its tests, never for
+        an answer."""
+        try:
+            self._validate_session_id(session_id)
+        except ValueError:
+            return None
+        name = self.file_name(session_id)
+        project = self.open_project_folder()
+        if project is not None:
+            place = private_files.sessions_folder(project) / name
+            if os.path.lexists(place):
+                return place
+        place = self.storage_dir / name
+        return place if place.exists() else None
 
     @staticmethod
     def canonical_database_path(project_path: Any) -> Optional[str]:
@@ -1020,6 +1278,15 @@ class SessionManager:
     ) -> List[Dict[str, Any]]:
         """List all sessions, optionally filtered by project and age.
 
+        The open project's own sessions, kept in its sessions folder, are
+        listed beside the state folder's (v0.15.4), each entry with
+        `kept_in` (KEPT_IN_PROJECT or KEPT_ON_THIS_COMPUTER); a project's
+        own are listed only while it is the open one, and with
+        `project_path` only when that path names it. A file holding
+        another session's id, a sync service's conflicted copy and a file
+        that cannot be read are not listed, and the log counts them,
+        naming no file.
+
         Args:
             project_path: Filter by specific project path (optional)
             days_old: Only show sessions from last N days (default: 30)
@@ -1035,54 +1302,72 @@ class SessionManager:
         # Compared as databases, whichever form or spelling either side
         # uses (same_project)
         wanted = self.canonical_database_path(project_path)
+        skipped = {"another_id": 0, "unreadable": 0}
+
+        def listed(data: Dict[str, Any], expected_id: str,
+                   project_db: str, kept_in: str) -> None:
+            # A copy whose inner id is not its file's name is refused by
+            # every tool (load_session), so it is not listed either:
+            # listed, it showed the real session's id twice (fix round 2)
+            if data.get('session_id') != expected_id:
+                skipped["another_id"] += 1
+                return
+            # Filter by project if specified
+            if wanted and not self.same_project(project_db, wanted):
+                return
+            # Filter by age
+            last_modified = datetime.fromisoformat(data['last_modified'])
+            if last_modified < cutoff_date:
+                return
+            sessions.append({
+                # API-facing key only. The on-disk file keeps
+                # 'session_id'; see the docstring above.
+                'coding_session_id': data['session_id'],
+                'created_at': data['created_at'],
+                'last_modified': data['last_modified'],
+                'description': data.get('description', ''),
+                'suggestion_count': data['statistics']['total_suggestions'],
+                'approved_count': data['statistics']['approved'],
+                'rejected_count': data['statistics']['rejected'],
+                'pending_count': data['statistics']['pending'],
+                # The project's folder name, not "data" (v0.14)
+                'project_name': self.project_name(project_db),
+                'project_path': project_db,
+                'kept_in': kept_in,
+            })
 
         try:
+            project = self.open_project_folder()
+            in_project = set()
+            if project is not None and (
+                    not wanted or self.same_project(project / "data.qda",
+                                                    wanted)):
+                project_db = str(project / "data.qda")
+                # Every entry at a session's name is that session, as a
+                # lookup takes it, though one that cannot be read (a link,
+                # past the cap) is not listed
+                for name in private_files.session_names(project,
+                                                        files_only=False):
+                    sid = name[len("session_"):-len(".json")]
+                    in_project.add(sid)
+                    try:
+                        data = json.loads(private_files.read_session(
+                            project, name).decode("utf-8"))
+                        listed(data, sid, project_db, KEPT_IN_PROJECT)
+                    except Exception:
+                        skipped["unreadable"] += 1
             for filepath in self.storage_dir.glob("session_*.json"):
+                # An id the project's folder holds is that session there,
+                # as a lookup takes it: a copy here is not listed again
+                if filepath.stem[len("session_"):] in in_project:
+                    continue
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         data = json.load(f)
-
-                    # A copy whose inner id is not its file's name is
-                    # refused by every tool (load_session), so it is not
-                    # listed either: listed, it showed the real session's
-                    # id twice (fix round 2)
-                    if data.get('session_id') != \
-                            filepath.stem[len("session_"):]:
-                        logger.warning(f"Skipping session file "
-                                       f"{filepath.name}: it holds another "
-                                       f"session's id")
-                        continue
-
-                    # Filter by project if specified
-                    if wanted and not self.same_project(
-                            data['project_path'], wanted):
-                        continue
-
-                    # Filter by age
-                    last_modified = datetime.fromisoformat(data['last_modified'])
-                    if last_modified < cutoff_date:
-                        continue
-
-                    # The project's folder name, not "data" (v0.14)
-                    project_name = self.project_name(data['project_path'])
-
-                    sessions.append({
-                        # API-facing key only. The on-disk file keeps
-                        # 'session_id'; see the docstring above.
-                        'coding_session_id': data['session_id'],
-                        'created_at': data['created_at'],
-                        'last_modified': data['last_modified'],
-                        'description': data.get('description', ''),
-                        'suggestion_count': data['statistics']['total_suggestions'],
-                        'approved_count': data['statistics']['approved'],
-                        'rejected_count': data['statistics']['rejected'],
-                        'pending_count': data['statistics']['pending'],
-                        'project_name': project_name,
-                        'project_path': data['project_path']
-                    })
-                except Exception as e:
-                    logger.warning(f"Skipping invalid session file "
-                                   f"{filepath.name}: {error_label(e)}")
+                    listed(data, filepath.stem[len("session_"):],
+                           data['project_path'], KEPT_ON_THIS_COMPUTER)
+                except Exception:
+                    skipped["unreadable"] += 1
                     continue
 
             # Sort by last modified (most recent first)
@@ -1092,10 +1377,58 @@ class SessionManager:
             logger.error(f"Error listing sessions: {error_label(e)}")
             raise
 
+        # Counts only: a file's name can carry a person's or a computer's
+        # name (a sync service's conflicted copy)
+        if skipped["another_id"]:
+            logger.warning("Skipped %d session file(s) holding another "
+                           "session's id", skipped["another_id"])
+        if skipped["unreadable"]:
+            logger.warning("Skipped %d session file(s) that could not be "
+                           "read", skipped["unreadable"])
         return sessions
 
+    def project_sessions(self, project_db: Any
+                         ) -> List[Tuple[str, AICodingSession, bytes]]:
+        """A project's coding sessions from both places (v0.15.4), each
+        with its id and the bytes it was read with, in the order of
+        their ids: those kept in its sessions folder while it is the open
+        project, and those in the state folder that record it. Every one
+        is listed, with no stop; a file that cannot be read is passed
+        over, since it cannot be applied either. For delete_coding's
+        marks, undo's check and its marks, each saving a session at its
+        place only if unchanged."""
+        found: Dict[str, Tuple[str, AICodingSession, bytes]] = {}
+        project = self.open_project_folder()
+        if project is not None and self.same_project(project_db,
+                                                     project / "data.qda"):
+            for name in private_files.session_names(project):
+                sid = name[len("session_"):-len(".json")]
+                try:
+                    session, raw = self.load_session_and_bytes(sid)
+                except Exception:
+                    continue
+                if session.kept_in == KEPT_IN_PROJECT:
+                    found[sid] = (sid, session, raw)
+        for path in sorted(self.storage_dir.glob("session_*.json")):
+            sid = path.stem[len("session_"):]
+            if sid in found:
+                continue
+            try:
+                session, raw = self.load_session_and_bytes(sid)
+            except Exception:
+                continue
+            if session.kept_in == KEPT_ON_THIS_COMPUTER and \
+                    self.same_project(session.project_path, project_db):
+                found[sid] = (sid, session, raw)
+        return [found[sid] for sid in sorted(found)]
+
     def delete_session(self, session_id: str) -> bool:
-        """Delete a session file.
+        """Delete a session file: the one the lookup finds (v0.15.4), in
+        the open project's sessions folder, with that session's temporary
+        files there, else in the state folder; never the other place's.
+        A link or anything but a file at the id's name in the project is
+        refused with the reason, and the state folder's file of that id
+        left as it is.
 
         Args:
             session_id: The session ID to delete
@@ -1108,7 +1441,23 @@ class SessionManager:
             self._validate_session_id(session_id)
         except ValueError:
             return False
-        filepath = self.storage_dir / f"session_{session_id}.json"
+        name = self.file_name(session_id)
+        project = self.open_project_folder()
+        refusal = None
+        if self._project is not None and project is None:
+            refusal = self._no_project_refusal()
+        if project is not None:
+            try:
+                if private_files.remove_session(project, name):
+                    logger.info(f"Deleted session {session_id}")
+                    return True
+            except private_files.PrivateFilesError as e:
+                if not e.about_folder:
+                    logger.error(f"Failed to delete session {session_id}: "
+                                 f"{error_label(e)}")
+                    raise SessionFileError(e.code, str(e)) from None
+                refusal = self._folder_refusal(e)
+        filepath = self.storage_dir / name
         if filepath.exists():
             try:
                 filepath.unlink()
@@ -1117,4 +1466,6 @@ class SessionManager:
             except Exception as e:
                 logger.error(f"Failed to delete session {session_id}: {error_label(e)}")
                 raise
+        if refusal is not None:
+            raise refusal
         return False

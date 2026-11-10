@@ -2048,19 +2048,12 @@ def find_backup_folder(project_db: Path, secret: str, digest: Optional[str]
 def project_sessions(manager: SessionManager, project_db: Path
                      ) -> List[Tuple[str, Any, bytes]]:
     """This project's coding sessions, each with the bytes it was read
-    with, found as delete_coding's marks find them: every session file,
-    its project compared by `same_project`; one that cannot be read is
-    passed over, since it cannot be applied either."""
-    found = []
-    for path in sorted(manager.storage_dir.glob("session_*.json")):
-        sid = path.stem[len("session_"):]
-        try:
-            session, raw = manager.load_session_and_bytes(sid)
-        except Exception:
-            continue
-        if SessionManager.same_project(session.project_path, project_db):
-            found.append((sid, session, raw))
-    return found
+    with, found as delete_coding's marks find them: the manager's
+    (v0.15.4), those kept in the project's sessions folder and those in
+    the state folder recording it, its project compared by
+    `same_project`; one that cannot be read is passed over, since it
+    cannot be applied either."""
+    return manager.project_sessions(project_db)
 
 
 def _marks_of(record: Dict[str, Any]) -> Tuple[Optional[str], List[str]]:

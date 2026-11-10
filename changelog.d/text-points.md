@@ -40,3 +40,10 @@
   unless it is switched off.
 - **The record of the update check's texts**,
   `docs/update-check/wording.md`, quotes the code's words again.
+- **Plainer sentences.** The bug report form, SUPPORT.md, QUICKSTART.md,
+  README.md, INSTALL.md and CONTRIBUTING.md were read again for
+  readability. Long sentences are split, lists inside sentences are set
+  out as lists, and an order is said as a warning where one belongs,
+  such as what an issue publishes. INSTALL.md's section on approving the
+  AI's suggestions is now headed "Approving the AI's suggestions", and
+  links to its earlier address still lead there.

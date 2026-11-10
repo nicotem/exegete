@@ -569,11 +569,13 @@ class TestTheDocuments:
                 "projects` unless `EXEGETE_WORKSPACE` names another folder. "
                 "iCloud (Desktop and Documents) or OneDrive may sync "
                 "Documents, and so copy your projects, with their "
-                "transcripts, off the computer. A sync service can also copy "
-                "a project's database and the working file beside it, the "
-                "database's journal, at different moments, which can leave a "
-                "damaged copy. You could name a folder outside Documents, "
-                "such as `~/Exegete projects`.") in step3
+                "transcripts, off the computer. A sync service can also leave "
+                "a damaged copy. It may copy a project's database and the "
+                "working file beside it, the database's journal, at different "
+                "moments. You could name a folder outside Documents, such as "
+                "`~/Exegete projects`.") in step3
+        # (v0.15.4, the readability reading: the damage first, then how
+        # it comes about, a sentence each)
         # (v0.15.2, the readability reading: the database's journal said
         # as its working file, not the research journal; the step a
         # sentence of its own)

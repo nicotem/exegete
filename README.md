@@ -59,7 +59,8 @@ nothing, though your assistant may (see "Start here"). It is an early
 version, an alpha, built by one researcher and tested on Windows, macOS
 and Linux. Parts marked Experimental have had little or no use yet.
 [GitHub Issues](https://github.com/nicotem/exegete/issues), not email,
-takes questions and ideas, in public, so leave out participants' data.
+takes questions and ideas. An issue is public, so participants' data put
+into one is published with it.
 
 ## What you can do
 
@@ -177,7 +178,7 @@ Your project   the codings, under the AI coder name you chose
 so it records the approval the assistant reports and cannot tell whether
 you gave it. Keep the assistant asking before the steps that record your
 decisions and write them
-([INSTALL.md lists them](https://github.com/nicotem/exegete/blob/main/INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-are-the-safeguard)).
+([INSTALL.md lists them](https://github.com/nicotem/exegete/blob/main/INSTALL.md#approving-the-ais-suggestions)).
 In Claude, choose "Allow once" each time it asks. In Codex, answer each
 prompt. Before any coding is applied, check that the counts (approved,
 rejected, pending) match what you said, and say so if they do not.
@@ -352,13 +353,13 @@ read again on 4 November 2026, and have not tried it.
 
 **Training.** While training is on, OpenAI may use your conversations,
 with the participants' data in them, to train its models. On a personal
-plan (Free, Plus or Pro, as OpenAI's Help Center names them, Archive
-capture of 6 November 2026), training is switched off with "Improve the
-model for everyone" in ChatGPT's Settings, Data controls, and with
-Codex's separate "Include environments". On Go, which the Help Center
-does not name, you could check that the setting is there. Rating a reply,
-with a thumbs up or down, can still let OpenAI train on that
-conversation. Then follow
+plan (Free, Plus or Pro, as OpenAI's Help Center names them in an
+Internet Archive capture of 6 November 2026), training is switched off
+with "Improve the model for everyone" in ChatGPT's Settings, Data
+controls, and with Codex's separate "Include environments". On Go,
+which the Help Center does not name, you could check that the setting
+is there. Rating a reply, with a thumbs up or down, can still let OpenAI
+train on that conversation. Then follow
 [the Terminal guide's steps](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#chatgpts-desktop-app-and-codex-experimental),
 which make the app ask before every change Exegete makes.
 
@@ -389,12 +390,12 @@ project", in the Terminal guide's recipe, says how to do both once.
 your own coder name, unless you have filled it in Exegete's settings.
 The project keeps it so that your work and the AI's stay apart. Any name
 you choose will do, and if you do not know yours, say so. Before Exegete
-first writes to the project, the assistant asks for the AI coder name,
-kept per project, under which Exegete writes what is done through the
-conversation. It does not ask if the project was made with that name in
-Exegete's settings. In Claude Desktop, both names and the switch "I use
-QualCoder on this computer" are in Settings, Extensions, Exegete. After
-changing one, quit Claude Desktop and open it again. Elsewhere, see
+first writes to the project, the assistant asks for the AI coder name.
+Exegete keeps it per project, and writes what is done through the
+conversation under it. It does not ask if the project was made with that
+name in Exegete's settings. In Claude Desktop, both names and the switch
+"I use QualCoder on this computer" are in Settings, Extensions, Exegete.
+After changing one, quit Claude Desktop and open it again. Elsewhere, see
 [the Terminal guide](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#environment-variables-exegete-reads).
 
 **A project you already have.** Ask the assistant to copy it into the
@@ -403,8 +404,8 @@ original, though an assistant that opens files by itself, such as Codex,
 can read it from the path you give. A project made in QualCoder before
 3.8 must first be opened once in QualCoder 3.8 or newer. Someone who has
 QualCoder, and is allowed to see the project's data, can do this and
-send you the updated copy. Otherwise, a new project made in Exegete from
-the original documents is a way on, without the old coding.
+send you the updated copy. Otherwise, you could make a new project in
+Exegete from the original documents, without the old coding.
 
 **One program at a time.** If you also use QualCoder, close the project
 there before the assistant changes it. QualCoder 3.8.2 writes a lock
@@ -608,9 +609,8 @@ github.com/nicotem/exegete
 [QUICKSTART.md](https://github.com/nicotem/exegete/blob/main/QUICKSTART.md) ·
 [docs/WRITING.md](https://github.com/nicotem/exegete/blob/main/docs/WRITING.md)
 
-The map above is a selection, showing the documents this page links and
-the main code files; the map in [CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md#project-structure),
-under "Project structure", lists every module and script.
+The map above is a selection. It shows the documents this page links
+and the main code files. The map in [CONTRIBUTING.md](https://github.com/nicotem/exegete/blob/main/CONTRIBUTING.md#project-structure), under "Project structure", lists every module and script.
 
 ## What comes next
 

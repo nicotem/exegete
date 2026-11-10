@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping test this alpha.
+        Thanks for helping test this alpha, an early version of Exegete.
 
         An issue is public. Anyone can read it, and search engines find it, so participants' data or a project put into an issue is published with it. You can describe the data without copying it, such as "a code name with an apostrophe" or "a file of about 40,000 characters". A made-up example, or one with names and details removed, usually shows the problem as well. [SUPPORT.md](https://github.com/nicotem/exegete/blob/main/SUPPORT.md) says what a report needs and what a log can hold. [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md) says what leaves your computer when you use Exegete.
 
@@ -28,14 +28,14 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
-      description: "What you asked, step by step, and which tools the assistant used, if the conversation shows them. A conversation copied in can carry passages of your documents, in the assistant's replies and in the tools' answers. You could describe each step in your own words instead, or copy only lines that hold no participants' data."
+      description: "What you asked, step by step, and which of Exegete's tools the assistant used, if the conversation shows them. A conversation copied in can carry passages of your documents, in the assistant's replies and in the tools' answers. You could describe each step in your own words instead, or copy only lines that hold no participants' data."
     validations:
       required: false
   - type: input
     id: mcp-version
     attributes:
       label: Exegete version
-      description: "With the Claude Desktop extension, the version is in the name of the `.mcpb` file you installed. From the Terminal, `exegete --version`, run in the environment you installed into, gives it, or `python -m exegete.server --version` for an install from the source. An install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too. `pip show exegete`, `pipx list` and `uv tool list` also give it. The commands write the version as PyPI does, with a0 for -alpha, and either spelling is fine. If you ask the assistant instead, it may answer without asking Exegete, so the file name or a command is surer."
+      description: "With the Claude Desktop extension, the version is in the name of the `.mcpb` file you installed. If you installed from the Terminal, `exegete --version` gives it, run in the environment you installed into. For an install from the source, the command is `python -m exegete.server --version`. An install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too. `pip show exegete`, `pipx list` and `uv tool list` also give it. The commands write the version as PyPI does, with a0 for -alpha, and either spelling is fine. If you ask the assistant instead, it may answer without asking Exegete, so the file name or a command is surer."
       placeholder: e.g. 0.15.3a0
     validations:
       required: true
@@ -51,7 +51,7 @@ body:
     id: schema-version
     attributes:
       label: Project schema version
-      description: The `databaseversion` value in the `schema` part of what `get_current_project` returns. You can ask the assistant for it. Exegete supports schemas v14 to v17.
+      description: The version of your project's database layout. You can ask the assistant for it. It is the `databaseversion` value in the `schema` part of what the tool `get_current_project` returns. Exegete supports schemas v14 to v17.
       placeholder: e.g. v14 or v17
     validations:
       required: false

@@ -58,9 +58,10 @@ its fix. Describe it there without copying data, as above.
    onnxruntime 1.31.0, such an import made onnxruntime write a device id
    and a database of events into the home folder, in
    `Library/Application Support/Microsoft/DeveloperTools/.onnxruntime`.
-   Whether it sent anything was not watched. You can give the setting yourself before
-   you start Python, with `export ORT_DISABLE_TELEMETRY=1` in the
-   Terminal. On Windows, onnxruntime does not read the setting:
+   That measurement did not check whether anything was sent. You can
+   give the setting yourself before you start Python, with
+   `export ORT_DISABLE_TELEMETRY=1` in the Terminal. On Windows,
+   onnxruntime does not read the setting:
    [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows),
    says what it reports there.
 
@@ -216,15 +217,20 @@ its fix. Describe it there without copying data, as above.
    constant in `src/exegete/server.py`, and `_with_paragraphs` puts it
    back into each tool's docstring, so a change to it is made there.
    Three tool texts also give the lock paragraph's words, typed by hand:
-   `apply_codings`' safety guarantees, `restore_backup`'s list of
-   safeguards, and the key features in `explain_ai_coding_tools`'
-   overview. Six texts give a shorter form of the same rule: the brief,
-   which `read_brief` returns; the descriptions of `select_project` and
-   `set_project_coder_name`; `get_current_project`'s account of
-   `qualcoder_open`; `start_coding_session`'s paragraph on a project in
-   use; and `import_documents`' list of what it refuses. Rule 9 of the
-   opening text says what the assistant does when a tool reports another
-   program. A rewording is made in each of them too.
+   - `apply_codings`' safety guarantees
+   - `restore_backup`'s list of safeguards
+   - the key features in `explain_ai_coding_tools`' overview
+
+   Six texts give a shorter form of the same rule:
+   - the brief, which `read_brief` returns
+   - the descriptions of `select_project` and `set_project_coder_name`
+   - `get_current_project`'s account of `qualcoder_open`
+   - `start_coding_session`'s paragraph on a project in use
+   - `import_documents`' list of what it refuses
+
+   Rule 9 of the opening text says what the assistant does when a tool
+   reports another program. When the rule's words change, change them in
+   each of these texts too.
 
    For each tool set, `full` and `core`, `docs/snapshot/` keeps the
    texts Exegete gives the assistant that are the same for every
@@ -628,19 +634,22 @@ npx @modelcontextprotocol/inspector python -m exegete.server
 
 The MCP library's own command, `mcp dev src/exegete/server.py`, cannot
 start Exegete. It loads `server.py` as a file on its own, and the
-module's imports are relative to its package. Started from the
-Inspector, Exegete works in your own home folder, as it does however it
-is started. It keeps its working files in `~/.exegete`, and looks for
-projects in the usual places. If an earlier copy left a folder at
-`~/.qualcoder_mcp`, the first start moves it to `~/.exegete`. The
-pages and copies that Exegete opens for reading go into its reading
+module's imports are relative to its package.
+
+Started from the Inspector, Exegete works in your own home folder, as it
+does however it is started. It keeps its working files in `~/.exegete`,
+and looks for projects in the usual places. If an earlier copy left a
+folder at `~/.qualcoder_mcp`, the first start moves it to `~/.exegete`.
+The pages and copies that Exegete opens for reading go into its reading
 folder, and a reading page holds a document's whole text and its
-codings. [PRIVACY.md](PRIVACY.md#reading-a-whole-file-what-leaves-the-computer)
-says where that folder is. To try the tools away from your own
-projects and these folders, start the Inspector with `HOME` set to an
-empty folder, as the suite does for each test. On Windows, set
-`USERPROFILE` to the same folder and `LOCALAPPDATA` to a folder inside
-it. On Linux, unset `XDG_CACHE_HOME` or set it inside that folder.
+codings.
+[PRIVACY.md](PRIVACY.md#reading-a-whole-file-what-leaves-the-computer)
+says where that folder is. To try the tools away from your own projects
+and these folders, start the Inspector with `HOME` set to an empty
+folder, as the suite does for each test. On Windows, set `USERPROFILE`
+to the same folder and `LOCALAPPDATA` to a folder inside it. On Linux,
+unset `XDG_CACHE_HOME` or set it inside that folder.
+
 Exegete also reads its settings from the environment it starts in. A
 project or a folder for projects set there would point the trial at
 your real projects, so leave out every setting whose name begins with
@@ -655,12 +664,17 @@ Exegete is built on the
 ## Scope
 
 The design is for general use, principles first. A feature is justified
-on general grounds: the whole life of a project from the conversation;
-interoperability with QualCoder, its formats and conventions kept and
-every departure named; general mappings that hold for any project;
-capability probes rather than special cases. Requests that fit only one research project, one
-researcher's habits or one MCP host are usually declined or generalised
-first. The same rule applies to the maintainer's own projects.
+on general grounds:
+
+- the whole life of a project from the conversation
+- interoperability with QualCoder, its formats and conventions kept and
+  every departure named
+- general mappings that hold for any project
+- capability probes rather than special cases
+
+Requests that fit only one research project, one researcher's habits or
+one MCP host are usually declined or generalised first. The same rule
+applies to the maintainer's own projects.
 
 ## The earlier name
 
@@ -695,7 +709,7 @@ anything (`scripts/release_version.py`).
 
 Every installed copy with checking on fetches
 `https://nicotem.github.io/exegete/latest.json` (`src/exegete/updates.py`)
-and follows no redirect, so that address is permanent. Never rename or
+and follows no redirect, so that address must never change. Never rename or
 delete the `nicotem` account, the `exegete` repository or its Pages
 site, and never set a custom domain on this Pages site or on the
 account's own one. Each of these would remove the site or move it to
@@ -726,20 +740,20 @@ is `_after_update_text` in `src/exegete/updates.py`.
 
 The version file, and the update page Exegete's notes point to
 (`https://nicotem.github.io/exegete/update/`), live in `pages/`. Each
-release updates both with `release.py`: in `latest.json`, the version
-as PyPI spells it and its date; on the page, the version, its date, the
-links and the commands, and under "What's new" the same paragraph as
-the note, word for word. `tests/test_v0142_pages.py` holds them to
+release updates both with `release.py`. `latest.json` gets the version
+as PyPI spells it, and its date. The page gets the version, its date,
+the links and the commands, and, under "What's new", the same paragraph
+as the note, word for word. `tests/test_v0142_pages.py` holds them to
 `release.py`.
 
-What Exegete tells once (the check's disclosure and a new version,
-whether on another tool's answer or in `check_for_updates`' own, and
-the note after an update) is recorded as told only after the answer
-carrying it has been written to standard output and flushed
-(`src/exegete/standard_output.py`), and not when the app has cancelled
-the request. Every tool but `check_for_updates` runs on the event loop,
-so the library reads a cancel only once such a tool has answered, and
-that answer still goes out. Standard input's own thread
+Exegete tells some things once: the check's disclosure, a new version,
+and the note after an update. The first two can come on another tool's
+answer or in `check_for_updates`' own. Each is recorded as told only
+after the answer carrying it has been written to standard output and
+flushed (`src/exegete/standard_output.py`). It is not recorded when the
+app has cancelled the request. Every tool but `check_for_updates` runs
+on the event loop, so the library reads a cancel only once such a tool
+has answered, and that answer still goes out. Standard input's own thread
 (`src/exegete/standard_input.py`) reads the line after the call while
 such a tool runs, and gives it to `standard_output.read_cancel`, so a
 cancel sent next is known before the answer goes out. A cancel sent
@@ -756,10 +770,10 @@ recorded, so the check would never run.
 is where such a change would show first.
 
 Each release's notes on GitHub list what the desktop extension
-installs, under "What the extension installs": the table in the summary
-of the Linux desktop extension job in the release commit's CI run
-(`scripts/extension_libraries.py`, from the lock's dry run on each
-computer).
+installs, under "What the extension installs". The list is the table
+that `scripts/extension_libraries.py` writes from the lock's dry run on
+each computer. It is in the summary of the Linux desktop extension job,
+in the CI run of the release's commit.
 
 The site is published by `.github/workflows/pages.yml`,
 deployed from GitHub Actions and never from a branch (the maintainer's

@@ -630,9 +630,22 @@ def _isolate_session_manager(tmp_path, _sandbox_patch):
     that do not, and any tool call made outside them, wrote for real.
     Patch the OBJECT, the way the other three home-derived bindings are
     patched above.
+
+    Built as the server builds its own (v0.15.4): with the open project's
+    folder, where a new session is kept and looked for first
+    (`sandboxed_session_manager`).
     """
     _sandbox_patch.setattr(server, "session_manager",
-                           SessionManager(str(tmp_path / "sessions")))
+                           sandboxed_session_manager(tmp_path / "sessions"))
+
+
+def sandboxed_session_manager(storage_dir) -> SessionManager:
+    """A session manager in a test's own folder, built as the server
+    builds its own: the state folder's sessions in `storage_dir`, and the
+    open project's in its sessions folder (v0.15.4)."""
+    return SessionManager(str(storage_dir),
+                          project=lambda: server._open_project_folder(),
+                          no_project=lambda: server._no_project_message())
 
 
 @pytest.fixture(autouse=True)
@@ -1009,7 +1022,7 @@ def setup_server(qualcoder_db_path, tmp_path):
     write_fixture_sidecar(qualcoder_db_path)
     server.db = QualcoderDatabase(qualcoder_db_path)
     server.current_project_path = qualcoder_db_path
-    server.session_manager = SessionManager(str(tmp_path / "sessions"))
+    server.session_manager = sandboxed_session_manager(tmp_path / "sessions")
 
     yield server
 
@@ -1036,7 +1049,7 @@ def setup_empty_server(empty_db_path, tmp_path):
     write_fixture_sidecar(empty_db_path)
     server.db = QualcoderDatabase(empty_db_path)
     server.current_project_path = empty_db_path
-    server.session_manager = SessionManager(str(tmp_path / "sessions"))
+    server.session_manager = sandboxed_session_manager(tmp_path / "sessions")
 
     yield server
 
@@ -1065,7 +1078,7 @@ def setup_server_unset(qualcoder_db_path, tmp_path):
     assert not (Path(qualcoder_db_path) / SIDECAR_NAME).exists()
     server.db = QualcoderDatabase(qualcoder_db_path)
     server.current_project_path = qualcoder_db_path
-    server.session_manager = SessionManager(str(tmp_path / "sessions"))
+    server.session_manager = sandboxed_session_manager(tmp_path / "sessions")
 
     yield server
 

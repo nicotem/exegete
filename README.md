@@ -283,10 +283,8 @@ copies its folder (PRIVACY.md says where):
 - the files you fill in for a project, such as the names file
   (`Names to replace.txt`, in the project's `Exegete` folder), which
   Exegete never shows to the assistant
-- Claude Desktop's log of the extension, which can hold every request
-  and answer
-  ([the Model Context Protocol's page on debugging](https://modelcontextprotocol.io/docs/tools/debugging),
-  read on 10 November 2026)
+- Claude Desktop's log of the extension, which can hold every request and answer
+  ([MCP's page on debugging](https://modelcontextprotocol.io/docs/tools/debugging), read on 10 November 2026)
 - Codex's session files and databases, with what Codex read by itself
 
 ## Start here
@@ -354,13 +352,13 @@ read again on 4 November 2026, and have not tried it.
 
 **Training.** While training is on, OpenAI may use your conversations,
 with the participants' data in them, to train its models. On a personal
-plan, training is switched off with "Improve the model for everyone" in
-ChatGPT's Settings, Data controls, and with Codex's separate "Include
-environments". OpenAI's Help Center page "Data controls in ChatGPT"
-names Free, Plus and Pro for that setting, but not Go (Archive capture
-of 6 November 2026). On Go, you could check that the setting is there
-before you bring in participants' data. Rating a reply, with a thumbs
-up or down, can still let OpenAI train on that conversation. Then follow
+plan (Free, Plus or Pro, as OpenAI's Help Center names them, Archive
+capture of 6 November 2026), training is switched off with "Improve the
+model for everyone" in ChatGPT's Settings, Data controls, and with
+Codex's separate "Include environments". On Go, which the Help Center
+does not name, you could check that the setting is there. Rating a reply,
+with a thumbs up or down, can still let OpenAI train on that
+conversation. Then follow
 [the Terminal guide's steps](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#chatgpts-desktop-app-and-codex-experimental),
 which make the app ask before every change Exegete makes.
 

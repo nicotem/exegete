@@ -850,9 +850,11 @@ Each is stated in full by its tool:
 - When the researcher wants to leave some occurrences of a name as they
   are, preview pseudonymise_source with choose_occurrences. The page it
   opens is theirs: never open, read or look at it, and never ask them
-  for words from it. They tell you the ids to leave, and you give those
-  ids alone, in leave_occurrences. Numbers they give from the preview's
-  list go as they are in leave_numbers, with the list's numbering in
+  for words of the text it shows. They give you the occurrences'
+  numbers, in bold there as in the preview's list, or paste the line
+  the page gives them, which holds the file, the list's numbering and
+  the numbers. You give those alone: the numbers as they are in
+  leave_numbers, with the list's numbering (a pasted line's own) in
   numbering, and every id in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
@@ -20541,33 +20543,53 @@ _OCCURRENCES_PAGE_WITHHELD = (
     "The page's place is in Exegete's reading folder ({reading_folder}), "
     "in this project's folder, under file-{file_id}.")
 # The occurrences block's next note where a page shows the researcher each
-# id, opened or written for them to open: without a page, the ids alone
-# leave them to count occurrences in text order. Where none was written,
-# the block's own note stands (QualcoderDatabase.
-# PSEUDONYMISE_OCCURRENCES_NEXT)
+# occurrence, opened or written for them to open: without a page, the
+# rows alone leave them to count occurrences in text order. Where none
+# was written, the block's own note stands (QualcoderDatabase.
+# PSEUDONYMISE_OCCURRENCES_NEXT), which names no page. With a page it
+# says that the page's bold numbers are the rows', what a line pasted
+# from it gives (its example the line the page's script builds,
+# occurrences.the_line), and that numbers said rather than pasted hold
+# for the page written last alone: a page of another list, still open,
+# shows numbers that the latest numbering would take for other
+# occurrences, where the line carries its own page's numbering and is
+# refused (v0.15.4; the occurrences design's data reading, point 1)
+_OCCURRENCES_THE_LINE = (
+    " On the page they may also tick occurrences and paste the line it "
+    "gives, such as \"" + occurrence_ids.the_line(12, "q8x2dm", [3, 7, 12])
+    + "\" For a line, give its file in file_id, the line's own numbering in "
+    "numbering, which a preview refuses if the list has changed since, "
+    "and each of its numbers in leave_numbers. Numbers said rather than "
+    "pasted hold for the page written last for this file: where the "
+    "researcher may be reading an earlier page, or another file's, ask "
+    "for the line.")
 _OCCURRENCES_NEXT_THEN = (
     QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_NUMBERS
+    + _OCCURRENCES_THE_LINE
     + " Then preview again with the same mapping and case_mode, "
     "choose_occurrences and the list: that preview marks the ones left, "
     "for the researcher to check, and its token is the one the run needs.")
 _OCCURRENCES_NEXT_OPENED = (
     "To leave some of these, ask the researcher which: the page that "
-    "opened in their browser shows each id where it stands in the text. "
+    "opened in their browser shows each occurrence where it stands in the "
+    "text, numbered in bold as this block's rows are, with its id. "
     + _OCCURRENCES_NEXT_THEN)
 _OCCURRENCES_NEXT_TO_OPEN = (
     "To leave some of these, ask the researcher which: the page written "
-    "for them shows each id where it stands in the text, and "
-    "occurrences_page says where it is, since it did not open. "
+    "for them shows each occurrence where it stands in the text, numbered "
+    "in bold as this block's rows are, with its id, and occurrences_page "
+    "says where it is, since it did not open. "
     + _OCCURRENCES_NEXT_THEN)
 # The block's note where it lists the first OCCURRENCES_LISTED alone and a
 # page was written, opened or not: a list is matched against every id
-# issued for the text, listed or not, so any id from the page may be
-# given. Without a page the block lists the first ones and says how many
-# more, and occurrences_page says why there is none
+# issued for the text, listed or not, and numbers count every occurrence,
+# so any occurrence on the page may be given. Without a page the block
+# lists the first ones and says how many more, and occurrences_page says
+# why there is none
 _OCCURRENCES_LISTED_IN_PART_NOTE = (
-    "The page shows every occurrence with its id; the researcher may give "
-    "any of them, listed here or not, by its id or by its number, up to "
-    "the block's count.")
+    "The page shows every occurrence with its number and its id; the "
+    "researcher may give any of them, listed here or not, by its number, "
+    "by its id or in the line the page gives, up to the block's count.")
 
 
 def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,

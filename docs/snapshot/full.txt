@@ -995,19 +995,25 @@ Novelty filter: exclude_code_ids drops content matches that overlap a
 coding of one of those codes in the same file, which is how you ask
 "where is this word in a passage I have not already coded this way?".
 Spans are half-open, so a match that begins exactly where an excluded
-coding ends is kept. A file whose every match is excluded (every
-match already coded) is not a result and is counted in
-files_with_all_matches_excluded; the files returned hold matches
-outside that coding. It needs search_content=true.
+coding ends is kept. A file whose every content match is excluded
+(every match already coded) is counted in
+files_with_all_matches_excluded, a count of the files this page
+examined, and is not listed unless its name matches; the files
+returned hold matches outside that coding, or, with
+search_filename=true, a name that matches. It needs
+search_content=true.
 
 Paging: the result carries a page block. Pass its next_cursor back as
 cursor with the same other arguments to continue; a cursor is bound
 to them. Nothing is stored between calls.
 
 Args:
-    pattern: Text to search for (case-insensitive by default)
+    pattern: Text to search for (case-insensitive by default); an
+           empty pattern is refused
     search_filename: Search in file names (default: True, fast)
-    search_content: Search in file content/fulltext (default: False, slower)
+    search_content: Search in file content/fulltext (default: False,
+           slower). With both false the call is refused, as nothing
+           would be searched
     case_sensitive: Use case-sensitive matching (default: False)
     limit: Maximum number of files to return per page (default: 50)
     exclude_code_ids: Codes whose coded spans are already accounted
@@ -1258,7 +1264,8 @@ Args:
            is ignored by Unicode's default case folding, so "école"
            finds "École" and "ß" finds "ss"; Turkish dotted and
            dotless i are not matched to i and I)
-    limit: Maximum number of results to return (default 50)
+    limit: Maximum number of results to return, 1 to 5,000 (default
+           50); a larger limit is refused
 
 Returns:
     JSON object with query, result_count and results; each result
@@ -6792,9 +6799,11 @@ Args:
                    change (accepted until the release on method)
 
 Returns:
-    JSON with the new annotation (anid, span, note). If it contains
-    `position_safety_warning`, relay it to the researcher: if the
-    project is opened in QualCoder, the span can show shifted there.
+    JSON with the new annotation under annotation: its
+    annotation_id, file_id, file_name, position_start, position_end,
+    memo, owner and date. If it contains `position_safety_warning`,
+    relay it to the researcher: if the project is opened in
+    QualCoder, the span can show shifted there.
 
 
 ==== Tool add_annotation: the rest of its entry ====
@@ -7744,7 +7753,8 @@ Args:
     important: Only segments flagged important
     include_variables: Append `FileVar_{name}` columns (and, in case
                        mode, `CaseVar_{name}`) with attribute values
-                       per row, QualCoder's "variables" checkbox
+                       per row, QualCoder's "variables" checkbox;
+                       csv only, since the txt report has no columns
     format: "csv" (default) or "txt"
     sanitize_formulas: Neutralise spreadsheet formula injection in
         CSV cells (values starting with = + - @ tab or CR get a '
@@ -7756,7 +7766,9 @@ Args:
 
 Returns:
     JSON with output_path, row count, the filters applied, and the
-    counting rule + disclosures.
+    counting rule + disclosures. In case mode, repeated_rows counts
+    the rows of a coding written again for its case, since it lies
+    inside two or more overlapping spans of that case.
 
 
 ==== Tool export_coded_segments_report: the rest of its entry ====

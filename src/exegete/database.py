@@ -13758,8 +13758,7 @@ class QualcoderDatabase:
                 files[-1].update({
                     "kept_at": kept_at,
                     "kept": sum(1 for place in kept_at if place not in left),
-                    "phrases": [{"number": phrase.number, **counts}
-                                for phrase, counts in zip(phrases, each)],
+                    "phrases": each,
                     "left_new_spans": [
                         [mapper.map_start(found[place].start),
                          mapper.map_end(found[place].end)]

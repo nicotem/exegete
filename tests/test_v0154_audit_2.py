@@ -225,6 +225,14 @@ class TestAMissingRowReadsAsUnset:
         assert _values(host("get_file_attributes", file_id=1)) == {
             "Source": "interview"}
 
+    def test_a_value_stored_as_null_reads_as_empty_with_its_row(
+            self, missing_rows):
+        # As query_by_attribute reads it (the next test); the row is
+        # there, so the read gives its attribute_id
+        (entry,) = host("get_case_attributes", case_id=3)["attributes"]
+        assert (entry["name"], entry["value"]) == ("Age", "")
+        assert entry["attribute_id"] == 2
+
     def test_an_empty_value_finds_a_case_without_a_row_or_with_none(
             self, missing_rows):
         out = host("query_by_attribute", attr_name="Age", attr_value="")
@@ -498,6 +506,27 @@ class TestVariablesWithTheTextReport:
         out = host("export_coded_segments_report",
                    output_path=str(tmp_path / "report.txt"), format="txt")
         assert "variables_note" not in out
+
+    @pytest.mark.parametrize("mode", [{}, {"case_names": ["Case A"]}],
+                             ids=["file mode", "case mode"])
+    def test_the_note_names_the_columns_the_csv_writes(self, project,
+                                                       tmp_path, mode):
+        # A file attribute beside the case attribute 'Age', so that each
+        # mode has columns to name; the csv writes CaseVar_ columns in
+        # case mode alone
+        _sql(project, "INSERT INTO attribute_type VALUES ('Source', "
+                      "'2024-01-15', 'TestCoder', '', 'file', 'character')")
+        _reopen(project)
+        note = host("export_coded_segments_report",
+                    output_path=str(tmp_path / "report.txt"), format="txt",
+                    include_variables=True, **mode)["variables_note"]
+        header = _csv_rows(host("export_coded_segments_report",
+                                output_path=str(tmp_path / "report.csv"),
+                                include_variables=True,
+                                **mode)["output_path"])[0]
+        for prefix in ("FileVar_", "CaseVar_"):
+            written = any(name.startswith(prefix) for name in header)
+            assert (prefix in note) == written, prefix
 
 
 # ---------------------------------------------------------------------------

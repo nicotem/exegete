@@ -8678,14 +8678,16 @@ class QualcoderDatabase:
         Files screen opens (cases.py 229-250, manage_files.py 1802-1823),
         and its coding report reads one as "" (report_codes.py 976-994).
         Such a row is missing in a project written by a program that does
-        not do the same; query_by_attribute reads it the same way.
+        not do the same. A value stored as null reads as "" too, its row
+        keeping its attribute_id. query_by_attribute reads both the same
+        way.
         """
         try:
             cursor = self.conn.execute("""
                 SELECT
                     a.attrid,
                     a.name,
-                    a.value,
+                    ifnull(a.value, '') AS value,
                     a.date,
                     a.owner,
                     at.valuetype,

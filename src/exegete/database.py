@@ -7991,6 +7991,14 @@ class QualcoderDatabase:
     # project declares them, as annotations already did, so a hidden
     # coder's note is not returned. They are the twelve note fields the
     # pseudonymisation preview counts.
+    #
+    # A region coding's row gives its id as `region_coding_id`, an
+    # audio/video coding's as `av_coding_id`, and `id` null, as the project
+    # memo's and the attribute types' rows already have (v0.15.4):
+    # delete_coding and set_memo's 'coding' target take a text coding's
+    # number, and under `id` such a row's number named another coding, a
+    # text one, which they then removed or changed. No tool takes the two
+    # keys.
     _MEMO_SECTIONS = (
         ("project", None,
          "SELECT NULL AS id, 'Project memo' AS name, "
@@ -8032,7 +8040,8 @@ class QualcoderDatabase:
          "LEFT JOIN source s ON t.fid = s.id "
          "WHERE {match} ORDER BY t.ctid"),
         ("region_coding", ("code_image", "code_image_visible"),
-         "SELECT t.imid AS id, CAST(c.name AS BLOB) AS name, "
+         "SELECT NULL AS id, t.imid AS region_coding_id, "
+         "CAST(c.name AS BLOB) AS name, "
          "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
          "CAST(t.date AS BLOB) AS date, t.id AS file_id, "
          "CAST(s.name AS BLOB) AS file_name FROM {source} t "
@@ -8040,7 +8049,8 @@ class QualcoderDatabase:
          "LEFT JOIN source s ON t.id = s.id "
          "WHERE {match} ORDER BY t.imid"),
         ("av_coding", ("code_av", "code_av_visible"),
-         "SELECT t.avid AS id, CAST(c.name AS BLOB) AS name, "
+         "SELECT NULL AS id, t.avid AS av_coding_id, "
+         "CAST(c.name AS BLOB) AS name, "
          "CAST(t.memo AS BLOB) AS memo, CAST(t.owner AS BLOB) AS owner, "
          "CAST(t.date AS BLOB) AS date, t.id AS file_id, "
          "CAST(s.name AS BLOB) AS file_name FROM {source} t "
@@ -8084,7 +8094,10 @@ class QualcoderDatabase:
             List of matching notes, each with its `type` (one of the
             twelve in `_MEMO_SECTIONS`), id, name, public memo text,
             owner and date, and where it sits when it belongs to a
-            coding, a case link or an annotation (file, positions)
+            coding, a case link or an annotation (file, positions). A
+            region coding's id is under `region_coding_id` and an
+            audio/video coding's under `av_coding_id`, their `id` null:
+            no tool takes either key
 
         Raises:
             TypeError: If parameters are wrong type

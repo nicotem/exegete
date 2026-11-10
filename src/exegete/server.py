@@ -1313,7 +1313,9 @@ def true_or_false_refusal(tool_name: str, schema: Dict[str, Any],
         return None
     if not given:
         return None
-    names = ", ".join(f"'{key}'" for key in given)
+    quoted = [f"'{key}'" for key in given]
+    names = (quoted[0] if len(quoted) == 1
+             else ", ".join(quoted[:-1]) + " and " + quoted[-1])
     text = (f"{tool_name} takes a number, not true or false, for {names}; "
             f"nothing was done. True and false are refused where a number "
             f"goes, rather than read as 1 and 0, so that true cannot stand "

@@ -295,3 +295,39 @@ class TestAddAnnotationsReturnsNamesItsKeys:
         for key in out["annotation"]:
             assert key in returns, key
 
+
+# ---------------------------------------------------------------------------
+# Point 47: search_files with nothing to search
+# ---------------------------------------------------------------------------
+
+class TestSearchFilesRefusesNothingToSearch:
+
+    def test_an_empty_pattern_is_refused(self, project):
+        out = host("search_files", pattern="")
+        assert set(out) == {"error"}
+        assert "pattern" in out["error"]
+
+    def test_an_empty_pattern_is_refused_for_the_text_too(self, project):
+        out = host("search_files", pattern="", search_filename=False,
+                   search_content=True)
+        assert set(out) == {"error"}
+
+    def test_searching_neither_place_is_refused(self, project):
+        out = host("search_files", pattern="interview",
+                   search_filename=False, search_content=False)
+        assert set(out) == {"error"}
+        assert "search_filename" in out["error"]
+        assert "search_content" in out["error"]
+
+    def test_a_space_is_still_a_pattern(self, project):
+        out = host("search_files", pattern=" ", search_filename=False,
+                   search_content=True)
+        assert "error" not in out
+        assert [r["file_id"] for r in out["results"]] == [1, 2]
+
+    def test_either_place_alone_still_searches(self, project):
+        names = host("search_files", pattern="interview")
+        assert [r["file_id"] for r in names["results"]] == [1]
+        text = host("search_files", pattern="observation",
+                    search_filename=False, search_content=True)
+        assert [r["file_id"] for r in text["results"]] == [2]

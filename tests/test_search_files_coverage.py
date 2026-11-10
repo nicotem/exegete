@@ -109,10 +109,11 @@ class TestSearchFilesBranches:
         assert len([m for m in dense["matches"]
                     if m["location"] == "content"]) == 5  # per-file cap
 
-    def test_empty_pattern_returns_empty(self, search_project):
+    def test_empty_pattern_is_refused(self, search_project):
+        # v0.15.4 (the claims audit's point 47): an empty pattern answered
+        # as a search that found nothing, and is now refused
         out = json.loads(server.search_files(""))
-        assert out["total_matches"] == 0
-        assert out["results"] == []
+        assert set(out) == {"error"}
 
     def test_null_filename_does_not_abort(self, search_project):
         """F5 fix pinned at the branch level: NULL names searched as ''."""

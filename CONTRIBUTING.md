@@ -19,10 +19,11 @@ for your operating system. An issue is public, so participants' data or
 a project put into one is published with it. Describe the data without
 copying it instead, such as "a code name with an apostrophe" or "a file
 of about 40,000 characters". SUPPORT.md says what a log can hold.
-A security concern, such as a fault that could expose participants'
-data or let a write damage a project, is best reported privately, as
+Some faults are security concerns, such as one that could expose
+participants' data or damage a project when Exegete changes it. A
+security concern is best reported privately, as
 [SECURITY.md](SECURITY.md) describes, so that it is not public before
-its fix. Describe it there without copying data, as above.
+it is fixed. Describe it there without copying data, as above.
 
 ## Proposing changes
 
@@ -50,11 +51,12 @@ its fix. Describe it there without copying data, as above.
    to 3.14, the part brings PyMuPDF 2. PyMuPDF 2 loads onnxruntime,
    Microsoft's library for running trained models. onnxruntime reports
    on its own use to Microsoft unless it is switched off. On Linux and
-   macOS, its own setting, `ORT_DISABLE_TELEMETRY=1`, given before it
-   loads, switches the reports off. Exegete's reading process, the suite
-   (`tests/conftest.py`) and `scripts/qualcoder_parity.py` give that
-   setting. An import of PyMuPDF anywhere else, such as your own check
-   of what is installed, does not. On a Mac with Apple silicon, with
+   macOS, onnxruntime's own setting, `ORT_DISABLE_TELEMETRY=1`, switches
+   the reports off when it is given before onnxruntime loads. Exegete's
+   reading process, the suite (`tests/conftest.py`) and
+   `scripts/qualcoder_parity.py` give that setting. An import of PyMuPDF
+   anywhere else, such as your own check of what is installed, does
+   not. On a Mac with Apple silicon, with
    onnxruntime 1.31.0, such an import made onnxruntime write a device id
    and a database of events into the home folder, in
    `Library/Application Support/Microsoft/DeveloperTools/.onnxruntime`.
@@ -62,13 +64,14 @@ its fix. Describe it there without copying data, as above.
    give the setting yourself before you start Python, with
    `export ORT_DISABLE_TELEMETRY=1` in the Terminal.
 
-   On Windows, the note in onnxruntime's package, `Privacy.md`, says
-   that its official releases report as they do on Linux and macOS, and
-   read the setting. The same note says that onnxruntime's older way of
-   reporting on Windows, through Windows' own diagnostic data, does not
-   read it. The Windows package of onnxruntime 1.31.0, the one the lock
-   installs, reports that older way, as its files show.
-   [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows),
+   onnxruntime's package holds a note, `Privacy.md`. For Windows, the
+   note says that onnxruntime's official releases report as they do on
+   Linux and macOS, and read the setting. It also says that
+   onnxruntime's older way of reporting on Windows, through Windows' own
+   diagnostic data, does not read the setting. The lock, `uv.lock`,
+   installs onnxruntime 1.31.0, whose Windows package reports in that
+   older way, as its files show.
+   [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows)
    says what it reports there.
 
 4. **Run the test suite** from the repository root:
@@ -321,11 +324,11 @@ its fix. Describe it there without copying data, as above.
    paragraph names. A dated reading gives the day a claim about another
    program was checked, in the form [docs/WRITING.md](docs/WRITING.md)
    gives, and the list gives its age in days. At release preparation,
-   `python scripts/check_promises.py --release`, run in a full clone,
-   fails on a promise whose line is older than the script's
-   `MAX_AGE_DAYS` and that names no row of the plan, and on a reading
-   older than `MAX_AGE_DAYS`. Write what is missing as what Exegete
-   does not do, or give it a row in the plan. A sentence that uses a
+   `python scripts/check_promises.py --release` is run in a full clone.
+   It fails on a promise whose line is older than the script's
+   `MAX_AGE_DAYS` and that names no row of the plan. It also fails on a
+   reading older than `MAX_AGE_DAYS`. Write what is missing as what
+   Exegete does not do, or give it a row in the plan. A sentence that uses a
    promise's words for a state, such as
    `a change previewed but not yet made`, goes into the script's
    `NOT_PROMISES`, with its reason.
@@ -767,10 +770,10 @@ behind several other lines is read only once the tool has answered,
 and can come too late: the note then counts as given.
 This relies on the MCP library flushing standard output once each
 message has been written: a message written in two parts, or two
-messages to one flush, are read alike. A release of the library that
-stopped flushing would leave every note held: each would come again at
-every start, and with checking on, the disclosure would never be
-recorded, so the check would never run.
+messages to one flush, are read alike. With a release of the library
+that stopped flushing, no note would ever be recorded as told. Each
+would then come again at every start. With checking on, the disclosure
+would never be recorded, so the check would never run.
 `tests/test_v0153_update_note.py` holds this, and the
 `newest-libraries` job, which runs the suite on the newest releases,
 is where such a change would show first.
@@ -782,12 +785,12 @@ each computer. It is in the summary of the Linux desktop extension job,
 in the CI run of the release's commit.
 
 The site is published by `.github/workflows/pages.yml`,
-deployed from GitHub Actions and never from a branch (the maintainer's
-decision of 5 October 2026, recorded in `docs/update-check/design.md`):
-a branch would let any token that can push rewrite `latest.json`
-without a release. Once the release is published, with its extension
-file, and both packages are on PyPI, start the workflow by hand from
-the release's tag. It checks the site against the release
+deployed from GitHub Actions and never from a branch. A branch would
+let any token that can push rewrite `latest.json` without a release.
+That was the maintainer's decision of 5 October 2026, recorded in
+`docs/update-check/design.md`. Once the release is published, with its
+extension file, and both packages are on PyPI, start the workflow by
+hand from the release's tag. It checks the site against the release
 (`scripts/check_pages_site.py`) and that the release is out. The deploy
 then waits in the `github-pages` environment for the maintainer's
 approval: the last step of each release, and a hold switch for a bad

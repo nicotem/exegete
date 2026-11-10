@@ -14,10 +14,10 @@ needs.
 
 Other ways of installing Exegete use the Terminal, the program where
 commands are typed. They are in a guide of their own,
-[Installing Exegete from the Terminal](docs/installing-from-the-terminal.md):
-installing with pip, pipx or uv, setting Exegete up by hand for Claude
-Code, Codex, LM Studio or Claude Desktop, and installing from the
-source code as a contributor.
+[Installing Exegete from the Terminal](docs/installing-from-the-terminal.md).
+That guide covers installing with pip, pipx or uv, setting Exegete up
+by hand for Claude Code, Codex, LM Studio or Claude Desktop, and
+installing from the source code as a contributor.
 
 Exegete was called qualcoder-mcp until version 0.14.0. What you set up
 under that name keeps working, and
@@ -34,12 +34,12 @@ what changed.
   a beta, for Linux, on Ubuntu 22.04 or Debian 12 and later. Exegete's
   tests install and start the extension on Linux the way Claude Desktop
   does, but without Claude Desktop itself.
-- **On a Mac, macOS 13 (Ventura) or later**, as the same page asks. On a
-  Mac with Apple silicon (M1 or later), the extension needs macOS 14
-  (Sonoma) or later, from 0.15.3: a library it fetches to read PDFs has
-  no package for earlier releases there. On macOS 13 it does not start
-  ("Troubleshooting", below, says what you can do). On an Intel Mac, the
-  extension needs no more than Claude Desktop does.
+- **On a Mac, macOS 13 (Ventura) or later**, as the same page asks. From
+  0.15.3, on a Mac with Apple silicon (M1 or later), the extension needs
+  macOS 14 (Sonoma) or later. A library it fetches to read PDFs has no
+  package for earlier releases of macOS there. On macOS 13 it does not
+  start ("Troubleshooting", below, says what you can do). On an Intel
+  Mac, the extension needs no more than Claude Desktop does.
 - **The internet when Exegete first starts**, and after each update.
   At those times Claude Desktop fetches a tool called uv, which fetches
   Python and the libraries Exegete needs, the ready-made code it builds
@@ -230,13 +230,13 @@ conversations, with any participants' data in them, to train its
 models. On a personal plan (Free, Pro, Max or Ultra), the setting "Help
 improve our AI models", at
 https://claude.ai/settings/data-privacy-controls, switches training off
-(Anthropic's pages, read on 10 November 2026). One of them, "Is my data
-used for model training?", says that rating a reply (thumbs up or down)
-can still let Anthropic train on that conversation. So can a flag for a
-safety review.
+(Anthropic's pages, read on 10 November 2026). Anthropic's page "Is my
+data used for model training?" says that rating a reply, with a thumbs
+up or down, can still let Anthropic train on that conversation.
+Anthropic can also train on a conversation flagged for a safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
-in the README, says the rest: the checks before participants' data, and
-which assistants open files by themselves.
+in the README, says the rest: the checks to make before you use
+participants' data, and which assistants open files by themselves.
 
 ### Approving the AI's suggestions
 
@@ -333,7 +333,7 @@ QualCoder, a PDF's text saved that way can differ from the one it reads.
 
 Exegete does not update itself. Unless you switched off "Tell me when a
 new version is out", Exegete asks Claude to tell you when a newer
-version is out, and you can ask "How do I update Exegete?" for the
+version is out. You can also ask "How do I update Exegete?" for the
 steps. With the small tool set, which has no tool for that question,
 the notice gives the address of the update page instead. If you have a
 GitHub account, you can also be told of each release: on Exegete's
@@ -507,10 +507,10 @@ GitHub Issues ("Getting help", below).
    - **Claude Desktop's log of the extension**,
      `mcp-server-Exegete.log` in `~/Library/Logs/Claude` on a Mac,
      `%APPDATA%\Claude\logs` on Windows or `~/.config/Claude/logs` on
-     Linux, with `mcp-server-qualcoder-mcp.log` beside it from before
-     0.14.1. It can hold every request and every answer in full, names,
-     paths and quoted text included ("Reading the server log", below).
-     Exegete never removes it.
+     Linux. A log from before 0.14.1, `mcp-server-qualcoder-mcp.log`,
+     stays beside it. The log can hold every request and every answer in
+     full, names, paths and quoted text included ("Reading the server
+     log", below). Exegete never removes it.
 
 The backups Exegete took sit beside each project, in folders named
 `<project>_backup_<timestamp>.qda`. The `prune_backups` tool removes
@@ -536,16 +536,17 @@ how long".
 - The first start needs the internet.
 - On a Mac with Apple silicon, from 0.15.3, the extension needs macOS
   14 or later. On macOS 13 or earlier it stops before Exegete runs, so
-  Exegete cannot say why: Claude Desktop's log of the extension
-  ("Reading the server log", below) holds uv's message that a library,
-  onnxruntime, has no package for that macOS. Updating macOS to 14 or
-  later brings the extension back, and so does installing 0.15.2's
-  extension again ("Going back to an earlier version", below). While
-  Exegete cannot start, it removes nothing it keeps. The texts an
-  import's preview read, and the reading folder's pages and copies of
-  originals, stay where "Decide what to do with what stays", under
-  "Uninstalling", says. 0.15.2's extension, installed again, removes
-  them at its first start once their time has passed.
+  Exegete cannot say why. Claude Desktop's log of the extension
+  ("Reading the server log", below) holds the reason: uv's message that
+  a library, onnxruntime, has no package for that macOS. Updating macOS
+  to 14 or later brings the extension back, and so does installing
+  0.15.2's extension again ("Going back to an earlier version", below).
+  While Exegete cannot start, it removes nothing it keeps. The texts an
+  import's preview read stay in Exegete's own folder, and the pages and
+  copies of originals stay in the reading folder. "Decide what to do
+  with what stays", under "Uninstalling", says where both folders are.
+  0.15.2's extension, installed again, removes them at its first start
+  once their time has passed.
 - An empty "Folder for projects", or a coder name outside the rules
   under "The settings page", stops the extension from starting. The log
   says which setting is at fault, never its value ("Reading the server
@@ -616,26 +617,36 @@ with it.
 
 Claude Desktop keeps the extension's log in `mcp-server-Exegete.log`,
 in `~/Library/Logs/Claude` on a Mac or `%APPDATA%\Claude\logs` on
-Windows, and Settings, Developer, Show Logs opens it. On Linux, where
-Claude Desktop is a beta, MCP's page on debugging, read on 10 November
-2026, gives the folder as `~/.config/Claude/logs`. Before 0.14.1 the
+Windows, and Settings, Developer, Show Logs opens it. Before 0.14.1 the
 log was `mcp-server-qualcoder-mcp.log`, which stays where it was.
+
+MCP, the protocol Exegete speaks to apps, has a page on debugging,
+<https://modelcontextprotocol.io/docs/tools/debugging>. Read on
+10 November 2026, it gives the log's folder on Linux, where Claude
+Desktop is a beta, as `~/.config/Claude/logs`. It also lists message
+exchanges among what Claude Desktop's logs capture. So Claude Desktop's
+log, the file Show Logs opens, can hold every request and every answer
+in full. That is everything the tools returned and the arguments they
+were given, names, paths and quoted text included, as the conversation
+holds them. Before sharing the file, read it as you would the
+conversation.
 
 Exegete writes its own lines to the log, at the INFO level and above.
 They carry ids, counts and the kinds of errors. They name no project,
 file, code, category, case, journal entry or attribute, and no path.
 They hold no memo text and no SQLite message. A project is kept in an
 SQLite database, and a database error is logged by its kind and
-SQLite's short name for it. So even a project built to put a note into
-an error, with a database trigger, does not make a tool log that note,
-private part included. Nor does a damaged project, with a note that is
-not UTF-8.
+SQLite's short name for it. A project could be built to put a note into
+an error message, with a database trigger. Even then, no tool logs that
+note, including any part that a `#####` mark keeps private. A damaged
+project, with a note that is not UTF-8, does not make a tool log it
+either.
 A project's schema version, the version of its database layout, appears
 only in QualCoder's format (`v` and digits). A file refused as damaged
-leaves one line with the kind of error, never the file. For a PDF,
-EPUB, RTF or Word file, the line also gives the release of the library
-Exegete reads that kind of file with. That line helps when you report
-a problem.
+leaves one line with the kind of error, never the file's name. For a
+PDF, EPUB, RTF or Word file, the line also gives the release of the
+library Exegete reads that kind of file with. That line helps when you
+report a problem.
 
 The MCP library, the code Exegete uses to talk to the app, writes lines
 of its own beside them, giving the kind of each request. They carry
@@ -658,15 +669,6 @@ Exegete's instead, and nothing of what was sent:
   request sent before the app had finished starting the session;
 - a response's id is text that is not a number.
 
-MCP, the protocol Exegete speaks to apps, has a page on debugging,
-<https://modelcontextprotocol.io/docs/tools/debugging>. Read on
-10 November 2026, it lists message exchanges among what Claude
-Desktop's logs capture. So Claude Desktop's log, the file Show Logs
-opens, can hold every request and every answer in full. That is
-everything the tools returned and the arguments they were given, names,
-paths and quoted text included, as the conversation holds them. Before
-sharing the file, read it as you would the conversation.
-
 ### Where to ask
 
 - **Problems with Exegete**: check "Troubleshooting", above, then open
@@ -674,13 +676,13 @@ sharing the file, read it as you would the conversation.
   [GitHub Issues](https://github.com/nicotem/exegete/issues). That is
   the only support channel, and email requests receive no reply
   ([SUPPORT.md](SUPPORT.md)). Research data pasted into an issue becomes
-  public, so a made-up example, or one with names and details removed,
-  is the safer way to show a problem. An example with names and details
-  removed is still a participant's words, which a search can find and
-  someone can recognise. Your ethics approval may not allow you to
-  publish it. Give the Exegete version, and your QualCoder version if
-  you use it. Say which host you use: Claude Desktop, and whether in a
-  chat, Cowork or a Code session. Give the tool set too: `full`, or
+  public, so a made-up example, or a real one with names and details
+  removed, is the safer way to show a problem. The real one is still a
+  participant's words, which a search can find and someone can
+  recognise. Your ethics approval may not allow you to publish it. Give
+  the Exegete version, and your QualCoder version if you use it. Say
+  which host you use: Claude Desktop, and whether in a chat, Cowork or
+  a Code session. Give the tool set too: `full`, or
   `core` if the small tool set is on. `lifecycle` is the earlier name
   of `full`.
 - **The protocol Exegete speaks to apps**, MCP:

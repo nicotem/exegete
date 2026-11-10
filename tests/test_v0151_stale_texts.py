@@ -175,10 +175,14 @@ def test_install_gives_the_linux_log_folder_the_check_reads(tmp_path):
     install = _flat("INSTALL.md")
     section = install[install.index("### Reading the server log"):]
     section = section[:section.index("### Where to ask")]
-    assert re.search(r"On Linux, where Claude Desktop is a beta, MCP's page "
-                     r"on debugging, read on \d{1,2} [A-Z][a-z]+ 20\d\d, "
-                     r"gives the folder as `~/\.config/Claude/logs`\.",
-                     section)
+    # (the readability reading: the page named, with its address, before
+    # the folder it gives)
+    page = "https://modelcontextprotocol.io/docs/tools/debugging"
+    assert page in section
+    assert re.search(r"Read on \d{1,2} [A-Z][a-z]+ 20\d\d, it gives the "
+                     r"log's folder on Linux, where Claude Desktop is a beta, "
+                     r"as `~/\.config/Claude/logs`\.",
+                     section[section.index(page):])
 
 
 def test_the_uninstall_says_the_hosts_records_stay_as_privacy_lists():

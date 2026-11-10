@@ -50,14 +50,18 @@ def test_the_issue_forms_and_support_send_such_a_fault_to_security_md():
     config = (REPO / ".github/ISSUE_TEMPLATE/config.yml").read_text(
         encoding="utf-8")
     link = config[config.index(f"url: {SECURITY_PAGE}"):]
-    assert link.split("\n")[1].strip().startswith("about: A fault that "
-                                                   "could expose")
-    assert "best reported privately" in link
+    # (the readability reading: the link's own text, held to its facts,
+    # the fault and the private report, not to its words)
+    about = link.split("\n")[1].strip()
+    assert about.startswith("about: "), about
+    assert "expose participants' data" in about
+    assert "best reported privately" in about
     assert "Everything goes through" not in config
     support = _flat("SUPPORT.md")
     assert "Everything goes through" not in support
     opening = support[support.index("## Where to get help"):]
     opening = opening[:opening.index("- **Bug reports.**")]
     assert ("is best reported privately instead, so that it is not public "
-            "before its fix. [SECURITY.md](SECURITY.md) says how.") in opening
+            "before it is fixed. [SECURITY.md](SECURITY.md) says how."
+            ) in opening
     assert (REPO / "SECURITY.md").is_file()

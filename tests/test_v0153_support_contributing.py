@@ -165,16 +165,22 @@ def test_contributing_gives_onnxruntimes_own_note_beside_the_package():
     contributing = _flat("CONTRIBUTING.md")
     assert "On Windows, onnxruntime does not read the setting" \
         not in contributing
-    for words in ("On Windows, the note in onnxruntime's package, "
-                  "`Privacy.md`, says that its official releases report as "
-                  "they do on Linux and macOS, and read the setting.",
-                  "The same note says that onnxruntime's older way of "
-                  "reporting on Windows, through Windows' own diagnostic "
-                  "data, does not read it.",
-                  "The Windows package of onnxruntime 1.31.0, the one the "
-                  "lock installs, reports that older way, as its files "
-                  "show."):
+    # (the readability reading: the note named first, then what it says
+    # for Windows, a sentence each, and the release the lock gives)
+    for words in ("onnxruntime's package holds a note, `Privacy.md`. For "
+                  "Windows, the note says that onnxruntime's official "
+                  "releases report as they do on Linux and macOS, and read "
+                  "the setting.",
+                  "It also says that onnxruntime's older way of reporting "
+                  "on Windows, through Windows' own diagnostic data, does "
+                  "not read the setting."):
         assert words in contributing, words
+    lock = tomllib.loads((REPO / "uv.lock").read_text(encoding="utf-8"))
+    release = next(package["version"] for package in lock["package"]
+                   if package["name"] == "onnxruntime")
+    assert (f"The lock, `uv.lock`, installs onnxruntime {release}, whose "
+            f"Windows package reports in that older way, as its files "
+            f"show.") in contributing
     assert ("comes from onnxruntime's source code and the Windows package "
             "Exegete installs") in _flat("PRIVACY.md")
     # PyMuPDF 2, and onnxruntime with it, only with Python 3.11 to 3.14,
@@ -211,20 +217,25 @@ def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
     and INSTALL say so). The copy the form suggests holds any names list
     and names file, as copy_project_to_workspace's description says."""
     form = _flat(".github/ISSUE_TEMPLATE/bug_report.yml")
-    still = ("An example with names and details removed is still a "
-             "participant's words, which a search can find and someone can "
-             "recognise. Your ethics approval may not allow you to publish "
-             "it.")
+    # (the readability reading: "a real one" named once, and the warning
+    # about it the next sentence, in the form, SUPPORT and INSTALL)
+    real = "a real one with names and details removed"
+    still = ("The real one is still a participant's words, which a search "
+             "can find and someone can recognise. Your ethics approval may "
+             "not allow you to publish it.")
     for words in ("The tools' answers can also hold the names of files and "
                   "cases, attribute values, codes and memos, which can "
                   "identify a participant.",
-                  still,
+                  real, still,
                   "The copy goes into your folder for projects. It holds the "
-                  "whole project, with any names list and names file, and "
-                  "the real names in them."):
+                  "whole project, including any names list and names file, "
+                  "with the real names in them."):
         assert words in form, words
     for name in ("SUPPORT.md", "INSTALL.md"):
-        assert still in _flat(name), name
+        text = _flat(name)
+        assert real in text, name
+        assert still in text, name
+        assert text.index(real) < text.index(still), name
     source = (REPO / "src/exegete/server.py").read_text(encoding="utf-8")
     tool = source[source.index("def copy_project_to_workspace("):]
     tool = " ".join(tool[:tool.index('"""', tool.index('"""') + 3)].split())

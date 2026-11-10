@@ -989,7 +989,7 @@ class TestTheDocumentsSayWhatTheLogCarries:
         # message exchanges among what Claude Desktop's logs capture
         assert ("So Claude Desktop's log, the file Show Logs opens, can "
                 "hold every request and every answer in full") in install
-        assert "it lists message exchanges among what Claude" in install
+        assert "lists message exchanges among what Claude" in install
         assert ("A host may record more in the same file: Claude "
                 "Desktop's server log") in privacy
         assert ("The rule closes one channel, SQLite's message; it does "

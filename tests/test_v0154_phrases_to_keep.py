@@ -518,20 +518,40 @@ class TestTheChecks:
         assert decomposed != cafe
         assert P.canonical_phrases(P.validate_phrases([decomposed], run)) \
             == [cafe]
+        # Two readings that differ in their normal form alone are both
+        # matched, each as supplied, and bind once
+        both = P.validate_phrases([cafe, decomposed], run)
+        assert len(both) == 2 and P.canonical_phrases(both) == [cafe]
+
+
+# The keys of a plan, of a file's plan and of the note plan's totals at
+# 3406aba, before phrases, for a plan made without an occurrence key or a
+# list of occurrences to leave
+PLAN_KEYS = {"eligible", "skipped", "files", "overlap_policy", "case_mode",
+             "compiled", "leave", "leave_numbers", "numbering"}
+FILE_KEYS = {"file_id", "name", "old_text", "through_markers", "new_text",
+             "old_fingerprint", "position_safe", "found", "replacements",
+             "rows", "overlap_conflicts", "overlap_conflicts_truncated",
+             "overlap_conflicts_capped", "collisions"}
+NOTE_TOTALS = {"rows", "replacements", "rewritten_with_private_part",
+               "not_rewritten_marker_risk",
+               "journal_entries_from_earlier_runs", "of_hidden_coders"}
 
 
 class TestWithoutPhrases:
 
     def test_the_plans_are_as_before(self, tmp_path):
         """No phrase, or an empty list, joins neither the plan nor the
-        note plan: the same keys, the same replacements, the same
-        effect."""
+        note plan: the keys they had before phrases, the same
+        replacements, the same effect."""
         with project_with(tmp_path, SPOKE, setup=_notes):
             run = compiled()
             plain = server.db.pseudonymise_plan(run, "snap_to_pseudonym",
                                                 [1])
             plain_memos = server.db.pseudonymise_memo_plan(run, plain)
-            assert "kept_by_phrases" not in plain_memos["totals"]
+            assert set(plain) == PLAN_KEYS
+            assert set(plain["files"][0]) == FILE_KEYS
+            assert set(plain_memos["totals"]) == NOTE_TOTALS
             for empty in (None, [], ()):
                 plan = server.db.pseudonymise_plan(
                     run, "snap_to_pseudonym", [1], phrases=empty)

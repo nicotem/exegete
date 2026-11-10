@@ -169,3 +169,91 @@ class TestACodingCountsOnceForItsCase:
         assert out["mode"] == "file"
         assert out["rows"] == 2
         assert "repeated_rows" not in out
+
+
+# ---------------------------------------------------------------------------
+# Point 34: a case or file with no row for an attribute reads as unset
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def missing_rows(project):
+    """Case 2 'Case B' has no row for 'Age', and case 3 'Case C' a row
+    whose value is null; the file attribute 'Source' has a row for file
+    1 alone, holding 'interview'."""
+    _sql(project, "INSERT INTO cases VALUES (2, 'Case B', '', 'TestCoder', "
+                  "'2024-01-15')")
+    _sql(project, "INSERT INTO cases VALUES (3, 'Case C', '', 'TestCoder', "
+                  "'2024-01-15')")
+    _sql(project, "INSERT INTO attribute VALUES (2, 'Age', 'case', NULL, 3, "
+                  "'2024-01-15', 'TestCoder')")
+    _sql(project, "INSERT INTO attribute_type VALUES ('Source', "
+                  "'2024-01-15', 'TestCoder', 'Where it came from', 'file', "
+                  "'character')")
+    _sql(project, "INSERT INTO attribute VALUES (3, 'Source', 'file', "
+                  "'interview', 1, '2024-01-15', 'TestCoder')")
+    _reopen(project)
+    return project
+
+
+def _values(answer):
+    return {a["name"]: a["value"] for a in answer["attributes"]}
+
+
+class TestAMissingRowReadsAsUnset:
+
+    def test_the_case_read_lists_the_attribute_with_an_empty_value(
+            self, missing_rows):
+        out = host("get_case_attributes", case_id=2)
+        assert out["attribute_count"] == 1
+        (entry,) = out["attributes"]
+        assert (entry["name"], entry["value"]) == ("Age", "")
+        assert entry["attribute_id"] is None
+        assert entry["value_type"] == "numeric"
+        # A row that exists is listed as stored, as before
+        assert _values(host("get_case_attributes", case_id=1)) == {
+            "Age": "30"}
+
+    def test_the_file_read_lists_the_attribute_with_an_empty_value(
+            self, missing_rows):
+        out = host("get_file_attributes", file_id=2)
+        assert _values(out) == {"Source": ""}
+        assert out["attributes"][0]["memo"] == "Where it came from"
+        assert _values(host("get_file_attributes", file_id=1)) == {
+            "Source": "interview"}
+
+    def test_an_empty_value_finds_a_case_without_a_row_or_with_none(
+            self, missing_rows):
+        out = host("query_by_attribute", attr_name="Age", attr_value="")
+        assert [(r["case_id"], r["attribute_value"])
+                for r in out["results"]] == [(2, ""), (3, "")]
+        assert out["result_count"] == 2
+
+    def test_an_empty_value_finds_a_file_without_a_row(self, missing_rows):
+        out = host("query_by_attribute", attr_name="Source", attr_value="",
+                   attr_type="file")
+        assert [r["file_id"] for r in out["results"]] == [2]
+
+    def test_a_comparison_counts_them_as_unset(self, missing_rows):
+        out = host("query_by_attribute", attr_name="Age", attr_value="18",
+                   operator="gt")
+        assert [r["case_id"] for r in out["results"]] == [1]
+        assert out["values_compared"] == 1
+        assert out["values_left_out"] == {"not_numbers": 0, "unset": 2}
+
+    def test_other_values_find_what_they_found(self, missing_rows):
+        out = host("query_by_attribute", attr_name="Age", attr_value="30")
+        assert [r["case_id"] for r in out["results"]] == [1]
+        out = host("query_by_attribute", attr_name="Source",
+                   attr_value="INTER", attr_type="file", operator="contains")
+        assert [r["file_id"] for r in out["results"]] == [1]
+
+    def test_an_attribute_of_the_other_kind_reads_its_own_rows_alone(
+            self, missing_rows):
+        # The tool refuses a case attribute queried as a file one; the
+        # database's own read then reads the rows there are, never every
+        # file as unset
+        out = host("query_by_attribute", attr_name="Age", attr_value="",
+                   attr_type="file")
+        assert "error" in out
+        found = server.get_db().attribute_query("Age", "", "file")
+        assert found["results"] == []

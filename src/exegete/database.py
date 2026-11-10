@@ -8612,7 +8612,7 @@ class QualcoderDatabase:
                  "id": row["id"], "value": row["value"]} for row in rows]
 
     def get_file_attributes(self, file_id: int) -> List[Dict[str, Any]]:
-        """Get all attributes for a specific file.
+        """Get all attributes for a specific file (`_entity_attributes`).
 
         Args:
             file_id: The file ID
@@ -8621,40 +8621,11 @@ class QualcoderDatabase:
             List of attributes with names and values
         """
         file_id = validate_id(file_id, "file_id")
-
-        try:
-            cursor = self.conn.execute("""
-                SELECT
-                    a.attrid,
-                    a.name,
-                    a.value,
-                    a.date,
-                    a.owner,
-                    at.valuetype,
-                    at.memo
-                FROM attribute a
-                JOIN attribute_type at ON a.name = at.name
-                WHERE a.attr_type = 'file' AND a.id = ?
-                ORDER BY a.name
-            """, (file_id,))
-
-            attributes = []
-            for row in cursor.fetchall():
-                attributes.append({
-                    "attribute_id": row["attrid"],
-                    "name": row["name"],
-                    "value": row["value"],
-                    "value_type": row["valuetype"],
-                    "memo": row["memo"] or "",
-                    "date": row["date"],
-                    "owner": row["owner"]
-                })
-            return attributes
-        except sqlite3.Error as e:
-            _raise_query_error(e, "get_file_attributes", "Failed to retrieve file attributes")
+        return self._entity_attributes("file", file_id, "get_file_attributes",
+                                       "Failed to retrieve file attributes")
 
     def get_case_attributes(self, case_id: int) -> List[Dict[str, Any]]:
-        """Get all attributes for a specific case.
+        """Get all attributes for a specific case (`_entity_attributes`).
 
         Args:
             case_id: The case ID
@@ -8663,7 +8634,24 @@ class QualcoderDatabase:
             List of attributes with names and values
         """
         case_id = validate_id(case_id, "case_id")
+        return self._entity_attributes("case", case_id, "get_case_attributes",
+                                       "Failed to retrieve case attributes")
 
+    def _entity_attributes(self, kind: str, entity_id: int, operation: str,
+                           failure: str) -> List[Dict[str, Any]]:
+        """The attributes of one case or file (`kind`), by name: each row
+        stored for it, and each attribute type of that kind it has no row
+        for, with the value "" and no attribute_id, date or owner.
+
+        A missing row reads as unset (v0.15.4, the claims audit's point
+        34), as QualCoder reads it: QualCoder 4.0 writes a row holding ""
+        for every case or file when an attribute is created
+        (attributes.py 135-148), fills in a missing one when its Cases or
+        Files screen opens (cases.py 229-250, manage_files.py 1802-1823),
+        and its coding report reads one as "" (report_codes.py 976-994).
+        Such a row is missing in a project written by a program that does
+        not do the same; query_by_attribute reads it the same way.
+        """
         try:
             cursor = self.conn.execute("""
                 SELECT
@@ -8676,9 +8664,15 @@ class QualcoderDatabase:
                     at.memo
                 FROM attribute a
                 JOIN attribute_type at ON a.name = at.name
-                WHERE a.attr_type = 'case' AND a.id = ?
-                ORDER BY a.name
-            """, (case_id,))
+                WHERE a.attr_type = ? AND a.id = ?
+                UNION ALL
+                SELECT NULL, at.name, '', NULL, NULL, at.valuetype, at.memo
+                FROM attribute_type at
+                WHERE at.caseOrFile = ? AND NOT EXISTS (
+                    SELECT 1 FROM attribute a
+                    WHERE a.attr_type = ? AND a.id = ? AND a.name = at.name)
+                ORDER BY 2
+            """, (kind, entity_id, kind, kind, entity_id))
 
             attributes = []
             for row in cursor.fetchall():
@@ -8693,7 +8687,7 @@ class QualcoderDatabase:
                 })
             return attributes
         except sqlite3.Error as e:
-            _raise_query_error(e, "get_case_attributes", "Failed to retrieve case attributes")
+            _raise_query_error(e, operation, failure)
 
     # Operator -> SQL condition over the attribute value, for the two
     # operators still filtered in SQL. The SQL text is selected from this
@@ -8701,10 +8695,12 @@ class QualcoderDatabase:
     # The numeric operators are compared in Python (v0.14, claims audit
     # item 11): a bare CAST(value AS REAL) read every text that does not
     # start with a number as 0.0 and "34 years" as 34.0, so "under 18"
-    # found "unknown" and "n/a" on a character attribute.
+    # found "unknown" and "n/a" on a character attribute. A value that
+    # is not there, its row missing or its value null, reads as ""
+    # (v0.15.4, the claims audit's point 34; `_entity_attributes`).
     _ATTRIBUTE_OPERATORS = {
-        "equals": "a.value = ?",
-        "contains": "qc_text_contains(CAST(a.value AS BLOB), ?)",
+        "equals": "ifnull(a.value, '') = ?",
+        "contains": "qc_text_contains(CAST(ifnull(a.value, '') AS BLOB), ?)",
         "gt": None,
         "gte": None,
         "lt": None,
@@ -8741,6 +8737,13 @@ class QualcoderDatabase:
                       substring), or 'gt'/'gte'/'lt'/'lte' (numeric
                       comparison of the values that are finite numbers)
 
+        A case or file with no row for an attribute of attr_type's kind,
+        or a row whose value is null, reads as '', unset, as QualCoder
+        reads a missing row (`_entity_attributes`; v0.15.4, the claims
+        audit's point 34): '' finds it, and a numeric comparison counts
+        it as unset. Before, the query joined the rows that exist, so ''
+        missed it and the count left it out.
+
         Returns:
             {"results": [...], "value_type": ..., and for a numeric
             comparison "numeric": {"compared", "not_numbers", "unset"}}.
@@ -8769,13 +8772,20 @@ class QualcoderDatabase:
 
         try:
             vt_row = self.conn.execute(
-                "SELECT valuetype FROM attribute_type WHERE name = ?",
+                "SELECT valuetype, caseOrFile FROM attribute_type "
+                "WHERE name = ?",
                 (attr_name,)
             ).fetchone()
         except sqlite3.Error as e:
             _raise_query_error(e, "query_by_attribute",
                                "Failed to query by attribute")
         value_type = vt_row["valuetype"] if vt_row else None
+        # Every case or file is read, those without a row as unset, only
+        # for an attribute of attr_type's own kind: a name of the other
+        # kind, which the tool refuses first, reads the rows it has, as
+        # before
+        join = ("LEFT JOIN" if vt_row is not None
+                and vt_row["caseOrFile"] == attr_type else "JOIN")
 
         probe: Optional[float] = None
         condition = self._ATTRIBUTE_OPERATORS[operator]
@@ -8829,11 +8839,11 @@ class QualcoderDatabase:
                 rows = self.conn.execute(f"""
                     SELECT x.{key} AS eid, CAST(x.name AS BLOB) AS name,
                            CAST(x.memo AS BLOB) AS memo,
-                           CAST(a.value AS BLOB) AS attr_value
+                           CAST(ifnull(a.value, '') AS BLOB) AS attr_value
                     FROM {table} x
-                    JOIN attribute a ON x.{key} = a.id
-                        AND a.attr_type = '{attr_type}'
-                    WHERE a.name = ? AND {condition}
+                    {join} attribute a ON x.{key} = a.id
+                        AND a.attr_type = '{attr_type}' AND a.name = ?
+                    WHERE {condition}
                     ORDER BY x.name
                 """, bound).fetchall()
                 for row in rows:
@@ -8854,9 +8864,8 @@ class QualcoderDatabase:
             rows = self.conn.execute(f"""
                 SELECT x.{key} AS eid, CAST(a.value AS BLOB) AS attr_value
                 FROM {table} x
-                JOIN attribute a ON x.{key} = a.id
-                    AND a.attr_type = '{attr_type}'
-                WHERE a.name = ?
+                {join} attribute a ON x.{key} = a.id
+                    AND a.attr_type = '{attr_type}' AND a.name = ?
                 ORDER BY x.name
             """, bound).fetchall()
             counts = {"compared": 0, "not_numbers": 0, "unset": 0}

@@ -73,7 +73,7 @@ body:
     id: toolset
     attributes:
       label: Tool set
-      description: "`full`, the default, has every tool, creating a project included. `core` is a smaller set, meant for models that run on your own computer. With the Claude Desktop extension, the tool set is `core` when its switch \"Limit Exegete to its small tool set\" is on, and `full` otherwise. For other installs, the setting EXEGETE_TOOLSET chooses it. `full` was called `lifecycle` before 0.15.0."
+      description: "`full`, the default, has every tool, creating a project included. `core` is a smaller set, meant for models that run on your own computer. With the Claude Desktop extension, the tool set is `core` when its switch \"Limit Exegete to its small tool set\" is on, and `full` otherwise. For other installs, the setting EXEGETE_TOOLSET chooses it, and Exegete takes `full` when it is not set. `full` was called `lifecycle` before 0.15.0."
       options:
         - full (the default)
         - core

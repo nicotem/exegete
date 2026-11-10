@@ -469,8 +469,9 @@ class TestF14ConfidenceClamp:
         sid = json.loads(out)["coding_session_id"]
         session = server.session_manager.load_session(sid)
         assert not hasattr(session, "min_confidence")
-        stored = json.loads((Path(server.session_manager.storage_dir)
-                             / f"session_{sid}.json").read_text())
+        # v0.15.4: the session is kept in the project's sessions folder
+        stored = json.loads(server.session_manager.session_file(sid)
+                            .read_text())
         assert "min_confidence" not in stored
         assert "confidence" not in json.loads(out)["instructions"].lower()
 

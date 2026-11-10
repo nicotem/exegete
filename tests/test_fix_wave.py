@@ -30,7 +30,7 @@ from exegete.database import (
     QUALCODER_LOCK_FILENAME,
     backup_project,
 )
-from exegete.sessions import AICodingSession, CodingSuggestion
+from exegete.sessions import AICodingSession, CodingSuggestion, SessionManager
 
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."
@@ -322,6 +322,11 @@ class TestApplyCodingsSafety:
         # Build a second, distinct project and open it
         other = tmp_path / "other_project.qda"
         shutil.copytree(qualcoder_db_path, other)
+        # v0.15.4: a session kept on this computer, as every session was
+        # before 0.15.4; one kept in its project is not found from another
+        # (tests/test_v0154_sessions_with_project.py)
+        setup_server.session_manager = SessionManager(
+            str(setup_server.session_manager.storage_dir))
         session = self._approved_session(setup_server, qualcoder_db_path)
         json.loads(server.select_project(str(other)))
 

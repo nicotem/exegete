@@ -6769,8 +6769,8 @@ class TestStaleSessions:
 
     def test_the_run_never_touches_a_session_file(self, project):
         session = self._session(project, 1)
-        path = Path(server.session_manager.storage_dir) / \
-            f"session_{session.session_id}.json"
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = server.session_manager.session_file(session.session_id)
         before = path.read_bytes()
         execute_from(preview_of())
         assert path.read_bytes() == before

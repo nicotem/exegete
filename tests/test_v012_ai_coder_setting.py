@@ -1314,8 +1314,8 @@ class TestRestartResilience:
     def test_a_0_11_session_file_without_the_field_still_applies(
             self, setup_server, qualcoder_db_path):
         session = _approved_session(server, qualcoder_db_path)
-        path = (Path(server.session_manager.storage_dir)
-                / f"session_{session.session_id}.json")
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = server.session_manager.session_file(session.session_id)
         data = json.loads(path.read_text(encoding="utf-8"))
         del data["ai_coder_name_at_record"]
         path.write_text(json.dumps(data), encoding="utf-8")

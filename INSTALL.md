@@ -648,8 +648,8 @@ the library's line about what the app sent holds a fixed sentence of
 Exegete's instead, and nothing of what was sent:
 
 - the library does not take a line, a request or a notification the
-  app sent, such as a line that is not JSON, a response to no request,
-  an address that is not a URL, arguments that are not an object, or a
+  app sent: a line that is not JSON, a response to no request, an
+  address that is not a URL, arguments that are not an object, or a
   request sent before the app had finished starting the session;
 - a response's id is text that is not a number.
 

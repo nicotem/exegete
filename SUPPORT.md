@@ -7,12 +7,14 @@ welcome, and they help decide what is built next.
 
 ## Where to get help
 
-Everything goes through
+Bug reports, questions and ideas go through
 [GitHub Issues](https://github.com/nicotem/exegete/issues), the
 project's public list of reports on GitHub. Each report there is called
 an issue. Opening an issue needs a GitHub account, which is free.
 Reading the issues needs no account (GitHub, checked on 4 November
-2026).
+2026). A fault that could expose participants' data, or let a write
+damage a project, is best reported privately instead, so that it is not
+public before its fix. [SECURITY.md](SECURITY.md) says how.
 
 - **Bug reports.** Say what you asked the assistant to do, what you
   expected, and what happened instead. Exegete's actions are called
@@ -22,13 +24,15 @@ Reading the issues needs no account (GitHub, checked on 4 November
   An issue is public: anyone can read it, and search engines find it.
   Participants' data or a project put into an issue is published with
   it. A made-up example, or one with names and details removed, usually
-  shows the problem as well. You can also describe the data without
-  copying it, such as "a code name with an apostrophe" or "a file of
-  about 40,000 characters". A line of the names file,
-  `Names to replace.txt`, or an entry of the project's
-  `pseudonyms.json` pairs a real name with its pseudonym. For a problem
-  with replacing names, describe the name instead, such as its length,
-  an apostrophe in it, or that it is also an ordinary word.
+  shows the problem as well. An example with names and details removed
+  is still a participant's words, which a search can find and someone
+  can recognise. Your ethics approval may not allow you to publish it.
+  You can also describe the data without copying it, such as "a code
+  name with an apostrophe" or "a file of about 40,000 characters". A
+  line of the names file, `Names to replace.txt`, or an entry of the
+  project's `pseudonyms.json` pairs a real name with its pseudonym. For
+  a problem with replacing names, describe the name instead, such as its
+  length, an apostrophe in it, or that it is also an ordinary word.
 
   Claude Desktop keeps a log of Exegete. MCP, the protocol through which
   apps talk to Exegete, has

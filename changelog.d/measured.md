@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 210,640 | 210,397 |
-| `core` (28 tools) | 76,805 | 76,805 |
+| `full` (80 tools) | 211,325 | 210,397 |
+| `core` (28 tools) | 77,142 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,334 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
@@ -16,9 +16,23 @@ Python 3.13 with the libraries in `uv.lock`:
 - Choosing occurrences by their numbers adds 243 characters to `full`:
   242 for the schemas of pseudonymise_source's two new arguments, and
   1 in its description, where the arguments for choosing occurrences
-  now take about the room they took before. On Python 3.11 that
-  description is 19,864 characters, within the 20,000 that the guide to
-  installing from the Terminal gives for Claude Code's setting. The
-  full brief is 154 characters longer, from one sentence on the numbers
-  in its privacy section. The sizes of `core`, which has no
-  pseudonymisation tool, do not change.
+  now take about the room they took before. The full brief is 154
+  characters longer, from one sentence on the numbers in its privacy
+  section. The sizes of `core`, which has no pseudonymisation tool, do
+  not change.
+- Six descriptions that now say what their tools do add 649 characters
+  to `full` and 337 to `core`. In both sets, `create_code`'s sentence on
+  the arguments it checks before the name adds 166 to its definition,
+  `search_memos`' sentence on the ids of region and audio/video codings
+  129, and `delete_coding`'s Returns 42. In `full` alone,
+  `create_category`'s sentence on the arguments it checks before the
+  name adds 130, the rule on a new attribute name in
+  `create_attribute_type`'s arguments 108, and `update_annotation`'s
+  sentence on what the answer gives for a hidden coder's row 74.
+- pseudonymise_source's sentence on what the transport does to a file
+  id now says that true and false are refused, adding 36 characters to
+  `full`. On Python 3.11 that description is 19,903 characters, within
+  the 20,000 that the guide to installing from the Terminal gives for
+  Claude Code's setting.
+- The documents now give the size of `full` as about 210,000 characters
+  (README and the Terminal guide) and about 211,000 (TOOLS.md).

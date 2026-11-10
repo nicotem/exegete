@@ -906,6 +906,10 @@ class Plan:
         self.checked: Dict[Tuple[str, Any], Tuple[str, Tuple[str, ...]]] = {}
         self.marks: List[Tuple[Any, ...]] = []
         self.removed_codes: Set[int] = set()
+        # Each removed code's date, from its row as it is now (v0.15.4):
+        # a session's scope loses the number only where it recorded that
+        # date, or none
+        self.removed_code_dates: Dict[int, Optional[str]] = {}
         self.removed_files: Set[int] = set()
         self.files_touched: Set[int] = set()
         self.suggestions_on_removed_files = 0
@@ -2138,6 +2142,15 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
     return result
 
 
+def _date_of(row: Optional[Row]) -> Optional[str]:
+    """A code's date from its row, as the codebook gives it (a text), or
+    None (v0.15.4)."""
+    for column, value in (row or {}).items():
+        if column.lower() == "date":
+            return text_of(value)
+    return None
+
+
 def _gather(result: Plan) -> None:
     """What the write checks before its commit, and what the undo sets
     back after it: the coding sessions' marks, the scopes and the files
@@ -2165,6 +2178,7 @@ def _gather(result: Plan) -> None:
                 result.checked[(low, step.key)] = (step.table, step.columns)
                 if low == "code_name" and what == "removed":
                     result.removed_codes.add(step.key)
+                    result.removed_code_dates[step.key] = _date_of(step.now)
                 if low == "source":
                     result.files_touched.add(step.key)
                     if what == "removed":

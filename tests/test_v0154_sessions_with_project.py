@@ -11,7 +11,7 @@ of 10 November 2026). Every session read and decision is bound to the
 open project, as its writes are.
 
 After the design's "How it is checked"
-(DESIGN_0154_sessions-with-project.md), its tests 1 to 7, a class each;
+(DESIGN_0154_sessions-with-project.md), its tests 1 to 8, a class each;
 each break fails with its change reverted (the pieces' reports say
 which were shown):
 
@@ -41,6 +41,9 @@ which were shown):
 7. Every session kept in the project, 201 of them, reaches undo,
    delete_coding's marks, the counts and the stale sessions; files that
    are not sessions are never listed, used or named.
+8. The fault: a scope keeps each code's date beside its number, so a
+   code given a deleted code's number is refused, and undo takes a
+   number out of a scope only with its date.
 """
 
 import asyncio
@@ -1467,3 +1470,165 @@ class TestTheDeleteFollowsTheLookup:
         out = jcall("delete_coding_session", coding_session_id=theirs)
         assert "error" in out
         assert file_of(other, theirs).is_file()
+
+
+# ---------------------------------------------------------------------------
+# Test 8: the fault, a deleted code's number given to the next code made
+# ---------------------------------------------------------------------------
+
+# A code's date before today's, so that the code made under its number
+# later in the test, dated now, differs from it whatever the second
+EARLIER = "2026-01-01 10:00:00"
+
+
+def _code_row(project, name):
+    with closing(sqlite3.connect(str(project / "data.qda"))) as conn:
+        return conn.execute("select cid, date from code_name where name = ?",
+                            (name,)).fetchone()
+
+
+def _dated_earlier(project, name):
+    """The code's date set earlier, as another program might have made
+    it, and the project selected again."""
+    cid = _code_row(project, name)[0]
+    with closing(sqlite3.connect(str(project / "data.qda"))) as conn, conn:
+        conn.execute("update code_name set date = ? where cid = ?",
+                     (EARLIER, cid))
+    _select(project)
+    return cid
+
+
+def _record_on(sid, code):
+    return record(sid, LATER, code)
+
+
+def _limited_to_belonging(project):
+    """Belonging made, dated earlier, the newest code; a session limited
+    to it and Trust, with a suggestion on Trust; then Belonging deleted.
+    The session, the suggestion, Belonging's number and the delete's
+    receipt."""
+    assert receipt_of(server.create_code(name="Belonging"))
+    belonging = _dated_earlier(project, "Belonging")
+    sid = start(code_names=["Belonging", "Trust"])["coding_session_id"]
+    guid = record(sid)["recorded"][0]["guid"]
+    deleted = _two_step(server.delete_code, code_id=belonging)
+    assert deleted.get("success") is True, deleted
+    return sid, guid, belonging, deleted["undo_receipt"]
+
+
+def _scope_of(project, sid):
+    return json.loads(file_of(project, sid).read_text(
+        encoding="utf-8"))["scope"]
+
+
+class TestTheFault:
+
+    def test_a_code_given_a_deleted_codes_number_is_refused(self, project):
+        sid, guid, belonging, _deleted = _limited_to_belonging(project)
+        assert receipt_of(server.create_code(name="Other"))
+        assert _code_row(project, "Other")[0] == belonging
+        out = _record_on(sid, "Other")
+        assert out["recorded_count"] == 0 and len(out["rejected"]) == 1, out
+        edited = jcall("edit_suggestion", coding_session_id=sid,
+                       suggestion_guid=guid, code_name="Other")
+        assert "error" in edited, edited
+        session = server.session_manager.load_session(sid)
+        assert session.get_suggestion_by_guid(guid).code_name == "Trust"
+
+    def test_undoing_the_later_code_leaves_the_sessions_own(self, project):
+        sid, _guid, belonging, deleted = _limited_to_belonging(project)
+        other = receipt_of(server.create_code(name="Other"))
+        done = undo_run(other)
+        assert done["success"] is True, done
+        assert belonging in _scope_of(project, sid)["code_ids"]
+        done = undo_run(deleted)
+        assert done["success"] is True, done
+        assert _code_row(project, "Belonging") == (belonging, EARLIER)
+        assert _record_on(sid, "Belonging")["recorded_count"] == 1
+
+    def test_the_sessions_own_proposal_made_under_that_number(self, project):
+        """A guard: the code the session's own proposal became, given the
+        deleted code's number, is accepted, its date replaced."""
+        sid, _guid, belonging, _deleted = _limited_to_belonging(project)
+        recorded = jcall("propose_codes", coding_session_id=sid,
+                         proposals=[{"name": "Fresh", "memo": "m",
+                                     "rationale": "r"}])
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[recorded["recorded"][0]["guid"]])
+        made = json.loads(server.create_proposed_codes(coding_session_id=sid))
+        assert made["created_codes"][0]["code_id"] == belonging, made
+        cid, date = _code_row(project, "Fresh")
+        assert _scope_of(project, sid)["code_dates"][str(cid)] == date
+        assert _record_on(sid, "Fresh")["recorded_count"] == 1
+
+    def test_a_read_after_create_proposed_codes_commit_is_never_needed(
+            self, project, monkeypatch):
+        """A guard: the new codes' dates are read inside the write, so a
+        read of the codebook failing once the codes are made changes
+        nothing in the answer."""
+        sid = start(code_names=["Trust"])["coding_session_id"]
+        recorded = jcall("propose_codes", coding_session_id=sid,
+                         proposals=[{"name": "Fresh", "memo": "m",
+                                     "rationale": "r"}])
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[recorded["recorded"][0]["guid"]])
+        real = server._perform_write
+        committed = []
+
+        def write_then_mark(*args, **kwargs):
+            result = real(*args, **kwargs)
+            committed.append(True)
+            return result
+
+        def refusing(name):
+            original = getattr(database.QualcoderDatabase, name)
+
+            def read(self, *args, **kwargs):
+                if committed:
+                    raise sqlite3.OperationalError("disk I/O error")
+                return original(self, *args, **kwargs)
+            return read
+        monkeypatch.setattr(server, "_perform_write", write_then_mark)
+        for name in ("get_code_details", "list_codes"):
+            monkeypatch.setattr(database.QualcoderDatabase, name,
+                                refusing(name))
+        made = json.loads(server.create_proposed_codes(coding_session_id=sid))
+        assert made.get("success") is True, made
+        assert committed and "session_not_saved" not in made
+        cid = made["created_codes"][0]["code_id"]
+        monkeypatch.undo()
+        assert _scope_of(project, sid)["code_dates"][str(cid)] == \
+            _code_row(project, "Fresh")[1]
+
+    def test_a_renamed_code_is_accepted(self, project):
+        """A guard: a rename keeps the code's date, as QualCoder's do."""
+        sid = start(code_names=["Trust"])["coding_session_id"]
+        trust = _code_row(project, "Trust")
+        renamed = json.loads(server.rename_code(code_id=trust[0],
+                                                new_name="Confiance"))
+        assert "error" not in renamed, renamed
+        assert _code_row(project, "Confiance") == trust
+        assert _record_on(sid, "Confiance")["recorded_count"] == 1
+
+    def test_undoing_the_sessions_own_code_takes_it_out(self, project):
+        """A guard: the removed code's date is the one the scope recorded."""
+        made = receipt_of(server.create_code(name="Belonging"))
+        cid = _code_row(project, "Belonging")[0]
+        sid = start(code_names=["Belonging", "Trust"])["coding_session_id"]
+        assert str(cid) in _scope_of(project, sid)["code_dates"]
+        done = undo_run(made)
+        assert done["success"] is True, done
+        scope = _scope_of(project, sid)
+        assert cid not in scope["code_ids"]
+        assert str(cid) not in scope["code_dates"]
+
+    def test_a_session_without_code_dates_keeps_todays_check(self, project):
+        """A guard: a scope written before 0.15.4 is checked by number."""
+        sid, _guid, belonging, _deleted = _limited_to_belonging(project)
+        path = file_of(project, sid)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        del data["scope"]["code_dates"]
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        assert receipt_of(server.create_code(name="Other"))
+        assert _code_row(project, "Other")[0] == belonging
+        assert _record_on(sid, "Other")["recorded_count"] == 1

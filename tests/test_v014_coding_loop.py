@@ -411,7 +411,10 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
         session = server.session_manager.load_session(
             out["coding_session_id"])
         assert session.file_ids == [1]
-        assert session.scope == {"file_ids": [1], "code_ids": [1]}
+        assert session.scope["file_ids"] == [1]
+        assert session.scope["code_ids"] == [1]
+        # each named code with its date (v0.15.4)
+        assert set(session.scope["code_dates"]) == {"1"}
 
     def test_nothing_found_is_an_error_that_names_it(self, setup_server):
         out = jcall("start_coding_session", file_ids=[1], code_names=["Nope"], instruction="test")

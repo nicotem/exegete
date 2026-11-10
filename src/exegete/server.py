@@ -10575,10 +10575,15 @@ def start_coding_session(
         code_names=[c['name'] for c in codes_to_use],
         instruction=instruction,
         # What record_suggestions will accept: these files, and the named
-        # codes (None: every code, including ones created later)
+        # codes (None: every code, including ones created later), each
+        # with its date (v0.15.4), since SQLite gives a deleted code's
+        # number to the next code made
         scope={"file_ids": [f['id'] for f in files_to_analyze],
                "code_ids": ([c['id'] for c in codes_to_use]
-                            if code_names else None)},
+                            if code_names else None),
+               "code_dates": {str(c['id']): c['date'] for c in codes_to_use
+                              if code_names
+                              and isinstance(c.get('date'), str)}},
         # A snapshot, not a decision: if the researcher changes the
         # project's AI coder name between recording and applying, the
         # rows are written under the NEW name (a name change never
@@ -11336,8 +11341,9 @@ def record_suggestions(
             rejected.append({"index": idx, "reason": "each suggestion needs code_id or code_name"})
             continue
 
-        # --- the session's scope (v0.14: it used to limit nothing) ---
-        outside = session.outside_scope(file_id, code["id"])
+        # --- the session's scope (v0.14: it used to limit nothing), the
+        # code by its number and date (v0.15.4) ---
+        outside = session.outside_scope(file_id, code["id"], code.get("date"))
         if outside is not None:
             rejected.append({"index": idx, **_scope_refusal(
                 session, outside, file_content["name"], code["name"])})
@@ -11821,7 +11827,8 @@ def edit_suggestion(
                     "error": f"code '{code_name}' not found",
                     "available_codes": sorted(c["name"] for c in codes)[:50],
                 })
-        outside = session.outside_scope(sugg.file_id, new_code["id"])
+        outside = session.outside_scope(sugg.file_id, new_code["id"],
+                                        new_code.get("date"))
         if outside is not None:
             refusal = _scope_refusal(session, outside, sugg.file_name,
                                      new_code["name"])
@@ -16254,7 +16261,14 @@ def _undo_session_marks(session, sid: str, plan: undo.Plan,
                     count("suggestions_applied_again")
     scope = session.scope
     if scope is not None:
-        for key, gone in (("code_ids", plan.removed_codes),
+        # A removed code leaves the scope only where the scope recorded
+        # its date, or none (v0.15.4): a later code given the number of
+        # the session's own, deleted since, is another code, and undoing
+        # it leaves the session's own in its scope
+        codes_gone = {cid for cid in plan.removed_codes
+                      if session.scope_recorded(
+                          cid, plan.removed_code_dates.get(cid))}
+        for key, gone in (("code_ids", codes_gone),
                           ("file_ids", plan.removed_files)):
             ids = scope.get(key)
             if isinstance(ids, list) and gone.intersection(ids):
@@ -16262,6 +16276,10 @@ def _undo_session_marks(session, sid: str, plan: undo.Plan,
                 counts["ids_taken_out_of_scope"] = counts.get(
                     "ids_taken_out_of_scope", 0) + len(ids) - len(kept)
                 scope[key] = kept
+                if key == "code_ids" and isinstance(scope.get("code_dates"),
+                                                    dict):
+                    for cid in gone:
+                        scope["code_dates"].pop(str(cid), None)
     if counts:
         session.last_modified = datetime.now().isoformat()
     return counts
@@ -18551,6 +18569,9 @@ def create_proposed_codes(coding_session_id: str,
         category_ids.update(ids)
         return refusal
 
+    # Each new code's date, by its number, as the write read the row back
+    made_dates: Dict[int, Any] = {}
+
     def _op(wdb):
         created = []
         for p in approved:
@@ -18575,8 +18596,13 @@ def create_proposed_codes(coding_session_id: str,
             # review_proposals showed; a session file written by v0.11 or
             # earlier carries an UNSNAPPED proposal colour, and without
             # this the researcher approved one colour and a different one
-            # was written with nothing saying so.
-            stored_color = (wdb.get_code_details(cid) or {}).get("color")
+            # was written with nothing saying so. The same row gives the
+            # code's date for the session's scope (v0.15.4), inside the
+            # write, never by a read after the commit, which could fail
+            # once the codes are made
+            stored = wdb.get_code_details(cid) or {}
+            stored_color = stored.get("color")
+            made_dates[cid] = stored.get("date")
             entry = {"proposal_guid": p.guid, "code_id": cid,
                      "name": stored_name,      # the name as stored
                      "category": p.category,
@@ -18597,9 +18623,11 @@ def create_proposed_codes(coding_session_id: str,
         for p in approved:
             p.status = "created"
         # A session limited to named codes takes in the codes its own
-        # approved proposals became, so the coding loop can apply them
-        session.add_codes_to_scope([p.created_code_id for p in approved
-                                    if p.created_code_id is not None])
+        # approved proposals became, so the coding loop can apply them,
+        # each with its date (v0.15.4)
+        session.add_codes_to_scope({
+            p.created_code_id: made_dates.get(p.created_code_id)
+            for p in approved if p.created_code_id is not None})
         session.last_modified = datetime.now().isoformat()
         session_manager.save_session(session)
         result["proposal_statistics"] = session.proposal_statistics()

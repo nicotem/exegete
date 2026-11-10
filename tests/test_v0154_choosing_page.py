@@ -14,7 +14,8 @@ and no other; the reading copy and the import page keep the policy that
 allows none. The script sets every box to its written state when the
 page loads, builds the line again at each tick, and copies it through
 the clipboard, or selects it in its read-only field where the clipboard
-is refused or absent.
+is refused or absent. The block's notes say what a pasted line gives,
+their example the line the script builds.
 
 The script is run under Node (test 10), with a stub of the calls it
 makes; it comes with CI's runners, where the test fails rather than
@@ -211,6 +212,40 @@ class TestThePage:
                     project_name="p", file_id=1, file_name="f.txt",
                     text="Tom.", marks=[(0, 3, "aaaaa")], left=set(),
                     written_at=datetime(2026, 11, 10, 9, 0), numbering=code)
+
+
+class TestTheNotes:
+    """The texts that say what the page gives (the design's test 12, the
+    part that names the page): the notes and the brief."""
+
+    def test_the_notes_give_the_scripts_line(self):
+        """The two notes that name the page say its bold numbers are the
+        rows', and give, for an example, the line the script builds
+        (`the_line`, which test 10 holds to the script): its file in
+        file_id, its own numbering, every number it names. The block's
+        own note, which stands where no page was written, names no page
+        and no line. Red when a note's example is not the script's."""
+        assert occurrences.the_line(12, "q8x2dm", [12, 3, 7, 3]) == EXAMPLE
+        assert occurrences.the_line(12, "q8x2dm", [3]) == ONE
+        for note in (server._OCCURRENCES_NEXT_OPENED,
+                     server._OCCURRENCES_NEXT_TO_OPEN):
+            assert f'"{EXAMPLE}"' in note
+            for words in ("in bold", "file_id", "the line's own numbering",
+                          "leave_numbers", "ask for the line"):
+                assert words in note, (words, note[:60])
+        own = QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_NEXT
+        assert "page" not in own and "q8x2dm" not in own
+        assert "line it gives" not in own
+
+    def test_the_brief_names_the_line(self):
+        """The brief's privacy section names the bold numbers and the line
+        the page gives, and never asks for the page's words."""
+        brief = " ".join(server.BRIEF_FULL.split())
+        privacy = brief[brief.index("## 11. Privacy"):brief.index("## 12. ")]
+        for words in ("in bold", "paste the line the page gives them",
+                      "a pasted line's own", "never ask them for words of "
+                      "the text it shows"):
+            assert words in privacy, words
 
 
 # The harness that runs the page's script under Node: a stub of the

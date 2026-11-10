@@ -1813,6 +1813,283 @@ def find_replacements_through(compiled: Compiled, text: str,
 
 
 # --------------------------------------------------------------------------
+# Phrases to keep (v0.15.4)
+# --------------------------------------------------------------------------
+#
+# A run keeps whole the phrases the researcher types into the call, such
+# as a public figure's name ("Theresa May") or a saying ("Mark my words"):
+# an occurrence of a name of the mapping that lies wholly inside an
+# occurrence of a phrase is left as it is, as a list of occurrences leaves
+# one. Phrases filter the occurrences as found rather than join the one
+# pattern, so the single pass, every occurrence's id and number and the
+# page's order stay as they are, and a name that runs past a phrase
+# ("May Smith" in "Theresa May Smith") is still replaced: joined to the
+# pattern, the phrase would win there and keep that name.
+
+# Ours, decided on 10 November 2026. The most phrases one run keeps, a
+# phrase given twice counted once, and the longest phrase as read: a
+# name's own limit, so the phrases of one call hold at most 10,000
+# characters.
+MAX_PHRASES = 50
+MAX_PHRASE_CHARS = MAX_FORM_CHARS
+
+# The white space between two words of a phrase: any run of white space
+# that holds no line boundary. The ten line boundaries are those Python's
+# `str.splitlines` knows (\n, \r, U+000B, U+000C, U+001C to U+001E,
+# U+0085, U+2028 and U+2029), and a phrase may hold none of them
+# (`_FORBIDDEN_RANGES` covers all ten), so a phrase never runs from one
+# line or paragraph to the next.
+_PHRASE_SPACE = (r"[^\S\n\r\x0b\x0c\x1c-\x1e\x85"
+                 r"\N{LINE SEPARATOR}\N{PARAGRAPH SEPARATOR}]+")
+
+
+class PhraseError(MappingError):
+    """A phrase, or a list of phrases, this engine refuses, with the
+    caller-facing text, which never quotes a phrase. `reason` names the
+    rule; `number` is the phrase's place in the list given, from 1, or
+    None where the list as a whole is refused."""
+
+    def __init__(self, message: str, reason: str,
+                 number: Optional[int] = None):
+        super().__init__(message)
+        self.reason = reason
+        self.number = number
+
+
+class Phrase:
+    """One phrase to keep: its number in the list given (from 1), the
+    phrase as the matcher reads it, and its pattern once a run's case
+    mode is known."""
+
+    __slots__ = ("number", "read", "pattern")
+
+    def __init__(self, number: int, read: str,
+                 pattern: Optional["re.Pattern[str]"] = None):
+        self.number = number
+        self.read = read
+        self.pattern = pattern
+
+    def __repr__(self) -> str:                # pragma: no cover - debugging
+        return f"Phrase({self.number})"
+
+
+def phrase_pattern(read: str, flags: int) -> "re.Pattern[str]":
+    """A phrase's pattern: each word escaped, the white space between two
+    words matching any run of white space that holds no line boundary,
+    whole words by the rule names are found by (`(?<!\\w)`, the escaped
+    phrase, `(?!\\w)`), under the run's flags."""
+    return re.compile(
+        "(?<!\\w)" + _PHRASE_SPACE.join(re.escape(word)
+                                        for word in read.split(" "))
+        + "(?!\\w)", flags)
+
+
+def read_phrases(raw: Any) -> Tuple[Phrase, ...]:
+    """The phrases to keep as the matcher reads them, each run of white
+    space as one space, or raise PhraseError.
+
+    The checks that need no mapping, so a caller can make them before it
+    reads one: a list, each phrase a string that is not empty, with no
+    white space at either end, none of the characters a mapping's string
+    may not hold (control and bidirectional characters, every line
+    boundary, a run of five '#') and at most MAX_PHRASE_CHARS characters
+    as read. A phrase given twice as read counts once, the first keeping
+    its number; more than MAX_PHRASES are refused. None, or an empty
+    list, is no phrase. Never quotes a phrase.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, (list, tuple)):
+        raise PhraseError(
+            "keep_phrases must be a list of phrases, each a string.",
+            "phrases_form")
+    phrases: List[Phrase] = []
+    seen = set()
+    for number, value in enumerate(raw, start=1):
+        if not isinstance(value, str) or not value:
+            raise PhraseError(
+                f"keep_phrases: phrase {number} must be a string that is "
+                f"not empty.", "phrase_not_a_string", number)
+        if value != value.strip():
+            raise PhraseError(
+                f"keep_phrases: phrase {number} must not begin or end with "
+                f"white space.", "phrase_white_space_at_an_end", number)
+        if _describe_bad_characters(value) is not None:
+            raise PhraseError(
+                f"keep_phrases: phrase {number} must not contain line "
+                f"breaks, control characters, bidirectional formatting "
+                f"characters or a run of five or more '#' characters.",
+                "phrase_hidden_characters", number)
+        read = " ".join(value.split())
+        if len(read) > MAX_PHRASE_CHARS:
+            raise PhraseError(
+                f"keep_phrases: phrase {number} must be at most "
+                f"{MAX_PHRASE_CHARS} characters, each run of white space "
+                f"counted as one.", "phrase_too_long", number)
+        if read in seen:
+            continue
+        if len(phrases) == MAX_PHRASES:
+            raise PhraseError(
+                f"keep_phrases holds more than {MAX_PHRASES} phrases; at "
+                f"most {MAX_PHRASES} are accepted, a phrase given twice "
+                f"counted once.", "too_many_phrases")
+        seen.add(read)
+        phrases.append(Phrase(number, read))
+    return tuple(phrases)
+
+
+def validate_phrases(raw: Any, compiled: "Compiled") -> Tuple[Phrase, ...]:
+    """The phrases to keep, read as `read_phrases` reads them and checked
+    against the run's mapping, each with its pattern under the run's
+    flags, or raise PhraseError.
+
+    Refused besides, by the phrase's number and never quoting it: a
+    phrase that is itself a name, its own pattern matching one of the
+    mapping's forms whole (so "may" under an insensitive mode, and
+    "Mary  Ann" where "Mary Ann" is a name), since it would keep every
+    occurrence of that name; and a phrase in which the run's own pattern
+    finds no name, as typed or as read, since it would keep nothing.
+    """
+    phrases = []
+    for phrase in read_phrases(raw):
+        pattern = phrase_pattern(phrase.read, compiled.flags)
+        if any(pattern.fullmatch(form) for form, _ in compiled.forms):
+            raise PhraseError(
+                f"keep_phrases: phrase {phrase.number} is itself a name of "
+                f"the mapping under this case_mode, so it would keep every "
+                f"occurrence of that name. A phrase keeps the names that "
+                f"stand inside it.", "phrase_is_a_name", phrase.number)
+        typed = raw[phrase.number - 1]
+        if not (compiled.pattern.search(typed)
+                or compiled.pattern.search(phrase.read)):
+            raise PhraseError(
+                f"keep_phrases: phrase {phrase.number} holds no name of the "
+                f"mapping as a whole word under this case_mode, so it would "
+                f"keep nothing.", "phrase_holds_no_name", phrase.number)
+        phrases.append(Phrase(phrase.number, phrase.read, pattern))
+    return tuple(phrases)
+
+
+def canonical_phrases(phrases: Sequence[Phrase]) -> List[str]:
+    """The phrases as a preview token binds them: each as read, in NFC,
+    each once, sorted, as `canonical_mapping` binds a mapping. So the
+    same phrases given twice, in another order or with a space doubled
+    bind the same. They are matched as supplied but for their white
+    space, never normalised, for `canonical_mapping`'s reason."""
+    return sorted({unicodedata.normalize("NFC", phrase.read)
+                   for phrase in phrases})
+
+
+def _without_markers_placed(text: str, markers: "re.Pattern[str]"):
+    """`text` with the markers taken out, and a function that gives, for
+    a place in that text, the place in `text` of its character: after
+    every marker that stood before it, as `find_replacements_through`
+    places a name back. None for the function where `text` holds no
+    marker."""
+    spans = [(m.start(), m.end()) for m in markers.finditer(text)]
+    if not spans:
+        return text, None
+    pieces, at, removed = [], 0, 0
+    places: List[int] = []
+    taken: List[int] = []
+    for start, end in spans:
+        pieces.append(text[at:start])
+        places.append(start - removed)
+        removed += end - start
+        taken.append(removed)
+        at = end
+    pieces.append(text[at:])
+
+    def stored_at(position: int) -> int:
+        index = bisect_right(places, position)
+        return position + (taken[index - 1] if index else 0)
+    return "".join(pieces), stored_at
+
+
+def _every_match(pattern: "re.Pattern[str]", text: str):
+    """Each match of `pattern` in `text`, overlapping ones included: the
+    one at each place it matches, in text order. A phrase matches one
+    length at a place, its white space being taken whole."""
+    position = 0
+    while True:
+        match = pattern.search(text, position)
+        if match is None:
+            return
+        yield match.start(), match.end()
+        position = match.start() + 1
+
+
+def phrase_spans(phrases: Sequence[Phrase], text: str,
+                 markers: Optional["re.Pattern[str]"] = None
+                 ) -> List[List[Tuple[int, int]]]:
+    """Where each phrase occurs in `text`, one list a phrase in their
+    order, each sorted and each span once, overlapping occurrences
+    included, as (start, end) in `text`.
+
+    With `markers`, a Word, OpenDocument or RTF text is read both ways
+    names are found in it (`find_replacements_through`): without the
+    import's markers, each occurrence placed back over the markers it
+    spans ("Theresa[Comment 1] May"), and as stored ("Theresa
+    May[Comment 1]day", which reads "Theresa Mayday" without them).
+    """
+    readings = [(text, None)]
+    if markers is not None:
+        bare, stored_at = _without_markers_placed(text, markers)
+        if stored_at is not None:
+            readings.append((bare, stored_at))
+    out: List[List[Tuple[int, int]]] = []
+    for phrase in phrases:
+        spans = set()
+        for reading, stored_at in readings:
+            for start, end in _every_match(phrase.pattern, reading):
+                if stored_at is not None:
+                    start, end = stored_at(start), stored_at(end - 1) + 1
+                spans.add((start, end))
+        out.append(sorted(spans))
+    return out
+
+
+def places_kept(found: Sequence[Replacement],
+                spans: Sequence[Sequence[Tuple[int, int]]],
+                left: Sequence[int] = ()
+                ) -> Tuple[List[int], List[Dict[str, int]]]:
+    """The places in `found` (the occurrences as found, in text order and
+    never overlapping) that lie wholly inside an occurrence of a phrase,
+    sorted, and for each phrase of `spans` (`phrase_spans`' lists) its
+    counts: `occurs`, its occurrences; `keeps`, the names wholly inside
+    one of them; and `cut`, the names that overlap one of them, lie
+    inside no phrase's occurrence and are replaced, not being among the
+    places `left` that a list of occurrences leaves.
+    """
+    starts = [item.start for item in found]
+    ends = [item.end for item in found]
+    inside_each: List[set] = []
+    overlap_each: List[set] = []
+    for occurrences in spans:
+        inside: set = set()
+        overlap: set = set()
+        for start, end in occurrences:
+            # The first name that ends after the phrase starts, then each
+            # that starts before it ends
+            place = bisect_right(ends, start)
+            while place < len(found) and starts[place] < end:
+                if start <= starts[place] and ends[place] <= end:
+                    inside.add(place)
+                else:
+                    overlap.add(place)
+                place += 1
+        inside_each.append(inside)
+        overlap_each.append(overlap)
+    kept = set().union(*inside_each)
+    left_places = set(left)
+    each = [{"occurs": len(occurrences), "keeps": len(inside),
+             "cut": len(overlap - kept - left_places)}
+            for occurrences, inside, overlap
+            in zip(spans, inside_each, overlap_each)]
+    return sorted(kept), each
+
+
+# --------------------------------------------------------------------------
 # Diagnostics (computed from the same pass)
 # --------------------------------------------------------------------------
 

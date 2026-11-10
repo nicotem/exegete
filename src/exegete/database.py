@@ -13636,6 +13636,12 @@ class QualcoderDatabase:
         list leaves. A name that runs past a phrase is still replaced.
         The plan carries the phrases as `keep_phrases`, for the note
         plan. Without phrases, or with none, nothing here changes.
+
+        A file left with no replacement, by a list, by phrases or by both,
+        stays in the plan for its counts, but its rows are neither read
+        nor mapped, as a file with no match has none: its three row
+        tables are present and empty, so no row of it is counted, clamped
+        or asked about, and the write and the run record pass over it.
         """
         from . import occurrences
         from . import pseudonymise as engine
@@ -13704,14 +13710,24 @@ class QualcoderDatabase:
                 replacements = [item for item in replacements
                                 if item.start not in inside]
             mapper = engine.SpanMapper(replacements, len(text))
-            rows = self._pseudonymise_rows(source["file_id"])
-            for table, items in rows.items():
-                hideable = table in self.PSEUDONYMISE_HIDEABLE
-                for row in items:
-                    row["hidden"] = bool(
-                        hideable and coder_is_hidden(visibility, row["owner"]))
-                    row["map"] = mapper.map_row(row["pos0"], row["pos1"],
-                                                overlap_policy)
+            if replacements:
+                rows = self._pseudonymise_rows(source["file_id"])
+                for table, items in rows.items():
+                    hideable = table in self.PSEUDONYMISE_HIDEABLE
+                    for row in items:
+                        row["hidden"] = bool(
+                            hideable and coder_is_hidden(visibility,
+                                                         row["owner"]))
+                        row["map"] = mapper.map_row(row["pos0"], row["pos1"],
+                                                    overlap_policy)
+            else:
+                # Left with no replacement, by a list, by phrases or by
+                # both (v0.15.4): as a file with no match, its rows are
+                # neither read nor mapped, so a row stored past the end of
+                # its text is not clamped, nor counted or asked about for
+                # a run that leaves the file as it is. The tables are
+                # present and empty, since every reader indexes them
+                rows = {"code_text": [], "annotation": [], "case_text": []}
             # Of the occurrences as found: a name of the mapping inside or
             # overlapping an occurrence left is named here still, with a
             # list as without one
@@ -15528,7 +15544,10 @@ class QualcoderDatabase:
             variants = engine.case_variants_seen(
                 compiled, engine.without_markers(text, doc_readers.NOTE_MARKER)
                 if item.get("through_markers") else text)
-            totals["files"] += 1
+            # The files the run rewrites: one left with no replacement, by
+            # a list or by phrases to keep, is not among them (v0.15.4)
+            if item["replacements"]:
+                totals["files"] += 1
             totals["codings_changed"] += codings["changed"]
             totals["annotations_changed"] += (
                 annotations["total"] - annotations["unchanged"]
@@ -15574,6 +15593,12 @@ class QualcoderDatabase:
                 "null_position_rows": self._pseudonymise_null_rows(item),
                 "unique_constraint_collisions": collisions,
             })
+            if not item["replacements"]:
+                # Its rows were not read (v0.15.4), so the blocks above
+                # count none of them, which is not a file without codings
+                files[-1]["rows_read"] = False
+                files[-1]["rows_read_note"] = \
+                    self.PSEUDONYMISE_ROWS_NOT_READ_NOTE
             if leave_given and not may_echo_names:
                 # Beside a preview without the list, the new length tells
                 # the left occurrences' entries: it differs by each left
@@ -15652,6 +15677,13 @@ class QualcoderDatabase:
                 preview["residue"].get("file_text", {}).get(
                     "scanned", {}).pop("characters", None)
         return preview
+
+    # A file's entry where the run replaces nothing in its text, every
+    # occurrence being left by a list or kept inside a phrase (v0.15.4)
+    PSEUDONYMISE_ROWS_NOT_READ_NOTE = (
+        "This run replaces nothing in this file's text, so its codings, "
+        "annotations and case links were not read: it moves none of them, "
+        "and the counts in this entry include none.")
 
     # The fixed strings of the preview's `memo_rewrites` block (v0.13,
     # Brief 2, 5.2). Every count block carries a fixed units string, and
@@ -15853,6 +15885,11 @@ class QualcoderDatabase:
 
         report = []
         for item in plan["files"]:
+            if not item["replacements"]:
+                # Left with no replacement, by a list or by phrases to
+                # keep (v0.15.4): neither written nor reported, so nothing
+                # that reads the files written says it changed
+                continue
             fid = item["file_id"]
             new_text = item["new_text"]
             deleted = {table: [row["id"] for row in item["rows"][table]

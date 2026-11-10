@@ -283,6 +283,29 @@ class TestTheFileText:
             assert len(item["replacements"]) == 1
             assert len(item["left_new_spans"]) == 4
 
+    def test_kept_beside_a_list(self, tmp_path):
+        """With a list of occurrences to leave as well, `kept` counts the
+        occurrences kept that the list does not also leave, and the
+        places of both are those the count of the names left reads; a
+        file left with no replacement by both has no rows read."""
+        with project_with(tmp_path, SPOKE, setup=_spoke):
+            key = occurrences.id_key(pt.load_secret(),
+                                     server._token_project())
+            code = plan_of(None, occurrence_key=key)["files"][0]["numbering"]
+            for numbers, kept, replaced in (([2], 1, 0), ([1, 2], 0, 0),
+                                            ([1], 0, 1)):
+                item = plan_of(occurrence_key=key, leave_numbers=numbers,
+                               numbering=code)["files"][0]
+                assert item["kept_at"] == [0] and item["kept"] == kept
+                assert len(item["replacements"]) == replaced
+                assert item["left_new_spans"][0] == [KEPT, KEPT + 3]
+                if replaced:
+                    assert len(item["left_new_spans"]) == 1
+                    assert len(item["rows"]["code_text"]) == 3
+                else:
+                    assert item["left_new_spans"] == [[KEPT, KEPT + 3],
+                                                      [LONE, LONE + 3]]
+                    assert item["rows"] == NO_ROWS
 
 
 def _notes(folder):
@@ -330,6 +353,84 @@ class TestTheNotes:
             assert "Notes rewritten: 1 (code_name 1)" in body
             assert [row["table"] for row in record_of(plan, written)[
                 "memos"]] == ["code_name"]
+
+
+def _past_the_end(folder):
+    """A hidden coder's coding stored past the end of the text, and a
+    code's note to rewrite."""
+    add_coding(folder, 1, 1, 0, len(ONLY) + 10, owner=HIDDEN, text=ONLY)
+    hide_coder(folder, HIDDEN)
+    set_note(folder, "UPDATE code_name SET memo=? WHERE cid=1",
+             "May agreed.")
+
+
+class TestAFileLeftWithNoReplacement:
+
+    def test_every_occurrence_kept(self, tmp_path):
+        """Its rows are neither read nor mapped, so the preview counts no
+        clamp, asks for no allow_hidden_coder, says the rows were not
+        read and does not count the file among those rewritten; the
+        write rewrites the note alone and passes over the file, and the
+        run record and the journal entry say no file text changed."""
+        with project_with(tmp_path, ONLY, setup=_past_the_end) as folder:
+            plan = plan_of()
+            item = plan["files"][0]
+            assert item["kept_at"] == [0] and item["replacements"] == []
+            assert item["rows"] == NO_ROWS and item["new_text"] == ONLY
+            memo_plan = server.db.pseudonymise_memo_plan(plan["compiled"],
+                                                         plan)
+            preview = server.db.pseudonymise_preview(plan, [],
+                                                     memo_plan=memo_plan)
+            entry = preview["files"][0]
+            assert entry["rows_read"] is False
+            assert entry["rows_read_note"] == \
+                QualcoderDatabase.PSEUDONYMISE_ROWS_NOT_READ_NOTE
+            assert entry["codings"]["total"] == 0
+            assert entry["hidden_coder_rows"]["clamped"] == 0
+            assert preview["hidden_coder_rows"]["override_required"] is \
+                False
+            assert preview["totals"]["files"] == 0
+            assert preview["memo_rewrites"]["totals"]["rows"] == 1
+            effect = server.db.pseudonymise_effect(plan, memo_plan)
+            assert effect["files"][0]["hidden_coder_rows"][
+                "override_required"] is False
+            plan, _, written = write(folder, rewrite_memos=True)
+            assert written["files"] == []
+            assert written["memos"]["totals"]["rows_updated"] == 1
+            assert stored(folder) == ONLY
+            assert positions(folder) == {1: (0, len(ONLY) + 10)}
+            assert not any(
+                QualcoderDatabase.pseudonymise_hidden_rows(item)[change]
+                for item in plan["files"]
+                for change in ("shifted", "substituted", "resized",
+                               "snapped", "deleted", "clamped"))
+            assert record_of(plan, written)["files"] == []
+            body = server._pseudonymise_journal_body(
+                plan, written, plan["compiled"], None, "run.json")
+            assert "Files rewritten: 0." in body
+            assert "No file text was rewritten, so no position has " \
+                "changed." in body
+
+    def test_every_occurrence_left_by_a_list(self, tmp_path):
+        """The same rule for a list that leaves every occurrence: the
+        preview counts no clamp and leaves the file out of the files
+        rewritten, and the execute without allow_hidden_coder gives the
+        answer that every occurrence was left, writing nothing."""
+        with project_with(tmp_path, ONLY, setup=_past_the_end) as folder:
+            out = preview_of(mapping=MAY,
+                             leave_occurrences=choose(mapping=MAY))
+            entry = out["preview"]["files"][0]
+            assert entry["rows_read"] is False
+            assert entry["hidden_coder_rows"]["clamped"] == 0
+            assert out["preview"]["hidden_coder_rows"][
+                "override_required"] is False
+            assert out["preview"]["totals"]["files"] == 0
+            done = execute_from(out, mapping=MAY)
+            assert done.get("nothing_changed") is True, done
+            assert done["message"].startswith(
+                server._EVERY_OCCURRENCE_WAS_LEFT)
+            assert stored(folder) == ONLY and backups(folder) == []
+            assert positions(folder) == {1: (0, len(ONLY) + 10)}
 
 
 def refusal(raw, mapping=MAY, case_mode="exact"):

@@ -22444,6 +22444,10 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
     withheld = set(pseudo.pseudonyms_withheld(compiled))
     files = []
     for item in plan["files"]:
+        if not item["replacements"]:
+            # A file left with no replacement, by a list or by phrases to
+            # keep, is not written (v0.15.4), so the record does not list it
+            continue
         offset = 0
         spans = []
         for replacement in item["replacements"]:

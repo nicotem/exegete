@@ -1425,8 +1425,8 @@ class TestReviewScreenSurvivesACorruptedProposalColour:
         before = _count(qualcoder_db_path, "code_name")
         self._seed(sid, [("Sound", "#FF0000"), ("Corrupted", "#FF0000")])
 
-        path = (Path(server.session_manager.storage_dir)
-                / f"session_{sid}.json")
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = server.session_manager.session_file(sid)
         data = json.loads(path.read_text(encoding="utf-8"))
         assert [p["name"] for p in data["proposed_codes"]] == ["Sound",
                                                                "Corrupted"]

@@ -1851,11 +1851,12 @@ class TestSessionFilesAfterPseudonymising:
             [suggesting, proposing, finished["reject"], finished["create"]])
         assert done["stale_sessions_with_work_to_apply"] == [proposing]
         note = [n for n in done["notes"] if "coding session file" in n]
-        assert len(note) == 1 and "~/.exegete/sessions/" in note[0]
+        # v0.15.4: the sessions are kept in the project's sessions folder,
+        # which the note names (tests/test_v0154_sessions_with_project.py)
+        assert len(note) == 1 and "Exegete coding sessions" in note[0]
         for session_id in (suggesting, proposing):
-            stored = (server.session_manager.storage_dir
-                      / f"session_{session_id}.json").read_text(
-                          encoding="utf-8")
+            stored = server.session_manager.session_file(
+                session_id).read_text(encoding="utf-8")
             assert "Maria" in stored
         for listing in (by_folder, by_file):
             ids = {s["coding_session_id"] for s in listing["sessions"]}
@@ -2584,8 +2585,8 @@ class TestTheMarkerChecksHoldForEveryShape:
                     "segment_text": QUOTE, "reasoning": "stated"}]})
             return ids
         ids = host_session(drive)
-        path = (server.session_manager.storage_dir
-                / f"session_{ids['session']}.json")
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = server.session_manager.session_file(ids['session'])
         return ids, path
 
     def _call(self, name, arguments):

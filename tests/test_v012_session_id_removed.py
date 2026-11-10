@@ -76,7 +76,8 @@ class TestSessionIdDuplicateRemoved:
     def test_on_disk_session_format_is_unchanged(self, setup_server, tmp_path):
         env = json.loads(server.start_coding_session([1], instruction="test"))
         sid = env["coding_session_id"]
-        path = Path(server.session_manager.storage_dir) / f"session_{sid}.json"
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = server.session_manager.session_file(sid)
         data = json.loads(path.read_text(encoding="utf-8"))
         assert data["session_id"] == sid          # internal schema keeps its key
         assert "coding_session_id" not in data

@@ -516,7 +516,8 @@ class TestPanelFixtures:
         sid = _make_session(setup_server)
         guid = _record_one(sid)
         sm = server.session_manager
-        path = Path(sm.storage_dir) / f"session_{sid}.json"
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = sm.session_file(sid)
         data = json.loads(path.read_text(encoding="utf-8"))
         data.pop("span_edit_stats", None)
         for s in data["suggestions"]:

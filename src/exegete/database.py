@@ -8111,7 +8111,7 @@ class QualcoderDatabase:
             query: Text to search for (letter case ignored by Unicode's
                    default case folding, `fold_text`; % and _ are
                    literal)
-            limit: Maximum results (max 5000)
+            limit: Maximum results, 1 to 5000; a larger one is refused
 
         Returns:
             List of matching notes, each with its `type` (one of the
@@ -8128,6 +8128,14 @@ class QualcoderDatabase:
             RuntimeError: If database operation fails
         """
         query = validate_string(query, "query")
+        # A limit above MAX_LIMIT is refused, as 0 is, rather than cut
+        # (v0.15.4, the claims audit's point 27): cut without a word, it
+        # broke the promise that fewer results than limit means nothing
+        # was left out. validate_limit, which cuts, serves other reads.
+        if isinstance(limit, int) and not isinstance(limit, bool) \
+                and limit > MAX_LIMIT:
+            raise ValueError(
+                f"Limit must be at most {MAX_LIMIT}, got {limit}")
         limit = validate_limit(limit)
         folded = fold_text(query)   # once, not per row (fix round 1)
 

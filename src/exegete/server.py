@@ -8531,7 +8531,8 @@ def search_memos(query: str, limit: int = 50) -> str:
                is ignored by Unicode's default case folding, so "école"
                finds "École" and "ß" finds "ss"; Turkish dotted and
                dotless i are not matched to i and I)
-        limit: Maximum number of results to return (default 50)
+        limit: Maximum number of results to return, 1 to 5,000 (default
+               50); a larger limit is refused
 
     Returns:
         JSON object with query, result_count and results; each result
@@ -23724,9 +23725,11 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int, memo: str,
                        change (accepted until the release on method)
 
     Returns:
-        JSON with the new annotation (anid, span, note). If it contains
-        `position_safety_warning`, relay it to the researcher: if the
-        project is opened in QualCoder, the span can show shifted there.
+        JSON with the new annotation under annotation: its
+        annotation_id, file_id, file_name, position_start, position_end,
+        memo, owner and date. If it contains `position_safety_warning`,
+        relay it to the researcher: if the project is opened in
+        QualCoder, the span can show shifted there.
     """
     marker = private_marker_refusal(memo, "memo")
     if marker is not None:

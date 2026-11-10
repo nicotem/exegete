@@ -257,3 +257,41 @@ class TestAMissingRowReadsAsUnset:
         assert "error" in out
         found = server.get_db().attribute_query("Age", "", "file")
         assert found["results"] == []
+
+
+# ---------------------------------------------------------------------------
+# Point 27: search_memos' limit, and add_annotation's Returns
+# ---------------------------------------------------------------------------
+
+def _returns_section(tool: str) -> str:
+    description = server.mcp._tool_manager._tools[tool].description
+    return " ".join(description.split("Returns:", 1)[1].split())
+
+
+class TestSearchMemosRefusesALimitItWouldCut:
+
+    def test_a_limit_above_five_thousand_is_refused(self, project):
+        out = host("search_memos", query="memo", limit=5001)
+        assert set(out) == {"error"}
+        assert "5000" in out["error"]
+
+    def test_five_thousand_is_taken(self, project):
+        out = host("search_memos", query="memo", limit=5000)
+        assert "error" not in out
+        assert out["result_count"] >= 1
+
+    def test_zero_is_refused_as_before(self, project):
+        assert "error" in host("search_memos", query="memo", limit=0)
+
+
+class TestAddAnnotationsReturnsNamesItsKeys:
+
+    def test_every_key_of_the_answer_is_named(self, project):
+        out = host("add_annotation", file_id=1, start_pos=0, end_pos=4,
+                   memo="A first note")
+        assert out["success"] is True, out
+        returns = _returns_section("add_annotation")
+        assert "annotation" in returns
+        for key in out["annotation"]:
+            assert key in returns, key
+

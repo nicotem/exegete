@@ -519,7 +519,7 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
                         "Auto") == 1
     approvals = _between(_flat("INSTALL.md"),
                          "**Claude's questions before a tool runs.**",
-                         "**Switch training off**")
+                         "**Training.**")
     # (v0.15.3: the page, read again, gives each mode its default by plan;
     # the warning about Auto comes with the suggestion)
     # (its readability reading: the version, the rollout and the setting a

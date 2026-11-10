@@ -102,8 +102,10 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
             "It is an early version, an alpha, built by one researcher and "
             "tested on Windows, macOS and Linux.",
             "Parts marked Experimental have had little or no use yet.",
-            "not email, takes questions and ideas, in public, so leave out "
-            "participants' data."):
+            # (v0.15.4, the readability reading: the warning said as what
+            # happens, for an order, as docs/WRITING.md asks)
+            "not email, takes questions and ideas. An issue is public, so "
+            "participants' data put into one is published with it."):
         assert words in opening, words
     # no tool, protocol or feature name before the benefit sentence
     lede = opening[:opening.index("Exegete is a qualitative analysis "
@@ -342,9 +344,9 @@ def test_a_first_session_names_both_coder_names():
             "The project keeps it so that your work and the AI's stay "
             "apart. Any name you choose will do, and if you do not know "
             "yours, say so. Before Exegete first writes to the project, the "
-            "assistant asks for the AI coder name, kept per project, under "
-            "which Exegete writes what is done through the conversation. It "
-            "does not ask if the project was made with that name in "
+            "assistant asks for the AI coder name. Exegete keeps it per "
+            "project, and writes what is done through the conversation under "
+            "it. It does not ask if the project was made with that name in "
             "Exegete's settings.") in names
     assert "records your coding under it" not in names
     assert "Not using QualCoder, or no coder name?" not in names
@@ -383,8 +385,9 @@ def test_the_approval_steps_are_named_where_the_readme_points():
             # update_suggestion_status returns, below)
             "Keep the assistant asking before the steps that record your "
             "decisions and write them",
-            "INSTALL.md#approving-the-ais-suggestions-your-hosts-settings-"
-            "are-the-safeguard",
+            # (v0.15.4, the readability reading: the heading without its
+            # flourish, its earlier address kept as an anchor)
+            "INSTALL.md#approving-the-ais-suggestions)",
             # (the readability reading: what to do in each app, a
             # sentence each)
             "In Claude, choose \"Allow once\" each time it asks. In Codex, "
@@ -401,8 +404,7 @@ def test_the_approval_steps_are_named_where_the_readme_points():
     # diagram of a coding's path)
     assert "The assistant is told to show you each passage with" in readme
     install = _between(_flat("INSTALL.md"), "### Approving the AI's "
-                       "suggestions: your host's settings are the safeguard",
-                       "## PDF and EPUB: the optional part")
+                       "suggestions", "## PDF and EPUB: the optional part")
     server._apply_toolset("full")
     tools = {t.name for t in asyncio.run(server.mcp.list_tools())}
     newcomer = _read("README.md")[:_read("README.md").index(

@@ -26,8 +26,8 @@ needs no typed commands: [README, "One click in Claude Desktop"](https://github.
 In Claude Code, leave out step 3's settings file. Instead, run
 `claude mcp add exegete -- <venv-python> -m exegete.server` in an empty
 folder, with the path `which python` gives in place of `<venv-python>`
-(the Terminal guide, "Claude Code"). Started in your home folder, or in
-one that holds a study, Claude Code reads that study without asking.
+(the Terminal guide, "Claude Code"). If you start Claude Code in your home
+folder, or in one that holds a study, it reads that study without asking.
 
 Claude Code opens files by itself, outside Exegete. A study kept on the
 same computer is within its reach, wherever your practice projects are,
@@ -35,9 +35,9 @@ and Exegete's list of projects tells it where each listed project is.
 What Claude Code opens goes to Anthropic, the AI provider that runs its
 model. While training is on, Anthropic may train its models on it. If
 that matters for a study, you could work on that study in Claude
-Desktop's chat, with computer use off, no folder that holds your
-projects or transcripts connected, and no other extension that reads
-files ([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
+Desktop's chat. There, you could keep computer use off, connect no
+folder that holds your projects or transcripts, and add no other
+extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
 
 ## Installation steps
 
@@ -142,9 +142,9 @@ project selected.
 On this route, a new project goes to `~/Documents/Exegete projects`
 unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
 Documents) or OneDrive may sync Documents, and so copy your projects,
-with their transcripts, off the computer. A sync service can also copy a
-project's database and the working file beside it, the database's
-journal, at different moments, which can leave a damaged copy. You could
+with their transcripts, off the computer. A sync service can also leave
+a damaged copy. It may copy a project's database and the working file
+beside it, the database's journal, at different moments. You could
 name a folder outside Documents, such as `~/Exegete projects`. To do so,
 add `"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"` as a line
 of the `env` block, with a comma after the line before it (the Terminal
@@ -164,7 +164,7 @@ On a personal plan (Free, Pro or Max), the setting "Help improve our AI
 models" at https://claude.ai/settings/data-privacy-controls switches
 training off (Anthropic's pages, read on 4 November 2026). The same pages
 say that rating a reply, with a thumbs up or down, can still let Anthropic
-train on that conversation, and so can its being flagged for a safety review.
+train on that conversation, and so can a flag for a safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
@@ -246,5 +246,5 @@ that the Python path in the settings file is the virtual environment's.
 - [The Terminal guide's troubleshooting section](docs/installing-from-the-terminal.md#troubleshooting)
 - If you use QualCoder, [its documentation](https://github.com/ccbogel/QualCoder/wiki)
 - [GitHub Issues](https://github.com/nicotem/exegete/issues), the only
-  support channel. It is public, so leave out participants' data.
-  Requests by email receive no reply ([SUPPORT.md](SUPPORT.md)).
+  support channel. It is public: participants' data put into an issue is
+  published with it. Requests by email get no reply ([SUPPORT.md](SUPPORT.md)).

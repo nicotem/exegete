@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.15.4, coding sessions kept with their project: the store and the
-reads (the first two of three pieces).
+"""v0.15.4, coding sessions kept with their project: where they are kept,
+and how they are read and decided.
 
 From 0.15.4 a new coding session is kept inside its project, in a
 top-level folder of its own, `Exegete coding sessions`, and goes
@@ -11,9 +11,8 @@ of 10 November 2026). Every session read and decision is bound to the
 open project, as its writes are.
 
 After the design's "How it is checked"
-(DESIGN_0154_sessions-with-project.md), its tests 1 to 8, a class each;
-each break fails with its change reverted (the pieces' reports say
-which were shown):
+(DESIGN_0154_sessions-with-project.md), its tests 1 to 8, a class or
+more each; each break fails with its change reverted:
 
 1. A new session in the project's folder, with its note, owner-only and
    without the project's path; the project copied under another name
@@ -424,8 +423,8 @@ class TestASessionInTheProjectThatCannotBeRead:
             assert "No project selected" in out["error"], (tool, out)
             assert "not found" not in out["error"]
         assert file_of(project, sid).is_file()
-        # one kept on this computer is found, and from piece 2 read only
-        # with its project open: the no-project answer, never "not found"
+        # one kept on this computer is found, and read only with its
+        # project open: the no-project answer, never "not found"
         out = jcall("get_coding_session_info",
                     coding_session_id=made_before.session_id)
         assert "No project selected" in out["error"]
@@ -1208,6 +1207,39 @@ class TestASessionNotSavedAfterACommit:
         assert suggestion.status == "applied"
         assert suggestion.applied_ctid is not None
 
+    def test_those_already_in_the_database_are_not_said_to_be_marked(
+            self, project, monkeypatch):
+        """One approved suggestion already in the database beside one
+        written, and the session not saved: the answer lists the first as
+        already there and never says it is marked applied in the session,
+        which the file does not hold."""
+        sid = start()["coding_session_id"]
+        first = record(sid)["recorded"][0]["guid"]
+        second = record(sid, LATER, "Doubt")["recorded"][0]["guid"]
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[first])
+        server.apply_codings(coding_session_id=sid)
+        # The first set back to approved, as an earlier apply whose
+        # session was not saved leaves it, and the second approved
+        path = file_of(project, sid)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        for entry in data["suggestions"]:
+            if entry["guid"] == first:
+                entry["status"] = "approved"
+                entry["applied_ctid"] = None
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[second])
+        _failing_save(monkeypatch)
+        out = server.apply_codings(coding_session_id=sid)
+        assert "(already_existing_count: 1)" in out, out
+        assert server.APPLIED_SESSION_NOT_SAVED.split("{reason}")[0] in out
+        assert "marked applied" not in out, out
+        assert len(_codings_of(project)) == 2
+        monkeypatch.undo()
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        assert {s["status"] for s in stored["suggestions"]} == {"approved"}
+
     def test_after_create_proposed_codes_the_codes_are_made_and_said(
             self, project, monkeypatch):
         sid = start(code_names=["Trust"])["coding_session_id"]
@@ -1364,6 +1396,30 @@ class TestWhatTheListCovers:
             made_before.session_id]
         assert out["covers"] == _covers(server.LIST_COVERS_NO_PROJECT)
 
+    def test_a_blank_path_is_taken_as_no_path(self, project, tmp_path,
+                                              monkeypatch):
+        """An empty or blank project_path names no project, so the list
+        filters by none, as a host that fills an optional argument with
+        "" gets it: the answer says that it covers what it lists, every
+        project's sessions kept on this computer, never one project's."""
+        other = make_project(tmp_path / "other")
+        theirs = _kept_on_this_computer(other / "data.qda", "theirs")
+        _select(project)
+        here = start()["coding_session_id"]
+        for blank in ("", "   "):
+            out = jcall("list_coding_sessions", project_path=blank)
+            assert {s["coding_session_id"] for s in out["sessions"]} == {
+                here, theirs.session_id}, blank
+            assert out["covers"] == _covers(server.LIST_COVERS_EVERY), blank
+        monkeypatch.setattr(server, "db", None)
+        monkeypatch.setattr(server, "current_project_path", None)
+        for blank in ("", "   "):
+            out = jcall("list_coding_sessions", project_path=blank)
+            assert [s["coding_session_id"] for s in out["sessions"]] == [
+                theirs.session_id], blank
+            assert out["covers"] == _covers(server.LIST_COVERS_NO_PROJECT), \
+                blank
+
 
 def _folder_a_link(project, tmp_path):
     """The project's sessions folder moved aside and a link left at its
@@ -1391,6 +1447,24 @@ class TestWhatCouldNotBeRead:
         assert [s["coding_session_id"] for s in out["sessions"]] == [
             made_before.session_id]
         assert sid not in json.dumps(out)
+
+    def test_what_the_list_covers_leaves_out_the_folder_not_read(
+            self, project, tmp_path):
+        """With the open project's sessions folder unreadable, the
+        sentence on what the list covers names only the sessions kept on
+        this computer, with or without the project's own path."""
+        start()
+        made_before = _kept_on_this_computer(project / "data.qda")
+        _folder_a_link(project, tmp_path)
+        for args, template in (
+                ({}, server.LIST_COVERS_EVERY_BUT_FOLDER),
+                ({"project_path": str(project)},
+                 server.LIST_COVERS_OPEN_PROJECT_BUT_FOLDER)):
+            out = jcall("list_coding_sessions", **args)
+            assert out["covers"] == _covers(template), args
+            assert "project_sessions_not_listed" in out, args
+            assert [s["coding_session_id"] for s in out["sessions"]] == [
+                made_before.session_id], args
 
     def test_a_folder_its_owner_cannot_read_gives_its_reason(self, project):
         if not POSIX or os.geteuid() == 0:

@@ -12365,15 +12365,18 @@ def apply_codings(
     already_existing = checked.already_existing
     to_write = checked.to_write
 
-    def _already_existing_lines() -> List[str]:
+    def _already_existing_lines(marked: bool = True) -> List[str]:
+        # `marked` False: the session was not saved after the commit, so
+        # its file still holds them as approved, as the answer says above
         if not already_existing:
             return []
         lines = [
             f"\n**Already in the database: {len(already_existing)}** "
             f"(already_existing_count: {len(already_existing)}). "
             f"{len(already_existing)} approved suggestion(s) were already in "
-            f"the database under coder '{owner}' and were left as they are; "
-            f"they are marked applied in the session.\n"
+            f"the database under coder '{owner}' and were left as they are"
+            f"{'; they are marked applied in the session' if marked else ''}"
+            f".\n"
         ]
         for r in already_existing:
             lines.append(f"  - {r['code']} in {r['file']} (ctid={r['ctid']}, "
@@ -12616,7 +12619,7 @@ def apply_codings(
         for r in file_results:
             output.append(f"  - {r['code']} (ctid={r['ctid']})")
 
-    output.extend(_already_existing_lines())
+    output.extend(_already_existing_lines(marked=not_saved is None))
 
     output.append("\n\n**The codings are in the project now: they can be "
                   "read back here, and QualCoder, if the researcher uses "
@@ -17111,19 +17114,29 @@ def list_coding_sessions(
         "Show coding sessions from the last 7 days"
         "List sessions for this project"
     """
-    # Worked out at the call (v0.15.4, the claims audit's point 3): below
-    # 1 nothing was listed, and past the year 1 the date overflowed
+    # Worked out at the call (v0.15.4): below 1 nothing was listed, and
+    # past the year 1 the date overflowed
     longest = days_back_to_year_one()
     if (not isinstance(days_old, int) or isinstance(days_old, bool)
             or not 1 <= days_old <= longest):
         return json.dumps({"error": DAYS_OLD_REFUSAL.format(limit=longest),
                            "days_old_range": [1, longest]}, indent=2)
+    # An empty or blank path names no project, and the list filters by
+    # none (canonical_database_path gives None for it): taken as no path
+    # here too, so that the answer says what the list covers
+    if SessionManager.canonical_database_path(project_path) is None:
+        project_path = None
     try:
         listing = session_manager.sessions_listing(project_path, days_old)
         sessions = listing.sessions
         # What the list covers (v0.15.4): a project's own sessions are
-        # read from its folder only while it is selected
-        if listing.project_read:
+        # read from its folder only while it is selected, and only when
+        # that folder can be read
+        if listing.project_folder_refusal is not None:
+            covers = (LIST_COVERS_OPEN_PROJECT_BUT_FOLDER
+                      if project_path is not None
+                      else LIST_COVERS_EVERY_BUT_FOLDER)
+        elif listing.project_read:
             covers = (LIST_COVERS_OPEN_PROJECT if project_path is not None
                       else LIST_COVERS_EVERY)
         else:
@@ -17182,6 +17195,20 @@ LIST_COVERS_OTHER_PROJECT = (
     "sessions kept on this computer, changed in {last}. A project's own "
     "sessions, kept in its Exegete coding sessions folder, are listed only "
     "while it is selected.")
+# The open project's sessions folder there but unreadable: the sessions
+# kept in it are not in the list, and project_sessions_not_listed says why
+_FOLDER_NOT_READ = (
+    "The open project's Exegete coding sessions folder could not be read, "
+    "so the sessions kept in it are not in this list; "
+    "project_sessions_not_listed gives the reason.")
+LIST_COVERS_EVERY_BUT_FOLDER = (
+    "This list covers the sessions kept on this computer, changed in "
+    "{last}: the open project's and other projects'. " + _FOLDER_NOT_READ
+    + " A project's own sessions, kept in its Exegete coding sessions "
+    "folder, are listed only while it is selected.")
+LIST_COVERS_OPEN_PROJECT_BUT_FOLDER = (
+    "This list covers the open project's sessions kept on this computer, "
+    "changed in {last}. " + _FOLDER_NOT_READ)
 DAYS_OLD_REFUSAL = (
     "days_old is the number of days back from today whose sessions are "
     "listed: a whole number from 1 to {limit:,}, which reaches back to the "

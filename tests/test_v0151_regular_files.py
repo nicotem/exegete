@@ -636,7 +636,7 @@ def test_a_pipe_beside_the_sessions_other_project_gives_the_session_answers(
     pipe, with a clean project open: the session's writes, and from
     0.15.4 its reads, get the answer for a session of another project,
     naming both, never the other project's entry as if the open project
-    held it (fix round 1)."""
+    held it."""
     other = _another(fresh, tmp_path)
     journal = other / "data.qda-journal"
 

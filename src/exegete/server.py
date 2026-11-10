@@ -8240,6 +8240,22 @@ def get_coded_segments(code_id: int, limit: int = 100,
     return _ai_json(payload, indent=2)
 
 
+def _nothing_to_search_refusal(pattern: Any, search_filename: Any,
+                               search_content: Any) -> Optional[str]:
+    """search_files' refusal of a search with nothing to look for, or
+    nowhere to look, which it answered as a search that found nothing
+    (v0.15.4, the claims audit's point 47); None for a search to run."""
+    if not isinstance(pattern, str) or not pattern:
+        return ("pattern is empty: pass the text to look for, in the file "
+                "names or in the files' text.")
+    if not search_filename and not search_content:
+        return ("search_filename and search_content are both false, so "
+                "nothing would be searched: set search_filename=true to "
+                "search the file names, search_content=true to search the "
+                "files' text, or both.")
+    return None
+
+
 @mcp.tool(annotations=TOOL_READS)
 @_tool_guard
 def search_files(
@@ -8361,18 +8377,10 @@ def search_files(
     - Once you have file_id, use read_file_with_codings() to get full content
     """
     db_ = get_db()
-    # A search with nothing to look for, or nowhere to look, answered as
-    # a search that found nothing (v0.15.4, the claims audit's point 47)
-    if not isinstance(pattern, str) or not pattern:
-        return json.dumps({"error": (
-            "pattern is empty: pass the text to look for, in the file "
-            "names or in the files' text.")})
-    if not search_filename and not search_content:
-        return json.dumps({"error": (
-            "search_filename and search_content are both false, so "
-            "nothing would be searched: set search_filename=true to search "
-            "the file names, search_content=true to search the files' "
-            "text, or both.")})
+    nothing = _nothing_to_search_refusal(pattern, search_filename,
+                                         search_content)
+    if nothing is not None:
+        return json.dumps({"error": nothing})
     if isinstance(max_matches_per_file, bool) or \
             not isinstance(max_matches_per_file, int) or \
             not 1 <= max_matches_per_file <= MAX_MATCHES_PER_FILE_CAP:

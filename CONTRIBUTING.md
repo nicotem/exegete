@@ -551,7 +551,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
-│   │   ├── occurrences.py       # pseudonymise_source: the short id and line number of each occurrence of a name, and the page for choosing them (0.15.3)
+│   │   ├── occurrences.py       # pseudonymise_source: the short id and line number of each occurrence of a name, and the page for choosing them (0.15.3); each occurrence's number, the list's numbering and the page's one script (0.15.4)
 │   │   ├── refi_export.py       # REFI-QDA XML export
 │   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
 │   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once

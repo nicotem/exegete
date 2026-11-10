@@ -1117,12 +1117,25 @@ QualCoder's format (`save_mapping_to_project`), or keep it yourself
 A run can also leave chosen occurrences of a name as they are, such as
 those of a second person with the same name. To choose them, ask the
 assistant for a preview that lists the occurrences
-(`choose_occurrences`). A page opens in your browser with an id beside
-each occurrence, and you tell the assistant which ids to leave
-(`leave_occurrences`). The page is for you alone, and the assistant is
-told never to read it. A second run can then give the second person a
-pseudonym of their own. That run needs a list you type and keep
-yourself, since the names list holds one pseudonym for each name.
+(`choose_occurrences`). A page opens in your browser with a number in
+bold and an id beside each occurrence. Tick the ones to leave and paste
+the line the page gives into the conversation, or tell the assistant
+their numbers (`leave_numbers`). The line gives the file, the list's
+numbering (a short code that changes whenever the list does) and the
+numbers, and nothing of the text. The page is for you alone, and the
+assistant is told never to read it.
+
+Numbers you say are read against the latest preview's list. Numbers
+from an earlier page, or from another file's page, can name other
+occurrences: a name meant to change would stay, and one meant to stay
+would change. You may prefer to paste the line, which carries its
+page's numbering, so that a preview refuses it if the list has changed.
+Either way, the next preview marks the occurrences left, for you to
+check.
+
+A second run can then give the second person a pseudonym of their own.
+That run needs a list you type and keep yourself, since the names list
+holds one pseudonym for each name.
 
 The rest of the project is treated in other ways:
 

@@ -461,8 +461,9 @@ What stays local, always, unless a sync service copies the folder it is in
     longer be checked;
   - the texts an import's preview kept can no longer be used, so the
     next preview reads the documents again;
-  - every occurrence gets a new id, so the ids to give in
-    `leave_occurrences` are those of a preview made since.
+  - every occurrence gets a new id, and every list of occurrences a
+    new numbering, so the ids and numbers to give are those of a
+    preview made since.
 
   Exegete replaces the secret by itself, with the same effects, when it
   finds the file malformed or, on macOS and Linux, readable by other
@@ -1197,14 +1198,47 @@ name for a pseudonymisation run to leave as they are
 preview writes a page into the reading folder, in that file's own
 folder, and opens it in your browser. It holds the file's
 whole text as stored, with every occurrence of the names you asked to
-replace marked and labelled with its id, and no pseudonym. So while it
-stays, anyone who can read the reading folder can see which words of
-that file are those names. It goes when Exegete changes the file's text
-or name, as a run on the file, an undo that changes it or a restore
-does. Otherwise it goes at Exegete's first tidy once it is an hour old,
-which can be later (below). The preview's answer says where the page
-is only when the page did not open. With the names list, the answer withholds the page's
-place when the place itself holds a name from the list.
+replace marked and labelled with its number and its id, and no
+pseudonym. So while it stays, anyone who can read the reading folder
+can see which words of that file are those names. It goes when Exegete
+changes the file's text or name, as a run on the file, an undo that
+changes it or a restore does. Otherwise it goes at Exegete's first tidy
+once it is an hour old, which can be later (below). The preview's
+answer says where the page is only when the page did not open. With the
+names list, the answer withholds the page's place when the place itself
+holds a name from the list.
+
+The page has one script, Exegete's own, which runs in your browser on
+that page alone: its policy allows that script by the digest of its
+text, and no other. The script adds a tick box beside each number, and
+gives one line for the occurrences you tick, such as "File 12,
+numbering q8x2dm: leave occurrences 3, 7, 12 as they are." The line
+holds the file's id, the list's numbering and the numbers, and no name,
+pseudonym or word of the text. The script reads no part of the text,
+fetches nothing, keeps nothing once the page closes and sends nothing.
+When you press Copy, the line goes to your computer's clipboard, where
+other programs can read it: a clipboard manager, or a clipboard shared
+with your other devices where that is switched on. Where the browser
+refuses the clipboard, the line is selected, for you to copy. Once you
+paste it into the conversation, it reaches the AI provider, as anything
+you type does. In a browser that runs no script, the page shows the
+numbers alone, and you tell the assistant the ones to leave.
+
+Numbers you say, rather than paste, are read against the latest
+preview's list. Numbers read from an earlier page, or from another
+file's page, can name other occurrences, so a real name meant to change
+would stay in the text. A pasted line carries its own page's numbering,
+and a preview refuses it if the list has changed. The next preview
+marks the occurrences left, for you to check.
+
+**Your browser's history.** Like a reading copy, the page leaves an
+entry in your browser's history once it has opened: its title, which
+holds the file's name, and its address, which holds the name of the
+project's folder. The entry stays after the page itself is gone, and a
+browser that syncs its history can carry it to your other devices and
+to your account with the browser's maker. You may prefer to delete
+those entries from the history, or to keep history sync off in the
+browser you read these pages in.
 
 Three cautions:
 

@@ -638,7 +638,15 @@ class TestTheTexts:
         setting, read from the guide. Rebuilt from the source, so that it
         holds on every Python the suite runs on."""
         guide = " ".join(GUIDE.read_text(encoding="utf-8").split())
-        figure = int(FIGURE.search(guide).group(1).replace(",", ""))
+        found = FIGURE.search(guide)
+        assert found, (
+            "The figure is looked for in docs/installing-from-the-terminal"
+            ".md, in its sentence on Claude Code's setting "
+            "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH: \"<figure>, for "
+            "example, lets every Exegete description through whole on any "
+            "Python\". That sentence has changed: give this test its new "
+            "words.")
+        figure = int(found.group(1).replace(",", ""))
         rebuilt = _as_311_keeps_it("pseudonymise_source")
         served = {tool.name: tool.description or ""
                   for tool in asyncio.run(server.mcp.list_tools())}

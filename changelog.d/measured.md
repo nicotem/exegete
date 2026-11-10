@@ -10,15 +10,16 @@ Python 3.13 with the libraries in `uv.lock`:
 | `full` (80 tools) | 211,325 | 210,397 |
 | `core` (28 tools) | 77,142 | 76,805 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 14,334 | 14,180 |
+| The full brief | 14,457 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
 
 - Choosing occurrences by their numbers adds 243 characters to `full`:
   242 for the schemas of pseudonymise_source's two new arguments, and
   1 in its description, where the arguments for choosing occurrences
-  now take about the room they took before. The full brief is 154
-  characters longer, from one sentence on the numbers in its privacy
-  section. The sizes of `core`, which has no pseudonymisation tool, do
+  now take about the room they took before. The full brief is 277
+  characters longer, from its privacy section's sentences on the
+  numbers and on the line the page for choosing occurrences gives to
+  paste. The sizes of `core`, which has no pseudonymisation tool, do
   not change.
 - Six descriptions that now say what their tools do add 649 characters
   to `full` and 337 to `core`. In both sets, `create_code`'s sentence on

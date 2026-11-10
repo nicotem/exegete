@@ -30,6 +30,7 @@ import json
 import logging
 import shutil
 import sqlite3
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -379,3 +380,105 @@ class TestTheProjectMemoTakesNoId:
         assert out.get("success") is True, out
         assert _rows(project, "SELECT memo FROM project") == [
             ("Carers again",)]
+
+
+# ---------------------------------------------------------------------------
+# A new attribute name
+# ---------------------------------------------------------------------------
+
+def _attribute_names(project):
+    return sorted(row[0] for row in
+                  _rows(project, "SELECT name FROM attribute_type"))
+
+
+@pytest.fixture
+def backups_started(monkeypatch):
+    """Each start of a backup, counted: a refusal made before the copy of
+    the project's folder starts none."""
+    started = []
+    real = QualcoderDatabase.start_backup_before_write
+
+    def counted(self, *args, **kwargs):
+        started.append(1)
+        return real(self, *args, **kwargs)
+    monkeypatch.setattr(QualcoderDatabase, "start_backup_before_write",
+                        counted)
+    return started
+
+
+def _create_attribute(name, applies_to="case"):
+    return host("create_attribute_type", name=name, applies_to=applies_to)
+
+
+class TestANewAttributeName:
+
+    def test_names_are_compared_exactly(self, project):
+        """Letter case, spacing and Unicode form are kept: each of these
+        is a second attribute beside the one it resembles."""
+        made = ["age", "Age group", "Age  group", "Café", "Café"]
+        for name in made:
+            out = _create_attribute(name)
+            assert out.get("success") is True, (name, out)
+        assert _attribute_names(project) == sorted(["Age"] + made)
+
+    def test_a_character_no_one_sees_is_refused_before_any_backup(
+            self, project, backups_started):
+        out = _create_attribute("Re​gion")
+        assert "U+200B" in out["error"] and "position 3" in out["error"]
+        assert "'Region'" in out["error"]        # the name without it
+        assert backups_started == [] and _beside(project) == []
+        assert _attribute_names(project) == ["Age"]
+
+    def test_a_tab_inside_the_name_is_refused_as_a_control(
+            self, project, backups_started):
+        out = _create_attribute("Age\tband")
+        assert "U+0009" in out["error"]
+        assert backups_started == [] and _beside(project) == []
+
+    @pytest.mark.parametrize("applies_to", ["case", "file"])
+    def test_a_twin_of_a_name_qualcoder_could_write_is_refused(
+            self, project, backups_started, applies_to):
+        """A file attribute named with a zero-width space, as QualCoder's
+        dialogs can store one: the new name is refused as its twin,
+        naming it with its codes and its kind; attribute names have no
+        id and Exegete no tool to rename one, so neither is offered."""
+        _sql(project, "INSERT INTO attribute_type VALUES (?, '2024-01-15', "
+                      "'TestCoder', '', 'file', 'character')",
+             ("Re​gion",))
+        out = _create_attribute("Region", applies_to=applies_to)
+        error = out["error"]
+        assert "Re<U+200B>gion" in error and "file" in error
+        assert "rename" not in error.lower()
+        assert set(out) == {"error"}
+        assert backups_started == [] and _beside(project) == []
+        assert _attribute_names(project) == ["Age", "Re​gion"]
+
+    def test_the_names_a_project_holds_are_never_checked(self, project):
+        """Two names that differ only by such a character, both written
+        as QualCoder could: a third name beside them is created."""
+        for name in ("Ro​le", "Ro⁠le"):
+            _sql(project, "INSERT INTO attribute_type VALUES (?, "
+                          "'2024-01-15', 'TestCoder', '', 'case', "
+                          "'character')", (name,))
+        out = _create_attribute("Income")
+        assert out.get("success") is True, out
+
+    def test_a_name_created_with_outer_spaces_is_found_by_set_attribute(
+            self, project):
+        out = _create_attribute("  Income band  ")
+        assert out["attribute_type"]["name"] == "Income band"
+        out = host("set_attribute", target_type="case", target_id=1,
+                   attribute_name="Income band", value="Low")
+        assert out.get("success") is True, out
+
+    def test_the_checks_come_after_the_refusal_while_qualcoder_holds_it(
+            self, project):
+        """The read-only checks follow the write gate, so a name in use is
+        not answered while the project's lock file is active."""
+        from exegete.database import QUALCODER_LOCK_FILENAME
+        (project / QUALCODER_LOCK_FILENAME).write_text(
+            f"livecoder\n{time.time()}")
+        expected = server._qualcoder_open_error()
+        assert expected is not None
+        assert host("create_attribute_type", name="Age",
+                    applies_to="case") == expected

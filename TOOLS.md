@@ -309,6 +309,17 @@ its twin. And some names that show are refused: a keycap emoji (a
 digit, U+FE0F and U+20E3), a flag written with tag characters, and a
 format character that shows, such as the Arabic number signs.
 
+A new attribute name follows the same rule on characters no one sees,
+and a tab or a line break inside it counts as a control character,
+since an attribute name keeps its spacing as typed. Otherwise attribute
+names are compared exactly, as QualCoder's dialogs compare them:
+`age` beside `Age` is a second attribute, and so is a name that differs
+from another only in its spacing or its Unicode form. A new attribute
+name that matches another attribute's, of any kind, only once such
+characters are left out of both is refused, naming that attribute and
+its kind. Exegete has no tool to rename an attribute, so none is
+offered.
+
 The setting travels with the project folder: Exegete's backups and
 workspace copies carry it, so do QualCoder's own `_BKUP_` backups, and
 `restore_backup` puts back whatever the backup held (the result says so
@@ -1222,7 +1233,7 @@ answer is a finding.
 - `create_case(name, memo, create_backup)` - **Writes to the database** - Create a new case (idempotent: an existing name, case-insensitively, answers `created: false` with the existing case; a new name may hold no invisible character, and one that matches another case's only once invisible characters are left out is refused with that case's id)
 - `rename_case(case_id, new_name, create_backup)` - **Writes to the database** - Rename a case, as QualCoder's Manage Cases does: the name only, the date untouched. A name another case has, ignoring letter case, spacing and Unicode form, is refused, and so is a name holding an invisible character, or one that would newly match another case's once invisible characters are left out; the result says where the old name stays (saved graph labels, table displays and filters, files named after the case, backups)
 - `rename_file(file_id, new_name, create_backup)` - **Writes to the database** - Rename a file's entry, as QualCoder's "Rename database entry" does: the name only, nothing on disk. Refuses path characters, names Windows cannot store, names over 200 bytes in UTF-8, a name already in the project's `documents/` folder for a text, and an ending change QualCoder acts on (a transcript's `.txt` or `.transcribed`, `.pdf`, a media file's extension); the result says what keeps the old name (an imported file's stored copy and stored path, and for a document its original text). A name the project's backups show is not looked for: `restore_backup`, or QualCoder's own Rename if you use it, can put an earlier name back
-- `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **Writes to the database** - Define a new attribute for cases or files; attributes on journal entries are refused, and those already in a project stay (QualCoder's Journals window, if you use QualCoder, sets and shows them)
+- `create_attribute_type(name, applies_to, value_type, memo, create_backup)` - **Writes to the database** - Define a new attribute for cases or files; attributes on journal entries are refused, and those already in a project stay (QualCoder's Journals window, if you use QualCoder, sets and shows them). A new name is compared exactly, and follows [the rule on invisible characters](#choosing-the-ai-coder-name-attribution) that code, category and case names follow
 - `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **Writes to the database** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them); not on a journal entry (see `create_attribute_type`)
 
 **Recovery and safety:**

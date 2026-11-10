@@ -449,6 +449,15 @@ def _args_pseudonymise_source(kwargs):
     binding only when the list is not empty, so a run without it binds
     exactly as before and a token issued before the update still
     verifies.
+
+    `leave_numbers` and `numbering` (v0.15.4) name the occurrences to
+    leave by their numbers in a preview's list, and the numbering of
+    that list, as the server settled them
+    (occurrences.canonical_numbers: the numbers sorted, each once; the
+    numbering read as an id is). Both are bound, on the same terms: only
+    when numbers are given, so that a run without them, by ids or by
+    neither, binds exactly as before and a token issued before the
+    update still verifies.
     """
     bound = {"file_id": int(kwargs["file_id"]),
              "mapping": kwargs["mapping"],
@@ -460,6 +469,10 @@ def _args_pseudonymise_source(kwargs):
     leave = kwargs.get("leave_occurrences")
     if leave:
         bound["leave_occurrences"] = [str(one) for one in leave]
+    numbers = kwargs.get("leave_numbers")
+    if numbers:
+        bound["leave_numbers"] = [int(one) for one in numbers]
+        bound["numbering"] = str(kwargs["numbering"])
     return bound
 
 

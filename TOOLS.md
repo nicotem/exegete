@@ -915,7 +915,7 @@ reaches it four ways:
   9 November 2026);
 - `read_brief()`, a tool in every tool set, whose description asks the
   assistant to call it once at the start of every conversation about a
-  project: it returns the full brief (about 14,200 characters), or in
+  project: it returns the full brief (about 14,300 characters), or in
   the `core` set the short version;
 - the same full brief as the help topic `explain_ai_coding_tools('brief')`
   and the resource `exegete://guidance/brief`;
@@ -1121,8 +1121,8 @@ declares, and each tool's own description says what each one does.
 > Meant for local models, and optional elsewhere. An unknown value
 > stops Exegete at startup, with a message giving the valid values. Measured on Python 3.13 with the libraries in
 > `uv.lock` (the serialised tool definitions: name, description and
-> input schema), the definitions run to about 203,000 characters for
-> `full`, roughly 51k tokens at four characters per token, and about
+> input schema), the definitions run to about 211,000 characters for
+> `full`, roughly 53k tokens at four characters per token, and about
 > 76,000 characters for `core`, roughly 19k tokens. On Python 3.11 and
 > 3.12 the same definitions measure about five per cent more, because
 > those interpreters keep the docstring indentation that 3.13 strips.

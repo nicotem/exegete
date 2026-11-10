@@ -345,11 +345,12 @@ class TestWhatTheBlockHolds:
                              choose_occurrences=True)
         found = block(out)
         assert found["count"] == FIVE
-        assert set(found) <= {"count", "listed", "listed_in_part", "more",
-                              "next"}
+        assert set(found) <= {"count", "numbering", "listed",
+                              "listed_in_part", "more", "next"}
         # The id beside its line with a typed mapping, alone with the
-        # names list (v0.15.3)
-        row_keys = {"id", "line"} if path == "typed" else {"id"}
+        # names list (v0.15.3); each after its number (v0.15.4)
+        row_keys = ({"number", "id", "line"} if path == "typed"
+                    else {"number", "id"})
         assert all(set(row) == row_keys for row in found["listed"])
         words = json.dumps(found)
         for name in NAMES_AND_PSEUDONYMS:
@@ -392,8 +393,11 @@ class TestWhatTheBlockHolds:
             {"entry": 0, "pseudonym": "Participant A", "count": 4}]
         found = block(out)
         assert found["count"] == 4
-        assert [set(row) for row in found["listed"]] == [{"id"}] * 4
-        assert "line" not in json.dumps(found)
+        assert [set(row) for row in found["listed"]] == [
+            {"number", "id"}] * 4
+        # No line on any row (the block's next note names line numbers
+        # in words, v0.15.4: a row's number is never a line's)
+        assert '"line"' not in json.dumps(found)
         typed = preview_of(mapping=[{"original": "Maria",
                                      "pseudonym": "Participant A"}],
                            choose_occurrences=True)

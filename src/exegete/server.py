@@ -849,7 +849,9 @@ Each is stated in full by its tool:
   are, preview pseudonymise_source with choose_occurrences. The page it
   opens is theirs: never open, read or look at it, and never ask them
   for words from it. They tell you the ids to leave, and you give those
-  ids alone, in leave_occurrences.
+  ids alone, in leave_occurrences. Numbers they give from the preview's
+  list go as they are in leave_numbers, with the list's numbering in
+  numbering, and every id in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a
@@ -20223,8 +20225,9 @@ _CONTEXT_WITH_OCCURRENCES = (
 # A list that leaves more occurrences than one run leaves (v0.15.3,
 # ruling 116), refused before any read of the project: the call carries
 # the list, and its execute_with repeats it. Nothing is read before the
-# limit, so it counts the ids given, each once as read, never the
-# occurrences they name: two ids, of two lengths, can name one occurrence
+# limit, so it counts the ids and the numbers given (v0.15.4) together,
+# each once as read, never the occurrences they name: two ids, of two
+# lengths, or an id and a number, can name one occurrence
 # (occurrences.match), and the words ask for each occurrence once (the
 # occurrences choice's design 5, review finding 1). With a typed mapping
 # in the call it says what taking the name out of the mapping for the
@@ -20236,10 +20239,10 @@ _CONTEXT_WITH_OCCURRENCES = (
 # call with no mapping at all, absent, empty or not a list, which has no
 # name to take out (review finding 2)
 _TOO_MANY_LEFT = (
-    f"leave_occurrences holds more than "
-    f"{occurrence_ids.MAX_OCCURRENCES_LEFT} ids, and one run takes at most "
-    f"{occurrence_ids.MAX_OCCURRENCES_LEFT}. Give each occurrence to leave "
-    f"by one id only.")
+    f"leave_occurrences and leave_numbers hold more than "
+    f"{occurrence_ids.MAX_OCCURRENCES_LEFT} ids and numbers together, and "
+    f"one run takes at most {occurrence_ids.MAX_OCCURRENCES_LEFT}. Give "
+    f"each occurrence to leave once, by one id or by its number.")
 _TOO_MANY_LEFT_TYPED = _TOO_MANY_LEFT + (
     " If most occurrences of a name in this file should stay, take the "
     "name out of the mapping for this run. Then every occurrence of it "
@@ -20263,6 +20266,26 @@ _OCCURRENCES_NOT_ISSUED = (
 _OCCURRENCE_ID_AMBIGUOUS = (
     "This id begins the ids of more than one occurrence: give each id as "
     "the preview lists it.")
+# Numbers to leave whose numbering is not the file's list's now (v0.15.4):
+# refused on a preview before the ids, never on the execute, where the
+# token answers. A number is safe only against the list it was read from,
+# so the causes are every one that gives other ids, and a file where no
+# name occurs any more, which has no list
+_NUMBERING_CHANGED = (
+    "These numbers come with another numbering than the one this file's "
+    "occurrences have now, so they could name other occurrences. They may "
+    "come from another file's preview, or the list may have changed since: "
+    "after a change to the text, after a change to the mapping or to "
+    "case_mode that moved an occurrence, or where no name of the mapping "
+    "occurs in the file any more. The numbering also changes when the "
+    "project is moved or renamed, under another account, and after the "
+    "preview-token secret is replaced. Preview again with "
+    "choose_occurrences and choose again.")
+_NUMBERS_PAST_THE_END = (
+    "This file has {count} occurrence(s) of the mapping's names, numbered "
+    "from 1, and a number given is past the last. Give the numbers as the "
+    "preview with choose_occurrences numbers them, or preview again and "
+    "choose again.")
 # A list that leaves every occurrence found (v0.15.3): nothing would be
 # rewritten by choice, which the answers say rather than that no name
 # occurs
@@ -20314,8 +20337,26 @@ def _refuse_occurrences_not_placed(plan: Dict[str, Any]) -> None:
     names no occurrence in the file's text as it is now, or more than
     one (v0.15.3). A file with no occurrence is not in the plan, so every
     id given is then refused. The ids come back as read: the assistant's
-    own, never a name."""
+    own, never a name.
+
+    Numbers (v0.15.4) are refused first, where the numbering they came
+    with is not the file's list's now, a file with no occurrence
+    included, since it has no list; then those past the last occurrence,
+    with the count. Then the ids, as before."""
     files = plan["files"]
+    if plan.get("leave_numbers"):
+        if not files or any(item.get("numbering_changed")
+                            for item in files):
+            raise _OccurrencesRefused({"error": _NUMBERING_CHANGED,
+                                       "reason": "numbering_changed"})
+        past = [number for item in files
+                for number in item.get("numbers_past", ())]
+        if past:
+            count = sum(len(item["found"]) for item in files)
+            raise _OccurrencesRefused({
+                "error": _NUMBERS_PAST_THE_END.format(count=count),
+                "reason": "occurrence_numbers_past_the_end",
+                "count": count, "past_the_end": past})
     unmatched = ([one for item in files for one in item.get("unmatched", ())]
                  if files else list(plan["leave"]))
     if unmatched:
@@ -20349,9 +20390,10 @@ _OCCURRENCES_PAGE_WITHHELD = (
 # the block's own note stands (QualcoderDatabase.
 # PSEUDONYMISE_OCCURRENCES_NEXT)
 _OCCURRENCES_NEXT_THEN = (
-    "Then preview again with choose_occurrences and leave_occurrences "
-    "listing their ids: that preview marks the ones left, for the "
-    "researcher to check, and its token is the one the run needs.")
+    QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_NUMBERS
+    + " Then preview again with the same mapping and case_mode, "
+    "choose_occurrences and the list: that preview marks the ones left, "
+    "for the researcher to check, and its token is the one the run needs.")
 _OCCURRENCES_NEXT_OPENED = (
     "To leave some of these, ask the researcher which: the page that "
     "opened in their browser shows each id where it stands in the text. "
@@ -20368,7 +20410,8 @@ _OCCURRENCES_NEXT_TO_OPEN = (
 # more, and occurrences_page says why there is none
 _OCCURRENCES_LISTED_IN_PART_NOTE = (
     "The page shows every occurrence with its id; the researcher may give "
-    "any of them, listed here or not.")
+    "any of them, listed here or not, by its id or by its number, up to "
+    "the block's count.")
 
 
 def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
@@ -21872,11 +21915,12 @@ def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
         for replacement in item["replacements"]:
             per_entry[replacement.entry] = per_entry.get(
                 replacement.entry, 0) + 1
-    # Occurrences left by a list (v0.15.3). With the names list, the
-    # counts per entry, beside a preview without the list, would tell the
-    # left occurrences' entries, so that path names the pseudonyms of the
-    # names found, without counts
-    leave_given = bool(plan.get("leave"))
+    # Occurrences left by a list (v0.15.3), of ids or numbers (v0.15.4).
+    # With the names list, the counts per entry, beside a preview without
+    # the list, would tell the left occurrences' entries, so that path
+    # names the pseudonyms of the names found, without counts
+    leave_given = occurrence_ids.list_given(plan.get("leave"),
+                                            plan.get("leave_numbers"))
     without_counts = leave_given and (retention or {}).get(
         "choice") == "project_pseudonyms_json"
     lines = [
@@ -22130,9 +22174,11 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
                     for entry in entries],
         "files": files,
     }
-    if plan.get("leave"):
-        # Occurrences left by a list (v0.15.3): a count only, never where
-        # one is, nor its entry or form; `files` holds the replacements
+    if occurrence_ids.list_given(plan.get("leave"),
+                                 plan.get("leave_numbers")):
+        # Occurrences left by a list (v0.15.3), of ids or numbers
+        # (v0.15.4): a count only, never where one is, nor its entry or
+        # form, nor how they were named; `files` holds the replacements
         # made alone. A key added, so the format stays 3
         manifest["occurrences_left"] = sum(item.get("left", 0)
                                            for item in plan["files"])
@@ -22193,6 +22239,8 @@ def pseudonymise_source(
     max_spans_per_entry: int = 50,
     choose_occurrences: bool = False,
     leave_occurrences: Optional[List[str]] = None,
+    leave_numbers: Optional[List[int]] = None,
+    numbering: Optional[str] = None,
 ) -> str:
     """Replace names with pseudonyms in a project's stored text.
 
@@ -22209,12 +22257,13 @@ def pseudonymise_source(
     change, with a preview_token. Show the researcher the preview and
     every warning it carries, and ask whether to proceed. Only if they
     agree, call again with the same mapping, file_id, case_mode,
-    overlap_policy, rewrite_memos, save_mapping_to_project and
-    leave_occurrences when given, plus preview_token=<the token>. The
-    token is valid for 60 minutes, and only while the text and the rows
-    it covers are unchanged. If the project changed in between, the run
-    is refused and you must preview again. Exegete takes a backup first,
-    as before every change. A run that changes nothing takes none.
+    overlap_policy, rewrite_memos, save_mapping_to_project, and
+    leave_occurrences, leave_numbers and numbering when given, plus
+    preview_token=<the token>. The token is valid for 60 minutes, and
+    only while the text and the rows it covers are unchanged. If what
+    the token covers changed in between, the run is refused and you
+    must preview again. Exegete takes a backup first, as before every
+    change. A run that changes nothing takes none.
 
     Deterministic and rule-based. Only the names in the mapping are
     replaced, as whole words, case-sensitively unless case_mode says
@@ -22467,24 +22516,22 @@ def pseudonymise_source(
                  one budget for the whole preview; a block that runs out
                  of it says context_truncated.
         choose_occurrences: List every occurrence of a name this run
-                 would replace, in text order, each as a short id in the
-                 file's `occurrences` block: beside its line number with
-                 a typed mapping, alone with use_project_pseudonyms. It
-                 lists the first 150 and says how many more. It holds no
-                 name, pseudonym or entry number, and no words of the
-                 file. Set it when the researcher wants to choose
-                 occurrences to leave as they are, such as those of a
-                 second person with the same name. The preview then
-                 writes a page for the researcher into the reading
-                 folder and opens it. Not with rewrite_memos or
-                 include_context.
-        leave_occurrences: The ids, from a preview with
-                 choose_occurrences, of the occurrences this run leaves
-                 as they are: at most 500 occurrences in one run, each
-                 given by one id. This argument is bound into the token:
-                 give it to a preview first, which marks the occurrences
-                 left for the researcher to check, then repeat it on the
-                 execute. Not with rewrite_memos or include_context.
+                 would replace, in text order, in the file's `occurrences`
+                 block: each numbered from 1, with a short id and, with a
+                 typed mapping, its line number. It lists the first 150,
+                 says how many more and gives the list's `numbering`. It
+                 holds no name, pseudonym, entry number or words of the
+                 file. The preview then writes a page for the researcher
+                 into the reading folder and opens it. Neither this nor
+                 the next three go with rewrite_memos or include_context.
+        leave_occurrences: The ids, from such a preview, of occurrences
+                 to leave as they are; every id goes here.
+        leave_numbers, numbering: Or their numbers in it, as the
+                 researcher gives them, with its `numbering`. Each number
+                 is read as file_id is, so an id of digits is a number
+                 here. With leave_occurrences, at most 500 occurrences in
+                 one run. Give these three to a preview first: it marks
+                 those left for the researcher to check.
 
     The arguments from include_context to choose_occurrences,
     record_in_journal and researcher_keeps_mapping are not bound into
@@ -22493,9 +22540,9 @@ def pseudonymise_source(
     run records itself, or where the mapping is said to be kept. A pair
     refused on a preview is refused on the execute call too. The
     arguments that are bound are mapping, file_id, case_mode,
-    overlap_policy, rewrite_memos, save_mapping_to_project and
-    leave_occurrences when given, and they must be repeated identically
-    on the execute call.
+    overlap_policy, rewrite_memos, save_mapping_to_project, and
+    leave_occurrences, leave_numbers and numbering when given, and they
+    must be repeated identically on the execute call.
 
     Returns:
         JSON: the preview and a preview_token, or the result of the run.
@@ -22553,10 +22600,18 @@ def pseudonymise_source(
     except ValueError as e:
         return json.dumps({"error": str(e), "reason": "occurrence_id_form"},
                           indent=2)
-    # At most MAX_OCCURRENCES_LEFT, counted as read, in words that follow
-    # the mapping's source; still before any read. The typed path's
-    # advice needs a mapping to take a name out of
-    if len(leave) > occurrence_ids.MAX_OCCURRENCES_LEFT:
+    # And by their numbers in a preview's list, with its numbering
+    # (v0.15.4): each a whole number from 1, before any read
+    try:
+        numbers, code = occurrence_ids.canonical_numbers(leave_numbers,
+                                                         numbering)
+    except ValueError as e:
+        return json.dumps({"error": str(e),
+                           "reason": "occurrence_number_form"}, indent=2)
+    # At most MAX_OCCURRENCES_LEFT, ids and numbers counted together as
+    # read, in words that follow the mapping's source; still before any
+    # read. The typed path's advice needs a mapping to take a name out of
+    if len(leave) + len(numbers) > occurrence_ids.MAX_OCCURRENCES_LEFT:
         has_mapping = isinstance(mapping, (list, tuple)) and bool(mapping)
         return json.dumps({"error": (_TOO_MANY_LEFT_TYPED
                                      if typed and has_mapping
@@ -22566,13 +22621,15 @@ def pseudonymise_source(
     # Choosing or leaving occurrences with a note rewrite (v0.15.3): the
     # rewrite would give the pseudonym to the notes about whoever the
     # occurrences left are, so the pair is refused here too, before any
-    # read
+    # read. Numbers are a list as ids are (v0.15.4)
     choose_occurrences = bool(choose_occurrences)
-    if (choose_occurrences or leave) and bool(rewrite_memos):
+    if (choose_occurrences or occurrence_ids.list_given(leave, numbers)) \
+            and bool(rewrite_memos):
         return json.dumps({"error": _OCCURRENCES_WITH_NOTE_REWRITE,
                            "reason": "occurrences_with_rewrite_memos"},
                           indent=2)
-    if (choose_occurrences or leave) and bool(include_context):
+    if (choose_occurrences or occurrence_ids.list_given(leave, numbers)) \
+            and bool(include_context):
         return json.dumps({"error": _CONTEXT_WITH_OCCURRENCES,
                            "reason": "context_with_occurrences"}, indent=2)
     sidecar_encoding = None
@@ -22626,7 +22683,8 @@ def pseudonymise_source(
         mapping=pseudo.canonical_mapping(validated),
         file_id=file_id, case_mode=case_mode,
         overlap_policy=overlap_policy, rewrite_memos=rewrite_memos,
-        save_mapping_to_project=save, leave_occurrences=leave)
+        save_mapping_to_project=save, leave_occurrences=leave,
+        leave_numbers=numbers, numbering=code)
 
     # The plan is the expensive part of everything below it: it reads
     # every eligible file's text, runs the pattern over all of it, and
@@ -22655,7 +22713,8 @@ def pseudonymise_source(
             return read_phase["plan"]
         plan = db_.pseudonymise_plan(compiled, overlap_policy, file_ids,
                                      occurrence_key=occurrence_key,
-                                     leave=leave)
+                                     leave=leave, leave_numbers=numbers,
+                                     numbering=code)
         if "plan" not in read_phase:
             read_phase["plan"] = plan
             read_phase["conn"] = db_.conn
@@ -22690,10 +22749,12 @@ def pseudonymise_source(
 
     def _preview_with_effect(db_):
         plan = _read_plan(db_)
-        if leave and preview_token is None:
-            # On a preview only: on the execute an id that names nothing
-            # leaves nothing, so the effect differs from the signed one
-            # and the token answers
+        if occurrence_ids.list_given(leave, numbers) and \
+                preview_token is None:
+            # On a preview only: on the execute an id that names nothing,
+            # or numbers read against another numbering, leave nothing,
+            # so the effect differs from the signed one and the token
+            # answers
             _refuse_occurrences_not_placed(plan)
         memo_plan = _read_memo_plan(db_)
         preview = db_.pseudonymise_preview(
@@ -22888,7 +22949,8 @@ def pseudonymise_source(
         """
         plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
                                      occurrence_key=occurrence_key,
-                                     leave=leave)
+                                     leave=leave, leave_numbers=numbers,
+                                     numbering=code)
         captured["write_plan"] = plan
         memo_plan = (wdb.pseudonymise_memo_plan(compiled, plan)
                      if rewrite_memos else None)
@@ -22921,7 +22983,8 @@ def pseudonymise_source(
         if plan is None:                  # pragma: no cover - defensive
             plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
                                          occurrence_key=occurrence_key,
-                                         leave=leave)
+                                         leave=leave, leave_numbers=numbers,
+                                         numbering=code)
         # C7, with the fingerprints the READ-ONLY phase captured, which
         # is what D1 3.6 specifies. Passing the write phase's own
         # fingerprints made the check compare a read to itself: both
@@ -22989,10 +23052,10 @@ def pseudonymise_source(
             message += (f" and {memos['totals']['rows_updated']} note(s) or "
                         f"journal entr(ies)")
         files = written["files"]
-        if leave and not typed:
-            # With the names list and occurrences left (v0.15.3): beside
-            # the preview without the list, the new length tells the left
-            # occurrences' entries
+        if occurrence_ids.list_given(leave, numbers) and not typed:
+            # With the names list and occurrences left (v0.15.3), by ids
+            # or by numbers (v0.15.4): beside the preview without the
+            # list, the new length tells the left occurrences' entries
             files = [{key: value for key, value in report.items()
                       if key != "new_length"} for report in files]
         result = {
@@ -23051,6 +23114,9 @@ def pseudonymise_source(
                 **({"researcher_keeps_mapping": True} if keeps else {}),
                 # Bound when given, so repeated as it binds (v0.15.3)
                 **({"leave_occurrences": leave} if leave else {}),
+                # And the numbers with their numbering (v0.15.4)
+                **({"leave_numbers": numbers, "numbering": code}
+                   if numbers else {}),
             },
             state_preview_fn=_signed,
             override_required_fn=_override_required,

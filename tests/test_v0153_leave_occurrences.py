@@ -278,7 +278,9 @@ class TestThePreview:
             assert [row["line"] for row in found["listed"]] == [
                 row["line"] for row in chosen["listed"]] == [1, 2, 3, 4]
         else:
-            assert all(set(row) <= {"id", "left"} for row in found["listed"])
+            # The number and the id (v0.15.4), with no line
+            assert all(set(row) <= {"number", "id", "left"}
+                       for row in found["listed"])
             words = json.dumps(found)
             assert '"line"' not in words and "span" not in words
 
@@ -467,16 +469,20 @@ class TestTheToken:
         names = pt.canonical_args(
             "pseudonymise_source", mapping=[], file_id=1, case_mode="exact",
             overlap_policy="snap_to_pseudonym", rewrite_memos=False,
-            save_mapping_to_project=False, leave_occurrences=["abcde"])
+            save_mapping_to_project=False, leave_occurrences=["abcde"],
+            leave_numbers=[1], numbering="abcdef")
+        # v0.15.4: the numbers and their numbering join them
         assert set(names) == {"mapping", "file_id", "case_mode",
                               "overlap_policy", "rewrite_memos",
-                              "save_mapping_to_project", "leave_occurrences"}
+                              "save_mapping_to_project", "leave_occurrences",
+                              "leave_numbers", "numbering"}
         for name in names:
             assert name in recipe and name in bound, name
         last = re.search(r"The arguments from include_context to (\w+),",
                          published).group(1)
         order = list(inspect.signature(server.pseudonymise_source).parameters)
-        assert order.index("leave_occurrences") > order.index(last)
+        for name in ("leave_occurrences", "leave_numbers", "numbering"):
+            assert order.index(name) > order.index(last), name
 
     def test_without_the_argument_unchanged(self, project):
         """A run without the list binds and signs what it did at bde966c;

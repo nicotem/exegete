@@ -3667,7 +3667,9 @@ Each is stated in full by its tool:
   are, preview pseudonymise_source (not available in this tool set) with choose_occurrences. The page it
   opens is theirs: never open, read or look at it, and never ask them
   for words from it. They tell you the ids to leave, and you give those
-  ids alone, in leave_occurrences.
+  ids alone, in leave_occurrences. Numbers they give from the preview's
+  list go as they are in leave_numbers, with the list's numbering in
+  numbering, and every id in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a

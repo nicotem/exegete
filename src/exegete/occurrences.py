@@ -28,6 +28,15 @@ five characters at which the file's ids are all distinct, and an id
 given back names the one occurrence whose full id it begins. The ids
 are made with the standard library alone.
 
+The preview also numbers the occurrences 1, 2, 3 in text order
+(v0.15.4), so that the researcher's "leave 1 and 3" can be given as it
+is, in `leave_numbers`. A number is safe only against the list it was
+read from, so each list has a short code of its own, its numbering
+(`numbering`), made from the file's full ids in order: it changes
+exactly when the list does, and numbers come with it. A preview whose
+list has another numbering refuses them, as it refuses an id that names
+nothing.
+
 The same preview writes a page for the researcher (`build_page`): the
 file's whole text as stored, one paragraph per stored line, each
 numbered as the preview numbers it where the preview gives lines, and
@@ -83,6 +92,23 @@ ID_FORM = ("An occurrence id has at least five characters, letters and "
 # the change record's digests begin "exegete change record" and the run
 # record's text digests their own label (server.RUN_RECORD_TEXT_LABEL)
 LABEL = b"exegete occurrence ids\n"
+# A list's numbering (v0.15.4): six characters of ALPHABET, the first one
+# of its 22 letters, so that no numbering reads as a number. Two
+# different lists share one about once in 700 million (22 x 32 ** 5)
+NUMBERING_LENGTH = 6
+_LETTERS = ALPHABET[10:]
+# What a numbering's digest is made over before the ids
+NUMBERING_LABEL = b"exegete occurrence numbering\n"
+# The refusal of numbers to leave that no preview could have given, or
+# given without their numbering, before anything is read
+NUMBERS_FORM = (
+    "Occurrence numbers are whole numbers from 1, as a preview with "
+    "choose_occurrences numbers the occurrences, and they come with that "
+    "preview's numbering: six letters and digits, the first a letter. "
+    "Give both, or neither.")
+# A number given as text: ASCII digits alone, white space around them set
+# aside (str.isdigit also takes other scripts' digits and superscripts)
+_DIGITS = re.compile("[0-9]+")
 # A line break as the reading copy counts one (reading_copy._LINE_BREAK)
 _LINE_BREAK = re.compile("\r\n|\r|\n")
 
@@ -194,6 +220,93 @@ def canonical_leave(value: object) -> List[str]:
             raise ValueError(ID_FORM)
         ids.add(wanted)
     return sorted(ids)
+
+
+def numbering(full: Sequence[str]) -> str:
+    """The numbering of a file's list of occurrences (v0.15.4): six
+    characters from the SHA-256 of NUMBERING_LABEL and the file's full
+    ids in text order, read as one number as `_base32` reads a digest,
+    the first one of ALPHABET's letters and the other five of ALPHABET.
+
+    It changes exactly when the list does: with the text, the file, the
+    project or the secret, and when an occurrence is found, moves or
+    goes, since each of these gives other full ids or another order of
+    them. A change of mapping or of case_mode that keeps every span
+    keeps every id, and so the numbering. Without the secret it says
+    nothing about the text, the ids being keyed digests."""
+    digest = hashlib.sha256(
+        NUMBERING_LABEL + "\n".join(full).encode("ascii")).digest()
+    number = int(digest.hex(), 16)
+    first = _LETTERS[number % len(_LETTERS)]
+    number //= len(_LETTERS)
+    rest = []
+    for _ in range(NUMBERING_LENGTH - 1):
+        rest.append(ALPHABET[number & 31])
+        number >>= 5
+    return first + "".join(rest)
+
+
+def _number(given: object) -> int:
+    """One number of a list to leave, as given: an integer, or a string
+    of ASCII digits with white space around them set aside. A truth
+    value or a fraction is refused, as is anything under 1 (ValueError,
+    NUMBERS_FORM)."""
+    if isinstance(given, bool):
+        raise ValueError(NUMBERS_FORM)
+    if isinstance(given, int):
+        value = given
+    elif isinstance(given, str) and _DIGITS.fullmatch(given.strip()):
+        try:
+            value = int(given.strip())
+        except ValueError:
+            # Past the digits Python converts in one string
+            raise ValueError(NUMBERS_FORM) from None
+    else:
+        raise ValueError(NUMBERS_FORM)
+    if value < 1:
+        raise ValueError(NUMBERS_FORM)
+    return value
+
+
+def canonical_numbers(numbers: object, code: object
+                      ) -> Tuple[List[int], Optional[str]]:
+    """The numbers of a list of occurrences to leave, with the numbering
+    of the list they were read from, as one value (v0.15.4): each number
+    read by `_number`, duplicates dropped, sorted; the numbering read as
+    `_read` reads an id. None, or an empty list, is no list, and an empty
+    numbering no numbering: ([], None).
+
+    Raises ValueError (NUMBERS_FORM) for anything a preview could not
+    have given: a value that is not a list, a number that is not a whole
+    number from 1, a numbering that is not NUMBERING_LENGTH characters
+    of ALPHABET beginning with a letter, numbers without a numbering and
+    a numbering without numbers. This is checked before anything is
+    read, so a malformed list is never placed against a text."""
+    if numbers is None:
+        numbers = []
+    if not isinstance(numbers, (list, tuple)):
+        raise ValueError(NUMBERS_FORM)
+    read = sorted({_number(one) for one in numbers})
+    if code is not None and not isinstance(code, str):
+        raise ValueError(NUMBERS_FORM)
+    wanted = _read(code) if code is not None else ""
+    if not read and not wanted:
+        return [], None
+    if not read or not wanted:
+        raise ValueError(NUMBERS_FORM)
+    if (len(wanted) != NUMBERING_LENGTH or wanted[0] not in _LETTERS
+            or not set(wanted) <= set(ALPHABET)):
+        raise ValueError(NUMBERS_FORM)
+    return read, wanted
+
+
+def list_given(ids: Optional[Sequence[str]],
+               numbers: Optional[Sequence[int]]) -> bool:
+    """Whether a list of occurrences to leave was given (v0.15.4): ids,
+    numbers or both. Every place that reads whether a run leaves
+    occurrences by a list reads it here, so that whatever a list of ids
+    changes or withholds, a list of numbers changes or withholds alike."""
+    return bool(ids) or bool(numbers)
 
 
 def match_each(given: Sequence[str], full: Sequence[str]

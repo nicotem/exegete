@@ -387,9 +387,15 @@ class TestInstall:
                  "the names list every later import applies. From version "
                  "2.1.199, Claude Code asks before every call of such a tool "
                  "in every permission mode, auto and `bypassPermissions` "
-                 "included. It offers no \"don't ask again\", and lets no "
-                 "allow rule skip it. In `dontAsk` mode, it refuses the "
-                 "call. Earlier versions ignore the mark.")) in install
+                 "included, and lets no allow rule skip it. In `dontAsk` "
+                 "mode, it refuses the call. Earlier versions ignore the "
+                 "mark.")) in install
+        # (v0.15.4) the missing "don't ask again" from 2.1.246, as Claude
+        # Code's changelog gives it, with the day it was read
+        assert ("From version 2.1.246, its question offers no \"don't ask "
+                "again\".") in install
+        assert re.search(r"Claude Code's changelog, read on \d{1,2} "
+                         r"[A-Z][a-z]+ 20\d\d", install)
         assert ("`check_for_updates` is not marked read-only: it records "
                 "each check") in install
         assert ("(here, `import_documents` and `save_names_list`) is asked "

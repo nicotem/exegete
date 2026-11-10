@@ -27,9 +27,13 @@ Reading the issues needs no account (GitHub, checked on 4 November
   `pseudonyms.json` pairs a real name with its pseudonym. For a problem
   with replacing names, describe the name instead, such as its length,
   an apostrophe in it, or that it is also an ordinary word. Claude
-  Desktop keeps a log of Exegete: a file that records every request to
-  Exegete and every answer, the text of your documents included. Other
-  apps keep records of their own. Read a log before you copy any of it
+  Desktop keeps a log of Exegete. MCP, the protocol through which apps
+  talk to Exegete, has
+  [a page on debugging](https://modelcontextprotocol.io/docs/tools/debugging).
+  Read on 10 November 2026, it lists message exchanges among what Claude
+  Desktop's logs capture. So the log can hold every request to Exegete
+  and every answer, the text of your documents included. Other apps keep
+  records of their own. Read a log before you copy any of it
   into an issue, and copy only the lines about the problem. They include
   the request that failed and Exegete's answer, which can hold names,
   paths and quoted text, so replace those or describe them.

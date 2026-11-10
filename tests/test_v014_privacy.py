@@ -981,12 +981,15 @@ class TestTheDocumentsSayWhatTheLogCarries:
     def test_both_say_what_a_host_that_records_every_answer_keeps(self):
         """Fix round 1 (the refuter's widening of QA F1): the sentences
         are about the lines this server writes; Claude Desktop's file
-        records every request and answer beside them."""
+        can hold every request and answer beside them (dated in v0.15.4
+        from MCP's page on debugging)."""
         install = _flat("INSTALL.md")
         privacy = _flat("PRIVACY.md")
-        assert ("Claude Desktop's log (the file Show Logs opens) also "
-                "records every request and every answer in full") \
-            in install
+        # (v0.15.4) dated from MCP's page on debugging, which lists
+        # message exchanges among what Claude Desktop's logs capture
+        assert ("So Claude Desktop's log, the file Show Logs opens, can "
+                "hold every request and every answer in full") in install
+        assert "it lists message exchanges among what Claude" in install
         assert ("A host may record more in the same file: Claude "
                 "Desktop's server log") in privacy
         assert ("The rule closes one channel, SQLite's message; it does "

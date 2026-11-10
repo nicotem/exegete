@@ -169,14 +169,13 @@ train on that conversation, and so can its being flagged for a safety review.
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
 
-If you have no project yet, ask Claude to "Create a new project in
-Exegete called Practice". Exegete first asks the assistant to check your
-coder name with you and to say where the project will be made. If your
-coder name is already set, the project is made with that name at once,
-and the answer says where. You set it with `EXEGETE_CODER_NAME` in the
-`env` section above, or with "Your coder name" in the extension's
-settings, which reaches Exegete once Claude Desktop has been quit and
-opened again.
+If you have no project yet, ask Claude to "Create a new project in Exegete
+called Practice". Exegete first asks the assistant to check your coder
+name with you and to say where the project will be made. If your coder
+name is already set, the project is made with that name at once, and the
+answer says where. You set it with `EXEGETE_CODER_NAME` in the `env`
+section above, or with "Your coder name" in the extension's settings,
+which reaches Exegete once Claude Desktop has been quit and opened again.
 
 Then try "Can you give me a summary of my project?", "What codes do I
 have?" and "Show me the most frequently used codes". The "Example
@@ -233,13 +232,14 @@ section and spelt correctly. Otherwise, ask Claude to list and select a
 project. The error also gives the last project used on this computer,
 if it still exists, so Claude can open it again in one step.
 
-**"Database file not found"**: check that the path to the `.qda` folder
-is right and complete, and that the folder holds `data.qda`.
+**"...EXEGETE_PROJECT_PATH was not found"**, as Exegete starts, or **"The
+project set in the host's configuration could not be opened"**, in its
+answers: check that the path to the `.qda` folder is right and complete,
+and that the folder holds `data.qda`.
 
-**"Module not found"**: check that you ran `pip install -e .` in the
-virtual environment, or `pip install -e ".[pdf-epub]"` for PDF and EPUB
-as well, and that the Python path in the settings file is the virtual
-environment's.
+**"Module not found"**: check that you ran `pip install -e .` in the virtual
+environment, or `pip install -e ".[pdf-epub]"` for PDF and EPUB as well, and
+that the Python path in the settings file is the virtual environment's.
 
 ## Getting help
 

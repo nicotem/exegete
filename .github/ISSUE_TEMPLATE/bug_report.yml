@@ -7,9 +7,11 @@ body:
       value: |
         Thanks for helping test this alpha, an early version of Exegete.
 
-        An issue is public. Anyone can read it, and search engines find it, so participants' data or a project put into an issue is published with it. You can describe the data without copying it, such as "a code name with an apostrophe" or "a file of about 40,000 characters". A made-up example, or one with names and details removed, usually shows the problem as well. [SUPPORT.md](https://github.com/nicotem/exegete/blob/main/SUPPORT.md) says what a report needs and what a log can hold. [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md) says what leaves your computer when you use Exegete.
+        A fault that could expose participants' data, or let a write damage a project, is best reported privately, so that it is not public before its fix. [SECURITY.md](https://github.com/nicotem/exegete/blob/main/SECURITY.md) says how.
 
-        A fault in this alpha could change a project in a way you did not intend. Before you try the problem again, you could work on a copy of the project. The assistant can make one with the tool `copy_project_to_workspace`.
+        An issue is public. Anyone can read it, and search engines find it, so participants' data or a project put into an issue is published with it. You can describe the data without copying it, such as "a code name with an apostrophe" or "a file of about 40,000 characters". A made-up example, or one with names and details removed, usually shows the problem as well. An example with names and details removed is still a participant's words, which a search can find and someone can recognise. Your ethics approval may not allow you to publish it. [SUPPORT.md](https://github.com/nicotem/exegete/blob/main/SUPPORT.md) says what a report needs and what a log can hold. [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md) says what leaves your computer when you use Exegete.
+
+        A fault in this alpha could change a project in a way you did not intend. Before you try the problem again, you could work on a copy of the project. The assistant can make one with the tool `copy_project_to_workspace`. The copy goes into your folder for projects. It holds the whole project, with any names list and names file, and the real names in them. [SUPPORT.md, "Before you report"](https://github.com/nicotem/exegete/blob/main/SUPPORT.md#before-you-report) says when a sync service can copy that folder off this computer.
   - type: textarea
     id: what-happened
     attributes:
@@ -28,7 +30,7 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
-      description: "What you asked, step by step, and which of Exegete's tools the assistant used, if the conversation shows them. A conversation copied in can carry passages of your documents, in the assistant's replies and in the tools' answers. You could describe each step in your own words instead, or copy only lines that hold no participants' data."
+      description: "What you asked, step by step, and which of Exegete's tools the assistant used, if the conversation shows them. A conversation copied in can carry passages of your documents, in the assistant's replies and in the tools' answers. The tools' answers can also hold the names of files and cases, attribute values, codes and memos, which can identify a participant. You could describe each step in your own words instead, or copy only lines that hold no participants' data."
     validations:
       required: false
   - type: input

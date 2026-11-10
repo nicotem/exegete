@@ -2,4 +2,7 @@ blank_issues_enabled: true
 contact_links:
   - name: Support policy
     url: https://github.com/nicotem/exegete/blob/main/SUPPORT.md
-    about: Everything goes through GitHub Issues, questions included. This page says what a bug report needs, and how to show a problem without publishing participants' data.
+    about: Bug reports, questions and ideas go through GitHub Issues. This page says what a bug report needs, and how to show a problem without publishing participants' data.
+  - name: Reporting a security fault
+    url: https://github.com/nicotem/exegete/blob/main/SECURITY.md
+    about: A fault that could expose participants' data, or let a write damage a project, is best reported privately, so that it is not public before its fix. This page says how.

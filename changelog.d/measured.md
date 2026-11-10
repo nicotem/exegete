@@ -42,5 +42,8 @@ Python 3.13 with the libraries in `uv.lock`:
   its definition, and `search_memos`' limit 51. In `full` alone,
   `export_coded_segments_report`'s `repeated_rows` and
   `include_variables` add 230, and `add_annotation`'s Returns 99.
+  The guide to installing from the Terminal now gives `search_files`'
+  description as about 4,800 characters on Python 3.13, and 5,100 on
+  3.11 and 3.12.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).

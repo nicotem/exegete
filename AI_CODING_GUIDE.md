@@ -1090,8 +1090,8 @@ an earlier name keeps that name.
 `pseudonymise_source` replaces the names on your names list, as whole
 words, in the stored text of one text source per call, so you run it
 file by file. It moves every coding, annotation and case link with the
-text. It runs after a preview you approve, and always takes a backup
-first.
+text. It runs after a preview you approve, and takes a backup first
+whenever it changes something; a run that changes nothing takes none.
 
 The names list pairs each real name with its pseudonym. You can fill it
 in on your own computer, so that the real names do not pass through the

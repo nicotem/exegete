@@ -3197,6 +3197,17 @@ def is_media_folder_entry(top: Union[str, Path], name: str) -> bool:
     return top_entry_named(top, name, MEDIA_FOLDERS)
 
 
+def is_sessions_folder_entry(top: Union[str, Path], name: str) -> bool:
+    """Whether a top-level entry of a project folder or of a backup is at
+    the name of the project's sessions folder
+    (`private_files.SESSIONS_FOLDER`, v0.15.4), whatever it is, matched
+    by `top_entry_named`: the one test a restore's keep
+    (server._kept_by_restore) and the leave-out of the sessions'
+    temporary files from backups and copies make. Never raises."""
+    from . import private_files
+    return top_entry_named(top, name, (private_files.SESSIONS_FOLDER,))
+
+
 def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
                  database_copied: bool = False,
                  exclude_real: Optional[set] = None,
@@ -3231,10 +3242,25 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
     entries at the project's top that are left out whatever they are, a
     link or a junction included, matched by `top_entry_named`: never
     copied, never followed, never reported as skipped.
+
+    In the project's sessions folder alone (v0.15.4; its name matched by
+    `is_sessions_folder_entry`), a session's temporary file
+    (`session_<id>.json.<random>.tmp`, `private_files.is_session_temporary`)
+    is left out too, by backups and workspace copies alike: the save
+    that made it replaces it within the instant, and a copy meeting it
+    gone would fail whole. BACKUP_IGNORE_PATTERNS, which QualCoder's own
+    set is held to, stays as it is.
     """
+    from . import private_files
     root_real = os.path.normcase(os.path.realpath(project_root))
     patterns = shutil.ignore_patterns(*BACKUP_IGNORE_PATTERNS)
     root_norm = os.path.normcase(os.path.abspath(project_root))
+
+    def _in_sessions_folder(dirpath) -> bool:
+        parent = os.path.normcase(os.path.abspath(os.path.dirname(
+            os.fspath(dirpath))))
+        return parent == root_norm and is_sessions_folder_entry(
+            project_root, os.path.basename(os.fspath(dirpath)))
 
     def _traversal_realpaths(dirpath):
         """Real paths of every folder copytree is inside at `dirpath`:
@@ -3255,6 +3281,9 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
         at_top = os.path.normcase(os.path.abspath(dirpath)) == root_norm
         if database_copied and at_top:
             ignored.update(n for n in names if n in DATABASE_FILES)
+        if not at_top and _in_sessions_folder(dirpath):
+            ignored.update(n for n in names
+                           if private_files.is_session_temporary(n))
         if leave_out_top and at_top:
             # Before the links are looked at, so a link at one of these
             # names is left out, not reported as skipped

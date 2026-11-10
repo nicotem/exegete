@@ -2177,7 +2177,9 @@ def _not_shown_block(counts: Dict[str, int], shown: str,
     """The disclosure a text read gives of the codings it leaves out
     (v0.14): region codings (areas on PDF pages or images) and
     audio/video codings, which QualCoder counts with the text codings
-    and the delete previews count too. None when there are none."""
+    and the delete previews count too. None when there are none. Since
+    0.15.4 it also says that no tool removes or changes one of them
+    alone."""
     region = int(counts.get("region", 0))
     av = int(counts.get("audio_video", 0))
     if not region and not av:
@@ -2189,8 +2191,11 @@ def _not_shown_block(counts: Dict[str, int], shown: str,
                  f"coding(s) (areas on PDF pages or images) and {av} "
                  f"audio/video coding(s) {what} are not included; "
                  f"QualCoder counts them with the text codings, and "
-                 + _mark_unregistered("the previews of delete_code and "
-                                      "merge_codes count them.")),
+                 + _mark_unregistered(
+                     "the previews of delete_code and merge_codes count "
+                     "them. No tool removes or changes one such coding "
+                     "alone: delete_code removes them with their code, and "
+                     "merge_codes moves them to the code it merges into.")),
     }
 
 
@@ -8378,7 +8383,9 @@ def search_memos(query: str, limit: int = 50) -> str:
 
     Returns:
         JSON object with query, result_count and results; each result
-        has type, id, name, memo (the public part), owner and date
+        has type, id, name, memo (the public part), owner and date. A
+        region or audio/video coding's id is under region_coding_id or
+        av_coding_id, with id null; no tool takes these ids.
     """
     results = get_db().search_memos(query, limit)
     payload = {

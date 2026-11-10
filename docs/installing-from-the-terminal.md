@@ -588,8 +588,8 @@ reports place the practical minimum for work with many tools around
 14B parameters.
 
 **Step 3. Use the small tool set.** Exegete offers 80 tools by default,
-and the serialised tool definitions alone measure about 200,000
-characters, roughly 50,000 tokens, against about 76,000 characters,
+and the serialised tool definitions alone measure about 210,000
+characters, roughly 53,000 tokens, against about 76,000 characters,
 roughly 19,000 tokens, for the 28 tools of `core` (measured on Python 3.13
 with the libraries in `uv.lock`; TOOLS.md says how, and
 [docs/snapshot/](snapshot/) gives the exact figures). The full set
@@ -605,7 +605,7 @@ load settings, or its default settings
 length to at least 32k for the core toolset (that leaves about 13k
 tokens for your transcript excerpts and conversation; 16k would not even
 hold the schema and is not workable), or 64k if you must run the full
-surface (its schema alone is about 50,000 tokens).
+surface (its schema alone is about 53,000 tokens).
 
 **Step 5. Add Exegete.** Open the Program tab in the right sidebar,
 click Install, then Edit mcp.json, and add these lines (LM Studio
@@ -1077,7 +1077,7 @@ the safeguard" says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 200,000 characters with `full`; TOOLS.md says how that
+  (about 210,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which

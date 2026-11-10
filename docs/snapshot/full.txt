@@ -1262,7 +1262,9 @@ Args:
 
 Returns:
     JSON object with query, result_count and results; each result
-    has type, id, name, memo (the public part), owner and date
+    has type, id, name, memo (the public part), owner and date. A
+    region or audio/video coding's id is under region_coding_id or
+    av_coding_id, with id null; no tool takes these ids.
 
 
 ==== Tool search_memos: the rest of its entry ====
@@ -3696,8 +3698,9 @@ Args:
 
 Returns:
     JSON with the deleted coding's details (code, file, positions, text)
-    and the backup path, or ids only for a hidden coder's row; hidden
-    coders' names and coding decisions never enter the conversation.
+    and the backup path; for a hidden coder's row, the ids of the
+    coding, its code and its file only: the coder's name, the span
+    and the text never enter the conversation.
 
 Example:
     "Delete coding 42, that segment was coded wrongly"
@@ -5166,8 +5169,10 @@ existing row under `code` (use its id), `match` (exact or
 case_insensitive) and, under `requested`, only the arguments that
 differ from the stored row (spelling, category, parent, colour). A
 supplied memo is never applied to an existing code (set_memo does
-that). Successful creates carry `created: true`. Whitespace runs in
-the name collapse to one space.
+that). A memo with the private-note marker, the category (alone or
+with parent_code_id) and the colour are checked first: their
+refusals come even for a name that exists. Successful creates carry
+`created: true`. Whitespace runs in the name collapse to one space.
 
 Sub-codes (projects with schema v16 or newer only): pass
 parent_code_id to nest the new code under an existing code instead of
@@ -5582,9 +5587,11 @@ The result is then `created: false, reason: already_exists`, with the
 existing row under `category` (use its id), `match` (exact or
 case_insensitive) and, under `requested`, only the arguments that
 differ from the stored row (spelling, parent). A supplied memo is
-never applied to an existing category (set_memo does that).
-Successful creates carry `created: true`. Whitespace runs in the name
-collapse to one space.
+never applied to an existing category (set_memo does that). A memo
+with the private-note marker and the parent category are checked
+first: their refusals come even for a name that exists. Successful
+creates carry `created: true`. Whitespace runs in the name collapse
+to one space.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -6392,8 +6399,9 @@ Args:
              file or a source with no stored text is refused with the
              reason (pdf_source, no_fulltext, unknown_file_id). The
              transport turns anything Python reads as an integer into
-             that integer before Exegete sees it: "1", 1.0, true, "01"
-             and "+1" are file 1, and "1_0" is file 10.
+             that integer before Exegete sees it: "1", 1.0, "01" and
+             "+1" are file 1, and "1_0" is file 10; true and false are
+             refused.
     use_project_pseudonyms: Read the mapping from the project's own
              pseudonyms.json instead (its names list).
              Give this or `mapping`, not both. The real names in that
@@ -6872,9 +6880,10 @@ Coder visibility (in a project that hides some coders' work): an
 annotation belonging to a hidden coder is refused unless the
 researcher asks for allow_hidden_coder=true. The refusal says that
 the annotation belongs to a hidden coder, but not which coder, or how
-many coders are hidden. With the override, the answer gives ids and
-the new public text only, and a coder_visibility note; the hidden
-coder's name, span and file never enter the conversation.
+many coders are hidden. With the override, the answer gives the ids
+of the annotation and its file, the new public note you gave and a
+coder_visibility note; the coder's name, the span, the annotated
+passage's text and the file's name never enter the conversation.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -7391,7 +7400,9 @@ there are some, ask the researcher before writing.
 Text containing '#####', QualCoder's private-note marker, is refused before anything is written or backed up: what follows it is the researcher's own, not the assistant's to write.
 
 Args:
-    name: The attribute name (unique across all domains)
+    name: The attribute name (unique across all domains, compared
+          exactly; no invisible characters, nor another's name once
+          they are left out)
     applies_to: 'case' or 'file' ('journal', QualCoder's third
                 domain, is refused: Exegete no longer sets attributes
                 on journal entries)

@@ -312,9 +312,9 @@ format character that shows, such as the Arabic number signs.
 A new attribute name follows the same rule on characters no one sees,
 and a tab or a line break inside it counts as a control character,
 since an attribute name keeps its spacing as typed. Otherwise attribute
-names are compared exactly, as QualCoder's dialogs compare them:
-`age` beside `Age` is a second attribute, and so is a name that differs
-from another only in its spacing or its Unicode form. A new attribute
+names are compared exactly: `age` beside `Age` is a second attribute,
+and so is a name that differs from another only in its spacing or its
+Unicode form. A new attribute
 name that matches another attribute's, of any kind, only once such
 characters are left out of both is refused, naming that attribute and
 its kind. Exegete has no tool to rename an attribute, so none is

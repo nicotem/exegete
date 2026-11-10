@@ -8606,10 +8606,10 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "a file name, folder name, path or pseudonym that carries one is "
          "withheld from both, and the file id or the entry number is used "
          "instead."),
-        ("the_transport_coerces_file_id",   # fix round 1, QA-3; fix round 2, CORR-5
+        ("the_transport_coerces_file_id",   # fix round 1, QA-3; fix round 2, CORR-5; v0.15.4
          "The transport turns anything Python reads as an integer into that "
-         "integer before Exegete sees it: \"1\", 1.0, true, \"01\" and "
-         "\"+1\" are file 1, and \"1_0\" is file 10."),
+         "integer before Exegete sees it: \"1\", 1.0, \"01\" and \"+1\" are "
+         "file 1, and \"1_0\" is file 10; true and false are refused."),
         ("the_residue_detail_argument",     # fix round 1, F4; fix round 2, CORR-4
          "residue_detail: \"file\" (default): full detail for the file this "
          "call gives and, for up to 1,000 other files that still show a "

@@ -22711,8 +22711,9 @@ def pseudonymise_source(
                  file or a source with no stored text is refused with the
                  reason (pdf_source, no_fulltext, unknown_file_id). The
                  transport turns anything Python reads as an integer into
-                 that integer before Exegete sees it: "1", 1.0, true, "01"
-                 and "+1" are file 1, and "1_0" is file 10.
+                 that integer before Exegete sees it: "1", 1.0, "01" and
+                 "+1" are file 1, and "1_0" is file 10; true and false are
+                 refused.
         use_project_pseudonyms: Read the mapping from the project's own
                  pseudonyms.json instead (its names list).
                  Give this or `mapping`, not both. The real names in that

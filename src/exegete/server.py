@@ -8291,9 +8291,12 @@ def search_files(
     to them. Nothing is stored between calls.
 
     Args:
-        pattern: Text to search for (case-insensitive by default)
+        pattern: Text to search for (case-insensitive by default); an
+               empty pattern is refused
         search_filename: Search in file names (default: True, fast)
-        search_content: Search in file content/fulltext (default: False, slower)
+        search_content: Search in file content/fulltext (default: False,
+               slower). With both false the call is refused, as nothing
+               would be searched
         case_sensitive: Use case-sensitive matching (default: False)
         limit: Maximum number of files to return per page (default: 50)
         exclude_code_ids: Codes whose coded spans are already accounted
@@ -8352,6 +8355,18 @@ def search_files(
     - Once you have file_id, use read_file_with_codings() to get full content
     """
     db_ = get_db()
+    # A search with nothing to look for, or nowhere to look, answered as
+    # a search that found nothing (v0.15.4, the claims audit's point 47)
+    if not isinstance(pattern, str) or not pattern:
+        return json.dumps({"error": (
+            "pattern is empty: pass the text to look for, in the file "
+            "names or in the files' text.")})
+    if not search_filename and not search_content:
+        return json.dumps({"error": (
+            "search_filename and search_content are both false, so "
+            "nothing would be searched: set search_filename=true to search "
+            "the file names, search_content=true to search the files' "
+            "text, or both.")})
     if isinstance(max_matches_per_file, bool) or \
             not isinstance(max_matches_per_file, int) or \
             not 1 <= max_matches_per_file <= MAX_MATCHES_PER_FILE_CAP:

@@ -186,9 +186,11 @@ class TestSearchFiles:
         assert data["total_matches"] == 0
 
     def test_search_empty_pattern(self, setup_server):
+        # Refused since v0.15.4 (the claims audit's point 47): an empty
+        # pattern answered as a search that found nothing
         result = server.search_files("")
         data = json.loads(result)
-        assert data["total_matches"] == 0
+        assert set(data) == {"error"}
 
 
 class TestGetCodingFrequencies:

@@ -309,8 +309,10 @@ class TestTheFolderSwappedOnceHeld:
         real = private_files._hold_folder
         swapped = []
 
-        def hold(top, info):
-            held = real(top, info)
+        # (v0.15.4: the step takes the folder's words too, for the
+        # sessions folder's refusals)
+        def hold(top, info, *words):
+            held = real(top, info, *words)
             if not swapped:
                 moved = top.with_name("Exegete, moved")
                 os.rename(top, moved)

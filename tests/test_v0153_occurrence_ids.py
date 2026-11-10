@@ -13,8 +13,8 @@ while those hold, and an id shown earlier names its occurrence, or none,
 when more occurrences lengthen the ids shown. On the names list's path
 neither a match's span nor an occurrence's line comes back: the
 entries' blocks and the overlap diagnostic keep their entries and
-counts, the occurrences block its ids alone (v0.15.3), and
-the changelog no longer says that lines come there. The choice is
+counts, the occurrences block its ids alone (v0.15.3; since v0.15.4 each
+with its number, which counts occurrences, not lines). The choice is
 refused with `rewrite_memos` before anything is read, and it binds
 nothing.
 
@@ -63,19 +63,6 @@ INTERVIEW = ("Interviewer: thank you for coming.\n"
              "Maria: John left early. Maria stayed.\n"
              "Interviewer: what did John do?\n"
              "Maria: he worked at the mill.\n")
-# The set's changelog fragment, whose words a release moves into the
-# CHANGELOG's entry for it (scripts/assemble_changelog.py)
-REPO = Path(__file__).resolve().parents[1]
-CHANGELOG_TEXTS = (REPO / "changelog.d" / "occurrences.md",
-                   REPO / "CHANGELOG.md")
-# What the changelog says of the names list's path: the ids come alone
-# there; the two sentences it gave while the lines came, gone with them
-IDS_ALONE = ("With `choose_occurrences`, the preview on this path lists "
-             "each occurrence's id alone, with no line.")
-LINES_GIVEN = ("the preview on this path gives the line of each "
-               "occurrence")
-LINES_CAN_PAIR = ("In a text the assistant has read, those lines can show "
-                  "which name each pseudonym replaces.")
 
 
 def block(out):
@@ -115,14 +102,6 @@ def full_ids_of(mapping):
         P.Compiled(P.validate_mapping(mapping)), "snap_to_pseudonym", [1],
         occurrence_key=key)
     return plan["files"][0]["occurrence_ids"]
-
-
-def changelog_words():
-    """The fragment and the CHANGELOG as they stand, each with its white
-    space read as single spaces, so that a sentence is found however it
-    wraps and in whichever of the two the release has left it."""
-    return [" ".join(path.read_text(encoding="utf-8").split())
-            for path in CHANGELOG_TEXTS if path.exists()]
 
 
 # The fixture's text: Thomas, Tom, Mary Ann, Thomas, Thomas, on one line
@@ -373,17 +352,16 @@ class TestWhatTheBlockHolds:
         assert any(entry.get("spans_truncated")
                    for entry in typed["replacements"])
 
-    def test_the_lines_on_the_names_list_path_and_what_the_changelog_says(
-            self, project):
+    def test_the_lines_on_the_names_list_path(self, project):
         """On the names list's path the occurrences block gives the ids
-        alone, with no line (v0.15.3): beside the entries'
-        pseudonyms and counts, the lines would show in a text the
-        assistant has read which name each pseudonym replaces (here the
-        one capitalised word on lines 2, 4 and 6 is the name). The typed
-        path keeps each id beside its line. The changelog says that the
-        ids come alone there, and no longer that lines do. Red when the
-        lines come back on that path, and when the fragment's words go
-        back to them."""
+        alone, with no line (v0.15.3; since v0.15.4 each with its number,
+        which counts occurrences): beside the entries' pseudonyms and
+        counts, the lines would show in a text the assistant has read
+        which name each pseudonym replaces (here the one capitalised word
+        on lines 2, 4 and 6 is the name). The typed path keeps each id
+        beside its line. Red when the lines come back on that path. The
+        changelog's words are not read: the release deletes the fragment
+        (CONTRIBUTING.md, step 6)."""
         set_text(project, INTERVIEW)
         names_list(project, [{"original": "Maria",
                               "pseudonym": "Participant A"}])
@@ -404,11 +382,6 @@ class TestWhatTheBlockHolds:
         assert [line for _, line in listed(typed)] == [2, 4, 4, 6]
         assert [row["id"] for row in found["listed"]] == [
             one for one, _ in listed(typed)]
-        said = changelog_words()
-        assert said
-        assert any(IDS_ALONE in text for text in said)
-        assert not any(LINES_GIVEN in text or LINES_CAN_PAIR in text
-                       for text in said)
 
     def test_the_overlap_diagnostic_keeps_its_entries_alone(self, project):
         """The lead's call on the overlap diagnostic: on the names list's

@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 211,325 | 210,397 |
-| `core` (28 tools) | 77,142 | 76,805 |
+| `full` (80 tools) | 211,964 | 210,397 |
+| `core` (28 tools) | 77,452 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,457 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
@@ -35,5 +35,12 @@ Python 3.13 with the libraries in `uv.lock`:
   `full`. On Python 3.11 that description is 19,903 characters, within
   the 20,000 that the guide to installing from the Terminal gives for
   Claude Code's setting.
+- Four descriptions that now say what their tools count and refuse add
+  639 characters to `full` and 310 to `core`. In both sets,
+  `search_files`' sentences on an empty pattern, a search of neither
+  place and the count of files whose every match is coded add 259 to
+  its definition, and `search_memos`' limit 51. In `full` alone,
+  `export_coded_segments_report`'s `repeated_rows` and
+  `include_variables` add 230, and `add_annotation`'s Returns 99.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).

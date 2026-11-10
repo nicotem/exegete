@@ -3,7 +3,7 @@
     "brief_characters": 1923,
     "opening_text_characters": 2042,
     "tool_count": 28,
-    "tool_definitions_characters": 77142,
+    "tool_definitions_characters": 77452,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -86,12 +86,12 @@
         "description_characters": 2787
       },
       "search_files": {
-        "definition_characters": 5535,
-        "description_characters": 4503
+        "definition_characters": 5794,
+        "description_characters": 4756
       },
       "search_memos": {
-        "definition_characters": 2448,
-        "description_characters": 2092
+        "definition_characters": 2499,
+        "description_characters": 2142
       },
       "select_project": {
         "definition_characters": 2730,
@@ -124,11 +124,11 @@
     "brief_characters": 14457,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 211325,
+    "tool_definitions_characters": 211964,
     "tools": {
       "add_annotation": {
-        "definition_characters": 2238,
-        "description_characters": 1667
+        "definition_characters": 2337,
+        "description_characters": 1764
       },
       "add_journal_entry": {
         "definition_characters": 1504,
@@ -219,8 +219,8 @@
         "description_characters": 1962
       },
       "export_coded_segments_report": {
-        "definition_characters": 4435,
-        "description_characters": 3121
+        "definition_characters": 4665,
+        "description_characters": 3348
       },
       "export_frequencies_csv": {
         "definition_characters": 1764,
@@ -395,12 +395,12 @@
         "description_characters": 2787
       },
       "search_files": {
-        "definition_characters": 5535,
-        "description_characters": 4503
+        "definition_characters": 5794,
+        "description_characters": 4756
       },
       "search_memos": {
-        "definition_characters": 2415,
-        "description_characters": 2059
+        "definition_characters": 2466,
+        "description_characters": 2109
       },
       "select_project": {
         "definition_characters": 2730,

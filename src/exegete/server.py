@@ -25407,8 +25407,7 @@ def export_coded_segments_report(
         include_variables: Append `FileVar_{name}` columns (and, in case
                            mode, `CaseVar_{name}`) with attribute values
                            per row, QualCoder's "variables" checkbox;
-                           csv only, since the txt report, like
-                           QualCoder's, has no columns
+                           csv only, since the txt report has no columns
         format: "csv" (default) or "txt"
         sanitize_formulas: Neutralise spreadsheet formula injection in
             CSV cells (values starting with = + - @ tab or CR get a '

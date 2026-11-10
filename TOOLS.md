@@ -312,9 +312,9 @@ format character that shows, such as the Arabic number signs.
 A new attribute name follows the same rule on characters no one sees,
 and a tab or a line break inside it counts as a control character,
 since an attribute name keeps its spacing as typed. Otherwise attribute
-names are compared exactly, as QualCoder's dialogs compare them:
-`age` beside `Age` is a second attribute, and so is a name that differs
-from another only in its spacing or its Unicode form. A new attribute
+names are compared exactly: `age` beside `Age` is a second attribute,
+and so is a name that differs from another only in its spacing or its
+Unicode form. A new attribute
 name that matches another attribute's, of any kind, only once such
 characters are left out of both is refused, naming that attribute and
 its kind. Exegete has no tool to rename an attribute, so none is
@@ -1132,8 +1132,8 @@ declares, and each tool's own description says what each one does.
 > Meant for local models, and optional elsewhere. An unknown value
 > stops Exegete at startup, with a message giving the valid values. Measured on Python 3.13 with the libraries in
 > `uv.lock` (the serialised tool definitions: name, description and
-> input schema), the definitions run to about 203,000 characters for
-> `full`, roughly 51k tokens at four characters per token, and about
+> input schema), the definitions run to about 211,000 characters for
+> `full`, roughly 53k tokens at four characters per token, and about
 > 76,000 characters for `core`, roughly 19k tokens. On Python 3.11 and
 > 3.12 the same definitions measure about five per cent more, because
 > those interpreters keep the docstring indentation that 3.13 strips.

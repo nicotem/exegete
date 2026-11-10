@@ -25584,13 +25584,25 @@ def export_coded_segments_report(
         "sanitization": _sanitization_note(sanitize_formulas,
                                            is_csv=(format == "csv")),
     }
+    result.update(_coded_segments_notes(rows, case_mode,
+                                        include_variables, format))
+    return json.dumps(result, indent=2)
+
+
+def _coded_segments_notes(rows: List[Dict[str, Any]], case_mode: bool,
+                          include_variables: bool,
+                          format: str) -> Dict[str, Any]:
+    """What export_coded_segments_report's answer says beside its
+    rows and filters: variables_note, when include_variables came with
+    txt, and in case mode repeated_rows and the counting rule."""
+    notes: Dict[str, Any] = {}
     if include_variables and format == "txt":
         # The txt report is the report as shown, with no columns, as
         # QualCoder's text export writes it (report_codes.py 791-816 at
         # 4.0; only its csv, xlsx and iramuteq exports read the variables
         # checkbox). include_variables was taken without a word (v0.15.4,
         # the claims audit's point 48).
-        result["variables_note"] = (
+        notes["variables_note"] = (
             "include_variables applies to the csv format only: the txt "
             "report has no columns for attribute values, so none were "
             "written. Export again with format 'csv' for the FileVar_ "
@@ -25603,9 +25615,9 @@ def export_coded_segments_report(
         # a coding already written for the same case (v0.15.4, the claims
         # audit's point 42), which the counts of get_codes_by_case,
         # get_cases_by_code and get_case_code_matrix count once.
-        result["repeated_rows"] = len(rows) - len(
+        notes["repeated_rows"] = len(rows) - len(
             {(r["caseid"], r["ctid"]) for r in rows})
-        result["counting_rule"] = (
+        notes["counting_rule"] = (
             "Containment: a coding belongs to a case when, and only when, "
             "its span lies fully inside one of the case's text spans on "
             "the same file "
@@ -25619,7 +25631,7 @@ def export_coded_segments_report(
             "repeated_rows counts the rows that repeat a coding already "
             "written for the same case."
         )
-    return json.dumps(result, indent=2)
+    return notes
 
 
 @mcp.tool(annotations=TOOL_CHANGES)

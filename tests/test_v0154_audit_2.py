@@ -459,3 +459,43 @@ class TestVariablesWithTheTextReport:
         out = host("export_coded_segments_report",
                    output_path=str(tmp_path / "report.txt"), format="txt")
         assert "variables_note" not in out
+
+
+# ---------------------------------------------------------------------------
+# Point 51: a search of the names reads no file's text
+# ---------------------------------------------------------------------------
+
+def _columns_read(call):
+    """Run `call` and return its answer and every (table, column) that
+    SQLite read on the project's connection, as its authoriser sees
+    them (setting one makes SQLite prepare each statement again)."""
+    conn = server.get_db().conn
+    read = set()
+
+    def authorise(action, table, column, *rest):
+        if action == sqlite3.SQLITE_READ:
+            read.add((table, column))
+        return sqlite3.SQLITE_OK
+
+    conn.set_authorizer(authorise)
+    try:
+        return call(), read
+    finally:
+        conn.set_authorizer(None)
+
+
+class TestANameSearchReadsNoText:
+
+    def test_the_names_alone_are_read(self, project):
+        out, read = _columns_read(
+            lambda: host("search_files", pattern="interview"))
+        assert [r["file_id"] for r in out["results"]] == [1]
+        assert ("source", "name") in read
+        assert ("source", "fulltext") not in read
+
+    def test_a_content_search_reads_the_text(self, project):
+        out, read = _columns_read(
+            lambda: host("search_files", pattern="observation",
+                         search_filename=False, search_content=True))
+        assert [r["file_id"] for r in out["results"]] == [2]
+        assert ("source", "fulltext") in read

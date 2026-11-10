@@ -12,9 +12,10 @@ Bug reports, questions and ideas go through
 project's public list of reports on GitHub. Each report there is called
 an issue. Opening an issue needs a GitHub account, which is free.
 Reading the issues needs no account (GitHub, checked on 4 November
-2026). A fault that could expose participants' data, or let a write
-damage a project, is best reported privately instead, so that it is not
-public before its fix. [SECURITY.md](SECURITY.md) says how.
+2026). Some faults could expose participants' data, or damage a project
+when Exegete changes it. Such a fault is best reported privately
+instead, so that it is not public before it is fixed.
+[SECURITY.md](SECURITY.md) says how.
 
 - **Bug reports.** Say what you asked the assistant to do, what you
   expected, and what happened instead. Exegete's actions are called
@@ -23,10 +24,10 @@ public before its fix. [SECURITY.md](SECURITY.md) says how.
 
   An issue is public: anyone can read it, and search engines find it.
   Participants' data or a project put into an issue is published with
-  it. A made-up example, or one with names and details removed, usually
-  shows the problem as well. An example with names and details removed
-  is still a participant's words, which a search can find and someone
-  can recognise. Your ethics approval may not allow you to publish it.
+  it. A made-up example, or a real one with names and details removed,
+  usually shows the problem as well. The real one is still a
+  participant's words, which a search can find and someone can
+  recognise. Your ethics approval may not allow you to publish it.
   You can also describe the data without copying it, such as "a code
   name with an apostrophe" or "a file of about 40,000 characters". A
   line of the names file, `Names to replace.txt`, or an entry of the
@@ -58,7 +59,8 @@ public before its fix. [SECURITY.md](SECURITY.md) says how.
 
 Issues are public and searchable. Every answered question helps the next
 researcher with the same problem, and others can confirm a bug or add
-detail. That is why there is one channel, and why it is not email.
+detail. That is why there is one public channel, and why it is not
+email.
 
 ## Email
 

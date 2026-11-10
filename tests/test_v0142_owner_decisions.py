@@ -246,21 +246,31 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
         assert "(Free, Pro or Max)" not in text, where
     for where, text in (("INSTALL, one-click", one_click),
                         ("QUICKSTART, step 5", quickstart)):
-        assert ("[Where your data goes](https://github.com/nicotem/exegete"
-                "#where-your-data-goes), in the README, says the rest: the "
-                "checks before participants' data, and which assistants open "
-                "files by themselves.") in text, where
+        # (v0.15.4, the readability reading: the pointer held to what it
+        # points to, the README's checks and the assistants that open
+        # files, in each document's own words)
+        pointer = ("[Where your data goes](https://github.com/nicotem/exegete"
+                   "#where-your-data-goes), in the README, says the rest: the "
+                   "checks ")
+        assert pointer in text, where
+        assert re.search(r"participants' data, and which assistants open "
+                         r"files by themselves\.",
+                         text[text.index(pointer):]), where
         # (v0.15.4) the terms' second exception where Claude Desktop is
         # set up, as Anthropic's page "Is my data used for model
         # training?" gives it ("Your conversations are flagged for safety
-        # review"), and PRIVACY.md's rung 1 quotes the terms
+        # review"), and PRIVACY.md's rung 1 quotes the terms; INSTALL.md
+        # in PRIVACY's checklist's words
         assert re.search(r"can still let Anthropic train on that "
-                         r"conversation(?:, and so can|\. So can) a flag for "
-                         r"a safety review\.", text), where
+                         r"conversation(?:, and so can a flag for a safety "
+                         r"review\.|\. Anthropic can also train on a "
+                         r"conversation flagged for a safety review\.)",
+                         text), where
     # INSTALL.md names that page and the day it was read
     assert re.search(r"\(Anthropic's pages, read on \d{1,2} [A-Z][a-z]+ "
-                     r"20\d\d\)\. One of them, \"Is my data used for model "
-                     r"training\?\", says that rating a reply", one_click)
+                     r"20\d\d\)\. Anthropic's page \"Is my data used for "
+                     r"model training\?\" says that rating a reply",
+                     one_click)
     # (v0.15.2, the readability reading: Anthropic named as the AI
     # provider, the one term the documents use)
     assert ("What Claude reads through Exegete (passages, codes, memos, "

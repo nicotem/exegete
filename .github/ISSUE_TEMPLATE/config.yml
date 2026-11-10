@@ -5,4 +5,4 @@ contact_links:
     about: Bug reports, questions and ideas go through GitHub Issues. This page says what a bug report needs, and how to show a problem without publishing participants' data.
   - name: Reporting a security fault
     url: https://github.com/nicotem/exegete/blob/main/SECURITY.md
-    about: A fault that could expose participants' data, or let a write damage a project, is best reported privately, so that it is not public before its fix. This page says how.
+    about: Some faults could expose participants' data, or damage a project when Exegete changes it. Such a fault is best reported privately, so that it is not public before it is fixed. This page says how.

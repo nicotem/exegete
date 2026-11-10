@@ -465,7 +465,7 @@ class TestTheSave:
         """A network share can report a rename as failed after making
         it: the file holds the session just written, so the save is
         answered as done, never as not saved with the file as it was,
-        which asking again would turn into the suggestions twice."""
+        which would be untrue."""
         sid, name, path = _a_saved_session(project)
         real = os.replace
 

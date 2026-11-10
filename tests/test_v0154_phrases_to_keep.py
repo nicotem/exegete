@@ -413,9 +413,10 @@ class TestAFileLeftWithNoReplacement:
 
     def test_every_occurrence_left_by_a_list(self, tmp_path):
         """The same rule for a list that leaves every occurrence: the
-        preview counts no clamp and leaves the file out of the files
-        rewritten, and the execute without allow_hidden_coder gives the
-        answer that every occurrence was left, writing nothing."""
+        preview counts no clamp, asks for no allow_hidden_coder and leaves
+        the file out of the files rewritten, and the execute without
+        allow_hidden_coder gives the answer that every occurrence was
+        left, writing nothing."""
         with project_with(tmp_path, ONLY, setup=_past_the_end) as folder:
             out = preview_of(mapping=MAY,
                              leave_occurrences=choose(mapping=MAY))
@@ -425,7 +426,9 @@ class TestAFileLeftWithNoReplacement:
             assert out["preview"]["hidden_coder_rows"][
                 "override_required"] is False
             assert out["preview"]["totals"]["files"] == 0
-            done = execute_from(out, mapping=MAY)
+            assert "allow_hidden_coder" not in out["execute_with"][
+                "arguments"]
+            done = execute_from(out, mapping=MAY, allow_hidden_coder=False)
             assert done.get("nothing_changed") is True, done
             assert done["message"].startswith(
                 server._EVERY_OCCURRENCE_WAS_LEFT)

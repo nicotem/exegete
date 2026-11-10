@@ -394,6 +394,13 @@ class TestInstall:
         # Code's changelog gives it, with the day it was read
         assert ("From version 2.1.246, its question offers no \"don't ask "
                 "again\".") in install
+        # (v0.15.4) the option and its ignored allow rule belong to the
+        # versions that read the mark, before the fix: from 2.1.199,
+        # never every earlier version
+        assert ("From 2.1.199 until then, it offered \"Yes, and don't ask "
+                "again\", but then ignored the allow rule that choice "
+                "wrote") in install
+        assert "Before that version, it offered" not in install
         assert re.search(r"Claude Code's changelog, read on \d{1,2} "
                          r"[A-Z][a-z]+ 20\d\d", install)
         assert ("`check_for_updates` is not marked read-only: it records "

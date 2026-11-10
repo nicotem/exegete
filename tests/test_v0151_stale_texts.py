@@ -162,6 +162,25 @@ def test_the_uninstall_says_claude_desktop_s_log_stays(tmp_path):
         assert words in stays, words
 
 
+def test_install_gives_the_linux_log_folder_the_check_reads(tmp_path):
+    """v0.15.4: Claude Desktop runs on Linux as a beta, and MCP's page on
+    debugging, read on 10 November 2026, gives its log folder there as
+    `~/.config/Claude/logs`, the last of the folders the transition check
+    reads. The list of what stays after an uninstall and "Reading the
+    server log" both give it."""
+    assert (transition.claude_log_folders(tmp_path)[-1]
+            == tmp_path / ".config" / "Claude" / "logs")
+    assert "`%APPDATA%\\Claude\\logs` on Windows or `~/.config/Claude/logs` " \
+        "on Linux" in _extension_stays()
+    install = _flat("INSTALL.md")
+    section = install[install.index("### Reading the server log"):]
+    section = section[:section.index("### Where to ask")]
+    assert re.search(r"On Linux, where Claude Desktop is a beta, MCP's page "
+                     r"on debugging, read on \d{1,2} [A-Z][a-z]+ 20\d\d, "
+                     r"gives the folder as `~/\.config/Claude/logs`\.",
+                     section)
+
+
 def test_the_uninstall_says_the_hosts_records_stay_as_privacy_lists():
     step = _guide_uninstall_step(3)
     listed = _what_stays()

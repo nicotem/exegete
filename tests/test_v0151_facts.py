@@ -632,9 +632,11 @@ USUAL_PLACES_LIST = r"these\s+(?:locations|places)\s+by\s+default:"
 # A folder in the home folder whose name starts with a dot
 DOT_FOLDER = r"~/\.(?P<name>[\w-]+(?:\.[\w-]+)*)"
 # Other programs' folders the documents name: QualCoder's, Claude
-# Code's, Codex's, and the caches and local files of other tools
+# Code's, Codex's, and the caches and local files of other tools; and,
+# from v0.15.4, Linux's folder for settings, where Claude Desktop keeps
+# its log (`~/.config/Claude/logs`, MCP's page on debugging)
 OTHER_PROGRAMS_FOLDERS = frozenset({"qualcoder", "claude", "codex",
-                                    "cache", "local"})
+                                    "cache", "local", "config"})
 # Other programs' settings the documents quote beside "setting", in
 # lower case: QualCoder's, the connectors' on claude.ai, and Claude's
 # switch for training, by the name its Settings, Privacy shows (read by

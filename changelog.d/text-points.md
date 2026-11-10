@@ -24,8 +24,8 @@
 - **Claude Code's question before an import.** INSTALL.md says that
   Claude Code offers no "don't ask again" for `import_documents` and
   `save_names_list` from version 2.1.246, by its changelog, read on 10
-  November 2026. Earlier versions offered it, and then ignored the allow
-  rule it wrote.
+  November 2026. From 2.1.199 until then, Claude Code offered it, and
+  then ignored the allow rule it wrote.
 - **OpenAI's plans.** README.md no longer counts Go among the plans that
   OpenAI's Help Center names for switching training off. Its page "Data
   controls in ChatGPT" (Archive capture of 6 November 2026) names Free,

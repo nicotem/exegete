@@ -227,10 +227,13 @@ below, says what each host does, from Anthropic's pages.
 
 **Training.** While training is on, Anthropic may use your
 conversations, with any participants' data in them, to train its
-models. On a personal plan (Free, Pro or Max), the setting "Help improve
-our AI models", at https://claude.ai/settings/data-privacy-controls,
-switches training off. Rating a reply (thumbs up or down) can still let
-Anthropic train on that conversation.
+models. On a personal plan (Free, Pro, Max or Ultra), the setting "Help
+improve our AI models", at
+https://claude.ai/settings/data-privacy-controls, switches training off
+(Anthropic's pages, read on 10 November 2026). One of them, "Is my data
+used for model training?", says that rating a reply (thumbs up or down)
+can still let Anthropic train on that conversation. So can a flag for a
+safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
@@ -502,12 +505,12 @@ GitHub Issues ("Getting help", below).
      only while it runs, so after an uninstall it stays until you
      delete it.
    - **Claude Desktop's log of the extension**,
-     `mcp-server-Exegete.log` in `~/Library/Logs/Claude` on a Mac or
-     `%APPDATA%\Claude\logs` on Windows, with
-     `mcp-server-qualcoder-mcp.log` beside it from before 0.14.1. It can
-     hold every request and every answer in full, names, paths and
-     quoted text included ("Reading the server log", below). Exegete
-     never removes it.
+     `mcp-server-Exegete.log` in `~/Library/Logs/Claude` on a Mac,
+     `%APPDATA%\Claude\logs` on Windows or `~/.config/Claude/logs` on
+     Linux, with `mcp-server-qualcoder-mcp.log` beside it from before
+     0.14.1. It can hold every request and every answer in full, names,
+     paths and quoted text included ("Reading the server log", below).
+     Exegete never removes it.
 
 The backups Exegete took sit beside each project, in folders named
 `<project>_backup_<timestamp>.qda`. The `prune_backups` tool removes
@@ -613,7 +616,9 @@ with it.
 
 Claude Desktop keeps the extension's log in `mcp-server-Exegete.log`,
 in `~/Library/Logs/Claude` on a Mac or `%APPDATA%\Claude\logs` on
-Windows, and Settings, Developer, Show Logs opens it. Before 0.14.1 the
+Windows, and Settings, Developer, Show Logs opens it. On Linux, where
+Claude Desktop is a beta, MCP's page on debugging, read on 10 November
+2026, gives the folder as `~/.config/Claude/logs`. Before 0.14.1 the
 log was `mcp-server-qualcoder-mcp.log`, which stays where it was.
 
 Exegete writes its own lines to the log, at the INFO level and above.
@@ -670,11 +675,14 @@ sharing the file, read it as you would the conversation.
   the only support channel, and email requests receive no reply
   ([SUPPORT.md](SUPPORT.md)). Research data pasted into an issue becomes
   public, so a made-up example, or one with names and details removed,
-  is the safer way to show a problem. Give the Exegete version, and your
-  QualCoder version if you use it. Say which host you use: Claude
-  Desktop, and whether in a chat, Cowork or a Code session. Give the
-  tool set too: `full`, or `core` if the small tool set is on.
-  `lifecycle` is the earlier name of `full`.
+  is the safer way to show a problem. An example with names and details
+  removed is still a participant's words, which a search can find and
+  someone can recognise. Your ethics approval may not allow you to
+  publish it. Give the Exegete version, and your QualCoder version if
+  you use it. Say which host you use: Claude Desktop, and whether in a
+  chat, Cowork or a Code session. Give the tool set too: `full`, or
+  `core` if the small tool set is on. `lifecycle` is the earlier name
+  of `full`.
 - **The protocol Exegete speaks to apps**, MCP:
   https://modelcontextprotocol.io/
 - **If you also use QualCoder**, its own help:
@@ -710,9 +718,9 @@ applies. From version 2.1.199, Claude Code asks before every call of
 such a tool in every permission mode, auto and `bypassPermissions`
 included, and lets no allow rule skip it. In `dontAsk` mode, it refuses
 the call. Earlier versions ignore the mark. From version 2.1.246, its
-question offers no "don't ask again". Before that version, it offered
-"Yes, and don't ask again", but then ignored the allow rule that choice
-wrote (Claude Code's changelog, read on 10 November 2026).
+question offers no "don't ask again". From 2.1.199 until then, it
+offered "Yes, and don't ask again", but then ignored the allow rule that
+choice wrote (Claude Code's changelog, read on 10 November 2026).
 
 `check_for_updates` is not marked read-only: it records each check in
 Exegete's own folder, so a host that asks before a tool runs asks

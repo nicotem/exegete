@@ -187,10 +187,11 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     # with the feedback exception beside it
     # (v0.15.2, the opening texts: the risk, the setting and the
     # exception, as a warning with what to do, not an order)
+    # (v0.15.4: Ultra, a plan for individuals, among the personal plans)
     assert ("3. **Training.** While training is on, Anthropic may use your "
             "conversations, with the participants' data in them, to train "
-            "its models. On a personal plan (Free, Pro or Max), the setting "
-            "\"Help improve our AI models\" at "
+            "its models. On a personal plan (Free, Pro, Max or Ultra), the "
+            "setting \"Help improve our AI models\" at "
             "https://claude.ai/settings/data-privacy-controls switches "
             "training off. Rating a reply, with a thumbs up or down, can "
             "still let Anthropic train on that conversation (PRIVACY.md "

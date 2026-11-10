@@ -627,10 +627,12 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
     # the account's terms, in the list before participants' data (the
     # owner, 1 October 2026: the same training advice for both makers)
     # v0.15.2, the opening texts: the risk, then the switch
+    # (v0.15.4: Ultra among the personal plans, as Claude's pricing page
+    # lists it under "Individual", read on 10 November 2026)
     assert ("3. **Training.** While training is on, Anthropic may use your "
             "conversations, with the participants' data in them, to train "
-            "its models. On a personal plan (Free, Pro or Max), the setting "
-            "\"Help improve our AI models\"") in data
+            "its models. On a personal plan (Free, Pro, Max or Ultra), the "
+            "setting \"Help improve our AI models\"") in data
     assert "the newer Claude app" not in _flat("README.md")
     # Anthropic's words for the rollout, as PRIVACY.md quotes the page
     # (read again in v0.15.3, with the Ultra plan)

@@ -375,9 +375,12 @@ class TestFixRoundOneWords:
         assert line.startswith(heading[5:-1])
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = " ".join(_section(text, heading, "\n### ").split())
-        for words in ("with a secret of its own there, which Exegete never "
-                      "uses", "says this once in its log, not at every "
-                      "start", "Quit or update that older copy",
+        # (v0.15.4, the readability reading: the new folder's secret, a
+        # sentence of its own)
+        for words in ("The new folder holds a secret of its own, which "
+                      "Exegete never uses",
+                      "says this once in its log, not at every start",
+                      "Quit or update that older copy",
                       "keeping the old folder changes nothing for Exegete",
                       "removing it removes that copy's secret, sessions "
                       "and run records with it"):

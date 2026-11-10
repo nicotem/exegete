@@ -339,8 +339,11 @@ class TestTheDocumentsInFixRound1:
             "bug_report.yml options": options,
             "CONTRIBUTING.md": _read_flat("CONTRIBUTING.md"),
             "SUPPORT.md": _read_flat("SUPPORT.md"),
+            # (v0.15.4, the readability reading: "the tool set", the
+            # documents' word, in sentences of their own)
             "INSTALL.md": _read_flat("INSTALL.md")[
-                _read_flat("INSTALL.md").index("the toolset mode ("):][:60],
+                _read_flat("INSTALL.md").index("Give the tool set too:"):
+            ][:120],
         }
         for mode in server._VALID_TOOLSET_MODES:
             for where, text in places.items():

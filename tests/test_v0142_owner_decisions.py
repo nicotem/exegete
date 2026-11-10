@@ -276,9 +276,11 @@ def test_quickstart_dates_the_setting_as_privacy_does():
     # (the fix round: the sentence on rating a reply is a claim about the
     # same terms, so it is dated by them, and it names their second
     # exception, which the terms PRIVACY quotes that day give)
+    # (v0.15.4, the readability reading: the second exception named as
+    # a flag, for "its being flagged")
     assert ("The same pages say that rating a reply, with a thumbs up or "
             "down, can still let Anthropic train on that conversation, and "
-            "so can its being flagged for a safety review.") in step5
+            "so can a flag for a safety review.") in step5
     rung_one = _between(_flat("PRIVACY.md"), "### Rung 1:", "### Rung 2:")
     exceptions = rung_one[rung_one.index("Exceptions that apply whatever "
                                          "the setting"):]
@@ -400,8 +402,10 @@ def test_quickstart_gives_the_warning_in_short_sentences():
     section = _between(_flat("QUICKSTART.md"),
                        "### Claude Code instead of Claude Desktop",
                        "## Installation steps")
-    reason = ("Started in your home folder, or in one that holds a study, "
-              "Claude Code reads that study without asking.")
+    # (v0.15.4, the readability reading: the condition said as one,
+    # with its subject, for an opening participle)
+    reason = ("If you start Claude Code in your home folder, or in one that "
+              "holds a study, it reads that study without asking.")
     assert section.index("in an empty folder") < section.index(reason)
     assert ("Claude Code started in your home folder, your projects folder "
             "or a study's folder, or given one of them as a working folder, "
@@ -415,12 +419,15 @@ def test_quickstart_gives_the_warning_in_short_sentences():
             "What Claude Code opens goes to Anthropic, the AI provider "
             "that runs its model.",
             "While training is on, Anthropic may train its models on it.",
+            # (v0.15.4, the readability reading: the chat, then its three
+            # conditions in a sentence of their own)
             "If that matters for a study, you could work on that study in "
-            "Claude Desktop's chat, with computer use off, no folder that "
-            "holds your projects or transcripts connected, and no other "
-            "extension that reads files ([PRIVACY.md, \"Assistants that "
-            "open files by themselves\"](PRIVACY.md#assistants-that-open-"
-            "files-by-themselves))."):
+            "Claude Desktop's chat.",
+            "There, you could keep computer use off, connect no folder that "
+            "holds your projects or transcripts, and add no other extension "
+            "that reads files ([PRIVACY.md, \"Assistants that open files by "
+            "themselves\"](PRIVACY.md#assistants-that-open-files-by-"
+            "themselves))."):
         assert sentence in section, sentence
 
 

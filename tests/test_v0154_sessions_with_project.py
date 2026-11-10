@@ -22,7 +22,8 @@ which were shown):
 2. The three reads and the two decisions bound to the open project,
    with the way back only where nothing is at the place a session
    records; the five not-found answers list the open project's sessions
-   only.
+   only; a session not saved after apply_codings' or
+   create_proposed_codes' commit is said, the write answered as done.
 3. A project whose folder cannot hold a session keeps it on this
    computer and says why; a start reported as failed once its file
    holds the session is kept in the project; a session in the project
@@ -1162,6 +1163,79 @@ class TestTheReadsAreBoundToTheOpenProject:
             assert out["available_sessions_note"] == \
                 server.AVAILABLE_SESSIONS_NOTE
             assert theirs.session_id not in text and str(other) not in text
+
+
+def _failing_save(monkeypatch):
+    """The session's save after the commit made to fail, as a full or
+    pulled-out drive, or a sync client holding the file, would."""
+    def failing(session):
+        raise sessions.SessionFileError(
+            "unwritable", "Exegete could not write in the project's Exegete "
+                          "coding sessions folder (Injected failure).")
+    monkeypatch.setattr(server.session_manager, "save_session", failing)
+
+
+def _codings_of(project):
+    with closing(sqlite3.connect(str(project / "data.qda"))) as conn:
+        return conn.execute("select cid, pos0, pos1 from code_text "
+                            "order by ctid").fetchall()
+
+
+class TestASessionNotSavedAfterACommit:
+
+    def test_after_apply_codings_the_codings_are_written_and_said(
+            self, project, monkeypatch):
+        sid = start()["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[guid])
+        _failing_save(monkeypatch)
+        out = server.apply_codings(coding_session_id=sid)
+        assert not out.lstrip().startswith("{"), out
+        assert server.APPLIED_SESSION_NOT_SAVED.split("{reason}")[0] in out
+        assert "(Injected failure)." in out
+        assert len(_codings_of(project)) == 1
+        assert receipt_of(out)
+        monkeypatch.undo()
+        stored = json.loads(file_of(project, sid).read_text(encoding="utf-8"))
+        assert stored["suggestions"][0]["status"] == "approved"
+        # Asking again writes nothing more and marks them applied
+        again = server.apply_codings(coding_session_id=sid)
+        assert not again.lstrip().startswith("{"), again
+        assert len(_codings_of(project)) == 1
+        session = server.session_manager.load_session(sid)
+        suggestion = session.get_suggestion_by_guid(guid)
+        assert suggestion.status == "applied"
+        assert suggestion.applied_ctid is not None
+
+    def test_after_create_proposed_codes_the_codes_are_made_and_said(
+            self, project, monkeypatch):
+        sid = start(code_names=["Trust"])["coding_session_id"]
+        recorded = jcall("propose_codes", coding_session_id=sid,
+                         proposals=[{"name": "Belonging", "memo": "m",
+                                     "rationale": "r"}])
+        guid = recorded["recorded"][0]["guid"]
+        call("update_proposal_status", coding_session_id=sid,
+             approve=[guid])
+        _failing_save(monkeypatch)
+        out = json.loads(server.create_proposed_codes(coding_session_id=sid))
+        assert out.get("success") is True, out
+        [made] = out["created_codes"]
+        assert isinstance(made["code_id"], int)
+        assert out["session_not_saved"].endswith("(Injected failure).")
+        assert out["session_not_saved_note"].startswith(
+            server.CREATED_SESSION_NOT_SAVED)
+        assert server.CREATED_OUTSIDE_SCOPE in out["session_not_saved_note"]
+        assert out["proposal_statistics"]["approved"] == 1
+        assert out["proposal_statistics"]["created"] == 0
+        assert "start_coding_session" in out["next_step"]
+        monkeypatch.undo()
+        stored = json.loads(file_of(project, sid).read_text(encoding="utf-8"))
+        assert stored["proposed_codes"][0]["status"] == "approved"
+        assert made["code_id"] not in stored["scope"]["code_ids"]
+        with closing(sqlite3.connect(str(project / "data.qda"))) as conn:
+            assert conn.execute("select count(*) from code_name where name "
+                                "= 'Belonging'").fetchone()[0] == 1
 
 
 class TestTheBoundReadsGuards:

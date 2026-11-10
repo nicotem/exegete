@@ -20627,8 +20627,10 @@ _OCCURRENCES_LEFT_COUNTED = (
 
 
 class _OccurrencesRefused(Exception):
-    """A list to leave that a preview refuses once the plan is built: an
-    id names no occurrence, or more than one. Neither a ValueError nor a
+    """A list to leave that a preview refuses once the plan is built:
+    numbers that come with another numbering than the file's list's now,
+    or go past its last occurrence (v0.15.4); an id that names no
+    occurrence, or more than one. Neither a ValueError nor a
     RuntimeError, which the token gate answers itself; `answer` is the
     tool's answer."""
 

@@ -3,12 +3,11 @@
 NOTICE, read in full. The facts their fix round corrected, each held to
 its source.
 
-- NOTICE names six with the EbookLib release that needs it. EbookLib
-  0.20, the release uv.lock gives, requires lxml and six; 0.21, on PyPI
-  since 1 November 2026, requires lxml alone (PyPI's metadata for both,
-  read on 4 November 2026). pyproject.toml's `ebooklib>=0.20` lets an
-  install from PyPI take 0.21, and nothing else in the lock needs six,
-  so six comes with the lock's EbookLib alone.
+- NOTICE names six only while the lock's EbookLib needs it. EbookLib
+  0.20 requires lxml and six; 0.21, on PyPI since 1 November 2026 and
+  in uv.lock from v0.15.4, requires lxml alone (PyPI's metadata for
+  both, read on 4 November 2026), and nothing else in the lock needs
+  six, so NOTICE no longer names it.
 - CONTRIBUTING's map says that open_file_for_reading shows or opens a
   read-only copy of the original, never the original itself (reading.py;
   tests/test_v0143_reading.py, TestTheOriginal, holds the behaviour).

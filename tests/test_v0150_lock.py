@@ -131,12 +131,16 @@ class TestTheReadersStay:
 
     @pytest.mark.parametrize("name", PARITY_LIBRARIES)
     def test_the_release_the_parity_record_names(self, name):
-        """The record's release, and for PyMuPDF the releases it lists as
-        giving QualCoder's functions the same text (v0.15.1)."""
+        """Every release of the library that the lock gives is one the
+        record names: the release it was made with, or one it lists as
+        giving QualCoder's functions the same text (v0.15.1: PyMuPDF 2.0;
+        v0.15.4: EbookLib 0.21, and PyMuPDF 2.1, which an install from
+        PyPI takes, each run through `scripts/qualcoder_parity.py --check`
+        and the parity tests on 10 November 2026 with no text changed)."""
         named = [PARITY[name]] + RECORD.get("same_text_with", {}).get(
             name, [])
-        assert sorted(_versions(_lock(), name), key=Version) == \
-            sorted(named, key=Version)
+        locked = _versions(_lock(), name)
+        assert locked and set(locked) <= set(named), (locked, named)
 
     def test_every_library_the_record_names_is_guarded(self):
         """A library the record gains later is guarded as well."""

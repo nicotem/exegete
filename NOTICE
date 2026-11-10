@@ -872,9 +872,8 @@ and striprtf (BSD-3-Clause) from PyPI. The optional part `pdf-epub`
 adds PyMuPDF and EbookLib, both under the GNU Affero General Public
 License, version 3, and lxml (BSD-3-Clause), which EbookLib needs. The
 lock, `uv.lock`, gives the releases that the Claude Desktop extension
-installs. It gives EbookLib 0.20, which also needs six (MIT).
-EbookLib's next release, 0.21, does not need six. The lock also gives
-lxml 6.1.3, whose packages contain zlib (Zlib), iconv (LGPL-2.1),
+installs. It gives EbookLib 0.21. The lock also gives lxml 6.1.3,
+whose packages contain zlib (Zlib), iconv (LGPL-2.1),
 and libxml2, libxslt and libexslt (each MIT), as lxml's LICENSES.txt
 states. An install with that part is, taken as a whole, under the
 AGPL's terms, as QualCoder 4.0's own installs are.

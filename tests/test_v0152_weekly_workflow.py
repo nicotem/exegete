@@ -5,10 +5,10 @@
 - The advisory check (`scripts/check_advisories.py`) also asks about
   the official validator's libraries, from their own lock
   (`packaging/desktop-extension/validator/package-lock.json`, npm), in
-  the same request as uv.lock's (PyPI). The four advisories OSV gives
-  for the validator today are accepted in a list of their own,
-  KNOWN_NPM, read only when that lock is asked, so a run given uv.lock
-  alone never says they can go. A lock of another name or form is not
+  the same request as uv.lock's (PyPI). The advisories OSV gives for
+  the validator that no release in its lock fixes are accepted in a
+  list of their own, KNOWN_NPM, read only when that lock is asked, so a
+  run given uv.lock alone never says they can go. A lock of another name or form is not
   read: exit 2, with nothing asked.
 - The watch on QualCoder's newest code runs once a week in a workflow
   of its own, and no longer in ci.yml, whose parity job compares with
@@ -134,8 +134,8 @@ def test_a_new_validator_advisory_fails_and_a_known_one_is_a_notice(
 
 def test_known_advisories_are_gone_only_for_the_locks_asked(actions, capsys):
     """An accepted advisory no longer reported is named only when its
-    lock was asked: uv.lock alone never names the validator's four; both
-    locks with none reported name the four, in KNOWN_NPM."""
+    lock was asked: uv.lock alone never names the validator's accepted
+    ones; both locks with none reported name each of them, in KNOWN_NPM."""
     libraries = advisories.locked_releases(REPO / "uv.lock")
     pairs = advisories.locked_releases(VALIDATOR_LOCK)
     assert advisories.main([str(REPO / "uv.lock")],

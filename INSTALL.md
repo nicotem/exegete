@@ -267,7 +267,7 @@ macOS 14. The choice between PyMuPDF 2 and 1.x goes by the kind of
 computer and the Python, never by the macOS release, so on macOS 13 or
 earlier the extension's install stops rather than take PyMuPDF 1.x
 ("Troubleshooting", below). The extension installs the releases the
-tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.20. Both releases
+tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.21. Both releases
 of PyMuPDF read the test documents' PDFs to the same text, the text that
 QualCoder 4.0 stores.
 

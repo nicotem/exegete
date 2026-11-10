@@ -215,7 +215,8 @@ from .project_settings import (
 from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
                        ProposedCode, reading_label, reading_in_words,
                        memo_with_reading, guids_in_more_than_one,
-                       KEPT_IN_PROJECT, KEPT_ON_THIS_COMPUTER)
+                       KEPT_IN_PROJECT, KEPT_ON_THIS_COMPUTER,
+                       SessionsListing, days_back_to_year_one)
 
 # Set up logging. The handler is installed at import, before FastMCP is
 # constructed, so the server's own plain stderr format wins over the rich
@@ -4269,13 +4270,26 @@ def _perform_write(op, *, check=None,
 def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]:
     """Verify a session belongs to the currently open project.
 
-    Session-consuming writes are bound to the project the session was
-    created in; applying a session to a different project would silently
-    corrupt it (cross-project write trapdoor).
+    Every session read, decision and write is bound to the project the
+    session belongs to (v0.15.4; its writes since 0.12): applying a
+    session to a different project would silently corrupt it
+    (cross-project write trapdoor), and its passages and decisions are
+    that project's. A session kept in the open project's sessions folder
+    carries that project's path and passes; one kept on this computer
+    passes only while its project is open at the place it records.
+
+    Both databases are opened read-only and closed again, and no lock
+    file is read (validate_qda_path), so a session is read and decided
+    while QualCoder has the project open; a database locked at that
+    instant raises DatabaseLockedError, which the tool answers as a
+    write's, and asking again works.
 
     Returns:
         None if the session matches the current project, otherwise a dict
-        suitable for JSON error output.
+        suitable for JSON error output: the other project's answer; "could
+        not be found", with the way back (SESSIONS_WAY_BACK), when nothing
+        is at the place the session records; or the reason, as error_text
+        gives it, when something there cannot be opened as the project.
     """
     _adopt_configured_project()
     if current_project_path is None:
@@ -4311,12 +4325,17 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
             Path(SessionManager.canonical_database_path(
                 session.project_path)).parent.name,
             current_db_path.parent.name)
-    except Exception:
-        return {
-            "error": "The project this session was created in could not be found "
-                     "(it may have been moved or deleted). Sessions can only be "
-                     "used with the project they were created in."
-        }
+    except FileNotFoundError:
+        # Nothing at the place the session records (v0.15.4: the way back
+        # only here, where putting the project back there is the remedy)
+        return {"error": SESSION_PROJECT_NOT_FOUND,
+                "way_back": _mark_unregistered(SESSIONS_WAY_BACK)}
+    except Exception as e:
+        # Something at that place that is not a project Exegete can open
+        # (a damaged database, a folder that is not a project): its reason,
+        # and no way back, since the project is not missing
+        return {"error": SESSION_PROJECT_UNUSABLE.format(
+            reason=_as_sentence(error_text(e)))}
 
     # One project under two spellings of its path (letter case, Unicode
     # form) is one database: compared as files, not strings (fix round 1)
@@ -4326,17 +4345,125 @@ def _check_session_project(session: AICodingSession) -> Optional[Dict[str, Any]]
     return None
 
 
+# A session kept on this computer whose project is not at the place it
+# records (v0.15.4): every session made before 0.15.4, and any kept there
+# because its project's folder could not hold it
+SESSION_PROJECT_NOT_FOUND = (
+    "The project this session was made in could not be found at the place "
+    "the session records: it may have been moved, renamed or deleted. A "
+    "session kept on this computer, as every session made before 0.15.4 "
+    "is, is used only while its project is open at that place.")
+_WAY_BACK = (
+    "If the project has moved, putting it back at that place and selecting "
+    "it there lets the session be finished, applied or exported; the "
+    "project can then move again, though a change made while it is there "
+    "can be undone only there. Where that place cannot be made again, the "
+    "session can still be listed and deleted.")
+# In the refusal, which core's tools reach: marked where it is used
+SESSIONS_WAY_BACK = (
+    "The session records its project's place, which list_coding_sessions "
+    "gives as its project_path. " + _WAY_BACK)
+# In list_coding_sessions' answer, beside sessions kept on this computer
+SESSIONS_WAY_BACK_IN_LIST = (
+    "A session kept on this computer (kept_in: this computer), as every "
+    "session made before 0.15.4 is, is used only while its project is open "
+    "at the place it records (its project_path). " + _WAY_BACK)
+SESSION_PROJECT_UNUSABLE = (
+    "The place this session records for its project holds no project "
+    "Exegete can open: {reason} A session kept on this computer is used "
+    "only while its project is open at that place.")
+
+
+def _as_sentence(text: str) -> str:
+    """A reason given as a sentence of its own: ending in a full stop."""
+    text = (text or "").strip()
+    return text if text.endswith((".", "!", "?")) else f"{text}."
+
+
 def _different_project_answer(session_project: str,
                               current_project: str) -> Dict[str, Any]:
-    """The refusal of a session-bound write while another project is
-    open, naming both projects' folders."""
+    """The refusal of a session's read, decision or write while another
+    project is open, naming both projects' folders."""
     return {
         "error": "This session belongs to a different project than the one "
-                 "currently open. Writes are bound to the session's project; "
-                 "open it with select_project first.",
+                 "currently open. A session is read, decided and applied "
+                 "only with its own project open; open it with "
+                 "select_project first.",
         "session_project": session_project,
         "current_project": current_project,
     }
+
+
+# Beside a session id found in neither place (v0.15.4): what the list of
+# sessions given with it covers, and the entries in the project's folder
+# that could not be read, counted, naming none
+AVAILABLE_SESSIONS_NOTE = (
+    "available_sessions lists the open project's sessions changed in the "
+    "last 30 days, those kept in its Exegete coding sessions folder and "
+    "those kept on this computer; other projects' sessions are not listed "
+    "here.")
+NO_PROJECT_SESSIONS_NOTE = (
+    "No project is selected, so no sessions are listed here: a session is "
+    "used only with its project open.")
+SESSIONS_NOT_READ_NOTE = (
+    "{count} entry or entries at a session's name in the open project's "
+    "Exegete coding sessions folder could not be read as that session (a "
+    "link, a file that is too large or cannot be read, a file holding "
+    "another session's id, or on Windows a path too long), so none of them "
+    "is listed. Each is named session_<id>.json there, and a session tool "
+    "given that id says why it cannot be used.")
+PROJECT_SESSIONS_NOT_LISTED = (
+    "The open project's own sessions could not be listed, because its "
+    "Exegete coding sessions folder could not be read: {reason}")
+
+
+def _session_not_found_answer(session_id: Any) -> Dict[str, Any]:
+    """The answer of the five session tools for an id found in neither
+    place (v0.15.4): the open project's sessions of the last 30 days
+    beside it, from both places, no longer every project's with their
+    descriptions and paths (the conversation only when it has to), and
+    the entries in the project's sessions folder that could not be read,
+    counted. Writes nothing."""
+    answer: Dict[str, Any] = {"error": f"Session {session_id} not found"}
+    if current_project_path is None:
+        answer["available_sessions"] = []
+        answer["available_sessions_note"] = NO_PROJECT_SESSIONS_NOTE
+        return answer
+    listing = session_manager.sessions_listing(
+        project_path=current_project_path)
+    answer["available_sessions"] = listing.sessions
+    answer["available_sessions_note"] = AVAILABLE_SESSIONS_NOTE
+    _add_what_was_not_read(answer, listing, on_this_computer=False)
+    return answer
+
+
+def _add_what_was_not_read(answer: Dict[str, Any],
+                           listing: SessionsListing,
+                           on_this_computer: bool) -> None:
+    """The project's sessions folder that could not be read, with its
+    reason, and the entries in either place that could not be read as
+    their session, counted, naming none (v0.15.4)."""
+    if listing.project_folder_refusal is not None:
+        answer["project_sessions_not_listed"] = \
+            PROJECT_SESSIONS_NOT_LISTED.format(
+                reason=listing.project_folder_refusal)
+    if listing.not_read_in_project:
+        answer["sessions_not_read"] = listing.not_read_in_project
+        answer["sessions_not_read_note"] = SESSIONS_NOT_READ_NOTE.format(
+            count=listing.not_read_in_project)
+    if on_this_computer and listing.not_read_on_this_computer:
+        answer["files_not_read_on_this_computer"] = \
+            listing.not_read_on_this_computer
+        answer["files_not_read_on_this_computer_note"] = (
+            FILES_NOT_READ_ON_THIS_COMPUTER_NOTE.format(
+                count=listing.not_read_on_this_computer,
+                folder=f"{state_folder.shown()}/sessions"))
+
+
+FILES_NOT_READ_ON_THIS_COMPUTER_NOTE = (
+    "{count} session file(s) in Exegete's sessions folder on this computer "
+    "({folder}) could not be read as their session, whichever project they "
+    "record, so none of them is listed.")
 
 
 def _find_occurrences(text: str, needle: str, max_hits: int = 11) -> List[int]:
@@ -8679,10 +8806,7 @@ def export_refi_qda(
         "settings", ro_db.get_project_info).get("coder_name")
     if session_id is not None:
         if not session_manager.session_exists(session_id):
-            return json.dumps({
-                "error": f"Session {session_id} not found",
-                "available_sessions": session_manager.list_sessions()
-            })
+            return json.dumps(_session_not_found_answer(session_id))
         session = session_manager.load_session(session_id)
         mismatch = _check_session_project(session)
         if mismatch is not None:
@@ -11074,10 +11198,7 @@ def record_suggestions(
     # argument is coding_session_id, aliased for the body.
     session_id = coding_session_id
     if not session_manager.session_exists(session_id):
-        return json.dumps({
-            "error": f"Session {session_id} not found",
-            "available_sessions": session_manager.list_sessions()
-        })
+        return json.dumps(_session_not_found_answer(session_id))
 
     session = session_manager.load_session(session_id)
 
@@ -11336,8 +11457,7 @@ def review_suggestions(
     question mark comes with the one before it. Then come the paragraph
     or turn holding the passage, with the passage marked, and the code,
     reading and reason. That text is read from the file now, never
-    stored; if another project is selected, none is shown.
-    edit_suggestion edits a span in place.
+    stored. edit_suggestion edits a span in place.
 
     Span alternatives: a pending, unadjusted suggestion may carry
     shorter/longer spans (core sentence; paragraph or speaker turn).
@@ -11368,6 +11488,10 @@ def review_suggestions(
         return json.dumps({"error": f"Session {session_id} not found"})
 
     session = session_manager.load_session(session_id)
+    # Read only with its project open (v0.15.4), as its writes are
+    mismatch = _check_session_project(session)
+    if mismatch is not None:
+        return json.dumps(mismatch, indent=2)
 
     # Get suggestions to show; a GUID that names none is said, not dropped
     not_found = []
@@ -11554,10 +11678,7 @@ def edit_suggestion(
     # argument is coding_session_id, aliased for the body.
     session_id = coding_session_id
     if not session_manager.session_exists(session_id):
-        return json.dumps({
-            "error": f"Session {session_id} not found",
-            "available_sessions": session_manager.list_sessions()
-        })
+        return json.dumps(_session_not_found_answer(session_id))
     session = session_manager.load_session(session_id)
     mismatch = _check_session_project(session)
     if mismatch is not None:
@@ -11916,6 +12037,10 @@ def update_suggestion_status(
             "in_more_than_one_list": overlap})
 
     session = session_manager.load_session(session_id)
+    # Decided only with its project open (v0.15.4), as it is applied
+    mismatch = _check_session_project(session)
+    if mismatch is not None:
+        return json.dumps(mismatch, indent=2)
 
     # Update statuses
     result = session.update_suggestions_by_guid(approve=approve, reject=reject,
@@ -16870,12 +16995,13 @@ def get_coding_session_info(coding_session_id: str) -> str:
     try:
         # Load session
         if not session_manager.session_exists(session_id):
-            return json.dumps({
-                "error": f"Session {session_id} not found",
-                "available_sessions": session_manager.list_sessions()
-            })
+            return json.dumps(_session_not_found_answer(session_id))
 
         session = session_manager.load_session(session_id)
+        # Read only with its project open (v0.15.4), as its writes are
+        mismatch = _check_session_project(session)
+        if mismatch is not None:
+            return json.dumps(mismatch, indent=2)
 
         # Return full session data. The on-disk format keeps its
         # "session_id" key (internal schema unchanged); the API-facing
@@ -16921,41 +17047,100 @@ def list_coding_sessions(
         project_path: Filter by a project (optional): its folder or the
             data.qda inside it, as select_project takes it; either form
             finds the project's sessions
-        days_old: Only show sessions from last N days (default: 30)
+        days_old: Only show sessions from last N days (default: 30), a
+            whole number from 1 to the days back to the year 1 (about
+            740,000)
 
     Returns:
         JSON with list of sessions and their metadata, each with the
         project's name (its folder's)
 
     Example:
-        "List all my coding sessions"
+        "List my coding sessions of the last 30 days"
         "Show coding sessions from the last 7 days"
         "List sessions for this project"
     """
+    # Worked out at the call (v0.15.4, the claims audit's point 3): below
+    # 1 nothing was listed, and past the year 1 the date overflowed
+    longest = days_back_to_year_one()
+    if (not isinstance(days_old, int) or isinstance(days_old, bool)
+            or not 1 <= days_old <= longest):
+        return json.dumps({"error": DAYS_OLD_REFUSAL.format(limit=longest),
+                           "days_old_range": [1, longest]}, indent=2)
     try:
-        sessions = session_manager.list_sessions(project_path, days_old)
+        listing = session_manager.sessions_listing(project_path, days_old)
+        sessions = listing.sessions
+        # What the list covers (v0.15.4): a project's own sessions are
+        # read from its folder only while it is selected
+        if listing.project_read:
+            covers = (LIST_COVERS_OPEN_PROJECT if project_path is not None
+                      else LIST_COVERS_EVERY)
+        else:
+            covers = (LIST_COVERS_OTHER_PROJECT if project_path is not None
+                      else LIST_COVERS_NO_PROJECT)
+        covers = covers.format(last=_last_days(days_old))
 
         if not sessions:
-            return json.dumps({
+            answer: Dict[str, Any] = {
                 "sessions": [],
                 "message": "No coding sessions found",
+                "covers": covers,
                 "filters": {
                     "project_path": project_path,
                     "days_old": days_old
                 }
-            }, indent=2)
-
-        # No rename needed here: SessionManager.list_sessions already
-        # builds every entry with the API-facing coding_session_id key,
-        # so the not-found envelopes below get it by construction too.
-        return json.dumps({
-            "session_count": len(sessions),
-            "sessions": sessions
-        }, indent=2)
+            }
+        else:
+            # No rename needed here: SessionManager.list_sessions already
+            # builds every entry with the API-facing coding_session_id
+            # key, so the not-found envelopes get it by construction too.
+            answer = {
+                "session_count": len(sessions),
+                "sessions": sessions,
+                "covers": covers,
+            }
+        if any(s.get("kept_in") == KEPT_ON_THIS_COMPUTER for s in sessions):
+            answer["kept_on_this_computer_note"] = SESSIONS_WAY_BACK_IN_LIST
+        _add_what_was_not_read(answer, listing, on_this_computer=True)
+        return json.dumps(answer, indent=2)
 
     except Exception as e:
         logger.error("Error in list_coding_sessions: %s", error_label(e))
         return json.dumps({"error": error_text(e)})
+
+
+# list_coding_sessions' answers (v0.15.4): what the list covers, and the
+# refusal of an age it cannot count
+LIST_COVERS_EVERY = (
+    "This list covers the sessions changed in {last}: the open project's, "
+    "kept in its Exegete coding sessions folder or on this computer, and "
+    "other projects' sessions kept on this computer. A project's own "
+    "sessions, kept in its Exegete coding sessions folder, are listed only "
+    "while it is selected.")
+LIST_COVERS_NO_PROJECT = (
+    "No project is selected, so this list covers only the sessions kept on "
+    "this computer, changed in {last}. A project's own sessions, kept in "
+    "its Exegete coding sessions folder, are listed only while it is "
+    "selected.")
+LIST_COVERS_OPEN_PROJECT = (
+    "This list covers the open project's sessions changed in {last}, those "
+    "kept in its Exegete coding sessions folder and those kept on this "
+    "computer.")
+LIST_COVERS_OTHER_PROJECT = (
+    "That project is not the one selected, so this list covers only its "
+    "sessions kept on this computer, changed in {last}. A project's own "
+    "sessions, kept in its Exegete coding sessions folder, are listed only "
+    "while it is selected.")
+DAYS_OLD_REFUSAL = (
+    "days_old is the number of days back from today whose sessions are "
+    "listed: a whole number from 1 to {limit:,}, which reaches back to the "
+    "year 1, the earliest date Exegete can count back to. Nothing was "
+    "listed.")
+
+
+def _last_days(days: int) -> str:
+    """'the last day', or 'the last 30 days'."""
+    return "the last day" if days == 1 else f"the last {days:,} days"
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
@@ -17557,10 +17742,7 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
     # argument is coding_session_id, aliased for the body.
     session_id = coding_session_id
     if not session_manager.session_exists(session_id):
-        return json.dumps({
-            "error": f"Session {session_id} not found",
-            "available_sessions": session_manager.list_sessions()
-        })
+        return json.dumps(_session_not_found_answer(session_id))
     session = session_manager.load_session(session_id)
     mismatch = _check_session_project(session)
     if mismatch is not None:
@@ -17776,6 +17958,10 @@ def review_proposals(coding_session_id: str,
     if not session_manager.session_exists(session_id):
         return json.dumps({"error": f"Session {session_id} not found"})
     session = session_manager.load_session(session_id)
+    # Read only with its project open (v0.15.4), as its writes are
+    mismatch = _check_session_project(session)
+    if mismatch is not None:
+        return json.dumps(mismatch, indent=2)
 
     not_found = []
     if proposal_guids:
@@ -18115,6 +18301,10 @@ def update_proposal_status(coding_session_id: str,
                      "only.",
             "in_more_than_one_list": overlap}, indent=2)
     session = session_manager.load_session(session_id)
+    # Decided only with its project open (v0.15.4), as it is created
+    mismatch = _check_session_project(session)
+    if mismatch is not None:
+        return json.dumps(mismatch, indent=2)
     result = session.update_proposals_by_guid(approve=approve, reject=reject)
     if result["changed"]:
         session_manager.save_session(session)

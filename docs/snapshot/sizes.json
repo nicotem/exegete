@@ -3,7 +3,7 @@
     "brief_characters": 1923,
     "opening_text_characters": 2042,
     "tool_count": 28,
-    "tool_definitions_characters": 77142,
+    "tool_definitions_characters": 77094,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -78,8 +78,8 @@
         "description_characters": 3480
       },
       "review_suggestions": {
-        "definition_characters": 1924,
-        "description_characters": 1384
+        "definition_characters": 1876,
+        "description_characters": 1337
       },
       "search_coded_text": {
         "definition_characters": 3617,
@@ -124,7 +124,7 @@
     "brief_characters": 14334,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 211325,
+    "tool_definitions_characters": 211381,
     "tools": {
       "add_annotation": {
         "definition_characters": 2238,
@@ -299,8 +299,8 @@
         "description_characters": 2695
       },
       "list_coding_sessions": {
-        "definition_characters": 1023,
-        "description_characters": 645
+        "definition_characters": 1127,
+        "description_characters": 747
       },
       "merge_category": {
         "definition_characters": 3044,
@@ -383,8 +383,8 @@
         "description_characters": 401
       },
       "review_suggestions": {
-        "definition_characters": 1924,
-        "description_characters": 1384
+        "definition_characters": 1876,
+        "description_characters": 1337
       },
       "save_names_list": {
         "definition_characters": 1292,

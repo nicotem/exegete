@@ -633,10 +633,10 @@ def test_a_pipe_put_beside_the_database_later_is_refused(fresh, tmp_path):
 def test_a_pipe_beside_the_sessions_other_project_gives_the_session_answers(
         fresh, tmp_path):
     """A session made in another project, whose journal is then a named
-    pipe, with a clean project open: the session's writes get the answer
-    for a session of another project, naming both, and its review the
-    note that contexts are not shown, never the other project's entry as
-    if the open project held it (fix round 1)."""
+    pipe, with a clean project open: the session's writes, and from
+    0.15.4 its reads, get the answer for a session of another project,
+    naming both, never the other project's entry as if the open project
+    held it (fix round 1)."""
     other = _another(fresh, tmp_path)
     journal = other / "data.qda-journal"
 
@@ -655,13 +655,14 @@ def test_a_pipe_beside_the_sessions_other_project_gives_the_session_answers(
             assert out.get("session_project") == other.name, out
             assert out.get("current_project") == fresh.name, out
             assert journal.name not in answer
-        review = server.review_suggestions(sid)
-        assert server.CONTEXT_NOT_SHOWN_NOTE in review
-        assert journal.name not in review
-        info = json.loads(server.get_coding_session_info(sid))
-        assert "error" not in info, info
-        assert info["suggestions"][0]["context_note"] \
-            == server.CONTEXT_NOT_SHOWN_NOTE
+        # The reads too (v0.15.4: a session is read only with its own
+        # project open), answered as the writes are
+        for answer in (server.review_suggestions(sid),
+                       server.get_coding_session_info(sid)):
+            out = json.loads(answer)
+            assert out.get("session_project") == other.name, out
+            assert out.get("current_project") == fresh.name, out
+            assert journal.name not in answer
         # The open project's own entry still answers in its own words
         own = fresh / "data.qda-journal"
         os.mkfifo(own)

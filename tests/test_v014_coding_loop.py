@@ -82,6 +82,15 @@ def on_this_computer(monkeypatch):
         str(server.session_manager.storage_dir)))
 
 
+def refused_as_another_projects(text):
+    """Whether a session's read was refused because another project is
+    open (v0.15.4: a session is read only with its own project open),
+    naming both projects' folders and nothing of the session."""
+    answer = json.loads(text)
+    return ("error" in answer and "session_project" in answer
+            and "current_project" in answer)
+
+
 def every_session_file():
     """Every session file in both places (v0.15.4)."""
     found = set(Path(server.session_manager.storage_dir).glob("*.json"))
@@ -778,7 +787,8 @@ class TestTheContextIsTheFilesOwn:
         server.current_project_path = str(twin)
         out = call("review_suggestions", coding_session_id=sid)
         assert "stored before" not in out
-        assert server.CONTEXT_NOT_SHOWN_NOTE in out
+        # v0.15.4: read only with its own project open
+        assert refused_as_another_projects(out)
 
     def test_a_span_the_file_no_longer_holds_shows_no_context(
             self, setup_server, qualcoder_db_path):
@@ -1205,14 +1215,13 @@ class TestFixRoundNoInventedContextAnywhere:
             self, setup_server, qualcoder_db_path, tmp_path):
         sid = self._old_session(qualcoder_db_path)
         self._open_a_twin(qualcoder_db_path, tmp_path)
-        info = jcall("get_coding_session_info", coding_session_id=sid)
-        entry = info["suggestions"][0]
-        assert INVENTED not in json.dumps(info)
-        assert entry["context_before"] == entry["context_after"] == ""
-        assert entry["context_note"] == server.CONTEXT_NOT_SHOWN_NOTE
+        info = call("get_coding_session_info", coding_session_id=sid)
+        assert INVENTED not in info
         review = call("review_suggestions", coding_session_id=sid)
         assert INVENTED not in review
-        assert server.CONTEXT_NOT_SHOWN_NOTE in review
+        # v0.15.4: neither reads it with another project open
+        assert refused_as_another_projects(info)
+        assert refused_as_another_projects(review)
 
 
 class TestFixRoundTwoHostsOnOneProject:
@@ -2206,9 +2215,11 @@ class TestFixRound2TheMinors:
         shutil.copytree(qualcoder_db_path, twin)
         server.current_project_path = str(twin)
         out = call("review_suggestions", coding_session_id=sid)
-        assert server.CONTEXT_NOT_SHOWN_NOTE in out
         assert "deadlines" not in out          # no text around it, stored
-        assert COPE in out                     # the passage itself
+        # v0.15.4: read only with its own project open, so not even the
+        # passage itself
+        assert refused_as_another_projects(out)
+        assert COPE not in out
 
     def test_names_that_all_match_two_codes_are_said_to(
             self, setup_server, qualcoder_db_path):
@@ -2430,11 +2441,12 @@ class TestFixRound3NoSpanTextStored:
         small = call("review_suggestions", coding_session_id=sid,
                      suggestion_guids=[guid])
         assert self.NAME not in small
-        assert "↔ longer (full speaker turn, " in small
-        entry = jcall("get_coding_session_info", coding_session_id=sid)[
-            "suggestions"][0]
-        assert all("preview" not in alt
-                   for alt in entry["span_alternatives"])
+        info = call("get_coding_session_info", coding_session_id=sid)
+        assert self.NAME not in info
+        # v0.15.4: read only with its own project open, so neither the
+        # spans nor their lengths are shown with another open
+        assert refused_as_another_projects(small)
+        assert refused_as_another_projects(info)
 
     def test_an_old_files_previews_are_never_shown_and_are_cut(
             self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):

@@ -1,23 +1,28 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.15.4, coding sessions kept with their project: the store (the
-first of three pieces).
+"""v0.15.4, coding sessions kept with their project: the store and the
+reads (the first two of three pieces).
 
 From 0.15.4 a new coding session is kept inside its project, in a
 top-level folder of its own, `Exegete coding sessions`, and goes
 wherever the project goes. Sessions made before 0.15.4 stay in
 Exegete's state folder and nothing moves; so does a session whose
 project's folder cannot hold it, with the reason (the owner's answers
-of 10 November 2026).
+of 10 November 2026). Every session read and decision is bound to the
+open project, as its writes are.
 
 After the design's "How it is checked"
-(DESIGN_0154_sessions-with-project.md), its tests 1, 3, 4, 6 and 7, a
-class each; each break fails with its change reverted (the piece's
-report says which were shown):
+(DESIGN_0154_sessions-with-project.md), its tests 1 to 7, a class each;
+each break fails with its change reverted (the pieces' reports say
+which were shown):
 
 1. A new session in the project's folder, with its note, owner-only and
    without the project's path; the project copied under another name
    and the original removed: the session works there, and undo takes
    back a change made after the copy.
+2. The three reads and the two decisions bound to the open project,
+   with the way back only where nothing is at the place a session
+   records; the five not-found answers list the open project's sessions
+   only.
 3. A project whose folder cannot hold a session keeps it on this
    computer and says why; a start reported as failed once its file
    holds the session is kept in the project; a session in the project
@@ -27,6 +32,9 @@ report says which were shown):
    after the replace was made is a save done; the file synced before
    the replace, the folder after it; capped; tried again on Windows;
    Exegete's temporary files.
+5. list_coding_sessions says what its list covers; a sessions folder
+   that cannot be read gives its reason, and entries that cannot be
+   read are counted, naming none; days_old's range.
 6. Backups and copies leave the temporary files out; a restore and its
    recovery keep the folder, a session saved after the safety backup
    included; a workspace copy carries it.
@@ -41,9 +49,12 @@ import json
 import logging
 import os
 import shutil
+import sqlite3
 import stat
 import sys
 import time
+from contextlib import closing
+from datetime import datetime
 from pathlib import Path
 
 import pytest
@@ -53,11 +64,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
 from exegete import (database, new_project, private_files,  # noqa: E402
-                     state_folder, undo)
+                     sessions, state_folder, undo)
 from exegete.database import QUALCODER_LOCK_FILENAME  # noqa: E402
 from exegete.sessions import (AICodingSession,  # noqa: E402
                               CodingSuggestion, KEPT_IN_PROJECT,
-                              KEPT_ON_THIS_COMPUTER, SessionManager)
+                              KEPT_ON_THIS_COMPUTER, ProposedCode,
+                              SessionManager)
 
 from test_v014_server_wide import QUOTE, TEXT_1  # noqa: E402
 from test_v0152_undo_record import (make_project, receipt_of,  # noqa: E402
@@ -408,10 +420,13 @@ class TestASessionInTheProjectThatCannotBeRead:
             assert "No project selected" in out["error"], (tool, out)
             assert "not found" not in out["error"]
         assert file_of(project, sid).is_file()
-        # one kept on this computer is still found
-        assert made_before.description in call(
-            "get_coding_session_info",
-            coding_session_id=made_before.session_id)
+        # one kept on this computer is found, and from piece 2 read only
+        # with its project open: the no-project answer, never "not found"
+        out = jcall("get_coding_session_info",
+                    coding_session_id=made_before.session_id)
+        assert "No project selected" in out["error"]
+        assert "not found" not in out["error"]
+        assert made_before.description not in json.dumps(out)
 
     def test_with_qualcoder_3_8_2_s_lock_a_session_starts_and_is_decided(
             self, project):
@@ -982,3 +997,473 @@ class TestEverySessionKeptInTheProject:
             for word in ("conflicted", "Maria", " 2.json",
                          f"session_{other}.json"):
                 assert word not in text, (word, text[:200])
+
+
+# ---------------------------------------------------------------------------
+# Test 2: the reads and the decisions bound to the open project, the
+# not-found answers, and a session not saved after a commit
+# ---------------------------------------------------------------------------
+
+# The three reads and the two decisions
+THE_FIVE = ("review_suggestions", "get_coding_session_info",
+            "review_proposals", "update_suggestion_status",
+            "update_proposal_status")
+UNKNOWN = "0f0f0f0f-0000-4000-8000-00000000abcd"
+
+
+def _five(sid, approve=(UNKNOWN,)):
+    """The three reads and the two decisions on `sid`, through the host's
+    call path: each answer parsed, or as text when it is not JSON (a
+    review)."""
+    out = {}
+    for tool in THE_FIVE:
+        args = {"coding_session_id": sid}
+        if tool.startswith("update_"):
+            args["approve"] = list(approve)
+        text = call(tool, **args)
+        try:
+            out[tool] = json.loads(text)
+        except ValueError:
+            out[tool] = text
+    return out
+
+
+def _kept_on_this_computer(db_path, description="kept on this computer"):
+    """A session kept on this computer recording `db_path`, as 0.15.3
+    kept every session: a passage of file 1 and a proposal."""
+    session = AICodingSession(project_path=str(db_path),
+                              description=description)
+    begin = TEXT_1.index(QUOTE)
+    session.add_suggestion(CodingSuggestion(
+        file_id=1, file_name="int1.txt", code_id=1, code_name="Trust",
+        start_pos=begin, end_pos=begin + len(QUOTE), segment_text=QUOTE))
+    session.add_proposal(ProposedCode(name="Belonging", memo="m",
+                                      rationale="r"))
+    SessionManager(str(server.session_manager.storage_dir)).save_session(
+        session)
+    return session
+
+
+def _state_file(sid) -> Path:
+    return Path(server.session_manager.storage_dir) / f"session_{sid}.json"
+
+
+def _select(project):
+    assert "error" not in jcall("select_project", project_path=str(project))
+
+
+def _refused_whole(out, sid):
+    """Each of the five refused, its passage, proposal and decision kept
+    from the conversation, and the session's file as it was."""
+    for tool, answer in out.items():
+        assert isinstance(answer, dict) and "error" in answer, (tool, answer)
+        assert QUOTE not in json.dumps(answer), tool
+        assert "Belonging" not in json.dumps(answer), tool
+
+
+class TestTheReadsAreBoundToTheOpenProject:
+
+    def test_another_existing_projects_session_is_refused(self, project,
+                                                          tmp_path):
+        other = make_project(tmp_path / "other")
+        theirs = _kept_on_this_computer(other / "data.qda")
+        _select(project)
+        before = _state_file(theirs.session_id).read_bytes()
+        out = _five(theirs.session_id,
+                    approve=[theirs.suggestions[0].guid])
+        _refused_whole(out, theirs.session_id)
+        for answer in out.values():
+            assert answer["session_project"] == other.name
+            assert answer["current_project"] == project.name
+            assert "way_back" not in answer
+        assert _state_file(theirs.session_id).read_bytes() == before
+
+    def test_a_moved_projects_session_is_refused_with_the_way_back(
+            self, project, tmp_path):
+        mine = _kept_on_this_computer(project / "data.qda")
+        server.db.close()
+        server.db = None
+        moved = tmp_path / "moved" / "Study.qda"
+        moved.parent.mkdir()
+        shutil.copytree(project, moved)
+        shutil.rmtree(project)
+        _select(moved)
+        before = _state_file(mine.session_id).read_bytes()
+        out = _five(mine.session_id, approve=[mine.suggestions[0].guid])
+        _refused_whole(out, mine.session_id)
+        for answer in out.values():
+            assert answer["error"] == server.SESSION_PROJECT_NOT_FOUND
+            assert answer["way_back"] == server._mark_unregistered(
+                server.SESSIONS_WAY_BACK)
+            assert "session_project" not in answer
+        assert _state_file(mine.session_id).read_bytes() == before
+        # put back at the place it records, it is read and decided there
+        server.db.close()
+        server.db = None
+        shutil.copytree(moved, project)
+        _select(project)
+        assert QUOTE in call("review_suggestions",
+                             coding_session_id=mine.session_id)
+
+    def test_a_place_holding_no_project_that_opens_gives_its_reason(
+            self, project, tmp_path):
+        broken = tmp_path / "broken" / "Broken.qda"
+        broken.mkdir(parents=True)
+        (broken / "data.qda").write_bytes(b"not a database " * 64)
+        theirs = _kept_on_this_computer(broken / "data.qda")
+        out = _five(theirs.session_id,
+                    approve=[theirs.suggestions[0].guid])
+        _refused_whole(out, theirs.session_id)
+        for answer in out.values():
+            assert answer["error"].startswith(
+                server.SESSION_PROJECT_UNUSABLE.split("{reason}")[0])
+            assert "SQLite database" in answer["error"]
+            assert "way_back" not in answer
+            assert answer["error"] != server.SESSION_PROJECT_NOT_FOUND
+
+    def test_the_five_not_found_answers_list_the_open_projects_only(
+            self, project, tmp_path):
+        other = make_project(tmp_path / "other")
+        theirs = _kept_on_this_computer(other / "data.qda",
+                                        "another project's")
+        _select(project)
+        here = start()["coding_session_id"]
+        made_before = _kept_on_this_computer(project / "data.qda")
+        target = tmp_path / "exports" / "probe.qdpx"
+        target.parent.mkdir()
+        answers = {
+            "record_suggestions": call(
+                "record_suggestions", coding_session_id=UNKNOWN,
+                suggestions=[{"file_id": 1, "code_name": "Trust",
+                              "segment_text": QUOTE, "reading": "explicit",
+                              "reasoning": "r"}]),
+            "edit_suggestion": call("edit_suggestion",
+                                    coding_session_id=UNKNOWN,
+                                    suggestion_guid=UNKNOWN),
+            "get_coding_session_info": call("get_coding_session_info",
+                                            coding_session_id=UNKNOWN),
+            "propose_codes": call("propose_codes", coding_session_id=UNKNOWN,
+                                  proposals=[{"name": "Fresh"}]),
+            "export_refi_qda": call("export_refi_qda",
+                                    output_path=str(target),
+                                    coding_session_id=UNKNOWN),
+        }
+        for tool, text in answers.items():
+            out = json.loads(text)
+            assert out["error"] == f"Session {UNKNOWN} not found", tool
+            listed = {s["coding_session_id"]: s["kept_in"]
+                      for s in out["available_sessions"]}
+            assert listed == {here: KEPT_IN_PROJECT,
+                              made_before.session_id: KEPT_ON_THIS_COMPUTER
+                              }, tool
+            assert out["available_sessions_note"] == \
+                server.AVAILABLE_SESSIONS_NOTE
+            assert theirs.session_id not in text and str(other) not in text
+
+
+class TestTheBoundReadsGuards:
+
+    def test_with_qualcoder_3_8_2_s_lock_both_places_are_read_and_decided(
+            self, project):
+        """The bound reads and decisions open both databases read-only
+        and read no lock file: QualCoder holding the project refuses
+        none of them, in either place."""
+        in_project = start()["coding_session_id"]
+        record(in_project)
+        jcall("propose_codes", coding_session_id=in_project,
+              proposals=[{"name": "Belonging", "memo": "m", "rationale": "r"}])
+        made_before = _kept_on_this_computer(project / "data.qda")
+        (project / QUALCODER_LOCK_FILENAME).write_text(
+            f"someone\n{time.time()}", encoding="utf-8")
+        try:
+            for sid in (in_project, made_before.session_id):
+                session = server.session_manager.load_session(sid)
+                guid = session.suggestions[0].guid
+                proposal = session.proposed_codes[0].guid
+                assert QUOTE in call("review_suggestions",
+                                     coding_session_id=sid)
+                info = jcall("get_coding_session_info", coding_session_id=sid)
+                assert "error" not in info, info
+                assert "Belonging" in call("review_proposals",
+                                           coding_session_id=sid)
+                decided = call("update_suggestion_status",
+                               coding_session_id=sid, approve=[guid])
+                assert not decided.lstrip().startswith("{"), decided
+                decided = jcall("update_proposal_status",
+                                coding_session_id=sid, approve=[proposal])
+                assert decided.get("success") is True, decided
+                session = server.session_manager.load_session(sid)
+                assert session.suggestions[0].status == "approved"
+                assert session.proposed_codes[0].status == "approved"
+        finally:
+            (project / QUALCODER_LOCK_FILENAME).unlink()
+
+    def test_a_session_in_another_projects_folder_is_never_found(
+            self, project, tmp_path):
+        theirs = start()["coding_session_id"]
+        record(theirs)
+        make_project(tmp_path / "other")
+        for tool, answer in _five(theirs).items():
+            assert answer["error"] == f"Session {theirs} not found", tool
+            assert theirs not in json.dumps(answer.get("available_sessions"))
+        assert file_of(project, theirs).is_file()
+
+    def test_every_read_only_tool_leaves_both_places_as_they_were(
+            self, project, tmp_path):
+        in_project = start()["coding_session_id"]
+        record(in_project)
+        made_before = _kept_on_this_computer(project / "data.qda")
+        other = make_project(tmp_path / "other")
+        theirs = _kept_on_this_computer(other / "data.qda")
+        _select(project)
+        state = Path(server.session_manager.storage_dir)
+        before = (tree(folder_of(project)), tree(state))
+        for sid in (in_project, made_before.session_id, theirs.session_id,
+                    UNKNOWN):
+            for tool in ("review_suggestions", "get_coding_session_info",
+                         "review_proposals"):
+                call(tool, coding_session_id=sid)
+        for args in ({}, {"project_path": str(other)}, {"days_old": 0}):
+            call("list_coding_sessions", **args)
+        assert (tree(folder_of(project)), tree(state)) == before
+
+
+# ---------------------------------------------------------------------------
+# Test 5: what the list covers, what could not be read, and days_old
+# ---------------------------------------------------------------------------
+
+def _covers(template, days=30):
+    return template.format(last=f"the last {days} days")
+
+
+class TestWhatTheListCovers:
+
+    def test_with_no_path_both_places_and_the_sentence_on_others(
+            self, project, tmp_path):
+        other = make_project(tmp_path / "other")
+        start()                                  # kept in the other's folder
+        theirs = _kept_on_this_computer(other / "data.qda", "theirs")
+        _select(project)
+        here = start()["coding_session_id"]
+        made_before = _kept_on_this_computer(project / "data.qda")
+        out = jcall("list_coding_sessions")
+        listed = {s["coding_session_id"]: s["kept_in"]
+                  for s in out["sessions"]}
+        assert listed == {here: KEPT_IN_PROJECT,
+                          made_before.session_id: KEPT_ON_THIS_COMPUTER,
+                          theirs.session_id: KEPT_ON_THIS_COMPUTER}
+        assert out["covers"] == _covers(server.LIST_COVERS_EVERY)
+        assert out["kept_on_this_computer_note"] == \
+            server.SESSIONS_WAY_BACK_IN_LIST
+        mine = jcall("list_coding_sessions", project_path=str(project))
+        assert {s["coding_session_id"] for s in mine["sessions"]} == {
+            here, made_before.session_id}
+        assert mine["covers"] == _covers(server.LIST_COVERS_OPEN_PROJECT)
+
+    def test_with_another_projects_path_its_sessions_on_this_computer(
+            self, project, tmp_path):
+        other = make_project(tmp_path / "other")
+        in_their_folder = start()["coding_session_id"]
+        _select(project)
+        out = jcall("list_coding_sessions", project_path=str(other))
+        # today "No coding sessions found" alone, the project having one
+        assert out["sessions"] == []
+        assert out["covers"] == _covers(server.LIST_COVERS_OTHER_PROJECT)
+        theirs = _kept_on_this_computer(other / "data.qda", "theirs")
+        out = jcall("list_coding_sessions", project_path=str(other),
+                    days_old=7)
+        assert [s["coding_session_id"] for s in out["sessions"]] == [
+            theirs.session_id]
+        assert out["covers"] == _covers(server.LIST_COVERS_OTHER_PROJECT, 7)
+        assert in_their_folder not in json.dumps(out)
+
+    def test_with_no_project_selected(self, project, monkeypatch):
+        start()
+        made_before = _kept_on_this_computer(project / "data.qda")
+        monkeypatch.setattr(server, "db", None)
+        monkeypatch.setattr(server, "current_project_path", None)
+        out = jcall("list_coding_sessions")
+        assert [s["coding_session_id"] for s in out["sessions"]] == [
+            made_before.session_id]
+        assert out["covers"] == _covers(server.LIST_COVERS_NO_PROJECT)
+
+
+def _folder_a_link(project, tmp_path):
+    """The project's sessions folder moved aside and a link left at its
+    name, the session in it."""
+    aside = tmp_path / "aside"
+    shutil.move(str(folder_of(project)), str(aside))
+    try:
+        folder_of(project).symlink_to(aside, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("this system cannot make a link")
+
+
+class TestWhatCouldNotBeRead:
+
+    def test_a_link_at_the_folders_name_gives_its_reason(self, project,
+                                                         tmp_path):
+        sid = start()["coding_session_id"]
+        made_before = _kept_on_this_computer(project / "data.qda")
+        _folder_a_link(project, tmp_path)
+        out = jcall("list_coding_sessions")
+        reason = str(private_files._folder_is_a_link(
+            private_files._SESSIONS_FOLDER_WORDS))
+        assert out["project_sessions_not_listed"] == \
+            server.PROJECT_SESSIONS_NOT_LISTED.format(reason=reason)
+        assert [s["coding_session_id"] for s in out["sessions"]] == [
+            made_before.session_id]
+        assert sid not in json.dumps(out)
+
+    def test_a_folder_its_owner_cannot_read_gives_its_reason(self, project):
+        if not POSIX or os.geteuid() == 0:
+            pytest.skip("a folder's modes are a POSIX matter, and root reads")
+        start()
+        os.chmod(folder_of(project), 0)
+        try:
+            out = jcall("list_coding_sessions")
+        finally:
+            os.chmod(folder_of(project), 0o700)
+        assert out["sessions"] == []
+        assert out["project_sessions_not_listed"].startswith(
+            server.PROJECT_SESSIONS_NOT_LISTED.split("{reason}")[0])
+        assert "could not be read" in out["project_sessions_not_listed"]
+        assert "message" in out and "covers" in out
+
+    def test_entries_that_cannot_be_read_are_counted_naming_none(
+            self, project, tmp_path, caplog):
+        sid = start()["coding_session_id"]
+        record(sid)
+        content = file_of(project, sid).read_text(encoding="utf-8")
+        linked = "1a1a1a1a-0000-4000-8000-00000000000a"
+        another = "2b2b2b2b-0000-4000-8000-00000000000b"
+        outside = tmp_path / "outside.json"
+        outside.write_text(content, encoding="utf-8")
+        try:
+            file_of(project, linked).symlink_to(outside)
+        except (OSError, NotImplementedError):
+            pytest.skip("this system cannot make a link")
+        file_of(project, another).write_text(content, encoding="utf-8")
+        garbage = "3c3c3c3c-0000-4000-8000-00000000000c"
+        _state_file(garbage).parent.mkdir(parents=True, exist_ok=True)
+        _state_file(garbage).write_text("{not json", encoding="utf-8")
+        caplog.set_level(logging.DEBUG)
+        listing = call("list_coding_sessions")
+        out = json.loads(listing)
+        assert [s["coding_session_id"] for s in out["sessions"]] == [sid]
+        assert out["sessions_not_read"] == 2
+        assert out["sessions_not_read_note"] == \
+            server.SESSIONS_NOT_READ_NOTE.format(count=2)
+        assert out["files_not_read_on_this_computer"] == 1
+        not_found = call("record_suggestions", coding_session_id=UNKNOWN,
+                         suggestions=[{"file_id": 1, "code_name": "Trust",
+                                       "segment_text": QUOTE,
+                                       "reading": "explicit",
+                                       "reasoning": "r"}])
+        assert json.loads(not_found)["sessions_not_read"] == 2
+        assert "files_not_read_on_this_computer" not in json.loads(not_found)
+        for text in (listing, not_found, caplog.text):
+            for name in (linked, another, garbage, "outside.json"):
+                assert name not in text, (name, text[:300])
+
+    def test_a_file_past_windows_limit_is_counted(self, project,
+                                                  monkeypatch):
+        sid = start()["coding_session_id"]
+        _too_long_for_windows(project, None, monkeypatch)
+        out = jcall("list_coding_sessions")
+        assert out["sessions"] == []
+        assert out["sessions_not_read"] == 1
+        assert "project_sessions_not_listed" not in out
+        not_found = jcall("get_coding_session_info",
+                          coding_session_id=UNKNOWN)
+        assert not_found["sessions_not_read"] == 1
+        assert sid not in json.dumps(out) + json.dumps(not_found)
+
+    def test_with_the_folder_unreadable_the_five_give_the_lookups_refusal(
+            self, project, tmp_path):
+        """A guard (the store's): never "not found" while the project's
+        folder cannot be read."""
+        start()
+        _folder_a_link(project, tmp_path)
+        refusal = str(SessionManager._folder_refusal(
+            private_files._folder_is_a_link(
+                private_files._SESSIONS_FOLDER_WORDS)))
+        target = tmp_path / "exports" / "probe.qdpx"
+        target.parent.mkdir()
+        for tool in ("record_suggestions", "edit_suggestion",
+                     "get_coding_session_info", "propose_codes",
+                     "export_refi_qda"):
+            args = {"coding_session_id": UNKNOWN}
+            if tool == "export_refi_qda":
+                args["output_path"] = str(target)
+            if tool == "record_suggestions":
+                args["suggestions"] = [{"file_id": 1, "code_name": "Trust",
+                                        "segment_text": QUOTE,
+                                        "reading": "explicit",
+                                        "reasoning": "r"}]
+            elif tool == "edit_suggestion":
+                args["suggestion_guid"] = UNKNOWN
+            elif tool == "propose_codes":
+                args["proposals"] = [{"name": "Fresh"}]
+            assert jcall(tool, **args) == {"error": refusal}, tool
+
+
+class TestTheAgeOfTheList:
+
+    @pytest.mark.parametrize("days", [0, -1])
+    def test_below_one_is_refused(self, project, days):
+        start()
+        out = jcall("list_coding_sessions", days_old=days)
+        assert "sessions" not in out
+        assert out["days_old_range"] == [1, sessions.days_back_to_year_one()]
+
+    def test_the_limit_worked_out_at_the_call_lists_and_one_more_is_not(
+            self, project, monkeypatch):
+        sid = start()["coding_session_id"]
+        fixed = datetime(2026, 11, 10, 12, 0, 0)
+        monkeypatch.setattr(sessions, "_now", lambda: fixed)
+        longest = sessions.days_back_to_year_one()
+        assert longest == 739929
+        out = jcall("list_coding_sessions", days_old=longest)
+        assert [s["coding_session_id"] for s in out["sessions"]] == [sid]
+        out = jcall("list_coding_sessions", days_old=longest + 1)
+        assert out["days_old_range"] == [1, longest]
+        assert "sessions" not in out
+
+    def test_the_internal_calls_36500_still_list_every_session(
+            self, project):
+        """A guard: the counts of pending suggestions and the stale
+        sessions keep listing sessions of any age."""
+        sid = start()["coding_session_id"]
+        record(sid)
+        path = file_of(project, sid)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["last_modified"] = "1990-01-01T00:00:00"
+        path.write_text(json.dumps(data), encoding="utf-8")
+        assert server._suggestion_counts(1) == (1, 0)
+        assert server._sessions_holding_old_text([1])[0] == [sid]
+        assert jcall("list_coding_sessions")["sessions"] == []
+
+
+class TestTheDeleteFollowsTheLookup:
+
+    def test_the_open_projects_file_else_this_computers_never_another(
+            self, project, tmp_path):
+        """A guard: a delete removes the open project's file, else the
+        state folder's, never a session kept in another project's
+        folder."""
+        other = make_project(tmp_path / "other")
+        theirs = start()["coding_session_id"]
+        _select(project)
+        here = start()["coding_session_id"]
+        made_before = _kept_on_this_computer(project / "data.qda")
+        out = jcall("delete_coding_session", coding_session_id=here)
+        assert out["success"] is True
+        assert not file_of(project, here).exists()
+        out = jcall("delete_coding_session",
+                    coding_session_id=made_before.session_id)
+        assert out["success"] is True
+        assert not _state_file(made_before.session_id).exists()
+        out = jcall("delete_coding_session", coding_session_id=theirs)
+        assert "error" in out
+        assert file_of(other, theirs).is_file()

@@ -379,8 +379,10 @@ class AICodingSession:
         # note: those sessions keep that behaviour. From 0.15.4 a scope
         # limited to named codes also keeps each code's date beside its
         # number, "code_dates" ({"<number>": "<date>"}): SQLite gives a
-        # deleted code's number to the next code made, and the date tells
-        # the two apart. A session without it is checked by number alone.
+        # deleted code's number to the next code made, and the date, kept
+        # to the second, tells the two apart unless the one was deleted
+        # and the other made within the same second. A session without
+        # it is checked by number alone.
         self.scope = self._clean_scope(scope)
         # A scope that is there but cannot be read (a damaged or hand-made
         # file) fails closed: nothing is recorded into the session, rather

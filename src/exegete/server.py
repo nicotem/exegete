@@ -4406,15 +4406,14 @@ NO_PROJECT_SESSIONS_NOTE = (
     "No project is selected, so no sessions are listed here: a session is "
     "used only with its project open.")
 SESSIONS_NOT_READ_NOTE = (
-    "{count} entry or entries at a session's name in the open project's "
-    "Exegete coding sessions folder could not be read as that session (a "
-    "link, a file that is too large or cannot be read, a file holding "
-    "another session's id, or on Windows a path too long), so none of them "
-    "is listed. Each is named session_<id>.json there, and a session tool "
-    "given that id says why it cannot be used.")
+    "Entries at a session's name in the open project's Exegete coding "
+    "sessions folder that could not be read as that session: {count}. Each "
+    "may be a link, a file that is too large or cannot be read, a file "
+    "holding another session's id, or on Windows a path too long, and none "
+    "of them is listed. Each is named session_<id>.json there, and a "
+    "session tool given that id says why it cannot be used.")
 PROJECT_SESSIONS_NOT_LISTED = (
-    "The open project's own sessions could not be listed, because its "
-    "Exegete coding sessions folder could not be read: {reason}")
+    "The open project's own sessions could not be listed. {reason}")
 
 
 def _session_not_found_answer(session_id: Any) -> Dict[str, Any]:
@@ -4461,9 +4460,9 @@ def _add_what_was_not_read(answer: Dict[str, Any],
 
 
 FILES_NOT_READ_ON_THIS_COMPUTER_NOTE = (
-    "{count} session file(s) in Exegete's sessions folder on this computer "
-    "({folder}) could not be read as their session, whichever project they "
-    "record, so none of them is listed.")
+    "Session files in Exegete's sessions folder on this computer ({folder}) "
+    "that could not be read as their session, whichever project they "
+    "record: {count}. None of them is listed.")
 
 
 def _find_occurrences(text: str, needle: str, max_hits: int = 11) -> List[int]:

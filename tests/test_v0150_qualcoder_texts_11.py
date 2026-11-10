@@ -104,9 +104,13 @@ RETENTION = " (retention never touches QualCoder's own backups)"
 # 0.15.1 on leave out and one made earlier may hold (its fix round 2,
 # tests/test_v0151_media_out.py); after the owner's sitting, the mark
 # read from the files in them (tests/test_v0151_sitting_fixes.py)
+# v0.15.4: and the temporary files of a session being saved, which
+# backups leave out in the project's sessions folder
+# (tests/test_v0154_sessions_with_project.py)
 BACKUPS_HOLD = (
-    "Exegete's backups hold the whole project folder except lock files "
-    "and SQLite's working files; those made from 0.15.1 on leave out its "
+    "Exegete's backups hold the whole project folder except lock files, "
+    "SQLite's working files and the temporary files of a coding session "
+    "being saved; those made from 0.15.1 on leave out its "
     "audio and video folders too, while one made by an earlier version "
     "may hold them, with recordings the project no longer has. Each "
     "backup's holds_audio_or_video says whether it holds any file in "

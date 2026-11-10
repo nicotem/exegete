@@ -3671,9 +3671,11 @@ Each is stated in full by its tool:
 - When the researcher wants to leave some occurrences of a name as they
   are, preview pseudonymise_source (not available in this tool set) with choose_occurrences. The page it
   opens is theirs: never open, read or look at it, and never ask them
-  for words from it. They tell you the ids to leave, and you give those
-  ids alone, in leave_occurrences. Numbers they give from the preview's
-  list go as they are in leave_numbers, with the list's numbering in
+  for words of the text it shows. They give you the occurrences'
+  numbers, in bold there as in the preview's list, or paste the line
+  the page gives them, which holds the file, the list's numbering and
+  the numbers. You give those alone: the numbers as they are in
+  leave_numbers, with the list's numbering (a pasted line's own) in
   numbering, and every id in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off

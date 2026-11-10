@@ -13442,7 +13442,9 @@ class QualcoderDatabase:
     def pseudonymise_plan(self, compiled, overlap_policy: str,
                           file_ids: Optional[Sequence[int]] = None,
                           occurrence_key: Optional[bytes] = None,
-                          leave: Optional[Sequence[str]] = None
+                          leave: Optional[Sequence[str]] = None,
+                          leave_numbers: Optional[Sequence[int]] = None,
+                          numbering: Optional[str] = None
                           ) -> Dict[str, Any]:
         """Everything one run would do, computed without writing anything.
 
@@ -13477,14 +13479,27 @@ class QualcoderDatabase:
         was; a file with no occurrence is not in it, as without a list.
         A list needs the key the ids are made with, so a list without
         one raises rather than being set aside unread.
+
+        With the key each file also gains `numbering`, its list's code
+        (occurrences.numbering, v0.15.4). With `leave_numbers`
+        (occurrences.canonical_numbers' numbers) and the `numbering` they
+        were read against, where that is the file's, each number names
+        the occurrence at its place in `found` (number 1 the first) and
+        joins the places the ids name, each once; numbers past the last
+        occurrence go to `numbers_past`. Where the numbering differs,
+        the numbers name nothing and the file says `numbering_changed`.
+        Numbers are a list as ids are (occurrences.list_given): whatever
+        reads `left_at`, `left` or `left_new_spans` reads them alike.
         """
         from . import occurrences
         from . import pseudonymise as engine
 
         leave = list(leave or ())
-        if leave and occurrence_key is None:
-            raise ValueError("leave_occurrences needs a plan made with an "
-                             "occurrence key")
+        numbers = list(leave_numbers or ())
+        given = occurrences.list_given(leave, numbers)
+        if given and occurrence_key is None:
+            raise ValueError("A list of occurrences to leave needs a plan "
+                             "made with an occurrence key")
         eligible, skipped = self.pseudonymise_sources(file_ids)
         visibility = self.coder_visibility_map()
         files: List[Dict[str, Any]] = []
@@ -13511,10 +13526,21 @@ class QualcoderDatabase:
                 ids = occurrences.full_ids(
                     occurrence_key, source["file_id"], sha,
                     [(item.start, item.end) for item in found])
-            if leave:
+                code = occurrences.numbering(ids)
+            if given:
                 left_at, unmatched, ambiguous = occurrences.match_each(
                     leave, ids)
                 kept = set(left_at)
+                # Numbers name places only against the numbering they
+                # were read from: against another they name nothing
+                changed = bool(numbers) and numbering != code
+                past = []
+                for number in ([] if changed else numbers):
+                    if number <= len(found):
+                        kept.add(number - 1)
+                    else:
+                        past.append(number)
+                left_at = sorted(kept)
                 replacements = [item for place, item in enumerate(found)
                                 if place not in kept]
             mapper = engine.SpanMapper(replacements, len(text))
@@ -13550,7 +13576,8 @@ class QualcoderDatabase:
             })
             if occurrence_key is not None:
                 files[-1]["occurrence_ids"] = ids
-            if leave:
+                files[-1]["numbering"] = code
+            if given:
                 # Where each left occurrence stands in the new text, for
                 # the count of the names left (never shown or written)
                 files[-1].update({
@@ -13562,11 +13589,16 @@ class QualcoderDatabase:
                         [mapper.map_start(found[place].start),
                          mapper.map_end(found[place].end)]
                         for place in left_at]})
+                if numbers:
+                    files[-1].update({"numbers_past": past,
+                                      "numbering_changed": changed})
         return {"eligible": digest_files, "skipped": skipped, "files": files,
                 "overlap_policy": overlap_policy,
                 "case_mode": compiled.case_mode,
                 "compiled": compiled,
-                "leave": leave}
+                "leave": leave,
+                "leave_numbers": numbers,
+                "numbering": numbering}
 
     def pseudonymise_memo_plan(self, compiled,
                                file_plan: Optional[Dict[str, Any]] = None
@@ -15056,11 +15088,27 @@ class QualcoderDatabase:
         "that overlap, are of the occurrences as found, before any is "
         "left; the run makes the replacements counted in "
         "totals.replacements.")
+    # How the researcher's choice is given (v0.15.4): by ids or by the
+    # rows' numbers, which hold only against the list they were read
+    # from. Said in every next note, the block's own and the ones that
+    # name the page (server._OCCURRENCES_NEXT_THEN), and naming no page
+    PSEUDONYMISE_OCCURRENCES_NUMBERS = (
+        "The researcher may name occurrences by id or by number. A row's "
+        "number counts the occurrences from 1 in the text's order; it is "
+        "never a line number, so ask if they may mean a line. Give ids in "
+        "leave_occurrences, every id whatever its characters, and numbers "
+        "as they are in leave_numbers, with this block's numbering in "
+        "numbering. The list replaces any given before; say back which "
+        "file it applies to. Numbers hold only for the list they were read "
+        "from: after a run on this file, or a change to its text or "
+        "mapping, ask for numbers from a new preview's list.")
     PSEUDONYMISE_OCCURRENCES_NEXT = (
-        "To leave some of these, ask the researcher which, then preview "
-        "again with choose_occurrences and leave_occurrences listing their "
-        "ids: that preview marks the ones left, for the researcher to "
-        "check, and its token is the one the run needs.")
+        "To leave some of these, ask the researcher which. "
+        + PSEUDONYMISE_OCCURRENCES_NUMBERS
+        + " Then preview again with the same mapping and case_mode, "
+        "choose_occurrences and the list: that preview marks the ones "
+        "left, for the researcher to check, and its token is the one the "
+        "run needs.")
 
     @classmethod
     def _pseudonymise_occurrences(cls, item: Dict[str, Any],
@@ -15084,6 +15132,11 @@ class QualcoderDatabase:
         (`leave_given`): each left one's row gains `"left": true`, and
         the block `left` (their number, the ones not listed included)
         and `left_note`. Without a list, `next` says how to give one.
+
+        Each row gives first its occurrence's `number`, from 1 in text
+        order, and the block gives the list's `numbering`, which numbers
+        given back come with (v0.15.4), on both paths: a number counts
+        occurrences, as an id names one, and says no more of the text.
         """
         from . import occurrences
         full = item.get("occurrence_ids")
@@ -15093,7 +15146,8 @@ class QualcoderDatabase:
         found = item.get("found", item["replacements"])
         shown = occurrences.shown_ids(full)[:occurrences.OCCURRENCES_LISTED]
         left = set(item.get("left_at", ()))
-        rows: List[Dict[str, Any]] = [{"id": one} for one in shown]
+        rows: List[Dict[str, Any]] = [{"number": number, "id": one}
+                                      for number, one in enumerate(shown, 1)]
         if may_echo_names:
             lines = occurrences.line_numbers(
                 item["old_text"],
@@ -15103,7 +15157,10 @@ class QualcoderDatabase:
         for place in left:
             if place < len(rows):
                 rows[place]["left"] = True
-        block: Dict[str, Any] = {"count": len(full), "listed": rows}
+        block: Dict[str, Any] = {
+            "count": len(full),
+            "numbering": item.get("numbering") or occurrences.numbering(full),
+            "listed": rows}
         if len(full) > len(shown):
             block["listed_in_part"] = True
             block["more"] = len(full) - len(shown)
@@ -15138,7 +15195,8 @@ class QualcoderDatabase:
         `occurrences` block (`_pseudonymise_occurrences`): short ids, each
         beside its line number when the mapping was typed into the call,
         from a plan built with an occurrence key. With a list of
-        occurrences to leave (the plan's `leave`) the block is given too,
+        occurrences to leave (the plan's `leave`, or its `leave_numbers`
+        from v0.15.4: occurrences.list_given) the block is given too,
         and marks the occurrences left, for the researcher to check. The
         entries' blocks and the overlap diagnostic are of the occurrences
         as found, the same with a list as without; `totals.replacements`
@@ -15184,6 +15242,7 @@ class QualcoderDatabase:
         that cannot name the file it is previewing cannot relay a
         preview.
         """
+        from . import occurrences
         from . import pseudonymise as engine
 
         compiled = plan["compiled"]
@@ -15200,7 +15259,8 @@ class QualcoderDatabase:
 
         context_withheld = include_context and not may_echo_names
         include_context = include_context and may_echo_names
-        leave_given = bool(plan.get("leave"))
+        leave_given = occurrences.list_given(plan.get("leave"),
+                                             plan.get("leave_numbers"))
         files = []
         totals = {"replacements": 0, "files": 0, "codings_changed": 0,
                   "annotations_changed": 0, "case_links_changed": 0,

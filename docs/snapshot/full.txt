@@ -6279,12 +6279,13 @@ project is written, and the result is a preview of exactly what would
 change, with a preview_token. Show the researcher the preview and
 every warning it carries, and ask whether to proceed. Only if they
 agree, call again with the same mapping, file_id, case_mode,
-overlap_policy, rewrite_memos, save_mapping_to_project and
-leave_occurrences when given, plus preview_token=<the token>. The
-token is valid for 60 minutes, and only while the text and the rows
-it covers are unchanged. If the project changed in between, the run
-is refused and you must preview again. Exegete takes a backup first,
-as before every change. A run that changes nothing takes none.
+overlap_policy, rewrite_memos, save_mapping_to_project, and
+leave_occurrences, leave_numbers and numbering when given, plus
+preview_token=<the token>. The token is valid for 60 minutes, and
+only while the text and the rows it covers are unchanged. If what
+the token covers changed in between, the run is refused and you
+must preview again. Exegete takes a backup first, as before every
+change. A run that changes nothing takes none.
 
 Deterministic and rule-based. Only the names in the mapping are
 replaced, as whole words, case-sensitively unless case_mode says
@@ -6537,24 +6538,22 @@ Args:
              one budget for the whole preview; a block that runs out
              of it says context_truncated.
     choose_occurrences: List every occurrence of a name this run
-             would replace, in text order, each as a short id in the
-             file's `occurrences` block: beside its line number with
-             a typed mapping, alone with use_project_pseudonyms. It
-             lists the first 150 and says how many more. It holds no
-             name, pseudonym or entry number, and no words of the
-             file. Set it when the researcher wants to choose
-             occurrences to leave as they are, such as those of a
-             second person with the same name. The preview then
-             writes a page for the researcher into the reading
-             folder and opens it. Not with rewrite_memos or
-             include_context.
-    leave_occurrences: The ids, from a preview with
-             choose_occurrences, of the occurrences this run leaves
-             as they are: at most 500 occurrences in one run, each
-             given by one id. This argument is bound into the token:
-             give it to a preview first, which marks the occurrences
-             left for the researcher to check, then repeat it on the
-             execute. Not with rewrite_memos or include_context.
+             would replace, in text order, in the file's `occurrences`
+             block: each numbered from 1, with a short id and, with a
+             typed mapping, its line number. It lists the first 150,
+             says how many more and gives the list's `numbering`. It
+             holds no name, pseudonym, entry number or words of the
+             file. The preview then writes a page for the researcher
+             into the reading folder and opens it. Neither this nor
+             the next three go with rewrite_memos or include_context.
+    leave_occurrences: The ids, from such a preview, of occurrences
+             to leave as they are; every id goes here.
+    leave_numbers, numbering: Or their numbers in it, as the
+             researcher gives them, with its `numbering`. Each number
+             is read as file_id is, so an id of digits is a number
+             here. With leave_occurrences, at most 500 occurrences in
+             one run. Give these three to a preview first: it marks
+             those left for the researcher to check.
 
 The arguments from include_context to choose_occurrences,
 record_in_journal and researcher_keeps_mapping are not bound into
@@ -6563,9 +6562,9 @@ not "a different operation": it changes what is shown, whether the
 run records itself, or where the mapping is said to be kept. A pair
 refused on a preview is refused on the execute call too. The
 arguments that are bound are mapping, file_id, case_mode,
-overlap_policy, rewrite_memos, save_mapping_to_project and
-leave_occurrences when given, and they must be repeated identically
-on the execute call.
+overlap_policy, rewrite_memos, save_mapping_to_project, and
+leave_occurrences, leave_numbers and numbering when given, and they
+must be repeated identically on the execute call.
 
 Refused while the project's lock file is active (QualCoder 3.8.2 has
 the project open, or another conversation using Exegete is writing
@@ -6698,6 +6697,33 @@ Returns:
         ],
         "default": null,
         "title": "Leave Occurrences"
+      },
+      "leave_numbers": {
+        "anyOf": [
+          {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Leave Numbers"
+      },
+      "numbering": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Numbering"
       }
     },
     "required": [
@@ -8504,7 +8530,9 @@ Each is stated in full by its tool:
   are, preview pseudonymise_source with choose_occurrences. The page it
   opens is theirs: never open, read or look at it, and never ask them
   for words from it. They tell you the ids to leave, and you give those
-  ids alone, in leave_occurrences.
+  ids alone, in leave_occurrences. Numbers they give from the preview's
+  list go as they are in leave_numbers, with the list's numbering in
+  numbering, and every id in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a
@@ -9215,7 +9243,9 @@ Each is stated in full by its tool:
   are, preview pseudonymise_source with choose_occurrences. The page it
   opens is theirs: never open, read or look at it, and never ask them
   for words from it. They tell you the ids to leave, and you give those
-  ids alone, in leave_occurrences.
+  ids alone, in leave_occurrences. Numbers they give from the preview's
+  list go as they are in leave_numbers, with the list's numbering in
+  numbering, and every id in leave_occurrences.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a

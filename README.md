@@ -510,7 +510,7 @@ EPUB, with libraries under the AGPL: INSTALL.md says more).
 
 | Tool set | Tools | Tool definitions | For | Default in |
 |---|---|---|---|---|
-| `full` | 80: every tool, creating a project and the earlier names of two renamed tools included | about 200,000 characters, 50k tokens | hosted models, such as Claude or OpenAI's | every route |
+| `full` | 80: every tool, creating a project and the earlier names of two renamed tools included | about 210,000 characters, 53k tokens | hosted models, such as Claude or OpenAI's | every route |
 | `core` | 28: reading, searching, coding with your approval, memos, backups and undoing changes, without creating a project or bringing documents in | about 76,000 characters, 19k tokens | local models (LM Studio, a context of 32k or more) | none: set `EXEGETE_TOOLSET=core`, or the extension's switch "Limit Exegete to its small tool set" |
 
 A host sends every tool's definition (name, description and arguments)

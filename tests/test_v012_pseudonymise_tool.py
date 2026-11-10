@@ -8592,10 +8592,12 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "file or a source with no stored text is refused with the reason "
          "(pdf_source, no_fulltext, unknown_file_id)."),
         ("repeat_the_same_bound_arguments",       # decision A; Brief 2
-         # v0.15.3: leave_occurrences joins them, "same" in lower case
+         # v0.15.3: leave_occurrences joins them, "same" in lower case;
+         # v0.15.4: the numbers and their numbering too
          "call again with the same mapping, file_id, case_mode, "
-         "overlap_policy, rewrite_memos, save_mapping_to_project and "
-         "leave_occurrences when given, plus preview_token=<the token>."),
+         "overlap_policy, rewrite_memos, save_mapping_to_project, and "
+         "leave_occurrences, leave_numbers and numbering when given, plus "
+         "preview_token=<the token>."),
         ("a_carrying_pseudonym_is_withheld",             # fix round 1, F1
          "A pseudonym that carries one of those names is withheld (null) "
          "wherever the preview would quote it, and its entry number stands "
@@ -8628,11 +8630,12 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "reported as such: with fewer names, a text file could be "
          "counted. A file too large for any mapping is reported too."),
         ("the_bound_arguments",                   # decision A; Brief 2
-         # v0.15.3: leave_occurrences joins them, named without a count
+         # v0.15.3: leave_occurrences joins them, named without a count;
+         # v0.15.4: the numbers and their numbering too
          "The arguments that are bound are mapping, file_id, case_mode, "
-         "overlap_policy, rewrite_memos, save_mapping_to_project and "
-         "leave_occurrences when given, and they must be repeated "
-         "identically on the execute call."),
+         "overlap_policy, rewrite_memos, save_mapping_to_project, and "
+         "leave_occurrences, leave_numbers and numbering when given, and "
+         "they must be repeated identically on the execute call."),
         ("the_unbound_arguments",                        # Brief 2, H.2.5
          # v0.15.3: choose_occurrences joins them, named without a count
          "The arguments from include_context to choose_occurrences, "

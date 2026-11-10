@@ -121,10 +121,10 @@
   },
   "counted": "Characters, as Python counts them. tool_definitions_characters: json.dumps, with Python's defaults, of the list of every tool's name, description and input schema, in the order tools/list gives (TOOLS.md, the tool sets); definition_characters: one tool's entry in that list, alone.",
   "full": {
-    "brief_characters": 14180,
+    "brief_characters": 14334,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 210397,
+    "tool_definitions_characters": 210630,
     "tools": {
       "add_annotation": {
         "definition_characters": 2238,
@@ -335,8 +335,8 @@
         "description_characters": 3623
       },
       "pseudonymise_source": {
-        "definition_characters": 20989,
-        "description_characters": 18691
+        "definition_characters": 21222,
+        "description_characters": 18682
       },
       "query_by_attribute": {
         "definition_characters": 3267,

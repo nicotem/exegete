@@ -149,11 +149,16 @@ class TestTheRefusalNamesBothCauses:
         line = next(line for line in block.splitlines()
                     if line.strip().startswith("description:"))
         value = line.split("description:", 1)[1].strip()
-        assert value == (
-            "Writes are refused while the project's lock file is active "
-            "(QualCoder 3.8.2 has the project open, or another conversation "
-            "using Exegete is writing to it); QualCoder 4.0 writes no lock "
-            "file, so an open project there can only be guessed at.")
+        # v0.15.4: in SUPPORT.md's sentences, the two causes and 4.0's
+        # missing lock file, each a fact of its own
+        for fact in ("Exegete refuses every change to the project's "
+                     "database while its lock file is active.",
+                     "QualCoder 3.8.2 writes one while it has the project "
+                     "open, and so does " + BOTH_CAUSES + " while it writes.",
+                     "QualCoder 4.0 writes no lock file.",
+                     "Exegete looks for signs of an open 4.0 window, but it "
+                     "can miss one."):
+            assert fact in value, fact
         # Still one plain YAML value: nothing in it starts a mapping or a
         # comment, and it does not open with a quote or an indicator
         assert ": " not in value and " #" not in value

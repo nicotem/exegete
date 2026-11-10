@@ -8424,9 +8424,13 @@ class QualcoderDatabase:
 
                     total_excluded += content_excluded
                     if content_found and content_shown == 0 and \
-                            content_excluded == content_found:
+                            content_excluded == content_found and \
+                            not matched_in["filename"]:
                         # Nothing novel in this file: not a result, but
-                        # counted: "every match already coded" is an answer
+                        # counted: "every match already coded" is an
+                        # answer. A file listed for its name is not
+                        # counted as well (v0.15.4, the claims audit's
+                        # point 49): its entry gives its content counts
                         files_all_excluded += 1
 
                 # If any matches, add to results

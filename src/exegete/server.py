@@ -8228,13 +8228,10 @@ def get_coded_segments(code_id: int, limit: int = 100,
             # Count suppressed rows for THIS code (disclosure may count,
             # never name, hidden coders), on the files of file_ids as the
             # segments and codings_not_shown are (v0.15.4, the claims
-            # audit's point 44)
-            scope = scoped_files or None
-            suppressed = (db_.count_codings_for_code(code_id,
-                                                     honor_visibility=False,
-                                                     file_ids=scope)
-                          - db_.count_codings_for_code(code_id,
-                                                       file_ids=scope))
+            # audit's point 44); an empty list is every file
+            suppressed = (db_.count_codings_for_code(
+                code_id, honor_visibility=False, file_ids=scoped_files)
+                - db_.count_codings_for_code(code_id, file_ids=scoped_files))
             note["codings_suppressed"] = max(0, suppressed)
         payload["coder_visibility"] = note
     return _ai_json(payload, indent=2)

@@ -3,7 +3,7 @@
     "brief_characters": 1923,
     "opening_text_characters": 2042,
     "tool_count": 28,
-    "tool_definitions_characters": 77452,
+    "tool_definitions_characters": 77519,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -86,8 +86,8 @@
         "description_characters": 2787
       },
       "search_files": {
-        "definition_characters": 5794,
-        "description_characters": 4756
+        "definition_characters": 5861,
+        "description_characters": 4823
       },
       "search_memos": {
         "definition_characters": 2499,
@@ -124,7 +124,7 @@
     "brief_characters": 14334,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 211964,
+    "tool_definitions_characters": 212031,
     "tools": {
       "add_annotation": {
         "definition_characters": 2337,
@@ -395,8 +395,8 @@
         "description_characters": 2787
       },
       "search_files": {
-        "definition_characters": 5794,
-        "description_characters": 4756
+        "definition_characters": 5861,
+        "description_characters": 4823
       },
       "search_memos": {
         "definition_characters": 2466,

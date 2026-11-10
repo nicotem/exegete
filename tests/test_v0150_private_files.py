@@ -1117,14 +1117,21 @@ class TestTheDocuments:
         assert "—" not in section
 
     def test_privacy_lists_the_folder_among_what_stays_local(self):
+        # (v0.15.4, PRIVACY read whole: the list "What stays local, always"
+        # went into "Files Exegete keeps on your computer", which gives the
+        # folder its row in the table and its place among the project's
+        # files, kept by you and never returned to the assistant)
         local = _flat(_read("PRIVACY.md"))
-        local = local[local.index("What stays local, always"):]
-        item = ("- the project's `Exegete` folder (v0.15.0), with the files "
-                "you fill in for it: yours to keep or delete; never returned "
-                "to the assistant (\"Files Exegete keeps on your computer\")")
-        assert item in local
-        assert local.index("- the reading folder (v0.14.3)") < \
-            local.index(item) < local.index("- the texts an import's preview")
+        local = local[local.index("## Files Exegete keeps on your "
+                                  "computer"):]
+        assert ("| Files you fill in | the `Exegete` folder inside the "
+                "project |") in local
+        assert ("you: Exegete never deletes them, and a restore keeps them "
+                "as they are") in local
+        assert ("the **`Exegete` folder**, with the files you fill in "
+                "(below)") in local
+        assert ("**Files you fill in.** The files you fill in are never "
+                "returned to the assistant") in local
 
     def test_tools_and_the_changelog(self):
         tools = _flat(_read("TOOLS.md"))

@@ -722,8 +722,11 @@ class TestPrivacyQuotesOpenAI:
                 "before you rely on the quote.") in section
 
     def test_the_flow_names_openai(self):
+        # (v0.15.4, PRIVACY read whole: "What stays local" went into
+        # "Files Exegete keeps on your computer"; the flow's opening ends
+        # where the rules it protects begin)
         flow = _between(_flat("PRIVACY.md"), "## How your data flows",
-                        "What stays local")
+                        "**What the rules here protect.**")
         assert ("for OpenAI's apps (the ChatGPT desktop app and Codex) it is "
                 "OpenAI") in flow
 
@@ -1506,9 +1509,11 @@ def _shipped_documents():
 
 
 def _privacy_hosts():
+    # (v0.15.4, PRIVACY read whole: the section alone, now that the next
+    # one lists what Exegete keeps in bold items of its own)
     return _between(_flat("PRIVACY.md"),
                     "## Assistants that open files by themselves",
-                    "## Keeping notes private from the AI")
+                    "## Files Exegete keeps on your computer")
 
 
 class TestAssistantsOwnFileAccess:
@@ -1998,9 +2003,11 @@ class TestClaudeCodesRoutes:
         hosts = _privacy_hosts()
         assert "With Claude Code or Cowork, keep your projects out of " \
                "their folders, as above." not in hosts
-        assert ("an empty folder of its own keeps your projects out of that "
-                "folder, but does not stop its read-only commands reading "
-                "them") in hosts
+        # (v0.15.4, PRIVACY read whole: said in Claude Code's own entry,
+        # where "For participants' data" repeated it)
+        assert ("empty folder of its own, as the Terminal guide's steps use, "
+                "keeps your projects out of that folder, but does not stop "
+                "its read-only commands reading them") in hosts
 
 
 # Anthropic's article on computer use (read 30 September 2026)
@@ -2131,8 +2138,10 @@ class TestTheSmallerPoints:
                 assert gone not in text, (name, gone)
 
     def test_privacy_opens_with_it_and_lm_studio_is_exact(self):
+        # (v0.15.4: the list "What stays local, always" went into "Files
+        # Exegete keeps on your computer")
         opening = _between(_flat("PRIVACY.md"), "## How your data flows",
-                           "What stays local, always")
+                           "**Error answers and Exegete's log.**")
         assert ("An assistant that opens files by itself can send more, "
                 "outside Exegete: \"Assistants that open files by "
                 "themselves\", below, says which assistants do, and what to "

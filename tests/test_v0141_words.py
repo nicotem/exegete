@@ -340,8 +340,10 @@ class TestFixRoundOneWords:
         return text[first:text.index(end, first)]
 
     @pytest.mark.parametrize("name, start, end", [
-        ("PRIVACY.md", "Exegete's own folder, `~/.exegete`",
-         "- AI-coding session files"),
+        # (v0.15.4, PRIVACY read whole: its own paragraph in "Files
+        # Exegete keeps on your computer")
+        ("PRIVACY.md", "**The earlier name.**",
+         "**In the project's folder**"),
         ("CHANGELOG.md", "The server's own folder is `~/.exegete`",
          "- The resources' addresses")])
     def test_the_move_promises_what_the_code_does(self, name, start, end):

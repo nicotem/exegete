@@ -295,8 +295,9 @@ def test_claude_codes_file_tools_in_auto_mode_are_named():
             "file tools in auto mode.") in section
     hosts = _between(_flat("PRIVACY.md"), "## Assistants that open files "
                      "by themselves", "## Keeping notes private")
+    # (v0.15.4, PRIVACY read whole: said in Claude Code's own entry)
     assert ("but does not stop its read-only commands reading them, or its "
-            "file tools in auto mode (above)") in hosts
+            "file tools in auto mode.") in hosts
 
 
 # ---------------------------------------------------------------------------
@@ -331,7 +332,7 @@ def _chat_suggestions():
             "## Installation steps"),
         "PRIVACY, practical mitigations": _between(
             privacy, "- **An assistant that opens files by itself can read "
-            "a project whole**", "- **Consult your institution's"),
+            "a project whole**", "- **Advice.**"),
     }
 
 
@@ -703,7 +704,8 @@ def test_deleting_the_name_file_says_its_exception():
             "unless the earlier `qualcoder_mcp.json` beside it could not "
             "be marked as moved and still holds a name (Exegete says so "
             "while it stays unmarked): that name would then come back "
-            "without a question, so remove both files.") in privacy
+            "without a question, so you could remove both files.") \
+        in privacy  # (v0.15.4: a suggestion, where it was an instruction)
     assert "Deleting it makes the next AI write ask for the name again." \
         not in privacy
     warning = project_settings.removing_alone_warning("Claude")
@@ -808,7 +810,8 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "Linux `~/.cache/exegete/reading`",
             "the pseudonymisation run records "
             "(`~/.exegete/pseudonymisation/`)",
-            "Claude Desktop's log of the extension, which keeps every "
+            # (v0.15.4: "can hold", dated from MCP's page on debugging)
+            "Claude Desktop's log of the extension, which can hold every "
             "request and answer",
             "Codex's session files (`~/.codex/sessions`)",
             "Claude Code's transcripts (`~/.claude/projects/`)",

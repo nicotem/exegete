@@ -56,8 +56,9 @@ its fix. Describe it there without copying data, as above.
    setting. An import of PyMuPDF anywhere else, such as your own check
    of what is installed, does not. On a Mac with Apple silicon, with
    onnxruntime 1.31.0, such an import made onnxruntime write a device id
-   and a database of events into the home folder. Whether it sent
-   anything was not watched. You can give the setting yourself before
+   and a database of events into the home folder, in
+   `Library/Application Support/Microsoft/DeveloperTools/.onnxruntime`.
+   Whether it sent anything was not watched. You can give the setting yourself before
    you start Python, with `export ORT_DISABLE_TELEMETRY=1` in the
    Terminal. On Windows, onnxruntime does not read the setting:
    [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows),

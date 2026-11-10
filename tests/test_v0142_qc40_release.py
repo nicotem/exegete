@@ -262,15 +262,22 @@ def test_the_bug_report_form_names_the_release():
     for words in ("4.0-Beta", "4.0 Beta", "9bddf17", "a released QualCoder"):
         assert words not in form, words
     # v0.14.2 (the owner's ruling of 7 October 2026): asked only of those
-    # who use QualCoder
-    assert ('description: A release (3.8.x or 4.0), or "none" if you do '
-            'not use QualCoder.') in form
+    # who use QualCoder (v0.15.4: the label says so, and the sentence gives
+    # the two releases and "none" without naming QualCoder again)
+    asked = form[form.index("id: qualcoder-version"):]
+    asked = asked[:asked.index("- type:")]
+    assert "label: QualCoder version, if you use it" in asked
+    assert '3.8.x or 4.0, or "none" if you do not use it.' in asked
     # v0.15.0, the whole-branch review's round 3: the lock file has two
-    # causes, QualCoder 3.8 or another conversation using Exegete
-    assert ("Writes are refused while the project's lock file is active "
-            "(QualCoder 3.8.2 has the project open, or another conversation "
-            "using Exegete is writing to it); QualCoder 4.0 writes no lock "
-            "file") in form
+    # causes, QualCoder 3.8.2 or another conversation using Exegete; 4.0
+    # writes none (v0.15.4: in SUPPORT.md's sentences)
+    opened = form[form.index("id: qualcoder-open"):]
+    opened = opened[:opened.index("- type:")]
+    assert "label: If you use QualCoder, was the project open" in opened
+    for fact in ("QualCoder 3.8.2 writes one while it has the project open",
+                 "another conversation using Exegete while it writes",
+                 "QualCoder 4.0 writes no lock file"):
+        assert fact in opened, fact
 
 
 def test_the_verified_check_would_notice():

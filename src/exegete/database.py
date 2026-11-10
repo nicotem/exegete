@@ -13742,35 +13742,17 @@ class QualcoderDatabase:
                                 if place not in kept]
             if phrases:
                 # Phrases to keep (v0.15.4): the occurrences as found that
-                # lie wholly inside an occurrence of a phrase, in either
-                # reading of the text, leave `replacements` as those a
-                # list leaves do, and nothing else changes
-                spans = engine.phrase_spans(
-                    phrases, text, doc_readers.NOTE_MARKER
-                    if source["through_markers"] else None)
-                kept_at, each = engine.places_kept(found, spans, left_at)
+                # lie inside one leave `replacements` as those a list
+                # leaves do, and nothing else changes
+                kept_at, each = self._pseudonymise_kept(
+                    phrases, source, found, left_at)
                 inside = {found[place].start for place in kept_at}
                 replacements = [item for item in replacements
                                 if item.start not in inside]
             mapper = engine.SpanMapper(replacements, len(text))
-            if replacements:
-                rows = self._pseudonymise_rows(source["file_id"])
-                for table, items in rows.items():
-                    hideable = table in self.PSEUDONYMISE_HIDEABLE
-                    for row in items:
-                        row["hidden"] = bool(
-                            hideable and coder_is_hidden(visibility,
-                                                         row["owner"]))
-                        row["map"] = mapper.map_row(row["pos0"], row["pos1"],
-                                                    overlap_policy)
-            else:
-                # Left with no replacement, by a list, by phrases or by
-                # both (v0.15.4): as a file with no match, its rows are
-                # neither read nor mapped, so a row stored past the end of
-                # its text is not clamped, nor counted or asked about for
-                # a run that leaves the file as it is. The tables are
-                # present and empty, since every reader indexes them
-                rows = {"code_text": [], "annotation": [], "case_text": []}
+            rows = self._pseudonymise_mapped_rows(
+                source["file_id"], mapper, replacements, overlap_policy,
+                visibility)
             # Of the occurrences as found: a name of the mapping inside or
             # overlapping an occurrence left is named here still, with a
             # list as without one
@@ -13836,6 +13818,51 @@ class QualcoderDatabase:
             # For the note plan, which keeps the same phrases in notes
             plan["keep_phrases"] = phrases
         return plan
+
+    @staticmethod
+    def _pseudonymise_kept(phrases: Sequence[Any], source: Dict[str, Any],
+                           found: Sequence[Any], left_at: Sequence[int]
+                           ) -> Tuple[List[int], List[Dict[str, int]]]:
+        """The places in `found` that lie wholly inside an occurrence of a
+        phrase to keep (v0.15.4), found in the file's text as stored and,
+        in a Word, OpenDocument or RTF file, through the import's markers
+        too, as its names are; and each phrase's counts, by its number."""
+        from . import pseudonymise as engine
+
+        spans = engine.phrase_spans(
+            phrases, source["text"],
+            doc_readers.NOTE_MARKER if source["through_markers"] else None)
+        kept_at, each = engine.places_kept(found, spans, left_at)
+        return kept_at, [{"number": phrase.number, **counts}
+                         for phrase, counts in zip(phrases, each)]
+
+    def _pseudonymise_mapped_rows(self, file_id: int, mapper,
+                                  replacements: Sequence[Any],
+                                  overlap_policy: str,
+                                  visibility: Optional[Dict[str, int]]
+                                  ) -> Dict[str, List[Dict]]:
+        """A file's rows, each with whether its coder is hidden and its map
+        under the run's replacements.
+
+        A file left with no replacement, by a list, by phrases to keep or
+        by both (v0.15.4), has its rows neither read nor mapped, as a file
+        with no match has none: so a row stored past the end of its text
+        is not clamped, nor counted or asked about with
+        allow_hidden_coder, for a run that leaves the file as it is. The
+        three tables are present and empty, since every reader indexes
+        them.
+        """
+        if not replacements:
+            return {"code_text": [], "annotation": [], "case_text": []}
+        rows = self._pseudonymise_rows(file_id)
+        for table, items in rows.items():
+            hideable = table in self.PSEUDONYMISE_HIDEABLE
+            for row in items:
+                row["hidden"] = bool(
+                    hideable and coder_is_hidden(visibility, row["owner"]))
+                row["map"] = mapper.map_row(row["pos0"], row["pos1"],
+                                            overlap_policy)
+        return rows
 
     def pseudonymise_memo_plan(self, compiled,
                                file_plan: Optional[Dict[str, Any]] = None

@@ -351,12 +351,12 @@ Neither carries SQLite's message, which can quote a note, private part
 included: an error from the database is reported by its kind and
 SQLite's short name for it (for example `IntegrityError
 SQLITE_CONSTRAINT_TRIGGER`), and a value that is not UTF-8, or an error
-of a kind Exegete does not expect, by its kind alone. The resources
-(the `exegete://` addresses) answer an error that Exegete meets as their
+of a kind Exegete does not expect, by its kind alone. The resources (the
+`exegete://` addresses) answer an error that Exegete meets as their
 content, as a tool does, so the MCP library logs none of those. An
 address whose id is not a number, such as `exegete://codes/abc`, is
-refused by the MCP library before Exegete sees it, with a protocol
-error that quotes what was sent; no line is logged for it. Exegete's
+refused by the MCP library before Exegete sees it, with a protocol error
+that quotes what was sent; the library logs no error for it. Exegete's
 own error texts are answered as they are, and some repeat what the
 caller supplied, such as a code name that is already taken.
 

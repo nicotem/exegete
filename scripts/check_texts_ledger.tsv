@@ -7,11 +7,6 @@
 # sentence's first 80 characters, a reading aid never compared. A reason
 # beginning "seeded" marks a sentence no reader has read yet: a reader
 # replaces it by hand with their own, once the sentence is read.
-e2d8493fcf579596	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded 27 October, to be read	A release (3.8.x or 4.0), or "none" if you do not use QualCoder.
-e67dba5342183210	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded 27 October, to be read	For a build from QualCoder's source, add the git commit if you know it.
-ba439373518884db	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded 27 October, to be read	Was the project open in QualCoder at the time?
-67746e6bc574473b	.github/ISSUE_TEMPLATE/bug_report.yml	document	qualcoder	seeded 27 October, to be read	Writes are refused while the project's lock file is active (QualCoder 3.8.2 has 
-029f9a2dcbd37605	.github/ISSUE_TEMPLATE/feature_request.yml	document	voice	seeded 27 October, to be read	The research task or workflow, not just the feature.
 c5cf3518abeab52f	AI_CODING_GUIDE.md	document	qualcoder	the title of a section about QualCoder's versions or its import	"Supported QualCoder versions" in TOOLS.md says what can be done with either
 8b264ea69d787073	AI_CODING_GUIDE.md	document	qualcoder	the title of a section about QualCoder's versions or its import	"Supported QualCoder versions", in TOOLS.md, says how to bring one up to date, w
 5c1c4a46d0617ec4	AI_CODING_GUIDE.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	A memo's text from the first ##### marker onward is private, in QualCoder 4.0's 

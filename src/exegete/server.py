@@ -13682,8 +13682,9 @@ def delete_coding(coding_id: int, create_backup: Optional[bool] = None,
 
     Returns:
         JSON with the deleted coding's details (code, file, positions, text)
-        and the backup path, or ids only for a hidden coder's row; hidden
-        coders' names and coding decisions never enter the conversation.
+        and the backup path; for a hidden coder's row, the ids of the
+        coding, its code and its file only: the coder's name, the span
+        and the text never enter the conversation.
 
     Example:
         "Delete coding 42, that segment was coded wrongly"
@@ -18428,8 +18429,10 @@ def create_code(name: str, category: Optional[str] = None,
     case_insensitive) and, under `requested`, only the arguments that
     differ from the stored row (spelling, category, parent, colour). A
     supplied memo is never applied to an existing code (set_memo does
-    that). Successful creates carry `created: true`. Whitespace runs in
-    the name collapse to one space.
+    that). A memo with the private-note marker, the category (alone or
+    with parent_code_id) and the colour are checked first: their
+    refusals come even for a name that exists. Successful creates carry
+    `created: true`. Whitespace runs in the name collapse to one space.
 
     Sub-codes (projects with schema v16 or newer only): pass
     parent_code_id to nest the new code under an existing code instead of
@@ -18826,9 +18829,11 @@ def create_category(name: str, parent_category: Optional[str] = None,
     existing row under `category` (use its id), `match` (exact or
     case_insensitive) and, under `requested`, only the arguments that
     differ from the stored row (spelling, parent). A supplied memo is
-    never applied to an existing category (set_memo does that).
-    Successful creates carry `created: true`. Whitespace runs in the name
-    collapse to one space.
+    never applied to an existing category (set_memo does that). A memo
+    with the private-note marker and the parent category are checked
+    first: their refusals come even for a name that exists. Successful
+    creates carry `created: true`. Whitespace runs in the name collapse
+    to one space.
 
     Args:
         name: The category name (unique among categories,
@@ -23597,9 +23602,10 @@ def update_annotation(annotation_id: int, memo: str,
     annotation belonging to a hidden coder is refused unless the
     researcher asks for allow_hidden_coder=true. The refusal says that
     the annotation belongs to a hidden coder, but not which coder, or how
-    many coders are hidden. With the override, the answer gives ids and
-    the new public text only, and a coder_visibility note; the hidden
-    coder's name, span and file never enter the conversation.
+    many coders are hidden. With the override, the answer gives the ids
+    of the annotation and its file, the new public note you gave and a
+    coder_visibility note; the coder's name, the span, the annotated
+    passage's text and the file's name never enter the conversation.
 
     Args:
         annotation_id: The annotation's anid (from read_file_with_codings

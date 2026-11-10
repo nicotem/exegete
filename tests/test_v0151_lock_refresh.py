@@ -372,8 +372,12 @@ def test_a_full_disk_keeps_the_last_lines_and_logs_once(
     seen = {}
 
     def disk_full(db):
-        first = lock.read_text(encoding="utf-8")
-        _writes_to_the_lock_fail(monkeypatch, lock, full, ("w", "+", "a"))
+        # The refresh writes under the lock's mutex: holding it, no
+        # refresh comes between reading the lines and the writes failing
+        # (v0.15.4: one did on Windows, and the lines read were older)
+        with captured[-1]._mutex:
+            first = lock.read_text(encoding="utf-8")
+            _writes_to_the_lock_fail(monkeypatch, lock, full, ("w", "+", "a"))
         time.sleep(10 * INTERVAL)
         seen["lines"] = lock.read_text(encoding="utf-8")
         seen["first"] = first

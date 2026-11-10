@@ -387,12 +387,12 @@ class TestThroughTheTransport:
     tool runs, as file_id is (tests/test_v013_one_file_per_call.py): a
     value Python reads as an integer reaches the tool as that integer.
     So an id of digits alone given as a number is read as one, which is
-    why every id goes in leave_occurrences. true and false are read as 1
-    and 0 here; the claims audit's check before the library converts a
-    value (point 20) would refuse them, and then these two rows change."""
+    why every id goes in leave_occurrences. true and false, which the
+    library would read as 1 and 0, are refused by name before it reads
+    them, as wherever a tool takes a number (v0.15.4), and nothing runs."""
 
-    @pytest.mark.parametrize("sent, read", [("3", 3), (3.0, 3), (True, 1)],
-                             ids=["text", "a float", "true"])
+    @pytest.mark.parametrize("sent, read", [("3", 3), (3.0, 3)],
+                             ids=["text", "a float"])
     def test_reaches_the_tool_as_an_integer(self, toms, sent, read):
         code = numbering_of(preview_of(mapping=TOM, choose_occurrences=True))
         out = _transport({"mapping": TOM, "file_id": 1, "numbering": code,
@@ -407,10 +407,13 @@ class TestThroughTheTransport:
         assert out.get("reason") == "occurrence_numbers_past_the_end", out
         assert out["past_the_end"] == [42] and out["count"] == 4
 
-    def test_false_reaches_the_tool_as_zero(self, toms):
+    @pytest.mark.parametrize("sent", [True, False], ids=["true", "false"])
+    def test_true_and_false_are_refused_before_the_tool(self, toms, sent):
         out = _transport({"mapping": TOM, "file_id": 1, "numbering": CODE,
-                          "leave_numbers": [False]})
-        assert out.get("reason") == "occurrence_number_form", out
+                          "leave_numbers": [sent]})
+        assert out.get("given_true_or_false") == ["leave_numbers"], out
+        assert "nothing was done" in out["error"]
+        assert backups(toms) == []
 
     @pytest.mark.parametrize("sent", [2.5, "x"], ids=["fraction", "word"])
     def test_refused_by_the_transport(self, toms, sent):

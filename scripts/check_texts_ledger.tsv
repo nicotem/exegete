@@ -342,7 +342,7 @@ baaa6baac85d0c56	TOOLS.md	document	qualcoder	a cell of the table comparing QualC
 c1de539dbf7a5c1c	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	applied in one pass, longest first, each pseudonym written literally, and counts
 ecefe9c6fdd0b0d7	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	codings_not_counted gives the region and audio/video codings beside them, so the
 916d3fc46f41dad4	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	compare_coders(coder_a, coder_b, code_ids, file_ids, case_ids, include_subcodes,
-c1d86e21c2c93c23	TOOLS.md	document	qualcoder	QualCoder offered on the condition that the researcher uses it	create_attribute_type(name, applies_to, value_type, memo, create_backup) - Write
+e057961a66b9a626	TOOLS.md	document	qualcoder	QualCoder offered on the condition that the researcher uses it	create_attribute_type(name, applies_to, value_type, memo, create_backup) - Write
 aa1961f45433412e	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	create_code(name, category, color, memo, parent_code_id, create_backup) - Writes
 d1086e2a5c665e1f	TOOLS.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	delete_code(code_id, preview_token, allow_hidden_coder) - Writes to the database
 7083a354829e4d52	TOOLS.md	document	qualcoder	a cell of the table comparing QualCoder 4.0's reading of a document with Exegete's	each starts and ends on a line of its own: Name:, then Ana; a line break goes in

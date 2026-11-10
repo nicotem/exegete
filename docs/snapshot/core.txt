@@ -1080,7 +1080,9 @@ Args:
 
 Returns:
     JSON object with query, result_count and results; each result
-    has type, id, name, memo (the public part), owner and date
+    has type, id, name, memo (the public part), owner and date. A
+    region or audio/video coding's id is under region_coding_id or
+    av_coding_id, with id null; no tool takes these ids.
 
 
 ==== Tool search_memos: the rest of its entry ====
@@ -2220,8 +2222,9 @@ Args:
 
 Returns:
     JSON with the deleted coding's details (code, file, positions, text)
-    and the backup path, or ids only for a hidden coder's row; hidden
-    coders' names and coding decisions never enter the conversation.
+    and the backup path; for a hidden coder's row, the ids of the
+    coding, its code and its file only: the coder's name, the span
+    and the text never enter the conversation.
 
 Example:
     "Delete coding 42, that segment was coded wrongly"
@@ -2722,8 +2725,10 @@ existing row under `code` (use its id), `match` (exact or
 case_insensitive) and, under `requested`, only the arguments that
 differ from the stored row (spelling, category, parent, colour). A
 supplied memo is never applied to an existing code (set_memo does
-that). Successful creates carry `created: true`. Whitespace runs in
-the name collapse to one space.
+that). A memo with the private-note marker, the category (alone or
+with parent_code_id) and the colour are checked first: their
+refusals come even for a name that exists. Successful creates carry
+`created: true`. Whitespace runs in the name collapse to one space.
 
 Sub-codes (projects with schema v16 or newer only): pass
 parent_code_id to nest the new code under an existing code instead of

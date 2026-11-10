@@ -8300,12 +8300,12 @@ def search_files(
     "where is this word in a passage I have not already coded this way?".
     Spans are half-open, so a match that begins exactly where an excluded
     coding ends is kept. A file whose every content match is excluded
-    (every match already coded) is counted in
+    (every match already coded) is not listed but counted in
     files_with_all_matches_excluded, a count of the files this page
-    examined, and is not listed unless its name matches; the files
-    returned hold matches outside that coding, or, with
-    search_filename=true, a name that matches. It needs
-    search_content=true.
+    examined. When such a file's name matches (search_filename=true), it
+    is listed instead, with its content counts, and not counted. So the
+    files returned hold matches outside that coding, or a name that
+    matches. It needs search_content=true.
 
     Paging: the result carries a page block. Pass its next_cursor back as
     cursor with the same other arguments to continue; a cursor is bound
@@ -17214,8 +17214,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                              "matches that overlap them are dropped, and a "
                              "file whose every match is already coded is "
                              "counted, page by page, rather than silently "
-                             "omitted. With search_filename=true, a file "
-                             "whose name matches is listed all the same. "
+                             "omitted. With search_filename=true, such a "
+                             "file whose name matches is listed instead, "
+                             "and not counted. "
                              "That count does not mean a code is complete. "
                              "Page with the page "
                              "block's next_cursor until exhaustive is true. "

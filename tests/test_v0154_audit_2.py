@@ -23,15 +23,17 @@ counts and searches that answered wrongly.
 - search_files reads a file's text only for a content search.
 
 The words that changed beside these are pinned by the served-texts
-snapshot (tests/test_served_texts.py); no phrasing is pinned here. Every
-call goes through the host's path, `server.mcp.call_tool`, unless a
-test says otherwise. Windows-safe: tmp fixtures only, no wall-clock
-waits.
+snapshot (tests/test_served_texts.py); no phrasing is pinned here, but
+for one fact read in three texts: a file listed for its name is not in
+the count of files whose every match is coded. Every call goes through
+the host's path, `server.mcp.call_tool`, unless a test says otherwise.
+Windows-safe: tmp fixtures only, no wall-clock waits.
 """
 
 import asyncio
 import csv
 import json
+import re
 import sqlite3
 from pathlib import Path
 
@@ -39,6 +41,8 @@ import pytest
 
 import exegete.server as server
 from exegete.database import QualcoderDatabase
+
+REPO = Path(__file__).resolve().parent.parent
 
 
 # ---------------------------------------------------------------------------
@@ -352,6 +356,23 @@ def coded_stress(project):
     return project
 
 
+def _tools_md_entry(tool: str) -> str:
+    """The tool's line in TOOLS.md."""
+    for line in (REPO / "TOOLS.md").read_text(
+            encoding="utf-8").splitlines():
+        if line.startswith(f"- `{tool}("):
+            return line
+    raise AssertionError(f"TOOLS.md has no line for {tool}")
+
+
+def _says_a_file_listed_for_its_name_is_not_counted(text: str) -> bool:
+    """Whether a sentence or clause of `text` says that a file listed
+    because its name matches is not counted."""
+    flat = " ".join(text.split())
+    return any("name matches" in part and "not counted" in part
+               for part in re.split(r"(?<=[.;])\s", flat))
+
+
 class TestAFileCountedAsCodedIsNotListed:
 
     def test_a_file_listed_for_its_name_is_not_counted(self, coded_stress):
@@ -395,6 +416,24 @@ class TestAFileCountedAsCodedIsNotListed:
         topic = json.loads(server.explain_ai_coding_tools())["not_yet_coded"]
         assert "search_files" in topic
         assert "search_filename=false" in topic
+
+    def test_the_texts_say_a_file_listed_for_its_name_is_not_counted(self):
+        # What the first test shows, the three texts an assistant reads
+        # say: search_files' description (one docstring, served in both
+        # tool sets, as docs/snapshot shows), the help's not_yet_coded
+        # topic and TOOLS.md. Each said that such a file was counted
+        # and listed too, so a count read from them fell short by the
+        # files listed for their names.
+        texts = {
+            "description": server.mcp._tool_manager._tools[
+                "search_files"].description,
+            "help": json.loads(server.explain_ai_coding_tools())[
+                "not_yet_coded"],
+            "TOOLS.md": _tools_md_entry("search_files"),
+        }
+        for where, text in texts.items():
+            assert _says_a_file_listed_for_its_name_is_not_counted(text), \
+                where
 
 
 # ---------------------------------------------------------------------------

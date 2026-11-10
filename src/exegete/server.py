@@ -12276,6 +12276,34 @@ def _codings_failed_validation(failures, total_approved: int
     }
 
 
+def _saved_after_commit(session: AICodingSession) -> Optional[str]:
+    """Save a session once its tool's write has committed (v0.15.4): None
+    when saved, else why not, as error_text gives it. The write is done
+    either way, so the tool says so and reports the session not saved,
+    as delete_coding's marks report theirs, rather than letting the tool
+    guard answer an error for a write that was made. In a project's
+    sessions folder a save can fail where it did not before (a sync
+    client holding the file past the tries on Windows, a network or a
+    removable drive)."""
+    try:
+        session_manager.save_session(session)
+    except Exception as e:
+        logger.error("A session could not be saved after its write was "
+                     "committed: %s", error_label(e))
+        return _as_sentence(error_text(e))
+    return None
+
+
+# After apply_codings' commit, a session that could not be saved (v0.15.4)
+APPLIED_SESSION_NOT_SAVED = (
+    "**The codings are written, but the session was not saved.** {reason} "
+    "The session still has these suggestions as approved, not applied: "
+    "asking apply_codings again writes nothing more and marks them "
+    "applied. Until then, a coding of theirs deleted with delete_coding is "
+    "not marked removed in the session, and apply_codings would write it "
+    "again.")
+
+
 @mcp.tool(annotations=TOOL_ADDS)
 @_ignores_create_backup
 @_tool_guard
@@ -12572,7 +12600,9 @@ def apply_codings(
                          + [r["guid"] for r in already_existing],
                          ctids={r["guid"]: r["ctid"]
                                 for r in results + already_existing})
-    session_manager.save_session(session)
+    # The codings are committed: a session that cannot be saved now is
+    # said in the answer, the write answered as done (v0.15.4)
+    not_saved = _saved_after_commit(session)
 
     # Re-signal position safety at the write step (track4 #6): if any file
     # just written to is position-unsafe, say so in the success output too
@@ -12584,6 +12614,9 @@ def apply_codings(
 
     # Format output
     output = ["\n**Codings applied to the database**\n"]
+    if not_saved is not None:
+        output.append(APPLIED_SESSION_NOT_SAVED.format(reason=not_saved)
+                      + "\n")
 
     name_change = _ai_coder_name_change_warning(session, owner)
     if name_change:
@@ -12632,9 +12665,10 @@ def apply_codings(
                   + (f"; {unlabelled} had no reading (recorded before "
                      f"v0.14, or cleared by a change of code), so their "
                      f"memo is the reason only." if unlabelled else "."))
-    output.append(f"If one of these turns out to be wrong, `delete_coding(ctid)` "
-                  f"removes it and marks its suggestion removed in this "
-                  f"session.")
+    if not_saved is None:
+        output.append(f"If one of these turns out to be wrong, "
+                      f"`delete_coding(ctid)` removes it and marks its "
+                      f"suggestion removed in this session.")
     receipt_line = _receipt_line(capture)
     if receipt_line:
         output.append(receipt_line)
@@ -18488,6 +18522,21 @@ def _check_approved_proposals(db_, approved):
     return None, category_ids
 
 
+# After create_proposed_codes' commit, a session that could not be saved
+# (v0.15.4): the codes are made, and the session's file is as it was
+CREATED_SESSION_NOT_SAVED = (
+    "The codes are made (created_codes gives their ids), but the session "
+    "could not be saved, so its file still has these proposals as approved, "
+    "not created, and proposal_statistics is as the file holds it. Asking "
+    "create_proposed_codes again would meet a name that collides with the "
+    "new code, whose words suggest renaming the proposal, and that would "
+    "make a second code: rejecting these proposals with "
+    "update_proposal_status tidies the session instead.")
+CREATED_OUTSIDE_SCOPE = (
+    "This session is limited to named codes, and as its file holds it the "
+    "new codes are not among them.")
+
+
 @mcp.tool(annotations=TOOL_ADDS)
 @_ignores_create_backup
 @_tool_guard
@@ -18620,6 +18669,10 @@ def create_proposed_codes(coding_session_id: str,
                                    "items": [p.guid for p in approved]})
 
     if "error" not in result:
+        # As the session's file holds them until it is saved (v0.15.4)
+        on_file = session.proposal_statistics()
+        limited = (session.scope is not None
+                   and session.scope.get("code_ids") is not None)
         for p in approved:
             p.status = "created"
         # A session limited to named codes takes in the codes its own
@@ -18629,8 +18682,16 @@ def create_proposed_codes(coding_session_id: str,
             p.created_code_id: made_dates.get(p.created_code_id)
             for p in approved if p.created_code_id is not None})
         session.last_modified = datetime.now().isoformat()
-        session_manager.save_session(session)
-        result["proposal_statistics"] = session.proposal_statistics()
+        # The codes are committed: a session that cannot be saved now is
+        # said in the answer, the codes answered as made (v0.15.4)
+        not_saved = _saved_after_commit(session)
+        if not_saved is None:
+            result["proposal_statistics"] = session.proposal_statistics()
+        else:
+            result["proposal_statistics"] = on_file
+            result["session_not_saved"] = not_saved
+            result["session_not_saved_note"] = CREATED_SESSION_NOT_SAVED + (
+                " " + CREATED_OUTSIDE_SCOPE if limited else "")
         # The codes only (owner ruling 25, question 6): the passages are
         # suggested one by one in this session, the proposals' own
         # example passages first (the Saldana reading, item 19), each
@@ -18650,14 +18711,23 @@ def create_proposed_codes(coding_session_id: str,
                     outside += 1
                 passages.append(entry)
         result["example_passages"] = passages
-        result["next_step"] = (
-            "Suggest the passages for the new codes one by one in this "
-            "session with record_suggestions, the example_passages first, "
-            "each with its reading and reason, for the researcher to "
-            "decide." + (f" {outside} example passage(s) are in files this "
-                         f"session does not cover (outside_session); a "
-                         f"session for those files can suggest them."
-                         if outside else ""))
+        if not_saved is not None and limited:
+            # As its file holds it, the session does not take the new
+            # codes in: their passages go in a session that does
+            result["next_step"] = (
+                "Suggest the passages for the new codes in a session that "
+                "includes them (start_coding_session), the example_passages "
+                "first, each with its reading and reason, for the "
+                "researcher to decide.")
+        else:
+            result["next_step"] = (
+                "Suggest the passages for the new codes one by one in this "
+                "session with record_suggestions, the example_passages "
+                "first, each with its reading and reason, for the "
+                "researcher to decide."
+                + (f" {outside} example passage(s) are in files this "
+                   f"session does not cover (outside_session); a session "
+                   f"for those files can suggest them." if outside else ""))
         name_change = _ai_coder_name_change_warning(session, owner)
         if name_change:
             result["ai_coder_name_warning"] = name_change

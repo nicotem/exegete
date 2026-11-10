@@ -24388,7 +24388,9 @@ def create_attribute_type(name: str, applies_to: str,
     Ref_Year, Ref_Journal) are reserved for QualCoder's reference importer.
 
     Args:
-        name: The attribute name (unique across all domains)
+        name: The attribute name (unique across all domains, compared
+              exactly; no invisible characters, nor another's name once
+              they are left out)
         applies_to: 'case' or 'file' ('journal', QualCoder's third
                     domain, is refused: Exegete no longer sets attributes
                     on journal entries)
@@ -24414,6 +24416,18 @@ def create_attribute_type(name: str, applies_to: str,
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
+    # The write gate, then the method's checks on the read-only connection
+    # (v0.15.4), as create_code's pre-check follows its gate: a refusal
+    # costs no copy of the project's folder, and is never answered as a
+    # backup that failed. They run again under SQLite's write lock.
+    gate = _write_gate_error()
+    if gate is not None:
+        return json.dumps(gate)
+    try:
+        get_db().check_add_attribute_type(name, owner, applies_to,
+                                          value_type, memo)
+    except ValueError as e:
+        return json.dumps({"error": str(e)}, indent=2)
     result = _perform_write(
         lambda wdb: {"success": True,
                      "message": f"Created {applies_to} attribute "

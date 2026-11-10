@@ -229,22 +229,38 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
     quickstart = _plain(_between(_flat("QUICKSTART.md"),
                                  "### 5. Try it",
                                  "If you have no project yet, ask Claude"))
+    # (v0.15.4: Ultra among the personal plans, as Claude's pricing page
+    # lists it under "Individual" and Anthropic's page "What is the Ultra
+    # plan?" calls it a plan for individual consumers, read on 10
+    # November 2026)
     for where, text in (("README, the checks", readme),
                         ("INSTALL, one-click", one_click),
                         ("QUICKSTART, step 5", quickstart)):
         for words in ("Anthropic may use your conversations",
-                      "to train its models", "(Free, Pro or Max)",
+                      "to train its models", "(Free, Pro, Max or Ultra)",
                       "\"Help improve our AI models\"",
                       "https://claude.ai/settings/data-privacy-controls",
                       "thumbs up or down",
                       "can still let Anthropic train on that conversation"):
             assert words in text, (where, words)
+        assert "(Free, Pro or Max)" not in text, where
     for where, text in (("INSTALL, one-click", one_click),
                         ("QUICKSTART, step 5", quickstart)):
         assert ("[Where your data goes](https://github.com/nicotem/exegete"
                 "#where-your-data-goes), in the README, says the rest: the "
                 "checks before participants' data, and which assistants open "
                 "files by themselves.") in text, where
+        # (v0.15.4) the terms' second exception where Claude Desktop is
+        # set up, as Anthropic's page "Is my data used for model
+        # training?" gives it ("Your conversations are flagged for safety
+        # review"), and PRIVACY.md's rung 1 quotes the terms
+        assert re.search(r"can still let Anthropic train on that "
+                         r"conversation(?:, and so can|\. So can) a flag for "
+                         r"a safety review\.", text), where
+    # INSTALL.md names that page and the day it was read
+    assert re.search(r"\(Anthropic's pages, read on \d{1,2} [A-Z][a-z]+ "
+                     r"20\d\d\)\. One of them, \"Is my data used for model "
+                     r"training\?\", says that rating a reply", one_click)
     # (v0.15.2, the readability reading: Anthropic named as the AI
     # provider, the one term the documents use)
     assert ("What Claude reads through Exegete (passages, codes, memos, "

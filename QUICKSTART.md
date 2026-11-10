@@ -160,8 +160,8 @@ Quit Claude Desktop completely, with Cmd+Q on a Mac, and open it again.
 codes, memos, names) goes to Anthropic, the AI provider that runs
 Claude's AI model. While training is on, Anthropic may use your
 conversations, with any participants' data in them, to train its models.
-On a personal plan (Free, Pro or Max), the setting "Help improve our AI
-models" at https://claude.ai/settings/data-privacy-controls switches
+On a personal plan (Free, Pro, Max or Ultra), the setting "Help improve our
+AI models" at https://claude.ai/settings/data-privacy-controls switches
 training off (Anthropic's pages, read on 4 November 2026). The same pages
 say that rating a reply, with a thumbs up or down, can still let Anthropic
 train on that conversation, and so can a flag for a safety review.

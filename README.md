@@ -234,8 +234,8 @@ where chat and Cowork are one conversation, go through five checks:
    You could also add no other extension that reads files.
 3. **Training.** While training is on, Anthropic may use your
    conversations, with the participants' data in them, to train its
-   models. On a personal plan (Free, Pro or Max), the setting "Help
-   improve our AI models" at
+   models. On a personal plan (Free, Pro, Max or Ultra), the setting
+   "Help improve our AI models" at
    https://claude.ai/settings/data-privacy-controls switches training
    off. Rating a reply, with a thumbs up or down, can still let
    Anthropic train on that conversation (PRIVACY.md quotes the terms).
@@ -357,9 +357,9 @@ plan (Free, Plus or Pro, as OpenAI's Help Center names them in an
 Internet Archive capture of 6 November 2026), training is switched off
 with "Improve the model for everyone" in ChatGPT's Settings, Data
 controls, and with Codex's separate "Include environments". On Go,
-which the Help Center does not name, you could check that the setting
-is there. Rating a reply, with a thumbs up or down, can still let OpenAI
-train on that conversation. Then follow
+which that page does not name for this setting, you could check that
+the setting is there. Rating a reply, with a thumbs up or down, can
+still let OpenAI train on that conversation. Then follow
 [the Terminal guide's steps](https://github.com/nicotem/exegete/blob/main/docs/installing-from-the-terminal.md#chatgpts-desktop-app-and-codex-experimental),
 which make the app ask before every change Exegete makes.
 

@@ -25406,7 +25406,9 @@ def export_coded_segments_report(
         important: Only segments flagged important
         include_variables: Append `FileVar_{name}` columns (and, in case
                            mode, `CaseVar_{name}`) with attribute values
-                           per row, QualCoder's "variables" checkbox
+                           per row, QualCoder's "variables" checkbox;
+                           csv only, since the txt report, like
+                           QualCoder's, has no columns
         format: "csv" (default) or "txt"
         sanitize_formulas: Neutralise spreadsheet formula injection in
             CSV cells (values starting with = + - @ tab or CR get a '
@@ -25575,6 +25577,17 @@ def export_coded_segments_report(
         "sanitization": _sanitization_note(sanitize_formulas,
                                            is_csv=(format == "csv")),
     }
+    if include_variables and format == "txt":
+        # The txt report is the report as shown, with no columns, as
+        # QualCoder's text export writes it (report_codes.py 791-816 at
+        # 4.0; only its csv, xlsx and iramuteq exports read the variables
+        # checkbox). include_variables was taken without a word (v0.15.4,
+        # the claims audit's point 48).
+        result["variables_note"] = (
+            "include_variables applies to the csv format only: the txt "
+            "report has no columns for attribute values, so none were "
+            "written. Export again with format 'csv' for the FileVar_ "
+            "and CaseVar_ columns.")
     if case_mode:
         # A coding inside two or more overlapping spans of one case is
         # written once for each, as QualCoder's own report writes it (its

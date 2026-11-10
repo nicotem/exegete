@@ -429,3 +429,33 @@ class TestTheCountLeftOutIsWithinTheFiles:
     def test_without_file_ids_every_file_counts(self, hidden_coder):
         assert _suppressed(code_id=1) == 1
         assert _suppressed(code_id=2) == 2
+
+
+# ---------------------------------------------------------------------------
+# Point 48: include_variables with the txt format
+# ---------------------------------------------------------------------------
+
+class TestVariablesWithTheTextReport:
+
+    def test_the_answer_says_none_were_written(self, project, tmp_path):
+        out = host("export_coded_segments_report",
+                   output_path=str(tmp_path / "report.txt"),
+                   case_names=["Case A"], format="txt",
+                   include_variables=True)
+        assert out["success"] is True
+        assert "variables_note" in out
+        text = Path(out["output_path"]).read_text(encoding="utf-8-sig")
+        assert "CaseVar_" not in text and "FileVar_" not in text
+
+    def test_the_csv_writes_them_and_needs_no_note(self, project, tmp_path):
+        out = host("export_coded_segments_report",
+                   output_path=str(tmp_path / "report.csv"),
+                   case_names=["Case A"], include_variables=True)
+        assert "variables_note" not in out
+        header = _csv_rows(out["output_path"])[0]
+        assert header[-1] == "CaseVar_Age"
+
+    def test_no_note_without_the_argument(self, project, tmp_path):
+        out = host("export_coded_segments_report",
+                   output_path=str(tmp_path / "report.txt"), format="txt")
+        assert "variables_note" not in out

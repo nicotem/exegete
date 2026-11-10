@@ -372,21 +372,25 @@ class TestTheExtension:
                 "bug_report.yml").read_text(encoding="utf-8")
         block = text[text.index("id: toolset"):]
         block = block[:block.index("  - type:")]
-        assert ("description: \"`full` is the default, every tool, creating "
-                "a project included; `core` is the reduced set for local "
-                "models; `lifecycle` was `full`'s name in the extension "
-                "before 0.15.0.") in block
+        # v0.15.4: SUPPORT.md's facts, a sentence each: `full` the
+        # default, with every tool; unset means `full`; `lifecycle` its
+        # earlier name
+        for fact in ("`full`, the default, has every tool, creating a "
+                     "project included.",
+                     "Exegete takes `full` when it is not set.",
+                     "`full` was called `lifecycle` before 0.15.0."):
+            assert fact in block, fact
         # v0.15.1: with the extension, `core` when the switch "Limit
         # Exegete to its small tool set" is on, `full` otherwise (after
         # 0.15.1 the switch alone, the text setting gone)
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
-        assert (f"it is `core` when the extension's switch \\\"{switch}\\\" "
-                f"is on, and `full` otherwise.\"") in block
+        assert (f"the tool set is `core` when its switch \\\"{switch}\\\" "
+                f"is on, and `full` otherwise.") in block
         assert "Tool set setting" not in block
         options = re.findall(r"^        - (.+)$", block, re.M)
         # Fix round 1: the option no longer reads as a version the
         # researcher is not on, since 0.15.0 may still show `lifecycle`
-        assert options == ["full (default, or variable not set)", "core",
+        assert options == ["full (the default)", "core",
                            "lifecycle (the earlier name of full)",
                            "Not sure"]
         support = _flat("SUPPORT.md")

@@ -19,13 +19,17 @@ report says which were shown):
    and the original removed: the session works there, and undo takes
    back a change made after the copy.
 3. A project whose folder cannot hold a session keeps it on this
-   computer and says why; a session in the project that cannot be read
-   is refused with its reason, never answered as missing nor passed
-   over for the state folder's file of that id.
-4. The save: a failure leaves the file as it was; synced before the
-   replace; capped; tried again on Windows; Exegete's temporary files.
+   computer and says why; a start reported as failed once its file
+   holds the session is kept in the project; a session in the project
+   that cannot be read is refused with its reason, never answered as
+   missing nor passed over for the state folder's file of that id.
+4. The save: a failure leaves the file as it was, and one reported
+   after the replace was made is a save done; the file synced before
+   the replace, the folder after it; capped; tried again on Windows;
+   Exegete's temporary files.
 6. Backups and copies leave the temporary files out; a restore and its
-   recovery keep the folder; a workspace copy carries it.
+   recovery keep the folder, a session saved after the safety backup
+   included; a workspace copy carries it.
 7. Every session kept in the project, 201 of them, reaches undo,
    delete_coding's marks, the counts and the stale sessions; files that
    are not sessions are never listed, used or named.
@@ -267,19 +271,54 @@ class TestAFolderThatCannotHoldASession:
         finally:
             os.chmod(project, 0o755)
 
-    def test_a_start_whose_write_left_a_file_is_refused(self, project,
-                                                        monkeypatch):
+    def test_a_start_reported_failed_once_its_file_is_made_is_kept_there(
+            self, project, monkeypatch):
+        """A network share or a scanner can report a replace as failed
+        after making it: the file holds the session, which is started,
+        kept in the project and listed once, nothing on this computer;
+        never "No session was started", which asking again turned into
+        a second session."""
         real = private_files.replace_session
 
-        def left_one(where, name, data):
+        def made_then_failed(where, name, data):
             real(where, name, data)
             raise private_files.PrivateFilesError("unwritable", "Injected.")
-        monkeypatch.setattr(private_files, "replace_session", left_one)
+        monkeypatch.setattr(private_files, "replace_session",
+                            made_then_failed)
+        out = start()
+        assert "error" not in out, out
+        sid = out["coding_session_id"]
+        assert out["kept_in"] == KEPT_IN_PROJECT
+        assert "kept_in_reason" not in out
+        assert on_this_computer() == []
+        assert [p.name for p in folder_of(project).glob("session_*.json")
+                ] == [f"session_{sid}.json"]
+        monkeypatch.setattr(private_files, "replace_session", real)
+        listed = jcall("list_coding_sessions")["sessions"]
+        assert [s["coding_session_id"] for s in listed] == [sid]
+        assert record(sid)["recorded_count"] == 1
+
+    def test_a_start_whose_write_left_something_else_is_refused(
+            self, project, monkeypatch):
+        """A file at the session's name that is not what the save wrote
+        (half of it): refused, never kept on this computer as well, the
+        file left as it is, and the answer gives the session's id, by
+        which the session is found if that file holds it."""
+        real = private_files.replace_session
+        left = []
+
+        def half_then_failed(where, name, data):
+            left.append(data[:len(data) // 2])
+            real(where, name, left[0])
+            raise private_files.PrivateFilesError("unwritable", "Injected.")
+        monkeypatch.setattr(private_files, "replace_session",
+                            half_then_failed)
         out = start()
         assert "coding_session_id" not in out
-        assert "No session was started" in out["error"]
         assert on_this_computer() == []
-        assert len(list(folder_of(project).glob("session_*.json"))) == 1
+        [path] = folder_of(project).glob("session_*.json")
+        assert path.read_bytes() == left[0]
+        assert path.name[len("session_"):-len(".json")] in out["error"]
 
 
 def _twin_on_this_computer(sid, project):
@@ -421,6 +460,27 @@ class TestTheSave:
         assert path.read_bytes() == before
         assert temporaries(folder_of(project)) == []
 
+    def test_a_save_reported_failed_after_its_replace_is_done(
+            self, project, monkeypatch):
+        """A network share can report a rename as failed after making
+        it: the file holds the session just written, so the save is
+        answered as done, never as not saved with the file as it was,
+        which asking again would turn into the suggestions twice."""
+        sid, name, path = _a_saved_session(project)
+        real = os.replace
+
+        def replace(source, target, **kwargs):
+            real(source, target, **kwargs)
+            if os.path.basename(os.fspath(target)) == name:
+                raise OSError(errno.EIO, os.strerror(errno.EIO))
+        monkeypatch.setattr(os, "replace", replace)
+        out = record(sid)
+        assert out.get("recorded_count") == 1, out
+        monkeypatch.setattr(os, "replace", real)
+        assert temporaries(folder_of(project)) == []
+        assert len(server.session_manager.load_session(sid)
+                   .suggestions) == 1
+
     def test_the_temporary_file_is_synced_before_the_replace(
             self, project, monkeypatch):
         _sid, name, path = _a_saved_session(project)
@@ -446,6 +506,32 @@ class TestTheSave:
         inode = events[replaced[0]][1]
         assert ("synced", inode) in events[:replaced[0]]
         assert path.stat().st_ino == inode
+
+    @pytest.mark.skipif(not private_files._HOLDS_FOLDERS,
+                        reason="a folder is held, and synced, on macOS and "
+                               "Linux alone")
+    def test_the_folder_is_synced_after_the_replace(self, project,
+                                                    monkeypatch):
+        """The file's sync does not make its new name last: the held
+        folder is synced after the replace, so that a power cut or a
+        drive pulled out then keeps the session's new file."""
+        _sid, name, _path = _a_saved_session(project)
+        folder = os.stat(folder_of(project)).st_ino
+        events = []
+        real_fsync, real_replace = os.fsync, os.replace
+
+        def fsync(descriptor):
+            events.append(("synced", os.fstat(descriptor).st_ino))
+            return real_fsync(descriptor)
+
+        def replace(source, target, **kwargs):
+            events.append(("replaced", None))
+            return real_replace(source, target, **kwargs)
+        monkeypatch.setattr(os, "fsync", fsync)
+        monkeypatch.setattr(os, "replace", replace)
+        private_files.replace_session(project, name, b'{"new": true}')
+        replaced = events.index(("replaced", None))
+        assert ("synced", folder) in events[replaced + 1:]
 
     def test_a_save_past_the_cap_is_refused_the_file_as_it_was(
             self, project, monkeypatch):
@@ -716,12 +802,30 @@ class TestBackupsRestoresAndCopies:
                 "the project's, newer", encoding="utf-8")
         before = {name: tree(project / name) for name in (FOLDER, "Exegete")
                   if (project / name).is_dir()}
+        if sessions:
+            # Another conversation's decision, saved after the safety
+            # backup is made and before the clear (session files wait for
+            # no lock), so that the safety backup's copy is older: the
+            # restore's keep alone holds it
+            real = server._recheck_lock_before_commit
+
+            def decided_meanwhile(*args, **kwargs):
+                session = server.session_manager.load_session(sid)
+                session.suggestions[0].status = "approved"
+                server.session_manager.save_session(session)
+                before[FOLDER] = tree(folder_of(project))
+                return real(*args, **kwargs)
+            monkeypatch.setattr(server, "_recheck_lock_before_commit",
+                                decided_meanwhile)
         _fail_the_copy_of(backup, monkeypatch)
         _, answer = _restore(backup)
         assert answer["error"] == RECOVERED, answer
         after = {name: tree(project / name) for name in (FOLDER, "Exegete")
                  if (project / name).is_dir()}
         assert after == before
+        if sessions:
+            assert server.session_manager.load_session(sid).suggestions[
+                0].status == "approved"
 
     def test_the_recovery_brings_back_a_folder_gone_meanwhile(
             self, project, monkeypatch):

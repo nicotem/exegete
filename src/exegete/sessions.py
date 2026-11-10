@@ -904,10 +904,18 @@ class SessionManager:
         the session is kept nowhere else, so that no session is in two
         places.
 
+        A save in a project that reports a failure while the file at the
+        session's name holds the bytes just written is a save done (a
+        network share or a virus scanner can report a replace as failed
+        after making it): the session is kept there, and saying it was
+        not saved would be untrue.
+
         Raises:
             ValueError: If session ID is not valid UUID4 format
             SessionFileError: The project's sessions folder refused the
-                save, with the reason; the file as it was
+                save, with the reason; the file as it was, or, for a new
+                session, a file there that Exegete cannot read back as
+                the session
         """
         self._validate_session_id(session.session_id)
         if session.kept_in is None:
@@ -936,16 +944,24 @@ class SessionManager:
             place = (private_files.sessions_folder(project)
                      / self.file_name(session.session_id))
             if os.path.lexists(place):
+                # Only this save can put a file at a new id's name, and
+                # one holding the bytes it wrote was taken as the session
+                # (_save_in_project): what is there now could not be read
+                # back as the session, and may still hold it
                 logger.error("A new session could not be kept in its "
                              "project, and something is at its name there")
                 raise SessionFileError(
                     "left",
-                    "No session was started. Exegete could not finish "
-                    "saving it in the project's Exegete coding sessions "
-                    f"folder ({reason.rstrip('.')}), and something is now "
-                    "at the session's name there, so it was not kept on "
-                    "this computer as well. Asking again starts a new "
-                    "session.") from None
+                    "Exegete could not finish saving the new session in "
+                    "the project's Exegete coding sessions folder "
+                    f"({reason.rstrip('.')}). A file is now at the "
+                    "session's name there that Exegete could not read back "
+                    "as the session, so the session was not kept on this "
+                    "computer as well: if that file holds the session, its "
+                    f"id is {session.session_id}, and it is found while "
+                    "this project is selected. Asking again starts "
+                    "another session."
+                ) from None
             logger.warning("A new session is kept on this computer: its "
                            "project's sessions folder could not hold it")
             self._save_on_this_computer(session)
@@ -960,7 +976,13 @@ class SessionManager:
                          project: Optional[Path]) -> None:
         """Write a session into a project's sessions folder, without its
         project path (private_files.replace_session: synced, owner-only,
-        capped)."""
+        capped).
+
+        A refusal while the file at the session's name holds the bytes
+        just written is a save done, as a network share or a virus
+        scanner can report a replace as failed after making it: the
+        file is the session, whole, and answering that it was not
+        saved, its file as it was, would be untrue."""
         if project is None:
             raise SessionFileError(
                 "no_project", "This session's project is not known, so it "
@@ -968,14 +990,31 @@ class SessionManager:
         data = session.to_dict()
         data.pop("project_path", None)
         raw = json.dumps(data, indent=2).encode("utf-8")
+        name = self.file_name(session.session_id)
         try:
-            private_files.replace_session(
-                project, self.file_name(session.session_id), raw)
+            private_files.replace_session(project, name, raw)
         except private_files.PrivateFilesError as e:
+            if self._holds(project, name, raw):
+                logger.warning(f"Saved session {session.session_id} in its "
+                               f"project, though the save reported "
+                               f"{error_label(e)}: its file holds it")
+                return
             logger.error(f"Failed to save session {session.session_id} in "
                          f"its project: {error_label(e)}")
             raise SessionFileError(e.code, str(e)) from None
         logger.info(f"Saved session {session.session_id}")
+
+    @staticmethod
+    def _holds(project: Path, name: str, raw: bytes) -> bool:
+        """Whether the project's file at a session's name holds `raw`, read
+        through the held folder (private_files.read_session); False when
+        it cannot be read, or `raw` is past the cap. Never raises."""
+        if len(raw) > private_files.MAX_SESSION:
+            return False
+        try:
+            return private_files.read_session(project, name) == raw
+        except (OSError, ValueError, private_files.PrivateFilesError):
+            return False
 
     def _save_on_this_computer(self, session: AICodingSession) -> None:
         """Save session to the state folder as JSON, atomically and

@@ -6850,16 +6850,27 @@ class QualcoderDatabase:
         return out
 
     def count_codings_for_code(self, code_id: int,
-                               honor_visibility: bool = True) -> int:
+                               honor_visibility: bool = True,
+                               file_ids: Optional[Sequence[int]] = None
+                               ) -> int:
         """Count a code's text codings (visible view or base table),
-        joined to source like the listing so counts agree with it."""
+        joined to source like the listing so counts agree with it, on
+        the files of file_ids when it is given (v0.15.4, the claims
+        audit's point 44: get_coded_segments' count of the codings it
+        leaves out for a hidden coder covered every file)."""
         code_id = validate_id(code_id, "code_id")
         source = self.code_text_source(honor_visibility)
+        params: List[Any] = [code_id]
+        file_sql = ""
+        if file_ids:
+            fids = [validate_id(f, "file_id") for f in file_ids]
+            file_sql = f" AND ct.fid IN ({','.join('?' * len(fids))})"
+            params.extend(fids)
         try:
             row = self.conn.execute(
                 f"SELECT COUNT(*) FROM {source} ct "
-                f"JOIN source s ON ct.fid = s.id WHERE ct.cid = ?",
-                (code_id,)
+                f"JOIN source s ON ct.fid = s.id WHERE ct.cid = ?{file_sql}",
+                params
             ).fetchone()
             return int(row[0]) if row else 0
         except sqlite3.Error as e:

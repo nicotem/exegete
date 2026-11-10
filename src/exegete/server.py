@@ -22526,12 +22526,12 @@ def pseudonymise_source(
                  the next three go with rewrite_memos or include_context.
         leave_occurrences: The ids, from such a preview, of occurrences
                  to leave as they are; every id goes here.
-        leave_numbers, numbering: Or their numbers in it, as the
-                 researcher gives them, with its `numbering`. Each number
-                 is read as file_id is, so an id of digits is a number
-                 here. With leave_occurrences, at most 500 occurrences in
-                 one run. Give these three to a preview first: it marks
-                 those left for the researcher to check.
+        leave_numbers: Or their numbers in it, as the researcher gives
+                 them. Each is read as file_id is, so an id of digits is
+                 a number here. With leave_occurrences, at most 500
+                 occurrences in one run. Give these three to a preview
+                 first: it marks those left for the researcher to check.
+        numbering: That preview's `numbering`, with leave_numbers.
 
     The arguments from include_context to choose_occurrences,
     record_in_journal and researcher_keeps_mapping are not bound into

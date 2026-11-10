@@ -7,6 +7,8 @@
 
 **Since the port onto 0.14.2 (6 October 2026):** this record describes pull request #11 as built at 23404b9. Ported onto 0.14.2 for its release, nine things changed, and where this record says otherwise, the code and the CHANGELOG's 0.14.2 entry hold: (1) a copy started as `uvx qualcoder-mcp` is the uvx route, no longer the old name in a virtual environment (whose pip command could not work in uv's cache), and uvx under either name gets steps of its own: quit the app, name the version in its entry (`exegete@<version>`), open it again; (2) a one-time note goes first in an answer, not last, and only into an answer of at most 20,000 characters (`updates.NOTE_MAX_ANSWER`), since it counts as given once added; (3) `check_for_updates`' description puts its rules first (only when the user asks, the steps as returned, the steps left to the user), and the extension's answer no longer promises pictures, since the update page has none yet; (4) the counts and sizes are 0.14.2's: 75 tools in `full`, 22 in `core`, 76 in `lifecycle`; (5) README's "Keeping Exegete up to date" is folded into 0.14.2's paragraph on updating, and release.py carries 0.14.2's words; (6) the Pages site, `latest.json` and the update page, is in the repository's `pages/` folder, and `.github/workflows/pages.yml` publishes it from GitHub Actions, never from a branch, as D3 decided: started by hand from the release's tag, it checks the site against `release.py`, that the release and both PyPI packages are out, and that the live file is not newer (`scripts/check_pages_site.py`), then deploys in the `github-pages` environment, with the owner as required reviewer, and reads the live file back. Until the three release jobs of D8 are written, it stands in for their announce job (design section 4.2); (7) the attempt is written to the state file before the fetch as well as after it, so a run stopped during the fetch still counts it and the next start does not try again within the week; (8) when a check fails with "certificate not trusted", the answer names the computer's own Python as a cause as well as the network; the answer for the earlier name suggests moving to the new name before 1.0 rather than telling the researcher to, and the answer for a route Exegete cannot tell says that the update page shows each way; (9) release.py's summary says that the check has to be switched on, since 0.14.2's note after an update reaches only researchers whose checking is off (with it on, the note about the check is given instead). At the port's checks (7 October 2026), none of the checks on a real computer in design section 13 had been made. That section says that items 1 to 6 must pass on a real Mac and a real Windows computer before a release carries the check. On 7 October 2026 the owner chose to make items 1 to 4 and 6 on his Mac, in his check of the brief with the final test build of this branch: the setting as Claude Desktop passes it, the default an update gives, whether the assistant passes the note on, what the installation screen shows, and, installing that build over an earlier one, the Install button's label when Exegete is already installed, and whether the settings chosen before (the tool set and the folder for projects) survive the update. Item 5 and the checks on Windows are not part of that sitting, and the release notes say that Windows has not been checked by hand yet.
 
+**Since 0.15.4 (10 November 2026):** section A's quotations are the code's words again: the setting's description (A1) and the tool's (A2) as they read now, "What's new, and each step" in A3.2, the guide that the end of A3.9 names, and "the researcher" in the notes (A4 to A6). Where the rest of this record differs from the code, the code holds. The steps for a copy started with uvx (updates._uvx_steps), which the port added, are not quoted here.
+
 ## How to read this document
 
 **Placeholders.** In section A each quotation is the built text, word for word, with a placeholder wherever the code puts in a value. The built strings carry no Markdown, so a name such as EXEGETE_UPDATE_CHECK appears without code marks, as in the code. Steps are shown numbered; in the answer they are the items of the `steps` list, without numbers.
@@ -50,7 +52,7 @@ If a decision changes, these passages change, and with them the code that holds 
 - Versions appear in the project's display form (0.15.0-alpha), never the pip form, except inside commands.
 - The register is the project's: plain, sober, British spelling, short sentences, no promises the code does not keep.
 - **[to verify]** marks behaviour not yet seen on a real computer (design, "To verify on a real computer").
-- Every text in src/exegete names the app "Claude Desktop" and the model "the assistant"; "Claude" alone appears only in A1 (the manifest) and in the drafts B and C.
+- Every text in src/exegete names the app "Claude Desktop" and the model "the assistant"; "Claude" alone appears only in the drafts B and C.
 - One set of terms throughout:
   - "stay as they are" for projects and settings;
   - "a minute or two";
@@ -76,7 +78,7 @@ Built in packaging/desktop-extension/manifest.in.json as `user_config.update_che
 **Title:** Tell me when a new version is out
 
 **Description:**
-> Exegete fetches a small file from its website, which GitHub hosts, to see whether a newer version exists: once a week at most on its own, and when Claude checks for you. Claude then tells you once. Nothing from your projects is sent; GitHub records your computer's internet address and the time, as any website does. Switch this off and Exegete itself makes no connection.
+> With this on, the default, Exegete checks its website for new versions once a week at most, and when you ask. Nothing from your projects is sent. GitHub, which hosts the website, records your computer's internet address. With it off, Exegete itself makes no connection.
 
 *Note:* how much of the description Claude Desktop's settings screen shows is **[to verify]**.
 
@@ -84,7 +86,7 @@ Built in packaging/desktop-extension/manifest.in.json as `user_config.update_che
 
 Built as the docstring of check_for_updates in src/exegete/server.py, word for word as below. The tool takes no arguments. It is async, and runs updates.tool_answer in a worker thread. Its annotations are TOOL_CHECKS_ONLINE: not read-only, not destructive, idempotent and open-world; it is the only open-world tool. It is in the `full` and `lifecycle` tool sets, not in `core` (D5).
 
-> Check whether a newer version of Exegete exists, and say how to install it. Use when the user asks whether Exegete is up to date, how to update it, or which version they have. Returns the installed version and its date, the newest version and its date, numbered steps for this computer, and links. Give the user the message and the steps. Do not suggest other ways to update, such as GitHub's Releases page. When checking is switched off in Exegete's settings, it makes no connection and returns the installed version and where to look.
+> Call only when the researcher asks whether Exegete is up to date, how to update it, or which version they have. Give the researcher the message and the steps as returned, and do not suggest other ways to update, such as GitHub's Releases page. The steps are for the researcher to follow: the app that started Exegete must be closed while Exegete changes, so do not run them yourself. Returns the installed version and its date, the newest version and its date, numbered steps for this computer, and links. While checking is on, it may fetch Exegete's version file from its website, which GitHub hosts, at most once a day. When checking is switched off in Exegete's settings, it makes no connection and returns the installed version and where to look.
 
 ### A3. The tool's answers (`message` and `steps`)
 
@@ -96,7 +98,7 @@ Built in src/exegete/updates.py, tool_answer. The answer is JSON with `message`,
 **A3.2 Newer version, Claude Desktop extension**
 
 Message:
-> A newer version of Exegete is available: <new> (<new date>). You have <installed>, which keeps working, so there is no hurry. What's new, and pictures of each step: <page>. Your projects stay as they are, and so do your conversations. After Claude Desktop reopens, the assistant may need to open your project again.
+> A newer version of Exegete is available: <new> (<new date>). You have <installed>, which keeps working, so there is no hurry. What's new, and each step: <page>. Your projects stay as they are, and so do your conversations. After Claude Desktop reopens, the assistant may need to open your project again.
 
 For a release marked important, the second sentence becomes:
 > It fixes a problem that could affect your projects: the page below says what it is, and what to do until you update.
@@ -177,7 +179,7 @@ In the extension, the message ends:
 > To let Exegete check, open Claude Desktop's Settings, then Extensions, then Exegete, and switch on "Tell me when a new version is out".
 
 On the Terminal route, the message ends:
-> To let Exegete check, set EXEGETE_UPDATE_CHECK to on in the settings of the app that starts it (INSTALL.md, "Environment variables the server reads").
+> To let Exegete check, set EXEGETE_UPDATE_CHECK to on in the settings of the app that starts it. The guide "Installing Exegete from the Terminal" says how, under "Environment variables Exegete reads".
 
 **A3.10 This copy is newer than the newest published version**
 > You have <installed>, which is newer than the newest published version, <new>. There is nothing to update.
@@ -202,7 +204,7 @@ With checking off, such a copy gets A3.9, which then reads "You have unknown."
 
 ### A4. The disclosure note (once per computer, in the first successful answer after a start with checking on)
 
-> Note for the user, who sees it only if you pass it on. Pass it on once, briefly, after answering their request. This version of Exegete can tell them when a new version is out. Once a week at most, and when they ask, it fetches a small file from its website, which GitHub hosts. Nothing from their projects is sent; GitHub records their computer's internet address and the time. It is switched on, and its first check will be on or after <first-check date>. To switch it off before then or at any time: Claude Desktop's Settings, then Extensions, then Exegete, "Tell me when a new version is out". PRIVACY.md, "Checking for new versions", says exactly what is sent.
+> Note for the researcher, who sees it only if you pass it on. Pass it on once, briefly, after answering their request. This version of Exegete can tell them when a new version is out. Once a week at most, and when they ask, it fetches a small file from its website, which GitHub hosts. Nothing from their projects is sent. GitHub records their computer's internet address and the time. It is switched on, and its first check will be on or after <first-check date>. To switch it off before then or at any time: Claude Desktop's Settings, then Extensions, then Exegete, "Tell me when a new version is out". PRIVACY.md, "Checking for new versions", says exactly what is sent.
 
 Nothing is given at the start itself. The note is added to the first successful answer from a tool other than check_for_updates after a start with checking on, when no disclosure is recorded on this computer. A refusal or an error carries no note; the note waits for the next answer. The record (`disclosed_at` in update_check.json) is shared by every copy of Exegete on the computer, so a later version does not give the note again. If the state file cannot be written, only this run's memory keeps the record, so a later start may give it again.
 
@@ -212,10 +214,10 @@ On the Terminal route, where the check is off unless switched on, that is the fi
 
 ### A5. The new-version notice (once per new version on this computer, while checking is on)
 
-> Note for the user, who sees it only if you pass it on. Pass it on once, in one or two sentences, after answering their request. Do not check for updates or start updating unless they ask. A newer version of Exegete is available: <new> (<new date>). They have <installed>, which keeps working, so there is no hurry. What's new: <page>. To update, they can ask: "How do I update Exegete?"
+> Note for the researcher, who sees it only if you pass it on. Pass it on once, in one or two sentences, after answering their request. Do not check for updates or start updating unless they ask. A newer version of Exegete is available: <new> (<new date>). They have <installed>, which keeps working, so there is no hurry. What's new: <page>. To update, they can ask: "How do I update Exegete?"
 
 **For a release marked important:**
-> Note for the user, who sees it only if you pass it on. Pass it on calmly, once, after answering their request, and before making any further change to a project. An important update to Exegete is available: <new> (<new date>). It fixes a problem that could affect projects. They have <installed>. <page> says what the problem is and what to do until they update. To update, they can ask: "How do I update Exegete?"
+> Note for the researcher, who sees it only if you pass it on. Pass it on calmly, once, after answering their request, and before making any further change to a project. An important update to Exegete is available: <new> (<new date>). It fixes a problem that could affect projects. They have <installed>. <page> says what the problem is and what to do until they update. To update, they can ask: "How do I update Exegete?"
 
 **In the `core` tool set,** "To update, they can ask: ..." becomes "To update, see <page>" (the notice then ends without a full stop).
 
@@ -225,7 +227,7 @@ No notice can be given until the GitHub Pages site is published (planned, outsid
 
 ### A6. After an update (once per update on this computer, no network, whether checking is on or off)
 
-> Note for the user, who sees it only if you pass it on. Pass it on once, after answering their request, in the release's own words and with the link: Exegete has been updated to <installed> on this computer, so the update worked. What's new: <summary> The release's notes, with each change and what to do: <installed notes>.
+> Note for the researcher, who sees it only if you pass it on. Pass it on once, after answering their request, in the release's own words and with the link: Exegete has been updated to <installed> on this computer, so the update worked. What's new: <summary> The release's notes, with each change and what to do: <installed notes>.
 
 `<summary>` is release.SUMMARY in src/exegete/release.py and ends with its own full stop. Since 0.15.3 it is one plain paragraph of at most 800 characters, with no link and no line break, on what is new and what changes for the researcher, written by hand at each release; the update page's "What's new" shows the same words. When the version running is not the one release.py describes (release.VERSION), the "What's new" sentence is left out, and the note asks only that it be passed on with the link.
 
@@ -235,7 +237,7 @@ It is given when the version running is newer than the newest version recorded a
 
 Version 3's drafts were built with these changes. Where no reason is recorded in a commit or a code comment, the list says so.
 
-- **"Claude Desktop" and "the assistant".** Every text in src/exegete names the app "Claude Desktop" and the model "the assistant", where the drafts said "Claude". tests/test_v0141_intro_openai.py (TestServedTextsAreHostNeutral.test_no_source_file_addresses_claude) refuses "Claude" in the package's source unless "Desktop" or "Code" follows, which also rules out the draft's Mac step ("click Claude in the menu bar"). A1 lives in the manifest, outside that rule, and still says "Claude".
+- **"Claude Desktop" and "the assistant".** Every text in src/exegete names the app "Claude Desktop" and the model "the assistant", where the drafts said "Claude". tests/test_v0141_intro_openai.py (TestServedTextsAreHostNeutral.test_no_source_file_addresses_claude) refuses "Claude" in the package's source unless "Desktop" or "Code" follows, which also rules out the draft's Mac step ("click Claude in the menu bar"). A1 lives in the manifest, outside that rule.
 - **One system only.** Commands and the quitting step are given for this computer's own system (PowerShell on Windows, Terminal otherwise), not in both forms. No reason is recorded; the server knows its own system, and A2 promises "numbered steps for this computer".
 - **The page's field is `instructions_page`**, not the design's `update_page`. No reason is recorded. The likely one: tests/test_v014_server_wide.py reads a word such as update_page (TOOL_SHAPED) as the name of a tool that does not exist, unless NOT_TOOLS lists it.
 - **The extension's answer (A3.2).** Step 1 no longer says where the downloads list usually is; step 2 holds its fallback; step 3 gives "Quit (or Exit)" on Windows and no waiting time; the closing lines end the message, without "Exegete's settings stay as they are". No reason is recorded; the open questions stay on the design's list ("To verify on a real computer", items 5 and 6). The line for organisations that manage Claude Desktop's extensions is not built, since Exegete cannot tell.

@@ -25599,12 +25599,14 @@ def _coded_segments_notes(rows: List[Dict[str, Any]], case_mode: bool,
         # QualCoder's text export writes it (report_codes.py 791-816 at
         # 4.0; only its csv, xlsx and iramuteq exports read the variables
         # checkbox). include_variables was taken without a word (v0.15.4,
-        # the claims audit's point 48).
+        # the claims audit's point 48). The csv writes CaseVar_ columns
+        # in case mode alone.
         notes["variables_note"] = (
             "include_variables applies to the csv format only: the txt "
             "report has no columns for attribute values, so none were "
-            "written. Export again with format 'csv' for the FileVar_ "
-            "and CaseVar_ columns.")
+            "written. Export again with format 'csv' for the "
+            + ("FileVar_ and CaseVar_ columns." if case_mode
+               else "FileVar_ columns."))
     if case_mode:
         # A coding inside two or more overlapping spans of one case is
         # written once for each, as QualCoder's own report writes it (its

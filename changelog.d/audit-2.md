@@ -22,11 +22,11 @@
   unset.** The attribute reads listed only the values stored, and
   `query_by_attribute` joined them, so `""` missed a case or file with
   no row for the attribute, and a numeric comparison left it out of its
-  count of unset values. Such a case or file, and a value stored as
-  null, now read as `""`: `get_case_attributes` and
-  `get_file_attributes` list the attribute with `""` and no
-  `attribute_id`, `""` finds it, and `values_left_out` counts it as
-  unset.
+  count of unset values. Such a case or file now reads as `""`:
+  `get_case_attributes` and `get_file_attributes` list the attribute
+  with `""` and no `attribute_id`, `""` finds it, and `values_left_out`
+  counts it as unset. A value stored as null reads as `""` too, in the
+  two reads with its row's `attribute_id`.
 - **`search_files` counts a file whose every match is already coded
   only when the file is not listed.** With the name search on, the
   default, such a file whose name matched was listed and counted in

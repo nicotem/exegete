@@ -2540,6 +2540,29 @@ def visible_name_key(value: Any) -> str:
     return name_key(name)
 
 
+# Attribute names (v0.15.4) follow the rule above on characters no one
+# sees, but are compared exactly, by Exegete and by QualCoder's own
+# dialogs: letter case, spacing and Unicode form are kept, and so is the
+# name as stored, its outer spaces stripped and nothing else. A tab or a
+# line break inside a new attribute name is refused as a control, since
+# the name keeps its spacing as typed.
+def attribute_name_without_unseen(value: Any, kept_too: bool = True) -> str:
+    """`value` without its outer spaces and without the characters no one
+    sees on screen: every one of them, kept or not, for the key two
+    attribute names are compared by (two names with one key look the
+    same in every list), or only those the rule refuses when `kept_too`
+    is false, for what a refusal offers instead. '' for a value that is
+    not text."""
+    if not isinstance(value, str):
+        return ""
+    drop = {index for index, keep in _unseen_in_name(value)
+            if kept_too or not keep}
+    if drop:
+        value = "".join(ch for index, ch in enumerate(value)
+                        if index not in drop)
+    return value.strip()
+
+
 # File names (v0.13, rename dossier 3.3, items 1 to 4): one rule set for
 # every file name this server writes, shared by import_text_file and
 # rename_file. QualCoder's own rename dialog checks only that the name is
@@ -12925,7 +12948,73 @@ class QualcoderDatabase:
                 f"{existing['caseOrFile']} attribute); attribute names "
                 f"are global across cases, files and journals"
             )
+        self._check_new_attribute_name(name, applies_to)
         return {"name": name, "memo": memo}
+
+    def _check_new_attribute_name(self, name: str, applies_to: str) -> None:
+        """The rule on characters no one sees on screen, for a new
+        attribute name (v0.15.4; `attribute_name_without_unseen`): the
+        name may hold none that the rule refuses, nor equal another
+        attribute's name, of any kind, once every such character is left
+        out of both. Names already in the project are never checked.
+
+        Raises:
+            ValueError: the refusal, in the words the names of codes,
+                categories and cases are refused with, naming the other
+                attribute and its kind; Exegete has no tool to rename an
+                attribute, so none is offered
+            RuntimeError: a read that failed
+        """
+        problem = name_character_problem(name)
+        if problem is not None:
+            position, code = problem
+            cleaned = attribute_name_without_unseen(name, kept_too=False)
+            raise ValueError(
+                f"The name '{name_shown_with_codes(name)}' holds {code} at "
+                f"position {position} (counting from 1), a character that "
+                f"usually shows nothing on screen. A new name may not hold "
+                f"one, since the name could then look like a name it is "
+                f"not." + (f" Without such characters it reads "
+                           f"'{cleaned}'." if cleaned else ""))
+        key = attribute_name_without_unseen(name)
+        if not key:
+            return
+        try:
+            rows = self.conn.execute(
+                "SELECT name, caseOrFile FROM attribute_type").fetchall()
+        except sqlite3.Error as e:
+            _raise_query_error(e, "add_attribute_type",
+                               "Failed to add attribute type")
+        twins = [row for row in rows
+                 if isinstance(row["name"], str) and row["name"] != name
+                 and attribute_name_without_unseen(row["name"]) == key]
+        if not twins:
+            return
+
+        def shown(row):
+            kind = row["caseOrFile"]
+            label = (f"the {kind} attribute" if isinstance(kind, str) and kind
+                     else "the attribute")
+            return f"{label} '{name_shown_with_codes(row['name'])}'"
+
+        if len(twins) == 1:
+            row = twins[0]
+            way_on = ("Use that attribute, or choose another name."
+                      if row["caseOrFile"] == applies_to else
+                      "Attribute names are global across cases, files and "
+                      "journals, so choose another name.")
+            raise ValueError(
+                f"Once characters that usually show nothing on screen are "
+                f"left out, {shown(row)} has the name '{name}', so the two "
+                f"could look the same in a list. Nothing was created. "
+                f"{way_on}")
+        listed = "; ".join(shown(row) for row in twins)
+        raise ValueError(
+            f"Once characters that usually show nothing on screen are left "
+            f"out, {len(twins)} attributes ({listed}) have the name "
+            f"'{name}', so they could look the same in a list. Nothing was "
+            f"created. Attribute names are global across cases, files and "
+            f"journals, so choose another name.")
 
     def add_attribute_type(self, name: str, owner: str, applies_to: str,
                            value_type: str = "character",

@@ -18481,6 +18481,13 @@ def set_memo(target_type: str, target_id: Optional[int] = None,
         return json.dumps({
             "error": f"target_id is required for target_type "
                      f"'{target_type}' (null is only for 'project')."})
+    # The project memo has no id: one given with it was ignored without a
+    # word (v0.15.4), so that a call meant for another target wrote the
+    # project memo
+    if target_type == "project" and target_id is not None:
+        return json.dumps({
+            "error": "target_type 'project' takes no target_id: leave it "
+                     "out, or pass null. Nothing was written."})
 
     if target_type == "coding":
         refusal = _refuse_existing_row_change(

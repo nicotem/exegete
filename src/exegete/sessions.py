@@ -353,6 +353,10 @@ class ProposedCode:
         )
 
 
+# `outside_scope` given no code date (v0.15.4): the number alone is checked
+_DATE_NOT_GIVEN = object()
+
+
 class AICodingSession:
     """Manages a session of AI coding suggestions."""
 
@@ -372,7 +376,11 @@ class AICodingSession:
         # claims audit's item 10): {"file_ids": [...], "code_ids": [...] or
         # None for every code}. None for a session made before v0.14 (or
         # built directly), whose file_ids and code_names were only ever a
-        # note: those sessions keep that behaviour.
+        # note: those sessions keep that behaviour. From 0.15.4 a scope
+        # limited to named codes also keeps each code's date beside its
+        # number, "code_dates" ({"<number>": "<date>"}): SQLite gives a
+        # deleted code's number to the next code made, and the date tells
+        # the two apart. A session without it is checked by number alone.
         self.scope = self._clean_scope(scope)
         # A scope that is there but cannot be read (a damaged or hand-made
         # file) fails closed: nothing is recorded into the session, rather
@@ -433,15 +441,35 @@ class AICodingSession:
             code_ids = ids(code_ids)
             if code_ids is None:
                 return None
-        return {"file_ids": file_ids, "code_ids": code_ids}
+        cleaned = {"file_ids": file_ids, "code_ids": code_ids}
+        # The codes' dates (v0.15.4): only a text for a number the scope
+        # holds is kept; anything else is read past, and a session whose
+        # dates cannot be read at all is checked by number, as before
+        dates = scope.get("code_dates")
+        if code_ids is not None and isinstance(dates, dict):
+            numbers = {str(cid) for cid in code_ids}
+            cleaned["code_dates"] = {
+                key: value for key, value in dates.items()
+                if isinstance(key, str) and key in numbers
+                and isinstance(value, str)}
+        return cleaned
 
-    def outside_scope(self, file_id: int,
-                      code_id: Optional[int] = None) -> Optional[str]:
+    def _recorded_date(self, code_id: int) -> Optional[str]:
+        """The date the scope recorded for a code's number, or None."""
+        dates = (self.scope or {}).get("code_dates")
+        return dates.get(str(code_id)) if isinstance(dates, dict) else None
+
+    def outside_scope(self, file_id: int, code_id: Optional[int] = None,
+                      code_date: Any = _DATE_NOT_GIVEN) -> Optional[str]:
         """Which part of the scope a file or code falls outside, or None.
 
         'file' or 'code'; 'unreadable' when the session's scope is there but
         cannot be read; None when the session has no scope (made before
-        v0.14) or both are inside it. code_id None checks the file only."""
+        v0.14) or both are inside it. code_id None checks the file only.
+        `code_date` (v0.15.4) is the code's date as the codebook holds it
+        now: a code whose number the scope holds under another date is
+        another code, given the number of one deleted since, and falls
+        outside ('code')."""
         if self.scope_unreadable:
             return "unreadable"
         if self.scope is None:
@@ -449,17 +477,46 @@ class AICodingSession:
         if file_id not in self.scope["file_ids"]:
             return "file"
         codes = self.scope["code_ids"]
-        if code_id is not None and codes is not None and code_id not in codes:
-            return "code"
+        if code_id is not None and codes is not None:
+            if code_id not in codes:
+                return "code"
+            recorded = self._recorded_date(code_id)
+            if (code_date is not _DATE_NOT_GIVEN and recorded is not None
+                    and code_date != recorded):
+                return "code"
         return None
 
-    def add_codes_to_scope(self, code_ids: List[int]) -> None:
+    def scope_recorded(self, code_id: int, code_date: Any) -> bool:
+        """Whether this session's scope names the code of that number and
+        date (v0.15.4): its number is there with that date, or with none
+        recorded. Undo takes a removed code out of a scope only where it
+        did, so undoing a later code given a deleted code's number leaves
+        the session's own code in its scope."""
+        if self.scope is None or self.scope.get("code_ids") is None:
+            return False
+        if code_id not in self.scope["code_ids"]:
+            return False
+        recorded = self._recorded_date(code_id)
+        return recorded is None or recorded == code_date
+
+    def add_codes_to_scope(self, codes: Dict[int, Any]) -> None:
         """Codes created from this session's approved proposals join a
-        session limited to named codes, so the loop can apply them."""
-        if self.scope is not None and self.scope["code_ids"] is not None:
-            for cid in code_ids:
-                if cid not in self.scope["code_ids"]:
-                    self.scope["code_ids"].append(cid)
+        session limited to named codes, so the loop can apply them: each
+        number added where it is missing, and its date set (v0.15.4),
+        replacing the one recorded where the number is already there (the
+        session's own code deleted, and its number given to the code its
+        proposal made). `codes`: each new code's number and date, as its
+        write read the row back."""
+        if not codes or self.scope is None or self.scope["code_ids"] is None:
+            return
+        dates = self.scope.setdefault("code_dates", {})
+        for cid, date in codes.items():
+            if cid not in self.scope["code_ids"]:
+                self.scope["code_ids"].append(cid)
+            if isinstance(date, str):
+                dates[str(cid)] = date
+            else:
+                dates.pop(str(cid), None)
 
     def add_suggestion(self, suggestion: CodingSuggestion):
         """Add a coding suggestion to the session."""

@@ -79,15 +79,20 @@ ZEB = [{"original": "Zebedee", "pseudonym": "Robin"}]
 ZEB_TEXT = ("Zebedee walked to the quarry.\n"
             "Ottoline stayed behind, and Zebedee came back.\n")
 # The safety sentences, word for word (the one page's exception to pinning
-# no phrasing)
-HEAD = ("This page is for you. To leave an occurrence as it is, tell the "
-        "assistant its id. Words you copy from this page into the "
-        "conversation go to the AI provider, names included, unless the "
-        "model runs on your own computer. It is not meant to be read by an "
-        "AI assistant.")
+# no phrasing); since v0.15.4 the researcher gives numbers or a line
+HEAD = ("This page is for you. To leave occurrences as they are, tell the "
+        "assistant their numbers in bold or, where the page shows tick "
+        "boxes, tick them and paste the line it gives you into the "
+        "conversation. That line holds no word of the text. Other words you "
+        "copy from this page into the conversation go to the AI provider, "
+        "names included, unless the model runs on your own computer. It is "
+        "not meant to be read by an AI assistant.")
 NOTE = ("This page is for the researcher: do not open it, read it or look "
-        "at it with any tool, browser or screenshot. Ask them which ids to "
-        "leave.")
+        "at it with any tool, browser or screenshot. Ask them which "
+        "occurrences to leave: they give the numbers in bold on it, or paste "
+        "the line it gives them.")
+# A numbering, for the pages the tests build themselves (v0.15.4)
+NUMBERING = "q8x2dm"
 BRIEF_LINE = ("That page and the copies it opens, and the page a "
               "pseudonymisation preview opens for choosing occurrences, are "
               "for the researcher: never open, read or look at them with any "
@@ -99,11 +104,18 @@ ANSWER_KEYS = {"opened", "counts", "note", "location", "not_opened_because",
 # The page's marks and labels, as occurrences.build_page draws them: each
 # line in the direction of its own first letter, each label's words
 # isolated, left to right, and named for the mark the page's style draws
-# after it where it needs one
-MARK = r'<mark class="occ( left)?">([^<]*)</mark>'
-LABEL = (r'<span class="id( left)?(?: bidi-(?:l|r|al))?"><bdi dir="ltr">'
-         r'<span class="sr">occurrence id </span>([0-9a-z]+)'
-         r'(, left as it is)?</bdi></span>')
+# after it where it needs one. Since v0.15.4 a label holds, before its
+# id, its tick box (its number, ticked where a list leaves it, hidden
+# until the page's script runs, a name of its own) and its number in bold
+MARK = r'<mark class="occ(?P<marked_left> left)?">(?P<words>[^<]*)</mark>'
+LABEL = (r'<span class="id(?P<label_left> left)?(?: bidi-(?:l|r|al))?">'
+         r'<bdi dir="ltr"><input type="checkbox" class="pick" '
+         r'data-n="(?P<box>\d+)"(?P<ticked> checked)? hidden '
+         r'autocomplete="off" aria-label="leave occurrence (?P<named>\d+) '
+         r'as it is"><span class="sr">occurrence </span>'
+         r'<b>(?P<number>\d+)</b><span class="sr">, id </span>'
+         r'<span class="dot" aria-hidden="true"> · </span>'
+         r'(?P<id>[0-9a-z]+)(?P<left_words>, left as it is)?</bdi></span>')
 TOKEN = re.compile(MARK + "|" + LABEL)
 PARAGRAPH = re.compile(r'<p dir="auto"><span class="n">(\d+)</span>(.*?)</p>',
                        re.DOTALL)
@@ -167,18 +179,29 @@ def marked(page):
             words += html.unescape(body[cursor:token.start()])
             if token.group(0).startswith("<mark"):
                 mark = (int(number), len(words), html.unescape(
-                    token.group(2)), bool(token.group(1)))
+                    token["words"]), bool(token["marked_left"]))
                 words += mark[2]
             else:
                 assert mark is not None, body
-                found.append((mark[0], mark[1], mark[2], token.group(4),
-                              mark[3], bool(token.group(3))
-                              and bool(token.group(5))))
+                found.append((mark[0], mark[1], mark[2], token["id"],
+                              mark[3], bool(token["label_left"])
+                              and bool(token["left_words"])))
                 mark = None
             cursor = token.end()
         words += html.unescape(body[cursor:])
         lines[int(number)] = words
     return found, lines
+
+
+def labels(page):
+    """Each label on the page, in page order (v0.15.4), as (its number in
+    bold, its box's number, the number its box's name gives, whether its
+    box comes ticked, its id, whether it is labelled left)."""
+    main = page[page.index('<main id="text">'):page.index("</main>")]
+    return [(int(found["number"]), int(found["box"]), int(found["named"]),
+             bool(found["ticked"]), found["id"],
+             bool(found["label_left"]) and bool(found["left_words"]))
+            for found in re.finditer(LABEL, main)]
 
 
 def expected(text, mapping, left=()):
@@ -235,7 +258,11 @@ class TestThePage:
     def test_page_carries_no_key(self, tmp_path):
         """No pseudonym and no entry number on the page, on either path:
         the mapping's pseudonyms occur nowhere in the text, so any on the
-        page would be the mapping's."""
+        page would be the mapping's. The page's own words, its script's
+        included, hold none of them ("same" holds "sam", JavaScript's
+        Object.entries "entries"); its ids and numbering, drawn from an
+        alphabet that holds s, a and m, are taken out before it is read,
+        since one of them could hold "sam" or "entry" by chance."""
         assert "Alex" not in flagship.TEXT and "Sam" not in flagship.TEXT
         with fresh(tmp_path, flagship.TEXT) as folder:
             for source in ("typed", "names list"):
@@ -250,12 +277,20 @@ class TestThePage:
                                choose_occurrences=True)
                 page = page_of(folder)
                 assert out["occurrences_page"]["counts"]["occurrences"] == 5
+                drawn = [row["id"] for row in block(out)["listed"]]
+                drawn.append(block(out)["numbering"])
+                assert all(one in page for one in drawn)
+                for one in drawn:
+                    page = page.replace(one, "")
                 for word in ("alex", "sam", "entry", "entries"):
                     assert word not in page.lower(), (source, word)
 
     def test_page_escaped(self, tmp_path):
         """A text and a file name holding markup stay text, and the head
-        carries the policy that allows no script."""
+        carries the policy that allows Exegete's one script alone (v0.15.4:
+        the reading copy's, with that script allowed by its digest): the
+        page's one script element is Exegete's, and the text's stays
+        text."""
         text = ('Tom wrote <script>alert("x")</script> & \'quoted\' '
                 '<b>Tom</b>.\n')
         with fresh(tmp_path, text) as folder:
@@ -269,9 +304,13 @@ class TestThePage:
             assert page.startswith("<!DOCTYPE html>\n"
                                    + reading_folder.PAGE_MARK)
             assert (f'<meta http-equiv="Content-Security-Policy" '
-                    f'content="{POLICY}">') in page
-            assert "<script" not in page and "<img" not in page
-            assert "<b>" not in page
+                    f'content="{occurrences.PAGE_POLICY}">') in page
+            assert occurrences.PAGE_POLICY.startswith(POLICY + "; ")
+            assert page.count("<script") == 1 and "<img" not in page
+            assert f"<script>{occurrences.PICK_SCRIPT}</script>" in page
+            # The bold numbers are the page's own <b>; the text's is text
+            main = page[page.index('<main id="text">'):page.index("</main>")]
+            assert len(re.findall("<b>", main)) == len(labels(page)) == 2
             assert "&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; " \
                    "&amp; &#x27;quoted&#x27; &lt;b&gt;" in page
             found, lines = marked(page)
@@ -341,7 +380,8 @@ class TestThePage:
             project_name="p", file_id=1, file_name="f.txt",
             text="Mary\nAnn and Tom.", marks=[(0, 8, "aaaaa"),
                                               (13, 16, "bbbbb")],
-            left={0}, written_at=datetime(2026, 11, 4, 9, 30))
+            left={0}, written_at=datetime(2026, 11, 4, 9, 30),
+            numbering=NUMBERING)
         found, lines = marked(page)
         assert lines == {1: "Mary", 2: "Ann and Tom."}
         assert found == [(2, 0, "Ann", "aaaaa", True, True),
@@ -352,8 +392,8 @@ class TestThePage:
     def test_the_lines_said_as_each_path_gives_them(self, tmp_path):
         """The page says the lines are numbered as the preview numbers them
         only where the preview gives lines (a mapping typed into the call);
-        with the names list it says that the preview lists the ids alone.
-        Neither path's page speaks of a run."""
+        with the names list it says that the preview gives no line
+        numbers. Neither path's page speaks of a run."""
         with fresh(tmp_path, ZEB_TEXT) as folder:
             names_list(folder, ZEB)
             for typed in (True, False):
@@ -363,8 +403,9 @@ class TestThePage:
                 page = " ".join(page_of(folder).split())
                 facts = page[page.index('<ul class="facts">'):
                              page.index("</ul>")]
-                assert ("as the preview numbers them" in facts) is typed
-                assert ("the preview lists the ids alone" in facts) \
+                assert ("The lines are numbered as the preview numbers "
+                        "them" in facts) is typed
+                assert ("the preview gives no line numbers" in facts) \
                     is not typed
                 assert "run" not in facts
 
@@ -391,7 +432,8 @@ def _page_for(text, names):
         marks.append((start, start + len(name), one))
     page, _counts = occurrences.build_page(
         project_name="p", file_id=1, file_name="f.txt", text=text,
-        marks=marks, left={1}, written_at=datetime(2026, 11, 4, 9, 30))
+        marks=marks, left={1}, written_at=datetime(2026, 11, 4, 9, 30),
+        numbering=NUMBERING)
     return page
 
 
@@ -403,16 +445,29 @@ def _page_for(text, names):
 # neutral object, each label's isolate (`bdi`) between an isolate's
 # opening and closing characters, the mark the page's style draws after
 # a label, and the paragraph's direction from its first letter outside
-# the labels (`dir="auto"`); the screen reader's words are out of flow
+# the labels (`dir="auto"`); the screen reader's words are out of flow.
+# Inside the isolate, as the page's script shows it (v0.15.4), the tick
+# box is one more neutral object, before the bold number and the id
 LRI, PDI, OBJECT = chr(0x2066), chr(0x2069), chr(0xFFFC)
 # Each label's mark, by its class, as the page's style draws it
 AFTER = {name: chr(int(code, 16)) for name, code in re.findall(
     r'\.id\.(bidi-[a-z]+)::after\{content:"\\([0-9a-f]+)"\}',
     occurrences.PAGE_STYLE)}
-# A paragraph's pieces: an occurrence's mark, its end, a label
+# A paragraph's pieces: an occurrence's mark, its end, a label (its class,
+# its bold number, the sign between number and id, and its words)
 PIECE = re.compile(
     r'<mark class="occ(?: left)?">|</mark>|<span class="([^"]*)"><bdi '
-    r'dir="ltr"><span class="sr">occurrence id </span>([^<]*)</bdi></span>')
+    r'dir="ltr"><input type="checkbox" class="pick" data-n="\d+"[^>]*>'
+    r'<span class="sr">occurrence </span><b>(\d+)</b><span class="sr">, '
+    r'id </span><span class="dot" aria-hidden="true">([^<]*)</span>'
+    r'([^<]*)</bdi></span>')
+
+
+def _label_seen(number, dot, words):
+    """What a label's isolate holds as a browser lays it out once the
+    page's script has shown its box: the box, as an object, then the
+    number, the sign and the label's words."""
+    return OBJECT + number + html.unescape(dot) + html.unescape(words)
 # Lines that mix directions, with the names marked in each: the review's
 # (a line of Hebrew; a line of Arabic after a Latin speaker label, so laid
 # out left to right; English after a Hebrew speaker label, and English
@@ -515,7 +570,9 @@ class _Bidi:
 def _as_built(paragraph):
     """A paragraph of the page as a browser hands it to the algorithm: its
     characters, each one's role (("number",), ("text", its place in the
-    line), ("label", n) or ("mark", n)) and the paragraph's level."""
+    line), ("label", n) or ("mark", n)) and the paragraph's level. A
+    label's characters are its isolate's: the box, as an object, the
+    number, the sign and its words (`_label_seen`)."""
     body = re.fullmatch(r'<p dir="auto"><span class="n">\d+</span>(.*)</p>',
                         paragraph, re.DOTALL).group(1)
     characters, roles = [OBJECT], [("number",)]
@@ -529,7 +586,7 @@ def _as_built(paragraph):
         if piece is None:
             break
         if piece.group(1) is not None:
-            for character in LRI + html.unescape(piece.group(2)) + PDI:
+            for character in LRI + _label_seen(*piece.group(2, 3, 4)) + PDI:
                 characters.append(character)
                 roles.append(("label", labels))
             for name in piece.group(1).split():
@@ -554,16 +611,19 @@ def _one_way(words):
 def _faults(bidi, text, spans, others=True, placed=True):
     """What is wrong with where the labels stand when the page of the one
     line `text`, with occurrences at `spans`, is laid out: a label not
-    beside its own occurrence; the text laid out otherwise than alone;
-    with `others`, a label beside another occurrence; and with `placed`,
-    a label not where the rule puts it, after its occurrence as the line
-    reads or, where the occurrence ends a stretch written against the
-    line's direction that began before it (as the line laid out alone
-    shows), after its last letter as the stretch reads."""
+    beside its own occurrence; its box, number and id not in that order,
+    left to right; the text laid out otherwise than alone; with `others`,
+    a label beside another occurrence; and with `placed`, a label not
+    where the rule puts it (`_as_the_rule_puts_it`): after its occurrence
+    as the line reads or, where the occurrence's last letter stands in a
+    stretch written against the line's direction that began before the
+    occurrence or goes on past it (as the line laid out alone shows),
+    after that letter as the stretch reads."""
     marks = [(begin, end, f"q{n:04d}") for n, (begin, end) in enumerate(spans)]
     page, _counts = occurrences.build_page(
         project_name="p", file_id=1, file_name="f.txt", text=text,
-        marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0))
+        marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0),
+        numbering=NUMBERING)
     main = page[page.index('<main id="text">'):page.index("</main>")]
     [paragraph] = re.findall(r'<p dir="auto">.*?</p>', main, re.DOTALL)
     built, roles, level = _as_built(paragraph)
@@ -573,8 +633,9 @@ def _faults(bidi, text, spans, others=True, placed=True):
     alone, levels = bidi.lay_out(OBJECT + drawn, level)
     # What a reader sees, in visual order: invisible characters (the
     # marks, the isolates' own and any in the text) have no place to see
-    seen = [roles[at] for at in order
-            if unicodedata.category(built[at]) != "Cf"]
+    visible = [at for at in order
+               if unicodedata.category(built[at]) != "Cf"]
+    seen = [roles[at] for at in visible]
     faults = []
     if [role[1] for role in seen if role[0] == "text"] != [
             at - 1 for at in alone
@@ -584,6 +645,9 @@ def _faults(bidi, text, spans, others=True, placed=True):
         where = [at for at, role in enumerate(seen) if role == ("label", n)]
         label = (where[0], where[-1])
         assert where == list(range(label[0], label[1] + 1))
+        if "".join(built[visible[at]] for at in where) != _label_seen(
+                str(n + 1), " · ", marks[n][2]):
+            faults.append(f"label {n}'s box, number and id out of order")
         faults += _beside(seen, spans, n, label, others)
         if placed:
             line_reads, right = _as_the_rule_puts_it(
@@ -674,8 +738,9 @@ def _random_line(draw):
 class TestRightToLeft:
     def test_each_line_takes_its_own_direction(self):
         """Each line of the text is laid out in the direction of its own
-        first letter, and each id's words follow its occurrence isolated,
-        left to right: in a line of right-to-left text the id then stands
+        first letter, and each label's words follow its occurrence
+        isolated, left to right, its box and number inside the isolate
+        (v0.15.4): in a line of right-to-left text the label then stands
         after its own occurrence in reading order, and a direction
         character in the text before it does not turn it round."""
         text = "\n".join(line for line, _names, _rtl in
@@ -690,7 +755,8 @@ class TestRightToLeft:
         marks.append((start, start + 3, f"id{len(marks)}"))
         page, _counts = occurrences.build_page(
             project_name="p", file_id=1, file_name="f.txt", text=text,
-            marks=marks, left={1}, written_at=datetime(2026, 11, 4, 9, 30))
+            marks=marks, left={1}, written_at=datetime(2026, 11, 4, 9, 30),
+            numbering=NUMBERING)
         main = page[page.index('<main id="text">'):page.index("</main>")]
         assert re.findall(r"<p\b[^>]*>", main) == ['<p dir="auto">'] * 5
         for place, (begin, end, one) in enumerate(marks):
@@ -700,8 +766,14 @@ class TestRightToLeft:
             # that holds a direction character of its own, where every label
             # has its mark, Tom's left-to-right one
             mark = " bidi-l" if place == len(marks) - 1 else ""
+            number = place + 1
             label = (f'<span class="id{" left" if left else ""}{mark}">'
-                     f'<bdi dir="ltr"><span class="sr">occurrence id </span>'
+                     f'<bdi dir="ltr"><input type="checkbox" class="pick" '
+                     f'data-n="{number}"{" checked" if left else ""} hidden '
+                     f'autocomplete="off" aria-label="leave occurrence '
+                     f'{number} as it is"><span class="sr">occurrence </span>'
+                     f'<b>{number}</b><span class="sr">, id </span><span '
+                     f'class="dot" aria-hidden="true"> · </span>'
                      f'{one}{", left as it is" if left else ""}</bdi></span>')
             kind = "occ left" if left else "occ"
             assert (f'<mark class="{kind}">{html.escape(text[begin:end])}'
@@ -718,7 +790,12 @@ class TestRightToLeft:
         """The page's own markup laid out by MuPDF's HTML engine (PyMuPDF,
         no browser), which applies the Unicode bidirectional algorithm: in
         reading order, right to left in a line of Hebrew or Arabic, each
-        id stands after its own occurrence, not after the next."""
+        id stands after its own occurrence, not after the next. MuPDF does
+        not isolate a label, so it would lay out the bold number before
+        an id (v0.15.4) and the id as two runs of the line, a number and
+        letters, which a browser keeps together: the number, its sign and
+        the hidden box are left out here, and the test of mixed lines lays
+        the whole label out as a browser does, by ICU."""
         pymupdf = pytest.importorskip("pymupdf")
 
         def laid_out(body):
@@ -726,7 +803,8 @@ class TestRightToLeft:
             spaces, in compatibility form (MuPDF gives Arabic letters in
             their shaped forms)."""
             story = pymupdf.Story(
-                html="<html><head><style>.sr{display:none}</style></head>"
+                html="<html><head><style>.sr,.id b,.dot,[hidden]"
+                     "{display:none}</style></head>"
                      f"<body>{body}</body></html>")
             path = tmp_path / "laid-out.pdf"
             writer = pymupdf.DocumentWriter(str(path))
@@ -794,7 +872,8 @@ class TestRightToLeft:
             at += len(line) + 1
         page, _counts = occurrences.build_page(
             project_name="p", file_id=1, file_name="f.txt", text=text,
-            marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0))
+            marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0),
+            numbering=NUMBERING)
         assert re.findall(r'<span class="(id[^"]*)">', page) == [
             "id bidi-l", "id bidi-l", "id", "id bidi-l", "id", "id"]
 
@@ -802,11 +881,13 @@ class TestRightToLeft:
         """The page's own markup and style laid out as a browser lays out
         a paragraph (the label an isolate, as MuPDF's engine does not
         take it), by ICU's implementation of the algorithm: in each line,
-        each id stands beside its own occurrence and beside no other,
-        after it as the line reads or, where the occurrence ends a stretch
-        written against the line's direction that began before it, after
-        its last letter as the stretch reads; and the text keeps the
-        layout it has alone (a digit after an Arabic name among it)."""
+        each label, its box, number and id in that order, stands beside
+        its own occurrence and beside no other, after it as the line reads
+        or, where the occurrence's last letter stands in a stretch written
+        against the line's direction that began before the occurrence or
+        goes on past it, after that letter as the stretch reads; and the
+        text keeps the layout it has alone (a digit after an Arabic name
+        among it)."""
         bidi = _icu_bidi()
         if bidi is None:
             pytest.skip("no ICU on this system to lay a line out with")
@@ -872,7 +953,8 @@ class TestRightToLeft:
         begun = time.perf_counter()
         page, counts = occurrences.build_page(
             project_name="p", file_id=1, file_name="f.txt", text=text,
-            marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0))
+            marks=marks, left=set(), written_at=datetime(2026, 11, 5, 9, 0),
+            numbering=NUMBERING)
         took = time.perf_counter() - begun
         assert took < 5, f"{took:.1f} s"
         assert counts == {"occurrences": 24000, "left": 0, "lines": 2}

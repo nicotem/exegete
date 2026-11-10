@@ -20579,17 +20579,19 @@ def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
 
     The page shows every occurrence as found (the plan's `found`, each
     at its place in the stored text) with the id the preview shows for
-    it (its `occurrence_ids`, cut as the block cuts them), and those a
-    list leaves (`left_at`) marked as left. The answer gives whether it
-    opened, the page's counts and the note for the assistant; the page's
-    place only when it did not open, beside the opener's reason, which
-    names no file; and `not_written_because` when it could not be
-    written: a reading folder error's own words, any other error by its
-    kind alone, since its message names the file. With the names list
-    (`typed` false) the place and those words are withheld where they
-    carry a name from the mapping, as a skipped link's name is, with
-    `withheld_note`. A file with no occurrence has no page, and one
-    sentence says so."""
+    it (its `occurrence_ids`, cut as the block cuts them), numbered as
+    the block numbers its rows, and those a list leaves (`left_at`)
+    marked as left, their boxes ticked; its bar carries the file's id and
+    the list's `numbering` for the line to copy (v0.15.4). The answer
+    gives whether it opened, the page's counts and the note for the
+    assistant; the page's place only when it did not open, beside the
+    opener's reason, which names no file; and `not_written_because` when
+    it could not be written: a reading folder error's own words, any
+    other error by its kind alone, since its message names the file.
+    With the names list (`typed` false) the place and those words are
+    withheld where they carry a name from the mapping, as a skipped
+    link's name is, with `withheld_note`. A file with no occurrence has
+    no page, and one sentence says so."""
     item = next((entry for entry in (plan or {}).get("files", ())
                  if entry.get("found")), None)
     if item is None:
@@ -20615,7 +20617,8 @@ def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
             marks=[(found.start, found.end, one)
                    for found, one in zip(item["found"], shown)],
             left=item.get("left_at", ()), written_at=reading.now(),
-            version=_package_version, lines_in_preview=typed)
+            numbering=item["numbering"], version=_package_version,
+            lines_in_preview=typed)
         path = reading_folder.write_page(
             reading_folder.occurrences_folder(_current_project_folder(),
                                               file_id),

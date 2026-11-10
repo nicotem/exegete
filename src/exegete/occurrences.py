@@ -41,23 +41,33 @@ The same preview writes a page for the researcher (`build_page`): the
 file's whole text as stored, one paragraph per stored line, each
 numbered as the preview numbers it where the preview gives lines, and
 laid out in the direction of its own first letter; every occurrence
-marked with its id beside it, rather than at the far end of a stretch
-written the other way (`_mark_after`), and, with a list to leave, those
-left marked in a second style, labelled "left as it is". It shows no
-pseudonym, no entry number and
-nothing else of the mapping. Exegete writes it into the file's folder in
-the reading folder (`reading_folder.occurrences_folder`, where pages are
-private to this account, not synced and not indexed) and opens it in the
-researcher's browser; the answer gives whether it opened and counts,
-never the text, and the page's place only when it did not open. The page
-goes at Exegete's first tidy of the reading folder once it is an hour
-old, or sooner, when Exegete changes the file's text or name. It is safe
-by structure, as the reading copy is: the text goes only into HTML text,
+marked with its label beside it, rather than at the far end of a
+stretch written the other way (`_mark_after`): its number in bold, as
+the preview numbers it, then its id (v0.15.4); and, with a list to
+leave, those left marked in a second style, labelled "left as it is".
+It shows no pseudonym, no entry number and nothing else of the mapping.
+Before each number stands a tick box, and at the page's foot a bar
+gives the line to copy for the occurrences ticked (`the_line`): the
+file's id, the list's numbering and their numbers, nothing of the text.
+Both are hidden until the page's one script (`PICK_SCRIPT`) runs, so a
+browser that runs none shows the numbers alone. Exegete writes the page
+into the file's folder in the reading folder
+(`reading_folder.occurrences_folder`, where pages are private to this
+account, not synced and not indexed) and opens it in the researcher's
+browser; the answer gives whether it opened and counts, never the text,
+and the page's place only when it did not open. The page goes at
+Exegete's first tidy of the reading folder once it is an hour old, or
+sooner, when Exegete changes the file's text or name. It is safe by
+structure, as the reading copy is: the text goes only into HTML text,
 every character escaped and control characters shown as their visible
-pictures; the head allows no script, no fetch, no form and no base
-address; nothing links outside the page.
+pictures; the head allows one script, Exegete's own, by the digest of
+its text (`PAGE_POLICY`), and no fetch, no form and no base address;
+nothing links outside the page. The script reads no element of the
+text, keeps nothing and sends nothing: it reads the boxes and the bar,
+and writes the line, which the researcher copies.
 """
 
+import base64
 import bisect
 import hashlib
 import hmac
@@ -356,19 +366,185 @@ def line_numbers(text: str, starts: Sequence[int]) -> List[int]:
 
 # One page per file, the next preview's taking its place
 PAGE_NAME = "choose-occurrences.html"
-# The page's own words to the researcher, at its head
+# The page's own words to the researcher, at its head. The tick boxes and
+# the line stand only where the page's script runs (PICK_SCRIPT), so the
+# words hold on a page without them
 PAGE_FOR_YOU = (
-    "This page is for you. To leave an occurrence as it is, tell the "
-    "assistant its id. Words you copy from this page into the conversation "
-    "go to the AI provider, names included, unless the model runs on your "
-    "own computer. It is not meant to be read by an AI assistant.")
+    "This page is for you. To leave occurrences as they are, tell the "
+    "assistant their numbers in bold or, where the page shows tick boxes, "
+    "tick them and paste the line it gives you into the conversation. That "
+    "line holds no word of the text. Other words you copy from this page "
+    "into the conversation go to the AI provider, names included, unless "
+    "the model runs on your own computer. It is not meant to be read by an "
+    "AI assistant.")
 # Said in the preview's answer, its first sentence the import page's
 # (import_page.FOR_THE_ASSISTANT): one rule in one wording
 PAGE_FOR_THE_ASSISTANT = (
     "This page is for the researcher: do not open it, read it or look at "
-    "it with any tool, browser or screenshot. Ask them which ids to leave.")
+    "it with any tool, browser or screenshot. Ask them which occurrences to "
+    "leave: they give the numbers in bold on it, or paste the line it "
+    "gives them.")
 # The label after an occurrence left by the list the preview was given
 LEFT_LABEL = "left as it is"
+# The bar at the page's foot (v0.15.4): its id, which the script finds it
+# by, and its words after the count of boxes ticked. Hidden until the
+# script runs
+PICK_BAR = "pick-bar"
+PICK_INTRO = (
+    "Copy the line into the conversation: it holds the file, this page's "
+    "numbering and the numbers ticked, and nothing of the text.")
+
+
+def the_line(file_id: int, code: str, numbers: Sequence[int]) -> str:
+    """The line the page's script builds for the occurrences ticked
+    (v0.15.4), for the researcher to paste into the conversation: the
+    file's id, the numbering of the page's list and the numbers,
+    ascending, each once; one number takes the singular. It holds no
+    name, id, pseudonym or word of the text, and the assistant gives
+    the next preview what it holds as it is (file_id, numbering and
+    leave_numbers). The script's own words make the same line
+    (PICK_SCRIPT; tests/test_v0154_choosing_page.py runs it)."""
+    ordered = sorted({int(one) for one in numbers})
+    head = f"File {int(file_id)}, numbering {code}: "
+    if len(ordered) == 1:
+        return f"{head}leave occurrence {ordered[0]} as it is."
+    return (f"{head}leave occurrences {', '.join(map(str, ordered))} as "
+            f"they are.")
+
+
+# The page's one script (v0.15.4), allowed by the SHA-256 of its text
+# alone (PAGE_POLICY), so that no other script, inline or from a file,
+# runs on the page. At load it sets every tick box to its written state
+# (a browser that keeps a form's state across a reload, as Firefox does
+# by position, could otherwise tick an earlier page's occurrences beside
+# this page's numbering), builds the line, then shows the boxes and the
+# bar. Each tick builds the line again from the ticked boxes' numbers and
+# the bar's file and numbering, which Exegete writes from integers and
+# the ids' alphabet: with none ticked, or more than one run leaves, there
+# is no line and Copy is off. Copy asks the clipboard inside the click,
+# as Safari requires; where there is no clipboard, or it refuses, the
+# line is selected in its read-only field, the older copy command is
+# tried, and the bar says to press the keys. The script reads no element
+# of the text, uses no storage, fetch, module or navigation, and holds no
+# "<", so that nothing in it can end its element
+PICK_SCRIPT = """
+(function () {
+  "use strict";
+  var most = MOST;
+  var bar = document.getElementById("pick-bar");
+  var field = document.getElementById("pick-line");
+  var copy = document.getElementById("pick-copy");
+  var count = document.getElementById("pick-count");
+  var status = document.getElementById("pick-status");
+  if (!bar || !field || !copy || !count || !status) {
+    return;
+  }
+  var file = bar.dataset.file;
+  var numbering = bar.dataset.numbering;
+  if (!/^[0-9]+$/.test(file) || !/^[a-z][0-9a-z]{5}$/.test(numbering)) {
+    return;
+  }
+  var boxes = document.querySelectorAll("input.pick");
+
+  function ticked() {
+    var numbers = [];
+    Array.prototype.forEach.call(boxes, function (box) {
+      if (box.checked) {
+        numbers.push(Number(box.dataset.n));
+      }
+    });
+    numbers.sort(function (a, b) { return a - b; });
+    return numbers;
+  }
+
+  function lineFor(numbers) {
+    var head = "File " + file + ", numbering " + numbering + ": ";
+    if (numbers.length === 1) {
+      return head + "leave occurrence " + numbers[0] + " as it is.";
+    }
+    return head + "leave occurrences " + numbers.join(", ") +
+      " as they are.";
+  }
+
+  function update() {
+    var numbers = ticked();
+    var past = numbers.length > most;
+    status.textContent = "";
+    if (numbers.length === 0) {
+      count.textContent = "Nothing is ticked: tick an occurrence to have " +
+        "a line to copy.";
+    } else if (past) {
+      count.textContent = numbers.length + " occurrences are ticked, " +
+        "more than the " + most + " one run leaves: untick some to have " +
+        "a line to copy.";
+    } else if (numbers.length === 1) {
+      count.textContent = "1 occurrence is ticked.";
+    } else {
+      count.textContent = numbers.length + " occurrences are ticked.";
+    }
+    field.value = numbers.length === 0 || past ? "" : lineFor(numbers);
+    copy.disabled = field.value === "";
+  }
+
+  function copied() {
+    status.textContent = "Copied: paste it into the conversation.";
+  }
+
+  function byHand() {
+    var done = false;
+    field.focus();
+    field.select();
+    try {
+      done = document.execCommand("copy") === true;
+    } catch (error) {
+      done = false;
+    }
+    if (done) {
+      copied();
+    } else {
+      status.textContent = "The line is selected: press Cmd+C to copy " +
+        "it (Ctrl+C on Windows and Linux), then paste it into the " +
+        "conversation.";
+    }
+  }
+
+  copy.addEventListener("click", function () {
+    var clipboard = typeof navigator === "undefined" ? null :
+      navigator.clipboard;
+    var asked = null;
+    if (field.value === "") {
+      return;
+    }
+    if (clipboard && typeof clipboard.writeText === "function") {
+      try {
+        asked = clipboard.writeText(field.value);
+      } catch (error) {
+        asked = null;
+      }
+    }
+    if (asked && typeof asked.then === "function") {
+      asked.then(copied, byHand);
+    } else {
+      byHand();
+    }
+  });
+
+  Array.prototype.forEach.call(boxes, function (box) {
+    box.checked = box.defaultChecked;
+    box.addEventListener("change", update);
+    box.hidden = false;
+  });
+  update();
+  bar.hidden = false;
+}());
+""".replace("MOST", str(MAX_OCCURRENCES_LEFT))
+# The page's policy: the reading copy's (reading_copy.POLICY), which
+# allows no script, with this one script allowed by its digest. The
+# reading copy and the import page keep POLICY itself
+PAGE_POLICY = (POLICY + "; script-src 'sha256-"
+               + base64.b64encode(hashlib.sha256(
+                   PICK_SCRIPT.encode("utf-8")).digest()).decode("ascii")
+               + "'")
 # The mark that follows a label which must take the direction of the
 # letter before it (`_mark_after`), by that letter's bidirectional class
 # (Unicode's UAX 9): the left-to-right mark, the right-to-left mark and
@@ -380,11 +556,16 @@ LEFT_LABEL = "left as it is"
 DIRECTION_MARKS = {"L": "\u200e", "R": "\u200f", "AL": "\u061c"}
 # The page's own rules beside the reading copy's (reading_copy.BASE_STYLE):
 # each line's number in a margin of its own, which copying leaves out, the
-# occurrences marked, and each id in a label after its occurrence. The
-# margins are set by the line's direction (inline start and end), so that
-# a line of right-to-left text has its number and margin on the right.
-# The last rules draw each label's mark (DIRECTION_MARKS)
+# occurrences marked, and each label after its occurrence, its tick box
+# and bold number before its id. The margins are set by the line's
+# direction (inline start and end), so that a line of right-to-left text
+# has its number and margin on the right, and every rule names sides by
+# the logical properties alone. What is hidden stays hidden whatever a
+# rule gives it (the boxes and the bar until the script runs), and a
+# printed page leaves both out. The last rules draw each label's mark
+# (DIRECTION_MARKS)
 PAGE_STYLE = """
+[hidden]{display:none!important}
 #text p{padding-inline-start:4.25em;text-indent:-4.25em}
 .n{display:inline-block;width:3.5em;margin-inline-end:.75em;text-indent:0;
 text-align:end;color:var(--quiet);font-variant-numeric:tabular-nums;
@@ -397,6 +578,17 @@ monospace;margin-block:0;margin-inline:.3em .2em;padding:0 .3em;
 border:1px solid var(--line);border-radius:.3em;background:var(--panel);
 color:var(--fg);white-space:nowrap}
 .id.left{border-style:dashed}
+.pick{margin-block:0;margin-inline:0 .3em;vertical-align:middle}
+.pick-bar{position:sticky;inset-block-end:0;margin-block:2rem 0;
+padding-block:.2rem;padding-inline:.75rem;background:var(--panel);
+border:1px solid var(--line);border-radius:6px;font-size:.9rem;
+line-height:1.4}
+.pick-bar p{margin-block:.25rem;margin-inline:0}
+.pick-row{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center}
+#pick-line{flex:1 1 16rem;min-inline-size:0;font-family:ui-monospace,
+SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;
+padding-block:.2rem;padding-inline:.4rem;resize:vertical}
+@media print{.pick,.pick-bar{display:none!important}}
 """ + "".join(f'.id.bidi-{kind.lower()}::after{{content:"\\{ord(mark):x}"}}\n'
               for kind, mark in DIRECTION_MARKS.items())
 
@@ -420,18 +612,32 @@ def _lines(text: str) -> List[Tuple[int, int]]:
     return spans
 
 
-def _label(shown_id: str, left: bool, mark: str = "") -> str:
-    """An occurrence's id, after it: text to copy, and a screen reader's
-    words before it. Its words are isolated, left to right (`bdi`), so
-    that they play no part in choosing the line's direction and are not
-    turned round by a direction character in the text before them.
-    `mark`, a key of DIRECTION_MARKS or "", names the mark the page's
-    style draws after it (`_mark_after`)."""
+def _label(number: int, shown_id: str, left: bool, mark: str = "") -> str:
+    """An occurrence's label, after it: its tick box, its number in bold
+    and its id, "3 · 7k3m9", which a screen reader reads as "occurrence
+    3, id 7k3m9" (v0.15.4). The box carries the number (`data-n`), is
+    ticked where the list given leaves the occurrence, and has a name of
+    its own; it is hidden until the page's script shows it, and its state
+    is not kept by the browser across a reload (`autocomplete`). The
+    label's words are isolated, left to right (`bdi`), box and number
+    with them, so that they play no part in choosing the line's
+    direction, are not turned round by a direction character in the text
+    before them, and go wherever the label goes, beside its own
+    occurrence. `mark`, a key of DIRECTION_MARKS or "", names the mark
+    the page's style draws after it (`_mark_after`)."""
+    number = int(number)
     words = f"{esc(shown_id)}, {LEFT_LABEL}" if left else esc(shown_id)
     kind = ("id" + (" left" if left else "")
             + (f" bidi-{mark.lower()}" if mark else ""))
-    return (f'<span class="{kind}"><bdi dir="ltr">'
-            f'<span class="sr">occurrence id </span>{words}</bdi></span>')
+    box = (f'<input type="checkbox" class="pick" data-n="{number}"'
+           + (" checked" if left else "")
+           + f' hidden autocomplete="off" '
+             f'aria-label="leave occurrence {number} as it is">')
+    return (f'<span class="{kind}"><bdi dir="ltr">{box}'
+            f'<span class="sr">occurrence </span><b>{number}</b>'
+            f'<span class="sr">, id </span>'
+            f'<span class="dot" aria-hidden="true"> · </span>'
+            f"{words}</bdi></span>")
 
 
 # A character that sets a direction for the text after it: an embedding,
@@ -598,10 +804,11 @@ def _mark_from(nearest: Optional[Tuple[int, Optional[str], str]],
 def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
                 left: Collection[int]) -> str:
     """The text as paragraphs, one per stored line, each after its number;
-    each occurrence in a mark, its id after its end. Each line takes the
-    direction of its own first letter (`dir="auto"`), as an editor shows
-    plain text, and each id stands beside its own occurrence, with the
-    mark `_mark_after` gives it where it needs one. An occurrence never
+    each occurrence in a mark, its label after its end, numbered by its
+    place in `marks` from 1 (`_label`). Each line takes the direction of
+    its own first letter (`dir="auto"`), as an editor shows plain text,
+    and each label stands beside its own occurrence, with the mark
+    `_mark_after` gives it where it needs one. An occurrence never
     crosses a line break (the rewrite matches nothing across one); were
     one to, it is marked on each line it covers and labelled once, after
     its last part."""
@@ -643,7 +850,8 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
                 mark, read = _mark_after(line_text, cut_start - start,
                                          cut_end - start, direction,
                                          explicit, read)
-                parts.append(_label(marks[index][2], index in left, mark))
+                parts.append(_label(index + 1, marks[index][2],
+                                    index in left, mark))
             at = max(at, cut_end)
         parts.append(esc(text[at:end]))
         parts.append("</p>")
@@ -651,19 +859,32 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
     return "\n".join(out)
 
 
+def _is_numbering(code: object) -> bool:
+    """Whether `code` is a numbering as `numbering` makes one."""
+    return (isinstance(code, str) and len(code) == NUMBERING_LENGTH
+            and code[0] in _LETTERS and set(code) <= set(ALPHABET))
+
+
 def build_page(*, project_name: str, file_id: int, file_name: str,
                text: str, marks: Sequence[Tuple[int, int, str]],
-               left: Collection[int], written_at: datetime,
+               left: Collection[int], written_at: datetime, numbering: str,
                version: str = "", lines_in_preview: bool = True
                ) -> Tuple[str, Dict[str, Any]]:
     """The page, and the counts the preview's answer gives.
 
     `marks` holds each occurrence's start and end in `text` and the id
-    the preview shows for it, in text order; `left` the positions in
-    `marks` of the occurrences the list given leaves as they are.
-    `lines_in_preview` is false where the preview lists the ids alone
-    (the names list's path): the page then numbers its lines for reading
-    only, and says so."""
+    the preview shows for it, in text order, so that each is numbered as
+    the preview numbers its rows; `left` the positions in `marks` of the
+    occurrences the list given leaves as they are, whose boxes come
+    ticked; `numbering` the list's numbering (`numbering`), which the
+    page gives and the line carries (v0.15.4). `lines_in_preview` is
+    false where the preview gives no lines (the names list's path): the
+    page then numbers its lines for reading only, and says so.
+
+    Raises ValueError where `numbering` is not one, so that the bar
+    never carries anything else."""
+    if not _is_numbering(numbering):
+        raise ValueError("A page for choosing needs its list's numbering.")
     left = set(left)
     lines = len(_lines(text))
     counts = {"occurrences": len(marks), "left": len(left), "lines": lines}
@@ -672,21 +893,44 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         f"goes at Exegete's first tidy once it is an hour old, or sooner, "
         f"when Exegete changes this file's text or name.",
         "Each occurrence of a name the preview looked for is marked, with "
-        "its id after it. "
+        "its number in bold and its id after it. The bold numbers count the "
+        "occurrences from 1 in the text's order, as the preview numbers "
+        "them, and are the ones to give: the numbers in the margin are the "
+        "lines'. "
         + ("The lines are numbered as the preview numbers them."
            if lines_in_preview else
-           "The lines are numbered on this page only: the preview lists "
-           "the ids alone.")]
-    if left:
-        facts.append(
-            f"{_plural(len(left), 'occurrence is', 'occurrences are')} "
-            f"marked as left as they are, by the list of ids the preview "
-            f"was given: check that they are the ones you meant.")
+           "The lines are numbered on this page only: the preview gives no "
+           "line numbers."),
+        f"These numbers hold for this page's list, whose numbering is "
+        f"{numbering}, a short code that changes whenever the list does. "
+        f"Numbers read from an earlier page, or from another file's page, "
+        f"can name other occurrences. Where this page shows tick boxes, the "
+        f"line it gives you to copy carries the numbering, so a preview "
+        f"refuses it if the list has changed since."]
+    if len(left) == 1:
+        facts.append("1 occurrence is marked as left as it is, by the list "
+                     "the preview was given: check that it is the one you "
+                     "meant.")
+    elif left:
+        facts.append(f"{len(left)} occurrences are marked as left as they "
+                     f"are, by the list the preview was given: check that "
+                     f"they are the ones you meant.")
     title = f"{esc(file_name)} (choosing occurrences)"
+    bar = (
+        f'<div id="{PICK_BAR}" class="pick-bar" role="region" '
+        f'aria-label="Occurrences to leave" data-file="{int(file_id)}" '
+        f'data-numbering="{esc(numbering)}" hidden>'
+        f'<p><span id="pick-count"></span> {PICK_INTRO}</p>'
+        '<p class="pick-row"><label for="pick-line">Line to copy</label> '
+        '<textarea id="pick-line" rows="2" readonly autocomplete="off" '
+        'spellcheck="false"></textarea> '
+        '<button type="button" id="pick-copy" disabled>Copy</button></p>'
+        '<p id="pick-status" role="status"></p></div>')
     parts = [
         "<!DOCTYPE html>\n" + PAGE_MARK,
         '<html lang="en-GB"><head><meta charset="utf-8">',
-        f'<meta http-equiv="Content-Security-Policy" content="{POLICY}">',
+        f'<meta http-equiv="Content-Security-Policy" '
+        f'content="{PAGE_POLICY}">',
         '<meta name="referrer" content="no-referrer">',
         # so that a phone's browser lays the page out at its own width
         '<meta name="viewport" content="width=device-width, '
@@ -704,8 +948,10 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         + "</ul>",
         f'<p class="for-you">{PAGE_FOR_YOU}</p></header>',
         f'<main id="text">{_paragraphs(text, marks, left)}</main>',
+        bar,
         f"<footer><p>Written by Exegete {esc(version)} on this computer. A "
         "page for choosing: changes to it go nowhere.</p></footer>",
+        f"<script>{PICK_SCRIPT}</script>",
         "</body></html>\n",
     ]
     return "\n".join(parts), counts

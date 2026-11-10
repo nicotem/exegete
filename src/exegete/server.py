@@ -10,6 +10,7 @@ import os
 import re
 import sys
 import json
+import math
 import argparse
 import shutil
 import stat
@@ -1196,6 +1197,129 @@ def unknown_arguments_refusal(tool_name: str, schema: Dict[str, Any],
     return json.dumps(payload, indent=2)
 
 
+# True and false where a tool takes a number (v0.15.4). The library
+# converts each argument to the type the tool declares before any check
+# of Exegete's sees it, in pydantic's lax mode, which reads true and false
+# as 1 and 0 (1.0 and 0.0 for a number that need not be whole): an id sent
+# as true acted on item 1, and keep_last sent as false lifted the floor
+# that keeps the newest backup. The check reads each argument's schema,
+# the one the host was given: its `type`, the branches of its `anyOf`, and
+# the `items` of an array. A shape it does not read is left to the
+# library, as before, and so is a number sent as text, which the library
+# reads as that number.
+_NUMBER_TYPES = frozenset({"integer", "number"})
+_SCHEMA_KEYS_NOT_READ = ("$ref", "oneOf", "allOf", "not")
+
+
+def _schema_types(schema: Any) -> Optional[Set[str]]:
+    """The JSON types `schema` takes, read from its `type` or from the
+    branches of its `anyOf`, or None for a shape this check does not
+    read."""
+    if not isinstance(schema, dict) or any(
+            key in schema for key in _SCHEMA_KEYS_NOT_READ):
+        return None
+    if "anyOf" in schema:
+        branches = schema["anyOf"]
+        if not isinstance(branches, list) or not branches:
+            return None
+        types: Set[str] = set()
+        for branch in branches:
+            found = _schema_types(branch)
+            if found is None:
+                return None
+            types |= found
+        return types
+    kind = schema.get("type")
+    if isinstance(kind, str):
+        return {kind}
+    if (isinstance(kind, list) and kind
+            and all(isinstance(each, str) for each in kind)):
+        return set(kind)
+    return None
+
+
+def _array_items(schema: Any) -> Optional[List[Any]]:
+    """The `items` schema of each array `schema` takes (itself, or a
+    branch of its `anyOf`), or None when it takes no array, or a shape
+    this check does not read."""
+    if not isinstance(schema, dict) or any(
+            key in schema for key in _SCHEMA_KEYS_NOT_READ):
+        return None
+    branches = schema["anyOf"] if "anyOf" in schema else [schema]
+    if not isinstance(branches, list):
+        return None
+    items: List[Any] = []
+    for branch in branches:
+        types = _schema_types(branch)
+        if types is None:
+            return None
+        if "array" in types:
+            if not isinstance(branch.get("items"), dict):
+                return None
+            items.append(branch["items"])
+    return items or None
+
+
+def _true_or_false_for_number(schema: Any, value: Any,
+                              outermost: bool = True) -> bool:
+    """Whether `value` is a true or a false where `schema` takes a number
+    and no true or false, or holds one as an item of an array. A text
+    the library reads as JSON first (an array sent as text, mcp 1.30.0
+    `FuncMetadata.pre_parse_json`) is read here as it reads it; a shape
+    this check does not read answers False."""
+    if isinstance(value, bool):
+        types = _schema_types(schema)
+        return (types is not None and bool(types & _NUMBER_TYPES)
+                and "boolean" not in types)
+    items = _array_items(schema)
+    if items is None:
+        return False
+    if outermost and isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return False
+    if not isinstance(value, list):
+        return False
+    return any(all(_true_or_false_for_number(each, item, False)
+                   for each in items)
+               for item in value)
+
+
+def true_or_false_refusal(tool_name: str, schema: Dict[str, Any],
+                          arguments: Any) -> Optional[str]:
+    """The refusal of a true or a false given where a tool takes a
+    number, alone or as an item of a list, or None (v0.15.4).
+
+    Called after `unknown_arguments_refusal`, so every argument it reads
+    is one the tool declares. The refusal names the tool and the
+    arguments, never a value, since a call can carry a memo or a typed
+    mapping of real names, and nothing is logged. Nothing here may fail a
+    tool: any error reads as no refusal, and the library's own checks
+    follow as before.
+    """
+    try:
+        if not isinstance(arguments, dict) or not arguments:
+            return None
+        properties = (schema or {}).get("properties", {})
+        if not isinstance(properties, dict):
+            return None
+        given = [key for key, value in arguments.items()
+                 if key in properties
+                 and _true_or_false_for_number(properties[key], value)]
+    except Exception:
+        return None
+    if not given:
+        return None
+    names = ", ".join(f"'{key}'" for key in given)
+    text = (f"{tool_name} takes a number, not true or false, for {names}; "
+            f"nothing was done. True and false are refused where a number "
+            f"goes, rather than read as 1 and 0, so that true cannot stand "
+            f"for item 1 unnoticed.")
+    return json.dumps({"error": text, "given_true_or_false": given},
+                      indent=2)
+
+
 # v0.14.1: the resources' addresses moved from qualcoder:// to
 # exegete:// (QualCoder's own MCP server uses qualcoder://, and one host
 # can hold both servers). The earlier addresses are still answered, and no
@@ -1216,7 +1340,8 @@ def current_resource_address(uri: Any) -> Any:
 
 class _ExegeteMCP(FastMCP):
     """FastMCP, with every tool refusing an argument it does not declare
-    (v0.14, server-wide), the resources' earlier addresses answered
+    (v0.14, server-wide) and true or false where it takes a number
+    (v0.15.4), the resources' earlier addresses answered
     (v0.14.1), one Ctrl+C stopping Exegete (v0.15.2: `run` and
     `run_stdio_async`), and what Exegete tells once counted as told once
     its answer has gone out (v0.15.3: `call_tool` and
@@ -1259,6 +1384,10 @@ class _ExegeteMCP(FastMCP):
         tool = self._tool_manager.get_tool(name)
         if tool is not None:
             refusal = unknown_arguments_refusal(tool.name, tool.parameters,
+                                                arguments)
+            if refusal is None:
+                # Before the library reads true and false as 1 and 0
+                refusal = true_or_false_refusal(tool.name, tool.parameters,
                                                 arguments)
             if refusal is not None:
                 # The tool's own answer shape, so the host sees an
@@ -14053,10 +14182,14 @@ def prune_backups(keep_last: Optional[int] = None,
             not isinstance(keep_last, int) or isinstance(keep_last, bool)
             or keep_last < 0):
         return json.dumps({"error": "keep_last must be a non-negative integer"})
+    # Finite too (v0.15.4): "nan" and "inf" reach here as numbers
     if older_than_days is not None and (
             not isinstance(older_than_days, (int, float))
-            or isinstance(older_than_days, bool) or older_than_days < 0):
-        return json.dumps({"error": "older_than_days must be a non-negative number"})
+            or isinstance(older_than_days, bool) or older_than_days < 0
+            or (isinstance(older_than_days, float)
+                and not math.isfinite(older_than_days))):
+        return json.dumps({"error": "older_than_days must be a finite, "
+                                    "non-negative number"})
 
     project_folder = validate_qda_path(current_project_path).parent
     all_backups = _collect_backups(project_folder)   # one walk, both kinds

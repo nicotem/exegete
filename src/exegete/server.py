@@ -2347,10 +2347,11 @@ def _open_project_folder() -> Optional[Path]:
     """The open project's folder, for the session manager (v0.15.4):
     where a new session is kept, and where a session is looked for first.
     A configured project is adopted first, as every tool that asks
-    whether a project is selected adopts it; None when no project is
-    open. Worked out from the selected path alone, opening nothing, so
-    that a database another program holds locked never hides the
-    project's sessions."""
+    whether a project is selected adopts it: at its first use that opens
+    its database, read-only, and raises with the reason when it cannot,
+    as `get_db` does. None when no project is open. Otherwise worked out
+    from the selected path alone, opening nothing, so that a database
+    another program holds locked never hides the project's sessions."""
     _adopt_configured_project()
     if current_project_path is None:
         return None
@@ -10291,8 +10292,10 @@ def start_coding_session(
     # Save session (the assistant records its suggestions with
     # record_suggestions): from 0.15.4 in the project's sessions folder,
     # or on this computer, with the reason, when the project's folder
-    # cannot hold it; refused when that attempt left something at the
-    # session's name in the project (SessionFileError, answered by the
+    # cannot hold it; kept in the project when its file there holds the
+    # session though the save reported a failure; refused when that
+    # attempt left at the session's name in the project a file Exegete
+    # cannot read back as the session (SessionFileError, answered by the
     # guard with its reason)
     session_manager.save_session(session)
     if session.kept_in == KEPT_IN_PROJECT:

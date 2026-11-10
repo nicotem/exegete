@@ -51,11 +51,12 @@ also checks that the file it opened is the file it looked at. `show`
 and `open_in_app` are not held so: the opener checks the file by its
 path and the system launches it by its path.
 
-The sessions folder is held the same way: no other module writes there,
-and only `session_<id>.json` files and Exegete's temporary files for
-them are written, read, listed or removed, by name; a session's file is
-replaced whole, through a temporary file synced first, and any other
-file there is never named.
+The sessions folder is held the same way: no other module writes there;
+its note is written at a session's start when it is missing, never
+replaced; otherwise only `session_<id>.json` files and Exegete's
+temporary files for them are written, read, listed or removed, by name;
+a session's file is replaced whole, through a temporary file synced
+first, and any other file there is never named.
 """
 
 import errno
@@ -90,7 +91,8 @@ SESSIONS_FOLDER = "Exegete coding sessions"
 MAX_SESSION = 64 * 1024 * 1024
 # A session's file, and Exegete's temporary file for it while it is
 # saved: the session's name, a dot, eight random hexadecimal digits and
-# ".tmp". Nothing else in the folder is written, read or removed.
+# ".tmp". Nothing else in the folder is read or removed, and nothing
+# else is written but the folder's note, at a start when it is missing.
 _SESSION_FILE = re.compile(
     r"session_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-"
     r"[0-9a-f]{12}\.json")

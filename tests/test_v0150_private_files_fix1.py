@@ -486,8 +486,10 @@ class TestAFolderSwappedForALink:
         real = private_files._check_folder
         swapped = []
 
-        def check(top):
-            info = real(top)
+        # (v0.15.4: the step takes the folder's words too, for the
+        # sessions folder's refusals)
+        def check(top, *words):
+            info = real(top, *words)
             if not swapped:
                 swapped.append(True)
                 os.rename(top, top.with_name("Exegete, moved"))

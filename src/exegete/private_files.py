@@ -19,10 +19,15 @@ reach it:
    backup's copy); shown in the file manager and opened in their app at
    the researcher's word; never returned to the assistant.
 4. Records of the research: backups beside the project; the originals,
-   `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json` inside it;
-   new projects and copies in the folder for projects, or in the folder
-   named when a project is created; exports where they were asked to
-   go; and the pseudonymisation run records, which live in
+   `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json` inside it,
+   and from 0.15.4 its coding sessions, in the folder `Exegete coding
+   sessions` at its top (this module; one `session_<id>.json` per
+   session, which the session tools return to the conversation while the
+   project is selected, so not in the `Exegete` folder; a restore keeps
+   the folder as it is, never taking the backup's copy); new projects
+   and copies in the folder for projects, or in the folder named when a
+   project is created; exports where they were asked to go; and the
+   pseudonymisation run records, which live in
    `~/.exegete/pseudonymisation/`.
 
 The rule across all four: Exegete writes only into the project and
@@ -45,10 +50,17 @@ after its check is never followed; where the system has no such calls
 also checks that the file it opened is the file it looked at. `show`
 and `open_in_app` are not held so: the opener checks the file by its
 path and the system launches it by its path.
+
+The sessions folder is held the same way: no other module writes there,
+and only `session_<id>.json` files and Exegete's temporary files for
+them are written, read, listed or removed, by name; a session's file is
+replaced whole, through a temporary file synced first, and any other
+file there is never named.
 """
 
 import errno
 import os
+import re
 import stat
 import sys
 import time
@@ -71,6 +83,31 @@ KINDS = {NOTE_NAME: "about this folder", NAMES_FILE: "names file"}
 MAX_LISTED = 200
 MAX_READ = 1024 * 1024
 
+# The project's folder for its coding sessions (v0.15.4), at its top
+# beside the Exegete folder, with a note of its own under NOTE_NAME
+SESSIONS_FOLDER = "Exegete coding sessions"
+# The largest session file Exegete reads or writes there
+MAX_SESSION = 64 * 1024 * 1024
+# A session's file, and Exegete's temporary file for it while it is
+# saved: the session's name, a dot, eight random hexadecimal digits and
+# ".tmp". Nothing else in the folder is written, read or removed.
+_SESSION_FILE = re.compile(
+    r"session_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-"
+    r"[0-9a-f]{12}\.json")
+_SESSION_TEMPORARY = re.compile(
+    r"(session_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-"
+    r"[0-9a-f]{12}\.json)\.[0-9a-f]{8}\.tmp")
+# The longest name a save makes there: a temporary file's
+_LONGEST_SESSION_NAME = len("session_") + 36 + len(".json.") + 8 + len(".tmp")
+# A temporary file older than this was left by a save whose process
+# ended; a later save there removes it
+TEMPORARY_FILE_AGE = 24 * 60 * 60
+# On Windows, a replace refused because another program holds the file
+# (a sync client, a scanner, a backup) is tried this many times in all,
+# this many seconds apart
+REPLACE_TRIES = 5
+REPLACE_PAUSE = 0.2
+
 # Where the note sends the researcher for more: the document on
 # Exegete's page, since the desktop extension puts no PRIVACY.md on the
 # computer.
@@ -90,6 +127,31 @@ NOTE = (
     "\"Files Exegete keeps on your computer\", in PRIVACY.md on "
     f"Exegete's page, says more: {PRIVACY_ADDRESS}\n"
 )
+
+# The note inside the sessions folder, six lines (v0.15.4)
+SESSIONS_NOTE = (
+    "This folder holds Exegete's coding sessions for this project, one "
+    "file per session: the passages suggested for coding, word for word, "
+    "with their codes and reasons, the researcher's instruction and "
+    "decisions, and any proposed codes with their evidence.\n"
+    "While this project is selected, Exegete's session tools return what "
+    "a session holds to the AI assistant.\n"
+    "These files travel with the project, into its backups and copies, "
+    "and to any service that syncs or shares this folder; on a Mac, "
+    "Spotlight can index them, and adding this folder to Spotlight's "
+    "privacy list (System Settings, Spotlight) keeps it out.\n"
+    "To delete a session, ask the assistant to delete it; its copies in "
+    "backups and in copies of the project stay until those are removed.\n"
+    "Before sharing or depositing the project, you may want to delete the "
+    "sessions you no longer need, or leave this folder out of what you "
+    "share.\n"
+    "\"Files Exegete keeps on your computer\", in PRIVACY.md on "
+    f"Exegete's page, says more: {PRIVACY_ADDRESS}\n"
+)
+
+# The two folders in words, for the refusals of the steps they share
+_EXEGETE_FOLDER_WORDS = "the project's Exegete folder"
+_SESSIONS_FOLDER_WORDS = "the project's Exegete coding sessions folder"
 
 # get_current_project's notes on the listing, by case.
 FOLDER_NOTE = (
@@ -234,55 +296,64 @@ def place(project, name: str) -> Path:
     return folder(project) / name
 
 
-def _folder_is_a_link() -> PrivateFilesError:
+def _capital(words: str) -> str:
+    return words[:1].upper() + words[1:]
+
+
+def _folder_is_a_link(words: str = _EXEGETE_FOLDER_WORDS
+                      ) -> PrivateFilesError:
     return PrivateFilesError(
         "link",
-        "The project's Exegete folder is a link (a shortcut, symbolic "
+        f"{_capital(words)} is a link (a shortcut, symbolic "
         "link or junction), which Exegete does not follow. If the link "
         "is removed, Exegete makes the folder when it is next needed.",
         about_folder=True)
 
 
-def _not_a_folder() -> PrivateFilesError:
+def _not_a_folder(words: str = _EXEGETE_FOLDER_WORDS) -> PrivateFilesError:
     return PrivateFilesError(
         "not_a_folder",
-        "Something other than a folder has the name of the project's "
-        "Exegete folder, so Exegete cannot keep files there. If it is "
+        f"Something other than a folder has the name of {words}, so "
+        "Exegete cannot keep files there. If it is "
         "moved or renamed, Exegete makes the folder when it is next "
         "needed.",
         about_folder=True)
 
 
-def _folder_changed() -> PrivateFilesError:
+def _folder_changed(words: str = _EXEGETE_FOLDER_WORDS
+                    ) -> PrivateFilesError:
     return PrivateFilesError(
         "changed",
-        "The project's Exegete folder changed while Exegete was using it "
+        f"{_capital(words)} changed while Exegete was using it "
         "(it was moved, replaced or made a link). Nothing was written or "
         "read; asking again uses the folder as it is now.",
         about_folder=True)
 
 
-def _folder_unreadable(exc: OSError) -> PrivateFilesError:
+def _folder_unreadable(exc: OSError, words: str = _EXEGETE_FOLDER_WORDS
+                       ) -> PrivateFilesError:
     return PrivateFilesError(
         "unreadable",
-        "The project's Exegete folder could not be read "
+        f"{_capital(words)} could not be read "
         f"({exc.strerror or 'it cannot be read'}).",
         about_folder=True)
 
 
-def _check_folder(top: Path) -> os.stat_result:
+def _check_folder(top: Path, words: str = _EXEGETE_FOLDER_WORDS
+                  ) -> os.stat_result:
     """The folder must be a real folder, not a link or a junction; its
-    `lstat`, against which the folder is held open (`_hold_folder`)."""
+    `lstat`, against which the folder is held open (`_hold_folder`).
+    `words` names the folder in a refusal."""
     try:
         info = os.lstat(top)
     except FileNotFoundError:
         raise
     except OSError as exc:
-        raise _folder_unreadable(exc) from None
+        raise _folder_unreadable(exc, words) from None
     if stat.S_ISLNK(info.st_mode) or reading_folder.is_link(top):
-        raise _folder_is_a_link()
+        raise _folder_is_a_link(words)
     if not stat.S_ISDIR(info.st_mode):
-        raise _not_a_folder()
+        raise _not_a_folder(words)
     return info
 
 
@@ -297,13 +368,14 @@ def _same_identity(info: os.stat_result, other: os.stat_result) -> bool:
     return (info.st_dev, info.st_ino) == (other.st_dev, other.st_ino)
 
 
-def _hold_folder(top: Path, info: os.stat_result) -> Optional[int]:
+def _hold_folder(top: Path, info: os.stat_result,
+                 words: str = _EXEGETE_FOLDER_WORDS) -> Optional[int]:
     """The folder opened once, not following a link, and checked to be the
     folder `info` describes (macOS and Linux). Every later step goes
     through it (`dir_fd`), so a folder swapped for a link after its check
     is never followed. None where the system has no such calls
     (Windows): there the folder is checked again once the file is open
-    (`_still_the_folder`)."""
+    (`_still_the_folder`). `words` names the folder in a refusal."""
     if not _HOLDS_FOLDERS:
         return None
     flags = (os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_NOFOLLOW", 0)
@@ -316,20 +388,20 @@ def _hold_folder(top: Path, info: os.stat_result) -> Optional[int]:
         try:
             now = os.lstat(top)
         except OSError:
-            raise _folder_unreadable(exc) from None
+            raise _folder_unreadable(exc, words) from None
         if stat.S_ISLNK(now.st_mode):
-            raise _folder_is_a_link() from None
+            raise _folder_is_a_link(words) from None
         if not stat.S_ISDIR(now.st_mode):
-            raise _not_a_folder() from None
-        raise _folder_unreadable(exc) from None
+            raise _not_a_folder(words) from None
+        raise _folder_unreadable(exc, words) from None
     try:
         opened = os.fstat(descriptor)
     except OSError as exc:
         os.close(descriptor)
-        raise _folder_unreadable(exc) from None
+        raise _folder_unreadable(exc, words) from None
     if not stat.S_ISDIR(opened.st_mode) or not _same_identity(opened, info):
         os.close(descriptor)
-        raise _folder_changed()
+        raise _folder_changed(words)
     return descriptor
 
 
@@ -368,12 +440,13 @@ def _is_link_at(held: Optional[int], top: Path, name: str,
         held is None and reading_folder.is_link(top / name))
 
 
-def _held(project) -> Tuple[Path, os.stat_result, Optional[int]]:
-    """The folder checked and, where the system allows, held open;
-    FileNotFoundError when it is not there."""
-    top = folder(project)
-    info = _check_folder(top)
-    return top, info, _hold_folder(top, info)
+def _held(top: Path, words: str = _EXEGETE_FOLDER_WORDS
+          ) -> Tuple[Path, os.stat_result, Optional[int]]:
+    """The folder at `top` checked and, where the system allows, held
+    open; FileNotFoundError when it is not there. `words` names the
+    folder in a refusal."""
+    info = _check_folder(top, words)
+    return top, info, _hold_folder(top, info, words)
 
 
 def _let_go(held: Optional[int]) -> None:
@@ -392,7 +465,12 @@ def ensure_folder(project) -> Path:
     note already there, Exegete's or the researcher's, whatever it holds,
     is never replaced, rewritten or deleted.
     """
-    top = folder(project)
+    return _ensure(folder(project), _EXEGETE_FOLDER_WORDS, NOTE)
+
+
+def _ensure(top: Path, words: str, note_text: str) -> Path:
+    """`ensure_folder` for either folder: the one at `top`, named in a
+    refusal by `words`, with `note_text` as its note."""
     try:
         os.mkdir(top, 0o700)
     except FileExistsError:
@@ -400,14 +478,14 @@ def ensure_folder(project) -> Path:
     except OSError as exc:
         raise PrivateFilesError(
             "unwritable",
-            "Exegete could not make the project's Exegete folder "
+            f"Exegete could not make {words} "
             f"({exc.strerror or 'it cannot be written'}).") from None
     try:
-        top, info, held = _held(project)
+        top, info, held = _held(top, words)
     except FileNotFoundError:
         raise PrivateFilesError(
             "unwritable",
-            "Exegete could not make the project's Exegete folder.") from None
+            f"Exegete could not make {words}.") from None
     try:
         if os.name == "posix":
             if held is not None:
@@ -424,18 +502,18 @@ def ensure_folder(project) -> Path:
         except OSError as exc:
             raise PrivateFilesError(
                 "unreadable",
-                "Exegete could not look in the project's Exegete folder "
+                f"Exegete could not look in {words} "
                 f"({exc.strerror or 'it cannot be read'}).") from None
         if note is not None and _is_link_at(held, top, NOTE_NAME, note):
             raise PrivateFilesError(
                 "link",
-                "The note in the project's Exegete folder is a link, which "
+                f"The note in {words} is a link, which "
                 "Exegete does not follow.")
     finally:
         _let_go(held)
     if note is None:
         try:
-            write_new(project, NOTE_NAME, NOTE)
+            _write_new_at(top, words, NOTE_NAME, note_text)
         except FileExistsError:
             pass
     return top
@@ -467,20 +545,27 @@ def write_new(project, name: str, text: str) -> Path:
     goes through the held folder (`_hold_folder`).
     """
     place(project, name)
+    return _write_new_at(folder(project), _EXEGETE_FOLDER_WORDS, name, text)
+
+
+def _write_new_at(top: Path, words: str, name: str, text: str) -> Path:
+    """`write_new` in the folder at `top`, named in a refusal by
+    `words`."""
     try:
-        top, folder_info, held = _held(project)
+        top, folder_info, held = _held(top, words)
     except FileNotFoundError:
         raise FileNotFoundError(
             errno.ENOENT,
-            "The project's Exegete folder is not there.") from None
+            f"{_capital(words)} is not there.") from None
     try:
-        return _write_new_in(held, top, folder_info, name, text)
+        return _write_new_in(held, top, folder_info, name, text, words)
     finally:
         _let_go(held)
 
 
 def _write_new_in(held: Optional[int], top: Path,
-                  folder_info: os.stat_result, name: str, text: str) -> Path:
+                  folder_info: os.stat_result, name: str, text: str,
+                  words: str = _EXEGETE_FOLDER_WORDS) -> Path:
     try:
         info = _lstat_in(held, top, name)
     except FileNotFoundError:
@@ -488,18 +573,18 @@ def _write_new_in(held: Optional[int], top: Path,
     except OSError as exc:
         raise PrivateFilesError(
             "unreadable",
-            "Exegete could not look in the project's Exegete folder "
+            f"Exegete could not look in {words} "
             f"({exc.strerror or 'it cannot be read'}).") from None
     if info is not None:
         if _is_link_at(held, top, name, info):
             raise PrivateFilesError(
                 "link",
-                "A link is at that name in the project's Exegete folder, "
+                f"A link is at that name in {words}, "
                 "and Exegete does not follow links.")
         raise FileExistsError(
             errno.EEXIST,
-            "A file of that name is already in the project's Exegete "
-            "folder, and Exegete never replaces it.")
+            f"A file of that name is already in {words}, and Exegete "
+            "never replaces it.")
     data = encoded(text)
     flags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY
              | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
@@ -508,13 +593,13 @@ def _write_new_in(held: Optional[int], top: Path,
     except FileExistsError:
         raise FileExistsError(
             errno.EEXIST,
-            "A file of that name is already in the project's Exegete "
-            "folder, and Exegete never replaces it.") from None
+            f"A file of that name is already in {words}, and Exegete "
+            "never replaces it.") from None
     made: Optional[os.stat_result] = None
     try:
         made = os.fstat(descriptor)
         if held is None and not _still_the_folder(top, folder_info):
-            raise _folder_changed()
+            raise _folder_changed(words)
         written = 0
         view = memoryview(data)
         while written < len(data):
@@ -565,7 +650,7 @@ def read_bytes(project, name: str) -> bytes:
     missing = FileNotFoundError(
         errno.ENOENT, "That file is not in the project's Exegete folder.")
     try:
-        top, folder_info, held = _held(project)
+        top, folder_info, held = _held(folder(project))
     except FileNotFoundError:
         raise missing from None
     try:
@@ -578,7 +663,12 @@ def read_bytes(project, name: str) -> bytes:
 
 
 def _read_in(held: Optional[int], top: Path, name: str,
-             missing: FileNotFoundError) -> bytes:
+             missing: FileNotFoundError,
+             limit: Optional[int] = None) -> bytes:
+    """A file's bytes, read with `read_bytes`' discipline, at most
+    `limit` of them (MAX_READ when not given)."""
+    if limit is None:
+        limit = MAX_READ
     try:
         info = _lstat_in(held, top, name)
     except FileNotFoundError:
@@ -614,10 +704,10 @@ def _read_in(held: Optional[int], top: Path, name: str,
             # Another file took the name between the look and the open
             # (on Windows, which opens without O_NOFOLLOW, a link too)
             raise _file_changed()
-        if opened.st_size > MAX_READ:
-            raise _too_large()
+        if opened.st_size > limit:
+            raise _too_large(limit)
         chunks = []
-        remaining = MAX_READ + 1
+        remaining = limit + 1
         while remaining > 0:
             chunk = os.read(descriptor, remaining)
             if not chunk:
@@ -629,8 +719,8 @@ def _read_in(held: Optional[int], top: Path, name: str,
     finally:
         os.close(descriptor)
     data = b"".join(chunks)
-    if len(data) > MAX_READ:
-        raise _too_large()
+    if len(data) > limit:
+        raise _too_large(limit)
     return data
 
 
@@ -650,8 +740,18 @@ def _file_changed() -> PrivateFilesError:
         "file as it is now.")
 
 
-def _too_large() -> PrivateFilesError:
-    return PrivateFilesError("too_large", "It is larger than 1 MB.")
+def _too_large(limit: Optional[int] = None) -> PrivateFilesError:
+    size = MAX_READ if limit is None else limit
+    return PrivateFilesError("too_large",
+                             f"It is larger than {_megabytes(size)}.")
+
+
+def _megabytes(size: int) -> str:
+    """A limit in words: '1 MB', '64 MB'; a limit under a megabyte (a
+    test's) in bytes."""
+    if size >= 1024 * 1024 and size % (1024 * 1024) == 0:
+        return f"{size // (1024 * 1024)} MB"
+    return f"{size} bytes"
 
 
 def _unreadable(exc: OSError) -> PrivateFilesError:
@@ -764,3 +864,436 @@ def open_in_app(project, name: str) -> opener.Outcome:
     """Ask the system to open a file Exegete names in the folder in the
     app it uses for that type (at the researcher's word)."""
     return opener.open_file(place(project, name), within=folder(project))
+
+
+# ---------------------------------------------------------------------------
+# The sessions folder (v0.15.4): `Exegete coding sessions`, at the project's
+# top, one `session_<id>.json` per coding session, kept with the project
+# ---------------------------------------------------------------------------
+
+def sessions_folder(project) -> Path:
+    """The project's sessions folder (not created)."""
+    return Path(project) / SESSIONS_FOLDER
+
+
+def is_sessions_folder_name(name: str, platform: Optional[str] = None
+                            ) -> bool:
+    """Whether `name` is the sessions folder's name as the system compares
+    names: letter case folded on macOS and Windows, exactly elsewhere."""
+    return _same_name(name, SESSIONS_FOLDER, platform)
+
+
+def is_session_name(name: str) -> bool:
+    """Whether `name` is a session file's: `session_<id>.json`, the id in
+    lower case, as Exegete writes it. A sync service's conflicted copy
+    (`session_<id> (…'s conflicted copy).json`, `session_<id> 2.json`) is
+    not."""
+    return _SESSION_FILE.fullmatch(name) is not None
+
+
+def is_session_temporary(name: str) -> bool:
+    """Whether `name` is a temporary file Exegete makes while it saves a
+    session: `session_<id>.json.<eight hexadecimal digits>.tmp`."""
+    return _SESSION_TEMPORARY.fullmatch(name) is not None
+
+
+def _on_windows() -> bool:
+    return os.name == "nt"
+
+
+def _path_limit_applies() -> bool:
+    """Whether paths are limited as Windows limits them unless long paths
+    are switched on (new_project's limits)."""
+    if not _on_windows():
+        return False
+    from . import new_project
+    return not new_project.windows_long_paths_enabled()
+
+
+def _too_long() -> PrivateFilesError:
+    from . import new_project
+    return PrivateFilesError(
+        "too_long",
+        f"The path of a session's file in "
+        f"{_SESSIONS_FOLDER_WORDS} passes the "
+        f"{new_project.WINDOWS_MAX_FILE_PATH} characters Windows allows "
+        f"unless long paths are switched on, so Windows cannot reach it "
+        f"there. A shorter path for the project (a folder nearer the top "
+        f"of the disk), or Windows' long paths switched on, avoids this.")
+
+
+def _passes_limit(path: Path) -> bool:
+    """Whether a path is too long for Windows without long paths, where
+    that limit applies."""
+    if not _path_limit_applies():
+        return False
+    from . import new_project
+    return len(str(path)) > new_project.WINDOWS_MAX_FILE_PATH
+
+
+def _check_session_name(name: str) -> None:
+    if not is_session_name(name):
+        raise ValueError("Exegete keeps no file of that name in the "
+                         "project's Exegete coding sessions folder.")
+
+
+def _session_unwritable(exc: OSError) -> PrivateFilesError:
+    return PrivateFilesError(
+        "unwritable",
+        f"Exegete could not write in {_SESSIONS_FOLDER_WORDS} "
+        f"({exc.strerror or 'it cannot be written'}).")
+
+
+def _session_is_a_link() -> PrivateFilesError:
+    return PrivateFilesError(
+        "link",
+        "A link (a shortcut, symbolic link or junction) is at this "
+        f"session's name in {_SESSIONS_FOLDER_WORDS}, and Exegete does not "
+        "follow links, so the session there cannot be used.")
+
+
+def _session_not_a_file() -> PrivateFilesError:
+    return PrivateFilesError(
+        "not_a_file",
+        "Something other than a file is at this session's name in "
+        f"{_SESSIONS_FOLDER_WORDS}.")
+
+
+def _said_of_the_session(error: PrivateFilesError) -> PrivateFilesError:
+    """A refusal of `_read_in`, which speaks of "it" or "the file", said
+    of the session's file in the project's sessions folder."""
+    text = str(error)
+    subject = f"This session's file in {_SESSIONS_FOLDER_WORDS}"
+    for opening in ("It ", "The file "):
+        if text.startswith(opening):
+            text = f"{subject} {text[len(opening):]}"
+            break
+    return PrivateFilesError(error.code, text, error.about_folder)
+
+
+def _held_sessions(project, missing: BaseException
+                   ) -> Tuple[Path, os.stat_result, Optional[int]]:
+    """The sessions folder checked and held, as `_held` holds a folder;
+    `missing` raised when it is not there. On Windows without long paths,
+    a folder whose own path is past the limit cannot be looked at: refused
+    as too long, as a folder that cannot be read (`about_folder`)."""
+    top = sessions_folder(project)
+    try:
+        return _held(top, _SESSIONS_FOLDER_WORDS)
+    except FileNotFoundError:
+        if _passes_limit(top):
+            error = _too_long()
+            error.about_folder = True
+            raise error from None
+        raise missing from None
+
+
+def _names_in(held: Optional[int], top: Path) -> list:
+    """The names in the held folder, every one (no stop)."""
+    return os.listdir(held if held is not None else top)
+
+
+def ensure_sessions_folder(project) -> Path:
+    """The project's sessions folder, made if missing, with its note,
+    `SESSIONS_NOTE`: as `ensure_folder` makes the Exegete folder (owner
+    only on macOS and Linux, the same refusals, a note already there
+    never replaced). On Windows without long paths, refused before
+    anything is made when a save there would pass 259 characters."""
+    top = sessions_folder(project)
+    if _passes_limit(top / ("x" * _LONGEST_SESSION_NAME)):
+        raise _too_long()
+    return _ensure(top, _SESSIONS_FOLDER_WORDS, SESSIONS_NOTE)
+
+
+def read_session(project, name: str) -> bytes:
+    """The bytes of a session's file in the project's sessions folder, for
+    Exegete's own code: `read_bytes`' discipline (`lstat` first, a link or
+    anything but a regular file refused, opened not following a link and
+    checked to be the file looked at), capped at MAX_SESSION.
+
+    FileNotFoundError only when nothing is at the name, or no folder is
+    there. Refused otherwise, with the reason: a link, not a file, past
+    the cap, unreadable, or on Windows without long paths a path past 259
+    characters, which Windows would report as missing. A refusal that is
+    the folder's (`about_folder`) means the folder cannot be read."""
+    _check_session_name(name)
+    missing = FileNotFoundError(
+        errno.ENOENT,
+        "That session is not in the project's Exegete coding sessions "
+        "folder.")
+    top, folder_info, held = _held_sessions(project, missing)
+    try:
+        if _passes_limit(top / name):
+            if name in _names_in(held, top):
+                raise _too_long()
+            raise missing
+        try:
+            info = _lstat_in(held, top, name)
+        except FileNotFoundError:
+            raise missing from None
+        except OSError as exc:
+            raise _unreadable(exc) from None
+        if _is_link_at(held, top, name, info):
+            raise _session_is_a_link()
+        try:
+            data = _read_in(held, top, name, missing, MAX_SESSION)
+        except PrivateFilesError as error:
+            raise _said_of_the_session(error) from None
+    except OSError as exc:
+        if isinstance(exc, FileNotFoundError):
+            raise
+        raise _folder_unreadable(exc, _SESSIONS_FOLDER_WORDS) from None
+    finally:
+        _let_go(held)
+    if held is None and not _still_the_folder(top, folder_info):
+        raise _folder_changed(_SESSIONS_FOLDER_WORDS)
+    return data
+
+
+def session_names(project, files_only: bool = True) -> list:
+    """The session files in the project's sessions folder, by name, every
+    one (no stop at MAX_LISTED, as `listing` has): one listing of the held
+    folder, `lstat` only, links never followed, only regular files at a
+    session's name (`is_session_name`); with `files_only` False, every
+    entry at a session's name, whatever it is, looked at by its name
+    alone. Never raises: no folder, or one that cannot be read, lists
+    none. Names nothing in a log line."""
+    top = sessions_folder(project)
+    try:
+        top, _info, held = _held(top, _SESSIONS_FOLDER_WORDS)
+    except (OSError, PrivateFilesError):
+        return []
+    try:
+        found = []
+        for name in _names_in(held, top):
+            if not is_session_name(name):
+                continue
+            if not files_only:
+                found.append(name)
+                continue
+            try:
+                info = _lstat_in(held, top, name)
+            except OSError:
+                continue
+            if stat.S_ISREG(info.st_mode) and not _is_link_at(
+                    held, top, name, info):
+                found.append(name)
+        return sorted(found)
+    except OSError:
+        return []
+    finally:
+        _let_go(held)
+
+
+def replace_session(project, name: str, data: bytes) -> None:
+    """Write a session's file in the project's sessions folder whole,
+    replacing the one at `name` (or making it), owner-only.
+
+    Through the held folder: a temporary file
+    `session_<id>.json.<random>.tmp` made exclusively (never following a
+    link) at 0600, written and synced, then put in place with
+    `os.replace` within the folder, which is synced after it where the
+    system allows; a reader sees the previous file or the new one, whole.
+    A link or anything but a regular file at `name` is refused, never
+    followed or replaced. A save past MAX_SESSION is refused before
+    anything is written. On Windows a replace refused because another
+    program holds the file is tried REPLACE_TRIES times, REPLACE_PAUSE
+    seconds apart. Any failure removes the temporary file this call made
+    and leaves the previous file as it was. Then Exegete's own temporary
+    files there over TEMPORARY_FILE_AGE old, left by a save whose process
+    ended, are removed. The folder must be there (`ensure_sessions_folder`
+    makes it)."""
+    _check_session_name(name)
+    if len(data) > MAX_SESSION:
+        raise PrivateFilesError(
+            "too_large",
+            f"The session would be larger than {_megabytes(MAX_SESSION)}, "
+            f"the most Exegete keeps in one session's file, so it was not "
+            f"saved; the file is as it was. A new session for the rest of "
+            f"the work avoids this.")
+    top = sessions_folder(project)
+    if _passes_limit(top / (name + ".00000000.tmp")):
+        raise _too_long()
+    gone = PrivateFilesError(
+        "missing",
+        f"{_capital(_SESSIONS_FOLDER_WORDS)} is not there any more, so the "
+        f"session was not saved.", about_folder=True)
+    top, folder_info, held = _held_sessions(project, gone)
+    try:
+        _replace_in(held, top, folder_info, name, data)
+        if held is not None:
+            try:
+                os.fsync(held)
+            except OSError:
+                pass
+        _remove_temporaries(held, top)
+    finally:
+        _let_go(held)
+
+
+def _replace_in(held: Optional[int], top: Path, folder_info: os.stat_result,
+                name: str, data: bytes) -> None:
+    try:
+        info = _lstat_in(held, top, name)
+    except FileNotFoundError:
+        info = None
+    except OSError as exc:
+        raise _folder_unreadable(exc, _SESSIONS_FOLDER_WORDS) from None
+    if info is not None:
+        if _is_link_at(held, top, name, info):
+            raise _session_is_a_link()
+        if not stat.S_ISREG(info.st_mode):
+            raise _session_not_a_file()
+    flags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY
+             | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    descriptor = temporary = None
+    for _attempt in range(3):
+        candidate = f"{name}.{os.urandom(4).hex()}.tmp"
+        try:
+            descriptor = _open_in(held, top, candidate, flags, 0o600)
+        except FileExistsError:
+            continue
+        except OSError as exc:
+            raise _session_unwritable(exc) from None
+        temporary = candidate
+        break
+    if descriptor is None or temporary is None:
+        raise PrivateFilesError(
+            "unwritable",
+            f"Exegete could not make a temporary file in "
+            f"{_SESSIONS_FOLDER_WORDS}.")
+    made: Optional[os.stat_result] = None
+    try:
+        made = os.fstat(descriptor)
+        if held is None and not _still_the_folder(top, folder_info):
+            raise _folder_changed(_SESSIONS_FOLDER_WORDS)
+        written = 0
+        view = memoryview(data)
+        while written < len(data):
+            written += os.write(descriptor, view[written:])
+        os.fsync(descriptor)
+    except OSError as exc:
+        os.close(descriptor)
+        _remove_if_ours(held, top, temporary, made)
+        raise _session_unwritable(exc) from None
+    except BaseException:
+        os.close(descriptor)
+        _remove_if_ours(held, top, temporary, made)
+        raise
+    os.close(descriptor)
+    try:
+        _replace_with_tries(held, top, temporary, name)
+    except BaseException:
+        _remove_if_ours(held, top, temporary, made)
+        raise
+
+
+def _replace_with_tries(held: Optional[int], top: Path, temporary: str,
+                        name: str) -> None:
+    """`os.replace` within the folder; on Windows, tried again while
+    another program holds the file."""
+    tries = max(1, REPLACE_TRIES) if _on_windows() else 1
+    for attempt in range(tries):
+        try:
+            if held is not None:
+                os.replace(temporary, name, src_dir_fd=held,
+                           dst_dir_fd=held)
+            else:
+                os.replace(top / temporary, top / name)
+            return
+        except PermissionError as exc:
+            if attempt + 1 < tries:
+                time.sleep(REPLACE_PAUSE)
+                continue
+            if _on_windows():
+                raise PrivateFilesError(
+                    "held",
+                    f"Windows refused to replace this session's file "
+                    f"({exc.strerror or 'access denied'}): another program "
+                    f"may hold it, such as a sync service like OneDrive, a "
+                    f"virus scanner or a backup. The session was not saved "
+                    f"and its file is as it was; asking again may work."
+                ) from None
+            raise _session_unwritable(exc) from None
+        except OSError as exc:
+            raise _session_unwritable(exc) from None
+
+
+def _remove_temporaries(held: Optional[int], top: Path,
+                        session: Optional[str] = None) -> None:
+    """Remove Exegete's own temporary files in the sessions folder: with
+    `session` (a session's file name), that session's, whatever their
+    age; without, every session's over TEMPORARY_FILE_AGE old. Regular
+    files only, never through a link; best effort, never raises."""
+    try:
+        names = _names_in(held, top)
+    except OSError:
+        return
+    now = time.time()
+    for name in names:
+        match = _SESSION_TEMPORARY.fullmatch(name)
+        if match is None:
+            continue
+        if session is not None and match.group(1) != session:
+            continue
+        try:
+            info = _lstat_in(held, top, name)
+            if not stat.S_ISREG(info.st_mode) or _is_link_at(
+                    held, top, name, info):
+                continue
+            if session is None and now - info.st_mtime <= TEMPORARY_FILE_AGE:
+                continue
+            if held is not None:
+                os.unlink(name, dir_fd=held)
+            else:
+                os.unlink(top / name)
+        except OSError:
+            continue
+
+
+def remove_session(project, name: str) -> bool:
+    """Remove a session's file from the project's sessions folder, with
+    that session's temporary files whatever their age; True when a file
+    was removed, False when nothing is at the name or no folder is there.
+
+    A regular file alone, through the held folder: a link or anything
+    else at the name is refused, as is, on Windows without long paths, a
+    path past 259 characters. A save of that session running meanwhile
+    then fails, and the session stays deleted."""
+    _check_session_name(name)
+    nothing = FileNotFoundError(errno.ENOENT, "No session at that name.")
+    try:
+        top, folder_info, held = _held_sessions(project, nothing)
+    except FileNotFoundError:
+        return False
+    try:
+        if _passes_limit(top / name):
+            if name in _names_in(held, top):
+                raise _too_long()
+            return False
+        try:
+            info = _lstat_in(held, top, name)
+        except FileNotFoundError:
+            _remove_temporaries(held, top, name)
+            return False
+        if _is_link_at(held, top, name, info):
+            raise _session_is_a_link()
+        if not stat.S_ISREG(info.st_mode):
+            raise _session_not_a_file()
+        if held is None and not _still_the_folder(top, folder_info):
+            raise _folder_changed(_SESSIONS_FOLDER_WORDS)
+        try:
+            if held is not None:
+                os.unlink(name, dir_fd=held)
+            else:
+                os.unlink(top / name)
+        except FileNotFoundError:
+            return False
+        except OSError as exc:
+            raise _session_unwritable(exc) from None
+        _remove_temporaries(held, top, name)
+        return True
+    except OSError as exc:
+        raise _folder_unreadable(exc, _SESSIONS_FOLDER_WORDS) from None
+    finally:
+        _let_go(held)

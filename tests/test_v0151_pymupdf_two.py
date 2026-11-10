@@ -476,10 +476,11 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     assert "use no network" not in reading
     assert ("Import and reading make no request over the network of "
             "their own") in reading
-    assert ("by then it has made a few reports to Windows' diagnostic "
-            "data") in reading
-    assert "graphics adapters and of any NPU among them" in reading
-    assert "Windows adds its own identifiers to what it sends" in reading
+    # (v0.15.4, PRIVACY read whole: the reports are told once, in "A
+    # library's usage reports", which the reading's paragraph points to)
+    assert ("on Windows x64 a PDF's reading makes the library's usage "
+            "reports (\"A library's usage reports\", under \"How your data "
+            "flows\")") in reading
     # the passages that say what else leaves the computer point to the part
     pointer = "a library Exegete installs for PDFs also reports its use"
     assert pointer in " ".join(flows.split())

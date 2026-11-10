@@ -153,15 +153,20 @@ LISTED_ABOVE = "What this does not rewrite, so the names remain there:"
 CHOOSING_OCCURRENCES = (
     "A run can also leave chosen occurrences of a name as they are, such as "
     "those of a second person with the same name. For that choice, the "
-    "preview gives the conversation a short id for each of the first "
-    f"{occurrences.OCCURRENCES_LISTED} occurrences, and counts. When the "
-    "mapping was typed into the conversation, each id comes with its line "
-    "number. It gives none of the words around an occurrence: "
-    "those are on a page that Exegete opens in your browser, where you "
-    "choose. The "
-    "assistant is told never to open or read that page, and you give it the "
-    "ids to leave. \"Reading a whole file\", below, says where the page is "
-    "kept and when it goes.")
+    # (v0.15.4, the way of choosing: each occurrence has a number beside
+    # its id, the list its numbering, and the page shows the numbers in
+    # bold and gives a line to paste; PRIVACY read whole, the choosing
+    # page's review, finding 7)
+    "preview gives the conversation a number and a short id for each of "
+    f"the first {occurrences.OCCURRENCES_LISTED} occurrences, the list's "
+    "numbering, and counts. When the mapping was typed into the "
+    "conversation, each occurrence also comes with its line number. It "
+    "gives none of the words around an occurrence: those are on a page "
+    "that Exegete opens in your browser, where you choose. The assistant is "
+    "told never to open or read that page. You give it the numbers to "
+    "leave, shown in bold on the page, or paste the line the page gives "
+    "you. \"Reading a whole file\", below, says where the page is kept and "
+    "when it goes.")
 # The new texts, word for word, white space collapsed (fix round 1:
 # what the project's folder still holds, what is not replaced, where
 # else an unchanged copy sits, and three phrases)
@@ -446,10 +451,16 @@ class TestPrivacy:
     def test_practical_mitigations_points_to_it(self):
         privacy = _doc("PRIVACY.md")
         mitigations = _section(privacy, "Practical mitigations")
-        first = mitigations[mitigations.index("- **Prefer synthetic"):]
+        # (v0.15.4, PRIVACY read whole: "Prefer synthetic" and "the safe
+        # path", a prescription and a reassurance, became a warning and a
+        # suggestion, the pointer kept)
+        first = mitigations[mitigations.index(
+            "- **Pseudonymised data is still personal data.**"):]
         first = _flat(first[:first.index("\n- ")])
-        assert first.endswith("genuinely anonymised data is the safe path "
-                              "for experimentation. " + MITIGATION)
+        assert "Pseudonymisation reduces risk only." in first
+        assert first.endswith("you could use made-up data, or data that is "
+                              "genuinely anonymised. " + MITIGATION)
+        assert "safe path" not in mitigations
 
     def test_no_long_dash_in_the_new_texts(self):
         privacy = _doc("PRIVACY.md")

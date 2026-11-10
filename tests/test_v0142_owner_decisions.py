@@ -89,6 +89,10 @@ README_ADVICE = ("While training is on, {maker} may use your conversations, "
                  "with the participants' data in them, to train its models.")
 README_RATED = ("Rating a reply, with a thumbs up or down, can still let "
                 "{maker} train on that conversation")
+# v0.15.4, PRIVACY read whole: PRIVACY.md's own piece, which says it as the
+# README does, a warning with the setting as the suggestion (ruling 108)
+WARNING = ("While training is on, {maker} may use your conversations, with "
+           "the participants' data in them, to train its models.")
 
 
 def _plain(text):
@@ -179,11 +183,14 @@ def test_install_and_privacy_give_the_same_advice():
     assert "practice included" not in install
     assert "practice included" not in _flat("INSTALL.md")
     # PRIVACY.md: each maker's section, and the checklist for both
+    # (v0.15.4: as a warning, the README's way, where the guide keeps the
+    # order until its own reading)
     rung_one = _between(privacy, "### Rung 1:", "### Rung 2:")
-    assert ADVICE.format(maker="Anthropic") in rung_one
+    assert WARNING.format(maker="Anthropic") in rung_one
     individuals = _between(privacy, "**Services for individuals**",
                            "**ChatGPT Business, Enterprise and Edu")
-    assert ADVICE.format(maker="OpenAI") in individuals
+    assert WARNING.format(maker="OpenAI") in individuals
+    assert "Switch training off" not in privacy
     checklist = _between(privacy, "## Before you use real participant data",
                          "## How your data flows")
     # (v0.15.2, the lead's reading: "the AI provider", the one term, for
@@ -191,7 +198,7 @@ def test_install_and_privacy_give_the_same_advice():
     # the document sets out, at its first mention)
     item = _between(checklist, "- **Training, with either AI provider.**",
                     "- **Controller")
-    for words in (ADVICE.format(maker="the AI provider"),
+    for words in (WARNING.format(maker="the AI provider"),
                   "\"Help improve our AI models\"",
                   "\"Improve the model for everyone\"",
                   "\"Include environments\"",

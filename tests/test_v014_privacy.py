@@ -185,7 +185,9 @@ class TestTheRunsFingerprints:
         assert ("Records written before v0.14 (format 1 by v0.12, format 2 "
                 "by v0.13) carry each file's length and plain SHA-256 "
                 "before and after the run instead") in privacy
-        assert ("the keyed digests in the run manifests already written "
+        # (v0.15.4, PRIVACY read whole: "run records", the document's one
+        # word for them)
+        assert ("the keyed digests in the run records already written "
                 "can then no longer be checked") in privacy
         assert "Deleting it invalidates outstanding preview tokens, which " \
                "means the next execute asks for a fresh preview; nothing " \
@@ -723,11 +725,20 @@ class TestTheDocumentsSayTheRule:
 
     def test_privacy_says_the_rule(self):
         privacy = _flat("PRIVACY.md")
-        assert ("Since v0.14 neither carries SQLite's message: an error "
-                "from the database is reported by its kind and SQLite's "
-                "short name for it") in privacy
-        assert ("The same rule holds for the resources (the `exegete://` "
-                "addresses)") in privacy
+        # (v0.15.4, PRIVACY read whole: the rule as it stands, without
+        # the release it came in)
+        assert ("Neither carries SQLite's message, which can quote a note, "
+                "private part included: an error from the database is "
+                "reported by its kind and SQLite's short name for it") \
+            in privacy
+        # (v0.15.4, the claims audit's point 52: the resources answer as
+        # content the errors Exegete meets; an id that is not a number is
+        # refused by the MCP library first, as a protocol error)
+        assert ("The resources (the `exegete://` addresses) answer an error "
+                "that Exegete meets as their content, as a tool does") \
+            in privacy
+        assert ("is refused by the MCP library before Exegete sees it, with "
+                "a protocol error") in privacy
 
     def test_install_no_longer_says_the_log_quotes_a_note(self):
         install = _flat("INSTALL.md")
@@ -968,9 +979,9 @@ class TestTheDocumentsSayWhatTheLogCarries:
 
     def test_privacy_says_the_log_names_nothing(self):
         privacy = _flat("PRIVACY.md")
-        assert ("Since v0.14 the log also carries no name of a project, "
-                "file, code, category, case, journal entry or attribute, and "
-                "no path") in privacy
+        assert ("The log carries no name of a project, file, code, "
+                "category, case, journal entry or attribute, and no path") \
+            in privacy
 
     def test_install_no_longer_says_the_log_carries_names(self):
         install = _flat("INSTALL.md")
@@ -990,8 +1001,12 @@ class TestTheDocumentsSayWhatTheLogCarries:
         assert ("So Claude Desktop's log, the file Show Logs opens, can "
                 "hold every request and every answer in full") in install
         assert "lists message exchanges among what Claude" in install
-        assert ("A host may record more in the same file: Claude "
-                "Desktop's server log") in privacy
+        # (v0.15.4, PRIVACY read whole: "can hold", dated, as INSTALL)
+        assert "A host may record more in the same file." in privacy
+        assert ("So Claude Desktop's server log (the file Settings > "
+                "Developer > Show Logs opens) can hold every request and "
+                "every answer") in privacy
+        assert "lists message exchanges among what Claude" in privacy
         assert ("The rule closes one channel, SQLite's message; it does "
                 "not make a project built to leak safe to open.") in privacy
         # (the staleness audit of 20 October 2026, and its fix round: held
@@ -1007,14 +1022,16 @@ class TestTheDocumentsSayWhatTheLogCarries:
         source = Path(server.__file__).read_text(encoding="utf-8")
         run = source[source.index("def pseudonymise_source("):]
         assert "secret = load_secret()" in run[:run.index("\n@mcp.tool")]
-        secret = privacy[privacy.index("the preview-token secret "
+        # (v0.15.4, PRIVACY read whole: an item of "Files Exegete keeps
+        # on your computer", in bold)
+        secret = privacy[privacy.index("preview-token secret** "
                                        "(`~/.exegete/preview_secret`)"):]
         secret = secret[:secret.index("logs that it did")]
         for use, lost in (
                 ("sign the tokens that approve a two-step operation",
                  "invalidates outstanding preview tokens"),
-                ("key the digests in the pseudonymisation run manifests",
-                 "the keyed digests in the run manifests already written "
+                ("key the digests in the pseudonymisation run records",
+                 "the keyed digests in the run records already written "
                  "can then no longer be checked"),
                 ("name and sign the texts an import's preview keeps",
                  "the texts an import's preview kept can no longer be "
@@ -1022,7 +1039,12 @@ class TestTheDocumentsSayWhatTheLogCarries:
             assert use in secret and lost in secret, use
         assert "Exegete replaces the secret by itself, with the same " \
             "effects" in secret
-        assert ("they share one memory of it") in privacy
+        # (v0.15.4, PRIVACY read whole: how the re-read shares its memory
+        # left the document, which keeps what a researcher sees: a coder
+        # hidden while Exegete is connected is filtered from the next call
+        # on; section 4 below holds the behaviour)
+        assert ("A coder hidden while Exegete is connected is filtered out "
+                "from the next call on") in privacy
 
 
 # =============================================================================

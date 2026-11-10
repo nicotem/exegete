@@ -137,9 +137,8 @@ LISTS = {
         _between(_flat(_read("PRIVACY.md")), "**A library's usage reports",
                  "What the switch cannot promise"),
         "read with PyMuPDF 2 (", ")"),
-    "PRIVACY.md, bringing documents in": lambda: _between(
-        _section("PRIVACY.md", "## Bringing documents in"),
-        "read with PyMuPDF 2 (", ")"),
+    # (v0.15.4, PRIVACY read whole: "Bringing documents in" points to "A
+    # library's usage reports" for the list, where it was said twice)
     "TOOLS.md, a PDF's text": lambda: _between(
         _flat(_read("TOOLS.md")), "the extension installs PyMuPDF 2.0 on",
         "1.28.2"),

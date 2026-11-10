@@ -157,7 +157,7 @@ def test_the_uninstall_says_claude_desktop_s_log_stays(tmp_path):
                   "**Claude Desktop's log of the extension**",
                   "`mcp-server-Exegete.log` in `~/Library/Logs/Claude`",
                   "`mcp-server-qualcoder-mcp.log`",
-                  "keeps every request and every answer in full",
+                  "can hold every request and every answer in full",
                   "Exegete never removes it"):
         assert words in stays, words
 

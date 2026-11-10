@@ -13,8 +13,10 @@ its source.
   tests/test_v0143_reading.py, TestTheOriginal, holds the behaviour).
 - SUPPORT's warnings about what an issue publishes: an issue is public;
   a line of the names file or of pseudonyms.json pairs a real name with
-  its pseudonym; the host's log keeps every request and every answer.
-  These safety sentences are the fact, so their words are held.
+  its pseudonym; the host's log can hold every request and every answer
+  (v0.15.4: dated from MCP's page on debugging, which lists message
+  exchanges among what Claude Desktop's logs capture). These safety
+  sentences are the fact, so their words are held.
 - CONTRIBUTING says that on Windows onnxruntime makes a few reports as
   it loads, before Exegete's switch can reach them
   (import_reading._onnxruntime_reports_off; PRIVACY.md, "How your data
@@ -121,8 +123,15 @@ def test_support_warns_what_an_issue_and_a_log_publish():
     assert (f"A line of the names file, `{private_files.NAMES_FILE}`, or an "
             f"entry of the project's `{PSEUDONYMS_JSON_NAME}` pairs a real "
             f"name with its pseudonym.") in support
-    assert ("a file that records every request to Exegete and every "
-            "answer, the text of your documents included") in support
+    assert ("So the log can hold every request to Exegete and every "
+            "answer, the text of your documents included.") in support
+    # (v0.15.4) the claim is dated, in the form the dates check reads,
+    # from the page that lists what Claude Desktop's logs capture
+    assert ("https://modelcontextprotocol.io/docs/tools/debugging"
+            in support)
+    assert re.search(r"Read on \d{1,2} [A-Z][a-z]+ 20\d\d, it lists message "
+                     r"exchanges among what Claude Desktop's logs capture",
+                     support)
     assert ("Read a log before you copy any of it into an issue, and copy "
             "only the lines about the problem.") in support
     assert ("They include the request that failed and Exegete's answer, "

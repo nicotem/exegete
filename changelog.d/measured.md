@@ -15,8 +15,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 - Choosing occurrences by their numbers adds 243 characters to `full`:
   242 for the schemas of pseudonymise_source's two new arguments, and
-  1 in its description, which names them in about the words it gave
-  the arguments for choosing occurrences before. On Python 3.11 that
+  1 in its description, where the arguments for choosing occurrences
+  now take about the room they took before. On Python 3.11 that
   description is 19,864 characters, within the 20,000 that the guide to
   installing from the Terminal gives for Claude Code's setting. The
   full brief is 154 characters longer, from one sentence on the numbers

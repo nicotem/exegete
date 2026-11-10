@@ -152,12 +152,19 @@ def test_privacy_tells_qualcoder_s_annotation_answer_as_it_is():
     (TestWriteEchoesRedactHiddenTargets)."""
     writes = _between(_flat("PRIVACY.md"),
                       "**Writes that target an existing row by id**",
-                      "The token-gated cascades")
+                      "**The cascades**")
     assert "as QualCoder's AI server does" not in writes
     for words in (
-            "With the override, the result echoes ids only (update_annotation "
-            "also echoes back the public note text the AI itself just "
-            "supplied), never the hidden coder's name, code, span or text.",
+            # (v0.15.4, the claims audit's point 25: with the override the
+            # code's and the file's ids do enter the conversation, which
+            # "never the hidden coder's ... code" denied; server.py
+            # delete_coding, database.py's hidden-row answers)
+            "With the override, the answer gives ids: those of the coding, "
+            "its code and its file, which together tell which code was "
+            "applied to which file, or those of the annotation and its "
+            "file, with the note and its date that update_annotation "
+            "wrote. The coder's name, the span and the text never enter "
+            "the conversation.",
             "QualCoder 4.0's own AI server answers the same way about a "
             "coding but not about an annotation: its update and delete of an "
             "annotation answer with the annotation's position and its "

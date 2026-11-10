@@ -124,7 +124,7 @@ def test_compare_coders_names_what_privacy_says_it_names():
     assert re.search(r'"file_name": file_info\["file_name"\]', body)
     privacy = _flat("PRIVACY.md")
     assert ("the name of each code and of its category" in privacy and
-            "with `per_file=true`, it also names, under each code, every "
+            "With `per_file=true`, it also names, under each code, every "
             "file either coder coded" in privacy)
 
 
@@ -334,7 +334,9 @@ def test_privacy_says_when_qualcoder_3_8_keeps_its_store():
             "copy") in privacy
     assert "where its AI search was used" not in privacy
     assert "Exegete opens no file in" not in privacy
-    assert privacy.count("reads no file in") == 2
+    # (v0.15.4, PRIVACY read whole: said once, in "Backups, project
+    # copies, and the `ai_data/` folder", which the mitigations point to)
+    assert privacy.count("reads no file in") == 1
 
 
 def test_list_backups_note_names_qualcoder_3_8_s_store():

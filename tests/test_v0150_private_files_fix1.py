@@ -167,7 +167,9 @@ class TestThePlacesAndTheTable:
                 "Exegete's own folder was `~/.qualcoder_mcp` before 0.14.1: "
                 "since "
                 "then Exegete keeps a link under that name pointing at "
-                "`~/.exegete`, as \"How your data flows\" says.") in section
+                # (v0.15.4, PRIVACY read whole: the folder's account moved
+                # into this section, under "The earlier name")
+                "`~/.exegete` (\"The earlier name\", below).") in section
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
         # folder chosen by hand said to be unchecked (the staleness audit of 20
@@ -199,8 +201,10 @@ class TestThePlacesAndTheTable:
         assert ("| Exegete's working state | `~/.exegete`, hidden on macOS "
                 "and Linux |") in section
         # v0.15.2: and the records of changes once a day old
+        # (v0.15.4, PRIVACY read whole: the account of those texts is in
+        # this section now, below the table)
         assert ("| Exegete removes the texts an import's preview read, as "
-                "\"How your data flows\" says, and a change's record once it "
+                "below, and a change's record once it "
                 "is a day old; coding sessions go at your "
                 "word (`delete_coding_session`); the "
                 "rest stays until you delete it.") in section

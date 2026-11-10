@@ -1109,12 +1109,19 @@ def test_tools_says_the_import_uses_the_preview_s_text():
 
 def test_privacy_says_what_is_kept_where_and_for_how_long():
     privacy = _flat("PRIVACY.md")
-    assert ("which holds the texts an import's preview read, the session "
-            "files, the secret, the pointer and the run manifests below"
-            ) in privacy
-    item = privacy[privacy.index("- the texts an import's preview read "
-                                 "(v0.15.0)"):]
-    item = item[:item.index("- AI-coding session files")]
+    # (v0.15.4, PRIVACY read whole: the folder's account is in "Files
+    # Exegete keeps on your computer", each thing it holds an item)
+    folder = privacy[privacy.index("**Exegete's own folder**, `~/.exegete`"):]
+    folder = folder[:folder.index("**The earlier name.**")]
+    for held in ("the coding sessions (`~/.exegete/sessions/`",
+                 "**The preview-token secret**",
+                 "**The texts an import's preview read**",
+                 "**The last-used project pointer**",
+                 "**The pseudonymisation run records**"):
+        assert held in folder, held
+    item = privacy[privacy.index("- **The texts an import's preview "
+                                 "read**"):]
+    item = item[:item.index("- **The records of changes**")]
     for said in ("`~/.exegete/import-texts.noindex`",
                  "the document's whole text as the preview read it, before "
                  "your names list is applied, so it can hold the names the "
@@ -1144,8 +1151,8 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
     caution = privacy[privacy.index("- **What is not pseudonymised**"):]
     caution = caution[:caution.index("- **", 2)]
     assert ("a PDF's text and its notes, and the texts an import's preview "
-            "read, kept outside the project for its import (\"How your "
-            "data flows\", above)") in caution
+            "read, kept outside the project for its import (\"Files "
+            "Exegete keeps on your computer\")") in caution
     stays = privacy[privacy.index("**What stays on the computer"):]
     stays = stays[:stays.index("## Practical mitigations")]
     assert "the texts an import's preview read" in stays

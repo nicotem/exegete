@@ -203,7 +203,9 @@ class TestTheRefusalNamesBothCauses:
 
     def test_privacy(self):
         privacy = _flat(_read("PRIVACY.md"))
-        assert (("- Remember what Exegete's safety features protect: your "
+        # (v0.15.4, PRIVACY read whole: the item's lead-in a statement,
+        # where "Remember" was an instruction; the facts as they were)
+        assert (("- **What Exegete's safety features protect**: your "
                  "project's **integrity on disk**. They are the read-only "
                  "default, the automatic local backups, the refusal to write "
                  "while the project's lock file is active (QualCoder 3.8.2 "

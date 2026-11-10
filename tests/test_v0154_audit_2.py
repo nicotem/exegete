@@ -395,3 +395,37 @@ class TestAFileCountedAsCodedIsNotListed:
         topic = json.loads(server.explain_ai_coding_tools())["not_yet_coded"]
         assert "search_files" in topic
         assert "search_filename=false" in topic
+
+
+# ---------------------------------------------------------------------------
+# Point 44: the codings left out for a hidden coder, within file_ids
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def hidden_coder(project):
+    """QualCoder 4.0's visibility views, with a hidden coder whose text
+    codings are 3 (code 1) and 4 and 5 (code 2), all on file 1."""
+    from test_qc40_visibility import _apply_visibility_schema
+    _apply_visibility_schema(str(project))
+    _reopen(project)
+    return project
+
+
+def _suppressed(**arguments):
+    return host("get_coded_segments", **arguments)["coder_visibility"][
+        "codings_suppressed"]
+
+
+class TestTheCountLeftOutIsWithinTheFiles:
+
+    def test_a_file_without_hidden_codings_counts_none(self, hidden_coder):
+        assert _suppressed(code_id=1, file_ids=[2]) == 0
+        assert _suppressed(code_id=2, file_ids=[2]) == 0
+
+    def test_the_file_that_holds_them_counts_them(self, hidden_coder):
+        assert _suppressed(code_id=1, file_ids=[1]) == 1
+        assert _suppressed(code_id=2, file_ids=[1, 2]) == 2
+
+    def test_without_file_ids_every_file_counts(self, hidden_coder):
+        assert _suppressed(code_id=1) == 1
+        assert _suppressed(code_id=2) == 2

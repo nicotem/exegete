@@ -1,16 +1,16 @@
 name: Feature idea
-description: Something that would make this more useful for your research
+description: Something that would make Exegete more useful for your research
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Early adopters shape the roadmap here: feature ideas are as welcome as bug reports.
+        Exegete's next features are worked out with the researchers who use it now, so ideas are as welcome as bug reports.
   - type: textarea
     id: need
     attributes:
       label: What are you trying to do?
-      description: The research task or workflow, not just the feature. It helps to understand the underlying need.
+      description: The research task or workflow behind the idea, not only the feature. It helps to understand the underlying need.
     validations:
       required: true
   - type: textarea

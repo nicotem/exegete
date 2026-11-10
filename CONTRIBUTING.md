@@ -46,12 +46,12 @@ its fix. Describe it there without copying data, as above.
    the tests of PDF and EPUB import are skipped. Its libraries are under
    the AGPL (INSTALL.md, "PDF and EPUB: the optional part").
 
-   On Windows x64, Linux and Macs with Apple silicon, the part brings
-   PyMuPDF 2, which loads onnxruntime, Microsoft's library for running
-   trained models. onnxruntime reports on its own use to Microsoft
-   unless it is switched off. On Linux and macOS, its own setting,
-   `ORT_DISABLE_TELEMETRY=1`, given before it loads, switches the
-   reports off. Exegete's reading process, the suite
+   On Windows x64, Linux and Macs with Apple silicon, with Python 3.11
+   to 3.14, the part brings PyMuPDF 2. PyMuPDF 2 loads onnxruntime,
+   Microsoft's library for running trained models. onnxruntime reports
+   on its own use to Microsoft unless it is switched off. On Linux and
+   macOS, its own setting, `ORT_DISABLE_TELEMETRY=1`, given before it
+   loads, switches the reports off. Exegete's reading process, the suite
    (`tests/conftest.py`) and `scripts/qualcoder_parity.py` give that
    setting. An import of PyMuPDF anywhere else, such as your own check
    of what is installed, does not. On a Mac with Apple silicon, with
@@ -60,8 +60,14 @@ its fix. Describe it there without copying data, as above.
    `Library/Application Support/Microsoft/DeveloperTools/.onnxruntime`.
    That measurement did not check whether anything was sent. You can
    give the setting yourself before you start Python, with
-   `export ORT_DISABLE_TELEMETRY=1` in the Terminal. On Windows,
-   onnxruntime does not read the setting:
+   `export ORT_DISABLE_TELEMETRY=1` in the Terminal.
+
+   On Windows, the note in onnxruntime's package, `Privacy.md`, says
+   that its official releases report as they do on Linux and macOS, and
+   read the setting. The same note says that onnxruntime's older way of
+   reporting on Windows, through Windows' own diagnostic data, does not
+   read it. The Windows package of onnxruntime 1.31.0, the one the lock
+   installs, reports that older way, as its files show.
    [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows),
    says what it reports there.
 

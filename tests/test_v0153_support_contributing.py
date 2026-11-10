@@ -21,6 +21,10 @@ its source.
   it loads, before Exegete's switch can reach them
   (import_reading._onnxruntime_reports_off; PRIVACY.md, "How your data
   flows").
+- v0.15.4: CONTRIBUTING gives onnxruntime's own note on Windows beside
+  what the Windows package the lock installs does, and the Python
+  releases with which the optional part brings PyMuPDF 2; the bug report
+  form says what a copied conversation and a copy of a project carry.
 """
 
 import inspect
@@ -149,3 +153,81 @@ def test_contributing_says_onnxruntime_reports_on_windows_as_it_loads():
     assert 'PRIVACY.md, "How your data flows"' in sentence
     assert "\n## How your data flows\n" in (REPO / "PRIVACY.md").read_text(
         encoding="utf-8")
+
+
+def test_contributing_gives_onnxruntimes_own_note_beside_the_package():
+    """v0.15.4: onnxruntime's own note, Privacy.md in its package, says
+    that its official releases for Windows report as on Linux and macOS
+    and read ORT_DISABLE_TELEMETRY, and that its older way of reporting
+    on Windows does not read it. The Windows package the lock installs
+    reports that older way (PRIVACY.md, "How your data flows", from its
+    files), so CONTRIBUTING gives both, not a bare "does not read"."""
+    contributing = _flat("CONTRIBUTING.md")
+    assert "On Windows, onnxruntime does not read the setting" \
+        not in contributing
+    for words in ("On Windows, the note in onnxruntime's package, "
+                  "`Privacy.md`, says that its official releases report as "
+                  "they do on Linux and macOS, and read the setting.",
+                  "The same note says that onnxruntime's older way of "
+                  "reporting on Windows, through Windows' own diagnostic "
+                  "data, does not read it.",
+                  "The Windows package of onnxruntime 1.31.0, the one the "
+                  "lock installs, reports that older way, as its files "
+                  "show."):
+        assert words in contributing, words
+    assert ("comes from onnxruntime's source code and the Windows package "
+            "Exegete installs") in _flat("PRIVACY.md")
+    # PyMuPDF 2, and onnxruntime with it, only with Python 3.11 to 3.14,
+    # as pyproject.toml's markers give it
+    assert ("On Windows x64, Linux and Macs with Apple silicon, with "
+            "Python 3.11 to 3.14, the part brings PyMuPDF 2") in contributing
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    assert ("\"pymupdf>=2.0,<3; python_version >= '3.11' and "
+            "python_version < '3.15'") in pyproject
+
+
+def test_onnxruntimes_note_says_what_contributing_reports():
+    """The note itself, where the package is installed: found, not
+    imported, since importing onnxruntime starts its reports."""
+    import importlib.util
+    spec = importlib.util.find_spec("onnxruntime")
+    places = list(spec.submodule_search_locations or []) if spec else []
+    notes = [Path(place) / "Privacy.md" for place in places
+             if (Path(place) / "Privacy.md").is_file()]
+    if not notes:
+        import pytest
+        pytest.skip("no onnxruntime package with its note here")
+    note = " ".join(notes[0].read_text(encoding="utf-8").split())
+    assert "for other Windows builds including our official releases" in note
+    assert ("The legacy Windows TraceLogging backend does not use this "
+            "environment variable.") in note
+
+
+def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
+    """v0.15.4: the bug report form's warnings, safety sentences whose
+    words are held. A copied conversation carries the tools' answers,
+    with names and values from the project. An example with names and
+    details removed is still a participant's words (the form, SUPPORT
+    and INSTALL say so). The copy the form suggests holds any names list
+    and names file, as copy_project_to_workspace's description says."""
+    form = _flat(".github/ISSUE_TEMPLATE/bug_report.yml")
+    still = ("An example with names and details removed is still a "
+             "participant's words, which a search can find and someone can "
+             "recognise. Your ethics approval may not allow you to publish "
+             "it.")
+    for words in ("The tools' answers can also hold the names of files and "
+                  "cases, attribute values, codes and memos, which can "
+                  "identify a participant.",
+                  still,
+                  "The copy goes into your folder for projects. It holds the "
+                  "whole project, with any names list and names file, and "
+                  "the real names in them."):
+        assert words in form, words
+    for name in ("SUPPORT.md", "INSTALL.md"):
+        assert still in _flat(name), name
+    source = (REPO / "src/exegete/server.py").read_text(encoding="utf-8")
+    tool = source[source.index("def copy_project_to_workspace("):]
+    tool = " ".join(tool[:tool.index('"""', tool.index('"""') + 3)].split())
+    assert (f"any names list and names file ({PSEUDONYMS_JSON_NAME}, "
+            f"Exegete/{private_files.NAMES_FILE}), with the real names in "
+            f"them") in tool

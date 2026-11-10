@@ -28,14 +28,18 @@ what changed.
 
 - **Claude Desktop**, the latest version, from
   https://claude.ai/download, and a Claude account to sign in with.
-- **A Mac or a Windows computer.** Claude Desktop runs on both. On a
-  Mac, Anthropic's help page, read on 3 November 2026, asks for macOS 13
-  (Ventura) or later. On a Mac with Apple silicon (M1 or later), the
-  extension needs macOS 14 (Sonoma) or later, from 0.15.3: a library it
-  fetches to read PDFs has no package for earlier releases there. On
-  macOS 13 it does not start ("Troubleshooting", below, says what you
-  can do). On an Intel Mac, the extension needs no more than Claude
-  Desktop does.
+- **A Mac or a Windows computer.** This guide's steps are written for
+  these two. Anthropic's help page "Install Claude Desktop", read on
+  10 November 2026, lists Claude Desktop for macOS, for Windows and, as
+  a beta, for Linux, on Ubuntu 22.04 or Debian 12 and later. Exegete's
+  tests install and start the extension on Linux the way Claude Desktop
+  does, but without Claude Desktop itself. On a Mac, the same page asks
+  for macOS 13 (Ventura) or later. On a Mac with Apple silicon (M1 or
+  later), the extension needs macOS 14 (Sonoma) or later, from 0.15.3:
+  a library it fetches to read PDFs has no package for earlier releases
+  there. On macOS 13 it does not start ("Troubleshooting", below, says
+  what you can do). On an Intel Mac, the extension needs no more than
+  Claude Desktop does.
 - **The internet when Exegete first starts**, and after each update.
   At those times Claude Desktop fetches a tool called uv, which fetches
   Python and the libraries Exegete needs, the ready-made code it builds
@@ -416,7 +420,7 @@ With the extension, the change of name can leave two things behind.
 One is the link under the old name, which holds nothing of its own
 ("Exegete's own folder", above, says what it is for). The other is the
 old log file, `mcp-server-qualcoder-mcp.log`, beside Claude Desktop's
-log of the extension ("Reading the server log", below). It keeps every
+log of the extension ("Reading the server log", below). It can hold every
 request and every answer from before 0.14.1 in full, names and quoted
 text included. You could delete it once you no longer need it to report
 a problem from that time. A check typed in the Terminal lists what the
@@ -496,9 +500,10 @@ GitHub Issues ("Getting help", below).
    - **Claude Desktop's log of the extension**,
      `mcp-server-Exegete.log` in `~/Library/Logs/Claude` on a Mac or
      `%APPDATA%\Claude\logs` on Windows, with
-     `mcp-server-qualcoder-mcp.log` beside it from before 0.14.1. It
-     keeps every request and every answer in full, names, paths and
-     quoted text included. Exegete never removes it.
+     `mcp-server-qualcoder-mcp.log` beside it from before 0.14.1. It can
+     hold every request and every answer in full, names, paths and
+     quoted text included ("Reading the server log", below). Exegete
+     never removes it.
 
 The backups Exegete took sit beside each project, in folders named
 `<project>_backup_<timestamp>.qda`. The `prune_backups` tool removes
@@ -641,11 +646,14 @@ had finished starting the session), or when a response's id is text
 that is not a number, its line about it holds a fixed sentence of
 Exegete's instead, and nothing of what was sent.
 
-Claude Desktop's log (the file Show Logs opens) also records every
-request and every answer in full. So it holds everything the tools
-returned and the arguments they were given, names, paths and quoted text
-included, as the conversation does. Before sharing the file, read it as
-you would the conversation.
+MCP, the protocol Exegete speaks to apps, has a page on debugging,
+<https://modelcontextprotocol.io/docs/tools/debugging>. Read on
+10 November 2026, it lists message exchanges among what Claude
+Desktop's logs capture. So Claude Desktop's log, the file Show Logs
+opens, can hold every request and every answer in full. That is
+everything the tools returned and the arguments they were given, names,
+paths and quoted text included, as the conversation holds them. Before
+sharing the file, read it as you would the conversation.
 
 ### Where to ask
 
@@ -692,9 +700,11 @@ Anthropic documents for Claude Code: `import_documents`, and
 `save_names_list`, which changes the names list every later import
 applies. From version 2.1.199, Claude Code asks before every call of
 such a tool in every permission mode, auto and `bypassPermissions`
-included. It offers no "don't ask again", and lets no allow rule skip
-it. In `dontAsk` mode, it refuses the call. Earlier versions ignore the
-mark.
+included, and lets no allow rule skip it. In `dontAsk` mode, it refuses
+the call. Earlier versions ignore the mark. From version 2.1.246, its
+question offers no "don't ask again". Before that version, it offered
+"Yes, and don't ask again", but then ignored the allow rule that choice
+wrote (Claude Code's changelog, read on 10 November 2026).
 
 `check_for_updates` is not marked read-only: it records each check in
 Exegete's own folder, so a host that asks before a tool runs asks

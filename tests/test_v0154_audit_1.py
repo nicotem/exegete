@@ -352,3 +352,30 @@ class TestTheCheckFailsNoTool:
                 "a_tool", {"properties": {"value": schema}},
                 {"value": value}))
             assert out["given_true_or_false"] == ["value"], schema
+
+
+# ---------------------------------------------------------------------------
+# set_memo: no target_id with the project memo
+# ---------------------------------------------------------------------------
+
+class TestTheProjectMemoTakesNoId:
+
+    @pytest.mark.parametrize("target_id", [0, 5, 1])
+    def test_an_id_with_the_project_memo_is_refused(self, project,
+                                                    target_id):
+        out = host("set_memo", target_type="project", target_id=target_id,
+                   memo="A study of carers")
+        assert "target_id" in out.get("error", ""), out
+        assert "success" not in out
+        assert _rows(project, "SELECT memo FROM project") == [
+            ("Test project",)]
+        assert _beside(project) == []
+
+    def test_without_an_id_it_is_written(self, project):
+        out = host("set_memo", target_type="project", target_id=None,
+                   memo="A study of carers")
+        assert out.get("success") is True, out
+        out = host("set_memo", target_type="project", memo="Carers again")
+        assert out.get("success") is True, out
+        assert _rows(project, "SELECT memo FROM project") == [
+            ("Carers again",)]

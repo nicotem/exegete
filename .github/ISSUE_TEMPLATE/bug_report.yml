@@ -5,9 +5,11 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping test this alpha. A couple of things first:
-        - **Please work on a copy of your data**, never an original.
-        - **Don't paste participant data, interview text, or anything sensitive** into this issue. Describe the problem structurally instead (e.g. "a code name with an apostrophe", "a file with ~40k characters"). For what happens to research data when you *use* the tool, see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md).
+        Thanks for helping test this alpha.
+
+        An issue is public. Anyone can read it, and search engines find it, so participants' data or a project put into an issue is published with it. You can describe the data without copying it, such as "a code name with an apostrophe" or "a file of about 40,000 characters". A made-up example, or one with names and details removed, usually shows the problem as well. [SUPPORT.md](https://github.com/nicotem/exegete/blob/main/SUPPORT.md) says what a report needs and what a log can hold. [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md) says what leaves your computer when you use Exegete.
+
+        A fault in this alpha could change a project in a way you did not intend. Before you try the problem again, you could work on a copy of the project. The assistant can make one with the tool `copy_project_to_workspace`.
   - type: textarea
     id: what-happened
     attributes:
@@ -26,14 +28,14 @@ body:
     id: steps
     attributes:
       label: Steps to reproduce
-      description: The conversation or sequence of tools, as best you can reconstruct it.
+      description: "What you asked, step by step, and which tools the assistant used, if the conversation shows them. A conversation copied in can carry passages of your documents, in the assistant's replies and in the tools' answers. You could describe each step in your own words instead, or copy only lines that hold no participants' data."
     validations:
       required: false
   - type: input
     id: mcp-version
     attributes:
       label: Exegete version
-      description: Run `exegete --version` in the environment you installed into (git installs, `python -m exegete.server --version`; an install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too). `pip show exegete`, `pipx list` and `uv tool list` also work; pip spells 0.15.3-alpha as 0.15.3a0, and either spelling is fine. With the Claude Desktop extension, give the version in the name of the `.mcpb` file you installed. If you ask your assistant instead, treat its answer as a convenience, not proof.
+      description: "With the Claude Desktop extension, the version is in the name of the `.mcpb` file you installed. From the Terminal, `exegete --version`, run in the environment you installed into, gives it, or `python -m exegete.server --version` for an install from the source. An install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too. `pip show exegete`, `pipx list` and `uv tool list` also give it. The commands write the version as PyPI does, with a0 for -alpha, and either spelling is fine. If you ask the assistant instead, it may answer without asking Exegete, so the file name or a command is surer."
       placeholder: e.g. 0.15.3a0
     validations:
       required: true
@@ -41,7 +43,7 @@ body:
     id: qualcoder-version
     attributes:
       label: QualCoder version, if you use it
-      description: A release (3.8.x or 4.0), or "none" if you do not use QualCoder. For a build from QualCoder's source, add the git commit if you know it.
+      description: 'Its release, 3.8.x or 4.0, or "none" if you do not use it. For a build from its source, add the git commit if you know it.'
       placeholder: e.g. 3.8.2, 4.0 or none
     validations:
       required: false
@@ -49,19 +51,20 @@ body:
     id: schema-version
     attributes:
       label: Project schema version
-      description: The `databaseversion` value in the `schema` block that `get_current_project` returns (ask your assistant to run it). Schemas v14 through v17 are supported.
+      description: The `databaseversion` value in the `schema` part of what `get_current_project` returns. You can ask the assistant for it. Exegete supports schemas v14 to v17.
       placeholder: e.g. v14 or v17
     validations:
       required: false
   - type: dropdown
     id: host
     attributes:
-      label: MCP host application
+      label: The app you use Exegete in
       description: The application that runs Exegete for you.
       options:
-        - Claude Desktop, with the one-click extension (.mcpb)
-        - Claude Desktop, configured by hand
+        - Claude Desktop with the extension (.mcpb)
+        - Claude Desktop set up by hand
         - Claude Code
+        - ChatGPT's desktop app or Codex
         - LM Studio
         - Other (say which under "What happened?")
     validations:
@@ -69,10 +72,10 @@ body:
   - type: dropdown
     id: toolset
     attributes:
-      label: Toolset (EXEGETE_TOOLSET, or QUALCODER_MCP_TOOLSET before 0.14.1)
-      description: "`full` is the default, every tool, creating a project included; `core` is the reduced set for local models; `lifecycle` was `full`'s name in the extension before 0.15.0. With the Claude Desktop extension, it is `core` when the extension's switch \"Limit Exegete to its small tool set\" is on, and `full` otherwise."
+      label: Tool set
+      description: "`full`, the default, has every tool, creating a project included. `core` is a smaller set, meant for models that run on your own computer. With the Claude Desktop extension, the tool set is `core` when its switch \"Limit Exegete to its small tool set\" is on, and `full` otherwise. For other installs, the setting EXEGETE_TOOLSET chooses it. `full` was called `lifecycle` before 0.15.0."
       options:
-        - full (default, or variable not set)
+        - full (the default)
         - core
         - lifecycle (the earlier name of full)
         - Not sure
@@ -81,8 +84,8 @@ body:
   - type: dropdown
     id: qualcoder-open
     attributes:
-      label: Was the project open in QualCoder at the time?
-      description: Writes are refused while the project's lock file is active (QualCoder 3.8.2 has the project open, or another conversation using Exegete is writing to it); QualCoder 4.0 writes no lock file, so an open project there can only be guessed at.
+      label: If you use QualCoder, was the project open in it at the time?
+      description: A lock file is a small file in a project's folder that marks the project as in use. Exegete refuses every change to the project's database while its lock file is active. QualCoder 3.8.2 writes one while it has the project open, and so does another conversation using Exegete while it writes. QualCoder 4.0 writes no lock file. Exegete looks for signs of an open 4.0 window, but it can miss one.
       options:
         - "No"
         - "Yes"

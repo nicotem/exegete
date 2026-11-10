@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
-  - name: Support policy (read first)
+  - name: Support policy
     url: https://github.com/nicotem/exegete/blob/main/SUPPORT.md
-    about: Everything goes through GitHub Issues, questions included. This page says what to include in a report and what never to paste (participant data, interview text).
+    about: Everything goes through GitHub Issues, questions included. This page says what a bug report needs, and how to show a problem without publishing participants' data.

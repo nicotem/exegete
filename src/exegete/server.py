@@ -23122,12 +23122,12 @@ def pseudonymise_source(
     every warning it carries, and ask whether to proceed. Only if they
     agree, call again with the same mapping, file_id, case_mode,
     overlap_policy, rewrite_memos, save_mapping_to_project, and
-    leave_occurrences, leave_numbers and numbering when given, plus
-    preview_token=<the token>. The token is valid for 60 minutes, and
-    only while the text and the rows it covers are unchanged. If what
-    the token covers changed in between, the run is refused and you
-    must preview again. Exegete takes a backup first, as before every
-    change. A run that changes nothing takes none.
+    keep_phrases, leave_occurrences, leave_numbers and numbering when
+    given, plus preview_token=<the token>. The token is valid for 60
+    minutes, and only while the text and the rows it covers are
+    unchanged. If what the token covers changed in between, the run is
+    refused and you must preview again. Exegete takes a backup first, as
+    before every change. A run that changes nothing takes none.
 
     Deterministic and rule-based. Only the names in the mapping are
     replaced, as whole words, case-sensitively unless case_mode says
@@ -23203,12 +23203,6 @@ def pseudonymise_source(
     those session files hold the real names until delete_coding_session
     removes them.
 
-    If the researcher uses QualCoder: a QualCoder window open on the
-    project does not refresh from this write on its own. Selecting the
-    file again in the Files list re-reads it, and reopening the project
-    always does. QualCoder 4.0's AI search index keeps the previous text
-    until it re-indexes on the next open with AI enabled.
-
     What it is for: it helps manage what the researcher shares with other
     people (a colleague, a second coder, an export). For what an
     assistant reads, it is not to be trusted blindly: Exegete's answers
@@ -23253,6 +23247,14 @@ def pseudonymise_source(
                  after the project folder. The backup path is reported on
                  any failure after the backup was taken, as on success.
                  Any of these can itself hold one of those names.
+        keep_phrases: With a typed mapping only, phrases to keep whole,
+                 such as a public figure ("Theresa May") or a saying
+                 ("Mark my words"): a name wholly inside one stays, in
+                 the text and in the notes rewritten. Whole words, by
+                 case_mode, within a line. At most 50, of up to 200
+                 characters. Bound into the token. Never saved, so a
+                 later run, or an import applying the names list,
+                 replaces those names.
         case_mode: "exact" (default, QualCoder's own rule: TOM, Tom and
                  tom are three different names), "insensitive" (all three
                  get the pseudonym exactly as written), or
@@ -23403,11 +23405,7 @@ def pseudonymise_source(
     the token. A different value for one of them on the execute call is
     not "a different operation": it changes what is shown, whether the
     run records itself, or where the mapping is said to be kept. A pair
-    refused on a preview is refused on the execute call too. The
-    arguments that are bound are mapping, file_id, case_mode,
-    overlap_policy, rewrite_memos, save_mapping_to_project, and
-    leave_occurrences, leave_numbers and numbering when given, and they
-    must be repeated identically on the execute call.
+    refused on a preview is refused on the execute call too.
 
     Returns:
         JSON: the preview and a preview_token, or the result of the run.

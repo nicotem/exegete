@@ -958,3 +958,28 @@ class TestAFileLeftUnreadThroughTheCall:
             assert query(folder, "SELECT memo, pos0, pos1 FROM code_text"
                          ) == [{"memo": "Participant B agreed.", "pos0": 0,
                                 "pos1": len("Theresa")}]
+
+
+class TestTheDescription:
+
+    def test_the_argument_and_its_limits(self):
+        """keep_phrases follows use_project_pseudonyms in the signature and
+        in the Args, before the arguments the description says are not
+        bound; its entry gives the limits the engine holds, and the input
+        schema takes a list of strings."""
+        order = list(inspect.signature(server.pseudonymise_source)
+                     .parameters)
+        assert order.index("keep_phrases") == \
+            order.index("use_project_pseudonyms") + 1
+        assert order.index("keep_phrases") < order.index("include_context")
+        published = " ".join(server.pseudonymise_source.__doc__.split())
+        entry = published[published.index("keep_phrases: "):
+                          published.index("case_mode: ")]
+        assert published.index("use_project_pseudonyms: ") < \
+            published.index("keep_phrases: ")
+        assert {str(P.MAX_PHRASES), str(P.MAX_PHRASE_CHARS)} <= set(
+            re.findall(r"\d+", entry)), entry
+        tool = server.mcp._tool_manager._tools["pseudonymise_source"]
+        schema = tool.parameters["properties"]["keep_phrases"]
+        assert {"items": {"type": "string"}, "type": "array"} in \
+            schema["anyOf"], schema

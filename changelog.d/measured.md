@@ -7,7 +7,7 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 212,241 | 210,397 |
+| `full` (80 tools) | 212,322 | 210,397 |
 | `core` (28 tools) | 77,625 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,457 | 14,180 |
@@ -32,7 +32,16 @@ Python 3.13 with the libraries in `uv.lock`:
   sentence on what the answer gives for a hidden coder's row 74.
 - pseudonymise_source's sentence on what the transport does to a file
   id now says that true and false are refused, adding 36 characters to
-  `full`. On Python 3.11 that description is 19,903 characters, within
+  `full`.
+- Phrases to keep add 81 characters to `full`: 137 for the schema of
+  pseudonymise_source's new argument, `keep_phrases`, while its
+  description is 56 characters shorter. The description gains the
+  argument's entry and its name among the arguments to repeat on the
+  execute. It loses two passages: the paragraph on an open window that
+  does not refresh after a run and on what QualCoder 4.0 keeps, which
+  the run's answer gives on signs of QualCoder, and the last sentence,
+  which named the bound arguments again, as the description's opening
+  does. On Python 3.11 that description is 19,841 characters, within
   the 20,000 that the guide to installing from the Terminal gives for
   Claude Code's setting.
 - Four descriptions that now say what their tools count and refuse add

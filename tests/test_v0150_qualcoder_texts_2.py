@@ -77,7 +77,12 @@ SHARING_THE_FOLDER = (
     "you keep one, the reverse key at its root, from which anyone can put "
     "the real names back; - the names file, `Names to replace.txt` in the "
     "project's `Exegete` folder, if you made one, which holds real names "
-    "and their pseudonyms in plain text as `pseudonyms.json` does. "
+    "and their pseudonyms in plain text as `pseudonyms.json` does; "
+    # (v0.15.4: the coding sessions kept with the project, each passage
+    # recorded word for word, sessions.CodingSuggestion's segment_text)
+    "- its coding sessions, in its `Exegete coding sessions` folder, whose "
+    "passages were recorded word for word, real names included if they "
+    "were recorded before the names were replaced. "
     "\"Pseudonymising a project does not empty it of names\", below, says "
     "what stays, the backups beside the project included.")
 # Fix round 2: what an export still carries, said after the folder
@@ -177,6 +182,28 @@ CHOOSING_OCCURRENCES = (
         "the list's numbering, and counts. The numbering is a short code "
         "that names that list. ").replace(
         "line number. It gives none", "line number. The preview gives none")
+# v0.15.4, phrases to keep: typed into the call, bound into the token and
+# kept in no file of Exegete's, counted by the preview, the answer, the
+# run record and the journal entry (server.py: _kept_by_phrases,
+# _KEEP_PHRASES_TO_REPEAT), refused with the names list before it is read
+# (_PHRASES_NEED_A_TYPED_MAPPING); held to the code in
+# tests/test_v0154_privacy_additions.py
+PHRASES_TO_KEEP = (
+    "With a mapping you type, a run can also keep whole phrases "
+    "(`keep_phrases`), such as a public figure's name or a saying. A name "
+    "inside one then stays as it is. The phrases are typed into the call, so "
+    "they are in the conversation and in the host's records, as a typed "
+    "mapping is. Exegete itself keeps no phrase: no file, record, log line "
+    "or answer of its own holds one. The preview, the run's answer, the run "
+    "record and the journal entry count the occurrences the phrases kept. "
+    "The preview also says how many phrases to give again for the run. The "
+    "records of changes kept for undo and `pseudonyms.json` hold nothing of "
+    "them. The page for choosing occurrences marks the occurrences kept, in "
+    "the text it already shows, and lists no phrase. With the names list, "
+    "phrases are refused before the list is read, since an answer about a "
+    "phrase could tell whether a name in it is on the list. A name inside a "
+    "phrase is a real name: it stays in the file's text after the run, and "
+    "in the notes the run rewrites.")
 # The new texts, word for word, white space collapsed (fix round 1:
 # what the project's folder still holds, what is not replaced, where
 # else an unchanged copy sits, and three phrases)
@@ -202,6 +229,7 @@ SECTION = (
     "reads that way goes to its AI provider in full (\"Assistants "
     "that open files by themselves\", above). "
     + CHOOSING_OCCURRENCES + " "
+    + PHRASES_TO_KEEP + " "
     "An imagined example. You bring ten interview transcripts into a "
     "project, meaning to replace the names before any coding starts. One "
     "file is refused. The assistant, which in your set-up can open files on "

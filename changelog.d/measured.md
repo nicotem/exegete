@@ -7,10 +7,10 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 212,322 | 210,397 |
-| `core` (28 tools) | 77,625 | 76,805 |
+| `full` (80 tools) | 213,373 | 210,397 |
+| `core` (28 tools) | 77,986 | 76,805 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 14,457 | 14,180 |
+| The full brief | 14,580 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
 
 - Choosing occurrences by their numbers adds 243 characters to `full`:
@@ -54,12 +54,24 @@ Python 3.13 with the libraries in `uv.lock`:
   The guide to installing from the Terminal now gives `search_files`'
   description as about 4,800 characters on Python 3.13, and 5,200 on
   3.11 and 3.12.
-- Coding sessions are read and decided only with their project open:
-  review_suggestions' description no longer says what is shown while
-  another project is selected, 48 characters fewer in its definition
-  in both sets, and list_coding_sessions' gives the range of
-  `days_old` and an example its 30-day default keeps true, 104 more
-  in `full`.
+- Coding sessions kept with their project add 1,107 characters to
+  `full` and 313 to `core`. Read and decided only with their project
+  open, review_suggestions' description no longer says what is shown
+  while another project is selected, 48 characters fewer in its
+  definition in both sets, and list_coding_sessions' gives the range
+  of `days_old` and an example its 30-day default keeps true, 104 more
+  in `full`. The descriptions that now say where sessions are kept add,
+  in both sets, 208 to restore_backup's definition (the sessions folder
+  kept as it is) and 153 to copy_project_to_workspace's (the sessions a
+  copy carries, and the temporary file it leaves out). In `full` alone
+  they add 334 to list_coding_sessions' (what it lists, and where each
+  session is kept), 157 to delete_coding_session's (where the copies
+  stay), 143 to prune_backups' (the sessions a backup holds) and 56 to
+  pseudonymise_source's (the copies in backups and copies of the
+  project), which brings that description to 19,897 characters on
+  Python 3.11. The full brief is 123 characters longer, from its
+  sentence on the sessions folder, read only through the session
+  tools.
 - The workspace copy's description now says that a copy leaves out
   every temporary copy of the names list, whatever its age, adding
   154 characters to its definition in both sets.

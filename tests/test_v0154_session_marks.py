@@ -37,7 +37,7 @@ import exegete.server as server  # noqa: E402
 from exegete import database, preview_tokens, private_files, sessions  # noqa: E402,E501
 from exegete.sessions import KEPT_IN_PROJECT, KEPT_ON_THIS_COMPUTER  # noqa: E402,E501
 
-from test_v014_server_wide import QUOTE  # noqa: E402
+from test_v014_server_wide import QUOTE, TEXT_1  # noqa: E402
 from test_v0152_undo_record import (change_database, receipt_of,  # noqa: E402,E501
                                     server_state)  # noqa: F401
 from test_v0154_sessions_with_project import (  # noqa: E402
@@ -113,6 +113,22 @@ def a_session_from_elsewhere(monkeypatch):
 def _code_names(project):
     with closing(sqlite3.connect(str(project / "data.qda"))) as conn:
         return {row[0] for row in conn.execute("select name from code_name")}
+
+
+def _code_id(project, name):
+    with closing(sqlite3.connect(str(project / "data.qda"))) as conn:
+        [(cid,)] = conn.execute("select cid from code_name where name = ?",
+                                (name,)).fetchall()
+    return cid
+
+
+def _changed_by_hand(project, sid, change):
+    """The session's file changed outside Exegete: `change` given its
+    data, the file written back without this installation's seal."""
+    path = file_of(project, sid)
+    data = json.loads(path.read_bytes())
+    change(data)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +277,38 @@ class TestTheSeal:
         out = server.apply_codings(coding_session_id=sid)
         assert "came_with_project" in out
 
+    def test_edit_suggestions_refusals_that_give_its_texts_are_flagged(
+            self, project):
+        """edit_suggestion's refusal of a code outside the session gives
+        the codes the session recorded, and its refusal of a suggestion
+        that is not pending gives the status recorded: both texts its file
+        holds, flagged as the other answers are."""
+        sid = start(code_names=["Trust"])["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        outside = jcall("edit_suggestion", coding_session_id=sid,
+                        suggestion_guid=guid, code_name="Hope")
+        assert outside["session_codes"] == ["Trust"]
+        assert "came_with_project" not in outside
+
+        def instruction_changed(data):
+            data["instruction"] = data["instruction"] + "."
+        _changed_by_hand(project, sid, instruction_changed)
+        outside = jcall("edit_suggestion", coding_session_id=sid,
+                        suggestion_guid=guid, code_name="Hope")
+        assert outside["session_codes"] == ["Trust"]
+        assert outside["came_with_project"] is True
+        assert outside["came_with_project_note"] == \
+            server.CAME_WITH_PROJECT_NOTE
+        assert outside["session_instruction"] == "test."
+
+        def status_changed(data):
+            data["suggestions"][0]["status"] = "kept by hand"
+        _changed_by_hand(project, sid, status_changed)
+        held = jcall("edit_suggestion", coding_session_id=sid,
+                     suggestion_guid=guid, reading="interpretive")
+        assert "kept by hand" in held["error"]
+        assert held["came_with_project"] is True
+
     def test_a_session_in_the_state_folder_carries_no_seal_or_mark(
             self, project):
         """A guard: a session kept on this computer reads as before."""
@@ -404,6 +452,82 @@ class TestWhatASaveKeeps:
         assert session.approval_counts(session.suggestions[0])
         assert stored(project, sid)["suggestions"][0][
             sessions.APPROVAL_MARK_FIELD]
+
+    def test_an_apply_changed_by_hand_then_undone_reads_as_pending(
+            self, project):
+        """Approved and applied here, the suggestion is then changed in
+        the file by hand, its passage, code and reason, its status still
+        applied: undoing the apply sets it back to approved as recorded,
+        and it reads as pending, so apply_codings writes nothing of the
+        change until the researcher approves it here."""
+        sid = start()["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        approve(sid, guid)
+        receipt = receipt_of(server.apply_codings(coding_session_id=sid))
+        hope = _code_id(project, "Hope")
+        at = TEXT_1.index(LATER)
+
+        def another_passage(data):
+            assert data["suggestions"][0]["status"] == "applied"
+            data["suggestions"][0].update(
+                segment_text=LATER, start_pos=at, end_pos=at + len(LATER),
+                code_id=hope, code_name="Hope", reasoning="changed by hand")
+        _changed_by_hand(project, sid, another_passage)
+        assert undo_run(receipt)["success"] is True
+        assert _codings_of(project) == []
+        session = loaded(sid)
+        assert session.came_with_project
+        [suggestion] = session.suggestions
+        assert suggestion.status == "approved"
+        assert session.shown_status(suggestion) == "pending"
+        assert sessions.APPROVAL_MARK_FIELD not in entry_of(
+            stored(project, sid), guid)
+        out = json.loads(server.apply_codings(coding_session_id=sid))
+        assert [s["guid"] for s in out["not_approved_here"]] == [guid], out
+        assert _codings_of(project) == []
+        # Approved here, on the researcher's word, it is written
+        approve(sid, guid)
+        assert "Successfully Applied: 1" in server.apply_codings(
+            coding_session_id=sid)
+        assert _codings_of(project) == [(hope, at, at + len(LATER))]
+
+    def test_a_creation_changed_by_hand_then_undone_reads_as_pending(
+            self, project):
+        """Approved and created here, the proposal is then renamed and
+        given another definition in the file by hand, its status still
+        created: undoing the creation sets it back to approved as
+        recorded, and it reads as pending, so create_proposed_codes makes
+        nothing of the change until the researcher approves it here."""
+        sid = start()["coding_session_id"]
+        made = jcall("propose_codes", coding_session_id=sid, proposals=[
+            {"name": "Belonging", "memo": "m", "rationale": "r"}])
+        guid = made["recorded"][0]["guid"]
+        call("update_proposal_status", coding_session_id=sid, approve=[guid])
+        created = call("create_proposed_codes", coding_session_id=sid)
+        assert json.loads(created).get("success") is True, created
+
+        def another_code(data):
+            assert data["proposed_codes"][0]["status"] == "created"
+            data["proposed_codes"][0].update(name="Planted",
+                                             memo="planted by hand")
+        _changed_by_hand(project, sid, another_code)
+        assert undo_run(receipt_of(created))["success"] is True
+        names = _code_names(project)
+        assert "Belonging" not in names
+        session = loaded(sid)
+        assert session.came_with_project
+        [proposal] = session.proposed_codes
+        assert proposal.status == "approved"
+        assert session.shown_status(proposal) == "pending"
+        out = jcall("create_proposed_codes", coding_session_id=sid)
+        assert "error" in out, out
+        assert [p["guid"] for p in out["not_approved_here"]] == [guid]
+        assert _code_names(project) == names
+        # Approved here, on the researcher's word, it is made
+        call("update_proposal_status", coding_session_id=sid, approve=[guid])
+        assert jcall("create_proposed_codes",
+                     coding_session_id=sid).get("success") is True
+        assert _code_names(project) == names | {"Planted"}
 
     def test_an_approval_not_given_here_is_taken_as_pending(
             self, project, monkeypatch):
@@ -593,6 +717,23 @@ class TestTheKey:
         assert sessions.session_key_unavailable_message(
             sessions.KEY_NOT_LISTED) in listed["project_sessions_not_listed"]
         assert file_of(project, sid).read_bytes() == before
+
+    def test_with_the_key_unreadable_those_on_this_computer_are_listed(
+            self, project, tmp_path):
+        """What the list's reason says it still gives: the open project's
+        sessions kept on this computer, those kept in the project left
+        out."""
+        folder_of(project).write_text("not a folder", encoding="utf-8")
+        here = start()
+        assert here["kept_in"] == KEPT_ON_THIS_COMPUTER
+        folder_of(project).unlink()
+        assert start()["kept_in"] == KEPT_IN_PROJECT
+        self._a_link_at_the_key(tmp_path)
+        listed = jcall("list_coding_sessions")
+        assert [s["coding_session_id"] for s in listed["sessions"]] == [
+            here["coding_session_id"]]
+        assert listed["project_sessions_not_listed"].endswith(
+            sessions.KEY_NOT_LISTED)
 
     def test_a_link_at_the_key_between_a_load_and_a_save(
             self, project, tmp_path, monkeypatch):

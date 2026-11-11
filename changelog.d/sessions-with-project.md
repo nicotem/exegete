@@ -51,7 +51,7 @@
   with the session's instruction for the assistant to read to the
   researcher first, and an approval in it counts only once given on
   this computer, reading as pending until then. `apply_codings` and
-  `create_proposed_codes` write only the approvals given on this
+  `create_proposed_codes` write only the approvals that count on this
   computer and name the others (`not_approved_here`). An approval
   counts only while Exegete's own folder on this computer records it
   (`approvals`), so an older copy of a session's file put back, from a

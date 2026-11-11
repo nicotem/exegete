@@ -874,8 +874,8 @@ reach the assistant marked as data, never as instructions, with a note
 asking it to read you the session's instruction before going on, so
 that you can check it is yours. An approval in it counts only once you give
 it here: until then it shows as pending, with its recorded status
-beside it, and `apply_codings` writes only the approvals given on this
-computer. An approval counts only while Exegete's own folder on this
+beside it, and `apply_codings` writes only the approvals that count on
+this computer. An approval counts only while Exegete's own folder on this
 computer records it, so an older copy of the session's file, put back
 from a backup or by a sync service, cannot bring back an approval you
 have withdrawn since. If you work on a project from two computers,

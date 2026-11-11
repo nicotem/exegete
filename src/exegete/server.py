@@ -20991,6 +20991,16 @@ _PHRASES_NEED_A_TYPED_MAPPING = (
     "as they are with the names list, preview this file with "
     "choose_occurrences, then give the occurrences the researcher chooses "
     "in leave_numbers, with the preview's numbering. Nothing was read.")
+# What execute_with says of the phrases (v0.15.4): bound into the token
+# and, like a typed mapping, repeated in no answer, so the execute gives
+# them again; how many, never their words. An execute made from
+# execute_with alone is refused as another operation, and that refusal
+# sends the assistant to a fresh preview, which would keep nothing
+_KEEP_PHRASES_TO_REPEAT = (
+    "keep_phrases is bound into the token and, like a mapping typed into "
+    "the call, is not repeated in these arguments: give the same "
+    "keep_phrases again on the execute call, unchanged. Without them, or "
+    "with others, the execute is refused as a different operation.")
 
 
 def _phrases_refused(error: "pseudo.PhraseError") -> str:
@@ -21001,6 +21011,23 @@ def _phrases_refused(error: "pseudo.PhraseError") -> str:
     if error.number is not None:
         answer["phrase_number"] = error.number
     return json.dumps(answer, indent=2)
+
+
+def _kept_by_phrases(plan: Dict[str, Any], written: Dict[str, Any]
+                     ) -> Optional[Dict[str, int]]:
+    """What a run's phrases to keep kept (v0.15.4), counted for the
+    journal entry, the run record and the answer: in the file text, the
+    occurrences inside a phrase that no list also leaves, and with
+    rewrite_memos the matches inside a phrase in the notes' public parts.
+    None for a run without phrases. Counts only: never a phrase, nor
+    where an occurrence kept stands."""
+    if not plan.get("keep_phrases"):
+        return None
+    kept = {"file_text": sum(item.get("kept", 0) for item in plan["files"])}
+    memos = written.get("memos")
+    if memos is not None:
+        kept["notes"] = memos["totals"].get("kept_by_phrases", 0)
+    return kept
 
 
 class _OccurrencesRefused(Exception):
@@ -22691,6 +22718,15 @@ def _pseudonymise_journal_body(plan: Dict[str, Any], written: Dict[str, Any],
         # A count only: never where an occurrence left is, nor its entry
         left = sum(item.get("left", 0) for item in plan["files"])
         lines.append(f"{left} occurrence(s) left as they were, by choice.")
+    kept = _kept_by_phrases(plan, written)
+    if kept is not None:
+        # Phrases to keep (v0.15.4): counts only, never a phrase, nor
+        # where an occurrence kept stands
+        lines.append(
+            f"Phrases to keep: {kept['file_text']} occurrence(s) in the "
+            f"file text kept as they were"
+            + (f", {kept['notes']} in notes" if "notes" in kept else "")
+            + ".")
     memos = written.get("memos")
     if memos is not None:
         # v0.13, Brief 2, 5.8: counts and field names only, never a key,
@@ -22931,6 +22967,12 @@ def _pseudonymise_manifest(plan: Dict[str, Any], written: Dict[str, Any],
         # made alone. A key added, so the format stays 3
         manifest["occurrences_left"] = sum(item.get("left", 0)
                                            for item in plan["files"])
+    kept = _kept_by_phrases(plan, written)
+    if kept is not None:
+        # Phrases to keep (v0.15.4): the occurrences kept in the file text
+        # and, with rewrite_memos, in notes, counted; never a phrase, nor
+        # where one kept stands. A key added, so the format stays 3
+        manifest["kept_by_phrases"] = kept
     if withheld:
         manifest["pseudonyms_withheld"] = len(withheld)
         manifest["pseudonyms_withheld_note"] = pseudo.PSEUDONYMS_WITHHELD_NOTE
@@ -23846,6 +23888,11 @@ def pseudonymise_source(
             # a key that carries a name is withheld.
             result["memos"] = {"fields": memos["fields"],
                                "totals": memos["totals"]}
+        kept = _kept_by_phrases(plan, written)
+        if kept is not None:
+            # What the phrases to keep kept (v0.15.4), as the journal
+            # entry and the run record count it
+            result["kept_by_phrases"] = kept
         if unsafe:
             result["position_safety_warning"] = (
                 f"File(s) {unsafe} contain Windows line breaks or characters "
@@ -23876,7 +23923,10 @@ def pseudonymise_source(
                 "plainly that this rewrites the stored text and moves every "
                 "coding in that file. Only with an explicit yes, call "
                 "pseudonymise_source again exactly as execute_with says, "
-                "with the same mapping."),
+                # The phrases (v0.15.4) are repeated as the mapping is,
+                # never in execute_with
+                + ("with the same mapping and keep_phrases." if phrases
+                   else "with the same mapping.")),
             execute_arguments={
                 "case_mode": case_mode,
                 "overlap_policy": overlap_policy,
@@ -23892,6 +23942,9 @@ def pseudonymise_source(
                 # And the numbers with their numbering (v0.15.4)
                 **({"leave_numbers": numbers, "numbering": code}
                    if numbers else {}),
+                # keep_phrases (v0.15.4) is left out, as the typed mapping
+                # is: no answer repeats a phrase, and execute_with says to
+                # give them again (keep_phrases_to_repeat)
             },
             state_preview_fn=_signed,
             override_required_fn=_override_required,
@@ -23935,6 +23988,12 @@ def pseudonymise_source(
                 "choose_one": ["save_mapping_to_project",
                                "researcher_keeps_mapping"],
                 "message": _RETENTION_ASK}
+        if phrases and "execute_with" in result:
+            # The phrases to keep (v0.15.4) are bound and not in the
+            # recipe: how many to give again, never their words
+            result["execute_with"]["keep_phrases_to_repeat"] = {
+                "phrases": len(phrases),
+                "message": _KEEP_PHRASES_TO_REPEAT}
         if owner_error is not None and "execute_with" in result:
             # The preview carries the ask, so the researcher hears it
             # before approving and the model has the arguments to act on

@@ -16081,6 +16081,10 @@ class QualcoderDatabase:
                     "journal_entries_from_earlier_runs",
                     "of_hidden_coders"):
             totals[key] = memo_plan["totals"][key]
+        # And the matches kept inside a phrase to keep (v0.15.4), only
+        # where the plan was given phrases
+        if "kept_by_phrases" in memo_plan["totals"]:
+            totals["kept_by_phrases"] = memo_plan["totals"]["kept_by_phrases"]
         return {"fields": fields, "totals": totals, "rows": rows}
 
     def _pseudonymise_move_rows(self, item: Dict[str, Any], new_text: str,

@@ -855,8 +855,9 @@ your computer", says more.
 Sessions made before 0.15.4 stay on your computer, in
 `~/.exegete/sessions/`, the folder `.exegete/sessions` in your home
 folder, and so does a session started where the project's folder could
-not hold one. Each is used only while its project is open at the place
-the session records. If the project has moved since,
+not hold one. Each is listed whichever project is selected, but read,
+decided and applied only while its project is open at the place the
+session records. If the project has moved since,
 [INSTALL.md, "Coding sessions, from 0.15.4"](INSTALL.md#coding-sessions-from-0154)
 gives the way back.
 
@@ -866,9 +867,9 @@ with a key Exegete keeps on this computer. A session without this
 computer's seal is read as having come with the project: saved by
 Exegete on another computer, changed outside Exegete, part of a project
 someone else gave you, or saved before that key was replaced. Its texts
-reach the assistant marked as data, never as instructions, and the
-assistant reads you the session's instruction before going on, so that
-you can check it is yours. An approval in it counts only once you give
+reach the assistant marked as data, never as instructions, with a note
+asking it to read you the session's instruction before going on, so
+that you can check it is yours. An approval in it counts only once you give
 it here: until then it shows as pending, with its recorded status
 beside it, and `apply_codings` writes only the approvals given on this
 computer. If you work on a project from two computers, approve on the
@@ -950,8 +951,11 @@ delete.
   conventions in the project" in TOOLS.md)
 - Exegete takes a backup, named with its date and time, before every
   change ("Backups", above)
-- A session is read, decided and applied only while the project it was
-  created in is selected
+- A session is read, decided and applied only while its project is
+  selected: the project whose `Exegete coding sessions` folder holds it,
+  so a copy of the project works on its own copy of the session, or,
+  for a session kept on this computer, the project at the place the
+  session records
 - Exegete marks each applied suggestion, and does not apply it again
   unless it is set back to approved: an undo of its batch does so, and
   a suggestion whose coding `delete_coding` removed can be approved
@@ -1061,7 +1065,8 @@ closed and reopened there.
 
 When a session cannot be loaded, its file, `session_ID.json` in the
 project's `Exegete coding sessions` folder, may be damaged or gone
-("Sessions", above). For a session made before 0.15.4, the file is
+("Sessions", above). For a session made before 0.15.4, or one started
+where the project's folder could not hold it, the file is
 `~/.exegete/sessions/session_ID.json`. The list of your sessions
 (`list_coding_sessions`) leaves out a file that Exegete cannot read,
 and says how many it left out. A damaged file stays on the disk until

@@ -390,8 +390,9 @@ Sessions made before 0.15.4 stay where they were, in Exegete's own
 folder (`~/.exegete/sessions`), and nothing moves. A new session is
 kept there too when the project's folder cannot hold it, as in a
 read-only project, and Exegete's answer then says why. Each of these
-sessions is used only while its project is open at the place the
-session records. If you have moved or renamed the project since, you
+sessions is listed whichever project is selected, but read, decided and
+applied only while its project is open at the place the session
+records. If you have moved or renamed the project since, you
 can put it back at that place, select it there, and finish, apply or
 export the session; the project can then move again.
 `list_coding_sessions` gives that place as the session's
@@ -408,8 +409,8 @@ its previews). A session whose file lacks this computer's seal is read
 as having come with the project: one saved by Exegete on another
 computer or under another account, one changed outside Exegete, or one
 in a project someone else gave you. Its texts then reach the assistant
-marked as data, never as instructions, and the assistant reads you the
-session's instruction before going on. An approval in it counts only
+marked as data, never as instructions, with a note asking it to read
+you the session's instruction before going on. An approval in it counts only
 once you give it on this computer. So approvals do not carry from one
 computer to another: if you work on a project from two computers, give
 them on the computer where the codings are written. A session saved on
@@ -439,9 +440,10 @@ What changed for everyone:
   again before it uses each tool.
 - **Exegete's own folder** moves by itself at the first start, from
   `~/.qualcoder_mcp` to `~/.exegete`, whole. It holds the secret that
-  signs Exegete's previews, the coding sessions made before 0.15.4
-  ("Coding sessions, from 0.15.4", above), the last-project hint and
-  the pseudonymisation run records. A link is left under the old
+  signs Exegete's previews, the coding sessions made before 0.15.4 and
+  any a project's folder could not hold ("Coding sessions, from
+  0.15.4", above), the last-project hint and the pseudonymisation run
+  records. A link is left under the old
   name (on Windows, a kind of link called a junction), so that an older
   copy of the program on the same computer keeps using the same folder
   and secret. If a backup or sync rule of yours names the old folder,
@@ -537,20 +539,22 @@ GitHub Issues ("Getting help", below).
      empties the cache.
    - **Exegete's own folder**, `~/.exegete`, with the link to it under
      its earlier name, `~/.qualcoder_mcp`. It holds the coding sessions
-     made before 0.15.4 (later ones are in each project's
-     `Exegete coding sessions` folder, and stay with the project), the
-     texts an import's preview read (`import-texts.noindex/`), the last
-     project used, the record of the check for new versions, the
-     pseudonymisation run records and the secret that signs Exegete's
-     previews and seals the sessions kept in projects. PRIVACY.md, "Files
-     Exegete keeps on your computer", says what each file holds.
+     made before 0.15.4, and any started where a project's folder could
+     not hold one ("Coding sessions, from 0.15.4", above); the others
+     are in each project's `Exegete coding sessions` folder, and stay
+     with the project. It also holds the texts an import's preview read
+     (`import-texts.noindex/`), the last project used, the record of the
+     check for new versions, the pseudonymisation run records and the
+     secret that signs Exegete's previews and seals the sessions kept in
+     projects. PRIVACY.md, "Files Exegete keeps on your computer", says
+     what each file holds.
      - The texts an import's preview read are each document's whole
        text, before any names are replaced. Exegete removes them after
        the import. When no import follows, they stay until the first
        time Exegete starts, or prepares an import, at least an hour and
        five minutes after the preview. After an uninstall neither
        happens, so they stay until you delete the folder.
-     - If you delete the folder, you lose the coding sessions kept
+     - If you delete the folder, you lose every coding session kept
        there and the pseudonymisation run records, and a change
        previewed but not yet made, such as an import, needs a new
        preview. The sessions kept in your projects stay, and read as

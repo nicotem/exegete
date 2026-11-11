@@ -10,13 +10,14 @@
   `start_coding_session` says where the session is kept (`kept_in`).
   Where the project's folder cannot hold a session, as in a read-only
   project, the session is kept on this computer as before, and the
-  answer says why (`kept_in_reason`). Backups and copies leave out the
-  temporary file of a session being saved. `restore_backup` keeps the
-  folder as it is, never taking the backup's copy, whose older
+  answer says why (`kept_in_reason`). Backups and copies leave out a
+  session's temporary files, whatever their age. `restore_backup` keeps
+  the folder as it is, never taking the backup's copy, whose older
   sessions would take away the decisions made since, and says so
   (`sessions_folder_note`).
 - **Sessions made before this release stay on this computer**, in
-  `~/.exegete/sessions`, and nothing moves. Each is used only while its
+  `~/.exegete/sessions`, and nothing moves. Each is listed whichever
+  project is selected, but read, decided and applied only while its
   project is open at the place the session records. If the project has
   moved or been renamed since, the session's tools say it could not be
   found and give the way back: put the project back at that place
@@ -49,8 +50,11 @@
   computer and name the others (`not_approved_here`). So approvals do
   not carry from one computer to another. If the key is lost or
   replaced, every session kept in a project reads as having come with
-  the project, nothing in it lost. When the key cannot be read, the
-  session tools refuse with its reason.
+  the project, nothing in it lost. When the key cannot be read, a start
+  and a session kept in a project are refused with its reason; the
+  sessions kept on this computer are read as before, and
+  `list_coding_sessions` lists them, with that reason for the project's
+  own.
 
 ### Fixed
 

@@ -894,14 +894,14 @@ What the lines do:
   take more than a minute. These two values are suggestions, which this
   project has not measured with Codex.
 
-Codex keeps 48,000 bytes of a tool's answer for the models it lists, and
-12,000 bytes for any other model, such as a local one; from a longer
-answer it leaves out the middle and puts a marker in its place (Codex
-0.167.0's source, read on 10 November 2026). A part of a file, from the
-tool or a resource, is at most 40,000 bytes unless the file's memo is
-long. Other long answers, such as `get_coded_segments` with many long
-passages, can lose their middle; a smaller `limit` keeps them whole. Two settings, which this project has not tried, set the budget:
-`tool_output_token_limit` for every tool and resource, and `output_token_limit` under `[mcp_servers.exegete.tools.read_file_with_codings]` for that tool alone, whatever the model (a listed model's is 10,000 tokens).
+Codex keeps 48,000 bytes of a tool's answer for the models it lists and 12,000
+bytes for others, such as a local model, cutting a longer answer's middle and
+leaving a marker (Codex 0.167.0's source, read on 10 November 2026). A part of
+a file is at most 40,000 bytes unless long memos, or many codings, annotations
+or a case's excerpts, come with it. A smaller `limit` shortens other long
+answers. Untried here: `tool_output_token_limit` sets the budget of every tool
+and resource (10,000 tokens for listed models), and `output_token_limit` under
+`[mcp_servers.exegete.tools.read_file_with_codings]` that tool's alone.
 
 If the file already has an entry named `exegete` (because you added it
 in the app's settings screen or with `codex mcp add`, below), do not

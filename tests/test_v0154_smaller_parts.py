@@ -17,9 +17,10 @@ to the model's budget and a fifth more with the middle left out: 10,000
 tokens at four bytes a token for each of the 12 models in the list Codex
 carries, so 48,000 bytes, and 10,000 bytes for a model it does not list,
 so 12,000. A resource read reaches the model inside an object with the
-server's name and the address (Codex 0.167.0's source, read on 10
-November 2026: protocol/src/models.rs 2496-2505; core/src/tools/
-context.rs 229-258; utils/output-truncation/src/lib.rs 20-22, 61;
+name under which the researcher added Exegete to Codex and the address
+(Codex 0.167.0's source, read on 10 November 2026:
+protocol/src/models.rs 2496-2505; core/src/tools/context.rs 229-258;
+utils/output-truncation/src/lib.rs 20-22, 61;
 models-manager/models.json; models-manager/src/model_info.rs 126;
 core/src/tools/handlers/mcp_resource.rs 248-254, 412-428). Each answer
 here is measured that way over the host's path, never by
@@ -99,11 +100,18 @@ def add_file(file_id: int, text: str, memo: str = "", every: int = 5000,
 
 
 def add_coding(coding_id: int, file_id: int, text: str, start: int,
-               end: int, code_id: int = 2) -> None:
+               end: int, code_id: int = 2, memo: str = "") -> None:
     sql("INSERT INTO code_text (ctid, cid, fid, seltext, pos0, pos1, owner, "
         "date, memo, important) VALUES (?, ?, ?, ?, ?, ?, 'TestCoder', "
-        "'2026-11-10', '', 0)",
-        (coding_id, code_id, file_id, text[start:end], start, end))
+        "'2026-11-10', ?, 0)",
+        (coding_id, code_id, file_id, text[start:end], start, end, memo))
+
+
+def add_codes(first: int, count: int) -> None:
+    for n in range(count):
+        sql("INSERT INTO code_name (cid, name, memo, catid, owner, date, "
+            "color) VALUES (?, ?, '', 1, 'TestCoder', '2026-11-10', "
+            "'#AABBCC')", (first + n, f"A code of the codebook {n:03d}"))
 
 
 def codex_tool_bytes(result) -> int:
@@ -115,8 +123,9 @@ def codex_tool_bytes(result) -> int:
 
 def codex_resource_bytes(uri: str, result) -> int:
     """What Codex gives its model of a resource read: the read's result
-    inside an object with the server's name and the address, as compact
-    JSON in UTF-8 bytes."""
+    inside an object with the name under which the researcher added
+    Exegete to Codex (here `exegete`) and the address, as compact JSON
+    in UTF-8 bytes."""
     dump = result.model_dump(mode="json", by_alias=True, exclude_none=True)
     return len(json.dumps(dict({"server": "exegete", "uri": uri}, **dump),
                           separators=(",", ":"),
@@ -237,10 +246,7 @@ class TestALongCoding:
 class TestManyCodings:
 
     def test_a_part_counts_the_codes_of_its_own_codings(self, setup_server):
-        for n in range(400):
-            sql("INSERT INTO code_name (cid, name, memo, catid, owner, date, "
-                "color) VALUES (?, ?, '', 1, 'TestCoder', '2026-11-10', "
-                "'#AABBCC')", (100 + n, f"A code of the codebook {n:03d}"))
+        add_codes(100, 400)
         text = english(297_550)
         add_file(63, text, every=700, codes=400)
         whole = server.get_db().get_file_with_coding(63)["statistics"]
@@ -383,11 +389,64 @@ class TestWhatEveryPartCarries:
         assert len(rows) == 9
         assert "".join(row["text"] for row in rows) == text
 
+    # What else every part carries, with no file memo: a coding or an
+    # annotation over the whole file with a memo of about 30,000
+    # characters, or 60 codings over the whole file. Each takes the
+    # answers past the bound while the part's own text keeps half of it,
+    # as TOOLS.md and the Terminal guide say (TestTheDocuments).
+    @pytest.mark.parametrize("carried", ["a coding's memo",
+                                         "an annotation's memo",
+                                         "60 codings"])
+    def test_what_runs_over_every_part_s_start(self, setup_server, carried):
+        text = english(150_000)
+        add_file(71, text, every=0)
+        memo = english(30_000, lines=False)
+        if carried == "a coding's memo":
+            add_coding(710, 71, text, 0, len(text), memo=memo)
+        elif carried == "an annotation's memo":
+            sql("INSERT INTO annotation (anid, fid, pos0, pos1, memo, owner, "
+                "date) VALUES (710, 71, 0, ?, ?, 'TestCoder', '2026-11-10')",
+                (len(text), memo))
+        else:
+            add_codes(500, 60)
+            for n in range(60):
+                add_coding(710 + n, 71, text, 0, len(text), 500 + n)
+
+        def check(row):
+            if row["part"]["continues_at"] is not None:
+                assert len(row["text"]) >= 15_000, row["start"]
+
+        rows = walk(71, check=check)
+        assert max(row["codex"] for row in rows) > parts.BOUND
+        assert "".join(row["text"] for row in rows) == text
+
+    def test_a_case_s_memo(self, setup_server):
+        """The case resource carries the case's memo in its answer."""
+        text = english(100_000)
+        add_file(72, text)
+        sql("UPDATE cases SET memo = ? WHERE caseid = 1",
+            (english(30_000, lines=False),))
+        sql("INSERT INTO case_text (caseid, fid, pos0, pos1, owner, date) "
+            "VALUES (1, 72, 0, ?, 'TestCoder', '2026-11-10')", (len(text),))
+
+        async def run():
+            async with create_connected_server_and_client_session(
+                    server.mcp._mcp_server) as client:
+                return await client.read_resource("exegete://cases/1")
+
+        case = asyncio.run(run())
+        assert codex_resource_bytes("exegete://cases/1", case) > parts.BOUND
+        body = json.loads(case.contents[0].text)
+        (excerpt,) = [s for s in body["text_segments"] if s["file_id"] == 72]
+        assert len(excerpt["text"]) >= 15_000
+        assert excerpt["text"] == text[:excerpt["text_continues_at"]]
+
 
 class TestTheDocuments:
     """TOOLS.md's entry for the tool and the Terminal guide's paragraph
-    on Codex's cut give the bound, what Codex keeps with a model it does
-    not list, and the day Codex's source was read."""
+    on Codex's cut give the bound, what takes an answer past it, what
+    Codex keeps with a model it does not list, and the day Codex's
+    source was read."""
 
     @staticmethod
     def _tools_entry() -> str:
@@ -414,3 +473,21 @@ class TestTheDocuments:
         for fact in (f"{parts.BOUND:,} bytes", f"{CODEX_OTHER_BYTES:,} bytes",
                      CODEX_READ_ON):
             assert fact in text, (where, fact)
+
+    @pytest.mark.parametrize("where", ["TOOLS.md", "the Terminal guide"])
+    def test_what_takes_an_answer_past_the_bound(self, where):
+        """The sentence that says when an answer passes the bound names
+        what TestWhatEveryPartCarries measures taking it there: memos,
+        codings and annotations, and in the guide, which covers the
+        resources too, a case's."""
+        if where == "TOOLS.md":
+            text, named = self._tools_entry(), ("memo", "coding",
+                                                "annotation")
+        else:
+            text, named = self._guide_paragraph(), ("memo", "coding",
+                                                    "annotation", "case")
+        sentences = [sentence for sentence in
+                     re.split(r"(?<=\.)\s+(?=[A-Z])", text)
+                     if f"{parts.BOUND:,} bytes" in sentence]
+        assert any(all(word in sentence for word in named)
+                   for sentence in sentences), (where, sentences)

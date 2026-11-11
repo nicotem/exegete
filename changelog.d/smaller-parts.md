@@ -7,19 +7,22 @@
   over the 48,000 that Codex keeps of an answer for the models it lists,
   and lost its middle there. Each answer that serves a part is now
   measured and kept within 40,000 bytes: about 35,000 characters of
-  English, or 5,000 to 7,000 of Chinese, Greek, Arabic or Hebrew. Such a
-  part reaches Claude Code whole, and Codex whole with the models Codex
-  lists (Codex 0.167.0's source, read on 10 November 2026). With any
-  other model, such as a local one, Codex keeps about 12,000 bytes of
-  an answer. A file whose answer fits comes whole, as before. A longer
-  one takes more calls than before: 9 for 300,000 characters of
-  English, where it took 5, and 2 for an interview of about an hour
-  (55,000 characters), where it took 1.
+  English, or 5,000 to 7,000 of Chinese, Greek, Arabic or Hebrew, and
+  fewer where a part holds many codings. Such a part reaches Claude Code
+  whole, and Codex whole with the models Codex lists (Codex 0.167.0's
+  source, read on 10 November 2026). With any other model, such as a
+  local one, Codex keeps about 12,000 bytes of an answer. A file whose
+  answer fits comes whole, as before. A longer one takes more calls
+  than before: 9 for 300,000 characters of English, where it took 5,
+  and 2 for an interview of about an hour (55,000 characters), where it
+  took 1.
 - **Every part carries the file's memo, and a long memo makes the parts
   shorter.** When what every part from a place carries (the memo, and
-  the codings and annotations that reach over the part's start) passes
-  20,000 bytes, the part's own text keeps 20,000 bytes and the answer
-  passes 40,000: from a memo of about 19,000 characters of English.
+  the codings and annotations that reach over the part's start, with
+  their memos; in the case resource, the case's memo and its excerpts)
+  passes 20,000 bytes, the part's own text keeps 20,000 bytes and the
+  answer passes 40,000: from a memo of about 19,000 characters of
+  English, or from a few dozen codings over the whole file.
 - **A coding that runs past the start or end of a part comes in that
   part without its passage**, marked `reaches_beyond_part`, its memo
   kept. In a part, `codes_used` counts the codes of that part's codings;

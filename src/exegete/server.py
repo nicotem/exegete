@@ -1164,7 +1164,9 @@ TOOL_META = {
     # the cut Codex makes to a tool's answer, while with any other model
     # Codex keeps 12,000 bytes of every answer (Codex 0.167.0's source,
     # read on 10 November 2026). The declaration stays for an answer over
-    # the bound, which a long file memo can make (parts.limit).
+    # the bound, which long memos (the file's, or those of codings and
+    # annotations over a part's start) or many codings over its start
+    # can make (parts.limit).
     "read_file_with_codings": {"anthropic/maxResultSizeChars": 200_000},
 }
 

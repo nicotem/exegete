@@ -9409,6 +9409,11 @@ def read_file_with_codings(file_id: int, start: int = 0,
     result's `part` says where the next starts; ask again with that
     `start`. Every position is a whole-file position, in every part.
 
+    If the result contains `position_safety_warning`, relay it to the
+    researcher before coding or applying anything in this file: if the
+    project is opened in QualCoder, codings in such a file can show shifted
+    or without highlight there.
+
     Args:
         file_id: The numeric ID of the file to analyse
         start: Where the part begins, in characters (default 0)
@@ -9429,11 +9434,6 @@ def read_file_with_codings(file_id: int, start: int = 0,
     Example use case:
         "What does Paul say that has relevance to the Wisdom of the Crowds argument?"
         This needs both the coded segments and the whole text around them.
-
-    If the result contains `position_safety_warning`, relay it to the
-    researcher before coding or applying anything in this file: if the
-    project is opened in QualCoder, codings in such a file can show shifted
-    or without highlight there.
 
     Coder visibility: a project in the format of QualCoder 3.8.2, or of
     4.0 onwards, can hide some coders' work. When it does,

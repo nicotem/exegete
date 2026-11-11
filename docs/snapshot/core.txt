@@ -1188,6 +1188,11 @@ A long file comes in parts (about 35,000 characters of English): the
 result's `part` says where the next starts; ask again with that
 `start`. Every position is a whole-file position, in every part.
 
+If the result contains `position_safety_warning`, relay it to the
+researcher before coding or applying anything in this file: if the
+project is opened in QualCoder, codings in such a file can show shifted
+or without highlight there.
+
 Grounding: when you report from or code this text, quote it verbatim;
 a paraphrase is rejected. Base claims on what the text says. An
 interpretive reading may draw on the same person's words elsewhere or on
@@ -1216,11 +1221,6 @@ Returns:
 Example use case:
     "What does Paul say that has relevance to the Wisdom of the Crowds argument?"
     This needs both the coded segments and the whole text around them.
-
-If the result contains `position_safety_warning`, relay it to the
-researcher before coding or applying anything in this file: if the
-project is opened in QualCoder, codings in such a file can show shifted
-or without highlight there.
 
 Coder visibility: a project in the format of QualCoder 3.8.2, or of
 4.0 onwards, can hide some coders' work. When it does,

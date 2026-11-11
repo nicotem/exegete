@@ -21016,32 +21016,56 @@ _NUMBERS_PAST_THE_END = (
     "from 1, and a number given is past the last. Give the numbers as the "
     "preview with choose_occurrences numbers them, or preview again and "
     "choose again.")
-# A list that leaves every occurrence found (v0.15.3): nothing would be
-# rewritten by choice, which the answers say rather than that no name
-# occurs
+# A list that leaves every occurrence found (v0.15.3), or phrases to keep
+# that keep every one not left (v0.15.4): nothing would be rewritten by
+# choice, which the answers say rather than that no name occurs
 _EVERY_OCCURRENCE_LEFT = (
     "Every occurrence of the mapping's names in this file is left as it "
     "is, by choice, so an execute would rewrite nothing.")
 _EVERY_OCCURRENCE_WAS_LEFT = (
     "Every occurrence of the mapping's names in this file was left as it "
     "is, by choice, so nothing was rewritten and no backup was taken.")
+# The same with notes to rewrite (v0.15.4): phrases to keep go with
+# rewrite_memos, where a list does not, so the run rewrites the notes alone
+_EVERY_OCCURRENCE_LEFT_NOTES = (
+    "Every occurrence of the mapping's names in this file is left as it "
+    "is, by choice; with rewrite_memos on, an execute would rewrite "
+    "{rows} note(s) or journal entr(ies) and nothing in the file text.")
 # The occurrences a list leaves, in the preview's warnings (v0.15.3): real
 # names, said on every path, the file counted or not. Where every
 # occurrence is left, the sentence above has said that it is by choice
 # and that nothing would be rewritten, so the warning gives only their
 # number and what they are. The clause is said where every occurrence
 # the file-text count found is one left by choice: that count's own
-# sentence would only say this one again, and is left out
+# sentence would only say this one again, and is left out. Since v0.15.4
+# the occurrences inside a phrase to keep are among them, and the
+# warning gives their share ({kept}, empty without phrases)
 _OCCURRENCES_LEFT_WARNING = (
     "Warning: {left} occurrence(s) of names from this mapping are left as "
-    "they were, by choice: they are real names, and stay in the file's text "
-    "after this run.")
+    "they were, by choice{kept}: they are real names, and stay in the "
+    "file's text after this run.")
 _EVERY_OCCURRENCE_LEFT_WARNING = (
-    "Warning: the {left} occurrence(s) left are real names, and stay in "
-    "the file's text.")
+    "Warning: the {left} occurrence(s) left{kept} are real names, and stay "
+    "in the file's text.")
+_OCCURRENCES_KEPT_SHARE = ", {kept} of them inside a phrase to keep"
 _OCCURRENCES_LEFT_COUNTED = (
     " residue.file_text counts {counted} of them under left_by_choice, a "
     "heuristic; the number left is exact.")
+# Phrases to keep in the preview's warnings (v0.15.4): the names that run
+# past a phrase, which the run replaces, by the phrases' numbers; and,
+# beside a save, that the phrases are not saved, so that a later run
+# without them and an import that applies the names list replace the
+# names they keep (Exegete's imports apply it by default)
+_PHRASES_CUT_WARNING = (
+    "Warning: names of this mapping run past phrase(s) {numbers} of "
+    "keep_phrases, and this run replaces them there: a phrase keeps only a "
+    "name that lies wholly inside it (see each phrase's cut, in the file's "
+    "phrases).")
+_PHRASES_NOT_SAVED_WARNING = (
+    "Warning: keep_phrases is not saved with the mapping, and nothing else "
+    "keeps it: a later run of this file without the same phrases, or an "
+    "import that applies the project's names list, replaces the names "
+    "they keep here.")
 # Phrases to keep (v0.15.4) go with a typed mapping only, refused with the
 # names list before anything is read, as decided on 27 September for the
 # same reason as the list: a phrase brings words into the conversation,
@@ -21060,12 +21084,24 @@ _PHRASES_NEED_A_TYPED_MAPPING = (
 # and, like a typed mapping, repeated in no answer, so the execute gives
 # them again; how many, never their words. An execute made from
 # execute_with alone is refused as another operation, and that refusal
-# sends the assistant to a fresh preview, which would keep nothing
+# sends the assistant to a fresh preview, which would keep nothing: so
+# any new preview for the run needs them too
 _KEEP_PHRASES_TO_REPEAT = (
     "keep_phrases is bound into the token and, like a mapping typed into "
     "the call, is not repeated in these arguments: give the same "
-    "keep_phrases again on the execute call, unchanged. Without them, or "
-    "with others, the execute is refused as a different operation.")
+    "keep_phrases again on the execute call, unchanged, and to any new "
+    "preview for this run. Without them, or with others, the execute is "
+    "refused as a different operation, and a new preview's run would "
+    "replace the names they keep.")
+# Every answer to a call given phrases that may send the assistant to a
+# new preview for the run, or back to the execute, ends with this
+# (v0.15.4): the retention note, ask and warning, the warnings on a save
+# that would be refused, and every refusal after the phrases are checked,
+# the token's and the save's (_SAVE_INSTEAD) included
+_PHRASES_AGAIN = (
+    " Give the same keep_phrases to the execute, and to any new preview "
+    "for this run: no answer repeats them, and without them the run "
+    "replaces the names they keep.")
 
 
 def _phrases_refused(error: "pseudo.PhraseError") -> str:
@@ -21109,10 +21145,27 @@ class _OccurrencesRefused(Exception):
 
 
 def _left_by_choice(preview: Dict[str, Any]) -> bool:
-    """Whether a preview's file has occurrences left by a list (v0.15.3):
-    where it makes no replacement, every occurrence found is left."""
+    """Whether a preview's file has occurrences left by a list (v0.15.3)
+    or kept inside a phrase to keep (v0.15.4): where it makes no
+    replacement, every occurrence found is left or kept, by choice."""
     return any((item.get("occurrences") or {}).get("left")
+               or (item.get("phrases") or {}).get("kept")
                for item in preview.get("files", []))
+
+
+def _kept_in_text(preview: Dict[str, Any]) -> int:
+    """How many occurrences in a preview's file lie inside a phrase to
+    keep and are left by no list (v0.15.4): the phrases' share of the
+    occurrences left. 0 without phrases."""
+    return sum((item.get("phrases") or {}).get("kept", 0)
+               for item in preview.get("files", []))
+
+
+def _phrase_numbers(numbers: Sequence[int]) -> str:
+    """Phrases' numbers in words: "2", "1 and 3", "1, 2 and 4"."""
+    words = [str(number) for number in numbers]
+    return (words[0] if len(words) == 1 else
+            ", ".join(words[:-1]) + " and " + words[-1])
 
 
 def _refuse_occurrences_not_placed(plan: Dict[str, Any]) -> None:
@@ -21715,11 +21768,30 @@ _FILE_TEXT_WARNING_KINDS_WITHOUT_A_RUN = {
         "whole words in files this call does not rewrite (a PDF source, or "
         "a file to be run with its own mapping)",
 }
+# What the occurrences under left_by_choice are (v0.15.4), by what left
+# them: a list ("list", the words of v0.15.3), phrases to keep, or both.
+# Each gives the kind's words, the reason where they are every occurrence
+# counted, and the clause where they are some
+_LEFT_BY_CHOICE_WORDS = {
+    "list": ("occurrences chosen to be left as they were",
+             "all of them chosen to be left as they were",
+             ", and because some were chosen to be left as they were"),
+    "phrases": ("occurrences inside a phrase to keep",
+                "all of them inside a phrase to keep",
+                ", and because some are inside a phrase to keep"),
+    "both": ("occurrences chosen to be left as they were or inside a "
+             "phrase to keep",
+             "all of them chosen to be left as they were or inside a "
+             "phrase to keep",
+             ", and because some were chosen to be left as they were or "
+             "are inside a phrase to keep"),
+}
 
 
 def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
                                     chosen_said: bool = False,
-                                    run: bool = True
+                                    run: bool = True,
+                                    left_by: str = "list"
                                     ) -> Optional[str]:
     """The second residue warning: occurrences in the file text.
 
@@ -21748,7 +21820,13 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
     leaves every occurrence, and no note to rewrite), no sentence says
     that a run happens or that the rewrite applies to the file (fix
     round 1; v0.15.3 for a file with no name).
+
+    `left_by` (v0.15.4) says what left the occurrences counted under
+    left_by_choice, a key of _LEFT_BY_CHOICE_WORDS: "list" by default,
+    with v0.15.3's words; "phrases" where phrases to keep alone did, and
+    "both" where a list and phrases did, each named in its own words.
     """
+    chosen_words = _LEFT_BY_CHOICE_WORDS[left_by]
     totals = file_text.get("totals") or {}
     occurrences = totals.get("occurrences") or {}
     wide = occurrences.get("wide", 0)
@@ -21777,6 +21855,8 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
                 continue
             if not run:
                 text = _FILE_TEXT_WARNING_KINDS_WITHOUT_A_RUN.get(key, text)
+            if key == "left_by_choice":
+                text = chosen_words[0]
             of_those = "" if clauses else " of those"
             clauses.append(f"{count}{of_those} "
                            f"{verb + ' ' if verb else ''}{text}")
@@ -21785,13 +21865,14 @@ def _pseudonymise_file_text_warning(file_text: Dict[str, Any],
         else:
             listed = " and ".join(clauses)
         # The reason is the rewrite's own rule, for every occurrence but
-        # those left by a list (v0.15.3), which were chosen
+        # those left by a list (v0.15.3), which were chosen, and those
+        # inside a phrase to keep (v0.15.4)
         because = ("because the rewrite replaces whole words only and in "
                    "one file per call")
         if chosen == wide:
-            because = "all of them chosen to be left as they were"
+            because = chosen_words[1]
         elif chosen:
-            because += ", and because some were chosen to be left as they were"
+            because += chosen_words[2]
         sentences.append(
             f"Warning: {after}{wide} occurrence(s) of these names "
             f"would still be in the text of {counted_showing} file(s), "
@@ -22150,9 +22231,13 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"residue, and tell the researcher which fields to check.")
     file_text = residue.get("file_text")
     left, counted_left, chosen_alone = _occurrences_left(preview, file_text)
+    # What left them (v0.15.4): a list, phrases to keep, or both
+    kept = _kept_in_text(preview)
+    left_by = ("list" if not kept else "both" if left > kept
+               else "phrases")
     if file_text:
         text_warning = _pseudonymise_file_text_warning(
-            file_text, chosen_alone, run=run)
+            file_text, chosen_alone, run=run, left_by=left_by)
         if text_warning:
             warnings.append(text_warning)
     unreadable = residue.get("unreadable") or []
@@ -22280,6 +22365,11 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"makes the file-text counts generous too; the whole-word "
             f"number beside each wide one shows how far.")
     retention = preview.get("mapping_retention") or {}
+    # Phrases to keep (v0.15.4), given where a file has its phrases block:
+    # each warning below that sends to a new preview asks for them too
+    phrases = [item["phrases"] for item in preview.get("files", [])
+               if "phrases" in item]
+    again = _PHRASES_AGAIN if phrases else ""
     if retention.get("required") and retention.get("chosen") is None:
         # Ruling 14a: the preview says which is needed.
         warnings.append(
@@ -22290,7 +22380,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             "that the researcher keeps their own copy, add "
             "researcher_keeps_mapping=true to the execute call with this "
             "token. Ask the researcher which (see "
-            "execute_with.mapping_retention).")
+            "execute_with.mapping_retention)." + again)
     if_saved = retention.get("if_saved") or {}
     if if_saved.get("conflicts"):
         warnings.append(
@@ -22302,13 +22392,16 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"preview again; if the whole mapping is already in the file, "
             f"run with use_project_pseudonyms=true instead; or preview "
             f"again without save_mapping_to_project and execute with "
-            f"researcher_keeps_mapping=true.")
+            f"researcher_keeps_mapping=true.{again}")
     elif if_saved.get("error"):
         warnings.append(
             f"Warning: saving this mapping into pseudonyms.json would be "
             f"refused: {if_saved['error']} Fix the file and preview again, "
             f"or preview again without save_mapping_to_project and execute "
-            f"with researcher_keeps_mapping=true.")
+            f"with researcher_keeps_mapping=true.{again}")
+    if phrases and retention.get("chosen") in ("save_requested", "both"):
+        # Beside the save (v0.15.4): pseudonyms.json takes the mapping alone
+        warnings.append(_PHRASES_NOT_SAVED_WARNING)
     # Brief 2 fix round 1, QA-B2-1: what QualCoder's own application of
     # the saved file will do differently from this run.
     if if_saved.get("pre_empted_by_existing"):
@@ -22349,9 +22442,16 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
                    "and preview again. (A researcher who uses QualCoder can "
                    "also enter the mapping in its Pseudonyms dialog, under "
                    "Manage Files.)" if save_asked else "")
-        if _left_by_choice(preview):
+        if _left_by_choice(preview) and note_rows:
+            # Every occurrence found is kept inside a phrase or left by a
+            # list, and notes are rewritten (v0.15.4: phrases go with
+            # rewrite_memos): the run rewrites the notes alone, and saves
+            warnings.append(_EVERY_OCCURRENCE_LEFT_NOTES.format(
+                rows=note_rows))
+        elif _left_by_choice(preview):
             # Every occurrence found is left by a list (v0.15.3; never
-            # with rewrite_memos): no name is missing from the file
+            # with rewrite_memos) or kept inside a phrase (v0.15.4): no
+            # name is missing from the file
             warnings.append(
                 _EVERY_OCCURRENCE_LEFT
                 + (" The mapping would not be saved either, because no run "
@@ -22371,6 +22471,13 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
                 "None of the names in this mapping occurs in this file or "
                 "in any note or journal entry, so an execute would rewrite "
                 "nothing." + no_save)
+    cut = sorted({each["number"] for block in phrases
+                  for each in block.get("each", ()) if each.get("cut")})
+    if cut:
+        # Names that run past a phrase are replaced (v0.15.4), by the
+        # phrases' numbers alone
+        warnings.append(_PHRASES_CUT_WARNING.format(
+            numbers=_phrase_numbers(cut)))
     if left:
         # Last, after the sentence that says, where every occurrence is
         # left, that it is by choice (v0.15.3). The put-back warning above
@@ -22383,16 +22490,18 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
 def _occurrences_left(preview: Dict[str, Any],
                       file_text: Optional[Dict[str, Any]]
                       ) -> Tuple[int, int, bool]:
-    """The occurrences a list leaves (v0.15.3): their number, from each
-    file's own block, which a preview given a list carries whether or not
-    the file was counted; how many of them the file-text count charged to
-    left_by_choice, which it does only where it counted the file; and
-    whether every occurrence that count found is one of them, where the
-    file-text sentence would only say again what the warning on them
-    says. Not where the whole-word count is above the wide one, which
-    that sentence explains."""
-    left = sum((item.get("occurrences") or {}).get("left", 0)
-               for item in preview.get("files", []))
+    """The occurrences a list leaves (v0.15.3), and those inside a phrase
+    to keep that no list also leaves (v0.15.4): their number, from each
+    file's own blocks, which a preview given a list, or phrases, carries
+    whether or not the file was counted; how many of them the file-text
+    count charged to left_by_choice, which it does only where it counted
+    the file; and whether every occurrence that count found is one of
+    them, where the file-text sentence would only say again what the
+    warning on them says. Not where the whole-word count is above the
+    wide one, which that sentence explains."""
+    left = _kept_in_text(preview) + sum(
+        (item.get("occurrences") or {}).get("left", 0)
+        for item in preview.get("files", []))
     totals = (file_text or {}).get("totals") or {}
     counted = (totals.get("by_reason") or {}).get("left_by_choice", 0)
     alone = bool(left and counted
@@ -22407,10 +22516,16 @@ def _occurrences_left_warning(preview: Dict[str, Any], left: int,
     """The preview's warning on the occurrences a list leaves (v0.15.3),
     in the form that says nothing the sentence for a file whose every
     occurrence is left has said, and with the file-text count's number
-    where that count gives no sentence of its own."""
+    where that count gives no sentence of its own. With phrases to keep
+    (v0.15.4) it gives the share of them inside a phrase."""
     every = not preview.get("totals", {}).get("replacements")
-    warning = (_EVERY_OCCURRENCE_LEFT_WARNING if every
-               else _OCCURRENCES_LEFT_WARNING).format(left=left)
+    kept = _kept_in_text(preview)
+    share = _OCCURRENCES_KEPT_SHARE.format(kept=kept) if kept else ""
+    if every:
+        warning = _EVERY_OCCURRENCE_LEFT_WARNING.format(
+            left=left, kept=share + ("," if share else ""))
+    else:
+        warning = _OCCURRENCES_LEFT_WARNING.format(left=left, kept=share)
     if alone:
         warning += _OCCURRENCES_LEFT_COUNTED.format(counted=counted)
     return warning

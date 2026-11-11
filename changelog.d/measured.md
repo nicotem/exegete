@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 212,031 | 210,397 |
-| `core` (28 tools) | 77,519 | 76,805 |
+| `full` (80 tools) | 212,241 | 210,397 |
+| `core` (28 tools) | 77,625 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,457 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
@@ -45,5 +45,8 @@ Python 3.13 with the libraries in `uv.lock`:
   The guide to installing from the Terminal now gives `search_files`'
   description as about 4,800 characters on Python 3.13, and 5,200 on
   3.11 and 3.12.
+- The workspace copy's description now says that a copy leaves out
+  every temporary copy of the names list, whatever its age, adding
+  154 characters to its definition in both sets.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).

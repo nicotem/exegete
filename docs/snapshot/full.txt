@@ -576,8 +576,10 @@ replace.txt), with the real names in them. Like a backup, it leaves
 out lock files, the database's side files (its journal and WAL files
 among them) and ai_data/search.sqlite, which QualCoder 4.0 rebuilds
 when it opens the copy. Unlike a backup, it keeps the audio and video
-folders. A copy of a project without an ai_data folder gets an empty
-one, as a new project does.
+folders, and it leaves out every temporary copy of the names list
+(pseudonyms.json.<eight characters>.tmp, which a write cut short can
+leave), whatever its age. A copy of a project without an ai_data
+folder gets an empty one, as a new project does.
 
 The database is copied with SQLite's own online backup, so a copy
 taken while another program is writing to the project holds what was

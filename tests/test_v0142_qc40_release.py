@@ -155,13 +155,17 @@ def test_privacy_tells_qualcoder_s_annotation_answer_as_it_is():
             # (v0.15.4, the claims audit's point 25: with the override the
             # code's and the file's ids do enter the conversation, which
             # "never the hidden coder's ... code" denied; server.py
-            # delete_coding, database.py's hidden-row answers)
-            "With the override, the answer gives ids: those of the coding, "
-            "its code and its file, which together tell which code was "
-            "applied to which file, or those of the annotation and its "
-            "file, with the note and its date that update_annotation "
-            "wrote. The coder's name, the span and the text never enter "
-            "the conversation.",
+            # delete_coding, database.py's hidden-row answers. PRIVACY's
+            # fix round: set_memo's answer gives the coding's id alone,
+            # database.py's set_memo, so each tool's answer is said apart)
+            "With the override, the answer gives ids. delete_coding gives "
+            "those of the coding, its code and its file, which together "
+            "tell which code was applied to which file. set_memo gives the "
+            "coding's id alone, with the public part of the note it wrote. "
+            "update_annotation and delete_annotation give those of the "
+            "annotation and its file, with the note and its date that "
+            "update_annotation wrote. The coder's name, the span and the "
+            "text never enter the conversation.",
             "QualCoder 4.0's own AI server answers the same way about a "
             "coding but not about an annotation: its update and delete of an "
             "annotation answer with the annotation's position and its "

@@ -213,10 +213,10 @@ class TestThePage:
                     written_at=datetime(2026, 11, 10, 9, 0), numbering=code)
 
     def test_the_line_takes_the_place_of_any_list(self):
-        """The bar says that the line names every occurrence to leave, in
-        place of any list given before: ticks on an earlier page of the
-        same list, still open, would drop a choice given since. Red with
-        the bar's words as before."""
+        """The bar says that the line takes the place of any list given
+        before, so that every occurrence to leave is ticked: ticks on an
+        earlier page of the same list, still open, would drop a choice
+        given since. Red with the bar's words as before."""
         page, _counts = occurrences.build_page(
             project_name="p", file_id=12, file_name="f.txt",
             text="Tom met Tom.", marks=[(0, 3, "aaaaa"), (8, 11, "bbbbb")],
@@ -224,8 +224,8 @@ class TestThePage:
             numbering="q8x2dm")
         [(_file, _code, inside)] = BAR.findall(page)
         inside = " ".join(inside.split())
-        assert "every occurrence to leave" in inside
-        assert "in place of any list given before" in inside
+        assert "the place of any list given before" in inside
+        assert "every occurrence you want left" in inside
 
     def test_a_second_skip_link_leads_to_the_bar(self):
         """After the skip link to the text, a second leads to the bar, so

@@ -396,13 +396,14 @@ KEPT_LABEL = "kept whole, inside a phrase"
 # The bar at the page's foot (v0.15.4): its id, which the script finds it
 # by, and its words after the count of boxes ticked. Hidden until the
 # script runs. A line replaces any list given before, the earlier page
-# of the same list's included, so its words say that it names every
-# occurrence to leave
+# of the same list's included, so its words say so, and that every
+# occurrence to leave is ticked
 PICK_BAR = "pick-bar"
 PICK_INTRO = (
     "Copy the line into the conversation: it holds the file, this page's "
-    "numbering and the numbers ticked, and nothing of the text. It names "
-    "every occurrence to leave, in place of any list given before.")
+    "numbering and the numbers ticked, and nothing of the text. It takes "
+    "the place of any list given before, so tick every occurrence you "
+    "want left.")
 # The second skip link, to the bar, which a keyboard otherwise reaches
 # past every tick box; hidden with the bar until the script shows both
 PICK_SKIP = "pick-skip"

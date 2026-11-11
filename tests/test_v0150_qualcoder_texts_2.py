@@ -187,23 +187,25 @@ CHOOSING_OCCURRENCES = (
 # run record and the journal entry (server.py: _kept_by_phrases,
 # _KEEP_PHRASES_TO_REPEAT), refused with the names list before it is read
 # (_PHRASES_NEED_A_TYPED_MAPPING); held to the code in
-# tests/test_v0154_privacy_additions.py
+# tests/test_v0154_privacy_additions.py (its readability reading: the
+# warning that a name inside a kept phrase stays said second, the names
+# list and the records of changes joined to the sentence that keeps no
+# phrase, and why the run needs the phrases again)
 PHRASES_TO_KEEP = (
-    "With a mapping you type, a run can also keep whole phrases "
+    "With a mapping you type, a run can also keep whole phrases as they are "
     "(`keep_phrases`), such as a public figure's name or a saying. A name "
-    "inside one then stays as it is. The phrases are typed into the call, so "
-    "they are in the conversation and in the host's records, as a typed "
-    "mapping is. Exegete itself keeps no phrase: no file, record, log line "
-    "or answer of its own holds one. The preview, the run's answer, the run "
-    "record and the journal entry count the occurrences the phrases kept. "
-    "The preview also says how many phrases to give again for the run. The "
-    "records of changes kept for undo and `pseudonyms.json` hold nothing of "
-    "them. The page for choosing occurrences marks the occurrences kept, in "
-    "the text it already shows, and lists no phrase. With the names list, "
+    "inside a kept phrase is a real name: it stays in the file's text after "
+    "the run, and in the notes the run rewrites. Like a typed mapping, the "
+    "phrases are typed into the conversation, so they are in it and in the "
+    "host's records. Exegete itself keeps no phrase: no file, record, log "
+    "line or answer of its own holds one, `pseudonyms.json` and the records "
+    "of changes kept for undo included. So the run needs the phrases again, "
+    "and the preview says how many to give. The preview, the run's answer, "
+    "the run record and the journal entry count the occurrences the phrases "
+    "kept. The page for choosing occurrences marks those occurrences in the "
+    "text it already shows, and lists no phrase. With the names list, "
     "phrases are refused before the list is read, since an answer about a "
-    "phrase could tell whether a name in it is on the list. A name inside a "
-    "phrase is a real name: it stays in the file's text after the run, and "
-    "in the notes the run rewrites.")
+    "phrase could tell whether a name in it is on the list.")
 # The new texts, word for word, white space collapsed (fix round 1:
 # what the project's folder still holds, what is not replaced, where
 # else an unchanged copy sits, and three phrases)

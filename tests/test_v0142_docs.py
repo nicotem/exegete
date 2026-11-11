@@ -803,14 +803,16 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             # session is kept in the project's sessions folder, so in its
             # backups and copies; Exegete's own folder keeps the earlier
             # ones and any a project's folder could not hold, as
-            # sessions.SessionManager._save_new does)
-            "From 0.15.4 the project keeps its coding sessions in its "
-            "`Exegete coding sessions` folder, each suggested passage word "
-            "for word with its reason, so its backups and copies hold them "
-            "too;",
+            # sessions.SessionManager._save_new does; the readability
+            # reading: what a session holds in a sentence of its own)
+            "From 0.15.4 the project also keeps its coding sessions, in its "
+            "`Exegete coding sessions` folder. Each session holds the "
+            "passages the assistant suggested for coding, word for word, "
+            "with their reasons. The project's backups and copies hold the "
+            "sessions too;",
             "in Exegete's own folder (`~/.exegete`), the coding sessions "
-            "made before 0.15.4 and any a project's folder could not hold "
-            "(`~/.exegete/sessions/`)",
+            "made before 0.15.4 and any that a project's folder could not "
+            "hold (`~/.exegete/sessions/`)",
             # (the staleness audit of 20 October 2026: the reading folder
             # and the run records, which PRIVACY's table already listed;
             # v0.15.3, the occurrences choice's readability reading: its

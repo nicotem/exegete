@@ -760,9 +760,13 @@ class TestTheDocumentsSayTheRule:
         # content the errors Exegete meets; an id that is not a number is
         # refused by the MCP library first, as a protocol error)
         # (and its readability reading: the resources and the MCP library
-        # named before the rule)
-        assert ("A resource answers an error that Exegete meets as its "
-                "content, as a tool does") in privacy
+        # named before the rule; then the privacy additions' readability
+        # reading: the failed read as the clause's subject, the error given
+        # as the resource's content, server._resource_guard)
+        assert ("When a resource cannot be read, Exegete gives the error as "
+                "the resource's content, as a tool does") in privacy
+        assert "the error as the resource's content" in " ".join(
+            server._resource_guard.__doc__.split())
         assert ("The MCP library refuses an address whose id is not a "
                 "number, such as `exegete://codes/abc`, before Exegete sees "
                 "it. Its refusal, a protocol error, quotes what was sent, and "

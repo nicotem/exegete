@@ -167,12 +167,14 @@ class TestTheServedTexts:
 
     def test_prune_says_a_backup_holds_the_sessions(self):
         """prune_backups' reason to prune beyond disk space names the
-        sessions kept in the project among what a backup copies."""
+        sessions kept in the project among what a backup copies, and
+        among what pruning leaves with the project."""
         description = _description("prune_backups")
         reason = description[description.index("A reason to prune"):]
         reason = reason[:reason.index("This does not touch")]
         assert FOLDER in reason, reason
         assert "word for word" in _sentence_with(reason, FOLDER)
+        assert "sessions" in _sentence_with(reason, "Pruning does not touch")
 
     def test_the_restore_keeps_the_sessions_folder(self):
         """restore_backup's description says that the sessions folder is
@@ -259,6 +261,7 @@ class TestTheDocuments:
         copies = tools[tools.index("**Backups, workspace copies and"):]
         copies = copies[:copies.index("They leave out")]
         assert FOLDER in copies, copies
+        assert "coding sessions" in _item(tools, "- Exegete's backups:")
         assert FOLDER in _entry(tools, "restore_backup(backup_path, "
                                        "preview_token)")
         for words in ("roll the project back to a backup",
@@ -299,6 +302,11 @@ class TestTheDocuments:
         assert FOLDER in own and "before 0.15.4" in own, own
         assert CAME_WITH.search(_item(uninstall, "- If you delete only the "
                                                  "secret"))
+        # Deleting Exegete's own folder loses the sessions kept there, not
+        # those kept in projects
+        gone = _item(uninstall, "- If you delete the folder")
+        assert "sessions kept in your projects stay" in gone, gone
+        assert "waiting for review" not in gone, gone
 
     def test_the_guide_says_where_sessions_are_kept(self):
         """The AI coding guide's Sessions section keeps the session inside
@@ -314,6 +322,10 @@ class TestTheDocuments:
         assert "before 0.15.4" in earlier, earlier
         assert "**A session that came with the project.**" in sessions
         assert "outside the project" not in sessions
+        backups = _section(guide, "### Backups")
+        assert FOLDER in _sentence_with(backups, "A restore keeps")
+        assert "coding sessions" in _sentence_with(
+            backups, "Every backup also holds")
         safety = _section(guide, "## Safety model")
         assert "selected" in _sentence_with(safety, "A session is read")
         lost = _section(guide, "### Session file damaged or lost")

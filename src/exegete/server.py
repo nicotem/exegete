@@ -21340,6 +21340,17 @@ _EVERY_OCCURRENCE_LEFT_NOTES = (
     "Every occurrence of the mapping's names in this file is left as it "
     "is, by choice; with rewrite_memos on, an execute would rewrite "
     "{rows} note(s) or journal entr(ies) and nothing in the file text.")
+# No name in the file, and every one the note rewrite finds lying inside
+# a phrase to keep (v0.15.4): nothing to rewrite, and the names in the
+# notes are kept, so the answers never say that none occurs there
+_NO_NAME_HERE_NOTES_KEPT = (
+    "None of the names in this mapping occurs in this file, and every one "
+    "in a note or journal entry lies inside a phrase to keep, so an "
+    "execute would rewrite nothing.")
+_NO_NAME_HERE_NOTES_WERE_KEPT = (
+    "None of the names in this mapping occurs in this file, and every one "
+    "in a note or journal entry lies inside a phrase to keep, so nothing "
+    "was rewritten and no backup was taken.")
 # The occurrences a list leaves, in the preview's warnings (v0.15.3): real
 # names, said on every path, the file counted or not. Where every
 # occurrence is left, the sentence above has said that it is by choice
@@ -21411,6 +21422,14 @@ _PHRASES_AGAIN = (
     " Give the same keep_phrases to the execute, and to any new preview "
     "for this run: no answer repeats them, and without them the run "
     "replaces the names they keep.")
+# A save refused because pseudonyms.json already holds the mapping's
+# entries under the same pseudonyms, with phrases to keep (v0.15.4): the
+# route without phrases, use_project_pseudonyms, refuses keep_phrases
+_ALREADY_THERE_KEEPING = (
+    "Those entries are already in the file under the same pseudonyms, and "
+    "keep_phrases goes with a typed mapping only: preview again without "
+    "save_mapping_to_project and execute with "
+    "researcher_keeps_mapping=true.")
 
 
 def _phrases_refused(error: "pseudo.PhraseError") -> str:
@@ -21468,6 +21487,41 @@ def _kept_in_text(preview: Dict[str, Any]) -> int:
     occurrences left. 0 without phrases."""
     return sum((item.get("phrases") or {}).get("kept", 0)
                for item in preview.get("files", []))
+
+
+def _kept_in_notes(preview: Dict[str, Any]) -> int:
+    """How many matches the note rewrite finds inside a phrase to keep in
+    the notes' public parts (v0.15.4), which it leaves as they are. 0
+    without phrases or without rewrite_memos; a file that holds no name
+    has no block of its own, so this is read beside the files' blocks."""
+    return ((preview.get("memo_rewrites") or {}).get("totals") or {}).get(
+        "kept_by_phrases", 0)
+
+
+def _nothing_was_rewritten(preview: Dict[str, Any], rewrite_memos: bool,
+                           not_saved: bool) -> str:
+    """The execute's answer to a run with nothing to do, read from the
+    preview its token signed: every occurrence found left by a list
+    (v0.15.3) or kept inside a phrase (v0.15.4), never "no name occurs"
+    nor "pick a file"; no name in the file and every one in the notes
+    kept inside a phrase (v0.15.4), never that no name occurs in any
+    note; else no name in the file, nor, with rewrite_memos, in any note
+    or journal entry. `not_saved` where a save was asked for on the
+    typed path (the lead's third ruling for Brief 2): no run, no save."""
+    if _left_by_choice(preview):
+        return _EVERY_OCCURRENCE_WAS_LEFT + (
+            " The mapping was not saved, because no run happened."
+            if not_saved else "")
+    if _kept_in_notes(preview):
+        said = _NO_NAME_HERE_NOTES_WERE_KEPT
+    elif rewrite_memos:
+        said = ("None of the names in this mapping occurs in this file or "
+                "in any note or journal entry, so nothing was rewritten and "
+                "no backup was taken.")
+    else:
+        said = ("None of the names in this mapping occurs in this file, so "
+                "nothing was rewritten and no backup was taken.")
+    return said + (_NOT_SAVED_NO_RUN if not_saved else "")
 
 
 def _phrase_numbers(numbers: Sequence[int]) -> str:
@@ -21919,11 +21973,14 @@ def _pseudonyms_json_refusal(error: _SaveRefused) -> Dict[str, Any]:
         "reason": error.reason, "nothing_changed": True}
 
 
-def _pseudonyms_json_conflict(merge: Dict[str, Any]) -> Dict[str, Any]:
+def _pseudonyms_json_conflict(merge: Dict[str, Any],
+                              phrases: bool = False) -> Dict[str, Any]:
     """`pseudonyms_json_conflict`: QualCoder's dialog refuses a duplicate
     original as well (`pseudonyms.py:84-86`), whether or not its
     pseudonym is the same; the entry is named by its index, never by the
-    file's value."""
+    file's value. With phrases to keep (v0.15.4), entries already there
+    are not sent to use_project_pseudonyms, which refuses keep_phrases,
+    but to the typed route without the save."""
     remedy = (
         "Those entries are already in the file under the same pseudonyms, "
         "so run this file with use_project_pseudonyms=true instead."
@@ -21935,6 +21992,8 @@ def _pseudonyms_json_conflict(merge: Dict[str, Any]) -> Dict[str, Any]:
         "Manage Files. Files already rewritten or imported with that entry "
         "keep its pseudonym, so one person can end up with two; keep a "
         "note of the entry first.)")
+    if merge["already_there"] and phrases:
+        remedy = _ALREADY_THERE_KEEPING
     return {"error": (
         f"The mapping cannot be saved into this project's pseudonyms.json: "
         f"entry {merge['conflicts']} maps a name the file already maps, and "
@@ -22422,11 +22481,15 @@ _SHARED_NAME_IN_NOTES_WARNING = (
     "name).")
 
 
-def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
+def _pseudonymise_warnings(preview: Dict[str, Any],
+                           phrases_given: bool = False) -> List[str]:
     """What the researcher has to be told before approving a run.
 
     Each appears only when it applies, and each says what would make the
     answer different, because the preview exists to be read out loud.
+    `phrases_given` says whether the call was given phrases to keep
+    (v0.15.4), which a preview shows only where the file or a note holds
+    a name of the mapping.
     """
     warnings: List[str] = []
     totals = preview.get("totals", {})
@@ -22699,11 +22762,10 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"makes the file-text counts generous too; the whole-word "
             f"number beside each wide one shows how far.")
     retention = preview.get("mapping_retention") or {}
-    # Phrases to keep (v0.15.4), given where a file has its phrases block:
-    # each warning below that sends to a new preview asks for them too
-    phrases = [item["phrases"] for item in preview.get("files", [])
-               if "phrases" in item]
-    again = _PHRASES_AGAIN if phrases else ""
+    # Phrases to keep (v0.15.4), as the call gave them, whether or not the
+    # file holds a name: each warning below that sends to a new preview
+    # asks for them too
+    again = _PHRASES_AGAIN if phrases_given else ""
     if retention.get("required") and retention.get("chosen") is None:
         # Ruling 14a: the preview says which is needed.
         warnings.append(
@@ -22717,14 +22779,18 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             "execute_with.mapping_retention)." + again)
     if_saved = retention.get("if_saved") or {}
     if if_saved.get("conflicts"):
+        # Not to use_project_pseudonyms with phrases (v0.15.4): it
+        # refuses keep_phrases before anything is read
+        sidecar = ("" if phrases_given else
+                   "if the whole mapping is already in the file, run with "
+                   "use_project_pseudonyms=true instead; ")
         warnings.append(
             f"Warning: saving this mapping into pseudonyms.json would be "
             f"refused: entry {if_saved['conflicts']} maps a name the file "
             f"already maps, and QualCoder's Pseudonyms dialog (the button in "
             f"Manage Files) refuses a duplicate original as well (see "
             f"mapping_retention.if_saved.conflicts). Remove the entry and "
-            f"preview again; if the whole mapping is already in the file, "
-            f"run with use_project_pseudonyms=true instead; or preview "
+            f"preview again; {sidecar}or preview "
             f"again without save_mapping_to_project and execute with "
             f"researcher_keeps_mapping=true.{again}")
     elif if_saved.get("error"):
@@ -22734,7 +22800,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"or preview again without save_mapping_to_project and execute "
             f"with researcher_keeps_mapping=true.{again}")
     # Beside the save's warnings, those on the phrases themselves (v0.15.4)
-    warnings.extend(_phrases_warnings(phrases, retention))
+    warnings.extend(_phrases_warnings(preview, phrases_given, run))
     # Brief 2 fix round 1, QA-B2-1: what QualCoder's own application of
     # the saved file will do differently from this run.
     if if_saved.get("pre_empted_by_existing"):
@@ -22763,47 +22829,7 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"spelling you expect as a variant, or check the next import by "
             f"hand.")
     if not totals.get("replacements"):
-        # Three forms (Brief 2, 4.8): the switch off; on, with notes to
-        # rewrite; on, with nothing anywhere. Where an execute would do
-        # nothing, a save asked for on the typed path is said not to
-        # happen either (the lead's third ruling for Brief 2).
-        note_rows = (memo_block or {}).get("totals", {}).get("rows", 0)
-        save_asked = retention.get("required") and retention.get(
-            "chosen") in ("save_requested", "both")
-        no_save = (" The mapping would not be saved either, because no run "
-                   "would happen. Pick a file that contains one of the names "
-                   "and preview again. (A researcher who uses QualCoder can "
-                   "also enter the mapping in its Pseudonyms dialog, under "
-                   "Manage Files.)" if save_asked else "")
-        if _left_by_choice(preview) and note_rows:
-            # Every occurrence found is kept inside a phrase or left by a
-            # list, and notes are rewritten (v0.15.4: phrases go with
-            # rewrite_memos): the run rewrites the notes alone, and saves
-            warnings.append(_EVERY_OCCURRENCE_LEFT_NOTES.format(
-                rows=note_rows))
-        elif _left_by_choice(preview):
-            # Every occurrence found is left by a list (v0.15.3; never
-            # with rewrite_memos) or kept inside a phrase (v0.15.4): no
-            # name is missing from the file
-            warnings.append(
-                _EVERY_OCCURRENCE_LEFT
-                + (" The mapping would not be saved either, because no run "
-                   "would happen." if save_asked else ""))
-        elif memo_block is None:
-            warnings.append(
-                "None of the names in this mapping occurs in this file, so "
-                "an execute would rewrite nothing." + no_save)
-        elif note_rows:
-            warnings.append(
-                f"None of the names in this mapping occurs in this file; "
-                f"with rewrite_memos on, an execute would rewrite "
-                f"{note_rows} note(s) or journal entr(ies) and nothing in "
-                f"the file text.")
-        else:
-            warnings.append(
-                "None of the names in this mapping occurs in this file or "
-                "in any note or journal entry, so an execute would rewrite "
-                "nothing." + no_save)
+        warnings.append(_no_replacement_warning(preview))
     if left:
         # Last, after the sentence that says, where every occurrence is
         # left, that it is by choice (v0.15.3). The put-back warning above
@@ -22813,17 +22839,68 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
     return warnings
 
 
-def _phrases_warnings(phrases: List[Dict[str, Any]],
-                      retention: Dict[str, Any]) -> List[str]:
-    """The preview's warnings on phrases to keep (v0.15.4), from each
-    file's phrases block: beside a save, that the phrases are not saved
-    with the mapping; and the names that run past a phrase, which the
-    run replaces, by the phrases' numbers alone. None without phrases."""
+def _no_replacement_warning(preview: Dict[str, Any]) -> str:
+    """The preview's sentence where the run replaces nothing in the
+    file's text. Three forms (Brief 2, 4.8): the switch off; on, with
+    notes to rewrite; on, with nothing anywhere. Where an execute would
+    do nothing, a save asked for on the typed path is said not to happen
+    either (the lead's third ruling for Brief 2). Occurrences left or
+    kept by choice (v0.15.3, v0.15.4) are said as such, never that no
+    name occurs; and where the file holds no name and every one the note
+    rewrite finds lies inside a phrase (v0.15.4), so are the notes'."""
+    memo_block = preview.get("memo_rewrites")
+    retention = preview.get("mapping_retention") or {}
+    note_rows = (memo_block or {}).get("totals", {}).get("rows", 0)
+    save_asked = retention.get("required") and retention.get(
+        "chosen") in ("save_requested", "both")
+    no_save = (" The mapping would not be saved either, because no run "
+               "would happen. Pick a file that contains one of the names "
+               "and preview again. (A researcher who uses QualCoder can "
+               "also enter the mapping in its Pseudonyms dialog, under "
+               "Manage Files.)" if save_asked else "")
+    if _left_by_choice(preview) and note_rows:
+        # Every occurrence found is kept inside a phrase or left by a
+        # list, and notes are rewritten (v0.15.4: phrases go with
+        # rewrite_memos): the run rewrites the notes alone, and saves
+        return _EVERY_OCCURRENCE_LEFT_NOTES.format(rows=note_rows)
+    if _left_by_choice(preview):
+        # Every occurrence found is left by a list (v0.15.3; never with
+        # rewrite_memos) or kept inside a phrase (v0.15.4): no name is
+        # missing from the file
+        return _EVERY_OCCURRENCE_LEFT + (
+            " The mapping would not be saved either, because no run "
+            "would happen." if save_asked else "")
+    if memo_block is None:
+        return ("None of the names in this mapping occurs in this file, so "
+                "an execute would rewrite nothing." + no_save)
+    if note_rows:
+        return (f"None of the names in this mapping occurs in this file; "
+                f"with rewrite_memos on, an execute would rewrite "
+                f"{note_rows} note(s) or journal entr(ies) and nothing in "
+                f"the file text.")
+    if _kept_in_notes(preview):
+        return _NO_NAME_HERE_NOTES_KEPT + no_save
+    return ("None of the names in this mapping occurs in this file or in "
+            "any note or journal entry, so an execute would rewrite "
+            "nothing." + no_save)
+
+
+def _phrases_warnings(preview: Dict[str, Any], given: bool,
+                      run: bool) -> List[str]:
+    """The preview's warnings on phrases to keep (v0.15.4): where the call
+    was given phrases, a save is asked for and a run happens, that the
+    phrases are not saved with the mapping, whether the names they keep
+    are in the file or in a note; and, from each file's phrases block,
+    the names that run past a phrase in the file's text, which the run
+    replaces, by the phrases' numbers alone. None without phrases."""
     warnings: List[str] = []
-    if phrases and retention.get("chosen") in ("save_requested", "both"):
+    retention = preview.get("mapping_retention") or {}
+    if given and run and retention.get("chosen") in ("save_requested",
+                                                     "both"):
         warnings.append(_PHRASES_NOT_SAVED_WARNING)
-    cut = sorted({each["number"] for block in phrases
-                  for each in block.get("each", ()) if each.get("cut")})
+    cut = sorted({each["number"] for item in preview.get("files", [])
+                  for each in (item.get("phrases") or {}).get("each", ())
+                  if each.get("cut")})
     if cut:
         warnings.append(_PHRASES_CUT_WARNING.format(
             numbers=_phrase_numbers(cut)))
@@ -24169,29 +24246,11 @@ def pseudonymise_source(
             # token stays valid until it expires (D3 3.2). With
             # rewrite_memos on, a run with no match in the file and a
             # match in a note has something to do (Brief 2, 4.8).
-            if _left_by_choice(preview):
-                # Every occurrence found is left (v0.15.3), never "no
-                # name occurs" nor "pick a file"
-                return {
-                    "success": True,
-                    "nothing_changed": True,
-                    "message": _EVERY_OCCURRENCE_WAS_LEFT + (
-                        " The mapping was not saved, because no run "
-                        "happened." if typed and save else ""),
-                }
-            return {
-                "success": True,
-                "nothing_changed": True,
-                "message": (
-                    "None of the names in this mapping occurs in this "
-                    "file or in any note or journal entry, so nothing was "
-                    "rewritten and no backup was taken."
-                    if rewrite_memos else
-                    "None of the names in this mapping occurs in this "
-                    "file, so nothing was rewritten and no backup was "
-                    "taken.")
-                + (_NOT_SAVED_NO_RUN if typed and save else ""),
-            }
+            # Occurrences left or kept by choice, and names kept in the
+            # notes (v0.15.3, v0.15.4), are said as such
+            return {"success": True, "nothing_changed": True,
+                    "message": _nothing_was_rewritten(
+                        preview, rewrite_memos, typed and save)}
         # Keeping the mapping (ruling 14a): after the collision and the
         # nothing-to-do answers, before the owner refusal and the backup,
         # so nothing is written, no backup is taken and the token stays
@@ -24207,7 +24266,7 @@ def pseudonymise_source(
             except _SaveRefused as e:
                 return _pseudonyms_json_refusal(e)
             if merge["conflicts"]:
-                return _pseudonyms_json_conflict(merge)
+                return _pseudonyms_json_conflict(merge, bool(phrases))
         if owner_error is not None:
             # The last check before the write, where `_resolve_write_owner`
             # says it belongs: after the token, the hidden-coder rule and
@@ -24320,7 +24379,7 @@ def pseudonymise_source(
         except _SaveRefused as e:
             return _pseudonyms_json_refusal(e)
         if merge["conflicts"]:
-            return _pseudonyms_json_conflict(merge)
+            return _pseudonyms_json_conflict(merge, bool(phrases))
         captured["pseudonyms_json_merge"] = merge
         captured["pseudonyms_json_fingerprint"] = fingerprint
         return None
@@ -24374,7 +24433,8 @@ def pseudonymise_source(
                         _pseudonyms_json_refusal(e)["error"]) from None
                 if merge["conflicts"]:
                     raise RuntimeError(
-                        _pseudonyms_json_conflict(merge)["error"])
+                        _pseudonyms_json_conflict(
+                            merge, bool(phrases))["error"])
                 captured["pseudonyms_json_merge"] = merge
             captured["pseudonyms_json_tmp"] = _write_pseudonyms_json_tmp(
                 folder, merge["merged"], merge["existing_mode"])
@@ -24478,7 +24538,10 @@ def pseudonymise_source(
             },
             state_preview_fn=_signed,
             override_required_fn=_override_required,
-            warnings_fn=_pseudonymise_warnings,
+            # With the call's phrases (v0.15.4), which a file holding no
+            # name has no block to show
+            warnings_fn=functools.partial(_pseudonymise_warnings,
+                                          phrases_given=bool(phrases)),
             execute_guard_fn=_collisions_refusal,
             state_of_fn=_state_on_write_connection,
             check_fn=_save_check,

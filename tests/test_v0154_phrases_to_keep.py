@@ -13,17 +13,17 @@ occurrence is kept, or left by a list, has its rows neither read nor
 mapped, and the write and the run record pass over it.
 
 The first tests drive the engine, the plan, the preview and the write
-directly. The call's (`keep_phrases`, the second piece) follow: a typed
-mapping only, every check made before anything is read, the phrases
-bound into the token as read and repeated in no answer, and counts
-alone in the journal entry, the run record and the answer. What is
-shown comes last (the third piece): the preview's phrases block, the
-rows and the page that mark the occurrences kept, the warnings and
-answers that count them as left by choice, and every note and answer
-that sends the assistant back to a preview or to the execute asking
-for the same keep_phrases. The fixtures and helpers are the flagship's
-own (`test_v012_pseudonymise_tool.py`) and the occurrences choice's
-(`test_v0153_leave_occurrences.py`, `test_v0153_occurrences_page.py`).
+directly. The call's tests (`keep_phrases`) follow: a typed mapping
+only, every check made before anything is read, the phrases bound into
+the token as read and repeated in no answer, and counts alone in the
+journal entry, the run record and the answer. What is shown comes last:
+the preview's phrases block, the rows and the page that mark the
+occurrences kept, the warnings and answers that count them as left by
+choice, and every note and answer that sends the assistant back to a
+preview or to the execute asking for the same keep_phrases. The fixtures
+and helpers are the flagship's own (`test_v012_pseudonymise_tool.py`)
+and the occurrences choice's (`test_v0153_leave_occurrences.py`,
+`test_v0153_occurrences_page.py`).
 """
 
 import hashlib
@@ -1012,7 +1012,7 @@ class TestTheDescription:
 
 
 # ---------------------------------------------------------------------------
-# What is shown (the third piece)
+# What is shown
 # ---------------------------------------------------------------------------
 
 # A name of two words that runs past the phrase in "Theresa May Smith"
@@ -1059,6 +1059,30 @@ def _named(name):
 def _code_note(folder):
     set_note(folder, "UPDATE code_name SET memo=? WHERE cid=1",
              "May agreed.")
+
+
+# A file that holds no name of the mapping, beside notes that do
+NOBODY = "Nobody is named here."
+KEPT_NOTE = "Theresa May spoke at the opening."
+
+
+def _a_note_kept_whole(folder):
+    """A code's note whose every match lies inside the phrase."""
+    set_note(folder, "UPDATE code_name SET memo=? WHERE cid=1", KEPT_NOTE)
+
+
+def _and_a_lone_name(folder):
+    """That note, and another code's note with a lone name in it."""
+    _a_note_kept_whole(folder)
+    set_note(folder, "UPDATE code_name SET memo=? WHERE cid=2",
+             "May agreed.")
+
+
+def _no_write(monkeypatch):
+    """A write started is a failure: the answers below write nothing."""
+    def no_write(*args, **kwargs):
+        raise AssertionError("a write was started")
+    monkeypatch.setattr(server, "_perform_write", no_write)
 
 
 class TestWhatThePreviewShows:
@@ -1249,6 +1273,61 @@ class TestTheWarnings:
                         preview_of(mapping=MAY, keep_phrases=PHRASE)):
                 assert server._PHRASES_NOT_SAVED_WARNING not in \
                     out["warnings"]
+
+    def test_not_where_no_run_happens(self, tmp_path):
+        """Where no run happens (every occurrence kept, no note to
+        rewrite), the preview says that the mapping would not be saved
+        either, and gives no warning that the phrases are not saved, which
+        speaks of a save. Red with that warning given wherever the save is
+        asked for."""
+        with project_with(tmp_path, ONLY):
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             save_mapping_to_project=True)
+            assert any(warning.startswith(server._EVERY_OCCURRENCE_LEFT)
+                       and "would not be saved either" in warning
+                       for warning in out["warnings"]), out["warnings"]
+            assert server._PHRASES_NOT_SAVED_WARNING not in out["warnings"]
+
+    def test_no_name_in_the_file_and_the_notes_kept(self, tmp_path,
+                                                    monkeypatch):
+        """Where the file holds no name of the mapping and every match in
+        the notes lies inside a phrase, the preview and the execute say
+        that the names in the notes are kept inside phrases, never that
+        no name occurs in any note; the execute writes nothing and takes
+        no backup, and the note keeps its words. Without phrases the same
+        call rewrites the note. Red with the notes' kept count not read,
+        at the preview or at the execute."""
+        with project_with(tmp_path, NOBODY,
+                          setup=_a_note_kept_whole) as folder:
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             rewrite_memos=True)
+            assert out["preview"]["files"] == []
+            assert out["preview"]["memo_rewrites"]["totals"] == {
+                "rows": 0, "replacements": 0, "kept_by_phrases": 1}
+            assert server._NO_NAME_HERE_NOTES_KEPT in out["warnings"], \
+                out["warnings"]
+            assert not any("in any note" in warning
+                           for warning in out["warnings"])
+            plain = preview_of(mapping=MAY, rewrite_memos=True)
+            assert plain["preview"]["memo_rewrites"]["totals"]["rows"] == 1
+            _no_write(monkeypatch)
+            done = execute_from(out, mapping=MAY, keep_phrases=PHRASE)
+            assert done == {"success": True, "nothing_changed": True,
+                            "message": server._NO_NAME_HERE_NOTES_WERE_KEPT}
+            assert backups(folder) == []
+            assert query(folder, "SELECT memo FROM code_name WHERE cid=1"
+                         )[0]["memo"] == KEPT_NOTE
+            saved = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                               rewrite_memos=True,
+                               save_mapping_to_project=True)
+            assert server._NO_NAME_HERE_NOTES_KEPT + \
+                " The mapping would not be saved either" in " ".join(
+                    saved["warnings"]), saved["warnings"]
+            done = execute_from(saved, mapping=MAY, keep_phrases=PHRASE)
+            assert done["message"] == (server._NO_NAME_HERE_NOTES_WERE_KEPT
+                                       + server._NOT_SAVED_NO_RUN), done
+            assert backups(folder) == []
+            assert not (folder / "pseudonyms.json").exists()
 
 
 class TestTheNotesAskForThePhrases:
@@ -1450,3 +1529,76 @@ class TestEveryAnswerAsksForThemAgain:
             assert server._SAVE_INSTEAD in refused["error"], refused
             assert refused["error"].endswith(server._PHRASES_AGAIN)
             assert backups(folder) == []
+
+    def test_the_call_gives_them_where_the_file_holds_no_name(self,
+                                                              tmp_path):
+        """Where the file holds no name and the notes are rewritten, one of
+        them keeping a name inside a phrase, the warnings follow the
+        phrases the call was given, not a file's block, which such a file
+        has not: the retention warning asks for the same keep_phrases,
+        and with the save the warning that the phrases are not saved is
+        given, since the run saves the mapping and keeps a name in a
+        note. Red with the phrases read from the files' blocks alone."""
+        with project_with(tmp_path, NOBODY, setup=_and_a_lone_name):
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             rewrite_memos=True)
+            assert out["preview"]["files"] == []
+            assert out["preview"]["memo_rewrites"]["totals"] == {
+                "rows": 1, "replacements": 1, "kept_by_phrases": 1}
+            asks = [warning for warning in out["warnings"]
+                    if "save_mapping_to_project=true" in warning]
+            assert len(asks) == 1 and asks[0].endswith(
+                server._PHRASES_AGAIN), asks
+            saved = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                               rewrite_memos=True,
+                               save_mapping_to_project=True)
+            assert server._PHRASES_NOT_SAVED_WARNING in saved["warnings"]
+            plain = preview_of(mapping=MAY, rewrite_memos=True,
+                               save_mapping_to_project=True)
+            assert server._PHRASES_NOT_SAVED_WARNING not in \
+                plain["warnings"]
+            assert not any(server._PHRASES_AGAIN in warning
+                           for warning in plain["warnings"])
+
+    def test_a_save_that_conflicts_is_not_sent_to_the_names_list(
+            self, tmp_path):
+        """Where pseudonyms.json already maps a name of the mapping, under
+        the same pseudonym or another, a call given phrases is not told to
+        run with use_project_pseudonyms, which refuses keep_phrases: the
+        preview's warning and the execute's refusal give the typed route
+        without the save, and ask for the same phrases; without phrases
+        each still gives use_project_pseudonyms where the entries are
+        already there. Nothing is written. Red with use_project_pseudonyms
+        given beside the phrases."""
+        with project_with(tmp_path, SPOKE) as folder:
+            for pseudonym, there in (("Participant B", True),
+                                     ("Someone Else", False)):
+                (folder / "pseudonyms.json").write_text(json.dumps(
+                    [{"original": "May", "pseudonym": pseudonym}]),
+                    encoding="utf-8")
+                for phrases in (PHRASE, None):
+                    out = preview_of(mapping=MAY, keep_phrases=phrases,
+                                     save_mapping_to_project=True)
+                    conflict = [warning for warning in out["warnings"]
+                                if warning.startswith(
+                                    "Warning: saving this mapping")]
+                    refused = execute_from(out, mapping=MAY,
+                                           keep_phrases=phrases)
+                    assert refused["reason"] == "pseudonyms_json_conflict"
+                    assert refused.get("nothing_changed") is True
+                    said = [conflict[0], refused["error"]]
+                    if phrases:
+                        for text in said:
+                            assert "use_project_pseudonyms" not in text
+                            assert "without save_mapping_to_project and " \
+                                "execute with researcher_keeps_mapping=" \
+                                "true" in text, text
+                            assert text.endswith(server._PHRASES_AGAIN)
+                    else:
+                        assert "use_project_pseudonyms=true instead" in \
+                            conflict[0]
+                        assert ("use_project_pseudonyms=true instead" in
+                                refused["error"]) is there
+                        assert not any(server._PHRASES_AGAIN in text
+                                       for text in said)
+            assert backups(folder) == [] and stored(folder) == SPOKE

@@ -894,6 +894,9 @@ class TestTheRepeatAndTheRecords:
                 "pseudonyms.json": saved,
                 "log": "\n".join(record.getMessage()
                                  for record in caplog.records)}
+            # The log was read at DEBUG: the token's line is there
+            assert any(record.levelno == logging.DEBUG
+                       for record in caplog.records)
             for place, words in places.items():
                 assert word not in words, place
                 assert "Admiral" not in words, place

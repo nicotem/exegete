@@ -1,62 +1,121 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Whole-file reads in parts (v0.14.3; the import and
-reading design, Part 3).
+"""Whole-file reads in parts (v0.14.3; sized by measuring since v0.15.4).
 
 `read_file_with_codings`, the file resource and the case resource
 returned a whole file's text with no limit: a 1,000,000-character file
 came back as about 250,000 tokens, ten times the 25,000-token cap Claude
-Code puts on one answer, which it then refused or cut. Imports will bring
-longer documents, so these reads now return a part at a time, sized to
-fit that cap with the codings beside it, and say where the next part
-starts. Every position stays a whole-file position.
+Code puts on one answer, which it then refused or cut. These reads
+return a part at a time and say where the next part starts. Every
+position stays a whole-file position.
 
-The size is estimated, not counted (no tokenizer is shipped): JSON as
-these reads write it escapes every character outside ASCII as `\\uXXXX`,
-and such an escape costs several tokens where ordinary English costs
-about one token per three or four characters. The estimate is
-deliberately on the high side for both, so English text gets about
-60,000 characters a part and text in other scripts proportionally fewer.
+A part's end is found by measuring the answer that serves it, as a host
+receives it (`host_bytes`), against BOUND. The answers escape every
+character outside ASCII as `\\uXXXX`, which the second encoding of a
+tool's structured content writes in seven bytes, so a part holds about
+35,000 characters of English and 5,000 to 7,000 of Chinese, Greek,
+Arabic or Hebrew. Every part from a place carries the same share: the
+file's details and memo, and the codings and notes that reach over the
+part's start. When that share passes half the bound, the part's own
+text still keeps half the bound, and the answer passes BOUND (`limit`).
+A coding that reaches beyond a part comes without its passage
+(`in_part`). Until v0.15.4 the end came from an estimate in tokens that
+left the file's memo out, and a coding whose passage alone passed the
+estimate made every part from its start one character long.
 """
 
 import bisect
+import json
 import re
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-# The budget for one answer, in estimated tokens, leaving room under
-# Claude Code's 25,000 for the answer's other fields.
-BUDGET = 20_000
-CHARS_PER_TOKEN = 3.5        # ASCII text, JSON-escaped where needed
-TOKENS_PER_ESCAPE = 3        # one \\uXXXX escape (two for an emoji)
-TOKENS_PER_CODING = 60       # a coding's fields besides its passage
+# The most bytes an answer that serves a part takes as a host receives
+# it: the answer JSON-encoded once more, as a tool's structured content
+# carries it, compact and in UTF-8 (`host_bytes`). Codex gives its model
+# that structured content after a line of its own, cut to the model's
+# budget and a fifth more, with the middle left out and a marker where it
+# was: 48,000 bytes for each of the models in the list Codex carries, and
+# 12,000 bytes, 6,000 from each end, for a model it does not list (Codex
+# 0.167.0's source, read on 10 November 2026). The bound leaves room
+# under the 48,000 for that line; with a model Codex does not list, a
+# part loses its middle. A part's answer of English is about 39,000
+# characters, under the 50,000 at which Claude Code keeps an answer in a
+# file (server.py, TOOL_META).
+BOUND = 40_000
+# The room a resource's part keeps under BOUND for what Codex sends
+# around a resource's contents: the server's name, which the researcher
+# chose, and the address twice (about 120 bytes with the name
+# `exegete`; Codex 0.167.0's source, read on 10 November 2026).
+RESOURCE_ROOM = 500
 
-
-class Costs:
-    """Estimated tokens of any stretch of a text, in constant time."""
-
-    def __init__(self, text: str):
-        self.text = text
-        prefix = [0]
-        running = 0
-        for char in text:
-            code = ord(char)
-            if code > 0xFFFF:
-                running += 2
-            elif code > 0x7F:
-                running += 1
-            prefix.append(running)
-        self.escapes = prefix
-
-    def of(self, start: int, end: int) -> float:
-        if end <= start:
-            return 0.0
-        escapes = self.escapes[end] - self.escapes[start]
-        plain = (end - start) - escapes
-        return max(plain, 0) / CHARS_PER_TOKEN + escapes * TOKENS_PER_ESCAPE
+# What a part's note adds when the text continues, and when one of its
+# codings reaches beyond it
+READ_EVERY_PART = (" Read every part before saying anything about the "
+                   "whole file.")
+BEYOND_PART = (" Codings marked reaches_beyond_part run past this part's "
+               "start or end and come without their passage, which is the "
+               "file's text at their positions.")
 
 
-def estimate(text: Optional[str]) -> float:
-    """Estimated tokens of a short text (a passage, a memo)."""
-    return Costs(text or "").of(0, len(text or ""))
+def host_bytes(answer: str) -> int:
+    """The bytes of `answer` as a host receives it in a tool's
+    structured content, `{"result": answer}`, compact and in UTF-8."""
+    return len(json.dumps({"result": answer}, separators=(",", ":"),
+                          ensure_ascii=False).encode("utf-8"))
+
+
+def limit(least: int, bound: int = BOUND) -> int:
+    """The most bytes for a part whose answer measures `least` bytes with
+    one character of text: `bound`, or more when what every part from
+    that place carries passes half of it, so that the part's own text
+    always keeps half the bound."""
+    return max(bound, least + bound // 2)
+
+
+def furthest(low: int, high: int, size: Callable[[int], int],
+             most: int) -> int:
+    """The largest end from `low` to `high` whose answer, as `size`
+    measures it, is within `most` bytes, found by halving; `low`, one
+    character on, when no end is. Only measured ends are kept."""
+    if size(high) <= most:
+        return high
+    good, over = low, high
+    while over - good > 1:
+        middle = (good + over) // 2
+        if size(middle) <= most:
+            good = middle
+        else:
+            over = middle
+    return good
+
+
+def back_to_break(text: str, start: int, end: int,
+                  size: Callable[[int], int], most: int) -> int:
+    """`end` moved back to just after the last line end, or else the
+    last space, in the part's last fifth, so that a part rarely ends
+    inside a word; each move taken only where the answer measured there
+    is still within `most` bytes. The text's end stays where it is."""
+    if end >= len(text):
+        return end
+    floor = start + (end - start) * 4 // 5
+    for mark in ("\n", " "):
+        cut = text.rfind(mark, floor, end)
+        if cut >= floor and cut + 1 > start and (
+                cut + 1 == end or size(cut + 1) <= most):
+            return cut + 1
+    return end
+
+
+def end_of_part(text: str, start: int, size: Callable[[int], int],
+                bound: int = BOUND) -> int:
+    """Where the part of `text` that begins at `start` ends, `size(end)`
+    being the bytes of the answer that serves the part [start, end) as a
+    host receives it: the furthest end within `limit` of the answer with
+    one character, moved back to a break."""
+    length = len(text)
+    one = min(length, start + 1)
+    most = limit(size(one), bound)
+    end = furthest(one, min(length, start + bound), size, most)
+    return back_to_break(text, start, end, size, most)
 
 
 def overlapping(items: Sequence[Dict[str, Any]], start: int, end: int,
@@ -77,58 +136,28 @@ def overlapping(items: Sequence[Dict[str, Any]], start: int, end: int,
     return chosen
 
 
-def choose_end(text: str, start: int,
-               items: Sequence[Dict[str, Any]] = (),
-               budget: float = BUDGET,
-               costs: Optional[Costs] = None) -> int:
-    """Where the part beginning at `start` ends: the furthest point at
-    which the text and the codings it touches fit the budget, moved back
-    to the end of a line or a space when one is near, so that a part
-    rarely ends inside a word. Always at least one character on."""
-    length = len(text)
-    if start >= length:
-        return length
-    costs = costs or Costs(text)
-    weighted = []
-    for item in items:
-        try:
-            p0, p1 = int(item.get("position_start")), \
-                int(item.get("position_end"))
-        except (TypeError, ValueError):
-            continue
-        weighted.append((p0, p1, TOKENS_PER_CODING + estimate(
-            item.get("text")) + estimate(item.get("memo"))))
-    weighted.sort()
-    starts = [w[0] for w in weighted]
-
-    def cost(end: int) -> float:
-        total = costs.of(start, end)
-        for p0, p1, value in weighted[:bisect.bisect_left(starts, end)]:
-            if p1 > start or (p0 == p1 and p0 >= start):
-                total += value
-        return total
-
-    if cost(length) <= budget:
-        return length
-    low, high = start + 1, length
-    while low < high:
-        middle = (low + high + 1) // 2
-        if cost(middle) <= budget:
-            low = middle
-        else:
-            high = middle - 1
-    end = low
-    floor = start + (end - start) * 4 // 5
-    for mark in ("\n", " "):
-        cut = text.rfind(mark, floor, end)
-        if cut >= floor and cut + 1 > start:
-            return cut + 1
-    return end
+def in_part(codings: Sequence[Dict[str, Any]], start: int,
+            end: int) -> List[Dict[str, Any]]:
+    """The codings that touch the part [start, end) (`overlapping`). One
+    whose words reach outside the part comes as a copy without its
+    passage (`text`), its memo kept, marked `reaches_beyond_part`, so
+    that a long passage is not repeated in every part it crosses."""
+    chosen = []
+    for coding in overlapping(codings, start, end):
+        p0 = int(coding.get("text_start", coding.get("position_start")))
+        p1 = int(coding.get("text_end", coding.get("position_end")))
+        if p0 < start or p1 > end:
+            coding = {key: value for key, value in coding.items()
+                      if key != "text"}
+            coding["reaches_beyond_part"] = True
+        chosen.append(coding)
+    return chosen
 
 
 def part_block(start: int, end: int, length: int,
-               how_to_continue: str) -> Dict[str, Any]:
-    """What a read in parts says about the part it returns."""
+               how_to_continue: str, beyond: bool = False) -> Dict[str, Any]:
+    """What a read in parts says about the part it returns; `beyond`
+    when one of its codings reaches beyond it."""
     block: Dict[str, Any] = {
         "start": start, "end": end, "text_length": length,
         "continues_at": end if end < length else None,
@@ -138,7 +167,10 @@ def part_block(start: int, end: int, length: int,
                  f"suggestions with these positions."),
     }
     if end < length:
-        block["note"] += f" The text continues: {how_to_continue}"
+        block["note"] += (f" The text continues: {how_to_continue}"
+                          + READ_EVERY_PART)
+    if beyond:
+        block["note"] += BEYOND_PART
     return block
 
 

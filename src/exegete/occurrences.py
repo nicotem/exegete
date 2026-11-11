@@ -50,7 +50,11 @@ Before each number stands a tick box, and at the page's foot a bar
 gives the line to copy for the occurrences ticked (`the_line`): the
 file's id, the list's numbering and their numbers, nothing of the text.
 Both are hidden until the page's one script (`PICK_SCRIPT`) runs, so a
-browser that runs none shows the numbers alone. Exegete writes the page
+browser that runs none shows the numbers alone. With phrases to keep
+(v0.15.4), an occurrence inside one is marked in a third style,
+labelled "kept whole, inside a phrase", with its number and id and no
+tick box, so the line leaves it out: the phrases keep it, as long as
+the next preview is given the same ones. Exegete writes the page
 into the file's folder in the reading folder
 (`reading_folder.occurrences_folder`, where pages are private to this
 account, not synced and not indexed) and opens it in the researcher's
@@ -386,6 +390,9 @@ PAGE_FOR_THE_ASSISTANT = (
     "gives them.")
 # The label after an occurrence left by the list the preview was given
 LEFT_LABEL = "left as it is"
+# The label after an occurrence inside a phrase to keep (v0.15.4), which
+# has no tick box: the phrases keep it, not the list
+KEPT_LABEL = "kept whole, inside a phrase"
 # The bar at the page's foot (v0.15.4): its id, which the script finds it
 # by, and its words after the count of boxes ticked. Hidden until the
 # script runs
@@ -560,10 +567,12 @@ DIRECTION_MARKS = {"L": "\u200e", "R": "\u200f", "AL": "\u061c"}
 # and bold number before its id. The margins are set by the line's
 # direction (inline start and end), so that a line of right-to-left text
 # has its number and margin on the right, and every rule names sides by
-# the logical properties alone. What is hidden stays hidden whatever a
-# rule gives it (the boxes and the bar until the script runs), and a
-# printed page leaves both out. The last rules draw each label's mark
-# (DIRECTION_MARKS)
+# the logical properties alone. An occurrence left by the list and one
+# kept inside a phrase (v0.15.4) each have a style of their own, told
+# apart by their outline as well as their colour. What is hidden stays
+# hidden whatever a rule gives it (the boxes, the bar and its skip link
+# until the script runs), and a printed page leaves out the boxes and the
+# bar. The last rules draw each label's mark (DIRECTION_MARKS)
 PAGE_STYLE = """
 [hidden]{display:none!important}
 #text p{padding-inline-start:4.25em;text-indent:-4.25em}
@@ -578,6 +587,8 @@ monospace;margin-block:0;margin-inline:.3em .2em;padding:0 .3em;
 border:1px solid var(--line);border-radius:.3em;background:var(--panel);
 color:var(--fg);white-space:nowrap}
 .id.left{border-style:dashed}
+mark.occ.kept{background:#d7ecd2;outline:2px dotted #3f7a35}
+.id.kept{border-style:dotted}
 .pick{margin-block:0;margin-inline:0 .3em;vertical-align:middle}
 .pick-bar{position:sticky;inset-block-end:0;margin-block:2rem 0;
 padding-block:.2rem;padding-inline:.75rem;background:var(--panel);
@@ -612,7 +623,8 @@ def _lines(text: str) -> List[Tuple[int, int]]:
     return spans
 
 
-def _label(number: int, shown_id: str, left: bool, mark: str = "") -> str:
+def _label(number: int, shown_id: str, left: bool, mark: str = "",
+           kept: bool = False) -> str:
     """An occurrence's label, after it: its tick box, its number in bold
     and its id, "3 · 7k3m9", which a screen reader reads as "occurrence
     3, id 7k3m9" (v0.15.4). The box carries the number (`data-n`), is
@@ -624,15 +636,24 @@ def _label(number: int, shown_id: str, left: bool, mark: str = "") -> str:
     direction, are not turned round by a direction character in the text
     before them, and go wherever the label goes, beside its own
     occurrence. `mark`, a key of DIRECTION_MARKS or "", names the mark
-    the page's style draws after it (`_mark_after`)."""
+    the page's style draws after it (`_mark_after`).
+
+    An occurrence inside a phrase to keep (`kept`, v0.15.4) keeps its
+    number and id and has no box, so no line names it, with KEPT_LABEL
+    after its id."""
     number = int(number)
-    words = f"{esc(shown_id)}, {LEFT_LABEL}" if left else esc(shown_id)
-    kind = ("id" + (" left" if left else "")
+    if kept:
+        left = False
+    words = (f"{esc(shown_id)}, {KEPT_LABEL}" if kept
+             else f"{esc(shown_id)}, {LEFT_LABEL}" if left
+             else esc(shown_id))
+    kind = ("id" + (" kept" if kept else " left" if left else "")
             + (f" bidi-{mark.lower()}" if mark else ""))
-    box = (f'<input type="checkbox" class="pick" data-n="{number}"'
-           + (" checked" if left else "")
-           + f' hidden autocomplete="off" '
-             f'aria-label="leave occurrence {number} as it is">')
+    box = "" if kept else (
+        f'<input type="checkbox" class="pick" data-n="{number}"'
+        + (" checked" if left else "")
+        + f' hidden autocomplete="off" '
+          f'aria-label="leave occurrence {number} as it is">')
     return (f'<span class="{kind}"><bdi dir="ltr">{box}'
             f'<span class="sr">occurrence </span><b>{number}</b>'
             f'<span class="sr">, id </span>'
@@ -802,12 +823,13 @@ def _mark_from(nearest: Optional[Tuple[int, Optional[str], str]],
 
 
 def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
-                left: Collection[int]) -> str:
+                left: Collection[int], kept: Collection[int] = ()) -> str:
     """The text as paragraphs, one per stored line, each after its number;
     each occurrence in a mark, its label after its end, numbered by its
-    place in `marks` from 1 (`_label`). Each line takes the direction of
-    its own first letter (`dir="auto"`), as an editor shows plain text,
-    and each label stands beside its own occurrence, with the mark
+    place in `marks` from 1 (`_label`); those in `kept` (v0.15.4) marked
+    as kept, the others in `left` as left. Each line takes the direction
+    of its own first letter (`dir="auto"`), as an editor shows plain
+    text, and each label stands beside its own occurrence, with the mark
     `_mark_after` gives it where it needs one. An occurrence never
     crosses a line break (the rewrite matches nothing across one); were
     one to, it is marked on each line it covers and labelled once, after
@@ -843,7 +865,8 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
         for cut_start, cut_end, index, last in marked:
             cut_start = max(cut_start, at)
             parts.append(esc(text[at:cut_start]))
-            kind = "occ left" if index in left else "occ"
+            kind = ("occ kept" if index in kept
+                    else "occ left" if index in left else "occ")
             parts.append(f'<mark class="{kind}">'
                          f"{esc(text[cut_start:cut_end])}</mark>")
             if last:
@@ -851,7 +874,7 @@ def _paragraphs(text: str, marks: Sequence[Tuple[int, int, str]],
                                          cut_end - start, direction,
                                          explicit, read)
                 parts.append(_label(index + 1, marks[index][2],
-                                    index in left, mark))
+                                    index in left, mark, index in kept))
             at = max(at, cut_end)
         parts.append(esc(text[at:end]))
         parts.append("</p>")
@@ -868,7 +891,8 @@ def _is_numbering(code: object) -> bool:
 def build_page(*, project_name: str, file_id: int, file_name: str,
                text: str, marks: Sequence[Tuple[int, int, str]],
                left: Collection[int], written_at: datetime, numbering: str,
-               version: str = "", lines_in_preview: bool = True
+               version: str = "", lines_in_preview: bool = True,
+               kept: Optional[Collection[int]] = None
                ) -> Tuple[str, Dict[str, Any]]:
     """The page, and the counts the preview's answer gives.
 
@@ -881,13 +905,23 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
     false where the preview gives no lines (the names list's path): the
     page then numbers its lines for reading only, and says so.
 
+    `kept` (v0.15.4), given where the preview had phrases to keep, holds
+    the positions in `marks` of the occurrences inside one: each keeps
+    its number and id, is marked as kept, with no box, so the line never
+    names it, and the counts give how many (`kept`); one the list leaves
+    too is marked as kept alone. A fact says that these marks hold for
+    the phrases of the preview that wrote the page.
+
     Raises ValueError where `numbering` is not one, so that the bar
     never carries anything else."""
     if not _is_numbering(numbering):
         raise ValueError("A page for choosing needs its list's numbering.")
-    left = set(left)
+    kept_at = set(kept or ())
+    left = set(left) - kept_at
     lines = len(_lines(text))
     counts = {"occurrences": len(marks), "left": len(left), "lines": lines}
+    if kept is not None:
+        counts["kept"] = len(kept_at)
     facts = [
         f"Written at {_when(written_at)}, by a pseudonymisation preview. It "
         f"goes at Exegete's first tidy once it is an hour old, or sooner, "
@@ -915,6 +949,17 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         facts.append(f"{len(left)} occurrences are marked as left as they "
                      f"are, by the list the preview was given: check that "
                      f"they are the ones you meant.")
+    if kept_at:
+        one = len(kept_at) == 1
+        facts.append(
+            f"{_plural(len(kept_at), 'occurrence is', 'occurrences are')} "
+            f"marked as kept whole, inside a phrase the preview was given "
+            f"to keep. {'It has' if one else 'They have'} no tick box and "
+            f"the line leaves {'it' if one else 'them'} out, since the "
+            f"phrases keep {'it' if one else 'them'}. These marks hold for "
+            f"the phrases of the preview that wrote this page: a preview "
+            f"given other phrases, or none, keeps other occurrences, or "
+            f"none.")
     title = f"{esc(file_name)} (choosing occurrences)"
     bar = (
         f'<div id="{PICK_BAR}" class="pick-bar" role="region" '
@@ -943,11 +988,12 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         f"{_plural(len(marks), 'occurrence', 'occurrences')}"
         + (f", {len(left)} left as "
            f"{'it is' if len(left) == 1 else 'they are'}" if left else "")
+        + (f", {len(kept_at)} kept whole" if kept_at else "")
         + ".</p>",
         '<ul class="facts">' + "".join(f"<li>{fact}</li>" for fact in facts)
         + "</ul>",
         f'<p class="for-you">{PAGE_FOR_YOU}</p></header>',
-        f'<main id="text">{_paragraphs(text, marks, left)}</main>',
+        f'<main id="text">{_paragraphs(text, marks, left, kept_at)}</main>',
         bar,
         f"<footer><p>Written by Exegete {esc(version)} on this computer. A "
         "page for choosing: changes to it go nowhere.</p></footer>",

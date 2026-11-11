@@ -21605,7 +21605,9 @@ def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
     it (its `occurrence_ids`, cut as the block cuts them), numbered as
     the block numbers its rows, and those a list leaves (`left_at`)
     marked as left, their boxes ticked; its bar carries the file's id and
-    the list's `numbering` for the line to copy (v0.15.4). The answer
+    the list's `numbering` for the line to copy (v0.15.4). With phrases
+    to keep (v0.15.4), those inside one (`kept_at`) are marked as kept,
+    with no box, and the counts give how many. The answer
     gives whether it opened, the page's counts and the note for the
     assistant; the page's place only when it did not open, beside the
     opener's reason, which names no file; and `not_written_because` when
@@ -21641,7 +21643,7 @@ def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
                    for found, one in zip(item["found"], shown)],
             left=item.get("left_at", ()), written_at=reading.now(),
             numbering=item["numbering"], version=_package_version,
-            lines_in_preview=typed)
+            lines_in_preview=typed, kept=item.get("kept_at"))
         path = reading_folder.write_page(
             reading_folder.occurrences_folder(_current_project_folder(),
                                               file_id),

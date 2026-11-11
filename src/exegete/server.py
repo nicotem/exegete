@@ -24103,7 +24103,9 @@ def pseudonymise_source(
             except _SaveRefused as e:
                 block["if_saved"] = {"error": f"{e.detail}.",
                                      "reason": e.reason}
-        block["note"] = _RETENTION_NOTE_TYPED
+        # Its preview again asks for the phrases too (v0.15.4)
+        block["note"] = _RETENTION_NOTE_TYPED + (_PHRASES_AGAIN if phrases
+                                                 else "")
         return block
 
     def _override_required(preview):
@@ -24475,17 +24477,24 @@ def pseudonymise_source(
                                             typed, compiled)
         if typed and not save and not keeps and "execute_with" in result:
             # Ruling 14a: the preview says which is needed, and the model
-            # finds the two ways forward where it finds the recipe.
+            # finds the two ways forward where it finds the recipe. Its
+            # preview again asks for the phrases too (v0.15.4)
             result["execute_with"]["mapping_retention"] = {
                 "choose_one": ["save_mapping_to_project",
                                "researcher_keeps_mapping"],
-                "message": _RETENTION_ASK}
+                "message": _RETENTION_ASK + (_PHRASES_AGAIN if phrases
+                                             else "")}
         if phrases and "execute_with" in result:
             # The phrases to keep (v0.15.4) are bound and not in the
             # recipe: how many to give again, never their words
             result["execute_with"]["keep_phrases_to_repeat"] = {
                 "phrases": len(phrases),
                 "message": _KEEP_PHRASES_TO_REPEAT}
+        if phrases and isinstance(result.get("error"), str):
+            # Every refusal of a call given phrases to keep (v0.15.4), the
+            # token's, the save's and the write's: the execute, and any
+            # new preview it sends to, needs the same phrases
+            result["error"] += _PHRASES_AGAIN
         if owner_error is not None and "execute_with" in result:
             # The preview carries the ask, so the researcher hears it
             # before approving and the model has the arguments to act on

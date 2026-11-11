@@ -13,10 +13,12 @@ receives it (`host_bytes`), against BOUND. The answers escape every
 character outside ASCII as `\\uXXXX`, which the second encoding of a
 tool's structured content writes in seven bytes, so a part holds about
 35,000 characters of English and 5,000 to 7,000 of Chinese, Greek,
-Arabic or Hebrew. Every part from a place carries the same share: the
-file's details and memo, and the codings and notes that reach over the
-part's start. When that share passes half the bound, the part's own
-text still keeps half the bound, and the answer passes BOUND (`limit`).
+Arabic or Hebrew, fewer where a part holds many codings. Every part
+from a place carries the same share: the file's details and memo, and
+the codings and annotations that reach over the part's start, with
+their memos. When that share passes half the bound, as long memos or
+many codings over the start make it, the part's own text still keeps
+half the bound, and the answer passes BOUND (`limit`).
 A coding that reaches beyond a part comes without its passage
 (`in_part`). Until v0.15.4 the end came from an estimate in tokens that
 left the file's memo out, and a coding whose passage alone passed the
@@ -42,9 +44,9 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 # file (server.py, TOOL_META).
 BOUND = 40_000
 # The room a resource's part keeps under BOUND for what Codex sends
-# around a resource's contents: the server's name, which the researcher
-# chose, and the address twice (about 120 bytes with the name
-# `exegete`; Codex 0.167.0's source, read on 10 November 2026).
+# around a resource's contents: the name under which the researcher
+# added Exegete to Codex, and the address twice (about 120 bytes with
+# the name `exegete`; Codex 0.167.0's source, read on 10 November 2026).
 RESOURCE_ROOM = 500
 
 # What a part's note adds when the text continues, and when one of its
@@ -52,8 +54,8 @@ RESOURCE_ROOM = 500
 READ_EVERY_PART = (" Read every part before saying anything about the "
                    "whole file.")
 BEYOND_PART = (" Codings marked reaches_beyond_part run past this part's "
-               "start or end and come without their passage, which is the "
-               "file's text at their positions.")
+               "start or end and come without their stored passage; the "
+               "file's text at their place is in the parts that cover it.")
 
 
 def host_bytes(answer: str) -> int:

@@ -860,7 +860,9 @@ Each is stated in full by its tool:
   the page gives them, which holds the file, the list's numbering and
   the numbers. You give those alone: the numbers as they are in
   leave_numbers, with the list's numbering (a pasted line's own) in
-  numbering, and every id in leave_occurrences.
+  numbering, and every id in leave_occurrences. Where a preview had
+  keep_phrases, give the same keep_phrases to every preview after it and
+  to the run.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a
@@ -21538,33 +21540,47 @@ _OCCURRENCES_PAGE_WITHHELD = (
 # for the page written last alone: a page of another list, still open,
 # shows numbers that the latest numbering would take for other
 # occurrences, where the line carries its own page's numbering and is
-# refused (v0.15.4; the occurrences design's data reading, point 1)
-_OCCURRENCES_THE_LINE = (
+# refused (v0.15.4). With phrases to keep (v0.15.4) a line, and the
+# preview after it, need the same keep_phrases: no answer repeats them,
+# and a page's kept marks hold for its own preview's phrases alone
+_OCCURRENCES_LINE_EXAMPLE = (
     " On the page they may also tick occurrences and paste the line it "
     "gives, such as \"" + occurrence_ids.the_line(12, "q8x2dm", [3, 7, 12])
     + "\" For a line, give its file in file_id, the line's own numbering in "
-    "numbering, which a preview refuses if the list has changed since, "
-    "and each of its numbers in leave_numbers. Numbers said rather than "
-    "pasted hold for the page written last for this file: where the "
-    "researcher may be reading an earlier page, or another file's, ask "
-    "for the line.")
+    "numbering, which a preview refuses if the list has changed since, ")
+_OCCURRENCES_SAID = (
+    " Numbers said rather than pasted hold for the page written last for "
+    "this file: where the researcher may be reading an earlier page, or "
+    "another file's, ask for the line.")
+_OCCURRENCES_THE_LINE = (
+    _OCCURRENCES_LINE_EXAMPLE + "and each of its numbers in leave_numbers."
+    + _OCCURRENCES_SAID)
+_OCCURRENCES_THE_LINE_KEEPING = (
+    _OCCURRENCES_LINE_EXAMPLE + "each of its numbers in leave_numbers, and "
+    "the same keep_phrases." + _OCCURRENCES_SAID)
 _OCCURRENCES_NEXT_THEN = (
     QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_NUMBERS
     + _OCCURRENCES_THE_LINE
-    + " Then preview again with the same mapping and case_mode, "
-    "choose_occurrences and the list: that preview marks the ones left, "
-    "for the researcher to check, and its token is the one the run needs.")
-_OCCURRENCES_NEXT_OPENED = (
+    + QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_AGAIN)
+_OCCURRENCES_NEXT_THEN_KEEPING = (
+    QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_NUMBERS
+    + _OCCURRENCES_THE_LINE_KEEPING
+    + QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_AGAIN_KEEPING)
+_OCCURRENCES_OPENED = (
     "To leave some of these, ask the researcher which: the page that "
     "opened in their browser shows each occurrence where it stands in the "
-    "text, numbered in bold as this block's rows are, with its id. "
-    + _OCCURRENCES_NEXT_THEN)
-_OCCURRENCES_NEXT_TO_OPEN = (
+    "text, numbered in bold as this block's rows are, with its id. ")
+_OCCURRENCES_TO_OPEN = (
     "To leave some of these, ask the researcher which: the page written "
     "for them shows each occurrence where it stands in the text, numbered "
     "in bold as this block's rows are, with its id, and occurrences_page "
-    "says where it is, since it did not open. "
-    + _OCCURRENCES_NEXT_THEN)
+    "says where it is, since it did not open. ")
+_OCCURRENCES_NEXT_OPENED = _OCCURRENCES_OPENED + _OCCURRENCES_NEXT_THEN
+_OCCURRENCES_NEXT_TO_OPEN = _OCCURRENCES_TO_OPEN + _OCCURRENCES_NEXT_THEN
+_OCCURRENCES_NEXT_OPENED_KEEPING = (
+    _OCCURRENCES_OPENED + _OCCURRENCES_NEXT_THEN_KEEPING)
+_OCCURRENCES_NEXT_TO_OPEN_KEEPING = (
+    _OCCURRENCES_TO_OPEN + _OCCURRENCES_NEXT_THEN_KEEPING)
 # The block's note where it lists the first OCCURRENCES_LISTED alone and a
 # page was written, opened or not: a list is matched against every id
 # issued for the text, listed or not, and numbers count every occurrence,
@@ -21658,26 +21674,35 @@ def _occurrences_page(plan: Optional[Dict[str, Any]], typed: bool,
 
 def _occurrences_next(preview: Dict[str, Any], page: Any) -> None:
     """The occurrences block's next note, naming the page that shows the
-    researcher each id where one was written: the one that opened, or
-    the one whose place the answer gives for them to open. On the names
-    list's path the ids come alone, so without the page the researcher
-    could choose only by counting occurrences in text order. Where none
-    was written the block's own note, which names no page, stands.
+    researcher each occurrence with its number in bold and its id, where
+    one was written: the one that opened, or the one whose place the
+    answer gives for them to open. On the names list's path the rows
+    give numbers and ids alone, so without the page the researcher could
+    choose only by counting occurrences in text order. Where none was
+    written the block's own note, which names no page, stands. Where the
+    preview had phrases to keep (the file's `phrases` block, v0.15.4),
+    the note asks for the same keep_phrases with a pasted line and on
+    the next preview.
 
     Where the block lists the first OCCURRENCES_LISTED alone
     (`listed_in_part`) and the page was written, it gains `note`: the
-    page shows them all, and any of their ids may be given, with a list
-    or without one."""
+    page shows them all, and any of them may be given, by number, by id
+    or in the line, with a list or without one."""
     if not isinstance(page, dict) or "note" not in page:
         return
-    words = (_OCCURRENCES_NEXT_OPENED if page.get("opened")
-             else _OCCURRENCES_NEXT_TO_OPEN)
     for item in preview.get("files", []):
         block = item.get("occurrences")
         if not isinstance(block, dict):
             continue
         if "next" in block:
-            block["next"] = words
+            if "phrases" in item:
+                block["next"] = (_OCCURRENCES_NEXT_OPENED_KEEPING
+                                 if page.get("opened")
+                                 else _OCCURRENCES_NEXT_TO_OPEN_KEEPING)
+            else:
+                block["next"] = (_OCCURRENCES_NEXT_OPENED
+                                 if page.get("opened")
+                                 else _OCCURRENCES_NEXT_TO_OPEN)
         if block.get("listed_in_part"):
             block["note"] = _OCCURRENCES_LISTED_IN_PART_NOTE
 

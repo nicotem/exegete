@@ -727,18 +727,23 @@ class TestTheDocumentsSayTheRule:
         privacy = _flat("PRIVACY.md")
         # (v0.15.4, PRIVACY read whole: the rule as it stands, without
         # the release it came in)
-        assert ("Neither carries SQLite's message, which can quote a note, "
-                "private part included: an error from the database is "
-                "reported by its kind and SQLite's short name for it") \
-            in privacy
+        # (v0.15.4, the readability reading: the reason first, then the
+        # rule, each a sentence)
+        assert ("SQLite's own error message can quote a note, its private "
+                "part included. So neither the answer nor the log carries "
+                "that message. An error from the database is reported by "
+                "its kind and SQLite's short name for it") in privacy
         # (v0.15.4, the claims audit's point 52: the resources answer as
         # content the errors Exegete meets; an id that is not a number is
         # refused by the MCP library first, as a protocol error)
-        assert ("The resources (the `exegete://` addresses) answer an error "
-                "that Exegete meets as their content, as a tool does") \
-            in privacy
-        assert ("is refused by the MCP library before Exegete sees it, with "
-                "a protocol error") in privacy
+        # (and its readability reading: the resources and the MCP library
+        # named before the rule)
+        assert ("A resource answers an error that Exegete meets as its "
+                "content, as a tool does") in privacy
+        assert ("The MCP library refuses an address whose id is not a "
+                "number, such as `exegete://codes/abc`, before Exegete sees "
+                "it. Its refusal, a protocol error, quotes what was sent, and "
+                "the library logs no error for it.") in privacy
 
     def test_install_no_longer_says_the_log_quotes_a_note(self):
         install = _flat("INSTALL.md")
@@ -1007,8 +1012,11 @@ class TestTheDocumentsSayWhatTheLogCarries:
                 "Developer > Show Logs opens) can hold every request and "
                 "every answer") in privacy
         assert "lists message exchanges among what Claude" in privacy
-        assert ("The rule closes one channel, SQLite's message; it does "
-                "not make a project built to leak safe to open.") in privacy
+        # (v0.15.4, the readability reading: two sentences, the project
+        # "built to leak" said with its subject)
+        assert ("Keeping SQLite's message out closes one channel only. It "
+                "does not make a project that someone built to leak its "
+                "notes safe to open.") in privacy
         # (the staleness audit of 20 October 2026, and its fix round: held
         # to the code) Three parts of Exegete read the secret: the tokens,
         # pseudonymise_source's run manifests and the texts an import's
@@ -1028,8 +1036,10 @@ class TestTheDocumentsSayWhatTheLogCarries:
                                        "(`~/.exegete/preview_secret`)"):]
         secret = secret[:secret.index("logs that it did")]
         for use, lost in (
+                # (v0.15.4, the readability reading: what losing the
+                # secret does to a preview, in plain words)
                 ("sign the tokens that approve a two-step operation",
-                 "invalidates outstanding preview tokens"),
+                 "previews not yet carried out lose their tokens"),
                 ("key the digests in the pseudonymisation run records",
                  "the keyed digests in the run records already written "
                  "can then no longer be checked"),

@@ -1986,7 +1986,9 @@ class TestHiddenCodersOnTheCodebook:
                      "the answer of `create_code`, `create_category` or "
                      "`create_case` when the name already exists"):
             assert tool in privacy, tool
-        assert "its `file_info` still gives the file's owner" in privacy
+        # (v0.15.4, the readability reading: a sentence of its own)
+        assert ("The file view's `file_info` still gives the file's owner, "
+                "hidden or not.") in privacy
 
     def test_the_other_rows_a_hidden_coder_owns_name_them(self, tmp_path):
         """Fix round 1: a file, a case and a journal entry owned by the

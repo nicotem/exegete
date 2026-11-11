@@ -207,12 +207,16 @@ class TestTheRefusalNamesBothCauses:
         # where "Remember" was an instruction; the facts as they were)
         assert (("- **What Exegete's safety features protect**: your "
                  "project's **integrity on disk**. They are the read-only "
-                 "default, the automatic local backups, the refusal to write "
-                 "while the project's lock file is active (QualCoder 3.8.2 "
-                 "keeps it while it has the project open, and Exegete during "
-                 "each of its own writes), and, for QualCoder 4.0, a "
-                 "best-effort check of this machine's process list that "
-                 "reports only a count, never names or command lines.")) in privacy
+                 # (v0.15.4, the readability reading: who keeps the lock
+                 # file, and the check for QualCoder 4.0, sentences of
+                 # their own)
+                 "default, the automatic local backups, and the refusal to "
+                 "write while the project's lock file is active. QualCoder "
+                 "3.8.2 keeps that file while it has the project open, and "
+                 "Exegete during each of its own writes. For QualCoder 4.0, "
+                 "there is also a best-effort check of this machine's "
+                 "process list, which reports only a count, never names or "
+                 "command lines.")) in privacy
 
     def test_the_project_selection_guide(self):
         guide = _flat(_read("PROJECT_SELECTION_GUIDE.md"))

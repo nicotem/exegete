@@ -615,8 +615,10 @@ def test_the_documents_say_so():
     privacy = flat("PRIVACY.md")
     assert "\"AgnËs\" when a file from Windows is opened as the Mac's own " \
         "set" in privacy
-    assert "each saying how to open it in the encoding it was saved in" \
-        in privacy
+    # (v0.15.4, the readability reading: the apps' steps, in a sentence
+    # of their own)
+    assert "each app's steps say how to open the file in the encoding it " \
+        "was saved in" in privacy
     changelog = flat("CHANGELOG.md")
     entry = changelog[changelog.index("## [0.14.3-alpha]"):
                       changelog.index("## [0.14.2-alpha]")]

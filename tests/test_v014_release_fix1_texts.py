@@ -180,7 +180,9 @@ def test_privacy_says_the_export_guard_decides_by_the_folder():
     assert ("export tools refuse paths inside this folder, and inside the "
             "project folder, by which folder a path really is, not by how "
             "it is spelled") in _flat(privacy)
-    assert "(since 0.14.2; before, a Mac let such a spelling through)" in \
+    # (v0.15.4, the readability reading: the history a sentence of its
+    # own)
+    assert "Before 0.14.2, a Mac let such a spelling through." in \
         _flat(privacy)
 
 

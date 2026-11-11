@@ -16,12 +16,17 @@ The first tests drive the engine, the plan, the preview and the write
 directly. The call's (`keep_phrases`, the second piece) follow: a typed
 mapping only, every check made before anything is read, the phrases
 bound into the token as read and repeated in no answer, and counts
-alone in the journal entry, the run record and the answer. The
-fixtures and helpers are the flagship's own
-(`test_v012_pseudonymise_tool.py`) and the occurrences choice's
-(`test_v0153_leave_occurrences.py`).
+alone in the journal entry, the run record and the answer. What is
+shown comes last (the third piece): the preview's phrases block, the
+rows and the page that mark the occurrences kept, the warnings and
+answers that count them as left by choice, and every note and answer
+that sends the assistant back to a preview or to the execute asking
+for the same keep_phrases. The fixtures and helpers are the flagship's
+own (`test_v012_pseudonymise_tool.py`) and the occurrences choice's
+(`test_v0153_leave_occurrences.py`, `test_v0153_occurrences_page.py`).
 """
 
+import hashlib
 import inspect
 import json
 import logging
@@ -50,7 +55,9 @@ from test_v012_pseudonymise_tool import (  # noqa: E402
     execute_from, hide_coder, preview_of, query, wired)
 from test_v0153_leave_occurrences import (  # noqa: E402
     AT_BDE966C, choose, journal_text)
-from test_v0153_occurrence_ids import names_list  # noqa: E402
+from test_v0153_occurrence_ids import block, names_list  # noqa: E402
+from test_v0153_occurrences_page import (  # noqa: E402
+    block_the_reading_folder, opened_as, page_of)
 
 # A public figure who shares a participant's first name, and a
 # pseudonym of another length than the name
@@ -1002,3 +1009,444 @@ class TestTheDescription:
         schema = tool.parameters["properties"]["keep_phrases"]
         assert {"items": {"type": "string"}, "type": "array"} in \
             schema["anyOf"], schema
+
+
+# ---------------------------------------------------------------------------
+# What is shown (the third piece)
+# ---------------------------------------------------------------------------
+
+# A name of two words that runs past the phrase in "Theresa May Smith"
+CUT_MAPPING = [{"original": "May", "pseudonym": "Participant B"},
+               {"original": "May Smith", "pseudonym": "Dana Field"}]
+CUT_TEXT = "Theresa May Smith arrived. Theresa May spoke. Then May left."
+# What the file-text warning called an occurrence left by a list, the
+# only kind before phrases (tests/test_v0153_left_by_choice.py)
+CHOSEN = "chosen to be left as they were"
+# The notes that send the assistant back to a preview, and the retention
+# texts, as at 3406aba and 834479b, by the SHA-256 of their text: a
+# preview without phrases gives each of them unchanged
+AS_BEFORE = {
+    "PSEUDONYMISE_OCCURRENCES_NEXT":
+        "66d584e5127190aeb06edbebd07167a6041dab4813d5490956d401d97937a2bc",
+    "_OCCURRENCES_NEXT_OPENED":
+        "dc0473d80215508f389085dc726bb7243e434f0f39aa7ebdb270b6d959120850",
+    "_OCCURRENCES_NEXT_TO_OPEN":
+        "66baa73aafdc438a2a5e812555fd6594e85d41000e77bab77e05df86e336f52e",
+    "_OCCURRENCES_THE_LINE":
+        "ef54677d4bbeaf06555280049832eae7375fb2fd54f29201b8c0dbd0c27c3de8",
+    "_RETENTION_ASK":
+        "369cc14282debf90fad3eca264008ebf6a092f3fd90f0377995cefcfa9844b22",
+    "_RETENTION_NOTE_TYPED":
+        "e5f32dc808b22107478ea08bc84391fef392166c9b13f8d8a4f6fca89ac28f2d",
+}
+# A label on the page for an occurrence kept inside a phrase: its words,
+# its number and its id, and no tick box
+KEPT_MARK = re.compile(
+    r'<mark class="occ kept">([^<]*)</mark><span class="id kept[^"]*">'
+    r'<bdi dir="ltr"><span class="sr">occurrence </span><b>(\d+)</b>'
+    r'<span class="sr">, id </span><span class="dot" aria-hidden="true">'
+    r' · </span>([0-9a-z]+), ' + re.escape(occurrences.KEPT_LABEL)
+    + r"</bdi></span>")
+BOX = re.compile(r'<input type="checkbox" class="pick" data-n="(\d+)"')
+
+
+def _named(name):
+    """A note or text of server.py or of the database class, by name."""
+    return getattr(QualcoderDatabase if name.startswith("PSEUDONYMISE")
+                   else server, name)
+
+
+def _code_note(folder):
+    set_note(folder, "UPDATE code_name SET memo=? WHERE cid=1",
+             "May agreed.")
+
+
+class TestWhatThePreviewShows:
+
+    def test_the_phrases_block(self, tmp_path):
+        """Each file's phrases block gives, by each phrase's number in the
+        list given, how often it occurs, the names it keeps and those that
+        run past it, as the plan counts them, and how many it keeps that
+        no list leaves; the entries' counts stay those of the occurrences
+        as found. No phrase is quoted, and without phrases there is no
+        block. Red without the block."""
+        with project_with(tmp_path, CUT_TEXT):
+            out = preview_of(mapping=CUT_MAPPING,
+                             keep_phrases=["Theresa May", "May Day"])
+            assert "preview_token" in out, out
+            entry = out["preview"]["files"][0]
+            assert entry["phrases"] == {
+                "kept": 1,
+                "each": [{"number": 1, "occurs": 2, "keeps": 1, "cut": 1},
+                         {"number": 2, "occurs": 0, "keeps": 0, "cut": 0}],
+                "note": QualcoderDatabase.PSEUDONYMISE_PHRASES_NOTE}
+            assert [(block_["entry"], block_["count"])
+                    for block_ in entry["replacements"]] == [(0, 2), (1, 1)]
+            assert out["preview"]["totals"]["replacements"] == 2
+            shown = json.dumps(out, ensure_ascii=False)
+            assert "Theresa" not in shown and "May Day" not in shown
+            plain = preview_of(mapping=CUT_MAPPING)
+            assert "phrases" not in plain["preview"]["files"][0]
+
+    def test_kept_rows_in_the_occurrences_block(self, tmp_path):
+        """With choose_occurrences, the row of an occurrence inside a
+        phrase is marked kept beside its line, its number and id those a
+        preview without phrases gives, and the block says what the mark
+        means; the other row is not marked. Red with the rows unmarked."""
+        with project_with(tmp_path, SPOKE):
+            plain = block(preview_of(mapping=MAY, choose_occurrences=True))
+            kept = block(preview_of(mapping=MAY, keep_phrases=PHRASE,
+                                    choose_occurrences=True))
+            assert [row.get("kept", False) for row in kept["listed"]] == [
+                True, False]
+            assert [{key: value for key, value in row.items()
+                     if key != "kept"} for row in kept["listed"]] == \
+                plain["listed"]
+            assert kept["numbering"] == plain["numbering"]
+            assert kept["kept_note"] == \
+                QualcoderDatabase.PSEUDONYMISE_OCCURRENCES_KEPT_NOTE
+            assert "kept_note" not in plain
+
+    def test_the_note_rewrite_counts_and_its_note(self, tmp_path):
+        """With rewrite_memos, memo_rewrites counts the matches kept inside
+        a phrase in the notes, as the run's answer counts them, and the
+        residue's note on the counts after the rewrite gains its sentence
+        on phrases; without phrases neither is there. Red with either
+        removed."""
+        with project_with(tmp_path, SPOKE, setup=_notes):
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             rewrite_memos=True)
+            totals = out["preview"]["memo_rewrites"]["totals"]
+            assert totals == {"rows": 1, "replacements": 1,
+                              "kept_by_phrases": 1}
+            assert out["preview"]["residue"]["after_rewrite_note"] == (
+                QualcoderDatabase.PSEUDONYMISE_AFTER_REWRITE_NOTE
+                + QualcoderDatabase.PSEUDONYMISE_AFTER_REWRITE_PHRASES)
+            plain = preview_of(mapping=MAY, rewrite_memos=True)
+            assert "kept_by_phrases" not in plain["preview"][
+                "memo_rewrites"]["totals"]
+            assert plain["preview"]["residue"]["after_rewrite_note"] == \
+                QualcoderDatabase.PSEUDONYMISE_AFTER_REWRITE_NOTE
+            done = execute_from(out, mapping=MAY, keep_phrases=PHRASE)
+            assert done.get("success") is True, done
+            assert done["memos"]["totals"]["kept_by_phrases"] == \
+                totals["kept_by_phrases"]
+
+
+class TestTheWarnings:
+
+    def test_a_name_running_past_a_phrase(self, tmp_path):
+        """The names that run past a phrase are replaced, and a warning
+        says so by the phrase's number; there is none without phrases, nor
+        where no name runs past one. Red without the warning."""
+        head = server._PHRASES_CUT_WARNING.split("{")[0]
+        with project_with(tmp_path, CUT_TEXT):
+            out = preview_of(mapping=CUT_MAPPING,
+                             keep_phrases=["May Day", "Theresa May"])
+            assert server._PHRASES_CUT_WARNING.format(numbers="2") in \
+                out["warnings"], out["warnings"]
+            for other in (preview_of(mapping=CUT_MAPPING),
+                          preview_of(mapping=CUT_MAPPING,
+                                     keep_phrases=["Then May"])):
+                assert not any(warning.startswith(head)
+                               for warning in other["warnings"])
+        assert server._phrase_numbers([1, 2, 4]) == "1, 2 and 4"
+        assert server._phrase_numbers([1, 3]) == "1 and 3"
+
+    def test_kept_occurrences_are_left_by_choice(self, tmp_path):
+        """The occurrence kept is counted under left_by_choice, the
+        warning on the occurrences left gives their number with the
+        phrases' share, and no warning calls a kept occurrence one chosen
+        to be left. Red with the phrases' share left out of the count or
+        of the warning, or the file-text warning's words as before."""
+        text = SPOKE + "\nA Mayday call."
+        with project_with(tmp_path, text):
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE)
+            totals = out["preview"]["residue"]["file_text"]["totals"]
+            assert totals["by_reason"]["left_by_choice"] == 1
+            assert totals["occurrences"]["wide"] == 2
+            share = server._OCCURRENCES_KEPT_SHARE.format(kept=1)
+            assert server._OCCURRENCES_LEFT_WARNING.format(
+                left=1, kept=share) in out["warnings"], out["warnings"]
+            assert not any(CHOSEN in warning for warning in out["warnings"])
+            assert any(warning.startswith("Warning: after this run, 2 ")
+                       and "inside a phrase to keep" in warning
+                       for warning in out["warnings"]), out["warnings"]
+
+    def test_the_file_text_warning_names_what_left_them(self):
+        """Its words for the occurrences under left_by_choice follow what
+        left them: a list, as before; phrases to keep; or both."""
+        totals = {"occurrences": {"wide": 3, "whole_word": 2},
+                  "by_reason": {"left_by_choice": 2,
+                                "inside_a_longer_word": 1},
+                  "files_showing_a_name": 1}
+        said = {left_by: server._pseudonymise_file_text_warning(
+            {"totals": totals}, left_by=left_by)
+            for left_by in ("list", "phrases", "both")}
+        assert said["list"] == server._pseudonymise_file_text_warning(
+            {"totals": totals})
+        assert CHOSEN in said["list"] and "phrase" not in said["list"]
+        assert CHOSEN not in said["phrases"]
+        assert said["phrases"].count("inside a phrase to keep") == 2
+        assert CHOSEN in said["both"] and "phrase" in said["both"]
+        every = dict(totals, occurrences={"wide": 2, "whole_word": 2},
+                     by_reason={"left_by_choice": 2},
+                     files_whole_word_above_wide=1)
+        assert "all of them inside a phrase to keep" in \
+            server._pseudonymise_file_text_warning(
+                {"totals": every}, left_by="phrases")
+
+    def test_every_occurrence_kept(self, tmp_path, monkeypatch):
+        """Where the phrases keep every occurrence and no note is to be
+        rewritten, the preview says that every occurrence is left by
+        choice, and the execute answers that every occurrence was left,
+        with no write and no backup: never that no name of the mapping
+        occurs. Red with the phrases' count not read."""
+        with project_with(tmp_path, ONLY) as folder:
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE)
+            assert server._EVERY_OCCURRENCE_LEFT in out["warnings"]
+            said = server._EVERY_OCCURRENCE_LEFT_WARNING.format(
+                left=1, kept=server._OCCURRENCES_KEPT_SHARE.format(kept=1)
+                + ",")
+            assert any(warning.startswith(said)
+                       for warning in out["warnings"]), out["warnings"]
+            assert not any("None of the names" in warning
+                           for warning in out["warnings"])
+
+            def no_write(*args, **kwargs):
+                raise AssertionError("a write was started")
+            monkeypatch.setattr(server, "_perform_write", no_write)
+            done = execute_from(out, mapping=MAY, keep_phrases=PHRASE)
+            assert done == {"success": True, "nothing_changed": True,
+                            "message": server._EVERY_OCCURRENCE_WAS_LEFT}
+            assert backups(folder) == [] and stored(folder) == ONLY
+
+    def test_every_occurrence_kept_with_a_note_to_rewrite(self, tmp_path):
+        """With rewrite_memos and a note to rewrite, the preview says that
+        every occurrence in the file is left by choice and that the run
+        rewrites the notes alone, never that no name occurs. Red with the
+        branch as before."""
+        with project_with(tmp_path, ONLY, setup=_code_note):
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             rewrite_memos=True)
+            assert server._EVERY_OCCURRENCE_LEFT_NOTES.format(rows=1) in \
+                out["warnings"], out["warnings"]
+            assert server._EVERY_OCCURRENCE_LEFT not in out["warnings"]
+            assert not any("None of the names" in warning
+                           for warning in out["warnings"])
+
+    def test_the_phrases_are_not_saved(self, tmp_path):
+        """With save_mapping_to_project, a warning says that the phrases
+        are not saved with the mapping, so that a later run without them,
+        or an import that applies the names list, replaces the names they
+        keep; there is none without phrases, nor without the save. Red
+        without the warning."""
+        with project_with(tmp_path, SPOKE):
+            saved = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                               save_mapping_to_project=True)
+            assert server._PHRASES_NOT_SAVED_WARNING in saved["warnings"]
+            for out in (preview_of(mapping=MAY, save_mapping_to_project=True),
+                        preview_of(mapping=MAY, keep_phrases=PHRASE)):
+                assert server._PHRASES_NOT_SAVED_WARNING not in \
+                    out["warnings"]
+
+
+class TestTheNotesAskForThePhrases:
+
+    def test_without_phrases_each_is_as_before(self):
+        """Each note that sends the assistant back to a preview, the line's
+        sentence and the retention texts, as a preview without phrases
+        gives them, are the words of 3406aba, and none names
+        keep_phrases."""
+        for name, digest in AS_BEFORE.items():
+            text = _named(name)
+            assert hashlib.sha256(text.encode("utf-8")).hexdigest() == \
+                digest, name
+            assert "keep_phrases" not in text, name
+
+    def test_with_phrases_each_asks_for_them(self, tmp_path, monkeypatch):
+        """With phrases, the block's own note, both notes that name the
+        page and their sentence on a pasted line ask for the same
+        keep_phrases, each the note without phrases but for that; through
+        the tool, each is given where the preview had phrases and the
+        note as before where it had none. Red with any note as before."""
+        pairs = (("PSEUDONYMISE_OCCURRENCES_NEXT",
+                  "PSEUDONYMISE_OCCURRENCES_NEXT_KEEPING"),
+                 ("_OCCURRENCES_NEXT_OPENED",
+                  "_OCCURRENCES_NEXT_OPENED_KEEPING"),
+                 ("_OCCURRENCES_NEXT_TO_OPEN",
+                  "_OCCURRENCES_NEXT_TO_OPEN_KEEPING"),
+                 ("_OCCURRENCES_THE_LINE", "_OCCURRENCES_THE_LINE_KEEPING"))
+        for plain, keeping in pairs:
+            words = _named(keeping)
+            assert "the same keep_phrases" in words or \
+                "case_mode and keep_phrases" in words, keeping
+            assert words.replace(
+                "the same mapping, case_mode and keep_phrases,",
+                "the same mapping and case_mode,").replace(
+                "each of its numbers in leave_numbers, and the same "
+                "keep_phrases.", "and each of its numbers in "
+                "leave_numbers.") == _named(plain), keeping
+        assert "the same keep_phrases" in \
+            server._OCCURRENCES_NEXT_TO_OPEN_KEEPING
+        with project_with(tmp_path, SPOKE) as folder:
+            for phrases, words in ((PHRASE, "_KEEPING"), (None, "")):
+                out = preview_of(mapping=MAY, keep_phrases=phrases,
+                                 choose_occurrences=True)
+                assert block(out)["next"] == _named(
+                    "_OCCURRENCES_NEXT_TO_OPEN" + words)
+            top = block_the_reading_folder(folder)
+            for phrases, words in ((PHRASE, "_KEEPING"), (None, "")):
+                out = preview_of(mapping=MAY, keep_phrases=phrases,
+                                 choose_occurrences=True)
+                assert block(out)["next"] == _named(
+                    "PSEUDONYMISE_OCCURRENCES_NEXT" + words)
+            top.unlink()
+            opened_as(monkeypatch)
+            for phrases, words in ((PHRASE, "_KEEPING"), (None, "")):
+                out = preview_of(mapping=MAY, keep_phrases=phrases,
+                                 choose_occurrences=True)
+                assert block(out)["next"] == _named(
+                    "_OCCURRENCES_NEXT_OPENED" + words)
+
+    def test_the_brief_names_them(self):
+        """The brief's line on choosing occurrences says to give the same
+        keep_phrases, where a preview had them, to every preview after it
+        and to the run. Red with the brief as before."""
+        brief = " ".join(server.BRIEF_FULL.split())
+        start = brief.index("- When the researcher wants to leave some "
+                            "occurrences")
+        line = brief[start:brief.index(" - ", start + 2)]
+        assert "keep_phrases" in line, line
+        assert "every preview after it" in line and "the run" in line
+
+
+class TestThePageMarksTheKept:
+
+    def test_kept_marks(self, tmp_path):
+        """On the page an occurrence inside a phrase keeps its number and
+        id, as the block's rows give them, and is marked kept whole, with
+        no tick box, so no line can name it; the counts give how many,
+        and a fact says that these marks hold for the phrases of the
+        preview that wrote the page. Without phrases the page is as
+        before. Red with the kept places not given to the page."""
+        with project_with(tmp_path, SPOKE) as folder:
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             choose_occurrences=True)
+            rows = block(out)["listed"]
+            page = page_of(folder)
+            main = page[page.index('<main id="text">'):page.index("</main>")]
+            assert KEPT_MARK.findall(main) == [("May", "1", rows[0]["id"])]
+            assert BOX.findall(page) == ["2"]
+            assert out["occurrences_page"]["counts"] == {
+                "occurrences": 2, "left": 0, "lines": 3, "kept": 1}
+            facts = " ".join(page.split())
+            facts = facts[facts.index('<ul class="facts">'):
+                          facts.index("</ul>")]
+            assert "kept whole" in facts
+            assert "hold for the phrases of the preview that wrote this " \
+                "page" in facts
+            preview_of(mapping=MAY, choose_occurrences=True)
+            page = page_of(folder)
+            assert not KEPT_MARK.findall(page) and "kept" not in BOX.sub(
+                "", page[page.index("<main"):page.index("</main>")])
+            assert BOX.findall(page) == ["1", "2"]
+
+    def test_kept_and_left_shows_as_kept(self, tmp_path):
+        """An occurrence a list leaves and a phrase keeps is marked kept,
+        with no box: the phrases keep it whatever the line says; the
+        counts give it as kept, not left."""
+        with project_with(tmp_path, SPOKE) as folder:
+            code = block(preview_of(mapping=MAY,
+                                    choose_occurrences=True))["numbering"]
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             choose_occurrences=True, leave_numbers=[1, 2],
+                             numbering=code)
+            assert "preview_token" in out, out
+            page = page_of(folder)
+            assert [number for _w, number, _id in KEPT_MARK.findall(page)] \
+                == ["1"]
+            assert re.findall(r'data-n="(\d+)" checked', page) == ["2"]
+            assert out["occurrences_page"]["counts"] == {
+                "occurrences": 2, "left": 1, "lines": 3, "kept": 1}
+
+    def test_a_page_given_no_phrases_counts_none(self):
+        """A page built without phrases has no kept count, and one built
+        with phrases that keep nothing counts 0."""
+        common = dict(project_name="p", file_id=1, file_name="f.txt",
+                      text="May.", marks=[(0, 3, "aaaaa")], left=set(),
+                      written_at=datetime(2026, 11, 11, 9, 0),
+                      numbering="q8x2dm")
+        assert "kept" not in occurrences.build_page(**common)[1]
+        assert occurrences.build_page(kept=[], **common)[1]["kept"] == 0
+
+
+class TestEveryAnswerAsksForThemAgain:
+
+    def test_the_retention_texts_and_the_repeat(self, tmp_path):
+        """With phrases, the retention ask in execute_with, the preview's
+        retention note and its warning, each of which sends the assistant
+        to a new preview, ask for the same keep_phrases, and so does what
+        execute_with says of them; without phrases each is as before. Red
+        with the sentence left out of any."""
+        with project_with(tmp_path, SPOKE):
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE)
+            assert out["execute_with"]["mapping_retention"]["message"] == \
+                server._RETENTION_ASK + server._PHRASES_AGAIN
+            assert out["preview"]["mapping_retention"]["note"] == \
+                server._RETENTION_NOTE_TYPED + server._PHRASES_AGAIN
+            asks = [warning for warning in out["warnings"]
+                    if "save_mapping_to_project=true" in warning]
+            assert len(asks) == 1 and asks[0].endswith(
+                server._PHRASES_AGAIN), asks
+            assert "any new preview" in \
+                out["execute_with"]["keep_phrases_to_repeat"]["message"]
+            plain = preview_of(mapping=MAY)
+            assert plain["execute_with"]["mapping_retention"]["message"] \
+                == server._RETENTION_ASK
+            assert plain["preview"]["mapping_retention"]["note"] == \
+                server._RETENTION_NOTE_TYPED
+            assert not any(server._PHRASES_AGAIN in warning
+                           for warning in plain["warnings"])
+
+    def test_every_refusal_asks_for_them(self, tmp_path):
+        """Each refusal of a call given phrases, after they are checked,
+        asks for the same keep_phrases on the execute and on any new
+        preview: the token's (not one Exegete issued, another operation,
+        the project changed), the retention's and the save's, which sends
+        to a preview without save_mapping_to_project; the same calls
+        without phrases are refused as before. Red with the sentence not
+        added."""
+        with project_with(tmp_path, SPOKE) as folder:
+            token = preview_of(mapping=MAY)["preview_token"]
+            for phrases in (PHRASE, None):
+                again = server._PHRASES_AGAIN if phrases else ""
+                refused = call(mapping=MAY, keep_phrases=phrases,
+                               preview_token="qcp2.1.aaaa.bbbb")
+                assert refused["reason"] == "token_malformed", refused
+                assert refused["error"].endswith(again) and (
+                    phrases or server._PHRASES_AGAIN not in refused["error"])
+                out = preview_of(mapping=MAY, keep_phrases=phrases)
+                refused = execute_from(out, mapping=MAY,
+                                       keep_phrases=phrases,
+                                       researcher_keeps_mapping=False)
+                assert refused["reason"] == "mapping_retention_required"
+                assert refused["error"] == server._RETENTION_REQUIRED + again
+            refused = call(mapping=MAY, keep_phrases=PHRASE,
+                           preview_token=token)
+            assert refused["reason"] == pt.OTHER_OPERATION, refused
+            assert refused["error"].endswith(server._PHRASES_AGAIN)
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE)
+            set_note(folder, "UPDATE source SET fulltext=? WHERE id=1",
+                     SPOKE + " More.")
+            refused = execute_from(out, mapping=MAY, keep_phrases=PHRASE)
+            assert refused.get("nothing_changed") is True, refused
+            assert refused["error"].endswith(server._PHRASES_AGAIN)
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             save_mapping_to_project=True)
+            (folder / "pseudonyms.json").write_text("not a list",
+                                                    encoding="utf-8")
+            refused = execute_from(out, mapping=MAY, keep_phrases=PHRASE)
+            assert server._SAVE_INSTEAD in refused["error"], refused
+            assert refused["error"].endswith(server._PHRASES_AGAIN)
+            assert backups(folder) == []

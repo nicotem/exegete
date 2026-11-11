@@ -205,3 +205,131 @@ class TestTheServedTexts:
         features = " ".join(overview["key_features"])
         assert FOLDER in features
         assert "saved on this computer" not in features
+
+
+# ---------------------------------------------------------------------------
+# 2. The documents
+# ---------------------------------------------------------------------------
+
+class TestTheDocuments:
+
+    def test_tools_entries_of_the_session_tools(self):
+        """TOOLS.md's entries say where a session is kept (start), what the
+        list holds and flags, what a delete removes and leaves, what apply
+        and create write in a session that came with the project, and
+        what an undo sets back there."""
+        tools = _doc("TOOLS.md")
+        start = _entry(tools, "start_coding_session(file_ids, code_names, "
+                              "instruction)")
+        assert "`kept_in`" in start and FOLDER in start
+        listing = _entry(tools, "list_coding_sessions(project_path, "
+                                "days_old)")
+        for words in (FOLDER, "`kept_in`", "`covers`",
+                      "`came_with_project`"):
+            assert words in listing, words
+        delete = _entry(tools, "delete_coding_session(coding_session_id)")
+        assert FOLDER in delete and "backups" in delete
+        for signature in ("apply_codings(coding_session_id, create_backup)",
+                          "create_proposed_codes(coding_session_id, "
+                          "create_backup)"):
+            entry = _entry(tools, signature)
+            assert CAME_WITH.search(entry), signature
+            assert "`not_approved_here`" in entry, signature
+        undo = _entry(tools, "undo_changes(receipts, preview_token)")
+        assert CAME_WITH.search(_sentence_with(
+            undo, "An undone `apply_codings` returns"))
+
+    def test_tools_places_the_key_and_the_restore(self):
+        """TOOLS.md's places name the project's sessions folder, and the
+        state folder only for sessions made before 0.15.4; the key's line
+        says it seals the sessions; a session that came with the project
+        is a key feature; every list of what a restore keeps names the
+        sessions folder."""
+        tools = _doc("TOOLS.md")
+        files = _item(tools, "- **Session files**")
+        assert FOLDER in files and "outside the project" not in files
+        place = _item(tools, "- Session files:")
+        assert FOLDER in place, place
+        assert place.index(FOLDER) < place.index(ON_THIS_COMPUTER), place
+        key = tools[tools.index(f"- Preview-token secret: `~/"
+                                f"{names.STATE_FOLDER}/{KEY}`"):]
+        key = key[:key.index("## ")]
+        assert "sessions" in key and CAME_WITH.search(key), key
+        assert "**A session that came with the project**" in tools
+        copies = tools[tools.index("**Backups, workspace copies and"):]
+        copies = copies[:copies.index("They leave out")]
+        assert FOLDER in copies, copies
+        assert FOLDER in _entry(tools, "restore_backup(backup_path, "
+                                       "preview_token)")
+        for words in ("roll the project back to a backup",
+                      "rolls the project back"):
+            assert FOLDER in _sentence_with(tools, words), words
+
+    def test_install_says_where_sessions_are_and_what_the_key_does(self):
+        """INSTALL.md's section on coding sessions: the folder, the earlier
+        sessions on this computer with the way back by their project_path,
+        a file copied there by hand, the key and the approvals on two
+        computers; the earlier folder's bullet says which sessions it
+        holds."""
+        install = _doc("INSTALL.md")
+        section = _section(install, "### Coding sessions, from 0.15.4")
+        for words in (FOLDER, ON_THIS_COMPUTER, "`project_path`",
+                      f"`{KEY}`", "by hand", "two computers"):
+            assert words in section, words
+        assert CAME_WITH.search(_sentence_with(section, "by hand"))
+        assert CAME_WITH.search(_sentence_with(section, "this computer's "
+                                                        "seal"))
+        moved = install[install.index("**Exegete's own folder** moves"):]
+        moved = moved[:moved.index(" - **")]
+        assert "sessions made before 0.15.4" in moved, moved
+
+    def test_install_going_back_and_uninstalling(self):
+        """INSTALL.md says what an earlier release's restore does to the
+        sessions folder, with what to do first, and that uninstalling
+        leaves the sessions kept in projects with them."""
+        install = _doc("INSTALL.md")
+        back = _section(install, "## Going back to an earlier version")
+        restore = _sentence_with(back, "`restore_backup`")
+        assert "replaces the folder" in restore, restore
+        assert "safety backup" in back
+        first = _sentence_with(back, "copy the")
+        assert FOLDER in first, first
+        uninstall = _section(install, "## Uninstalling")
+        own = _sentence_with(uninstall, "It holds the coding sessions")
+        assert FOLDER in own and "before 0.15.4" in own, own
+        assert CAME_WITH.search(_item(uninstall, "- If you delete only the "
+                                                 "secret"))
+
+    def test_the_guide_says_where_sessions_are_kept(self):
+        """The AI coding guide's Sessions section keeps the session inside
+        the project, names the earlier place for sessions made before
+        0.15.4 alone, and says what a session that came with the project
+        means; its safety model, troubleshooting, undo and pseudonymisation
+        lines follow."""
+        guide = _doc("AI_CODING_GUIDE.md")
+        sessions = _section(guide, "### Sessions")
+        first = _sentence_with(sessions, "Exegete keeps the session")
+        assert FOLDER in first and "inside the project" in first, first
+        earlier = _sentence_with(sessions, ON_THIS_COMPUTER)
+        assert "before 0.15.4" in earlier, earlier
+        assert "**A session that came with the project.**" in sessions
+        assert "outside the project" not in sessions
+        safety = _section(guide, "## Safety model")
+        assert "selected" in _sentence_with(safety, "A session is read")
+        lost = _section(guide, "### Session file damaged or lost")
+        assert FOLDER in _sentence_with(lost, "When a session cannot be")
+        undo = _section(guide, "### Undoing applied codings")
+        assert CAME_WITH.search(undo)
+        faq = guide[guide.index("Exegete's coding sessions hold"):]
+        faq = _sentences(faq)[0]
+        assert "copy of the project" in faq, faq
+        assert "kept outside the project" not in guide
+
+    def test_the_map_names_the_sessions_folder(self):
+        """CONTRIBUTING.md's map says what sessions.py and private_files.py
+        keep: the project's sessions folder."""
+        contributing = (REPO / "CONTRIBUTING.md").read_text(encoding="utf-8")
+        for module in ("sessions.py", "private_files.py"):
+            line = next(line for line in contributing.splitlines()
+                        if f"── {module} " in line)
+            assert FOLDER in line, line

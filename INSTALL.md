@@ -376,6 +376,51 @@ For an install from the Terminal, the Terminal guide's
 ["Updating"](docs/installing-from-the-terminal.md#updating) gives the
 steps for each way of installing.
 
+### Coding sessions, from 0.15.4
+
+From 0.15.4, Exegete keeps each new coding session inside its project,
+in a folder at the project's top called `Exegete coding sessions`. A
+session holds the passages suggested for coding, word for word, with
+their reasons and your decisions. Kept there, it goes wherever the
+project goes: into its backups and copies, and to anyone who can open
+the project's folder where it is shared or synced. PRIVACY.md, "Files
+Exegete keeps on your computer", says more.
+
+Sessions made before 0.15.4 stay where they were, in Exegete's own
+folder (`~/.exegete/sessions`), and nothing moves. A new session is
+kept there too when the project's folder cannot hold it, as in a
+read-only project, and Exegete's answer then says why. Each of these
+sessions is used only while its project is open at the place the
+session records. If you have moved or renamed the project since, you
+can put it back at that place, select it there, and finish, apply or
+export the session; the project can then move again.
+`list_coding_sessions` gives that place as the session's
+`project_path`. A session's file copied by hand from
+`~/.exegete/sessions` into a project's `Exegete coding sessions` folder
+is read as having come with the project, as the next paragraph says,
+and while the project is selected Exegete uses it in place of the file
+of the same name in `~/.exegete/sessions`.
+
+Each session Exegete starts in a project carries a seal, and each
+approval you give on this computer a mark, both made with a key that
+Exegete keeps in its own folder (`preview_secret`, which also signs
+its previews). A session whose file lacks this computer's seal is read
+as having come with the project: one saved by Exegete on another
+computer or under another account, one changed outside Exegete, or one
+in a project someone else gave you. Its texts then reach the assistant
+marked as data, never as instructions, and the assistant reads you the
+session's instruction before going on. An approval in it counts only
+once you give it on this computer. So approvals do not carry from one
+computer to another: if you work on a project from two computers, give
+them on the computer where the codings are written. A session saved on
+the other computer reads as having come with the project, on both,
+from then on. If the key is lost or replaced, every session kept in a
+project reads as having come with the project. Nothing in them is
+lost, and you give their approvals again. Exegete replaces the key
+when it is damaged and, on a Mac or Linux, when its permissions have
+been widened, as copying or restoring a home folder without its
+permissions can leave them.
+
 ### Coming from qualcoder-mcp
 
 Exegete was called qualcoder-mcp until version 0.14.0. The program is
@@ -394,8 +439,9 @@ What changed for everyone:
   again before it uses each tool.
 - **Exegete's own folder** moves by itself at the first start, from
   `~/.qualcoder_mcp` to `~/.exegete`, whole. It holds the secret that
-  signs Exegete's previews, the coding sessions, the last-project hint
-  and the pseudonymisation run records. A link is left under the old
+  signs Exegete's previews, the coding sessions made before 0.15.4
+  ("Coding sessions, from 0.15.4", above), the last-project hint and
+  the pseudonymisation run records. A link is left under the old
   name (on Windows, a kind of link called a junction), so that an older
   copy of the program on the same computer keeps using the same folder
   and secret. If a backup or sync rule of yours names the old folder,
@@ -459,6 +505,18 @@ An older release may have other settings, with defaults of its own, as
 its settings page shows. Every release with the check for new versions,
 from 0.14.2 on, has it on by default.
 
+Releases before 0.15.4 do not know a project's `Exegete coding
+sessions` folder ("Coding sessions, from 0.15.4", above). They do not
+list the sessions kept there, and do not update them when a coding is
+deleted or a change undone. Their `restore_backup` also replaces the
+folder with the backup's copy of it, older decisions and sessions
+deleted since included, or removes it when the backup has none. The
+folder as it was is then only in the safety backup that restore takes.
+So before going back, you may want to finish the sessions you have
+open. Before restoring a backup in the earlier release, you could copy
+the `Exegete coding sessions` folder somewhere else, or update again
+first.
+
 If you go back as far as 0.14.0, you meet one refusal. In a project
 where a later release has stored the AI coder name, 0.14.0 refuses the
 changes that need that name, and says to upgrade ("Coming from
@@ -479,24 +537,30 @@ GitHub Issues ("Getting help", below).
      empties the cache.
    - **Exegete's own folder**, `~/.exegete`, with the link to it under
      its earlier name, `~/.qualcoder_mcp`. It holds the coding sessions
-     waiting for review, the texts an import's preview read
-     (`import-texts.noindex/`), the last project used, the record of the
-     check for new versions, the pseudonymisation run records and the
-     secret that signs Exegete's previews. PRIVACY.md, "Files Exegete
-     keeps on your computer", says what each file holds.
+     made before 0.15.4 (later ones are in each project's
+     `Exegete coding sessions` folder, and stay with the project), the
+     texts an import's preview read (`import-texts.noindex/`), the last
+     project used, the record of the check for new versions, the
+     pseudonymisation run records and the secret that signs Exegete's
+     previews and seals the sessions kept in projects. PRIVACY.md, "Files
+     Exegete keeps on your computer", says what each file holds.
      - The texts an import's preview read are each document's whole
        text, before any names are replaced. Exegete removes them after
        the import. When no import follows, they stay until the first
        time Exegete starts, or prepares an import, at least an hour and
        five minutes after the preview. After an uninstall neither
        happens, so they stay until you delete the folder.
-     - If you delete the folder, you lose the coding sessions waiting
-       for review and the pseudonymisation run records, and a change
+     - If you delete the folder, you lose the coding sessions kept
+       there and the pseudonymisation run records, and a change
        previewed but not yet made, such as an import, needs a new
-       preview.
+       preview. The sessions kept in your projects stay, and read as
+       the next point says.
      - If you delete only the secret, `preview_secret`, the run records
        stay, but their digests can no longer be checked, and a change
-       previewed but not yet made needs a new preview.
+       previewed but not yet made needs a new preview. Every session
+       kept in a project then reads as having come with the project,
+       and its approvals are given again ("Coding sessions, from
+       0.15.4", above).
    - **The reading folder**, where Exegete writes the pages you read on
      your own computer, with a file's whole text and its codings, and
      read-only copies of originals:

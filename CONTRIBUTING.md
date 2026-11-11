@@ -534,7 +534,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── file_kinds.py        # What kind of entry sits at a name: a named pipe is refused, never opened (0.15.1)
 │   │   ├── memo_privacy.py      # QualCoder's '#####' private-memo convention
 │   │   ├── new_project.py       # create_project: the folder and its schema v17 database
-│   │   ├── sessions.py          # AI coding session management
+│   │   ├── sessions.py          # AI coding sessions: each kept in its project's Exegete coding sessions folder, sealed with Exegete's key, earlier ones in the state folder (0.15.4)
 │   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
 │   │   ├── change_record.py     # The record each change leaves for undo; a sweep removes it once a day old
@@ -553,7 +553,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── reading_copy.py      # The reading page: a file's whole text and its codings
 │   │   ├── reading_folder.py    # The private reading folder, and its tidying
 │   │   ├── opener.py            # Opening a file in its own app, or showing it in its folder
-│   │   ├── private_files.py     # The files Exegete keeps, and the project's Exegete folder (0.15.0)
+│   │   ├── private_files.py     # The files Exegete keeps, the project's Exegete folder (0.15.0) and its Exegete coding sessions folder (0.15.4)
 │   │   ├── names_file.py        # The names file: its five lines, and how it is read back (0.15.0)
 │   │   ├── origin_mark.py       # The internet-origin mark, carried to a copy
 │   │   ├── parts.py             # Whole-file reads in parts

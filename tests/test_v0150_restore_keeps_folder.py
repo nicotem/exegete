@@ -1245,15 +1245,18 @@ class TestTheTexts:
                 "in) is kept as it is, never taken from the backup; the "
                 "preview says when either has one. So are its `audio` and "
                 "`video` folders") in entry
+        # (v0.15.4: the project's sessions folder, which a restore keeps
+        # too, among them)
         assert ("`list_backups` and `restore_backup` roll the project back "
-                "to a backup, all but its `Exegete`, `audio` and `video` "
-                "folders, which a restore keeps.") in tools
+                "to a backup, all but its `Exegete`, `Exegete coding "
+                "sessions`, `audio` and `video` folders, which a restore "
+                "keeps.") in tools
         # v0.15.1, the restore: its preview counts rows by kind, every
         # coder's together, never by owner
         assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete`, `audio` and `video` folders, which a restore "
-                "keeps): its preview counts each kind of row, every coder's "
-                "together, never by owner") in tools
+                "`Exegete`, `Exegete coding sessions`, `audio` and `video` "
+                "folders, which a restore keeps): its preview counts each "
+                "kind of row, every coder's together, never by owner") in tools
         assert "whole project back" not in tools
 
     def test_privacy(self):

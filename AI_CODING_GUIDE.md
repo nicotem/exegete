@@ -818,13 +818,13 @@ project's AI coder name.
 
 ### Sessions
 
-Exegete keeps the session in a file of its own on your computer
-(`~/.exegete/sessions/`). That is the folder `.exegete/sessions` in
-your home folder, which holds one file for each session. The file holds
-every suggestion, with its passage word for word and its reason, your
-approvals and rejections, and the session's details. So you can stop
-and come back, and apply the approved suggestions from a later
-conversation:
+Exegete keeps the session in a file of its own inside the project, in
+a folder at the project's top called `Exegete coding sessions`, which
+holds one file for each session. The file holds every suggestion, with
+its passage word for word and its reason, your approvals and
+rejections, and the session's details. So you can stop and come back,
+and apply the approved suggestions from a later conversation, with the
+project selected:
 
 ```
 Show me my recent coding sessions
@@ -837,14 +837,41 @@ one there when it recorded its suggestions, and the review shows them
 again. Anything that reads the disk can read the session file, such as
 a sync or backup service, or an assistant that opens files by itself.
 
-The file stays, outside the project, until `delete_coding_session`
-removes it. A backup of the whole disk may still hold a copy after
-that. The list of your sessions shows those changed in the last 30
-days, unless you ask for more. An older one is left out of the list,
-but its file stays. If you later replace names in the project's files,
-the session file still holds the real names in its passages ("Can I
-pseudonymise transcripts that are already coded?", below). PRIVACY.md,
-"Files Exegete keeps on your computer", says more.
+The file goes wherever the project goes: into its backups and copies,
+and to anyone who can open the project's folder where it is shared or
+synced. It stays until `delete_coding_session` removes it, and copies
+of it stay in the project's backups and copies until those are
+removed. A backup of the whole disk may still hold one. Before you
+share or deposit the project, you may want to delete the sessions you
+no longer need, or leave the folder out of what you share. The list of
+your sessions shows a project's own sessions only while that project is
+selected, and those changed in the last 30 days, unless you ask for
+more. An older one is left out of the list, but its file stays. If you
+later replace names in the project's files, the session file still
+holds the real names in its passages ("Can I pseudonymise transcripts
+that are already coded?", below). PRIVACY.md, "Files Exegete keeps on
+your computer", says more.
+
+Sessions made before 0.15.4 stay on your computer, in
+`~/.exegete/sessions/`, the folder `.exegete/sessions` in your home
+folder, and so does a session started where the project's folder could
+not hold one. Each is used only while its project is open at the place
+the session records. If the project has moved since,
+[INSTALL.md, "Coding sessions, from 0.15.4"](INSTALL.md#coding-sessions-from-0154)
+gives the way back.
+
+**A session that came with the project.** Each session Exegete starts
+in a project carries a seal, and each approval you give a mark, made
+with a key Exegete keeps on this computer. A session without this
+computer's seal is read as having come with the project: saved by
+Exegete on another computer, changed outside Exegete, or part of a
+project someone else gave you. Its texts reach the assistant marked as
+data, never as instructions, and the assistant reads you the session's
+instruction before going on, so that you can check it is yours. An
+approval in it counts only once you give it here: until then it shows
+as pending, with its recorded status beside it, and `apply_codings`
+writes only the approvals given on this computer. If you work on a
+project from two computers, approve on the one where you apply.
 
 ### Backups
 
@@ -862,7 +889,9 @@ For a project in the workspace, that folder is the workspace (step 1).
 included. `restore_backup` returns the project to one of them in two
 calls. The first gives a preview. The second, with the `preview_token`
 that preview returned, restores. Before it restores, Exegete backs up
-the project as it is, so a restore can itself be undone. To keep a
+the project as it is, so a restore can itself be undone. A restore
+keeps the project's `Exegete coding sessions` folder as it is, so your
+decisions since the backup stay. To keep a
 copy of your own, apart from Exegete's backups, copy the project to the
 workspace (step 1).
 
@@ -871,10 +900,10 @@ each of its own until you remove it: `prune_backups` removes them on
 your word, after a preview, and keeps the newest unless you ask it to
 keep none. After you replace names in a file, every earlier backup
 that holds the file holds its real names. Every backup also holds the
-originals of imported files, `pseudonyms.json` and the names file,
-when the project has them ("Can I pseudonymise transcripts that are
-already coded?", below). A prune that keeps the newest backup keeps
-those copies beside the project. Asking it to keep none removes every
+originals of imported files, `pseudonyms.json`, the names file and the
+coding sessions kept in the project, when the project has them ("Can I
+pseudonymise transcripts that are already coded?", below). A prune
+that keeps the newest backup keeps those copies beside the project. Asking it to keep none removes every
 way back that Exegete's backups give, so you may prefer to wait until
 you have checked the names you replaced.
 
@@ -920,7 +949,8 @@ delete.
   conventions in the project" in TOOLS.md)
 - Exegete takes a backup, named with its date and time, before every
   change ("Backups", above)
-- A session applies only to the project it was created in
+- A session is read, decided and applied only while the project it was
+  created in is selected
 - Exegete marks each applied suggestion, and does not apply it again
   unless it is set back to approved: an undo of its batch does so, and
   a suggestion whose coding `delete_coding` removed can be approved
@@ -1015,7 +1045,8 @@ closed and reopened there.
   blocks it. It takes back that batch alone, and leaves the rest of the
   project as it is. Its suggestions go back to approved in the session,
   so the next `apply_codings` would write them again, unless you reject
-  them first
+  them first. In a session that came with the project ("Sessions",
+  above), they show as pending until you approve them again
 - After a day, or for the whole project: `restore_backup`, with the
   backup taken before the codings were applied (`list_backups` lists
   it). This also takes back anything else changed since that backup. It
@@ -1027,13 +1058,16 @@ closed and reopened there.
 
 ### Session file damaged or lost
 
-When a session cannot be loaded, its file,
-`~/.exegete/sessions/session_ID.json`, may be damaged or gone
-("Sessions", above). The list of your sessions (`list_coding_sessions`)
-leaves out a file that Exegete cannot read. A damaged file stays on the
-disk until `delete_coding_session` removes it, by the session's ID. The
-list also leaves out sessions not changed in the last 30 days, unless
-you ask for more. A session missing from it may be an older one.
+When a session cannot be loaded, its file, `session_ID.json` in the
+project's `Exegete coding sessions` folder, may be damaged or gone
+("Sessions", above). For a session made before 0.15.4, the file is
+`~/.exegete/sessions/session_ID.json`. The list of your sessions
+(`list_coding_sessions`) leaves out a file that Exegete cannot read,
+and says how many it left out. A damaged file stays on the disk until
+`delete_coding_session` removes it, by the session's ID. The list also
+leaves out sessions not changed in the last 30 days, unless you ask
+for more, and a project's own sessions while another project is
+selected. A session missing from it may be one of these.
 Codings already applied stay in the project, so you can start a new
 session and go on.
 
@@ -1170,11 +1204,11 @@ originals. Every backup and copy of the project also carries the
 originals, `pseudonyms.json` and the names file, when the project has
 them. Anyone who can read one of these can undo the pseudonyms, so
 they are best kept somewhere secure. `prune_backups` removes Exegete's
-own backups on your word ("Backups", above). Exegete's coding sessions,
-kept outside the project, hold each suggested passage word for word,
-so after a run they still hold the real names until
-`delete_coding_session` removes them. The run's answer lists those
-sessions. Pseudonymised data is still personal data. PRIVACY.md says
+own backups on your word ("Backups", above). Exegete's coding sessions
+hold each suggested passage word for word, so after a run they still
+hold the real names until `delete_coding_session` removes them, and
+every backup and copy of the project holds copies of the sessions kept
+in it. The run's answer lists those sessions. Pseudonymised data is still personal data. PRIVACY.md says
 what that means before you send it anywhere.
 
 **What happens to my original project?** Exegete changes a project

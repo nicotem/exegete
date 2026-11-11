@@ -276,9 +276,10 @@ def test_the_guide_decides_each_item():
     assert "Show me 1, 3, 4 and 5 too" in guide
     # (v0.15.3, the readability reading: the conversation, the guide's
     # one word for it; the fix round: the file is on the computer, and
-    # its passages went through the conversation too)
-    assert ("Exegete keeps the session in a file of its own on your "
-            "computer (`~/.exegete/sessions/`)") in guide
+    # its passages went through the conversation too; v0.15.4: the file
+    # is inside the project, in its sessions folder)
+    assert ("Exegete keeps the session in a file of its own inside the "
+            "project") in guide
     assert "The passages are in the conversation as well." in guide
     # (the fix round's reader: the ban is the Sessions section's fact)
     sessions = guide[guide.index("### Sessions "):]

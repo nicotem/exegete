@@ -857,6 +857,36 @@ class TestTheWords:
         assert "does not count on this computer" in \
             out["not_approved_here"][0]["reason"]
 
+    def test_with_one_that_counts_the_other_is_said_not_to(self, project):
+        """apply_codings writes the approval that counts and names the
+        other; create_proposed_codes the same: each says that the other's
+        approval does not count on this computer, true of one given here
+        and put back from an older copy."""
+        sid = start()["coding_session_id"]
+        one = record(sid)["recorded"][0]["guid"]
+        two = record(sid, LATER, "Hope")["recorded"][0]["guid"]
+        first, second = propose(sid), propose(sid, "Care")
+        approve(sid, one, two)
+        jcall("update_proposal_status", coding_session_id=sid,
+              approve=[first, second])
+        older = file_of(project, sid).read_bytes()
+        call("update_suggestion_status", coding_session_id=sid,
+             reject=[two])
+        jcall("update_proposal_status", coding_session_id=sid,
+              reject=[second])
+        file_of(project, sid).write_bytes(older)
+        applied = server.apply_codings(coding_session_id=sid)
+        assert "Successfully Applied: 1" in applied, applied
+        line = applied[applied.index("**Not written"):]
+        assert "do not count on this computer" in line.split("\n")[0]
+        created = jcall("create_proposed_codes", coding_session_id=sid)
+        assert created.get("success") is True, created
+        assert [p["guid"] for p in created["not_approved_here"]] == [second]
+        assert "does not count on this computer" in \
+            created["not_approved_here_note"]
+        assert "does not count on this computer" in \
+            created["not_approved_here"][0]["reason"]
+
     def test_the_note_names_the_new_causes(self, project):
         """A safety sentence: the note on a session that came with the
         project names a workspace copy, another project and the
@@ -873,6 +903,74 @@ class TestTheWords:
         assert "leaves out the project's id" in description
         assert "read in it as having come with the project" in description
         assert "copy's own once it is selected" not in description
+        # The folder's note names the id, and what changing or removing it
+        # does
+        assert ID_FILE in private_files.SESSIONS_NOTE
+
+
+def _doc(name) -> str:
+    return " ".join((Path(__file__).resolve().parent.parent / name
+                     ).read_text(encoding="utf-8").split())
+
+
+class TestTheDocuments:
+    """The documents' facts, each from the code: the id beside the
+    sessions, left out of a workspace copy; the record in Exegete's own
+    folder, an approval counting only while it holds it; deleting it
+    loses nothing; an id changed by hand refuses, and its ways on."""
+
+    def test_tools(self):
+        tools = _doc("TOOLS.md")
+        entry = tools[tools.index("- `copy_project_to_workspace("):]
+        entry = entry[:entry.index(" - `", 4)]
+        assert "project's id" in entry and "come with the project" in entry
+        places = tools[tools.index("- Records of approvals: `~/"):]
+        places = places[:places.index(" - ", 4)]
+        assert f"/{sessions.APPROVALS_FOLDER}/" in places, places
+        assert "pending" in places and "counts only while" in places
+        assert ID_FILE in tools[tools.index("- Session files: in each"):][
+            :400]
+        feature = tools[tools.index("- **A session that came with the "
+                                    "project**"):]
+        feature = feature[:feature.index(" - **")]
+        for words in (ID_FILE, "another project", "workspace copy",
+                      "cannot bring back an approval withdrawn since"):
+            assert words in feature, words
+
+    def test_install(self):
+        install = _doc("INSTALL.md")
+        section = install[install.index("### Coding sessions, from 0.15.4"):]
+        section = section[:section.index(" ### ")]
+        for words in (ID_FILE, "another of your projects",
+                      "cannot bring back an approval you have withdrawn",
+                      "never changes it", "put back from a backup",
+                      "removed", "keeps the same id"):
+            assert words in section, words
+        uninstall = install[install.index("## Uninstalling"):]
+        assert f"`{sessions.APPROVALS_FOLDER}/`" in uninstall
+        only = uninstall[uninstall.index("If you delete only the records"):]
+        only = only[:only.index(" - ")]
+        assert "read as pending" in only and "Nothing" in only, only
+
+    def test_the_guide_and_the_fragment(self):
+        guide = _doc("AI_CODING_GUIDE.md")
+        came = guide[guide.index("**A session that came with the "
+                                 "project.**"):]
+        came = came[:came.index(" ### ")]
+        for words in (ID_FILE, "copied in from another of your projects",
+                      "copy_project_to_workspace",
+                      "cannot bring back an approval you have withdrawn"):
+            assert words in came, words
+        path = (Path(__file__).resolve().parent.parent / "changelog.d"
+                / "sessions-with-project.md")
+        if not path.is_file():
+            pytest.skip("assembled into CHANGELOG.md when the release is "
+                        "prepared")
+        fragment = " ".join(path.read_text(encoding="utf-8").split())
+        for words in (ID_FILE, "cannot bring back an approval withdrawn "
+                               "since", "read as pending",
+                      "reads its sessions as having come with the project"):
+            assert words in fragment, words
 
 
 class TestGuards:

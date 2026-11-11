@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 213,948 | 210,397 |
-| `core` (28 tools) | 78,024 | 76,805 |
+| `full` (80 tools) | 214,132 | 210,397 |
+| `core` (28 tools) | 78,208 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,625 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
@@ -92,5 +92,11 @@ Python 3.13 with the libraries in `uv.lock`:
   of English, where it gave 60,000, in as many characters, and says that
   `codes_used` in a part counts that part's codings, which takes one
   more line.
+- Approvals that count only while this computer records them add 184
+  characters to copy_project_to_workspace's definition in both sets:
+  its description now says that a copy leaves out the project's id and
+  gets its own, so that the sessions it carries read in the copy as
+  having come with the project, their approvals given again there,
+  where it said that they were the copy's own once it was selected.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).

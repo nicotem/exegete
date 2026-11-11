@@ -21042,6 +21042,30 @@ _EVERY_OCCURRENCE_LEFT_WARNING = (
 _OCCURRENCES_LEFT_COUNTED = (
     " residue.file_text counts {counted} of them under left_by_choice, a "
     "heuristic; the number left is exact.")
+# Phrases to keep (v0.15.4) go with a typed mapping only, refused with the
+# names list before anything is read, as decided on 27 September for the
+# same reason as the list: a phrase brings words into the conversation,
+# and any refusal or count about it would tell whether a name in it is on
+# the names list. Occurrences left by their numbers or ids carry no words,
+# so they are that path's way to leave a name in one file (ruling 106)
+_PHRASES_NEED_A_TYPED_MAPPING = (
+    "keep_phrases goes with a mapping typed into the call, never with "
+    "use_project_pseudonyms: a phrase brings its words into the "
+    "conversation, and what Exegete said about it would tell whether a "
+    "name in it is on the names list. To leave some occurrences of a name "
+    "as they are with the names list, preview this file with "
+    "choose_occurrences, then give the occurrences the researcher chooses "
+    "in leave_numbers, with the preview's numbering. Nothing was read.")
+
+
+def _phrases_refused(error: "pseudo.PhraseError") -> str:
+    """A refusal of the phrases to keep (v0.15.4): the rule broken and,
+    where one phrase breaks it, its number in the list given, never the
+    phrase itself."""
+    answer: Dict[str, Any] = {"error": str(error), "reason": error.reason}
+    if error.number is not None:
+        answer["phrase_number"] = error.number
+    return json.dumps(answer, indent=2)
 
 
 class _OccurrencesRefused(Exception):
@@ -23021,6 +23045,7 @@ def pseudonymise_source(
     *,
     file_id: int,
     use_project_pseudonyms: bool = False,
+    keep_phrases: Optional[List[str]] = None,
     case_mode: str = "exact",
     overlap_policy: str = "snap_to_pseudonym",
     rewrite_memos: bool = False,
@@ -23390,6 +23415,21 @@ def pseudonymise_source(
     if not typed and (save or keeps):
         return json.dumps({"error": _RETENTION_ON_THE_SIDECAR_PATH},
                           indent=2)
+    # Phrases to keep (v0.15.4) go with a typed mapping alone: with the
+    # names list they are refused here, before pseudonyms.json is read,
+    # so no answer about a phrase tells what the list holds. None and an
+    # empty list are no phrase
+    if not typed and keep_phrases is not None and not (
+            isinstance(keep_phrases, (list, tuple)) and not keep_phrases):
+        return json.dumps({"error": _PHRASES_NEED_A_TYPED_MAPPING,
+                           "reason": "phrases_need_a_typed_mapping"},
+                          indent=2)
+    # Their number and each phrase's form, which need no mapping, before
+    # any read; each refused by its number, never quoted
+    try:
+        pseudo.read_phrases(keep_phrases)
+    except pseudo.PhraseError as e:
+        return _phrases_refused(e)
     # The occurrences to leave (v0.15.3), each id read as the preview
     # lists them, before any read: an id no preview could have listed is
     # refused with the form an id has
@@ -23453,6 +23493,14 @@ def pseudonymise_source(
     except pseudo.MappingError as e:
         return json.dumps({"error": str(e)}, indent=2)
     compiled = pseudo.Compiled(validated)
+    # Each phrase against the mapping (v0.15.4), still before any read: a
+    # phrase that is itself a name, or in which no name is found, keeps
+    # every occurrence of that name or nothing. The phrases as read, each
+    # with its pattern under the run's case mode, go to every plan
+    try:
+        phrases = pseudo.validate_phrases(keep_phrases, compiled)
+    except pseudo.PhraseError as e:
+        return _phrases_refused(e)
 
     try:
         file_id = _validate_positive_id(file_id, "file_id")
@@ -23482,7 +23530,8 @@ def pseudonymise_source(
         file_id=file_id, case_mode=case_mode,
         overlap_policy=overlap_policy, rewrite_memos=rewrite_memos,
         save_mapping_to_project=save, leave_occurrences=leave,
-        leave_numbers=numbers, numbering=code)
+        leave_numbers=numbers, numbering=code,
+        keep_phrases=pseudo.canonical_phrases(phrases))
 
     # The plan is the expensive part of everything below it: it reads
     # every eligible file's text, runs the pattern over all of it, and
@@ -23512,7 +23561,7 @@ def pseudonymise_source(
         plan = db_.pseudonymise_plan(compiled, overlap_policy, file_ids,
                                      occurrence_key=occurrence_key,
                                      leave=leave, leave_numbers=numbers,
-                                     numbering=code)
+                                     numbering=code, phrases=phrases)
         if "plan" not in read_phase:
             read_phase["plan"] = plan
             read_phase["conn"] = db_.conn
@@ -23748,7 +23797,7 @@ def pseudonymise_source(
         plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
                                      occurrence_key=occurrence_key,
                                      leave=leave, leave_numbers=numbers,
-                                     numbering=code)
+                                     numbering=code, phrases=phrases)
         captured["write_plan"] = plan
         memo_plan = (wdb.pseudonymise_memo_plan(compiled, plan)
                      if rewrite_memos else None)
@@ -23782,7 +23831,7 @@ def pseudonymise_source(
             plan = wdb.pseudonymise_plan(compiled, overlap_policy, file_ids,
                                          occurrence_key=occurrence_key,
                                          leave=leave, leave_numbers=numbers,
-                                         numbering=code)
+                                         numbering=code, phrases=phrases)
         # C7, with the fingerprints the READ-ONLY phase captured, which
         # is what D1 3.6 specifies. Passing the write phase's own
         # fingerprints made the check compare a read to itself: both

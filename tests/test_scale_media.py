@@ -237,8 +237,15 @@ class TestReadSurface:
     def test_big_document_handled(self, small_scale, scratch):
         proj, stats = small_scale
         connect(proj, scratch / "sess_read")
-        fc = json.loads(server.get_file_content(stats["big_doc_fid"]))
-        assert len(fc.get("content", "")) == stats["big_doc_chars"]
+        fid = stats["big_doc_fid"]
+        fc = json.loads(server.get_file_content(fid))
+        content = fc.get("content", "")
+        # a long document comes in parts (v0.15.4): walked to its end
+        while fc.get("part") and fc["part"]["continues_at"] is not None:
+            fc = json.loads(server.get_file_content_from(
+                fid, fc["part"]["continues_at"]))
+            content += fc["content"]
+        assert len(content) == stats["big_doc_chars"]
 
 
 # ===========================================================================

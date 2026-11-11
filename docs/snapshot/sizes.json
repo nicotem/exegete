@@ -3,7 +3,7 @@
     "brief_characters": 1923,
     "opening_text_characters": 2042,
     "tool_count": 28,
-    "tool_definitions_characters": 77625,
+    "tool_definitions_characters": 77658,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -66,8 +66,8 @@
         "description_characters": 294
       },
       "read_file_with_codings": {
-        "definition_characters": 2745,
-        "description_characters": 2296
+        "definition_characters": 2778,
+        "description_characters": 2328
       },
       "record_suggestions": {
         "definition_characters": 5083,
@@ -124,7 +124,7 @@
     "brief_characters": 14579,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 212322,
+    "tool_definitions_characters": 212355,
     "tools": {
       "add_annotation": {
         "definition_characters": 2337,
@@ -347,8 +347,8 @@
         "description_characters": 294
       },
       "read_file_with_codings": {
-        "definition_characters": 2745,
-        "description_characters": 2296
+        "definition_characters": 2778,
+        "description_characters": 2328
       },
       "recolor_code": {
         "definition_characters": 1719,

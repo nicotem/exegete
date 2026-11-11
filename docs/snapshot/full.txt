@@ -1487,7 +1487,7 @@ Return a text file's whole text with its coded segments.
 
 Read a file this way before suggesting codings for it, or to answer a
 question that needs the whole account rather than coded extracts.
-A long file comes in parts (about 60,000 characters of English): the
+A long file comes in parts (about 35,000 characters of English): the
 result's `part` says where the next starts; ask again with that
 `start`. Every position is a whole-file position, in every part.
 
@@ -1509,7 +1509,8 @@ Returns:
     - file_info: File metadata (name, type, date)
     - full_text: Complete text of the file
     - coded_segments: All coded segments with positions, codes, and memos
-    - codes_used: Summary of which codes appear in this file
+    - codes_used: Summary of which codes appear in this file (in a
+      part, in that part)
     - annotations: Any annotations on the file
     - statistics: four counts: total_segments, unique_codes,
       total_annotations and text_length (characters); no coverage or

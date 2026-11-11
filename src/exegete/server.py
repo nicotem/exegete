@@ -1144,12 +1144,17 @@ TOOL_META = {
     # import, so the researcher approves both calls (the lead's answer to
     # the design's open point 1)
     "save_names_list": {"anthropic/requiresUserInteraction": True},
-    # read_file_with_codings (v0.15.3, ruling 117): a part of a long file
-    # is about 60,000 characters of English (parts.py), over the 50,000 at
-    # which Claude Code saves a text answer to a file under
+    # read_file_with_codings (v0.15.3, ruling 117): Claude Code saves a
+    # text answer longer than 50,000 characters to a file under
     # ~/.claude/projects/ and gives the assistant its path instead; this
     # raises the tool's threshold, under Claude Code's ceiling of 500,000
-    # (code.claude.com's MCP page, read on 5 November 2026)
+    # (code.claude.com's MCP page, read on 5 November 2026). Since v0.15.4
+    # a part is within parts.BOUND, about 39,000 characters of English,
+    # so it stays under the 50,000 and, for the models Codex lists, under
+    # the cut Codex makes to a tool's answer, while with any other model
+    # Codex keeps 12,000 bytes of every answer (Codex 0.167.0's source,
+    # read on 10 November 2026). The declaration stays for an answer over
+    # the bound, which a long file memo can make (parts.limit).
     "read_file_with_codings": {"anthropic/maxResultSizeChars": 200_000},
 }
 
@@ -4946,8 +4951,11 @@ def get_file_content_from(file_id: int, start: int) -> str:
 
 
 def _file_content_part(file_id: int, start: Any) -> str:
-    """The file resource's answer: the whole content when it fits one
-    part, else the part from `start` with its `part` block."""
+    """The file resource's answer: the whole content when its answer is
+    within parts.BOUND, less the room kept for what a host sends around
+    a resource's contents (parts.RESOURCE_ROOM), else the part from
+    `start` with its `part` block, its end found by measuring the
+    answer (v0.15.4)."""
     file_data = get_db().get_file_content(file_id)
     if file_data is None:
         return json.dumps({"error": f"File with id {file_id} not found"})
@@ -4959,15 +4967,28 @@ def _file_content_part(file_id: int, start: Any) -> str:
     problem = parts.start_problem(start, len(whole))
     if problem is not None:
         return json.dumps({"error": problem})
-    end = parts.choose_end(whole, start)
-    if start > 0 or end < len(whole):
-        file_data["content"] = whole[start:end]
-        file_data["part"] = parts.part_block(
+    bound = parts.BOUND - parts.RESOURCE_ROOM
+    if start == 0 and len(whole) <= bound and parts.host_bytes(
+            _ai_json(file_data, indent=2)) <= bound:
+        return _ai_json(file_data, indent=2)
+
+    def build(end: int) -> Dict[str, Any]:
+        answer = dict(file_data)
+        answer["content"] = whole[start:end]
+        answer["part"] = parts.part_block(
             start, end, len(whole),
             f"read {names.RESOURCE_SCHEME}://files/{file_id}/from/{end}, "
             f"or call read_file_with_codings(file_id={file_id}, "
             f"start={end}).")
-    return _ai_json(file_data, indent=2)
+        return answer
+
+    def size(end: int) -> int:
+        return parts.host_bytes(_ai_json(build(end), indent=2))
+
+    end = parts.end_of_part(whole, start, size, bound)
+    if start == 0 and end >= len(whole):
+        return _ai_json(file_data, indent=2)
+    return _ai_json(build(end), indent=2)
 
 
 @mcp.resource(f"{names.RESOURCE_SCHEME}://cases/list")
@@ -5000,35 +5021,55 @@ def get_case_info(case_id: int) -> str:
 
 
 def _case_excerpts_in_parts(case: Dict[str, Any]) -> None:
-    """Keep a case's excerpts within one answer's budget (v0.14.3): a
-    case linked to whole files carries each file's whole text. Excerpts
-    are given in order until the budget is spent; the one that spends it
-    is cut, and it and every later one say where their text continues,
-    as a whole-file position to read from with read_file_with_codings."""
-    left = float(parts.BUDGET)
-    cut = False
-    for segment in case.get("text_segments") or []:
-        text = segment.get("text") or ""
-        start = int(segment.get("position_start") or 0)
+    """Keep a case's answer within one part's bound (v0.14.3; measured
+    since v0.15.4): a case linked to whole files carries each file's
+    whole text. When the whole answer passes parts.BOUND, less the room
+    kept for what a host sends around a resource's contents, the
+    excerpts are given in order up to a number of characters found by
+    measuring the answer; the one that spends it is cut, and it and
+    every later one say where their text continues, as a whole-file
+    position to read from with read_file_with_codings."""
+    bound = parts.BOUND - parts.RESOURCE_ROOM
+    if parts.host_bytes(_ai_json(case, indent=2)) <= bound:
+        return
+    segments = case.get("text_segments") or []
+    texts = [segment.get("text") or "" for segment in segments]
+    joined = "".join(texts)
+    if not joined:
+        return
+
+    def build(kept: int) -> Dict[str, Any]:
+        answer = dict(case)
+        answer["text_segments"] = given = []
+        left, cut = kept, False
+        for segment, text in zip(segments, texts):
+            segment = dict(segment)
+            start = int(segment.get("position_start") or 0)
+            if cut:
+                if text:
+                    segment["text"] = ""
+                    segment["text_continues_at"] = start
+            elif len(text) <= left:
+                left -= len(text)
+            else:
+                segment["text"] = text[:left]
+                segment["text_continues_at"] = start + left
+                cut = True
+            given.append(segment)
         if cut:
-            if text:
-                segment["text"] = ""
-                segment["text_continues_at"] = start
-            continue
-        costs = parts.Costs(text)
-        if costs.of(0, len(text)) <= left:
-            left -= costs.of(0, len(text))
-            continue
-        end = parts.choose_end(text, 0, budget=max(left, 1.0), costs=costs)
-        segment["text"] = text[:end]
-        segment["text_continues_at"] = start + end
-        cut = True
-    if cut:
-        case["parts_note"] = (
-            "The excerpts' text is cut to fit one answer. Each excerpt "
-            "marked text_continues_at continues there, a whole-file "
-            "position: call read_file_with_codings(file_id=..., "
-            "start=...) with it.")
+            answer["parts_note"] = (
+                "The excerpts' text is cut to fit one answer. Each excerpt "
+                "marked text_continues_at continues there, a whole-file "
+                "position: call read_file_with_codings(file_id=..., "
+                "start=...) with it.")
+        return answer
+
+    def size(kept: int) -> int:
+        return parts.host_bytes(_ai_json(build(kept), indent=2))
+
+    answer = build(parts.end_of_part(joined, 0, size, bound))
+    case.clear()
+    case.update(answer)
 
 
 @mcp.resource(f"{names.RESOURCE_SCHEME}://journal")
@@ -9263,7 +9304,7 @@ def read_file_with_codings(file_id: int, start: int = 0,
 
     Read a file this way before suggesting codings for it, or to answer a
     question that needs the whole account rather than coded extracts.
-    A long file comes in parts (about 60,000 characters of English): the
+    A long file comes in parts (about 35,000 characters of English): the
     result's `part` says where the next starts; ask again with that
     `start`. Every position is a whole-file position, in every part.
 
@@ -9277,7 +9318,8 @@ def read_file_with_codings(file_id: int, start: int = 0,
         - file_info: File metadata (name, type, date)
         - full_text: Complete text of the file
         - coded_segments: All coded segments with positions, codes, and memos
-        - codes_used: Summary of which codes appear in this file
+        - codes_used: Summary of which codes appear in this file (in a
+          part, in that part)
         - annotations: Any annotations on the file
         - statistics: four counts: total_segments, unique_codes,
           total_annotations and text_length (characters); no coverage or
@@ -9384,7 +9426,12 @@ def _in_parts(result: Dict[str, Any], file_id: int, start: int,
     """Cut a whole-file read to one part (v0.14.3). Each
     coding found by QualCoder's count gets the place of its words
     (`text_start`, `text_end`); each found by neither count is flagged.
-    A file that fits one part reads as before, these apart."""
+    A file whose whole answer is within parts.BOUND reads as before,
+    these apart. Otherwise the part's end is found by measuring the
+    answer that serves it (v0.15.4), and that answer is the one given:
+    the codings that touch the part, each reaching beyond it without
+    its passage (parts.in_part), the codes those codings use, and the
+    annotations that touch it; `statistics` stay the whole file's."""
     whole = result.get("full_text") or ""
     segments = result.get("coded_segments") or []
     positions = parts.Positions(whole)
@@ -9398,21 +9445,55 @@ def _in_parts(result: Dict[str, Any], file_id: int, start: int,
         result["qualcoder_positions_note"] = QUALCODER_POSITIONS_NOTE
     if any(s.get("stored_passage_differs") for s in segments):
         result["stored_passage_note"] = STORED_PASSAGE_NOTE
-    end = parts.choose_end(whole, start, segments)
+    if start == 0 and len(whole) <= parts.BOUND and parts.host_bytes(
+            _ai_json(result, indent=2)) <= parts.BOUND:
+        return
+    base = {key: value for key, value in result.items()
+            if key != "full_text"}
+    annotations = result.get("annotations") or []
+    again = ", without_codes=true" if without_codes else ""
+
+    def build(end: int) -> Dict[str, Any]:
+        answer = dict(base)
+        beyond = False
+        if "coded_segments" in base:
+            chosen = parts.in_part(segments, start, end)
+            beyond = any(s.get("reaches_beyond_part") for s in chosen)
+            answer["coded_segments"] = chosen
+            if "codes_used" in base:
+                answer["codes_used"] = _codes_used(chosen)
+        if "annotations" in base:
+            answer["annotations"] = parts.overlapping(annotations, start,
+                                                      end)
+        answer["part_text"] = whole[start:end]
+        answer["part"] = parts.part_block(
+            start, end, len(whole),
+            f"call read_file_with_codings(file_id={file_id}, start={end}"
+            f"{again}).", beyond)
+        return answer
+
+    def size(end: int) -> int:
+        return parts.host_bytes(_ai_json(build(end), indent=2))
+
+    end = parts.end_of_part(whole, start, size)
     if start == 0 and end >= len(whole):
         return
-    result.pop("full_text", None)
-    result["part_text"] = whole[start:end]
-    if "coded_segments" in result:
-        result["coded_segments"] = parts.overlapping(segments, start, end)
-    if "annotations" in result:
-        result["annotations"] = parts.overlapping(
-            result.get("annotations") or [], start, end)
-    again = ", without_codes=true" if without_codes else ""
-    result["part"] = parts.part_block(
-        start, end, len(whole),
-        f"call read_file_with_codings(file_id={file_id}, start={end}"
-        f"{again}).")
+    answer = build(end)
+    result.clear()
+    result.update(answer)
+
+
+def _codes_used(segments: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+    """`codes_used` counted from `segments`, in the form the database's
+    read gives it for the whole file (v0.15.4: a part's own codings)."""
+    used: Dict[str, Any] = {}
+    for segment in segments:
+        code = segment.get("code") or {}
+        entry = used.setdefault(code.get("name"), {
+            "count": 0, "category": code.get("category"),
+            "color": code.get("color")})
+        entry["count"] += 1
+    return used
 
 
 # ============================================================================

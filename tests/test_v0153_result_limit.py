@@ -6,14 +6,16 @@ Claude Code saves an MCP tool's text answer longer than 50,000 characters
 to a file under ~/.claude/projects/ and gives the assistant the file's
 path instead, unless the tool's tools/list entry declares a larger
 `anthropic/maxResultSizeChars`, up to a ceiling of 500,000 characters
-(code.claude.com's MCP page, read on 5 November 2026). A full part of a
-long file is about 60,000 characters of English (parts.py). Pinned here:
-the declaration over the host's path, a full part's answer longer than
-50,000 characters and shorter than the declared limit, and the limit
-under the ceiling.
+(code.claude.com's MCP page, read on 5 November 2026). Since v0.15.4 a
+full part of a long file is within parts.BOUND, about 39,000 characters
+of English, and the declaration stays for an answer over the bound,
+which a long file memo can make. Pinned here: the declaration over the
+host's path, a full part's answer shorter than 50,000 characters, and
+the limit under the ceiling.
 """
 
 import asyncio
+import json
 import sqlite3
 import sys
 from pathlib import Path
@@ -68,13 +70,13 @@ def test_the_tool_declares_a_result_limit_on_the_hosts_path():
     assert CLAUDE_CODE_THRESHOLD < declared <= CLAUDE_CODE_CEILING
 
 
-def test_a_full_part_needs_the_limit_and_fits_it(long_file):
+def test_a_full_part_is_under_the_threshold(long_file):
     out = asyncio.run(server.mcp.call_tool(
         "read_file_with_codings", {"file_id": 61}))
     if isinstance(out, tuple):
         out = out[0]
     answer = "".join(getattr(block, "text", "") for block in out)
-    declared = server.TOOL_META["read_file_with_codings"][KEY]
-    # longer than the threshold, so without the declaration Claude Code
-    # would keep the part in a file; shorter than what is declared
-    assert CLAUDE_CODE_THRESHOLD < len(answer) < declared
+    # a full part, the text continuing, reaches Claude Code as text
+    # without the declaration (v0.15.4)
+    assert json.loads(answer)["part"]["continues_at"] is not None
+    assert len(answer) < CLAUDE_CODE_THRESHOLD

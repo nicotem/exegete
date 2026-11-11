@@ -143,6 +143,27 @@ class TestTheSeal:
         assert not session.came_with_project
         assert session.approval_counts(session.suggestions[0])
 
+    def test_a_name_held_as_null_beside_text_is_sealed_as_read(
+            self, project):
+        """Another program can leave a file's name NULL: the session's
+        statistics then key one file by None and another by text, which
+        cannot be sorted as they stand, and the seal, worked out over the
+        file as its JSON text holds it, is made and verified as before."""
+        beans = "The beans grew tall in the spring."
+        made = json.loads(server.import_text_file(filename="notes.txt",
+                                                  content=beans))
+        assert "error" not in made, made
+        sid = start(file_ids=[1, 2])["coding_session_id"]
+        change_database(project, "update source set name = NULL where id = 1")
+        assert record(sid)["recorded_count"] == 1
+        out = jcall("record_suggestions", coding_session_id=sid, suggestions=[
+            {"file_id": 2, "code_name": "Hope", "segment_text": beans,
+             "reading": "explicit", "reasoning": "r"}])
+        assert out.get("recorded_count") == 1, out
+        data = stored(project, sid)
+        assert sorted(data["statistics"]["by_file"]) == ["notes.txt", "null"]
+        assert not loaded(sid).came_with_project
+
     @pytest.mark.parametrize("how", ["a character changed", "another key"])
     def test_a_file_without_this_seal_came_with_the_project(
             self, project, monkeypatch, how):

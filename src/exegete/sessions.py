@@ -1329,6 +1329,11 @@ class SessionManager:
         data = session.to_dict()
         data.pop("project_path", None)
         if not session.came_with_project:
+            # Over the rest of the file as its JSON text will hold it, as a
+            # load reads it: every key text, so that a file's or a code's
+            # name the project holds as NULL, beside names held as text (a
+            # statistic's by_file and by_code), sorts as it will be read
+            data = json.loads(json.dumps(data))
             data[SEAL_FIELD] = seal_of(key, data)
         raw = json.dumps(data, indent=2).encode("utf-8")
         name = self.file_name(session.session_id)

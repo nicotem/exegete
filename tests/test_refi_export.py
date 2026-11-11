@@ -11,6 +11,13 @@ from exegete.refi_export import RefiQdaExporter, NAMESPACE
 from exegete.sessions import CodingSuggestion
 
 
+# Text long enough for the sample positions (export now bounds-checks
+# positions against the actual payload text, and from 0.15.4 compares a
+# session's passages with it, as apply_codings does)
+TEXT_1 = ("Sample interview text here. " * 12).strip()
+TEXT_2 = ("Another interview text goes on. " * 12).strip()
+
+
 class MockQualcoderDatabase:
     """Mock database for testing."""
 
@@ -22,14 +29,10 @@ class MockQualcoderDatabase:
              "memo": "Ways people cope", "category_id": None, "category": None}
         ]
 
-        # Text long enough for the sample positions (export now bounds-checks
-        # positions against the actual payload text)
-        _text_1 = ("Sample interview text here. " * 12).strip()
-        _text_2 = ("Another interview text goes on. " * 12).strip()
         self.files = [
-            {"id": 1, "name": "interview_01.txt", "content": _text_1,
+            {"id": 1, "name": "interview_01.txt", "content": TEXT_1,
              "is_text": True, "memo": "First interview"},
-            {"id": 2, "name": "interview_02.txt", "content": _text_2,
+            {"id": 2, "name": "interview_02.txt", "content": TEXT_2,
              "is_text": True, "memo": "Second interview"}
         ]
 
@@ -104,7 +107,7 @@ def sample_suggestions():
             code_name="Workplace Stress",
             start_pos=0,
             end_pos=50,
-            segment_text="I feel very stressed at work.",
+            segment_text=TEXT_1[0:50],
             reasoning="Clear stress indicator",
             reading="explicit",
             status="approved",
@@ -117,7 +120,7 @@ def sample_suggestions():
             code_name="Coping Strategies",
             start_pos=100,
             end_pos=150,
-            segment_text="I try to meditate daily.",
+            segment_text=TEXT_1[100:150],
             reasoning="Positive coping strategy",
             reading="explicit",
             status="approved",
@@ -130,7 +133,7 @@ def sample_suggestions():
             code_name="Workplace Stress",
             start_pos=200,
             end_pos=250,
-            segment_text="The deadlines are overwhelming.",
+            segment_text=TEXT_2[200:250],
             reasoning="Stress from deadlines",
             reading="explicit",
             status="approved",
@@ -566,7 +569,7 @@ class TestRefiQdaExporter:
             code_name="Test Code",
             start_pos=0,
             end_pos=10,
-            segment_text="text",
+            segment_text=TEXT_1[0:10],
             reasoning="",  # Empty reasoning
             reading="explicit"
         )

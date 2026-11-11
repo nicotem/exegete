@@ -7,7 +7,7 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 212,322 | 210,397 |
+| `full` (80 tools) | 212,702 | 210,397 |
 | `core` (28 tools) | 77,625 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,457 | 14,180 |
@@ -63,5 +63,11 @@ Python 3.13 with the libraries in `uv.lock`:
 - The workspace copy's description now says that a copy leaves out
   every temporary copy of the names list, whatever its age, adding
   154 characters to its definition in both sets.
+- The REFI-QDA export's description now says that a session's export
+  compares each suggestion's passage with the file's text, that an
+  applied or removed suggestion that no longer fits is left out,
+  counted and the first 20 named, and that past 5,000 codings of one
+  code the rest are left out, adding 380 characters to its definition
+  in `full`.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).

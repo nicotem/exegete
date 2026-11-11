@@ -3234,7 +3234,8 @@ def is_sessions_folder_entry(top: Union[str, Path], name: str) -> bool:
 def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
                  database_copied: bool = False,
                  exclude_real: Optional[set] = None,
-                 leave_out_top: Tuple[str, ...] = ()):
+                 leave_out_top: Tuple[str, ...] = (),
+                 leave_out_names_leftovers: bool = False):
     """The ignore callback shared by backup_project and copy_project_to_workspace.
 
     Applies BACKUP_IGNORE_PATTERNS and additionally skips any entry that
@@ -3273,6 +3274,14 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
     that made it replaces it within the instant, and a copy meeting it
     gone would fail whole. BACKUP_IGNORE_PATTERNS, which QualCoder's own
     set is held to, stays as it is.
+
+    With `leave_out_names_leftovers` (v0.15.4; a workspace copy passes
+    it, a backup never), every entry at the project's top whose name has
+    the form of a temporary copy of the names list (`_NAMES_LIST_LEFTOVER`,
+    matched whole, as written) is left out too, whatever it is and however old:
+    never copied, never followed, never reported as skipped. A backup
+    copies such a file while it is under an hour old, and sweeps older
+    ones from the project first (`sweep_names_list_leftovers`).
     """
     from . import private_files
     root_real = os.path.normcase(os.path.realpath(project_root))
@@ -3313,6 +3322,11 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
             ignored.update(n for n in names
                            if top_entry_named(project_root, n,
                                               leave_out_top))
+        if leave_out_names_leftovers and at_top:
+            # The same, for the names list's temporary copies, which hold
+            # the real names (v0.15.4)
+            ignored.update(n for n in names
+                           if _NAMES_LIST_LEFTOVER.fullmatch(n) is not None)
         if exclude_real:
             ignored.update(
                 n for n in names
@@ -3678,7 +3692,8 @@ def _copy_database(source: Path, dest: Path,
 def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
                        report: Optional[Dict[str, Any]] = None,
                        database_later: bool = False,
-                       leave_out_top: Tuple[str, ...] = ()
+                       leave_out_top: Tuple[str, ...] = (),
+                       leave_out_names_leftovers: bool = False
                        ) -> Optional[Path]:
     """Copy a project folder into `dest`, an empty folder the caller has
     just claimed (and removes on any failure): the database
@@ -3696,7 +3711,9 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
 
     `leave_out_top` names the entries at the project's top left out of
     the copy, whatever they are (`_copy_ignore`): a backup passes
-    MEDIA_FOLDERS, a workspace copy nothing."""
+    MEDIA_FOLDERS, a workspace copy nothing. `leave_out_names_leftovers`
+    leaves out the names list's temporary copies at the top, whatever
+    their age (`_copy_ignore`): a workspace copy passes it (v0.15.4)."""
     database = source / "data.qda"
     exclude_real: set = set()
     database_source: Optional[Path] = None
@@ -3721,7 +3738,9 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
         ignore=_copy_ignore(source, skipped,
                             database_copied=database_source is not None,
                             exclude_real=exclude_real,
-                            leave_out_top=leave_out_top))
+                            leave_out_top=leave_out_top,
+                            leave_out_names_leftovers=(
+                                leave_out_names_leftovers)))
     _withhold_exegete_folder_links(source, skipped, report)
     return database_source if database_later else None
 
@@ -4150,7 +4169,10 @@ def copy_project_to_workspace(
     closed" prompt on the copy). Symlinks pointing outside the project
     folder, dangling symlinks, and in-project symlink loops are skipped
     rather than followed (S-P1, see _copy_ignore). A copy that holds no
-    ai_data then gets an empty one (v0.15.0, AI_DATA_FOLDER).
+    ai_data then gets an empty one (v0.15.0, AI_DATA_FOLDER). The names
+    list's temporary copies at the project's top, with the real names in
+    them, are left out whatever their age (v0.15.4), where a backup
+    copies one under an hour old; the original is only read.
 
     Args:
         source_path: Path to the source .qda project
@@ -4237,8 +4259,11 @@ def copy_project_to_workspace(
         raise OSError(f"Copy failed: {error_label(e)}") from None
     try:
         # The database consistently, as a backup is made (v0.14): a copy
-        # taken while QualCoder writes holds what was last committed
-        _copy_project_tree(source_path, dest_path, skipped, report)
+        # taken while QualCoder writes holds what was last committed.
+        # Unlike a backup, it leaves out every temporary copy of the names
+        # list, however young (v0.15.4): the original is only read
+        _copy_project_tree(source_path, dest_path, skipped, report,
+                           leave_out_names_leftovers=True)
         # A copy with no ai_data gets an empty one, as create_project
         # makes (AI_DATA_FOLDER: spares QualCoder 4.0 a race on its first
         # open); one the copy carries is left as it is

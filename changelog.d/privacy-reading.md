@@ -3,8 +3,8 @@
 - **PRIVACY.md, read whole.** What it said twice is said once. Its list
   of what stays on the computer is now part of "Files Exegete keeps on
   your computer", and the pseudonymisation run record is described
-  there alone. It is about a twelfth shorter, and every warning and its
-  suggestion is kept.
+  there alone. It is about a fifteenth shorter, and every warning and
+  its suggestion is kept.
 - **PRIVACY.md in plainer sentences.** It was read again as a
   researcher new to Exegete would read it. Long sentences are split,
   lists take the place of sentences joined by semicolons, and words
@@ -29,14 +29,18 @@
   length out, as PRIVACY.md now says.
 - **Your browser's history.** Each page Exegete opens in your browser
   leaves an entry there: a reading copy, the page for choosing
-  occurrences and an import's page for checking letters. PRIVACY.md says
+  occurrences, an import's page for checking letters, and a copy of an
+  original that opens in a browser, as a PDF can. PRIVACY.md says
   what each entry holds, and suggests deleting such entries or keeping
   history sync off.
 - **What hosts keep, and where.** PRIVACY.md dates Claude Desktop's log,
   which can hold every request and answer, from MCP's page on debugging,
   read on 10 November 2026. It adds Claude Code's files for answers over
   50,000 characters, from Anthropic's page on MCP, read on 10 November
-  2026, and the deny rules' second gap, a command such as `grep -r`.
+  2026, and the deny rules' second gap, a command such as `grep -r`. It
+  says what `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` and
+  `cleanupPeriodDays` each change, from Anthropic's pages read on
+  11 November 2026.
 - **Claude's memory** can carry what was said in one conversation into
   another. PRIVACY.md quotes Anthropic's pages, read on 10 November
   2026, and gives the switches for one conversation and for the
@@ -47,8 +51,9 @@
   is loaded.
 - **ChatGPT Business, Enterprise and Edu.** From OpenAI's page on
   enterprise privacy (an Internet Archive capture of 3 November 2026),
-  PRIVACY.md says that the workspace's admins set how long data is kept,
-  and that on Business they can view and export members' conversations.
+  PRIVACY.md says that on Enterprise and Edu the workspace's admins set
+  how long data is kept and can reach an audit log of conversations, and
+  that on Business they can view and export members' conversations.
 - **onnxruntime on Windows.** PRIVACY.md gives both accounts: the note in
   onnxruntime's package, which says its official Windows releases read
   the setting Exegete gives, and the reading of the Windows package
@@ -57,6 +62,9 @@
 - **Smaller corrections.** Ultra is named beside Free, Pro and Max. A
   hidden coder's coding, deleted with the override, gives the ids of its
   code and its file too. A resource address whose id is not a number is
-  refused by the MCP library, with no line logged. Readings that said
-  "the same day" give their date. "Questions" points to SECURITY.md for
-  a fault that could expose participants' data.
+  refused by the MCP library, with no error logged. Deleting the
+  preview secret also means that a change made before can no longer be
+  undone. `save_names_list` is named among the tools that read a
+  backup, which it does to keep a keyed digest of the names list.
+  Readings that said "the same day" give their date. "Questions" points
+  to SECURITY.md for a fault that could expose participants' data.

@@ -269,9 +269,19 @@ def test_privacy_says_rename_file_reads_the_backups():
     # v0.15.1: rename_file no longer reads the backups, as announced
     # (tests/test_v0151_journal_and_rename_back.py); v0.15.2: undo reads
     # the backup of the change it takes back, said in a paragraph of its own
+    # (v0.15.4, PRIVACY's fix round: save_names_list reads the names list
+    # in the backup it has just taken, as a keyed digest for its record;
+    # server.py, _record_names_list_save)
     assert ("No tool reads the backups' contents, apart from "
-            "`restore_backup`, `prune_backups` and `undo_changes`."
+            "`restore_backup`, `prune_backups`, `undo_changes` and "
+            "`save_names_list`.") in paragraph
+    assert ("`save_names_list` reads the `pseudonyms.json` of the backup it "
+            "takes before the save, only to keep a keyed digest of it"
             ) in paragraph
+    source = Path(server.__file__).read_text(encoding="utf-8")
+    record = source[source.index("def _record_names_list_save("):]
+    record = record[:record.index("\ndef ")]
+    assert "pseudonyms_json_fingerprint(backup)" in record
     assert "In 0.15.0 and earlier, `rename_file` read the names in the " \
            "backups to recognise a rename back." in paragraph
     assert "`undo_changes` reads the backup Exegete took" in paragraph

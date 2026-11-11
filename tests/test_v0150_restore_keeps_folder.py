@@ -1269,12 +1269,15 @@ class TestTheTexts:
                 "note | you: Exegete never deletes them, and a restore keeps "
                 "them as they are (and leaves the backup's copy in the "
                 "backup) |") in files
+        # (v0.15.4, the readability reading: the exceptions in a sentence
+        # of their own)
         assert ("They travel with the project into every backup (Exegete's, "
-                "and QualCoder's if you use it) and every copy, apart from "
-                "files whose names those leave out (lock files, "
-                "`search.sqlite` and SQLite's side files, and in QualCoder's "
-                "backups, audio and video when its settings say so), and to "
-                "any service that syncs the project's folder.") in files
+                "and QualCoder's if you use it) and every copy, and to any "
+                "service that syncs the project's folder. The exceptions are "
+                "files whose names those backups and copies leave out: lock "
+                "files, `search.sqlite` and SQLite's side files, and in "
+                "QualCoder's backups, audio and video when its settings say "
+                "so.") in files
         assert "this folder with it" not in files
         backups = _flat(privacy[privacy.index(
             "\n## Backups, project copies, and the `ai_data/` folder\n"):])
@@ -1283,12 +1286,15 @@ class TestTheTexts:
                 "normal: QualCoder rebuilds it on project open. A restore "
                 "keeps the project's `Exegete` folder as it is, with every "
                 "file in it, those whose names backups leave out included: "
+                # (v0.15.4, the readability reading: the aside and the
+                # case without a folder, sentences of their own)
                 "it leaves the folder where it is. It leaves the backup's "
-                "copy of that folder in the backup (QualCoder, if you use it, "
-                "removes its own older backups when it closes a project, so a "
-                "copy in one of those may not stay); when the project has no "
-                "such folder, a restore does not bring the backup's back, and "
-                "you can copy it into the project yourself.") in backups
+                "copy of that folder in the backup. (QualCoder, if you use "
+                "it, removes its own older backups when it closes a project, "
+                "so a copy in one of those may not stay.) When the project "
+                "has no such folder, a restore does not bring the backup's "
+                "back, and you can copy it into the project yourself.") \
+            in backups
         assert "stays in the backup" not in _flat(privacy)
         # exegete.json: rolled back with the rest of the project, not of
         # the folder
@@ -1297,9 +1303,11 @@ class TestTheTexts:
                 "restore keeps).") in _flat(privacy)
         # the passage on pseudonyms.json no longer says the whole folder
         assert "rolls the whole folder back" not in _flat(privacy)
-        assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete`, `audio` and `video` folders, which a restore "
-                "keeps), this file with it") in _flat(privacy)
+        # (v0.15.4, the readability reading: the file first, the folders a
+        # restore keeps after it)
+        assert ("`restore_backup` rolls the project back, this file with it, "
+                "all but its `Exegete`, `audio` and `video` folders, which a "
+                "restore keeps.") in _flat(privacy)
 
     def test_the_changelog(self):
         changelog = _flat(_read("CHANGELOG.md"))

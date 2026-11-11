@@ -3,8 +3,15 @@
 - **PRIVACY.md, read whole.** What it said twice is said once. Its list
   of what stays on the computer is now part of "Files Exegete keeps on
   your computer", and the pseudonymisation run record is described
-  there alone. It is about a tenth shorter, and every warning and its
+  there alone. It is about a twelfth shorter, and every warning and its
   suggestion is kept.
+- **PRIVACY.md in plainer sentences.** It was read again as a
+  researcher new to Exegete would read it. Long sentences are split,
+  lists take the place of sentences joined by semicolons, and words
+  such as MCP, digest, symlink, Cowork and computer use are explained
+  where they first appear. Where a section repeated the advice of
+  another, such as which assistant to use for participants' data, it
+  now points to that section.
 - **Warnings where PRIVACY.md gave orders.** Switching training off, an
   old run record, a repair of a damaged database, the notes of two
   people who share a name, a coder name file left beside another, a

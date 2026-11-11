@@ -275,7 +275,8 @@ def test_the_backup_before_a_database_change_is_never_copied_as_a_file():
     finish = inspect.getsource(database.QualcoderDatabase.backup_before_write)
     assert "started.finish(copy_as_file=False)" in finish
     privacy = _flat("PRIVACY.md")
-    assert ("the backup Exegete takes before a change to the project's "
+    # (v0.15.4, the readability reading: a sentence of its own)
+    assert ("The backup Exegete takes before a change to the project's "
             "database is never copied as a file") in privacy
     readme = _flat("README.md")
     # (the ignored argument, merged first: "every change", whatever

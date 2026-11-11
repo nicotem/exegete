@@ -495,7 +495,8 @@ class TestTheDocuments:
         assert ("The help's overview (`explain_ai_coding_tools()`) checks "
                 "only whether `~/.qualcoder_mcp` is there, as a folder or a "
                 "link, to point the assistant to the topic on the earlier "
-                "name; nothing inside it is listed or read.") in privacy
+                # (v0.15.4, the readability reading: two sentences)
+                "name. Nothing inside it is listed or read.") in privacy
 
     def test_the_changelog_gives_the_words_and_figures(self):
         section, measured = self._changelog()

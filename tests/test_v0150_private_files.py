@@ -1103,10 +1103,12 @@ class TestTheDocuments:
                 "your word, `undo_changes` also removes",
                 "The files you fill in are never returned to the assistant",
                 # piece 2's fix round 2: backups leave out files by name
+                # (v0.15.4, the readability reading: the exceptions in a
+                # sentence of their own, after the places)
                 "They travel with the project into every backup (Exegete's, "
-                "and QualCoder's if you use it) and every copy, apart from "
-                "files whose names those leave out",
-                "and to any service that syncs the project's folder.",
+                "and QualCoder's if you use it) and every copy, and to any "
+                "service that syncs the project's folder. The exceptions are "
+                "files whose names those backups and copies leave out",
                 "These rules govern what passes through Exegete, not what an "
                 "assistant can reach by other routes. Imagine you tell the "
                 "assistant that Exegete refused a file you filled in",

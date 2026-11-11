@@ -15078,7 +15078,8 @@ class QualcoderDatabase:
         over the public part as the run would leave it (the plan's own
         rewritten text for a note in it, the stored public part for every
         other note), and the block gains `after_rewrite_note`, which says
-        why that number is not zero. Labels and attribute values are
+        why that number is not zero and, with phrases to keep (v0.15.4),
+        that a name inside one stays. Labels and attribute values are
         never rewritten and gain nothing.
         """
         residue: Dict[str, Any] = {"counts": "fields, not occurrences",
@@ -15243,7 +15244,12 @@ class QualcoderDatabase:
                 "index) is never read or written by Exegete and is not "
                 "scanned; it may still hold the previous text.")
         if memo_plan is not None:
-            residue["after_rewrite_note"] = self.PSEUDONYMISE_AFTER_REWRITE_NOTE
+            # With phrases to keep, one sentence more (v0.15.4); the note's
+            # own words stay those of every other run
+            residue["after_rewrite_note"] = (
+                self.PSEUDONYMISE_AFTER_REWRITE_NOTE
+                + (self.PSEUDONYMISE_AFTER_REWRITE_PHRASES
+                   if (plan or {}).get("keep_phrases") else ""))
         try:
             residue["file_text"] = self._pseudonymise_file_text(
                 compiled, plan, may_echo_names, detail)
@@ -15423,13 +15429,35 @@ class QualcoderDatabase:
         "file it applies to. Numbers hold only for the list they were read "
         "from: after a run on this file, or a change to its text or "
         "mapping, ask for numbers from a new preview's list.")
-    PSEUDONYMISE_OCCURRENCES_NEXT = (
-        "To leave some of these, ask the researcher which. "
-        + PSEUDONYMISE_OCCURRENCES_NUMBERS
-        + " Then preview again with the same mapping and case_mode, "
+    # The preview every next note sends the assistant to, the block's own
+    # and the ones that name the page (server._OCCURRENCES_NEXT_THEN).
+    # With phrases to keep (v0.15.4) it asks for them too: no answer
+    # repeats them, and a preview made without them binds none, so its
+    # run would replace every name they keep. Without phrases the words
+    # are those of v0.15.3
+    PSEUDONYMISE_OCCURRENCES_AGAIN = (
+        " Then preview again with the same mapping and case_mode, "
         "choose_occurrences and the list: that preview marks the ones "
         "left, for the researcher to check, and its token is the one the "
         "run needs.")
+    PSEUDONYMISE_OCCURRENCES_AGAIN_KEEPING = (
+        " Then preview again with the same mapping, case_mode and "
+        "keep_phrases, choose_occurrences and the list: that preview marks "
+        "the ones left, for the researcher to check, and its token is the "
+        "one the run needs.")
+    PSEUDONYMISE_OCCURRENCES_NEXT = (
+        "To leave some of these, ask the researcher which. "
+        + PSEUDONYMISE_OCCURRENCES_NUMBERS
+        + PSEUDONYMISE_OCCURRENCES_AGAIN)
+    PSEUDONYMISE_OCCURRENCES_NEXT_KEEPING = (
+        "To leave some of these, ask the researcher which. "
+        + PSEUDONYMISE_OCCURRENCES_NUMBERS
+        + PSEUDONYMISE_OCCURRENCES_AGAIN_KEEPING)
+    # A row inside a phrase to keep (v0.15.4), said where the file has one
+    PSEUDONYMISE_OCCURRENCES_KEPT_NOTE = (
+        "A row marked kept lies wholly inside a phrase to keep: the run "
+        "leaves it as it is, listed or not, while the same keep_phrases "
+        "are given.")
 
     @classmethod
     def _pseudonymise_occurrences(cls, item: Dict[str, Any],
@@ -15458,6 +15486,12 @@ class QualcoderDatabase:
         order, and the block gives the list's `numbering`, which numbers
         given back come with (v0.15.4), on both paths: a number counts
         occurrences, as an id names one, and says no more of the text.
+
+        With phrases to keep (the plan's `phrases`, v0.15.4) each row of
+        an occurrence inside one (`kept_at`) gains `"kept": true`, beside
+        its line, the block gains `kept_note` where the file has one, and
+        `next` asks for the same keep_phrases. Kept occurrences keep their
+        numbers and ids, which phrases never change.
         """
         from . import occurrences
         full = item.get("occurrence_ids")
@@ -15478,6 +15512,9 @@ class QualcoderDatabase:
         for place in left:
             if place < len(rows):
                 rows[place]["left"] = True
+        for place in item.get("kept_at", ()):
+            if place < len(rows):
+                rows[place]["kept"] = True
         block: Dict[str, Any] = {
             "count": len(full),
             "numbering": item.get("numbering") or occurrences.numbering(full),
@@ -15485,12 +15522,16 @@ class QualcoderDatabase:
         if len(full) > len(shown):
             block["listed_in_part"] = True
             block["more"] = len(full) - len(shown)
+        if item.get("kept_at"):
+            block["kept_note"] = cls.PSEUDONYMISE_OCCURRENCES_KEPT_NOTE
         if leave_given:
             block["left"] = item.get("left", 0)
             if block["left"]:
                 block["left_note"] = cls.PSEUDONYMISE_OCCURRENCES_LEFT_NOTE
         else:
-            block["next"] = cls.PSEUDONYMISE_OCCURRENCES_NEXT
+            block["next"] = (cls.PSEUDONYMISE_OCCURRENCES_NEXT_KEEPING
+                             if "phrases" in item
+                             else cls.PSEUDONYMISE_OCCURRENCES_NEXT)
         return block
 
     def pseudonymise_preview(self, plan: Dict[str, Any],
@@ -15523,6 +15564,14 @@ class QualcoderDatabase:
         as found, the same with a list as without; `totals.replacements`
         counts the replacements the run makes. Without either the block is
         absent and the preview is as before.
+
+        With phrases to keep (the plan's `keep_phrases`, v0.15.4) each
+        file gains a `phrases` block: `kept`, the occurrences inside a
+        phrase that no list also leaves, and `each`, by the phrase's
+        number in the list given, its `occurs`, `keeps` and `cut`, with a
+        fixed note; counts alone, never a phrase. The entries' blocks stay
+        those of the occurrences as found, the `occurrences` block marks
+        the rows kept, and `memo_rewrites.totals` gains `kept_by_phrases`.
 
         Read-only, and everything in it is a count, a span, a short id
         with its line, or a name the caller already supplied. The only
@@ -15703,6 +15752,13 @@ class QualcoderDatabase:
                 files[-1]["rows_read"] = False
                 files[-1]["rows_read_note"] = \
                     self.PSEUDONYMISE_ROWS_NOT_READ_NOTE
+            if "phrases" in item:
+                # What the phrases to keep kept (v0.15.4): counts by each
+                # phrase's number in the list given, never a phrase
+                files[-1]["phrases"] = {
+                    "kept": item["kept"],
+                    "each": [dict(each) for each in item["phrases"]],
+                    "note": self.PSEUDONYMISE_PHRASES_NOTE}
             if leave_given and not may_echo_names:
                 # Beside a preview without the list, the new length tells
                 # the left occurrences' entries: it differs by each left
@@ -15791,6 +15847,22 @@ class QualcoderDatabase:
         "This run replaces nothing in this file's text, so the positions "
         "of its codings, annotations and case links were not read: it "
         "moves none of them, and the counts in this entry include none.")
+    # A file's `phrases` block (v0.15.4): what each phrase to keep kept,
+    # by its number in keep_phrases, beside the entries' counts, which
+    # stay those of the occurrences as found, as with a list to leave
+    PSEUDONYMISE_PHRASES_NOTE = (
+        "For each phrase, by its number in keep_phrases: occurs, how often "
+        "it occurs in this file's text; keeps, the names of the mapping "
+        "wholly inside it, which the run leaves as they are; and cut, the "
+        "names that run past it, which the run replaces. kept is the "
+        "number of names kept that no list also leaves. The counts per "
+        "entry are of the occurrences as found, before any is kept; the "
+        "run makes the replacements counted in totals.replacements.")
+    # The note rewrite's residue note gains this where phrases are given
+    # (v0.15.4): a name inside one is kept in the notes too
+    PSEUDONYMISE_AFTER_REWRITE_PHRASES = (
+        " A name inside a phrase to keep stays in the notes as it is, and "
+        "wide_after_rewrite counts it.")
 
     # The fixed strings of the preview's `memo_rewrites` block (v0.13,
     # Brief 2, 5.2). Every count block carries a fixed units string, and
@@ -15866,6 +15938,10 @@ class QualcoderDatabase:
         if totals["of_hidden_coders"] > 0:
             block["memos_of_hidden_coders_note"] = \
                 self.PSEUDONYMISE_MEMO_HIDDEN_NOTE
+        if "kept_by_phrases" in totals:
+            # The matches inside a phrase to keep, left as they are
+            # (v0.15.4), as the run's answer counts them; with phrases alone
+            block["totals"]["kept_by_phrases"] = totals["kept_by_phrases"]
         if memo_plan["unreadable"]:
             block["unreadable"] = list(memo_plan["unreadable"])
         return block

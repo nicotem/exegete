@@ -67,7 +67,10 @@ def _entries(folder: Path) -> dict:
     path with its kind, its bytes or its link's target, and its times."""
     found = {}
     for entry in sorted(os.scandir(folder), key=lambda e: e.name):
-        info = entry.stat(follow_symlinks=False)
+        # Each entry's own times, read afresh: on Windows a listing gives a
+        # folder's times from its parent's index, which NTFS updates later,
+        # so two listings can differ where nothing changed (v0.15.4)
+        info = os.lstat(entry.path)
         if entry.is_symlink():
             found[entry.name] = ("link", os.readlink(entry.path),
                                  info.st_mtime_ns)

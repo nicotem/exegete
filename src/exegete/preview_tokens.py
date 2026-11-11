@@ -458,6 +458,16 @@ def _args_pseudonymise_source(kwargs):
     when numbers are given, so that a run without them, by ids or by
     neither, binds exactly as before and a token issued before the
     update still verifies.
+
+    `keep_phrases` (v0.15.4) names the phrases whose names the run keeps
+    as they are, so it changes what happens to the text and to the notes
+    and is bound, as Exegete settled it
+    (pseudonymise.canonical_phrases: each phrase as the matcher reads
+    it, in NFC, each once, sorted), on the same terms: only when the
+    list is not empty, so that a run without phrases binds exactly as
+    before and a token issued before the update still verifies. Its
+    words are a typed mapping's kind, so the bind stays keyed
+    (`KEYED_BIND`).
     """
     bound = {"file_id": int(kwargs["file_id"]),
              "mapping": kwargs["mapping"],
@@ -473,6 +483,9 @@ def _args_pseudonymise_source(kwargs):
     if numbers:
         bound["leave_numbers"] = [int(one) for one in numbers]
         bound["numbering"] = str(kwargs["numbering"])
+    phrases = kwargs.get("keep_phrases")
+    if phrases:
+        bound["keep_phrases"] = [str(one) for one in phrases]
     return bound
 
 

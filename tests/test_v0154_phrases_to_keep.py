@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.15.4, phrases to keep: the engine and the plan.
+"""v0.15.4, phrases to keep: the engine and the plan, and the call.
 
 A run of pseudonymise_source keeps whole the phrases the researcher types
 into the call, such as a quoted public figure ("Theresa May") or a
@@ -12,13 +12,20 @@ ids, numbers and numbering stay as they are. A file whose every
 occurrence is kept, or left by a list, has its rows neither read nor
 mapped, and the write and the run record pass over it.
 
-These tests drive the engine, the plan, the preview and the write
-directly, as far as they reach without the call's argument. The
+The first tests drive the engine, the plan, the preview and the write
+directly. The call's (`keep_phrases`, the second piece) follow: a typed
+mapping only, every check made before anything is read, the phrases
+bound into the token as read and repeated in no answer, and counts
+alone in the journal entry, the run record and the answer. The
 fixtures and helpers are the flagship's own
 (`test_v012_pseudonymise_tool.py`) and the occurrences choice's
 (`test_v0153_leave_occurrences.py`).
 """
 
+import inspect
+import json
+import logging
+import re
 import sqlite3
 import sys
 import unicodedata
@@ -32,15 +39,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
+from exegete import change_record  # noqa: E402
 from exegete import occurrences  # noqa: E402
 from exegete import preview_tokens as pt  # noqa: E402
 from exegete import pseudonymise as P  # noqa: E402
 from exegete.database import QualcoderDatabase  # noqa: E402
 from track5_helpers import write_fixture_sidecar  # noqa: E402
 from test_v012_pseudonymise_tool import (  # noqa: E402
-    add_annotation, add_coding, backups, build_project, execute_from,
-    hide_coder, preview_of, query, wired)
-from test_v0153_leave_occurrences import choose  # noqa: E402
+    MAPPING, add_annotation, add_coding, backups, build_project, call,
+    execute_from, hide_coder, preview_of, query, wired)
+from test_v0153_leave_occurrences import (  # noqa: E402
+    AT_BDE966C, choose, journal_text)
+from test_v0153_occurrence_ids import names_list  # noqa: E402
 
 # A public figure who shares a participant's first name, and a
 # pseudonym of another length than the name
@@ -566,3 +576,202 @@ class TestWithoutPhrases:
                 assert memos["totals"] == plain_memos["totals"]
                 assert server.db.pseudonymise_effect(plan, memos) == \
                     server.db.pseudonymise_effect(plain, plain_memos)
+
+
+# ---------------------------------------------------------------------------
+# The call: keep_phrases, its checks, its binding and its records
+# ---------------------------------------------------------------------------
+
+# A refusal's place, when nothing was read: no names list, no file of the
+# project and no plan
+NOTHING_READ = {"names list": 0, "files": 0, "plan": 0}
+
+
+def counting(monkeypatch):
+    """Count each read of the names list, of the project's files and of
+    the plan, so that a refusal is shown to come before all of them."""
+    counts = dict.fromkeys(NOTHING_READ, 0)
+    real = (server.read_project_pseudonyms,
+            QualcoderDatabase.pseudonymise_sources,
+            QualcoderDatabase.pseudonymise_plan)
+
+    def names(*args, **kwargs):
+        counts["names list"] += 1
+        return real[0](*args, **kwargs)
+
+    def sources(self, *args, **kwargs):
+        counts["files"] += 1
+        return real[1](self, *args, **kwargs)
+
+    def plan(self, *args, **kwargs):
+        counts["plan"] += 1
+        return real[2](self, *args, **kwargs)
+    monkeypatch.setattr(server, "read_project_pseudonyms", names)
+    monkeypatch.setattr(QualcoderDatabase, "pseudonymise_sources", sources)
+    monkeypatch.setattr(QualcoderDatabase, "pseudonymise_plan", plan)
+    return counts
+
+
+def refused_unread(counts, **arguments):
+    """The call's answer, refused with nothing read and no token, its
+    words quoting no phrase given."""
+    for key in counts:
+        counts[key] = 0
+    out = call(**arguments)
+    assert "preview_token" not in out and "error" in out, out
+    assert counts == NOTHING_READ, (counts, out)
+    phrases = arguments.get("keep_phrases")
+    for phrase in (phrases if isinstance(phrases, list) else []):
+        if isinstance(phrase, str) and len(phrase.strip()) > 3:
+            assert phrase.strip() not in json.dumps(out, ensure_ascii=False)
+    return out
+
+
+TOKEN = "qcp2.1.aaaaaaaa." + "a" * 32
+MARY = [{"original": "Mary Ann", "pseudonym": "Sam"},
+        {"original": "Ann", "pseudonym": "Joan"}]
+APART = [{"original": "Mary\N{NO-BREAK SPACE}Ann", "pseudonym": "Sam"}]
+
+
+class TestTheCallsChecks:
+
+    def test_refused_with_the_names_list(self, tmp_path, monkeypatch):
+        """With use_project_pseudonyms, phrases are refused before the
+        names list is read, however they are given, on a preview and on
+        an execute; no phrase, None or an empty list, is no phrase."""
+        with project_with(tmp_path, SPOKE) as folder:
+            names_list(folder, MAY)
+            counts = counting(monkeypatch)
+            for token in (None, TOKEN):
+                for given in (PHRASE, ["Mark my words"],
+                              [f"Theresa May {n}" for n in range(60)],
+                              "Theresa May"):
+                    out = refused_unread(counts, mapping=None,
+                                         use_project_pseudonyms=True,
+                                         keep_phrases=given,
+                                         preview_token=token)
+                    assert out["reason"] == "phrases_need_a_typed_mapping"
+                    assert out["error"] == \
+                        server._PHRASES_NEED_A_TYPED_MAPPING
+            for nothing in (None, []):
+                out = call(mapping=None, use_project_pseudonyms=True,
+                           keep_phrases=nothing)
+                assert "preview_token" in out, out
+            assert backups(folder) == [] and stored(folder) == SPOKE
+
+    @pytest.mark.parametrize("phrases, reason, number", [
+        ([f"Theresa May {n}" for n in range(51)], "too_many_phrases", None),
+        (["Theresa May " + "x" * 189], "phrase_too_long", 1),
+        (["Theresa May #####"], "phrase_hidden_characters", 1),
+        (["Theresa May", "Mark my words"], "phrase_holds_no_name", 2),
+        (["May"], "phrase_is_a_name", 1),
+    ] + [([f"Theresa{boundary}May"], "phrase_hidden_characters", 1)
+         for boundary in LINE_BOUNDARIES])
+    def test_each_rule_before_any_read(self, tmp_path, monkeypatch, phrases,
+                                       reason, number):
+        """Each rule, on a preview and on an execute, refused by the
+        phrase's number with nothing read: the names list, the file and
+        the plan untouched."""
+        with project_with(tmp_path, SPOKE) as folder:
+            counts = counting(monkeypatch)
+            for token in (None, TOKEN):
+                out = refused_unread(counts, mapping=MAY, keep_phrases=phrases,
+                                     preview_token=token)
+                assert out["reason"] == reason, out
+                assert out.get("phrase_number") == number, out
+            assert backups(folder) == []
+
+    @pytest.mark.parametrize("mapping, phrase, case_mode", [
+        (MAY, "may", "insensitive"),
+        (MAY, "may", "insensitive_preserve"),
+        (MARY, "Mary  Ann", "exact"),
+        (APART, "Mary Ann", "exact")])
+    def test_a_phrase_that_is_a_name(self, tmp_path, monkeypatch, mapping,
+                                     phrase, case_mode):
+        """A phrase that is itself a name under the run's case mode, as
+        the matcher reads both, is refused before any read."""
+        with project_with(tmp_path, SPOKE):
+            counts = counting(monkeypatch)
+            out = refused_unread(counts, mapping=mapping, keep_phrases=[phrase],
+                                 case_mode=case_mode)
+            assert (out["reason"], out["phrase_number"]) == (
+                "phrase_is_a_name", 1), out
+
+    def test_each_refusals_place(self, tmp_path, monkeypatch):
+        """The phrases' form is checked before the mapping, and each phrase
+        against the mapping after it and before the file: so a call wrong
+        in both is refused for its phrases' form, then for its mapping;
+        and a phrase holding no name is refused before an unknown file."""
+        short = [{"original": "M", "pseudonym": "Participant B"}]
+        with project_with(tmp_path, SPOKE):
+            counts = counting(monkeypatch)
+            out = refused_unread(counts, mapping=short,
+                                 keep_phrases=["Theresa May " + "x" * 189])
+            assert out["reason"] == "phrase_too_long", out
+            out = refused_unread(counts, mapping=short,
+                                 keep_phrases=["Mark my words"])
+            assert out.get("reason") is None and "original" in out["error"]
+            out = refused_unread(counts, mapping=MAY, file_id=99,
+                                 keep_phrases=["Mark my words"])
+            assert out["reason"] == "phrase_holds_no_name", out
+            out = call(mapping=MAY, file_id=99, keep_phrases=PHRASE)
+            assert out["reason"] == "unknown_file_id", out
+            assert counts["files"] == 1
+
+
+# Two phrases over one name: "Theresa May" and "May Day" both keep the
+# first May; the second stands alone
+DAY = "Theresa May Day was cold. Then May left."
+TWO = ["Theresa May", "May Day"]
+
+
+class TestTheBinding:
+
+    def test_another_phrase_or_none_is_another_operation(self, tmp_path):
+        """The token binds the phrases as read, each once and in any
+        order: the same phrases given twice, reordered or with a space
+        doubled run; other phrases, or none, which an execute made from
+        execute_with alone gives, are refused as another operation with
+        nothing written."""
+        with project_with(tmp_path, DAY) as folder:
+            out = preview_of(mapping=MAY, keep_phrases=TWO)
+            assert out["preview"]["totals"]["replacements"] == 1, out
+            for other in (["Theresa May"], ["May Day"], None, [],
+                          TWO + ["Then May"]):
+                refused = execute_from(out, mapping=MAY, keep_phrases=other)
+                assert refused.get("reason") == pt.OTHER_OPERATION, refused
+            assert stored(folder) == DAY and backups(folder) == []
+            done = execute_from(out, mapping=MAY, keep_phrases=[
+                "May Day", "Theresa  May", "Theresa May"])
+            assert done.get("success") is True, done
+            assert stored(folder) == DAY.replace("Then May",
+                                                 "Then Participant B")
+
+    def test_bound_as_read_and_only_when_given(self, tmp_path):
+        """Without phrases, or with an empty list, the arguments bound are
+        those of a run before phrases, byte for byte, so a token issued
+        before the update still verifies, and a preview without phrases
+        runs with an empty list; with phrases, they are bound as read, in
+        NFC, each once and sorted."""
+        flagship = P.Compiled(P.validate_mapping(MAPPING))
+        bound = dict(mapping=P.canonical_mapping(flagship.mapping), file_id=1,
+                     case_mode="exact", overlap_policy="snap_to_pseudonym",
+                     rewrite_memos=False, save_mapping_to_project=False)
+        for empty in (None, [], ()):
+            assert pt.canonical(pt.canonical_args(
+                "pseudonymise_source", keep_phrases=empty, **bound)) == \
+                AT_BDE966C["canonical_args"]
+        run = compiled()
+        given = ["Theresa  May", "May Day", "Theresa May"]
+        args = pt.canonical_args(
+            "pseudonymise_source",
+            **dict(bound, mapping=P.canonical_mapping(run.mapping)),
+            keep_phrases=P.canonical_phrases(P.validate_phrases(given, run)))
+        assert args["keep_phrases"] == ["May Day", "Theresa May"]
+        with project_with(tmp_path, SPOKE) as folder:
+            out = preview_of(mapping=MAY)
+            assert "keep_phrases_to_repeat" not in out["execute_with"]
+            done = execute_from(out, mapping=MAY, keep_phrases=[])
+            assert done.get("success") is True, done
+            assert "kept_by_phrases" not in done
+            assert stored(folder).count("Participant B") == 2

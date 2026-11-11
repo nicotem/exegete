@@ -6622,6 +6622,21 @@ Returns:
         "title": "Use Project Pseudonyms",
         "type": "boolean"
       },
+      "keep_phrases": {
+        "anyOf": [
+          {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Keep Phrases"
+      },
       "case_mode": {
         "default": "exact",
         "title": "Case Mode",

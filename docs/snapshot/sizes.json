@@ -124,7 +124,7 @@
     "brief_characters": 14457,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 212087,
+    "tool_definitions_characters": 212224,
     "tools": {
       "add_annotation": {
         "definition_characters": 2337,
@@ -335,7 +335,7 @@
         "description_characters": 3623
       },
       "pseudonymise_source": {
-        "definition_characters": 21268,
+        "definition_characters": 21405,
         "description_characters": 18727
       },
       "query_by_attribute": {

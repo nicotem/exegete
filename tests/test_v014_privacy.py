@@ -193,6 +193,29 @@ class TestTheRunsFingerprints:
                "means the next execute asks for a fresh preview; nothing " \
                "else." not in privacy
 
+    def test_the_documents_say_the_record_keeps_where_each_pseudonym_sits(
+            self, project):
+        """(v0.15.4, PRIVACY's fix round) A replacement in the record is
+        an entry and where its pseudonym now sits in the text after the
+        run, never what it replaced; PRIVACY said "the stretches of text
+        they replaced", which reads as the names themselves."""
+        _, record, new_text = _run(project)
+        pseudonyms = {entry["index"]: entry["pseudonym"]
+                      for entry in record["entries"]}
+        replacements = record["files"][0]["replacements"]
+        assert replacements
+        for replacement in replacements:
+            assert set(replacement) == {"entry", "new_span"}, replacement
+            start, end = replacement["new_span"]
+            assert new_text[start:end] == pseudonyms[replacement["entry"]]
+        privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md"
+                            ).read_text(encoding="utf-8").split())
+        held = privacy[privacy.index("**The pseudonymisation run records**"):]
+        held = held[:held.index("A record never holds an original name")]
+        assert ("the pseudonyms applied, where each pseudonym now sits in "
+                "the text after the run") in held
+        assert "stretches of text they replaced" not in held
+
     def test_the_does_not_rewrite_list_names_the_stored_copy(self):
         doc = " ".join(server.pseudonymise_source.__doc__.split())
         start = doc.index("What this does not rewrite")
@@ -1030,23 +1053,40 @@ class TestTheDocumentsSayWhatTheLogCarries:
         source = Path(server.__file__).read_text(encoding="utf-8")
         run = source[source.index("def pseudonymise_source("):]
         assert "secret = load_secret()" in run[:run.index("\n@mcp.tool")]
+        # (v0.15.4, PRIVACY's fix round: the records of changes are the
+        # fifth use. Every change Exegete records is keyed with the
+        # secret, and undo refuses a record made under another one,
+        # tests/test_v0152_undo_tool.py's test_a_replaced_secret_is_refused)
+        capture = source[source.index("def _capture_start("):]
+        capture = capture[:capture.index("\ndef ")]
+        assert "secret = load_secret()" in capture
+        assert 'change_record.digest(secret, "key check", "")' in capture
+        from exegete import undo
+        assert undo.SECRET_REPLACED in server.UNDO_REFUSAL_TEXTS
         # (v0.15.4, PRIVACY read whole: an item of "Files Exegete keeps
         # on your computer", in bold)
         secret = privacy[privacy.index("preview-token secret** "
                                        "(`~/.exegete/preview_secret`)"):]
         secret = secret[:secret.index("logs that it did")]
         for use, lost in (
-                # (v0.15.4, the readability reading: what losing the
-                # secret does to a preview, in plain words)
+                # (v0.15.4, PRIVACY's fix round: what losing the secret
+                # does to a preview, in the words the table above uses,
+                # which the promises check reads as a state)
                 ("sign the tokens that approve a two-step operation",
-                 "previews not yet carried out lose their tokens"),
+                 "any preview not yet carried out loses its token"),
                 ("key the digests in the pseudonymisation run records",
                  "the keyed digests in the run records already written "
                  "can then no longer be checked"),
                 ("name and sign the texts an import's preview keeps",
                  "the texts an import's preview kept can no longer be "
-                 "used")):
+                 "used"),
+                ("key the ids a pseudonymisation preview gives for "
+                 "choosing occurrences",
+                 "every occurrence gets a new id"),
+                ("keys the records of changes",
+                 "a change Exegete made before can no longer be undone")):
             assert use in secret and lost in secret, use
+        assert "Deleting it has five effects, and nothing else" in secret
         assert "Exegete replaces the secret by itself, with the same " \
             "effects" in secret
         # (v0.15.4, PRIVACY read whole: how the re-read shares its memory

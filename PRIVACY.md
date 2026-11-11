@@ -681,13 +681,14 @@ versions"). It also holds:
   sign the tokens that approve a two-step operation, to key the digests
   in the pseudonymisation run records, to key the ids a pseudonymisation
   preview gives for choosing occurrences, and to name and sign the texts
-  an import's preview keeps. A digest is a short fingerprint of a text,
-  and a keyed digest can be made or checked only with the secret. The
-  secret never leaves your machine, and never appears in a result, a log
-  line or an error. It holds nothing about your project. Deleting it has
-  four effects, and nothing else:
-  - previews not yet carried out lose their tokens, so the next run asks
-    for a fresh preview;
+  an import's preview keeps. It also keys the records of changes
+  (below), from which `undo_changes` takes a change back. A digest is a
+  short fingerprint of a text, and a keyed digest can be made or checked
+  only with the secret. The secret never leaves your machine, and never
+  appears in a result, a log line or an error. It holds nothing about
+  your project. Deleting it has five effects, and nothing else:
+  - any preview not yet carried out loses its token, so the next run
+    asks for a fresh preview;
   - the keyed digests in the run records already written can then no
     longer be checked;
   - the texts an import's preview kept can no longer be used, so the
@@ -695,7 +696,11 @@ versions"). It also holds:
   - every occurrence gets a new id, and every list of occurrences a new
     numbering. Ids, and a line copied from a page, are then accepted
     only from a preview made since. The numbers themselves stay as they
-    were.
+    were;
+  - a change Exegete made before can no longer be undone: `undo_changes`
+    refuses it, since its record was made with the old secret. A backup
+    taken before that change is still a way back, with `restore_backup`,
+    which also takes back everything done after that backup.
 
   Exegete replaces the secret by itself, with the same effects, when it
   finds the file malformed or, on macOS and Linux, readable by other
@@ -743,8 +748,8 @@ versions"). It also holds:
   of which rows a run changed and where the pseudonyms now sit, kept so
   that a run can be accounted for afterwards. No tool reads them back,
   and the way back is the backup taken before the run. A record holds:
-  - the pseudonyms applied, the stretches of text they replaced, and
-    the rows the run moved, with their offsets;
+  - the pseudonyms applied, where each pseudonym now sits in the text
+    after the run, and the rows the run moved, with their offsets;
   - each file's length before and after the run (`old_length`,
     `new_length`);
   - digests keyed with the secret, of the run's token and the mapping
@@ -753,13 +758,13 @@ versions"). It also holds:
 
   A keyed digest can be recomputed only with that secret. So beside the
   pseudonymised text, it confirms no guessed name to anyone without the
-  secret. The two lengths, with the stretches replaced, say by how many
+  secret. The two lengths, with those places, say by how many
   characters the replaced names were longer or shorter in total than
   their pseudonyms. That narrows a guess without confirming it. The
   preview and the run's answer give the conversation the same two
   lengths. The exception is a run with the names list and occurrences to
-  leave, where both leave the new length out: beside a preview without
-  that list, the new length would tell which entries the occurrences
+  leave, where both leave the new length out: beside a preview that
+  leaves none, the new length would tell which entries the occurrences
   left belong to. When a run rewrites notes, the record lists each by
   its table and row key, with the lengths of its public part, and no
   note's text. It says how many occurrences a run left, never where.
@@ -925,13 +930,14 @@ folder, with the real names in it: its name is `pseudonyms.json.`, then
 eight letters, digits or underscores, then `.tmp`. The next backup of
 the project removes it once it is an hour old. Until then it goes into
 every backup made, as `pseudonyms.json` does, and a restore of one of
-those backups brings it back. It also goes into every copy of the
-project made with `copy_project_to_workspace` meanwhile, whatever its
-age, since a copy removes nothing. It stays in such a copy until a
-backup of that copy removes it. If you take `pseudonyms.json` and the
-names file out of a project before copying it to share, you could also
-look in the project's folder for a file whose name starts with
-`pseudonyms.json.` and ends with `.tmp`. A copy made with
+those backups brings it back. A copy made with
+`copy_project_to_workspace` leaves it out, whatever its age. A copy
+made with it by 0.15.3 or earlier may still hold one, until a backup of
+that copy removes it. A copy made another way, in Finder or File
+Explorer for example, carries it. If you take `pseudonyms.json` and the
+names file out of such a copy before sharing it, you could also look in
+it for a file whose name starts with `pseudonyms.json.` and ends with
+`.tmp`. A copy made with
 `copy_project_to_workspace` that fails part-way is removed too, unless
 that removal fails. A copy cut short, or one whose removal failed,
 stays in the folder for projects under its own name, with whatever it
@@ -1219,7 +1225,10 @@ itself is gone. A reading copy's entry holds the file's name, in its
 title and its address, and the name of the project's folder, in its
 address. The page for choosing occurrences holds the file's name in its
 title and the project folder's name in its address. An import's page for
-checking letters holds the project folder's name in its address. A
+checking letters holds the project folder's name in its address. A copy
+of an original opened in its own app (`show="original"`) leaves an
+entry too when that app is a web browser, as it can be for a PDF. Its
+address holds the project folder's name and the original's file name. A
 browser that syncs its history can carry these entries to your other
 devices and to your account with the browser's maker. You may prefer
 to delete those entries from the history, or to keep history sync off
@@ -1329,7 +1338,12 @@ paths. This limits how much passes through the conversation ("How your
 data flows"). On a project that hides coders, naming a hidden coder is
 refused unless you pass `allow_hidden_coder=true`. The refusal says only
 that a named coder is hidden, never which of the two, and never how many
-coders are hidden. The tool's log lines carry the number of codes and
+coders are hidden. Its other error messages, such as the one for a
+coder with no codings, list the coders it can compare. They name the
+visible coders and give the hidden ones as a count. With
+`allow_hidden_coder=true`, they name the hidden coders too, and say so.
+If Exegete cannot read which coders the project hides, the tool compares
+nothing and says so. The tool's log lines carry the number of codes and
 files, never a coder's name.
 
 ## Coder visibility: reading and writing hidden coders' work
@@ -1388,12 +1402,14 @@ number. When a project has them:
   refuse unless the call passes `allow_hidden_coder=true`. The refusal
   says only that the row belongs to a coder currently hidden in
   QualCoder, never who or how many. With the override, the answer gives
-  ids: those of the coding, its code and its file, which together tell
-  which code was applied to which file, or those of the annotation and
-  its file, with the note and its date that update_annotation wrote.
-  The coder's name, the span and the text never enter the
-  conversation. QualCoder 4.0's own AI server answers the same way about
-  a coding but not about an annotation: its update and delete of an
+  ids. delete_coding gives those of the coding, its code and its file,
+  which together tell which code was applied to which file. set_memo
+  gives the coding's id alone, with the public part of the note it
+  wrote. update_annotation and delete_annotation give those of the
+  annotation and its file, with the note and its date that
+  update_annotation wrote. The coder's name, the span and the text never
+  enter the conversation. QualCoder 4.0's own AI server answers the same
+  way about a coding but not about an annotation: its update and delete of an
   annotation answer with the annotation's position and its owner's name
   as well (`ai_mcp_server.py:2324-2336` and `:2370-2380` at tag `4.0`).
   Exegete keeps to ids there too, so that the override, which is there
@@ -1581,22 +1597,23 @@ The cautions:
   say what either of its modes does with the mark.
 - **A file imported by mistake** stays in every backup taken after it,
   since a backup copies the project (all but its audio and video
-  folders). Restoring the backup taken just before the import takes it
-  back while nothing else has changed. For a day after an import,
-  `undo_changes` can also take it back: it removes the files' entries,
-  and the originals Exegete stored in the project's `documents` folder,
-  only if each is still the file the import stored. Copies stay
-  elsewhere. The backups taken since the import, and the backup the undo
-  takes first, hold the originals and their text until `prune_backups`
-  removes them. Coding sessions that hold passages of the files keep
-  them, with the files' names, until `delete_coding_session` removes
-  them. An export made since keeps what it holds until you delete it.
-  If you use QualCoder, its own backups beside the project may hold the
-  files too, its AI search index keeps their text until it next
-  re-indexes with AI on, and its AI chat history may quote them. The
-  undo's preview and answer count the backups and the coding sessions,
-  and name each of those other files that Exegete finds beside or
-  inside the project.
+  folders). Restoring the backup taken
+  just before the import takes it back while nothing else has changed.
+  For a day after an import, `undo_changes` can also take it back. It
+  removes the files' entries, and the originals Exegete stored in the
+  project's `documents` folder. It removes an original only if it is
+  still the file the import stored, and refuses the undo when one has
+  changed since. Copies stay elsewhere. The backups taken since the
+  import, and the backup the undo takes first, hold the originals and
+  their text until `prune_backups` removes them. Coding sessions that
+  hold passages of the files keep them, with the files' names, until
+  `delete_coding_session` removes them. An export made since keeps what
+  it holds until you delete it. If you use QualCoder, its own backups
+  beside the project may hold the files too. Its AI search index keeps
+  their text until it next re-indexes with AI on, and its AI chat
+  history may quote them. The undo's preview and answer count the
+  backups and the coding sessions, and name each of those other files
+  that Exegete finds beside or inside the project.
 - **More of a document comes in than in QualCoder**: a Word,
   OpenDocument or RTF file's footnotes, endnotes, comments, headers and
   footers (and an RTF file's text boxes) come after its text, where
@@ -1695,25 +1712,28 @@ could copy the whole project folder by hand, with no program using the
 project (QualCoder closed, if you use it), and keep that copy.
 
 No tool reads the backups' contents, apart from `restore_backup`,
-`prune_backups` and `undo_changes`. `restore_backup` checks that no
-journal or WAL file sits beside the database of the backup you choose,
-opens it to check it, reads its first bytes for the preview and copies
-it back. Its preview counts the rows of each kind in that database and
-in the project's, as numbers only, never a row's content or an owner's
-name. It opens the backup read-only and immutable, so that the count
-writes nothing into it. It also compares a fingerprint of the bytes of
-the project's `pseudonyms.json` with the backup's, to say whether that
-file is the same, appears, disappears or changes, reading no name in
-either. `prune_backups` reads the `pseudonyms.json` of each backup
-beside the project only to compare such fingerprints: no name in it is
-read out or returned. In 0.15.0 and earlier, `rename_file` read the
-names in the backups to recognise a rename back. `undo_changes` reads
-the backup Exegete took before a change, read-only and immutable. It
-reads the rows the change altered or removed and the rows they point
+`prune_backups`, `undo_changes` and `save_names_list`. `restore_backup`
+checks that no journal or WAL file sits beside the database of the
+backup you choose, opens it to check it, reads its first bytes for the
+preview and copies it back. Its preview counts the rows of each kind in
+that database and in the project's, as numbers only, never a row's
+content or an owner's name. It opens the backup read-only and immutable,
+so that the count writes nothing into it. It also compares a fingerprint
+of the bytes of the project's `pseudonyms.json` with the backup's, to
+say whether that file is the same, appears, disappears or changes,
+reading no name in either. `prune_backups` reads the `pseudonyms.json`
+of each backup beside the project only to compare such fingerprints: no
+name in it is read out or returned. In 0.15.0 and earlier, `rename_file`
+read the names in the backups to recognise a rename back. `undo_changes`
+reads the backup Exegete took before a change, read-only and immutable.
+It reads the rows the change altered or removed and the rows they point
 at; for a pseudonymisation run, every table, to check that the backup
 holds the project as it was; and for a save of the names list, that
 backup's `pseudonyms.json`, whose bytes it copies back. Its preview
 gives counts of rows, by table and by coder, never a row's content.
+`save_names_list` reads the `pseudonyms.json` of the backup it takes
+before the save, only to keep a keyed digest of it in the record its
+undo reads: no name in it is read out or returned.
 
 Further rules touch files on your disk:
 
@@ -2069,9 +2089,17 @@ less of a local model's room than the full set, and gives the steps.
   tool raises that threshold (<https://code.claude.com/docs/en/mcp>,
   read on 10 November 2026). `read_file_with_codings` raises it for its
   parts; a longer answer from another of Exegete's tools is kept in
-  such a file too. `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` and
-  `cleanupPeriodDays` narrow these
-  (<https://code.claude.com/docs/en/data-usage>).
+  such a file too. Anthropic's pages, read on 11 November 2026, say
+  that:
+  - `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1` turns off the usage
+    metrics, the error reports and the surveys
+    (<https://code.claude.com/docs/en/data-usage>);
+  - `cleanupPeriodDays` sets how long Claude Code keeps the transcripts
+    and those files, 30 days by default;
+  - a session started or last continued in Claude Desktop or Cowork
+    keeps its transcript at any age, unless
+    `desktopSessionCleanupPeriodDays` gives it a limit
+    (<https://code.claude.com/docs/en/claude-directory>).
 - **Commercial terms are not GDPR compliance.** Anthropic has a Data
   Processing Addendum (DPA), but it is for the institution to decide who
   is controller and who is processor, and to sign or rely on the DPA.
@@ -2479,7 +2507,13 @@ near the top of this document, set them out.
     because QualCoder deletes them past its `backup_num` when a project
     closes. The token that approves the prune signs that set of backups
     holding the only copies, so a prune whose set changed after its
-    preview is refused and removes nothing.
+    preview is refused and removes nothing. A backup the prune could not
+    remove whole, as when another program has one of its files open, is
+    named apart in its answer. If it held the only copy of a
+    `pseudonyms.json`, it may still hold it. It keeps its name, so `list_backups` lists it and `restore_backup` accepts it
+    while its database remains, though it may lack some of its files,
+    which a restore from it would not bring back. You could remove it by
+    hand once nothing holds it open.
 
     A run on a mapping you typed is refused unless the call either asks
     for the mapping to be saved into this file
@@ -2492,7 +2526,12 @@ near the top of this document, set them out.
     only once the run has committed. A file the save creates is
     owner-only (0600) on macOS and Linux, where QualCoder's own write
     would leave it readable by other accounts under the usual umask: a
-    departure, for a file of real names. A preview that asks for the save
+    departure, for a file of real names. A file that exists keeps its
+    own permissions, as QualCoder's write keeps them. So a names list
+    that other accounts could read before the save still can, and you
+    could make it readable by your account alone. One this account
+    cannot write is refused, as QualCoder's write would fail on it. A
+    preview that asks for the save
     lists, by entry number, which of the typed names the file already
     maps, which typed pseudonyms it already gives to another name, and
     which typed names hold, as a word, a name the file lists

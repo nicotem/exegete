@@ -863,17 +863,23 @@ gives the way back.
 
 **A session that came with the project.** Each session Exegete starts
 in a project carries a seal, and each approval you give a mark, made
-with a key Exegete keeps on this computer. A session without this
-computer's seal is read as having come with the project: saved by
-Exegete on another computer, changed outside Exegete, part of a project
-someone else gave you, or saved before that key was replaced. Its texts
+with a key Exegete keeps on this computer and tied to the project by a
+random id beside the sessions (`Project id.txt`). A session without
+this computer's seal for this project is read as having come with the
+project: saved by Exegete on another computer, changed outside Exegete,
+part of a project someone else gave you, copied in from another of your
+projects, carried by a copy made with `copy_project_to_workspace`, or
+saved before that key was replaced or the project's id was lost. Its texts
 reach the assistant marked as data, never as instructions, with a note
 asking it to read you the session's instruction before going on, so
 that you can check it is yours. An approval in it counts only once you give
 it here: until then it shows as pending, with its recorded status
 beside it, and `apply_codings` writes only the approvals given on this
-computer. If you work on a project from two computers, approve on the
-one where you apply.
+computer. An approval counts only while Exegete's own folder on this
+computer records it, so an older copy of the session's file, put back
+from a backup or by a sync service, cannot bring back an approval you
+have withdrawn since. If you work on a project from two computers,
+approve on the one where you apply.
 
 ### Backups
 

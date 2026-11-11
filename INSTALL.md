@@ -405,13 +405,20 @@ of the same name in `~/.exegete/sessions`.
 Each session Exegete starts in a project carries a seal, and each
 approval you give on this computer a mark, both made with a key that
 Exegete keeps in its own folder (`preview_secret`, which also signs
-its previews). A session whose file lacks this computer's seal is read
-as having come with the project: one saved by Exegete on another
-computer or under another account, one changed outside Exegete, or one
-in a project someone else gave you. Its texts then reach the assistant
-marked as data, never as instructions, with a note asking it to read
-you the session's instruction before going on. An approval in it counts only
-once you give it on this computer. So approvals do not carry from one
+its previews) and both tied to the project by a random id that Exegete
+keeps beside the sessions (`Project id.txt`). A session whose file
+lacks this computer's seal for this project is read as having come with
+the project: one saved by Exegete on another computer or under another
+account, one changed outside Exegete, one in a project someone else
+gave you, one copied in from another of your projects, or one carried
+by a copy made with `copy_project_to_workspace`, which gets an id of its
+own. Its texts then reach the assistant marked as data, never as
+instructions, with a note asking it to read you the session's
+instruction before going on. An approval in it counts only once you
+give it on this computer. An approval also counts only while Exegete's
+own folder on this computer records it, so an older copy of a session's
+file, put back from a backup or by a sync service, cannot bring back an
+approval you have withdrawn since. So approvals do not carry from one
 computer to another: if you work on a project from two computers, give
 them on the computer where the codings are written. A session saved on
 the other computer reads as having come with the project, on both,
@@ -421,6 +428,19 @@ lost, and you give their approvals again. Exegete replaces the key
 when it is damaged and, on a Mac or Linux, when its permissions have
 been widened, as copying or restoring a home folder without its
 permissions can leave them.
+
+Exegete makes `Project id.txt` when a session first starts in the
+project and never changes it. If the file is changed, Exegete does not
+use the project's sessions, and says why, until it is put back from a
+backup of the project or removed; once it is removed, every session
+there reads as having come with the project, and you give their
+approvals again. A copy of the project made outside Exegete, in the
+file manager or by a sync service, keeps the same id: a session from
+one copy then reads in the other as this computer's own, and a decision
+in one copy can change which approvals count in the other. If you use
+QualCoder, a backup it made, opened as a project, keeps the id too.
+Working on each session in one copy only avoids this, and
+`copy_project_to_workspace` makes a copy with an id of its own.
 
 ### Coming from qualcoder-mcp
 
@@ -544,9 +564,10 @@ GitHub Issues ("Getting help", below).
      are in each project's `Exegete coding sessions` folder, and stay
      with the project. It also holds the texts an import's preview read
      (`import-texts.noindex/`), the last project used, the record of the
-     check for new versions, the pseudonymisation run records and the
-     secret that signs Exegete's previews and seals the sessions kept in
-     projects. PRIVACY.md, "Files Exegete keeps on your computer", says
+     check for new versions, the pseudonymisation run records, the
+     records of the approvals given on this computer in sessions kept
+     in projects (`approvals/`), and the secret that signs Exegete's
+     previews and seals the sessions kept in projects. PRIVACY.md, "Files Exegete keeps on your computer", says
      what each file holds.
      - The texts an import's preview read are each document's whole
        text, before any names are replaced. Exegete removes them after
@@ -559,6 +580,10 @@ GitHub Issues ("Getting help", below).
        previewed but not yet made, such as an import, needs a new
        preview. The sessions kept in your projects stay, and read as
        the next point says.
+     - If you delete only the records of approvals, `approvals/`,
+       the approvals you gave on this computer in sessions kept in
+       projects read as pending, and you give them again. Nothing in
+       the sessions is lost: each keeps its decisions in its own file.
      - If you delete only the secret, `preview_secret`, the run records
        stay, but their digests can no longer be checked, and a change
        previewed but not yet made needs a new preview. Every session

@@ -8975,12 +8975,14 @@ def export_refi_qda(
     code, the rest are left out, the code named in truncated_codes. A
     session's export also checks that each suggestion's passage is still
     the file's text at its positions. A suggestion that fails a check,
-    or whose code or file has gone since, refuses the export: its first
-    ten reasons each name a suggestion by its GUID, and the refusal says
-    how to correct each by its status. An applied or removed one is left
-    out instead, counted in skipped_suggestions and the first 20 named in
-    skipped_details; the whole project's export carries what the project
-    holds.
+    or whose code or file has gone since, refuses the export, unless it
+    is applied or removed: such a one is left out instead, counted in
+    skipped_suggestions and the first 20 named in skipped_details, and
+    the whole project's export carries what the project holds. The
+    refusal's first ten reasons each name a suggestion by its number,
+    and by its GUID when that is in a GUID's form; where its positions
+    or passage no longer fit its file's text, the reason gives its
+    status and the refusal says how to correct it.
 
     The project's coder name is the first user, which QualCoder's
     importer takes as its own coder name. The AI coder name is the last,

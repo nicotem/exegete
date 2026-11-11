@@ -80,10 +80,12 @@ EMPTY_PROJECT_REFUSAL = (
     "entries to export.")
 
 # A session's export (v0.15.4): the way to correct a suggestion whose
-# passage is not the file's text at its positions, by its status, given
-# at the end of the refusal. edit_suggestion edits a pending suggestion
-# alone, and record_suggestions only adds (its `replace` drops pending
-# ones alone), so a decided one is reopened first.
+# positions or passage no longer fit its file's text (its passage not
+# the text at its positions, or positions the text cannot hold), by its
+# status, given at the end of the refusal. edit_suggestion edits a
+# pending suggestion alone, and record_suggestions only adds (its
+# `replace` drops pending ones alone), so a decided one is reopened
+# first.
 PASSAGE_MOVED_PENDING = (
     "To correct a pending one: edit_suggestion, with the passage as the "
     "file now has it, or new positions.")
@@ -95,6 +97,12 @@ PASSAGE_MOVED_DECIDED = (
 # being in the project, and a removed one's status is the only record
 # that its coding was written and then deleted, which undo reads
 LEFT_OUT_STATUSES = ("applied", "removed")
+# The kinds of a reason `check_suggestions` finds (fix round 1): the
+# suggestion's own; its own that edit_suggestion can correct, its
+# positions or passage not fitting its file's text, which in a session's
+# export names its status when the file is in the project with text; and
+# the file's 2 GiB limit, which is not its own
+_OWN, _SPAN, _LIMIT = "own", "span", "limit"
 NOTHING_LEFT_REFUSAL = (
     "Export validation failed: every suggestion of the session is applied "
     "or removed and no longer fits the project (its passage, positions, "
@@ -503,8 +511,9 @@ def _passage_at(content: str, suggestion: Any) -> bool:
 
 
 def _way_to_correct(statuses: List[str]) -> str:
-    """The way to correct each status named among the passages not at
-    their positions, pending first, or "" when none is named."""
+    """The way to correct each status named among the reasons that
+    edit_suggestion can correct (positions or a passage that no longer
+    fit the file's text), pending first, or "" when none is named."""
     ways = []
     if "pending" in statuses:
         ways.append(PASSAGE_MOVED_PENDING)
@@ -519,11 +528,13 @@ def _way_to_correct(statuses: List[str]) -> str:
 
 class SuggestionCheck(NamedTuple):
     """What `check_suggestions` found: the reasons that refuse the export;
-    the status, in words, of each passage not at its positions among them,
-    by the reason's place; the suggestions left out of a session's file,
-    each as the answer names it; and the suggestions the file can hold."""
+    the status, in words, of each reason among them that edit_suggestion
+    can correct (positions or a passage that no longer fit the file's
+    text), by the reason's place; the suggestions left out of a session's
+    file, each as the answer names it; and the suggestions the file can
+    hold."""
     reasons: List[str]
-    moved: Dict[int, str]
+    editable: Dict[int, str]
     left_out: List[Dict[str, Any]]
     kept: List[Any]
 
@@ -1441,7 +1452,8 @@ class RefiQdaExporter:
                 more = (f" (+{len(problems) - 10} more)"
                         if len(problems) > 10 else "")
                 way = _way_to_correct([status for place, status
-                                       in check.moved.items() if place < 10])
+                                       in check.editable.items()
+                                       if place < 10])
                 raise ValueError(f"Export validation failed: {shown}{more}"
                                  + (f".{way}" if way else ""))
             if check.left_out and not check.kept:
@@ -1540,8 +1552,13 @@ class RefiQdaExporter:
         that do not fit, never giving a reason; any other gives its
         reasons, and the export is refused. A suggestion is named by its
         number, and by its GUID, ids and positions only where each has
-        its shape (`_which`, `_shown_number`), its status in
-        `_status_word`'s words, never by the file's text.
+        its shape (`_which`, `_shown_number`), never by the file's text.
+        With `compare_passages`, a reason that edit_suggestion can
+        correct, its positions or passage not fitting the text of a file
+        still in the project (fix round 1: positions past the text's end
+        too), also gives its status in `_status_word`'s words, so that
+        the refusal can end with the way for each status; a code or file
+        gone, or a file with no text, keeps its reason alone.
 
         Raises:
             RuntimeError: a read of the project failed, in words naming
@@ -1564,7 +1581,7 @@ class RefiQdaExporter:
         # File text lengths (also identifies files with no exportable text)
         content_lengths: Dict[int, int] = {}
         reasons: List[str] = []
-        moved: Dict[int, str] = {}
+        editable: Dict[int, str] = {}
         left_out: List[Dict[str, Any]] = []
         kept: List[Any] = []
 
@@ -1573,10 +1590,11 @@ class RefiQdaExporter:
             which = _which(i, suggestion)
             code_id, file_id = suggestion.code_id, suggestion.file_id
             start, end = suggestion.start_pos, suggestion.end_pos
-            # Each reason's text, and whether it is the suggestion's own
-            # (the file's 2 GiB limit is not)
-            found: List[Tuple[str, bool]] = []
-            moved_text: Optional[str] = None
+            # Each reason's text and kind: the suggestion's own (OWN), its
+            # own that edit_suggestion can correct, its positions or
+            # passage not fitting its file's text (SPAN), or the file's
+            # 2 GiB limit, which is not its own (LIMIT)
+            found: List[Tuple[str, str]] = []
             content = ""
             # Check code exists
             if not (_whole_number(code_id) and code_id in code_ids):
@@ -1584,7 +1602,7 @@ class RefiQdaExporter:
                     f"Code ID {code_id} not found in project"
                     if _whole_number(code_id) else
                     "Code ID not found in project (it is not a whole "
-                    "number)", True))
+                    "number)", _OWN))
 
             # Check file exists
             if not (_whole_number(file_id) and file_id in file_ids):
@@ -1592,7 +1610,7 @@ class RefiQdaExporter:
                     f"File ID {file_id} not found in project"
                     if _whole_number(file_id) else
                     "File ID not found in project (it is not a whole "
-                    "number)", True))
+                    "number)", _OWN))
             else:
                 if file_id not in content_lengths:
                     fc = self._text(file_id, texts)
@@ -1601,17 +1619,17 @@ class RefiQdaExporter:
                     if text and len(text.encode("utf-8")) > _MAX_INTERNAL_FILE_BYTES:
                         found.append((
                             f"File {file_id} exceeds the REFI-QDA "
-                            f"2 GiB internal file limit", False))
+                            f"2 GiB internal file limit", _LIMIT))
                 content = (texts.get(file_id) or {}).get("content") or ""
                 length = content_lengths[file_id]
                 if length == 0:
                     found.append((
                         f"File ID {file_id} has no text content; "
-                        f"selections cannot be exported for it", True))
+                        f"selections cannot be exported for it", _OWN))
                 elif _whole_number(end) and end > length:
                     found.append((
                         f"End position {end} is beyond the file text "
-                        f"(length {length})", True))
+                        f"(length {length})", _SPAN))
 
             # Check positions are valid. Damaged projects can carry rows with
             # NULL positions (QA2-6): report them, never a TypeError on them.
@@ -1620,24 +1638,23 @@ class RefiQdaExporter:
                     f"missing or non-integer positions "
                     f"(start={_shown_number(start)}, "
                     f"end={_shown_number(end)}); the coding row may be "
-                    f"damaged", True))
+                    f"damaged", _SPAN))
             else:
                 if start < 0:
-                    found.append((f"Invalid start position {start}", True))
+                    found.append((f"Invalid start position {start}", _SPAN))
                 if end <= start:
                     found.append((
                         f"End position {end} must be greater than start "
-                        f"position {start}", True))
+                        f"position {start}", _SPAN))
                 # The passage, where the positions fit the text
                 if (compare_passages and content
                         and 0 <= start < end <= len(content)
                         and not _passage_at(content, suggestion)):
-                    moved_text = (f"the passage it records is not at "
+                    found.append((f"the passage it records is not at "
                                   f"positions {start}-{end} of File ID "
-                                  f"{file_id}")
-                    found.append((moved_text, True))
+                                  f"{file_id}", _SPAN))
 
-            own = [text for text, is_own in found if is_own]
+            own = [text for text, kind in found if kind != _LIMIT]
             if (compare_passages and own
                     and suggestion.status in LEFT_OUT_STATUSES):
                 left_out.append({
@@ -1650,21 +1667,25 @@ class RefiQdaExporter:
                     "end_pos": _shown_number(end),
                     "reason": "; ".join(own),
                 })
-                reasons += [text for text, is_own in found if not is_own]
+                reasons += [text for text, kind in found if kind == _LIMIT]
                 continue
             if not own:
                 kept.append(suggestion)
-            for text, is_own in found:
-                if not is_own:
+            # The status, for the way, where edit_suggestion can correct
+            # the span: in a session's export, the file in the project
+            # with text (fix round 1)
+            span_editable = compare_passages and bool(content)
+            for text, kind in found:
+                if kind == _LIMIT:
                     reasons.append(text)
-                elif text is moved_text:
-                    moved[len(reasons)] = _status_word(suggestion.status)
+                elif kind == _SPAN and span_editable:
+                    editable[len(reasons)] = _status_word(suggestion.status)
                     reasons.append(f"{which}: {text} (status: "
                                    f"{_status_word(suggestion.status)})")
                 else:
                     reasons.append(f"{which}: {text}")
 
-        return SuggestionCheck(reasons, moved, left_out, kept)
+        return SuggestionCheck(reasons, editable, left_out, kept)
 
 
 def _unset(value: Any) -> bool:

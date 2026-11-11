@@ -6,11 +6,13 @@ then two untrue answers (DESIGN_0154_small-corrections-3.md, items 3, 5,
 1. A coding session's REFI-QDA export compares each suggestion's
    passage with the file's text at its positions, as apply_codings
    does. A pending, approved or rejected suggestion that does not fit
-   refuses the export, the refusal saying how to correct it by its
-   status; an applied or removed one is left out of the file, counted
-   and the first 20 named, as the whole project's export leaves out
-   codings that do not fit. The answer's counts are those of what the
-   file holds.
+   refuses the export; where its positions or passage no longer fit
+   its file's text, the refusal gives its status and says how to
+   correct it (fix round 1: positions past the text's end too). An
+   applied or removed one is left out of the file, counted and the
+   first 20 named, as the whole project's export leaves out codings
+   that do not fit. The answer's counts are those of what the file
+   holds.
 2. An export removes only its own destination's earlier part files: a
    part's name is compared exactly, letter case and an accented
    letter's two forms set aside only where the folder takes the two as
@@ -326,6 +328,100 @@ def test_values_of_another_shape_are_never_repeated(
     assert "(status: unknown)" in refused["error"]
     assert refused["error"].endswith(
         refi_export.PASSAGE_MOVED_DECIDED.format(statuses="unknown"))
+
+
+def test_positions_past_a_text_cut_short_give_the_status_and_the_way(
+        setup_server, qualcoder_db_path, tmp_path):
+    """A text cut short after its suggestions were recorded, as a
+    pseudonymisation run or another program can leave it: a pending and
+    an approved suggestion whose end lies past the new end are each named
+    with their status, and the refusal ends with the way to correct each,
+    as for a passage no longer at its positions; corrected so, the export
+    goes ahead (fix round 1)."""
+    sid = new_session()
+    pending = _guid(sid, COPE)
+    approved = _guid(sid, STRESSED, code="Coping")
+    call("update_suggestion_status", coding_session_id=sid,
+         approve=[approved])
+    _exec(qualcoder_db_path, "UPDATE source SET fulltext = ? WHERE id = 1",
+          (FULLTEXT[:40],))
+    _reopen(qualcoder_db_path)
+
+    out = tmp_path / "c.qdpx"
+    refused = _export(coding_session_id=sid, output_path=str(out))
+    assert "success" not in refused, refused
+    error = refused["error"]
+    assert (f"(GUID {pending}): End position 78 is beyond the file text "
+            f"(length 40) (status: pending)") in error, error
+    assert (f"(GUID {approved}): End position 56 is beyond the file text "
+            f"(length 40) (status: approved)") in error, error
+    assert error.endswith(
+        ". " + refi_export.PASSAGE_MOVED_PENDING + " "
+        + refi_export.PASSAGE_MOVED_DECIDED.format(statuses="approved")), \
+        error
+    assert not out.exists() and _parts(tmp_path) == []
+
+    # Corrected as the refusal says
+    edited = jcall("edit_suggestion", coding_session_id=sid,
+                   suggestion_guid=pending, start_pos=0, end_pos=23)
+    assert "error" not in edited, edited
+    call("update_suggestion_status", coding_session_id=sid,
+         reopen=[approved])
+    edited = jcall("edit_suggestion", coding_session_id=sid,
+                   suggestion_guid=approved, segment_text="I feel stressed")
+    assert "error" not in edited, edited
+    call("update_suggestion_status", coding_session_id=sid,
+         approve=[approved])
+    answer = _export(coding_session_id=sid, output_path=str(out))
+    assert answer.get("success") is True, answer
+    assert [(a, b) for _, a, b, _ in _selections(out)[0]] == [
+        (0, 23), (24, 39)]
+
+
+def test_positions_that_do_not_fit_give_the_status_and_the_way(
+        setup_server, qualcoder_db_path, tmp_path):
+    """Positions a session's file holds that cannot be the file's (a start
+    below 0, an end not after the start, none at all): each reason gives
+    the suggestion's status, and the refusal the way for each status."""
+    sid = _session_of(qualcoder_db_path, [
+        _suggestion(-1, 5, "This ", status="pending"),
+        _suggestion(30, 20, "x", status="rejected"),
+        _suggestion(None, None, "This ", status="approved")])
+    refused = _export(coding_session_id=sid,
+                      output_path=str(tmp_path / "p.qdpx"))
+    error = refused["error"]
+    assert "Invalid start position -1 (status: pending)" in error, error
+    assert ("End position 20 must be greater than start position 30 "
+            "(status: rejected)") in error, error
+    assert ("(start=missing, end=missing); the coding row may be damaged "
+            "(status: approved)") in error, error
+    assert error.endswith(
+        ". " + refi_export.PASSAGE_MOVED_PENDING + " "
+        + refi_export.PASSAGE_MOVED_DECIDED.format(
+            statuses="approved or rejected")), error
+
+
+def test_a_code_or_file_gone_keeps_its_reason_alone(
+        setup_server, qualcoder_db_path, tmp_path):
+    """A suggestion whose code has gone, or whose file has gone or holds
+    no text, is named by its reasons alone, with no status and no way,
+    even beside positions that do not fit: edit_suggestion cannot move a
+    suggestion to another file, nor change the span in a file with no
+    text."""
+    _exec(qualcoder_db_path, "UPDATE source SET fulltext = '' WHERE id = 2")
+    _reopen(qualcoder_db_path)
+    sid = _session_of(qualcoder_db_path, [
+        _suggestion(24, 56, STRESSED, status="pending", code_id=999),
+        _suggestion(-1, 5, "This ", status="pending", file_id=99),
+        _suggestion(0, 500, "Some", status="approved", file_id=2)])
+    refused = _export(coding_session_id=sid,
+                      output_path=str(tmp_path / "g.qdpx"))
+    error = refused["error"]
+    assert "Code ID 999 not found in project" in error, error
+    assert "File ID 99 not found in project" in error, error
+    assert "Invalid start position -1" in error, error
+    assert "File ID 2 has no text content" in error, error
+    assert "(status:" not in error and "To correct" not in error, error
 
 
 def test_a_passage_with_a_paragraph_separator_still_matches(

@@ -507,7 +507,7 @@ def _passage_at(content: str, suggestion: Any) -> bool:
     if not isinstance(passage, str):
         return False
     found = content[suggestion.start_pos:suggestion.end_pos]
-    return found in (passage, passage.replace(" ", "\n"))
+    return found in (passage, passage.replace("\u2029", "\n"))
 
 
 def _way_to_correct(statuses: List[str]) -> str:

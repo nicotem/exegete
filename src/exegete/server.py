@@ -1929,8 +1929,8 @@ _USUAL_SEARCH_PLACES = ["~/Documents/QualCoder_projects",
 # database is marked
 NOT_A_PROJECT_FOLDER_NOTE = (
     "select_project does not take this entry: Exegete selects a project "
-    "by a folder whose name ends in lower-case .qda and holds data.qda, "
-    "or by that data.qda.")
+    "by a folder whose name ends in lower-case .qda and holds a file "
+    "named data.qda, or by that file.")
 # The tag Windows gives a junction (IO_REPARSE_TAG_MOUNT_POINT, which
 # Python's stat module defines on Windows alone)
 _JUNCTION_TAG = 0xA0000003

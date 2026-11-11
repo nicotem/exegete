@@ -432,7 +432,7 @@ def test_a_passage_with_a_paragraph_separator_still_matches(
           ("First line\nsecond line.",))
     _reopen(qualcoder_db_path)
     sid = _session_of(qualcoder_db_path, [
-        _suggestion(0, 17, "First line second", status="approved")])
+        _suggestion(0, 17, "First line\u2029second", status="approved")])
     answer = _export(coding_session_id=sid,
                      output_path=str(tmp_path / "p.qdpx"))
     assert answer.get("success") is True, answer
@@ -643,6 +643,22 @@ def test_the_listing_sizes_folders_and_marks_what_select_project_refuses(
         answer = json.loads(server.select_project(entry["path"]))
         assert (answer.get("success") is not False) is (
             "usable" not in entry), (name, answer)
+
+
+def test_a_data_qda_that_is_not_a_file_is_marked(
+        setup_server, qualcoder_db_path, tmp_path):
+    """A folder whose name ends in lower-case .qda holding a folder named
+    data.qda: select_project refuses it, and the listing marks it, the
+    note asking for a file of that name (fix round 1)."""
+    search = tmp_path / "search"
+    (search / "Holder.qda" / "data.qda").mkdir(parents=True)
+    listed = server.discover_projects([str(search)])
+    assert listed, listed
+    for entry in listed:
+        assert entry["usable"] is False, entry
+        assert entry["note"] == server.NOT_A_PROJECT_FOLDER_NOTE, entry
+        answer = json.loads(server.select_project(entry["path"]))
+        assert answer.get("success") is False, answer
 
 
 def test_the_answer_of_list_available_projects_carries_both(

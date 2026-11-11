@@ -21067,8 +21067,10 @@ _OCCURRENCES_LEFT_COUNTED = (
 # Phrases to keep in the preview's warnings (v0.15.4): the names that run
 # past a phrase, which the run replaces, by the phrases' numbers; and,
 # beside a save, that the phrases are not saved, so that a later run
-# without them and an import that applies the names list replace the
-# names they keep (Exegete's imports apply it by default)
+# without them replaces the names they keep, in the file's text (a run of
+# this file) or in the notes (a run with rewrite_memos), and an import
+# that applies the names list replaces the names inside them in the texts
+# it imports (Exegete's imports apply it by default)
 _PHRASES_CUT_WARNING = (
     "Warning: names of this mapping run past phrase(s) {numbers} of "
     "keep_phrases, and this run replaces them there: a phrase keeps only a "
@@ -21076,9 +21078,10 @@ _PHRASES_CUT_WARNING = (
     "phrases).")
 _PHRASES_NOT_SAVED_WARNING = (
     "Warning: keep_phrases is not saved with the mapping, and nothing else "
-    "keeps it: a later run of this file without the same phrases, or an "
-    "import that applies the project's names list, replaces the names "
-    "they keep here.")
+    "keeps it: a later run without the same phrases, of this file or with "
+    "rewrite_memos, replaces the names they keep here, and an import that "
+    "applies the project's names list replaces the names inside them in "
+    "the texts it imports.")
 # Phrases to keep (v0.15.4) go with a typed mapping only, refused with the
 # names list before anything is read, as decided on 27 September for the
 # same reason as the list: a phrase brings words into the conversation,

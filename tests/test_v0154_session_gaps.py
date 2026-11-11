@@ -984,6 +984,11 @@ class TestTheDocuments:
         only = only[:only.index(" - ")]
         assert f"`{sessions.APPROVALS_FOLDER}/`" in only, only
         assert "read as pending" in only and "Nothing" in only, only
+        # Deleting the whole folder takes the records and the key: the
+        # sessions in projects read as both points that follow say
+        whole = uninstall[uninstall.index("If you delete the folder"):]
+        whole = whole[:whole.index(" - ")]
+        assert "the next two points" in whole, whole
 
     def test_the_guide_and_the_fragment(self):
         guide = _doc("AI_CODING_GUIDE.md")

@@ -579,7 +579,7 @@ GitHub Issues ("Getting help", below).
        there and the pseudonymisation run records, and a change
        previewed but not yet made, such as an import, needs a new
        preview. The sessions kept in your projects stay, and read as
-       the next point says.
+       the next two points say.
      - If you delete only the records of approvals, `approvals/`,
        the approvals you gave on this computer in sessions kept in
        projects read as pending, and you give them again. Nothing in

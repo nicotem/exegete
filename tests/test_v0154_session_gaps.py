@@ -950,6 +950,7 @@ class TestTheDocuments:
         assert f"`{sessions.APPROVALS_FOLDER}/`" in uninstall
         only = uninstall[uninstall.index("If you delete only the records"):]
         only = only[:only.index(" - ")]
+        assert f"`{sessions.APPROVALS_FOLDER}/`" in only, only
         assert "read as pending" in only and "Nothing" in only, only
 
     def test_the_guide_and_the_fragment(self):

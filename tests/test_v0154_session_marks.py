@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 """Coding sessions kept with their project: the seal and the approvals'
-marks (v0.15.4).
+marks, and three refusals of the coding loop (v0.15.4).
 
 Whoever can write in a project's folder can place a session there, so a
 session kept in a project carries a seal, and each approval given on this
@@ -10,7 +10,7 @@ with the project: its texts reach the assistant flagged, as data, and an
 approval counts only with a mark that verifies. "Another computer" here
 is Exegete with another key, the preview tokens' `load_secret` patched.
 
-The design's test 9
+The design's tests 9 and 10
 (qc40-ai-study/v015/DESIGN_0154_sessions-with-project.md). The tests pin
 facts and refusals: the flag, the counts, what a save keeps, what is
 written; the note's words only where a safety sentence is the fact (the
@@ -38,7 +38,7 @@ from exegete import database, preview_tokens, private_files, sessions  # noqa: E
 from exegete.sessions import KEPT_IN_PROJECT, KEPT_ON_THIS_COMPUTER  # noqa: E402,E501
 
 from test_v014_server_wide import QUOTE  # noqa: E402
-from test_v0152_undo_record import (receipt_of,  # noqa: E402,E501
+from test_v0152_undo_record import (change_database, receipt_of,  # noqa: E402,E501
                                     server_state)  # noqa: F401
 from test_v0154_sessions_with_project import (  # noqa: E402
     LATER, call, file_of, folder_of, jcall, on_this_computer, project,  # noqa: F401,E501
@@ -626,3 +626,124 @@ def test_no_log_line_names_a_file_or_holds_a_text(project, monkeypatch,
     for word in (f"session_{sid}.json", "gardeners", QUOTE,
                  str(project), project.name):
         assert word not in text, word
+
+
+# ---------------------------------------------------------------------------
+# Test 10: three refusals of the coding loop
+# ---------------------------------------------------------------------------
+
+class TestACodeGivenByIdAndName:
+
+    @staticmethod
+    def _ids(project):
+        with closing(sqlite3.connect(str(project / "data.qda"))) as conn:
+            return dict(conn.execute("select name, cid from code_name"))
+
+    @pytest.mark.parametrize("name", ["Hope", "Nothing like it"])
+    def test_record_suggestions_refuses_names_that_disagree(self, project,
+                                                            name):
+        sid = start()["coding_session_id"]
+        before = file_of(project, sid).read_bytes()
+        out = jcall("record_suggestions", coding_session_id=sid,
+                    suggestions=[{"file_id": 1,
+                                  "code_id": self._ids(project)["Trust"],
+                                  "code_name": name, "segment_text": QUOTE,
+                                  "reading": "explicit", "reasoning": "r"}])
+        assert out["recorded_count"] == 0
+        [refused] = out["rejected"]
+        assert "Trust" in refused["reason"] and name in refused["reason"]
+        assert file_of(project, sid).read_bytes() == before
+
+    @pytest.mark.parametrize("name", ["Hope", "Nothing like it"])
+    def test_edit_suggestion_refuses_names_that_disagree(self, project, name):
+        sid = start()["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        before = file_of(project, sid).read_bytes()
+        out = jcall("edit_suggestion", coding_session_id=sid,
+                    suggestion_guid=guid,
+                    code_id=self._ids(project)["Doubt"], code_name=name)
+        assert "error" in out and "Doubt" in out["error"]
+        assert file_of(project, sid).read_bytes() == before
+
+    def test_an_id_with_its_own_name_or_one_of_its_twins_is_taken(
+            self, project):
+        """Guards: the name in another letter case agrees with its id,
+        and a name that folds onto two codes agrees with the id of one."""
+        ids = self._ids(project)
+        sid = start()["coding_session_id"]
+        out = jcall("record_suggestions", coding_session_id=sid,
+                    suggestions=[{"file_id": 1, "code_id": ids["Trust"],
+                                  "code_name": "trust", "segment_text": QUOTE,
+                                  "reading": "explicit", "reasoning": "r"}])
+        assert out["recorded_count"] == 1, out
+        change_database(project, (
+            "insert into code_name (name, memo, owner, date, color) "
+            "values ('hope', '', 'Researcher', '2026-11-11 10:00:00', "
+            "'#EB7333')"))
+        ids = self._ids(project)
+        sid = start()["coding_session_id"]
+        for code in ("Hope", "hope"):
+            out = jcall("record_suggestions", coding_session_id=sid,
+                        suggestions=[{"file_id": 1, "code_id": ids[code],
+                                      "code_name": "HOPE",
+                                      "segment_text": QUOTE,
+                                      "reading": "explicit",
+                                      "reasoning": "r"}])
+            assert out["recorded_count"] == 1, out
+
+
+class TestCollisionsAsTheCodebookStands:
+
+    def test_review_shows_a_collision_made_since_and_writes_nothing(
+            self, project):
+        sid = start()["coding_session_id"]
+        made = jcall("propose_codes", coding_session_id=sid,
+                     proposals=[{"name": "Belonging", "memo": "m"}])
+        guid = made["recorded"][0]["guid"]
+        assert "collides_with" not in made["recorded"][0]
+        assert "error" not in json.loads(server.create_code(
+            name="Belonging"))
+        before = file_of(project, sid).read_bytes()
+        review = call("review_proposals", coding_session_id=sid)
+        assert "Collides with existing code: Belonging" in review
+        assert file_of(project, sid).read_bytes() == before
+        out = jcall("update_proposal_status", coding_session_id=sid,
+                    approve=[guid])
+        assert out["collisions"] == [{"guid": guid, "name": "Belonging",
+                                      "collides_with": "Belonging"}]
+        assert entry_of(stored(project, sid), guid)["collides_with"] == \
+            "Belonging"
+
+    def test_a_colliding_code_renamed_since_is_no_collision(self, project):
+        """A guard: the recorded collision is out of date once the code
+        is renamed, and the review says so."""
+        sid = start()["coding_session_id"]
+        made = jcall("propose_codes", coding_session_id=sid,
+                     proposals=[{"name": "Trust", "memo": "m"}])
+        assert made["recorded"][0]["collides_with"] == "Trust"
+        trust = TestACodeGivenByIdAndName._ids(project)["Trust"]
+        assert "error" not in json.loads(server.rename_code(
+            code_id=trust, new_name="Faith"))
+        review = call("review_proposals", coding_session_id=sid)
+        assert "Collides with existing code" not in review
+
+
+class TestEvidenceThatIsNotAList:
+
+    @pytest.mark.parametrize("evidence", [
+        {"file_id": 1, "segment_text": QUOTE}, QUOTE])
+    def test_refused_for_that_item_and_replace_keeps_the_pending(
+            self, project, evidence):
+        sid = start()["coding_session_id"]
+        kept = jcall("propose_codes", coding_session_id=sid,
+                     proposals=[{"name": "Belonging", "memo": "m"}])
+        kept = kept["recorded"][0]["guid"]
+        before = file_of(project, sid).read_bytes()
+        out = jcall("propose_codes", coding_session_id=sid, replace=True,
+                    proposals=[{"name": "Care", "memo": "m",
+                                "example_segments": evidence}])
+        assert out["recorded_count"] == 0
+        assert "example_segments" in out["rejected"][0]["reason"]
+        assert out["pending_kept"] == 1
+        assert file_of(project, sid).read_bytes() == before
+        assert [p.guid for p in loaded(sid).proposed_codes] == [kept]

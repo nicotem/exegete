@@ -219,7 +219,7 @@ from .sessions import (SessionManager, AICodingSession, CodingSuggestion,
                        memo_with_reading, guids_in_more_than_one,
                        KEPT_IN_PROJECT, KEPT_ON_THIS_COMPUTER,
                        SessionsListing, days_back_to_year_one,
-                       APPROVAL_MARK_FIELD)
+                       APPROVAL_MARK_FIELD, unique_in_order)
 
 # Set up logging. The handler is installed at import, before FastMCP is
 # constructed, so the server's own plain stderr format wins over the rich
@@ -10973,6 +10973,60 @@ def _ambiguous_code_reason(name: str, twins: List[str]) -> str:
             f"exactly")
 
 
+def _code_from_arguments(codes: List[Dict[str, Any]], code_id: Any,
+                         code_name: Any
+                         ) -> Tuple[Optional[Dict[str, Any]],
+                                    Optional[Dict[str, Any]]]:
+    """The code a coding-loop tool's code_id and/or code_name names, or
+    why not: (code, None) or (None, {"reason": ...}).
+
+    The id must be a whole number naming a code, and a name is matched
+    by start_coding_session's rule (_match_code_name), one folding onto
+    two codes refused as ambiguous. Given both, they must name the same
+    code, as a case's id and name must (_resolve_case_argument; v0.15.4,
+    where the id used to win without a word): a name naming another
+    code, or none, is refused, and a name that folds onto several codes
+    agrees with an id among them. A blank name beside an id is taken as
+    not given, as hosts send one for an argument left out."""
+    by_id = None
+    if code_id is not None:
+        if not isinstance(code_id, int) or isinstance(code_id, bool):
+            return None, {"reason": "code_id must be an integer"}
+        by_id = next((c for c in codes if c["id"] == code_id), None)
+        if by_id is None:
+            return None, {"reason": f"code_id {code_id} does not exist"}
+        if code_name is None or (isinstance(code_name, str)
+                                 and not code_name.strip()):
+            return by_id, None
+    match = _match_code_name(codes, code_name)
+    twins = _code_name_twins(codes, code_name) if match is None else []
+    available = sorted(c["name"] for c in codes)[:50]
+    if by_id is not None:
+        if (match is not None and match["id"] == by_id["id"]) or \
+                by_id["name"] in twins:
+            return by_id, None
+        said = (f"code_id {code_id} is the code '{by_id['name']}', but "
+                f"code_name '{code_name}'")
+        if match is not None:
+            said += (f" names the code '{match['name']}' (id "
+                     f"{match['id']})")
+        elif twins:
+            said += (f" names other codes "
+                     f"({', '.join(repr(t) for t in twins)})")
+        else:
+            return None, {"reason": f"{said} names no code: give one of "
+                                    f"the two, or both naming the same code",
+                          "available_codes": available}
+        return None, {"reason": f"{said}: give one of the two, or both "
+                                f"naming the same code"}
+    if twins:
+        return None, {"reason": _ambiguous_code_reason(str(code_name), twins)}
+    if match is None:
+        return None, {"reason": f"code '{code_name}' not found",
+                      "available_codes": available}
+    return match, None
+
+
 # The turn before a passage (fix round 4). A heuristic over files laid out
 # in many ways, so it claims no more than its rule finds: an unusual layout
 # makes it less helpful, never misleading.
@@ -11264,6 +11318,18 @@ def _code_name_collisions(name: str, codes=None) -> Optional[str]:
     return ", ".join(twins) if twins else None
 
 
+def _collision_now(proposal: ProposedCode,
+                   codes: List[Dict[str, Any]]) -> Optional[str]:
+    """A proposal's collision with the codebook as it stands (v0.15.4),
+    as create_proposed_codes will judge it, the code the proposal itself
+    became left out; None for a name that is not text."""
+    if not isinstance(proposal.name, str):
+        return None
+    return _code_name_collisions(
+        proposal.name, [c for c in codes
+                        if c["id"] != proposal.created_code_id])
+
+
 def _validate_proposal_evidence(ro_db, items, file_cache):
     """Validate a proposal's evidence spans exactly like record_suggestions
     validates suggestion positions. Returns (kept, rejected, unsafe_files)."""
@@ -11411,7 +11477,6 @@ def record_suggestions(
 
     ro_db = get_db()
     codes = ro_db.list_codes()
-    codes_by_id = {c["id"]: c for c in codes}
 
     removed_pending = session.remove_pending_suggestions() if replace else 0
 
@@ -11466,34 +11531,15 @@ def record_suggestions(
         if file_id not in unsafe_files and not db_position_safe(fulltext):
             unsafe_files[file_id] = file_content["name"]
 
-        # --- code ---
-        code = None
-        if item.get("code_id") is not None:
-            code_id = item["code_id"]
-            if not isinstance(code_id, int) or isinstance(code_id, bool):
-                rejected.append({"index": idx, "reason": "code_id must be an integer"})
-                continue
-            code = codes_by_id.get(code_id)
-            if code is None:
-                rejected.append({"index": idx, "reason": f"code_id {code_id} does not exist"})
-                continue
-        elif item.get("code_name"):
-            code = _match_code_name(codes, item["code_name"])
-            twins = (_code_name_twins(codes, item["code_name"])
-                     if code is None else [])
-            if twins:
-                rejected.append({"index": idx, "reason": _ambiguous_code_reason(
-                    str(item["code_name"]), twins)})
-                continue
-            if code is None:
-                rejected.append({
-                    "index": idx,
-                    "reason": f"code '{item['code_name']}' not found",
-                    "available_codes": sorted(c["name"] for c in codes)[:50]
-                })
-                continue
-        else:
+        # --- code: given both, the id and the name must name the same
+        # code (v0.15.4) ---
+        if item.get("code_id") is None and not item.get("code_name"):
             rejected.append({"index": idx, "reason": "each suggestion needs code_id or code_name"})
+            continue
+        code, refusal = _code_from_arguments(codes, item.get("code_id"),
+                                             item.get("code_name"))
+        if refusal is not None:
+            rejected.append({"index": idx, **refusal})
             continue
 
         # --- the session's scope (v0.14: it used to limit nothing), the
@@ -11967,28 +12013,15 @@ def edit_suggestion(
     result: Dict[str, Any] = {"coding_session_id": session_id,
                               "guid": sugg.guid}
 
-    # --- code change (existing codes only, record_suggestions rules) ---
+    # --- code change (existing codes only, record_suggestions rules: an
+    # id and a name given together must name the same code, v0.15.4) ---
     new_code = None
     if wants_code:
         codes = ro_db.list_codes()
-        if code_id is not None:
-            if not isinstance(code_id, int) or isinstance(code_id, bool):
-                return json.dumps({"error": "code_id must be an integer"})
-            new_code = next((c for c in codes if c["id"] == code_id), None)
-            if new_code is None:
-                return json.dumps({"error": f"code_id {code_id} does not exist"})
-        else:
-            new_code = _match_code_name(codes, code_name)
-            twins = _code_name_twins(codes, code_name) if new_code is None \
-                else []
-            if twins:
-                return json.dumps({"error": _ambiguous_code_reason(
-                    str(code_name), twins)})
-            if new_code is None:
-                return json.dumps({
-                    "error": f"code '{code_name}' not found",
-                    "available_codes": sorted(c["name"] for c in codes)[:50],
-                })
+        new_code, refusal = _code_from_arguments(codes, code_id, code_name)
+        if refusal is not None:
+            refusal["error"] = refusal.pop("reason")
+            return json.dumps(refusal)
         outside = session.outside_scope(sugg.file_id, new_code["id"],
                                         new_code.get("date"))
         if outside is not None:
@@ -18145,6 +18178,15 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
             rejected.append({"index": idx,
                              "reason": f"{not_text} must be text"})
             continue
+        # The evidence is a list, as update_proposal requires (v0.15.4): an
+        # object or a text was read key by key, or character by character,
+        # each refused, and the proposal recorded with no evidence
+        if item.get("example_segments") is not None and \
+                not isinstance(item.get("example_segments"), list):
+            rejected.append({"index": idx,
+                             "reason": "example_segments must be a list of "
+                                       "evidence objects"})
+            continue
         marker = next(filter(None, (
             private_marker_refusal(item.get(key), key)
             for key in ("memo", "definition", "rationale"))), None)
@@ -18331,6 +18373,10 @@ def review_proposals(coding_session_id: str,
         return "No proposals found." + (f"\n{missing_line}"
                                         if missing_line else "")
 
+    # Each proposal's collision with the codebook as it stands, worked out
+    # for this answer alone (v0.15.4): the one recorded when it was made
+    # can be out of date, and a read-only tool writes nothing back
+    codes = get_db().list_codes()
     # A session that came with the project says so first (v0.15.4)
     lines = _came_with_project_lines(session)
     lines.append(f"**Review of {len(proposals)} Code Proposal(s)**\n")
@@ -18396,8 +18442,9 @@ def review_proposals(coding_session_id: str,
             lines.append(f"**Definition:** {p.memo}")
         if p.rationale:
             lines.append(f"**Rationale:** {p.rationale}")
-        if p.collides_with:
-            lines.append(f"Collides with existing code: {p.collides_with}")
+        collision = _collision_now(p, codes)
+        if collision:
+            lines.append(f"Collides with existing code: {collision}")
         if p.created_code_id is not None:
             lines.append(f"Created as code id {p.created_code_id}")
         lines.append(f"Evidence segments: {len(p.example_segments)}")
@@ -18667,6 +18714,19 @@ def update_proposal_status(coding_session_id: str,
     if mismatch is not None:
         return json.dumps(mismatch, indent=2)
     result = session.update_proposals_by_guid(approve=approve, reject=reject)
+    # Each approved proposal's collision with the codebook as it stands
+    # (v0.15.4), which creation refuses until the proposal is renamed:
+    # given here, and kept in the session at its save
+    collisions = []
+    codes = get_db().list_codes() if approve else []
+    for guid in unique_in_order(approve):
+        p = session.get_proposal_by_guid(guid)
+        if p is None or not session.approval_counts(p):
+            continue
+        p.collides_with = _collision_now(p, codes)
+        if p.collides_with:
+            collisions.append({"guid": p.guid, "name": p.name,
+                               "collides_with": p.collides_with})
     if result["changed"]:
         session_manager.save_session(session)
     stats = session.proposal_statistics()
@@ -18680,8 +18740,28 @@ def update_proposal_status(coding_session_id: str,
         "next_step": "Use create_proposed_codes to write the approved "
                      "proposals to the codebook."
     }
+    if collisions:
+        answer["collisions"] = collisions
+        answer["collision_note"] = APPROVED_COLLISION_NOTE
+        answer["next_step"] = APPROVED_COLLISION_NEXT_STEP
     answer.update(_came_with_project_fields(session))
     return json.dumps(answer, indent=2)
+
+
+# update_proposal_status approving proposals whose names collide with the
+# codebook as it stands (v0.15.4)
+APPROVED_COLLISION_NOTE = (
+    "The proposals in collisions are approved, and each name matches an "
+    "existing code as the codebook stands now (letter case, spacing and "
+    "Unicode form ignored, or characters that usually show nothing on "
+    "screen left out): create_proposed_codes refuses them until each is "
+    "renamed with update_proposal, or rejected so that the existing code "
+    "is applied instead.")
+APPROVED_COLLISION_NEXT_STEP = (
+    "Show the researcher the collisions first: rename those proposals with "
+    "update_proposal, or reject them and suggest codings with the existing "
+    "code; then use create_proposed_codes to write the approved proposals "
+    "to the codebook.")
 
 
 # What a proposal holds that is not text (a session file made by hand or

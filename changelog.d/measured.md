@@ -10,7 +10,7 @@ Python 3.13 with the libraries in `uv.lock`:
 | `full` (80 tools) | 213,373 | 210,397 |
 | `core` (28 tools) | 77,986 | 76,805 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 14,580 | 14,180 |
+| The full brief | 14,503 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
 
 - Choosing occurrences by their numbers adds 243 characters to `full`:
@@ -69,9 +69,9 @@ Python 3.13 with the libraries in `uv.lock`:
   stay), 143 to prune_backups' (the sessions a backup holds) and 56 to
   pseudonymise_source's (the copies in backups and copies of the
   project), which brings that description to 19,897 characters on
-  Python 3.11. The full brief is 123 characters longer, from its
-  sentence on the sessions folder, read only through the session
-  tools.
+  Python 3.11. The full brief is 46 characters longer: its sentence
+  on what is never opened directly now names the project's sessions
+  folder.
 - The workspace copy's description now says that a copy leaves out
   every temporary copy of the names list, whatever its age, adding
   154 characters to its definition in both sets.

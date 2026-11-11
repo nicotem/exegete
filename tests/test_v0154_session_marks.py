@@ -53,9 +53,13 @@ OTHER_KEY = "b" * 64
 
 @contextmanager
 def elsewhere(monkeypatch):
-    """Exegete on another computer: the same project, another key."""
+    """Exegete on another computer: the same project, another key, and
+    another folder of its own, where it keeps its records of approvals
+    (v0.15.4)."""
+    other = Path(preview_tokens.state_home()).parent / "another_computer"
     with monkeypatch.context() as patch:
         patch.setattr(preview_tokens, "load_secret", lambda: OTHER_KEY)
+        patch.setattr(preview_tokens, "STATE_HOME", other)
         yield
 
 
@@ -81,6 +85,11 @@ def approve(sid, *guids):
 
 def key() -> str:
     return preview_tokens.load_secret()
+
+
+def project_id(project) -> str:
+    """The project's id, which the seal and the marks cover (v0.15.4)."""
+    return private_files.read_project_id(project)
 
 
 def a_session_from_elsewhere(monkeypatch):
@@ -145,7 +154,8 @@ class TestTheSeal:
         guid = record(sid)["recorded"][0]["guid"]
         approve(sid, guid)
         data = stored(project, sid)
-        assert data[sessions.SEAL_FIELD] == sessions.seal_of(key(), data)
+        assert data[sessions.SEAL_FIELD] == sessions.seal_of(
+            key(), project_id(project), data)
         assert entry_of(data, guid)[sessions.APPROVAL_MARK_FIELD]
         session = loaded(sid)
         assert not session.came_with_project
@@ -637,25 +647,33 @@ class TestOneFile:
         assert path.read_bytes() == before
         assert sorted(os.listdir(folder_of(project))) == names
         data = json.loads(before)
-        assert data[sessions.SEAL_FIELD] == sessions.seal_of(key(), data)
+        assert data[sessions.SEAL_FIELD] == sessions.seal_of(
+            key(), project_id(project), data)
         assert not loaded(sid).came_with_project
 
-    def test_a_copy_and_its_original_each_verify_after_a_save_in_the_other(
-            self, project):
+    def test_a_copy_reads_the_session_as_having_come_with_it(self, project):
+        """A workspace copy leaves the project's id out and makes its own
+        (v0.15.4, the seal's two gaps), so the session it carries reads
+        there as having come with the project, and still does after a save
+        there; the original's session verifies, before and after a save in
+        each."""
         sid = start()["coding_session_id"]
         record(sid)
         copied = jcall("copy_project_to_workspace", source_path=str(project),
                        new_name="Copied study")
         copy = Path(copied["workspace_copy"])
         assert "error" not in jcall("select_project", project_path=str(copy))
+        assert loaded(sid).came_with_project
         assert record(sid, LATER, "Hope")["recorded_count"] == 1
-        assert not loaded(sid).came_with_project
+        assert loaded(sid).came_with_project
+        assert project_id(copy) != project_id(project)
         assert "error" not in jcall("select_project",
                                     project_path=str(project))
         assert not loaded(sid).came_with_project
         assert record(sid, GARDEN, "Doubt")["recorded_count"] == 1
-        assert "error" not in jcall("select_project", project_path=str(copy))
         assert not loaded(sid).came_with_project
+        assert "error" not in jcall("select_project", project_path=str(copy))
+        assert loaded(sid).came_with_project
 
     def test_a_backup_holds_it_sealed_and_a_restore_keeps_it(self, project):
         sid = start()["coding_session_id"]
@@ -664,7 +682,8 @@ class TestOneFile:
         data = json.loads((backup / private_files.SESSIONS_FOLDER
                            / f"session_{sid}.json").read_text(
                                encoding="utf-8"))
-        assert data[sessions.SEAL_FIELD] == sessions.seal_of(key(), data)
+        assert data[sessions.SEAL_FIELD] == sessions.seal_of(
+            key(), project_id(project), data)
         approve(sid, loaded(sid).suggestions[0].guid)
         now = file_of(project, sid).read_bytes()
         _preview, answer = _restore(backup)

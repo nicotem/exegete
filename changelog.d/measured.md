@@ -87,5 +87,10 @@ Python 3.13 with the libraries in `uv.lock`:
   any other whose positions or passage no longer fit, and that past
   5,000 codings of one code the rest are left out, adding 537
   characters to its definition in `full`.
+- Smaller parts add 33 characters to read_file_with_codings' definition
+  in both sets: its description gives a part as about 35,000 characters
+  of English, where it gave 60,000, in as many characters, and says that
+  `codes_used` in a part counts that part's codings, which takes one
+  more line.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).

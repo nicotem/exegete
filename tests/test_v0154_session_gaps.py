@@ -546,6 +546,28 @@ class TestFailuresBesideTheFile:
         assert record(sid, LATER, "Hope")["recorded_count"] == 1
         assert marks_in(project, sid) == set()
 
+    def test_with_the_folder_a_link_a_delete_takes_this_computer_s(
+            self, project, tmp_path):
+        """A guard of the store's lookup: with a link at the project's
+        sessions folder's name, a delete removes the state folder's file
+        of that id, as before, never refused for a record it cannot
+        reach."""
+        sid = start()["coding_session_id"]
+        twin = Path(server.session_manager.storage_dir) / \
+            f"session_{sid}.json"
+        twin.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(file_of(project, sid), twin)
+        aside = tmp_path / "aside"
+        shutil.move(str(folder_of(project)), str(aside))
+        try:
+            folder_of(project).symlink_to(aside, target_is_directory=True)
+        except (OSError, NotImplementedError):
+            pytest.skip("this system cannot make a link")
+        out = jcall("delete_coding_session", coding_session_id=sid)
+        assert out.get("success") is True, out
+        assert not twin.exists()
+        assert (aside / f"session_{sid}.json").is_file()
+
     def test_a_record_that_cannot_be_removed_refuses_the_delete(
             self, project, monkeypatch):
         sid = start()["coding_session_id"]

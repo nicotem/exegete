@@ -1313,12 +1313,19 @@ def _remove_temporaries(held: Optional[int], top: Path,
 
 def session_file_there(project, name: str) -> bool:
     """Whether a regular file, not a link, is at a session's name in the
-    project's sessions folder, within Windows' path limit where it
-    applies: what `remove_session` would remove (v0.15.4, for the record
-    of the session's approvals, which goes first). Never raises."""
+    project's sessions folder, itself a real folder, within Windows' path
+    limit where it applies: what `remove_session` would remove (v0.15.4,
+    for the record of the session's approvals, which goes first). Never
+    raises."""
     try:
         _check_session_name(name)
-        place = sessions_folder(project) / name
+        top = sessions_folder(project)
+        folder_info = os.lstat(top)
+        if (stat.S_ISLNK(folder_info.st_mode)
+                or not stat.S_ISDIR(folder_info.st_mode)
+                or reading_folder.is_link(top)):
+            return False
+        place = top / name
         if _passes_limit(place):
             return False
         return stat.S_ISREG(os.lstat(place).st_mode)

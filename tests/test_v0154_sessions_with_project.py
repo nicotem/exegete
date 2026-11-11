@@ -256,10 +256,11 @@ def _read_only(project, tmp_path, monkeypatch):
 
 def _too_long_for_windows(project, tmp_path, monkeypatch):
     """Windows without long paths, the limit just past the folder's own
-    path, so that no session's file there fits."""
+    path, so that no session's file there fits, though the project's id
+    (`Project id.txt`, 15 characters with the separator) does."""
     monkeypatch.setattr(private_files, "_path_limit_applies", lambda: True)
     monkeypatch.setattr(new_project, "WINDOWS_MAX_FILE_PATH",
-                        len(str(folder_of(project))) + 10)
+                        len(str(folder_of(project))) + 20)
 
 
 class TestAFolderThatCannotHoldASession:

@@ -652,17 +652,25 @@ def seal_session_file(path) -> None:
     """Seal again a session's file kept in a project that a test changed
     by hand, as Exegete seals one it saves (v0.15.4): each approval in it
     marked as given here, and the seal over the rest, under the test's
-    own key (the preview tokens' secret in its state folder). Everything
-    else the test wrote is kept as it is, so the file reads as this
-    installation's and holds what the test made it hold. Import it as
-    `from tests.conftest import seal_session_file`: `import conftest`
+    own key (the preview tokens' secret in its state folder) and the
+    project's id (`Project id.txt` beside the file, made when missing),
+    the session's record of approvals holding exactly those marks.
+    Everything else the test wrote is kept as it is, so the file reads as
+    this installation's and holds what the test made it hold. Import it
+    as `from tests.conftest import seal_session_file`: `import conftest`
     would load a second copy."""
     import json
-    from exegete import preview_tokens, sessions
+    from exegete import preview_tokens, private_files, sessions
     key = preview_tokens.load_secret()
     path = Path(path)
+    project = path.parent.parent
+    project_id = private_files.read_project_id(project)
+    if project_id is None:
+        private_files.make_project_id(project)
+        project_id = private_files.read_project_id(project)
     data = json.loads(path.read_text(encoding="utf-8"))
     sid = data.get("session_id")
+    marks = set()
     for field, kind, mark in (
             ("suggestions", sessions.CodingSuggestion,
              sessions.suggestion_mark),
@@ -675,9 +683,15 @@ def seal_session_file(path) -> None:
                 item = kind.from_dict(raw)
             except (TypeError, ValueError):
                 continue        # a broken item the test means to leave
-            raw[sessions.APPROVAL_MARK_FIELD] = mark(key, sid, item)
-    data[sessions.SEAL_FIELD] = sessions.seal_of(key, data)
+            raw[sessions.APPROVAL_MARK_FIELD] = mark(key, sid, project_id,
+                                                     item)
+            marks.add(raw[sessions.APPROVAL_MARK_FIELD])
+    data[sessions.SEAL_FIELD] = sessions.seal_of(key, project_id, data)
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    if marks:
+        sessions.write_record(project_id, sid, frozenset(marks))
+    else:
+        sessions.remove_record(project_id, sid)
 
 
 @pytest.fixture(autouse=True)

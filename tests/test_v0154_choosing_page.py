@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""v0.15.4, choosing occurrences, second part: the page (ruling 120,
-item 2).
+"""v0.15.4, choosing occurrences, second part: the page.
 
 The page for choosing occurrences labels each occurrence with its number
 in bold, as the preview numbers its rows, before its id, and a tick box
@@ -117,8 +116,8 @@ class TestThePage:
     def test_the_boxes_of_a_list_come_ticked(self, tmp_path):
         """With a list, by numbers alone, the boxes of those it leaves come
         ticked and their labels say so; the facts say they were left by
-        the list the preview was given, never "of ids" (piece 1's
-        review, finding 3)."""
+        the list the preview was given, never "of ids", which a list of
+        numbers is not."""
         with fresh(tmp_path, TOMS) as folder:
             chosen = call(mapping=TOM, choose_occurrences=True)
             out = call(mapping=TOM, choose_occurrences=True,
@@ -213,6 +212,43 @@ class TestThePage:
                     text="Tom.", marks=[(0, 3, "aaaaa")], left=set(),
                     written_at=datetime(2026, 11, 10, 9, 0), numbering=code)
 
+    def test_the_line_takes_the_place_of_any_list(self):
+        """The bar says that the line names every occurrence to leave, in
+        place of any list given before: ticks on an earlier page of the
+        same list, still open, would drop a choice given since. Red with
+        the bar's words as before."""
+        page, _counts = occurrences.build_page(
+            project_name="p", file_id=12, file_name="f.txt",
+            text="Tom met Tom.", marks=[(0, 3, "aaaaa"), (8, 11, "bbbbb")],
+            left=set(), written_at=datetime(2026, 11, 11, 9, 0),
+            numbering="q8x2dm")
+        [(_file, _code, inside)] = BAR.findall(page)
+        inside = " ".join(inside.split())
+        assert "every occurrence to leave" in inside
+        assert "in place of any list given before" in inside
+
+    def test_a_second_skip_link_leads_to_the_bar(self):
+        """After the skip link to the text, a second leads to the bar, so
+        that a keyboard reaches the line without passing every box. It is
+        hidden, with the bar, until the script shows both (test 10). Red
+        without the link."""
+        page, _counts = occurrences.build_page(
+            project_name="p", file_id=12, file_name="f.txt",
+            text="Tom met Tom.", marks=[(0, 3, "aaaaa"), (8, 11, "bbbbb")],
+            left=set(), written_at=datetime(2026, 11, 11, 9, 0),
+            numbering="q8x2dm")
+        links = re.findall(r'<a class="skip"([^>]*)>([^<]*)</a>', page)
+        assert [href for href in (re.search(r'href="([^"]+)"', attributes)
+                                  .group(1) for attributes, _ in links)] \
+            == ["#text", f"#{occurrences.PICK_BAR}"]
+        second = links[1][0]
+        assert f'id="{occurrences.PICK_SKIP}"' in second
+        assert second.endswith(" hidden")
+        assert page.index(f'id="{occurrences.PICK_SKIP}"') < \
+            page.index("<header>")
+        assert f'getElementById("{occurrences.PICK_SKIP}")' in \
+            occurrences.PICK_SCRIPT
+
 
 class TestTheNotes:
     """The texts that say what the page gives (the design's test 12, the
@@ -258,7 +294,7 @@ const fs = require("fs");
 const vm = require("vm");
 const script = fs.readFileSync(process.argv[2], "utf8");
 const OWN = ["pick-bar", "pick-line", "pick-copy", "pick-count",
-             "pick-status"];
+             "pick-status", "pick-skip"];
 let inClick = false;
 
 function untouchable(what) {
@@ -349,6 +385,7 @@ function seen(state) {
     count: state.own["pick-count"].textContent,
     status: state.own["pick-status"].textContent,
     bar_hidden: state.own["pick-bar"].hidden,
+    skip_hidden: state.own["pick-skip"].hidden,
     boxes_hidden: state.boxes.filter((box) => box.hidden).length,
     ticked: state.boxes.filter((box) => box.checked).map(
       (box) => Number(box.dataset.n)),
@@ -437,13 +474,15 @@ class TestTheScript:
         """A box a browser ticked against its written state, as one that
         keeps a form's state across a reload can, is set back, and so is
         one it unticked; the line is built from the written state, and
-        boxes and bar are shown. Red when the script keeps the state it
-        finds."""
+        boxes, bar and the skip link to the bar are shown. Red when the
+        script keeps the state it finds, or leaves the skip link
+        hidden."""
         loaded = ran["loaded"]
         assert loaded["ticked"] == [2, 5]
         assert loaded["line"] == occurrences.the_line(12, "q8x2dm", [2, 5])
         assert loaded["copy_off"] is False
         assert loaded["bar_hidden"] is False and loaded["boxes_hidden"] == 0
+        assert loaded["skip_hidden"] is False
         assert loaded["log"] == []
 
     def test_the_line_for_the_boxes_ticked(self, ran):

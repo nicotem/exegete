@@ -395,11 +395,17 @@ LEFT_LABEL = "left as it is"
 KEPT_LABEL = "kept whole, inside a phrase"
 # The bar at the page's foot (v0.15.4): its id, which the script finds it
 # by, and its words after the count of boxes ticked. Hidden until the
-# script runs
+# script runs. A line replaces any list given before, the earlier page
+# of the same list's included, so its words say that it names every
+# occurrence to leave
 PICK_BAR = "pick-bar"
 PICK_INTRO = (
     "Copy the line into the conversation: it holds the file, this page's "
-    "numbering and the numbers ticked, and nothing of the text.")
+    "numbering and the numbers ticked, and nothing of the text. It names "
+    "every occurrence to leave, in place of any list given before.")
+# The second skip link, to the bar, which a keyboard otherwise reaches
+# past every tick box; hidden with the bar until the script shows both
+PICK_SKIP = "pick-skip"
 
 
 def the_line(file_id: int, code: str, numbers: Sequence[int]) -> str:
@@ -424,8 +430,9 @@ def the_line(file_id: int, code: str, numbers: Sequence[int]) -> str:
 # runs on the page. At load it sets every tick box to its written state
 # (a browser that keeps a form's state across a reload, as Firefox does
 # by position, could otherwise tick an earlier page's occurrences beside
-# this page's numbering), builds the line, then shows the boxes and the
-# bar. Each tick builds the line again from the ticked boxes' numbers and
+# this page's numbering), builds the line, then shows the boxes, the bar
+# and the skip link to it. Each tick builds the line again from the
+# ticked boxes' numbers and
 # the bar's file and numbering, which Exegete writes from integers and
 # the ids' alphabet: with none ticked, or more than one run leaves, there
 # is no line and Copy is off. Copy asks the clipboard inside the click,
@@ -443,6 +450,7 @@ PICK_SCRIPT = """
   var copy = document.getElementById("pick-copy");
   var count = document.getElementById("pick-count");
   var status = document.getElementById("pick-status");
+  var skip = document.getElementById("pick-skip");
   if (!bar || !field || !copy || !count || !status) {
     return;
   }
@@ -543,6 +551,9 @@ PICK_SCRIPT = """
   });
   update();
   bar.hidden = false;
+  if (skip) {
+    skip.hidden = false;
+  }
 }());
 """.replace("MOST", str(MAX_OCCURRENCES_LEFT))
 # The page's policy: the reading copy's (reading_copy.POLICY), which
@@ -983,6 +994,8 @@ def build_page(*, project_name: str, file_id: int, file_name: str,
         f"<title>{title}</title>",
         f"<style>{BASE_STYLE}\n{PAGE_STYLE}\n</style></head><body>",
         '<a class="skip" href="#text">Skip to the text</a>',
+        f'<a class="skip" id="{PICK_SKIP}" href="#{PICK_BAR}" hidden>Skip '
+        f'to the line to copy</a>',
         f"<header><h1><bdi>{esc(file_name)}</bdi></h1>",
         f"<p>Project: <bdi>{esc(project_name)}</bdi>. File {int(file_id)}, "
         f"{_plural(len(marks), 'occurrence', 'occurrences')}"

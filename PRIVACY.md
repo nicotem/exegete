@@ -252,10 +252,12 @@ readers:
   Names and pseudonyms that you type into the conversation, called a
   typed mapping below, reach the provider as you type them ("What
   pseudonymisation is for", below).
-- **What stays on the computer, and who else reads it.** The project,
-  its backups and copies, Exegete's own folder and its reading folder,
-  and the host's own records of the conversation stay on your disk (the
-  checklist above lists them). Anything that reads the disk can read
+- **What stays on the computer, and who else reads it.** Several things
+  stay on your disk: the project, its backups and copies, Exegete's own
+  folder (coding sessions, the texts an import's preview read, the
+  records of changes kept for undo, the pseudonymisation run records),
+  the reading folder, and the host's own records of the conversation
+  (its log, its transcripts). Anything that reads the disk can read
   them: a sync or backup service, a copy you give someone, another
   assistant that opens files by itself, a log or a support bundle you
   send. Exegete's own log lines name no project or file and quote no
@@ -1581,7 +1583,7 @@ The cautions:
   since a backup copies the project (all but its audio and video
   folders). Restoring the backup taken just before the import takes it
   back while nothing else has changed. For a day after an import,
-  `undo_changes` can also take it back. It removes the files' entries,
+  `undo_changes` can also take it back: it removes the files' entries,
   and the originals Exegete stored in the project's `documents` folder,
   only if each is still the file the import stored. Copies stay
   elsewhere. The backups taken since the import, and the backup the undo

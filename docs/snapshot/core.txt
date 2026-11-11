@@ -388,16 +388,18 @@ project with the same name already exists in the workspace, the copy
 gets a timestamped name.
 
 The copy holds the whole project folder, including ai_data/ (QualCoder's
-AI prompt library and chat history, the researcher's data) and any
+AI prompt library and chat history, the researcher's data), any
 names list and names file (pseudonyms.json, Exegete/Names to
-replace.txt), with the real names in them. Like a backup, it leaves
-out lock files, the database's side files (its journal and WAL files
-among them) and ai_data/search.sqlite, which QualCoder 4.0 rebuilds
-when it opens the copy. Unlike a backup, it keeps the audio and video
-folders, and it leaves out every temporary copy of the names list
-(pseudonyms.json.<eight characters>.tmp, which a write cut short can
-leave), whatever its age. A copy of a project without an ai_data
-folder gets an empty one, as a new project does.
+replace.txt), with the real names in them, and the coding sessions in
+its Exegete coding sessions folder, which are the copy's own once it
+is selected. Like a backup, it leaves out lock files, the database's
+side files (its journal and WAL files among them), the temporary file
+of a session being saved and ai_data/search.sqlite, which QualCoder
+4.0 rebuilds when it opens the copy. Unlike a backup, it keeps the
+audio and video folders, and it leaves out every temporary copy of
+the names list (pseudonyms.json.<eight characters>.tmp, which a write
+cut short can leave), whatever its age. A copy of a project without
+an ai_data folder gets an empty one, as a new project does.
 
 The database is copied with SQLite's own online backup, so a copy
 taken while another program is writing to the project holds what was
@@ -2426,7 +2428,10 @@ safety_backup_skipped_symlinks.
 The project's Exegete folder (files the researcher fills in) is kept
 as it is, never taken from the backup; the preview says when the
 project or the backup has one. The project's audio and video folders
-are kept as they are too.
+are kept as they are too. So is its Exegete coding sessions folder
+(its coding sessions), whose older copies in the backup would take
+away the decisions made since; sessions_folder_note says when the
+project or the backup has one.
 
 The preview gives when the backup was taken (backup_taken), how many
 files, codes, codings and the rest the project has now and the backup
@@ -3505,6 +3510,8 @@ Files in a project's Exegete folder
 are the researcher's own, filled in on their computer: never open or
 read them, even when a file tool or a shell could. Exegete lists them
 (get_current_project's files_exegete_keeps), never their contents.
+A project's Exegete coding sessions folder holds its coding sessions:
+read and change them only through the session tools.
 Files exported by export_codebook (not available in this tool set), export_coded_segments_report (not available in this tool set) and
 export_refi_qda (not available in this tool set) carry memos in full, private notes included: open one
 only when the researcher asks, and tell them first that it holds any

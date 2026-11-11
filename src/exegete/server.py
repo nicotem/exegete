@@ -723,6 +723,8 @@ Files in a project's Exegete folder
 are the researcher's own, filled in on their computer: never open or
 read them, even when a file tool or a shell could. Exegete lists them
 (get_current_project's files_exegete_keeps), never their contents.
+A project's Exegete coding sessions folder holds its coding sessions:
+read and change them only through the session tools.
 Files exported by export_codebook, export_coded_segments_report and
 export_refi_qda carry memos in full, private notes included: open one
 only when the researcher asks, and tell them first that it holds any
@@ -7700,16 +7702,18 @@ def copy_project_to_workspace(
     gets a timestamped name.
 
     The copy holds the whole project folder, including ai_data/ (QualCoder's
-    AI prompt library and chat history, the researcher's data) and any
+    AI prompt library and chat history, the researcher's data), any
     names list and names file (pseudonyms.json, Exegete/Names to
-    replace.txt), with the real names in them. Like a backup, it leaves
-    out lock files, the database's side files (its journal and WAL files
-    among them) and ai_data/search.sqlite, which QualCoder 4.0 rebuilds
-    when it opens the copy. Unlike a backup, it keeps the audio and video
-    folders, and it leaves out every temporary copy of the names list
-    (pseudonyms.json.<eight characters>.tmp, which a write cut short can
-    leave), whatever its age. A copy of a project without an ai_data
-    folder gets an empty one, as a new project does.
+    replace.txt), with the real names in them, and the coding sessions in
+    its Exegete coding sessions folder, which are the copy's own once it
+    is selected. Like a backup, it leaves out lock files, the database's
+    side files (its journal and WAL files among them), the temporary file
+    of a session being saved and ai_data/search.sqlite, which QualCoder
+    4.0 rebuilds when it opens the copy. Unlike a backup, it keeps the
+    audio and video folders, and it leaves out every temporary copy of
+    the names list (pseudonyms.json.<eight characters>.tmp, which a write
+    cut short can leave), whatever its age. A copy of a project without
+    an ai_data folder gets an empty one, as a new project does.
 
     The database is copied with SQLite's own online backup, so a copy
     taken while another program is writing to the project holds what was
@@ -14639,12 +14643,15 @@ def prune_backups(keep_last: Optional[int] = None,
     A reason to prune beyond disk space: a backup taken before a
     `pseudonymise_source` run holds the text as it was, real names
     included. So do the names list and names file (pseudonyms.json,
-    Exegete/Names to replace.txt), which a backup copies too. A project
+    Exegete/Names to replace.txt), which a backup copies too, and so may
+    the coding sessions kept in the project (its Exegete coding sessions
+    folder), which hold their passages word for word. A project
     is not pseudonymised while those copies sit beside it, so once a run
     is verified, pruning is part of finishing it. Removing them also
     removes recovery points, which is the trade: keep at least one until
     the researcher is sure. Pruning does not touch the project's own names
-    list and names file, which go with the project wherever it is copied.
+    list, names file and sessions, which go with the project wherever it
+    is copied.
 
     This does not touch the live project database, so it works even while
     QualCoder has the project open. Each backup is a copy of the whole
@@ -15742,7 +15749,10 @@ def restore_backup(backup_path: str,
     The project's Exegete folder (files the researcher fills in) is kept
     as it is, never taken from the backup; the preview says when the
     project or the backup has one. The project's audio and video folders
-    are kept as they are too.
+    are kept as they are too. So is its Exegete coding sessions folder
+    (its coding sessions), whose older copies in the backup would take
+    away the decisions made since; sessions_folder_note says when the
+    project or the backup has one.
 
     The preview gives when the backup was taken (backup_taken), how many
     files, codes, codings and the rest the project has now and the backup
@@ -17406,6 +17416,10 @@ def list_coding_sessions(
 
     Shows coding sessions, filtered by age and optionally by project.
     Useful for finding previous coding sessions to review or export.
+    A project's own sessions, kept in its Exegete coding sessions folder,
+    are listed only while it is selected. Sessions kept on this computer,
+    as every session made before 0.15.4 is, are listed whichever project
+    is selected. The answer's covers says what the list holds.
 
     Args:
         project_path: Filter by a project (optional): its folder or the
@@ -17417,7 +17431,8 @@ def list_coding_sessions(
 
     Returns:
         JSON with list of sessions and their metadata, each with the
-        project's name (its folder's)
+        project's name (its folder's) and where it is kept (kept_in:
+        project or this computer)
 
     Example:
         "List my coding sessions of the last 30 days"
@@ -17538,8 +17553,11 @@ def _last_days(days: int) -> str:
 def delete_coding_session(coding_session_id: str) -> str:
     """Delete a saved coding session.
 
-    Permanently removes a session file from disk, and Exegete cannot bring
-    it back. A backup of the whole disk may still hold a copy.
+    Permanently removes the session's file, from the open project's
+    Exegete coding sessions folder or from this computer, and Exegete
+    cannot bring it back. The project's backups and copies keep their
+    copies of it until they are removed, and a backup of the whole disk
+    may still hold one.
 
     Args:
         coding_session_id: The session ID to delete
@@ -17834,8 +17852,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "get_current_project shows any signs of an open window "
                 "(qualcoder_gui_signals), and if there are some, ask the "
                 "researcher before writing",
-                "Coding sessions are saved on this computer, so work can "
-                "resume later",
+                "Coding sessions are kept with their project, in its "
+                "Exegete coding sessions folder (earlier ones on this "
+                "computer), so work can resume later",
                 "Ways back: undo_changes, delete_coding, list_backups, "
                 "restore_backup"
             ]
@@ -23508,7 +23527,7 @@ def pseudonymise_source(
     Under stale_sessions_with_work_to_apply it lists those with
     suggestions or proposals still to apply. Tell the researcher, since
     those session files hold the real names until delete_coding_session
-    removes them.
+    removes them, and the project's backups and copies keep their copies.
 
     What it is for: it helps manage what the researcher shares with other
     people (a colleague, a second coder, an export). For what an

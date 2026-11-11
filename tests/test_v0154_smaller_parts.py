@@ -329,6 +329,26 @@ class TestWhatAPartHolds:
         assert "every part" in first["part"]["note"]
         assert "every part" not in last["part"]["note"]
 
+    def test_a_file_comes_whole_exactly_when_its_answer_fits(
+            self, setup_server):
+        """Files a few characters apart around the bound: each whose
+        whole answer, as the database read gives it, is within the bound
+        comes whole, though a part's answer, with its `part` block,
+        would pass it; each whose whole answer passes it comes in
+        parts."""
+        whole, split = 0, 0
+        for n, length in enumerate(range(35_250, 35_500, 4)):
+            add_file(1000 + n, english(length))
+            answer = server._ai_json(
+                server.get_db().get_file_with_coding(1000 + n), indent=2)
+            fits = len(json.dumps({"result": answer}, separators=(",", ":"),
+                                  ensure_ascii=False).encode("utf-8")
+                       ) <= parts.BOUND
+            first = walk(1000 + n, most=3)[0]
+            assert (first["part"] is None) is fits, length
+            whole, split = whole + fits, split + (not fits)
+        assert whole > 10 and split > 10
+
 
 class TestWhatEveryPartCarries:
 

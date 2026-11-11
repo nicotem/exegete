@@ -22733,9 +22733,8 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
             f"refused: {if_saved['error']} Fix the file and preview again, "
             f"or preview again without save_mapping_to_project and execute "
             f"with researcher_keeps_mapping=true.{again}")
-    if phrases and retention.get("chosen") in ("save_requested", "both"):
-        # Beside the save (v0.15.4): pseudonyms.json takes the mapping alone
-        warnings.append(_PHRASES_NOT_SAVED_WARNING)
+    # Beside the save's warnings, those on the phrases themselves (v0.15.4)
+    warnings.extend(_phrases_warnings(phrases, retention))
     # Brief 2 fix round 1, QA-B2-1: what QualCoder's own application of
     # the saved file will do differently from this run.
     if if_saved.get("pre_empted_by_existing"):
@@ -22805,19 +22804,29 @@ def _pseudonymise_warnings(preview: Dict[str, Any]) -> List[str]:
                 "None of the names in this mapping occurs in this file or "
                 "in any note or journal entry, so an execute would rewrite "
                 "nothing." + no_save)
-    cut = sorted({each["number"] for block in phrases
-                  for each in block.get("each", ()) if each.get("cut")})
-    if cut:
-        # Names that run past a phrase are replaced (v0.15.4), by the
-        # phrases' numbers alone
-        warnings.append(_PHRASES_CUT_WARNING.format(
-            numbers=_phrase_numbers(cut)))
     if left:
         # Last, after the sentence that says, where every occurrence is
         # left, that it is by choice (v0.15.3). The put-back warning above
         # reads a count that no longer holds them
         warnings.append(_occurrences_left_warning(
             preview, left, counted_left, chosen_alone))
+    return warnings
+
+
+def _phrases_warnings(phrases: List[Dict[str, Any]],
+                      retention: Dict[str, Any]) -> List[str]:
+    """The preview's warnings on phrases to keep (v0.15.4), from each
+    file's phrases block: beside a save, that the phrases are not saved
+    with the mapping; and the names that run past a phrase, which the
+    run replaces, by the phrases' numbers alone. None without phrases."""
+    warnings: List[str] = []
+    if phrases and retention.get("chosen") in ("save_requested", "both"):
+        warnings.append(_PHRASES_NOT_SAVED_WARNING)
+    cut = sorted({each["number"] for block in phrases
+                  for each in block.get("each", ()) if each.get("cut")})
+    if cut:
+        warnings.append(_PHRASES_CUT_WARNING.format(
+            numbers=_phrase_numbers(cut)))
     return warnings
 
 

@@ -6,13 +6,16 @@
   pseudonymisation run, or in another program) a suggestion could be
   written onto other words. Each suggestion's passage is now compared
   with the file's text at its positions, as `apply_codings` compares
-  it. A pending, approved or rejected suggestion that no longer fits
-  refuses the export, and the refusal says how to correct it:
+  it. A pending, approved or rejected suggestion whose passage or
+  positions no longer fit the file's text refuses the export, and the
+  refusal gives its status and says how to correct it:
   `edit_suggestion` for a pending one, and for one already decided,
   `update_suggestion_status` with `reopen` first, then
-  `edit_suggestion`, then the decision again. An applied or removed
-  suggestion that no longer fits, whose coding is in the project or was
-  deleted from it, is left out of the file instead, counted in
+  `edit_suggestion`, then the decision again. One whose code or file
+  has gone refuses the export as before, with its reason alone. An
+  applied or removed suggestion that no longer fits the project (its
+  passage, positions, code or file), whose coding is in the project or
+  was deleted from it, is left out of the file instead, counted in
   `skipped_suggestions` and the first 20 named in `skipped_details`, as
   the whole project's export leaves out codings that do not fit; the
   whole project's export carries what the project holds. The session is

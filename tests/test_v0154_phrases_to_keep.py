@@ -1391,13 +1391,15 @@ class TestTheNotesAskForThePhrases:
     def test_the_brief_names_them(self):
         """The brief's line on choosing occurrences says to give the same
         keep_phrases, where a preview had them, to every preview after it
-        and to the run. Red with the brief as before."""
+        for that file, not of any file, and to the run. Red with the brief
+        as before."""
         brief = " ".join(server.BRIEF_FULL.split())
         start = brief.index("- When the researcher wants to leave some "
                             "occurrences")
         line = brief[start:brief.index(" - ", start + 2)]
         assert "keep_phrases" in line, line
-        assert "every preview after it" in line and "the run" in line
+        assert "every preview after it for that file" in line, line
+        assert "the run" in line
 
 
 class TestThePageMarksTheKept:

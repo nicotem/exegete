@@ -15748,11 +15748,14 @@ class QualcoderDatabase:
         return preview
 
     # A file's entry where the run replaces nothing in its text, every
-    # occurrence being left by a list or kept inside a phrase (v0.15.4)
+    # occurrence being left by a list or kept inside a phrase (v0.15.4).
+    # Their positions, not the rows: with rewrite_memos the note plan
+    # reads every coding's, annotation's and case link's note, this
+    # file's included, and rewrites it
     PSEUDONYMISE_ROWS_NOT_READ_NOTE = (
-        "This run replaces nothing in this file's text, so its codings, "
-        "annotations and case links were not read: it moves none of them, "
-        "and the counts in this entry include none.")
+        "This run replaces nothing in this file's text, so the positions "
+        "of its codings, annotations and case links were not read: it "
+        "moves none of them, and the counts in this entry include none.")
 
     # The fixed strings of the preview's `memo_rewrites` block (v0.13,
     # Brief 2, 5.2). Every count block carries a fixed units string, and

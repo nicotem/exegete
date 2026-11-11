@@ -929,3 +929,32 @@ class TestEveryOccurrenceKeptThroughTheCall:
             assert not any(note.startswith("Positions after")
                            for note in done["notes"]), done["notes"]
             assert done["stale_sessions"] == []
+
+
+def _a_coding_with_a_note(folder):
+    """A coding in the file whose note names the participant."""
+    add_coding(folder, 1, 1, 0, len("Theresa"), memo="May agreed.",
+               text=ONLY)
+
+
+class TestAFileLeftUnreadThroughTheCall:
+
+    def test_its_entry_says_the_positions_were_not_read(self, tmp_path):
+        """With rewrite_memos, the notes of a file's codings are read and
+        rewritten even where the file's rows are not: the entry of a file
+        whose every occurrence is kept says that the rows' positions were
+        not read, and the run rewrites the coding's note."""
+        with project_with(tmp_path, ONLY,
+                          setup=_a_coding_with_a_note) as folder:
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             rewrite_memos=True)
+            entry = out["preview"]["files"][0]
+            assert entry["rows_read"] is False
+            assert "positions" in entry["rows_read_note"]
+            fields = out["preview"]["memo_rewrites"]["fields"]
+            assert fields["code_text"]["rows"] == 1, fields
+            done = execute_from(out, mapping=MAY, keep_phrases=PHRASE)
+            assert done.get("success") is True, done
+            assert query(folder, "SELECT memo, pos0, pos1 FROM code_text"
+                         ) == [{"memo": "Participant B agreed.", "pos0": 0,
+                                "pos1": len("Theresa")}]

@@ -11884,10 +11884,12 @@ def edit_suggestion(
             "rejected": reopen,
             "removed": "its coding was deleted; " + reopen,
         }
+        # The recorded status is a text the session's file holds (v0.15.4)
         return json.dumps({
             "error": f"Only pending suggestions can be edited; this one is "
                      f"{sugg.status}; "
-                     f"{hints.get(sugg.status, 'no edit path')}"
+                     f"{hints.get(sugg.status, 'no edit path')}",
+            **_came_with_project_fields(session)
         })
 
     manual_span = (start_pos is not None or end_pos is not None
@@ -11963,6 +11965,9 @@ def edit_suggestion(
             refusal = _scope_refusal(session, outside, sugg.file_name,
                                      new_code["name"])
             refusal["error"] = refusal.pop("reason")
+            # The codes the session recorded, and its file's name, are
+            # texts its file holds (v0.15.4)
+            refusal.update(_came_with_project_fields(session))
             return json.dumps(refusal)
 
     # --- span change (same position machinery as record_suggestions) ---
@@ -16447,23 +16452,29 @@ def _undo_session_marks(session, sid: str, plan: undo.Plan,
     def count(key):
         counts[key] = counts.get(key, 0) + 1
 
-    # An approval set back here is this installation's (v0.15.4): the
-    # change undone applied or created it here, which only an approval
-    # that counted here can be, so it counts again, marked at the save
+    # An approval set back here counts as this installation's (v0.15.4)
+    # only where the session read as this installation's: the change
+    # undone applied or created it here, from an approval that counted
+    # here, and the seal shows that the item is as it was then, so it is
+    # marked at the save. In a session that came with the project the item
+    # may have been changed since, by whoever can write in the project's
+    # folder: it is approved as recorded, and reads as pending until the
+    # researcher approves it here
+    given_here = not session.came_with_project
     for mark in plan.marks:
         if mark[0] == "approved" and mark[1] == sid:
             for suggestion in session.suggestions:
                 if suggestion.guid in mark[2] and \
                         suggestion.status == "applied":
                     suggestion.status = "approved"
-                    suggestion.approval_here = True
+                    suggestion.approval_here = given_here
                     suggestion.applied_ctid = None
                     count("suggestions_approved_again")
         elif mark[0] == "proposals" and mark[1] == sid:
             for proposal in session.proposed_codes:
                 if proposal.guid in mark[2] and proposal.status == "created":
                     proposal.status = "approved"
-                    proposal.approval_here = True
+                    proposal.approval_here = given_here
                     proposal.created_code_id = None
                     count("proposals_approved_again")
         elif mark[0] == "applied":
@@ -20213,11 +20224,14 @@ UNDO_WAY_BACK = (
 UNDO_SUGGESTIONS_AGAIN = (
     "{count} coding suggestion(s) return to approved in their session: the "
     "next apply_codings on that session writes them again unless they are "
-    "rejected first.")
+    "rejected first. In a session that came with the project, they read as "
+    "pending, and are written only once the researcher approves them here.")
 UNDO_PROPOSALS_AGAIN = (
     "{count} code proposal(s) return to approved in their session: the "
     "next create_proposed_codes on that session makes their codes again "
-    "unless they are rejected first.")
+    "unless they are rejected first. In a session that came with the "
+    "project, they read as pending, and their codes are made only once the "
+    "researcher approves them here.")
 UNDO_SUGGESTIONS_ON_FILES = (
     "{count} coding suggestion(s) name a file this undo removes; "
     "apply_codings writes none of them unless a file added later holds "

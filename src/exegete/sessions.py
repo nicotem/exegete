@@ -73,7 +73,7 @@ class SessionFileError(ValueError):
 KEY_NOT_READ = "The session was not read, and nothing was changed."
 KEY_NOT_SAVED = "The session was not saved."
 KEY_NOT_STARTED = "No session was started."
-KEY_NOT_LISTED = "The open project's own sessions were not listed."
+KEY_NOT_LISTED = "Only the sessions kept on this computer are listed."
 
 
 def session_key_unavailable_message(what: str) -> str:

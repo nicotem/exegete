@@ -219,10 +219,19 @@ def part_name(destination_name: str, pid: int, ns: int) -> str:
     return f".{cut_name(destination_name)}.{pid}-{ns}.part"
 
 
-def _part_key(name: str) -> str:
-    """How two part files' names are compared: without regard to letter
-    case or to Unicode's two ways of writing an accented letter."""
-    return unicodedata.normalize("NFC", name).casefold()
+def _taken_as_one(folder: Path, name: str, other: str) -> bool:
+    """Whether the folder takes `other` as the same name as `name`, the
+    file under `name` being there: found under both by
+    `os.path.samefile`, an `OSError` read as no (v0.15.4). A Mac's
+    default disk takes a name with its letters' case swapped, and an
+    accented letter's other form, as the same; Windows the first alone;
+    Linux neither."""
+    if other == name:
+        return False
+    try:
+        return os.path.samefile(folder / name, folder / other)
+    except OSError:
+        return False
 
 
 def part_path_refusal(destination: Path, on_windows: bool,
@@ -265,14 +274,33 @@ def remove_earlier_parts(folder: Path, destination_name: str,
                          before_ns: int) -> int:
     """Remove Exegete's part files of this destination made before
     `before_ns` (an export killed before its replace leaves one), and
-    count them.
+    count them. Called once the destination is in place.
 
     Only a regular file (by `lstat`) named exactly a dot, the cut name, a
-    dot, digits, a hyphen, digits and `.part`, compared without regard to
-    letter case and never through a glob (a name may hold `[`, `*` or
-    `?`). One that cannot be removed (on Windows, one still open) is
-    skipped and not counted; nothing here fails the export."""
-    key = _part_key(cut_name(destination_name))
+    dot, digits, a hyphen, digits and `.part`, never through a glob (a
+    name may hold `[`, `*` or `?`). The cut name is compared exactly
+    (v0.15.4): without regard to letter case only where the folder takes
+    the destination's name with its letters' case swapped as the same
+    file, and in one Unicode form only where it takes the name's other
+    form so (`_taken_as_one`), so that another destination's part file,
+    which may still be being written, stays. A name longer than
+    PART_NAME_BYTES is known by its cut alone, as before. One that cannot
+    be removed (on Windows, one still open) is skipped and not counted;
+    nothing here fails the export."""
+    ignore_case = _taken_as_one(folder, destination_name,
+                                destination_name.swapcase())
+    composed = unicodedata.normalize("NFC", destination_name)
+    one_form = _taken_as_one(
+        folder, destination_name,
+        composed if composed != destination_name
+        else unicodedata.normalize("NFD", destination_name))
+
+    def compared(name: str) -> str:
+        if one_form:
+            name = unicodedata.normalize("NFC", name)
+        return name.casefold() if ignore_case else name
+
+    key = compared(cut_name(destination_name))
     try:
         with os.scandir(folder) as listing:
             entries = [(entry.name, entry.path) for entry in listing]
@@ -283,7 +311,7 @@ def remove_earlier_parts(folder: Path, destination_name: str,
     removed = 0
     for name, path in entries:
         match = _PART_RE.fullmatch(name)
-        if match is None or _part_key(match.group(1)) != key:
+        if match is None or compared(match.group(1)) != key:
             continue
         if int(match.group(3)) >= before_ns:
             continue

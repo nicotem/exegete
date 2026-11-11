@@ -456,28 +456,29 @@ class TestTheToken:
         assert stored(toms).count("Tom") == 2
 
     def test_the_recipe_names_the_list(self):
-        """The recipe in the description's opening part and the sentence
-        on bound arguments name the list, and it is not among the
-        arguments the description says are not bound."""
+        """The recipe in the description's opening part names every
+        argument the token binds, the list included, and the list is not
+        among the arguments the description says are not bound. (v0.15.4,
+        phrases to keep: the closing sentence that named them again went,
+        to make room, and keep_phrases joins them.)"""
         published = " ".join(server.pseudonymise_source.__doc__.split())
         recipe = re.search(r"Only if they agree, call again with (.*?), "
                            r"plus preview_token=<the token>\.",
                            published).group(1)
-        bound = re.search(r"The arguments that are bound are (.*?), and "
-                          r"they must be repeated identically", published
-                          ).group(1)
         names = pt.canonical_args(
             "pseudonymise_source", mapping=[], file_id=1, case_mode="exact",
             overlap_policy="snap_to_pseudonym", rewrite_memos=False,
             save_mapping_to_project=False, leave_occurrences=["abcde"],
-            leave_numbers=[1], numbering="abcdef")
-        # v0.15.4: the numbers and their numbering join them
+            leave_numbers=[1], numbering="abcdef",
+            keep_phrases=["Theresa May"])
+        # v0.15.4: the numbers and their numbering join them, and the
+        # phrases to keep
         assert set(names) == {"mapping", "file_id", "case_mode",
                               "overlap_policy", "rewrite_memos",
                               "save_mapping_to_project", "leave_occurrences",
-                              "leave_numbers", "numbering"}
+                              "leave_numbers", "numbering", "keep_phrases"}
         for name in names:
-            assert name in recipe and name in bound, name
+            assert name in recipe, name
         last = re.search(r"The arguments from include_context to (\w+),",
                          published).group(1)
         order = list(inspect.signature(server.pseudonymise_source).parameters)

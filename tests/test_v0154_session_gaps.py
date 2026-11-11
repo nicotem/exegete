@@ -45,7 +45,8 @@ from test_v0154_sessions_with_project import (  # noqa: E402
     FOLDER, LATER, call, file_of, folder_of, jcall, on_this_computer,
     project, record, start, undo_run, _codings_of, _restore)  # noqa: F401
 from test_v0154_session_marks import (  # noqa: E402
-    approve, entry_of, loaded, stored, _changed_by_hand, _code_names)
+    approve, elsewhere, entry_of, loaded, stored, _changed_by_hand,
+    _code_names)
 
 POSIX = os.name == "posix"
 ID_FILE = private_files.PROJECT_ID_FILE
@@ -184,6 +185,30 @@ class TestAnOlderCopyPutBack:
         assert not counts(sid, guid)
         assert not_applied(sid) == [guid]
         assert _codings_of(project) == []
+
+    def test_a_withdrawal_elsewhere_counts_here_until_a_save_here(
+            self, project, monkeypatch):
+        """A guard of the limit the documents give beside the claim: this
+        computer's record holds what Exegete did here. An approval given
+        here and rejected by Exegete on another computer stays in it, so
+        this computer's older copy put back still counts it; once Exegete
+        here has saved the session as the other computer left it, the
+        older copy counts nothing."""
+        sid = start()["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        approve(sid, guid)
+        older = file_of(project, sid).read_bytes()
+        with elsewhere(monkeypatch):
+            call("update_suggestion_status", coding_session_id=sid,
+                 reject=[guid])
+        newer = file_of(project, sid).read_bytes()
+        assert entry_of(json.loads(newer), guid)["status"] == "rejected"
+        file_of(project, sid).write_bytes(older)
+        assert counts(sid, guid)
+        file_of(project, sid).write_bytes(newer)
+        assert record(sid, LATER, "Hope")["recorded_count"] == 1
+        file_of(project, sid).write_bytes(older)
+        assert not counts(sid, guid)
 
 
 # ---------------------------------------------------------------------------
@@ -453,6 +478,72 @@ class TestARecordThatCannotBeUsed:
         assert not counts(sid, one)
         assert len(refusals) == private_files.REPLACE_TRIES
 
+    def test_held_at_the_load_alone_a_save_keeps_it(self, project,
+                                                     monkeypatch):
+        """On Windows (patched) a record held through the load's tries and
+        let go before the save: the load reads its approvals as pending,
+        and a save that gives none judges the record as it finds it, so
+        it keeps both approvals and they count at the next read."""
+        sid, one, two = _approved_two(project)
+        before = marks_in(project, sid)
+        holding = _hold_the_record(project, sid, monkeypatch)
+        holding["now"] = True
+        real = sessions.SessionManager._save_in_project
+
+        def let_go(manager, session, folder):
+            holding["now"] = False
+            return real(manager, session, folder)
+        monkeypatch.setattr(sessions.SessionManager, "_save_in_project",
+                            let_go)
+        assert record(sid, QUOTE, "Doubt")["recorded_count"] == 1
+        assert marks_in(project, sid) == before
+        assert counts(sid, one) and counts(sid, two)
+
+    def test_held_at_the_save_alone(self, project, monkeypatch):
+        """Read at the load and held at the save (Windows, patched): a call
+        that gives no approval is saved, the record as it was; one that
+        gives an approval is refused with the reason, the file as it
+        was."""
+        sid, one, two = _approved_two(project)
+        before = marks_in(project, sid)
+        holding = _hold_the_record(project, sid, monkeypatch)
+        real = sessions.SessionManager._save_in_project
+
+        def hold(manager, session, folder):
+            holding["now"] = True
+            try:
+                return real(manager, session, folder)
+            finally:
+                holding["now"] = False
+        monkeypatch.setattr(sessions.SessionManager, "_save_in_project",
+                            hold)
+        third = record(sid, QUOTE, "Doubt")
+        assert third.get("recorded_count") == 1, third
+        assert marks_in(project, sid) == before
+        assert counts(sid, one) and counts(sid, two)
+        kept = file_of(project, sid).read_bytes()
+        out = approve(sid, third["recorded"][0]["guid"])
+        assert "could not be read" in out and sessions.KEY_NOT_SAVED in out, \
+            out
+        assert file_of(project, sid).read_bytes() == kept
+        assert marks_in(project, sid) == before
+
+
+def _hold_the_record(project, sid, monkeypatch) -> dict:
+    """On Windows (patched), the session's record held by another program
+    while `holding["now"]` is true: every open of it refused."""
+    place = str(record_of(project, sid))
+    monkeypatch.setattr(sessions, "_on_windows", lambda: True)
+    monkeypatch.setattr(private_files, "REPLACE_PAUSE", 0)
+    real, holding = os.open, {"now": False}
+
+    def held(path, flags, *args, **kwargs):
+        if holding["now"] and str(path) == place:
+            raise PermissionError(errno.EACCES, "Injected: held")
+        return real(path, flags, *args, **kwargs)
+    monkeypatch.setattr(os, "open", held)
+    return holding
+
 
 def _refuse_the_replace_of(project, sid, monkeypatch):
     """The session's replace made to fail, as a full disk would."""
@@ -577,11 +668,95 @@ class TestFailuresBesideTheFile:
 
         def refused(*args, **kwargs):
             raise OSError(errno.EACCES, "Permission denied")
-        monkeypatch.setattr(sessions, "remove_record", refused)
+        monkeypatch.setattr(sessions, "set_record_aside", refused)
         out = jcall("delete_coding_session", coding_session_id=sid)
         assert sessions.KEY_NOT_DELETED in out["error"], out
         assert file_of(project, sid).read_bytes() == kept
         assert marks_in(project, sid) == held
+
+    @pytest.mark.skipif(not POSIX or os.geteuid() == 0,
+                        reason="permissions are POSIX's, and bind no root")
+    def test_a_delete_the_folder_refuses_puts_the_record_back(self,
+                                                              project):
+        """The record leaves its name before the file is removed; when
+        the removal is then refused (here a read-only sessions folder), it
+        is put back: the file as it was, its approval counting once the
+        folder is writable again, nothing left in Exegete's own folder."""
+        sid = start()["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        approve(sid, guid)
+        held, kept = marks_in(project, sid), file_of(project,
+                                                     sid).read_bytes()
+        os.chmod(folder_of(project), 0o500)
+        try:
+            out = jcall("delete_coding_session", coding_session_id=sid)
+        finally:
+            os.chmod(folder_of(project), 0o700)
+        assert "error" in out, out
+        assert file_of(project, sid).read_bytes() == kept
+        assert marks_in(project, sid) == held and counts(sid, guid)
+        assert sorted(os.listdir(sessions.approvals_folder())) == [
+            record_of(project, sid).name]
+
+    def test_a_delete_refused_for_a_file_another_program_holds(
+            self, project, monkeypatch):
+        """On Windows a sync client or a scanner can hold the session's
+        file (here its removal refused, on any system): the record is put
+        back, and the approval still counts."""
+        sid = start()["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        approve(sid, guid)
+        held, kept = marks_in(project, sid), file_of(project,
+                                                     sid).read_bytes()
+        with monkeypatch.context() as patch:
+            _hold_the_file_of(sid, patch)
+            out = jcall("delete_coding_session", coding_session_id=sid)
+        assert "error" in out, out
+        assert file_of(project, sid).read_bytes() == kept
+        assert marks_in(project, sid) == held and counts(sid, guid)
+        assert sorted(os.listdir(sessions.approvals_folder())) == [
+            record_of(project, sid).name]
+        # Let go, the delete takes the record and the file
+        assert jcall("delete_coding_session",
+                     coding_session_id=sid)["success"] is True
+        assert os.listdir(sessions.approvals_folder()) == []
+
+    def test_a_record_that_cannot_be_put_back_is_said(self, project,
+                                                      monkeypatch):
+        """Both refused, the removal and the record's return: the answer
+        says that the session's approvals read as pending until given
+        again, its file and every decision in it as they were."""
+        sid = start()["coding_session_id"]
+        guid = record(sid)["recorded"][0]["guid"]
+        approve(sid, guid)
+        kept, place = file_of(project, sid).read_bytes(), str(
+            record_of(project, sid))
+        real = os.replace
+
+        def no_return(source, target, *args, **kwargs):
+            if str(target) == place:
+                raise PermissionError(errno.EACCES, "Injected: refused")
+            return real(source, target, *args, **kwargs)
+        with monkeypatch.context() as patch:
+            _hold_the_file_of(sid, patch)
+            patch.setattr(os, "replace", no_return)
+            out = jcall("delete_coding_session", coding_session_id=sid)
+        assert sessions.RECORD_NOT_PUT_BACK in out["error"], out
+        assert file_of(project, sid).read_bytes() == kept
+        assert entry_of(stored(project, sid), guid)["status"] == "approved"
+        assert not counts(sid, guid)
+
+
+def _hold_the_file_of(sid, patch):
+    """The session's file held by another program: its removal refused,
+    as Windows refuses it."""
+    real = os.unlink
+
+    def held(path, *args, **kwargs):
+        if str(path).endswith(f"session_{sid}.json"):
+            raise PermissionError(errno.EACCES, "Injected: held")
+        return real(path, *args, **kwargs)
+    patch.setattr(os, "unlink", held)
 
 
 # ---------------------------------------------------------------------------
@@ -808,6 +983,64 @@ class TestAnIdThatIsNotOne:
         assert "Windows allows" in out["error"], out
         assert id_file(project).read_bytes() == made
 
+    def test_an_id_changed_to_another_is_used_as_the_id(self, project):
+        """A guard of the fact the folder's note and the documents give:
+        an id changed to another (one digit, another project's, a sync
+        service's conflict) is an id, so nothing is refused, and every
+        session there reads as having come with the project, its
+        approvals pending. An approval given meanwhile is saved with no
+        seal on the session and a mark over the changed id, so once the
+        id is put back the session still reads so and that approval as
+        pending, its decision kept in the file."""
+        sid = start()["coding_session_id"]
+        before = record(sid)["recorded"][0]["guid"]
+        approve(sid, before)
+        made = id_file(project).read_bytes()
+        changed = made.decode("ascii").strip()
+        changed = changed[:-1] + ("0" if changed[-1] != "0" else "1")
+        id_file(project).write_text(f"{changed}\n", encoding="ascii")
+        review = call("review_suggestions", coding_session_id=sid)
+        assert "came_with_project: true" in review, review
+        assert not counts(sid, before)
+        meanwhile = record(sid, LATER, "Hope")["recorded"][0]["guid"]
+        approve(sid, meanwhile)
+        assert counts(sid, meanwhile)
+        assert id_file(project).read_text(encoding="ascii").strip() == \
+            changed
+        id_file(project).write_bytes(made)
+        session = loaded(sid)
+        assert session.came_with_project and not counts(sid, meanwhile)
+        assert entry_of(stored(project, sid), meanwhile)["status"] == \
+            "approved"
+
+    def test_an_id_that_cannot_be_read_asks_again_first(self, project,
+                                                         monkeypatch):
+        """An id that cannot be read (another program holding it, a file a
+        sync service has not brought down) is refused with ways on of its
+        own: asking again later may work, and removing it would make every
+        session read as having come with the project. The damaged id's
+        ways on are not given."""
+        sid = start()["coding_session_id"]
+        made = id_file(project).read_bytes()
+        real = os.open
+
+        def held(path, flags, *args, **kwargs):
+            if str(path) == ID_FILE or str(path).endswith(os.sep + ID_FILE):
+                raise PermissionError(errno.EACCES, "Injected: held")
+            return real(path, flags, *args, **kwargs)
+        with monkeypatch.context() as patch:
+            patch.setattr(os, "open", held)
+            out = jcall("review_suggestions", coding_session_id=sid)
+            listed = jcall("list_coding_sessions")
+            started = start()
+        for text in (out if isinstance(out, str) else out["error"],
+                     listed["project_sessions_not_listed"],
+                     started["error"]):
+            assert sessions.PROJECT_ID_UNREAD_WAYS_ON in text, text
+            assert sessions.PROJECT_ID_WAYS_ON not in text, text
+        assert id_file(project).read_bytes() == made
+        assert on_this_computer() == []
+
     def test_a_session_on_this_computer_is_read_as_before(self, project):
         """A guard: the id is the project's sessions folder's alone."""
         folder_of(project).write_text("not a folder", encoding="utf-8")
@@ -926,13 +1159,35 @@ class TestTheWords:
         assert "read in it as having come with the project" in description
         assert "copy's own once it is selected" not in description
         # The folder's note names the id, and what changing or removing it
-        # does
+        # does: an id changed to another is no refusal
         assert ID_FILE in private_files.SESSIONS_NOTE
+        note = " ".join(private_files.SESSIONS_NOTE.split())
+        for words in CHANGED_ID:
+            assert words in note, (words, note)
 
 
 def _doc(name) -> str:
     return " ".join((Path(__file__).resolve().parent.parent / name
                      ).read_text(encoding="utf-8").split())
+
+
+# The cases the record of approvals cannot see, each a safety fact said
+# beside the claim that an older copy put back brings back no approval
+# withdrawn since (test_a_withdrawal_elsewhere_counts_here_until_a_save_
+# here holds the first)
+THE_RECORD_S_LIMIT = ("withdrawn on another computer",
+                      "deleted outside Exegete", "cut short",
+                      "older backup")
+
+
+def _the_limit_beside(text: str, claim: str) -> None:
+    after = text[text.index(claim):][:900]
+    for words in THE_RECORD_S_LIMIT:
+        assert words in after, (words, after)
+
+
+# What an id changed to another does, said wherever the id's refusal is
+CHANGED_ID = ("id in it is changed", "after the id is put back")
 
 
 class TestTheDocuments:
@@ -958,6 +1213,7 @@ class TestTheDocuments:
         for words in (ID_FILE, "another project", "workspace copy",
                       "cannot bring back an approval withdrawn since"):
             assert words in feature, words
+        _the_limit_beside(feature, "cannot bring back an approval")
         # What apply_codings writes, and what the list counts as pending:
         # the approvals that count here, not those given here, which an
         # older copy put back can hold
@@ -978,6 +1234,16 @@ class TestTheDocuments:
                       "never changes it", "put back from a backup",
                       "removed", "keeps the same id"):
             assert words in section, words
+        _the_limit_beside(section, "cannot bring back an approval")
+        made = section[section.index(f"Exegete makes `{ID_FILE}`"):]
+        made = made[:made.index("makes a copy with an id of its own")]
+        # Made at a start or at a save that finds none; an id that cannot
+        # be read for a moment, asked for again; an id changed to another
+        # read as one, the sessions as having come with the project; and
+        # Exegete's own backups among the copies that keep it
+        for words in ("if the file is missing", "asking again later may work",
+                      *CHANGED_ID, "a backup that Exegete made"):
+            assert words in made, (words, made)
         uninstall = install[install.index("## Uninstalling"):]
         assert f"`{sessions.APPROVALS_FOLDER}/`" in uninstall
         only = uninstall[uninstall.index("If you delete only the records"):]
@@ -1000,6 +1266,7 @@ class TestTheDocuments:
                       "cannot bring back an approval you have withdrawn",
                       "writes only the approvals that count"):
             assert words in came, words
+        _the_limit_beside(came, "cannot bring back an approval")
         path = (Path(__file__).resolve().parent.parent / "changelog.d"
                 / "sessions-with-project.md")
         if not path.is_file():
@@ -1011,6 +1278,9 @@ class TestTheDocuments:
                       "reads its sessions as having come with the project",
                       "write only the approvals that count on this "
                       "computer"):
+            assert words in fragment, words
+        _the_limit_beside(fragment, "cannot bring back an approval")
+        for words in ("changed to another id", "after the id is put back"):
             assert words in fragment, words
 
 

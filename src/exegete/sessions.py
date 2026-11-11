@@ -19,10 +19,14 @@ this installation's seal for this project is read as having come with
 the project: its texts are data, and an approval counts only with a mark
 that verifies and while the state folder's record of the session's
 approvals (`approvals/<project id>_<session id>.json`) holds it, so that
-an older copy of the file put back brings back no approval withdrawn
-since (v0.15.4).
+an older copy of the file put back brings back no approval withdrawn here
+since (v0.15.4). The record knows only what Exegete did here: an approval
+withdrawn on another computer, in a session deleted outside Exegete, or
+by a save cut short before the record was set right, stays in it until
+Exegete here saves or deletes that session.
 """
 
+import errno
 import hashlib
 import hmac
 import json
@@ -91,6 +95,21 @@ PROJECT_ID_WAYS_ON = (
     "used again; once it is removed, every session there reads as having "
     "come with the project, its approvals to be given again, and nothing "
     "in them is lost.")
+# ... and one that could not be read at that moment, which is no sign
+# that it is damaged: asking again comes first, since removing it would
+# make every session there read as having come with the project
+PROJECT_ID_UNREAD_WAYS_ON = (
+    "Exegete never replaces that file. Another program may be holding it "
+    "for a moment, or a sync service may not yet have brought it to this "
+    "computer, so asking again later may work. Removing it would make "
+    "every session there read as having come with the project, its "
+    "approvals to be given again.")
+# Said when a delete was refused and the session's record of approvals,
+# set aside first, could not be put back either (v0.15.4)
+RECORD_NOT_PUT_BACK = (
+    "Its record of approvals could not be put back, so the approvals "
+    "given on this computer in this session read as pending until they "
+    "are given again; every decision stays in the session's file.")
 
 
 def session_key_unavailable_message(what: str) -> str:
@@ -121,13 +140,16 @@ class ProjectIdUnusable(SessionFileError):
     UUID4. A start and every read, decision, save and delete of the
     project's sessions are refused with the reason and the ways on, as an
     unreadable key refuses them; the file is never replaced. `reason` is
-    the id's refusal alone. (An id whose path is past Windows' limit is
-    refused as a session's file is, with that remedy.)"""
+    the id's refusal alone, and `ways_on` what the researcher can do: for
+    an id that could not be read at that moment, asking again first. (An
+    id whose path is past Windows' limit is refused as a session's file
+    is, with that remedy.)"""
 
-    def __init__(self, reason: str, what: str):
-        super().__init__("project_id",
-                         f"{reason} {what} {PROJECT_ID_WAYS_ON}")
+    def __init__(self, reason: str, what: str,
+                 ways_on: str = PROJECT_ID_WAYS_ON):
+        super().__init__("project_id", f"{reason} {what} {ways_on}")
         self.reason = reason
+        self.ways_on = ways_on
 
 
 class ApprovalRecordError(SessionFileError):
@@ -237,16 +259,21 @@ def proposal_mark(key: str, session_id: str, project_id: str,
 # as its write takes it and the decision. In a session kept in a project
 # an approval counts only when its mark verifies and its record holds it,
 # so an older copy of the session's file put back brings back no approval
-# withdrawn since, and a workspace copy, with an id of its own, keeps
+# withdrawn here since, and a workspace copy, with an id of its own, keeps
 # records apart from its original's. A record holds ids and digests
 # alone. One that is missing, damaged or a link reads as none, and the
 # next write puts a whole one in its place; one of a higher format reads
 # as none and is never replaced; one that cannot be read (another program
 # holding it, on Windows tried again as a session's replace is) reads as
-# none, and a write that would change it is refused or left for the next
-# save, so that no write drops its other approvals. A record taken as
-# none leaves the session's approvals pending, every recorded status and
-# mark kept in the session's file: no decision is lost.
+# none. A save judges what counts against the record as it finds it, so
+# that an approval a load could not see is kept, and, when it cannot read
+# the record, against what the load read: one adding an approval new to
+# it is refused, one ending approvals leaves it for the next save, so
+# that no write drops its other approvals. A delete sets the record aside
+# before the session's file is removed and puts it back if the removal is
+# refused. A record taken as none leaves the session's approvals pending,
+# every recorded status and mark kept in the session's file: no decision
+# is lost.
 APPROVALS_FOLDER = "approvals"
 RECORD_FORMAT = 1
 _RECORD_NAME = re.compile(
@@ -421,6 +448,58 @@ def remove_record(project_id: str, session_id: str) -> None:
     try:
         _with_tries(lambda: os.unlink(place))
     except FileNotFoundError:
+        pass
+
+
+def set_record_aside(project_id: str, session_id: str
+                     ) -> Optional[Tuple[Path, Path]]:
+    """Before a session kept in a project is deleted (v0.15.4): its record
+    of approvals moved off its name to a temporary name of the records',
+    so that it reads as none from then on, and can be put back if the
+    session's file is not removed after all (`put_record_back`). Whatever
+    is at its name but a folder is moved, a record that cannot be read
+    included; on Windows tried again while another program holds it.
+    (the temporary place, the record's place), or None when nothing is
+    there. Raises OSError, the record as it was."""
+    place = _record_place(project_id, session_id)
+    try:
+        if stat.S_ISDIR(os.lstat(place).st_mode):
+            raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR))
+    except FileNotFoundError:
+        return None
+    aside = place.with_name(f"{place.name}.{os.urandom(4).hex()}.tmp")
+    try:
+        _with_tries(lambda: os.replace(place, aside))
+    except FileNotFoundError:
+        return None
+    return aside, place
+
+
+def put_record_back(set_aside: Optional[Tuple[Path, Path]]) -> bool:
+    """A record `set_record_aside` moved, put back at its name; True when
+    it is back or nothing was set aside, False when it could not be (on
+    Windows tried again while another program holds it). One left aside
+    is a record's temporary file, which a later write removes a day on
+    (`_remove_old_record_temporaries`)."""
+    if set_aside is None:
+        return True
+    aside, place = set_aside
+    try:
+        _with_tries(lambda: os.replace(aside, place))
+    except OSError:
+        return False
+    return True
+
+
+def drop_record_set_aside(set_aside: Optional[Tuple[Path, Path]]) -> None:
+    """A record `set_record_aside` moved, removed once its session's file
+    is; one that cannot be is left as a record's temporary file, which a
+    later write removes a day on."""
+    if set_aside is None:
+        return
+    try:
+        _with_tries(lambda: os.unlink(set_aside[0]))
+    except OSError:
         pass
 
 
@@ -852,6 +931,12 @@ class AICodingSession:
         # that it reads so after any save here and wherever it goes.
         # Never written
         self.came_with_project = False
+        # The marks its record of approvals held when it was read, or as
+        # its last save left it (v0.15.4); None when the record could not
+        # be read, as while another program held it. A save that cannot
+        # read the record judges by these, so that it refuses only an
+        # approval new to the record. Never written
+        self.recorded_marks: Optional[frozenset] = frozenset()
 
     def approval_counts(self, item: Any) -> bool:
         """Whether an item's approval counts (v0.15.4): in a session kept
@@ -1534,10 +1619,13 @@ class SessionManager:
             self._save_in_project(session, project)
         except SessionKeyUnavailable:
             raise SessionKeyUnavailable(KEY_NOT_STARTED) from None
-        except (ProjectIdUnusable, ApprovalRecordError) as e:
-            # As for the key (v0.15.4): the folder could hold the
-            # session, so it is not kept on this computer instead
-            raise type(e)(e.reason, KEY_NOT_STARTED) from None
+        # As for the key (v0.15.4): the folder could hold the session, so
+        # it is not kept on this computer instead
+        except ProjectIdUnusable as e:
+            raise ProjectIdUnusable(e.reason, KEY_NOT_STARTED,
+                                    e.ways_on) from None
+        except ApprovalRecordError as e:
+            raise ApprovalRecordError(e.reason, KEY_NOT_STARTED) from None
         except (private_files.PrivateFilesError, SessionFileError,
                 OSError) as e:
             reason = (str(e) if isinstance(
@@ -1607,7 +1695,12 @@ class SessionManager:
         that those the save ended leave it only once the file holds their
         end, and is removed when it holds none. A failure at that second
         write is logged by count and set right at the session's next
-        save, never answered as a save not made."""
+        save, never answered as a save not made. What counts is judged
+        against the record as the save finds it, not as the load found
+        it, so an approval the load could not see (its record held by
+        another program then) is kept; and where the save cannot read the
+        record, against what the load read, so that only an approval new
+        to it is refused."""
         if project is None:
             raise SessionFileError(
                 "no_project", "This session's project is not known, so it "
@@ -1626,10 +1719,13 @@ class SessionManager:
             data[SEAL_FIELD] = seal_of(key, project_id, data)
         raw = json.dumps(data, indent=2).encode("utf-8")
         name = self.file_name(session.session_id)
-        counting = self._marks_that_count(session)
+        given = self._marks_given_here(session)
         record = read_record(project_id, session.session_id)
-        recorded = self._record_new_approvals(project_id, session.session_id,
-                                              record, counting)
+        recorded = self._record_new_approvals(
+            project_id, session.session_id, record, given,
+            record.marks if record.held is None else session.recorded_marks)
+        counting = self._marks_that_count(session, key, project_id, given,
+                                          recorded)
         try:
             private_files.replace_session(project, name, raw)
         except private_files.PrivateFilesError as e:
@@ -1637,14 +1733,13 @@ class SessionManager:
                 logger.warning(f"Saved session {session.session_id} in its "
                                f"project, though the save reported "
                                f"{error_label(e)}: its file holds it")
-                self._settle_record(project_id, session.session_id, record,
-                                    recorded, counting)
+                self._settle_record(session, project_id, record, recorded,
+                                    counting)
                 return
             logger.error(f"Failed to save session {session.session_id} in "
                          f"its project: {error_label(e)}")
             raise SessionFileError(e.code, str(e)) from None
-        self._settle_record(project_id, session.session_id, record,
-                            recorded, counting)
+        self._settle_record(session, project_id, record, recorded, counting)
         logger.info(f"Saved session {session.session_id}")
 
     @staticmethod
@@ -1659,7 +1754,10 @@ class SessionManager:
         except private_files.PrivateFilesError as e:
             if e.about_folder or e.code == "too_long":
                 raise SessionFileError(e.code, str(e)) from None
-            raise ProjectIdUnusable(str(e), what) from None
+            raise ProjectIdUnusable(
+                str(e), what, PROJECT_ID_UNREAD_WAYS_ON
+                if e.code == private_files.PROJECT_ID_UNREAD
+                else PROJECT_ID_WAYS_ON) from None
 
     def _project_id_for_save(self, project: Path) -> str:
         """The project's id for a save there (v0.15.4), made when the
@@ -1682,10 +1780,10 @@ class SessionManager:
         return project_id
 
     @staticmethod
-    def _marks_that_count(session: AICodingSession) -> frozenset:
-        """The marks of the approvals that count in a session kept in a
-        project, as its save writes them: given here, or read with a mark
-        that verifies and a record that holds it."""
+    def _marks_given_here(session: AICodingSession) -> frozenset:
+        """The marks of the approvals a save of a session kept in a project
+        takes as given here: given or set back here, or read with a mark
+        that verifies and a record that held it."""
         return frozenset(
             item.approval_mark
             for item in session.suggestions + session.proposed_codes
@@ -1693,37 +1791,67 @@ class SessionManager:
             and item.approval_mark is not None)
 
     @staticmethod
+    def _marks_that_count(session: AICodingSession, key: str,
+                          project_id: str, given: frozenset,
+                          recorded: frozenset) -> frozenset:
+        """The marks of the approvals that count in the file a save writes
+        (v0.15.4): those given here, and every other approval whose mark
+        verifies and that the record holds as the save found it, so that
+        one the load could not see (its record held by another program
+        then) stays in the record."""
+        counting = set(given)
+        for suggestion in session.suggestions:
+            if suggestion.status == "approved" and \
+                    suggestion.approval_mark in recorded and _matches(
+                        suggestion.approval_mark, suggestion_mark(
+                            key, session.session_id, project_id, suggestion)):
+                counting.add(suggestion.approval_mark)
+        for proposal in session.proposed_codes:
+            if proposal.status == "approved" and \
+                    proposal.approval_mark in recorded and _matches(
+                        proposal.approval_mark, proposal_mark(
+                            key, session.session_id, project_id, proposal)):
+                counting.add(proposal.approval_mark)
+        return frozenset(counting)
+
+    @staticmethod
     def _record_new_approvals(project_id: str, session_id: str,
-                              record: ApprovalsRecord,
-                              counting: frozenset) -> frozenset:
+                              record: ApprovalsRecord, given: frozenset,
+                              known: Optional[frozenset]) -> frozenset:
         """Before a session's file is replaced (v0.15.4): the marks of the
-        approvals new to its record enter it. What the record then holds;
-        ApprovalRecordError when they could not, nothing changed."""
-        new = counting - record.marks
+        approvals new to its record enter it. `known` is what the record
+        holds: as read now or, when it cannot be read now, as the load
+        read it (None when the load could not read it either), so that a
+        save giving no new approval is never refused for it. What the
+        record then holds, as far as is known; ApprovalRecordError when
+        the new marks could not enter it, nothing changed."""
+        known = known or frozenset()
+        new = given - known
         if not new:
-            return record.marks
+            return known
         if record.held is not None:
             raise ApprovalRecordError(
                 f"{record.held} So an approval given here could not be "
                 f"recorded without losing the others.", KEY_NOT_SAVED)
         try:
-            write_record(project_id, session_id, record.marks | new)
+            write_record(project_id, session_id, known | new)
         except OSError as e:
             raise ApprovalRecordError(
                 f"Exegete could not record the approvals given here in its "
                 f"own folder on this computer "
                 f"({e.strerror or type(e).__name__}).",
                 KEY_NOT_SAVED) from None
-        return record.marks | new
+        return known | new
 
     @staticmethod
-    def _settle_record(project_id: str, session_id: str,
+    def _settle_record(session: AICodingSession, project_id: str,
                        record: ApprovalsRecord, recorded: frozenset,
                        counting: frozenset) -> None:
         """After a session's file is replaced (v0.15.4): its record keeps
         only the marks of the approvals that count in the file, and goes
         when it holds none. A record a write must leave as it is stays; a
-        failure is logged by count and set right at the next save."""
+        failure is logged by count and set right at the next save. The
+        session keeps what the record then holds, for its next save."""
         if record.held is not None:
             if recorded != counting:
                 logger.warning("After a save, %d approval(s) were not set "
@@ -1732,17 +1860,21 @@ class SessionManager:
                                len(recorded ^ counting))
             return
         if recorded == counting and (counting or not record.present):
+            session.recorded_marks = counting
             return
         try:
             if counting:
-                write_record(project_id, session_id, counting)
+                write_record(project_id, session.session_id, counting)
             else:
-                remove_record(project_id, session_id)
+                remove_record(project_id, session.session_id)
         except OSError as e:
             logger.warning("After a save, %d approval(s) were not set right "
                            "in their record (%s); the session's next save "
                            "does it", len(recorded ^ counting),
                            error_label(e))
+            session.recorded_marks = recorded
+            return
+        session.recorded_marks = counting
 
     @staticmethod
     def _mark_approvals_given_here(session: AICodingSession, key: str,
@@ -1977,10 +2109,13 @@ class SessionManager:
             if kept_in == KEPT_IN_PROJECT:
                 key = session_key(KEY_NOT_READ)
                 project_id = self._project_id(project, KEY_NOT_READ)
-                recorded = (frozenset() if project_id is None else
-                            read_record(project_id, session_id).marks)
+                record = (ApprovalsRecord(frozenset(), False, None)
+                          if project_id is None
+                          else read_record(project_id, session_id))
+                session.recorded_marks = (None if record.held is not None
+                                          else record.marks)
                 self._check_seal_and_marks(session, data, key, project_id,
-                                           recorded)
+                                           record.marks)
                 if session.came_with_project:
                     logger.info(f"Session {session_id} does not carry this "
                                 f"installation's seal: read as having come "
@@ -2367,12 +2502,16 @@ class SessionManager:
         refused with the reason, and the state folder's file of that id
         left as it is.
 
-        A session kept in the project has its record of approvals removed
-        first (v0.15.4), so that a process ended between the two leaves
-        the session with its approvals pending, never a record with no
-        session: a record that cannot be removed refuses the delete
+        A session kept in the project has its record of approvals taken
+        off its name first (v0.15.4), so that a process ended between the
+        two leaves the session with its approvals pending, never a record
+        with no session: a record that cannot be moved refuses the delete
         (ApprovalRecordError), and so does a project's id that is not one
-        (ProjectIdUnusable), the file as it was.
+        (ProjectIdUnusable), the file as it was. The record is set aside,
+        not removed, until the file is: when the file's removal is
+        refused (a read-only folder; on Windows, a file another program
+        holds), the record is put back, and the refusal says so if it
+        cannot be, the session's approvals then reading as pending.
 
         Args:
             session_id: The session ID to delete
@@ -2391,17 +2530,30 @@ class SessionManager:
         if self._project is not None and project is None:
             refusal = self._no_project_refusal()
         if project is not None:
-            self._forget_approvals(project, session_id)
+            aside = self._forget_approvals(project, session_id)
             try:
-                if private_files.remove_session(project, name):
-                    logger.info(f"Deleted session {session_id}")
-                    return True
+                removed = private_files.remove_session(project, name)
             except private_files.PrivateFilesError as e:
+                back = put_record_back(aside)
+                if not back:
+                    logger.error(f"Session {session_id} was not deleted, and "
+                                 f"its record of approvals could not be put "
+                                 f"back")
                 if not e.about_folder:
                     logger.error(f"Failed to delete session {session_id}: "
                                  f"{error_label(e)}")
-                    raise SessionFileError(e.code, str(e)) from None
+                    raise SessionFileError(e.code, str(e) if back else
+                                           f"{e} {RECORD_NOT_PUT_BACK}"
+                                           ) from None
                 refusal = self._folder_refusal(e)
+                if not back:
+                    refusal = SessionFileError(
+                        refusal.code, f"{refusal} {RECORD_NOT_PUT_BACK}")
+            else:
+                drop_record_set_aside(aside)
+                if removed:
+                    logger.info(f"Deleted session {session_id}")
+                    return True
         filepath = self.storage_dir / name
         if filepath.exists():
             try:
@@ -2415,20 +2567,22 @@ class SessionManager:
             raise refusal
         return False
 
-    def _forget_approvals(self, project: Path, session_id: str) -> None:
+    def _forget_approvals(self, project: Path, session_id: str
+                          ) -> Optional[Tuple[Path, Path]]:
         """Before a session kept in the project is deleted (v0.15.4): its
-        record of approvals removed, where a regular file is at the
-        session's name there; anything else there is left for
-        `remove_session` to refuse, the record as it was. ProjectIdUnusable
-        or ApprovalRecordError refuses the delete, the file as it was."""
+        record of approvals set aside (`set_record_aside`), where a
+        regular file is at the session's name there; anything else there
+        is left for `remove_session` to refuse, the record as it was.
+        What `put_record_back` takes; ProjectIdUnusable or
+        ApprovalRecordError refuses the delete, the file as it was."""
         if not private_files.session_file_there(project,
                                                 self.file_name(session_id)):
-            return
+            return None
         project_id = self._project_id(project, KEY_NOT_DELETED)
         if project_id is None:
-            return
+            return None
         try:
-            remove_record(project_id, session_id)
+            return set_record_aside(project_id, session_id)
         except OSError as e:
             logger.error(f"Failed to delete session {session_id}: its "
                          f"record of approvals could not be removed "

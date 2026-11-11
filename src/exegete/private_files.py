@@ -136,6 +136,9 @@ _PROJECT_ID_TEMPORARY = re.compile(r"Project id\.txt\.[0-9a-f]{8}\.tmp")
 # The id named in a refusal
 _PROJECT_ID_WORDS = ("The project's id (Project id.txt, in the project's "
                      "Exegete coding sessions folder)")
+# The code of an id's refusal where the file could not be read at that
+# moment, rather than holding no id (read_project_id)
+PROJECT_ID_UNREAD = "project_id_unread"
 
 # Where the note sends the researcher for more: the document on
 # Exegete's page, since the desktop extension puts no PRIVACY.md on the
@@ -164,11 +167,12 @@ SESSIONS_NOTE = (
     "with their codes and reasons, the researcher's instruction and "
     "decisions, and any proposed codes with their evidence.\n"
     f"{PROJECT_ID_FILE} holds a random id that ties these sessions to this "
-    "project and says nothing about anyone. If it is changed, Exegete does "
-    "not use the "
-    "sessions until it is put back or removed; once it is removed, they "
-    "read as having come with the project, and their approvals are given "
-    "again.\n"
+    "project and says nothing about anyone. If Exegete cannot read an id "
+    "in it, Exegete does not use the sessions, and says why and what can "
+    "be done. If the file is removed, or the id in it is changed, the "
+    "sessions read as having come with the project and their approvals "
+    "are given again; a session saved meanwhile goes on reading so after "
+    "the id is put back.\n"
     "While this project is selected, Exegete's session tools return what "
     "a session holds to the AI assistant.\n"
     "These files travel with the project, into its backups and copies, "
@@ -1387,13 +1391,19 @@ def remove_session(project, name: str) -> bool:
 
 def _said_of_the_id(error: PrivateFilesError) -> PrivateFilesError:
     """A refusal of `_read_in`, which speaks of "it" or "the file", said
-    of the project's id."""
+    of the project's id: code "project_id", or PROJECT_ID_UNREAD where
+    the file could not be read at that moment (another program holding
+    it, a file a sync service has not brought down, a permission, or the
+    file changed while it was read), which is no sign that it is
+    damaged."""
     text = str(error)
     for opening in ("It ", "The file "):
         if text.startswith(opening):
             text = f"{_PROJECT_ID_WORDS} {text[len(opening):]}"
             break
-    return PrivateFilesError("project_id", text)
+    return PrivateFilesError(
+        PROJECT_ID_UNREAD if error.code in ("unreadable", "changed")
+        else "project_id", text)
 
 
 def _id_in(data: bytes) -> Optional[str]:
@@ -1419,7 +1429,8 @@ def read_project_id(project) -> Optional[str]:
     looked at), at most MAX_PROJECT_ID bytes; on Windows a file that
     cannot be opened is read again as a session's replace is tried
     (REPLACE_TRIES). Refused, code "project_id", when what is there is
-    not an id: a link, not a file, past the cap, unreadable, or no UUID4.
+    not an id: a link, not a file, past the cap, or no UUID4; code
+    PROJECT_ID_UNREAD when it could not be read even so.
     On Windows without long paths, a path past 259 characters is refused
     as a session's is, code "too_long", with that remedy, since the
     sessions' longer paths are past it too. A refusal that is the

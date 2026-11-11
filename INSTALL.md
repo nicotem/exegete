@@ -418,26 +418,38 @@ instruction before going on. An approval in it counts only once you
 give it on this computer. An approval also counts only while Exegete's
 own folder on this computer records it, so an older copy of a session's
 file, put back from a backup or by a sync service, cannot bring back an
-approval you have withdrawn since. So approvals do not carry from one
-computer to another: if you work on a project from two computers, give
-them on the computer where the codings are written. A session saved on
-the other computer reads as having come with the project, on both,
-from then on. If the key is lost or replaced, every session kept in a
-project reads as having come with the project. Nothing in them is
-lost, and you give their approvals again. Exegete replaces the key
-when it is damaged and, on a Mac or Linux, when its permissions have
-been widened, as copying or restoring a home folder without its
-permissions can leave them.
+approval you have withdrawn since on this computer. That record knows
+only what Exegete did here: an approval withdrawn on another computer,
+in a session deleted outside Exegete, or by a save here cut short
+before the record was updated, stays in it until Exegete here saves or
+deletes that session, and an older copy put back before then still
+counts it. The same holds if Exegete's own folder is put back from an
+older backup. Approvals do not carry from one computer to another: if
+you work on a project from two computers, give them on the computer
+where the codings are written. A session saved on the other computer
+reads as having come with the project, on both, from then on. If the
+key is lost or replaced, every session kept in a project reads as
+having come with the project. Nothing in them is lost, and you give
+their approvals again. Exegete replaces the key when it is damaged
+and, on a Mac or Linux, when its permissions have been widened, as
+copying or restoring a home folder without its permissions can leave
+them.
 
 Exegete makes `Project id.txt` when a session first starts in the
-project and never changes it. If the file is changed, Exegete does not
-use the project's sessions, and says why, until it is put back from a
-backup of the project or removed; once it is removed, every session
-there reads as having come with the project, and you give their
-approvals again. A copy of the project made outside Exegete, in the
-file manager or by a sync service, keeps the same id: a session from
-one copy then reads in the other as this computer's own, and a decision
-in one copy can change which approvals count in the other. If you use
+project, or at the next save of a session there if the file is missing,
+and never changes it. If Exegete cannot read an id in the file, it does
+not use the project's sessions, and says why. When another program
+holds the file for a moment, or a sync service has not yet brought it
+to this computer, asking again later may work; when the file is
+damaged, it can be put back from a backup of the project, or removed.
+If the file is removed, or the id in it is changed, every session there
+reads as having come with the project, and you give their approvals
+again; a session saved in the meantime goes on reading so after the id
+is put back. A copy of the project made outside Exegete, in the file
+manager or by a sync service, keeps the same id, and so does a backup
+that Exegete made, if you select it as a project: a session from one
+copy then reads in the other as this computer's own, and a decision in
+one copy can change which approvals count in the other. If you use
 QualCoder, a backup it made, opened as a project, keeps the id too.
 Working on each session in one copy only avoids this, and
 `copy_project_to_workspace` makes a copy with an id of its own.

@@ -333,3 +333,17 @@ class TestTheDocuments:
             line = next(line for line in contributing.splitlines()
                         if f"── {module} " in line)
             assert FOLDER in line, line
+
+    def test_the_changelog_fragment(self):
+        """The fragment says what changed, what was fixed and which
+        documents say so, the earlier release's restore among them."""
+        fragment = (REPO / "changelog.d" / "sessions-with-project.md"
+                    ).read_text(encoding="utf-8")
+        headings = re.findall(r"(?m)^### (.+)$", fragment)
+        assert headings == ["Changed", "Fixed", "Documents"]
+        flat = _flat(fragment)
+        assert FOLDER in flat and ON_THIS_COMPUTER in flat
+        documents = flat[flat.index("### Documents"):]
+        assert "Going back to an earlier version" in documents
+        assert "`restore_backup`" in _sentence_with(
+            documents, "Going back to an earlier version")

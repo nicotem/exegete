@@ -622,9 +622,10 @@ class TestFixRoundOneTheDocuments:
         assert ("The field also gives, as `setting`, the researcher's "
                 "answer to \"Do you also use QualCoder on this computer?\" "
                 "in Exegete's settings (yes, no or not sure; any other word "
-                "typed there is read as not sure and never given), and "
-                "with a yes or a no it is given even when nothing was "
-                "found, so that answer enters the conversation") in bullet
+                # (v0.15.4, the readability reading: a sentence of its own)
+                "typed there is read as not sure and never given). With a "
+                "yes or a no, it is given even when nothing was found, so "
+                "that answer enters the conversation") in bullet
         # v0.15.1: the switch, by its title read from the manifest, and
         # its variable: on, `setting` is yes whatever the text answer
         # says, and the field is given even when nothing was found

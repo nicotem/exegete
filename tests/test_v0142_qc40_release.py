@@ -121,20 +121,17 @@ def test_privacy_says_what_its_verification_covers():
         found = [i for i, h in enumerate(headings) if h.startswith(name)]
         assert len(found) == 1 and found[0] > here, name
     for words in (
+            # (v0.15.4, the readability reading: the commit's line numbers
+            # in fewer words; the correction made at the release, history
+            # that changes nothing now, left out)
             "The code behind the private memo marker, the coder-visibility "
             "table and its views, and QualCoder's backups is the same there "
             "as in its development tree at commit 9bddf17 (25 August 2026), "
-            "where they were first checked, and the line numbers cited from "
-            "QualCoder's code are still that commit's.",
+            "whose line numbers they cite.",
             # (v0.15.3: named by the release it is true of, which no
             # longer changes, as docs/WRITING.md allows)
-            # (its readability reading: the correction a sentence of its
-            # own)
-            "What these sections say of QualCoder's own assistant and AI "
-            "server, whose code changed a good deal in the release, was read "
-            "again in 4.0's released code. One statement was corrected: "
-            "what QualCoder's server answers about an annotation (under "
-            "\"Coder visibility\").",
+            "What they say of QualCoder's own assistant and AI server was "
+            "read again in 4.0's released code.",
             "TOOLS.md, \"Supported QualCoder versions\", says what else was "
             "checked at the release."):
         assert words in note, words

@@ -2157,14 +2157,15 @@ class TestTheDocuments:
         privacy = _flat(_read("PRIVACY.md"))
         assert ("When a names file is already there, `prepare_names_list` "
                 "reads it for counts only") in privacy
+        # (v0.15.4, the readability reading: one fact a sentence)
         assert ("When you say the list is ready, `save_names_list` reads "
-                "the file to check it: its preview gives counts, which "
+                "the file to check it. Its preview gives counts, which "
                 "compare the list with the file in the same way, and the "
-                "numbers of the lines to correct, never a name; on your "
+                "numbers of the lines to correct, never a name. On your "
                 "word, after a backup, it replaces the list in "
-                "`pseudonyms.json` with the file's names, keeping only the "
-                "list's entries the file cannot hold as a line, and the file "
-                "itself stays as it is.") in privacy
+                "`pseudonyms.json` with the file's names. It keeps only those "
+                "of the list's entries that the file cannot hold as a line, "
+                "and the file itself stays as it is.") in privacy
 
     def test_install_names_it_among_the_tools_carrying_the_mark(self):
         install = _flat(_read("INSTALL.md"))

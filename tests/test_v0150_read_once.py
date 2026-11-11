@@ -1126,8 +1126,10 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
                  "the document's whole text as the preview read it, before "
                  "your names list is applied, so it can hold the names the "
                  "document holds",
-                 "readable by your account only",
-                 "not indexed by the computer's search",
+                 # (v0.15.4, the readability reading: who can read it, and
+                 # what does not index it, each with its subject)
+                 "Only your account can read the folder",
+                 "The computer's search does not index it",
                  "left out of Time Machine when Exegete could mark it so",
                  # (the staleness audit of 20 October 2026: the token's
                  # hour and its five minutes of skew, kept_texts.py, held

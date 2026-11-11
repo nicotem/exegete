@@ -412,11 +412,12 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     # library starts, as on Linux; what was checked there is that a
     # reading keeps nothing, its connections having been watched on Linux
     # alone)
-    assert ("Exegete switches its reports off: on Linux before the library "
-            "starts, so it reports nothing there; on a Mac with Apple "
-            "silicon before it starts too, where a reading was checked to "
-            "keep nothing in a home folder of its own; and on Windows once "
-            "it has loaded, after its first few reports") in flows
+    # (v0.15.4, the readability reading: one sentence for the three
+    # systems, the detail of each left to the part below, which this test
+    # holds)
+    assert ("Exegete switches its reports off on all three systems, on "
+            "Windows only once the library has loaded, after its first few "
+            "reports.") in flows
     # (the fix round: "nothing there" holds for the release the lock
     # gives, so the pointer names the switch's limits, which say so)
     assert ("\"A library's usage reports\", below, says what they hold, "
@@ -440,8 +441,10 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     start = flows.index("**A library's usage reports (what Microsoft can "
                         "learn about the library being used on this "
                         "computer, with no participant data).**")
-    part = flows[start:flows.index("An assistant that opens files by "
-                                   "itself", start)]
+    # (v0.15.4, the readability reading: what leaves the computer is said
+    # before the rules, so the part runs to the error answers)
+    part = flows[start:flows.index("**Error answers and Exegete's log.**",
+                                   start)]
     for fact in (
             "Exegete switches this off in the process that reads a "
             "document, before onnxruntime loads",
@@ -482,8 +485,10 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
             "reports (\"A library's usage reports\", under \"How your data "
             "flows\")") in reading
     # the passages that say what else leaves the computer point to the part
+    # (v0.15.4, the readability reading: the flow's summary names the
+    # reports its first paragraph gave)
+    assert "and, on Windows x64, the library's reports above." in flows
     pointer = "a library Exegete installs for PDFs also reports its use"
-    assert pointer in " ".join(flows.split())
     # (the fix round: the checklist's question on what Exegete connects
     # to, which says what a data-management plan can state, names them)
     checklist = _flat_section("PRIVACY.md",
@@ -497,8 +502,11 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     assert connects.index("Windows' diagnostic data") < connects.index(
         "it can say this")
     governance = _flat_section("PRIVACY.md", "## Your governance options")
-    assert ("though on Windows x64 a library it installs for PDFs reports "
-            "its use to Windows") in governance
+    # (v0.15.4, the readability reading: a sentence of its own, with its
+    # subject named)
+    assert ("One thing still leaves the computer, though: on Windows x64 a "
+            "library Exegete installs for PDFs reports its use to Windows") \
+        in governance
     # (v0.15.2: the LM Studio recipe is the Terminal guide's)
     install = " ".join((REPO / "docs/installing-from-the-terminal.md"
                         ).read_text(encoding="utf-8").split())

@@ -500,18 +500,23 @@ class TestToolsReadmePrivacy:
             "\n## What pseudonymisation is for\n")[1]
         paragraphs = [p.strip() for p in section.split("\n\n") if p.strip()]
         assert paragraphs[0].startswith("The project's names list")
-        assert _flat(paragraphs[1]) == (
+        # (v0.15.4, the readability reading: what the folder still holds
+        # is a list after the first paragraph, so the paragraph is found by
+        # its start; two sentences where a semicolon joined them)
+        filled = next(i for i, p in enumerate(paragraphs)
+                      if p.startswith("The list can be filled in"))
+        assert _flat(paragraphs[filled]) == (
             "The list can be filled in on your own computer, in the names "
             "file Exegete prepares, so that the names do not pass through "
-            "the conversation; an assistant that opens files by itself "
+            "the conversation. An assistant that opens files by itself "
             "could still read that file (\"Files Exegete keeps on your "
             "computer\"). Filling it in there protects the key (\"How your "
             "data flows\").")
         # Fix round 1: the next paragraph names its subject
-        assert _flat(paragraphs[2]).startswith(
+        assert _flat(paragraphs[filled + 1]).startswith(
             "For what reaches the AI assistant, the list and "
-            "`pseudonymise_source` help, but they should not be trusted "
-            "blindly.")
+            "`pseudonymise_source` help, but they do not catch every "
+            "name.")
         assert "\n## Files Exegete keeps on your computer\n" in (
             REPO / "PRIVACY.md").read_text(encoding="utf-8")
 

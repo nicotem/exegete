@@ -727,8 +727,10 @@ class TestPrivacyQuotesOpenAI:
         # where the rules it protects begin)
         flow = _between(_flat("PRIVACY.md"), "## How your data flows",
                         "**What the rules here protect.**")
-        assert ("for OpenAI's apps (the ChatGPT desktop app and Codex) it is "
-                "OpenAI") in flow
+        # (v0.15.4, the readability reading: the provider for each host
+        # in a sentence of its own)
+        assert ("with OpenAI's apps (the ChatGPT desktop app and Codex) it "
+                "is OpenAI") in flow
 
 
 # ---------------------------------------------------------------------------
@@ -1068,8 +1070,9 @@ class TestCodexWorksInAFolderOfItsOwn:
         assert re.search(r"<https://github\.com/openai/codex/tree/"
                          r"rust-v\d+\.\d+\.\d+/codex-rs>", section)
         # (the owner, 1 October 2026: warn, don't prescribe)
+        # (v0.15.4, the readability reading: two sentences)
         assert ("Codex changes files in the folder it works in without "
-                "asking, so a study's folder, the projects folder or the "
+                "asking. So a study's folder, the projects folder or the "
                 "home folder given to it as that folder would be open to its "
                 "changes as well as its reads") in section
         assert ON_REQUEST_READS in section
@@ -1639,11 +1642,15 @@ class TestAssistantsOwnFileAccess:
             in _readme_data()
         for where, text in {
                 "INSTALL, step 3": _install_openai_flat(),
-                "PRIVACY, mitigations": _between(_flat("PRIVACY.md"),
-                                                 "## Practical mitigations",
-                                                 "## Questions"),
                 "CHANGELOG": _flat("CHANGELOG.md")}.items():
             assert chat in text, where
+        # (v0.15.4, the readability reading: PRIVACY's mitigations point to
+        # the section that suggests the chat, which they repeated)
+        assert ("\"Assistants that open files by themselves\", above, says "
+                "which do, what narrows it, and which assistant this project "
+                "suggests for participants' data.") in _between(
+                    _flat("PRIVACY.md"), "## Practical mitigations",
+                    "## Questions")
         # v0.14.2, the README review: the bold paragraph is split clause
         # by clause into a lead sentence and a list of what to check, with
         # PRIVACY.md's third condition (no other extension that reads
@@ -1693,7 +1700,9 @@ class TestAssistantsOwnFileAccess:
                 "chat with the extension, with computer use off, no folder "
                 "that holds your projects or transcripts connected to it, "
                 "and no other extension that reads files, on whichever plan "
-                "or terms you use. LM Studio's chat, with Exegete and no "
+                "or terms you use. The others, in short: "
+                # (v0.15.4, the readability reading: the others in a list)
+                "- LM Studio's chat, with Exegete and no "
                 "other server or plugin that reads files, opens no file by "
                 "itself either, and a local model is a route to consider "
                 "for particular uses") in _privacy_hosts()
@@ -1739,8 +1748,10 @@ class TestAssistantsOwnFileAccess:
                 assert (re.search(READ_ON, bullet)
                         or "the same day" in bullet), host
         # Codex's entry points to the part with OpenAI's words and the code
-        assert ("quoted and dated: \"Codex's own file access\", in "
-                "\"OpenAI's apps\" below.") in bullets[0]
+        # (v0.15.4, the readability reading: the part named as the subject)
+        assert ("\"Codex's own file access\", in \"OpenAI's apps\" below, "
+                "quotes OpenAI's pages and Codex's source code, with their "
+                "dates.") in bullets[0]
         openai = _privacy_openai()
         # (v0.15.3: Codex's source read again at its newest release: the
         # release, its day and the day it was read, in the read form)
@@ -1761,12 +1772,14 @@ class TestAssistantsOwnFileAccess:
         # copy and the backups are named by their place too, each tool
         # that answers with one named; tests/test_v0151_stale_texts.py
         # holds the backups' fields)
-        assert ("(`list_available_projects`, `select_project`, "
+        # (v0.15.4, the readability reading: the tools in a list)
+        assert ("`list_available_projects`, `select_project`, "
                 "`get_current_project` and `create_project` answer with its "
                 "path") in section
         for words in ("`copy_project_to_workspace` with its copy's",
-                      "`list_backups` with each backup's, a whole copy of "
-                      "the project", "every change's answer with the backup "
+                      "`list_backups` answers with each backup's, a whole "
+                      "copy of the project", "every change's answer with the "
+                      "backup "
                       "taken before it", "`restore_backup` with the backup "
                       "restored"):
             assert words in section, words
@@ -2026,7 +2039,8 @@ class TestTheSmallerPoints:
                 if bullet.startswith("**Claude Desktop's chat")]
         assert len(chat) == 1
         for words in (
-                "Three exceptions.",
+                # (v0.15.4, the readability reading: a list)
+                "There are three exceptions:",
                 # (v0.15.3: Anthropic's page, read again, moved the switch
                 # and added the Ultra plan)
                 "(the \"Enable computer use\" toggle, in Settings, "
@@ -2045,11 +2059,16 @@ class TestTheSmallerPoints:
                 "included), the assistant reaches your project only through "
                 "Exegete."):
             assert words in chat[0], words
-        mitigations = _between(_flat("PRIVACY.md"), "## Practical mitigations",
-                               "## Questions")
+        # (v0.15.4, the readability reading: PRIVACY's mitigations point to
+        # "Assistants that open files by themselves", whose summary gives the
+        # conditions, rather than repeat them)
         for where, text in {"README": _readme_data(),
                             "INSTALL, step 3": _install_openai_flat(),
-                            "PRIVACY, mitigations": mitigations}.items():
+                            "PRIVACY, the summary of assistants": _between(
+                                _flat("PRIVACY.md"),
+                                "**For participants' data**, this project "
+                                "suggests", "## Files Exegete keeps")
+                            }.items():
             assert "computer use off" in text, where
         # v0.14.2, the README review: where the README gives the chat's
         # conditions in full, it gives PRIVACY.md's third one too, and
@@ -2150,11 +2169,13 @@ class TestTheSmallerPoints:
         assert "that comes with LM Studio" not in hosts
         for words in ("LM Studio's JavaScript sandbox plugin, which LM Studio "
                       "publishes and which is switched on chat by chat,",
+                      # (v0.15.4, the readability reading: two sentences,
+                      # "them" named)
                       "LM Studio's pages do not say whether its commands "
                       "stop at that folder, so given a study's folder, or a "
                       "folder that holds one, it may read and change the "
-                      "study; this project suggests keeping them out of "
-                      "it."):
+                      "study. This project suggests keeping studies out of "
+                      "the folder you give it."):
             assert words in hosts, words
 
     def test_no_text_assumes_participants_data_goes_to_openai(self):

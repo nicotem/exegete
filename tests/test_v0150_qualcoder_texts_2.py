@@ -68,20 +68,22 @@ FIRST_LINE = "Replace names with pseudonyms in a project's stored text."
 # The names file's fix round 1 (v0.15.0, the files design, piece 3): the
 # names file, a second plain-text file of real names, joins what the
 # folder still holds (tests/test_v0150_names_file.py)
+# (v0.15.4, the readability reading: what the folder still holds in a
+# list, and the reverse key explained)
 SHARING_THE_FOLDER = (
     "Sharing the project's folder itself, though, shares what it still "
-    "holds, real names included: the imported documents' originals, copied "
-    "unchanged into its folder of originals; `pseudonyms.json`, if you keep "
-    "one, the reverse key at its root; and the names file, `Names to "
-    "replace.txt` in the project's `Exegete` folder, if you made one, which "
-    "holds real names and their pseudonyms in plain text as "
-    "`pseudonyms.json` does. \"Pseudonymising a project does not empty it "
-    "of names\", below, says what stays, the backups beside the project "
-    "included.")
+    "holds, real names included: - the imported documents' originals, "
+    "copied unchanged into its folder of originals; - `pseudonyms.json`, if "
+    "you keep one, the reverse key at its root, from which anyone can put "
+    "the real names back; - the names file, `Names to replace.txt` in the "
+    "project's `Exegete` folder, if you made one, which holds real names "
+    "and their pseudonyms in plain text as `pseudonyms.json` does. "
+    "\"Pseudonymising a project does not empty it of names\", below, says "
+    "what stays, the backups beside the project included.")
 # Fix round 2: what an export still carries, said after the folder
 EXPORTS = (
     "An export from Exegete carries the replaced text, but file and case "
-    "names as they are, and notes in full, private parts included; an "
+    "names as they are, and notes in full, private parts included. An "
     "export made in QualCoder carries the unchanged originals.")
 # The files design, piece 5 (read_pseudonym_list removed): the list can
 # be filled in on the researcher's own computer, a paragraph after the
@@ -89,7 +91,7 @@ EXPORTS = (
 FILLED_IN = (
     "The list can be filled in on your own computer, in the names file "
     "Exegete prepares, so that the names do not pass through the "
-    "conversation; an assistant that opens files by itself could still read "
+    "conversation. An assistant that opens files by itself could still read "
     "that file (\"Files Exegete keeps on your computer\").")
 # v0.15.1, privacy by audience (the owner, 21 October 2026): the rule
 # says which of the three things PRIVACY.md's opening names it protects
@@ -98,14 +100,16 @@ FILLED_IN_PROTECTS = (
 # Fix round 2: the list is a selection, a name in another form is
 # named, the condition is on the last item alone, and the long sentence
 # is three
+# (v0.15.4, the readability reading: the selection in a list, its
+# condition still on the last item alone)
 AMONG_WHAT_REACHES = (
-    "Not everything is replaced, though; among what still reaches the "
-    "assistant through Exegete: a PDF's text, file and case names, "
-    "attribute values, any name, or form of a name, that the list or the "
+    "Not everything is replaced, though. Among what still reaches the "
+    "assistant through Exegete: - a PDF's text; - file and case names, and "
+    "attribute values; - any name, or form of a name, that the list or the "
     # (v0.15.3, the occurrences choice: the occurrences a run leaves by
     # choice are real names, still in the text)
-    "mapping does not match, occurrences left by choice, and notes and "
-    "journal entries unless you ask for them to be rewritten.")
+    "mapping does not match; - occurrences left by choice; - notes and "
+    "journal entries, unless you ask for them to be rewritten.")
 TYPED_NAMES = (
     "Names you type into the conversation for a mapping reach the "
     "assistant as you type them.")
@@ -166,7 +170,13 @@ CHOOSING_OCCURRENCES = (
     "told never to open or read that page. You give it the numbers to "
     "leave, shown in bold on the page, or paste the line the page gives "
     "you. \"Reading a whole file\", below, says where the page is kept and "
-    "when it goes.")
+    "when it goes.").replace(
+        # (v0.15.4, the readability reading: the numbering explained, and
+        # the preview named where "It" stood)
+        "the list's numbering, and counts. ",
+        "the list's numbering, and counts. The numbering is a short code "
+        "that names that list. ").replace(
+        "line number. It gives none", "line number. The preview gives none")
 # The new texts, word for word, white space collapsed (fix round 1:
 # what the project's folder still holds, what is not replaced, where
 # else an unchanged copy sits, and three phrases)
@@ -181,12 +191,15 @@ SECTION = (
     + FILLED_IN_PROTECTS + " "
     # the files design, piece 5, fix round 1: the subject named, after
     # the paragraph on the names file
+    # (v0.15.4, the readability reading: what the tools miss said as a
+    # fact, where "should not be trusted blindly" stood; the route outside
+    # Exegete and what it reads, two sentences)
     "For what reaches the AI assistant, the list and `pseudonymise_source` "
-    "help, but they should not be trusted blindly. "
+    "help, but they do not catch every name. "
     + NOT_EVERYTHING + " "
     "And depending on how your assistant is set up, an assistant that "
-    "meets a problem may work round it by a route outside Exegete, and "
-    "what it reads that way goes to its AI provider in full (\"Assistants "
+    "meets a problem may work round it by a route outside Exegete. What it "
+    "reads that way goes to its AI provider in full (\"Assistants "
     "that open files by themselves\", above). "
     + CHOOSING_OCCURRENCES + " "
     "An imagined example. You bring ten interview transcripts into a "
@@ -210,7 +223,7 @@ SECTION = (
 # The phrases the design names, each looked for on its own as well
 SECTION_PHRASES = (
     "replaces participants' names as documents are imported",
-    "help, but they should not be trusted blindly",
+    "help, but they do not catch every name",
     "Nothing in Exegete saw that read",
     "a safer way is to replace them before the documents come to the "
     "computer where the assistant works",
@@ -379,7 +392,7 @@ class TestPrivacy:
     def test_the_section_says_not_everything_is_replaced_and_where(self):
         privacy = _doc("PRIVACY.md")
         section = _flat(_section(privacy, "What pseudonymisation is for"))
-        assert ("they should not be trusted blindly. " + NOT_EVERYTHING
+        assert ("they do not catch every name. " + NOT_EVERYTHING
                 + " And depending on how your assistant") in section
         # the first round's wider claim is gone
         assert "what Exegete's tools return carries the pseudonyms" \
@@ -414,7 +427,7 @@ class TestPrivacy:
                                  "What pseudonymisation is for"))
         assert AMONG_WHAT_REACHES in section
         # a selection, not the whole account
-        assert ("Not everything is replaced, though; among what still "
+        assert ("Not everything is replaced, though. Among what still "
                 "reaches the assistant through Exegete:") in section
         # a name in another form is named, and "match" rather than "hold"
         assert ("any name, or form of a name, that the list or the mapping "
@@ -422,7 +435,7 @@ class TestPrivacy:
         # the condition is on notes and journal entries alone: the last
         # item, and the sentence ends with it
         listed = AMONG_WHAT_REACHES[AMONG_WHAT_REACHES.index(":") + 1:]
-        assert listed.endswith(", and notes and journal entries unless you "
+        assert listed.endswith("- notes and journal entries, unless you "
                                "ask for them to be rewritten.")
         assert listed.count("unless") == 1
         assert ("unless you ask for them to be rewritten. " + TYPED_NAMES
@@ -436,8 +449,10 @@ class TestPrivacy:
         sentences = re.split(r'(?<=\.) (?=["A-Z])', second)
         longest = max(sentences, key=lambda s: len(s.split()))
         assert len(longest.split()) <= LONGEST_SENTENCE, longest
-        # what the first round said in one sentence is now three
-        assert len(sentences) == 6, sentences
+        # what the first round said in one sentence is now three; and
+        # (v0.15.4, the readability reading) the list that ends the
+        # paragraph stands apart from it
+        assert len(sentences) == 4, sentences
 
     def test_the_second_rounds_words_are_gone(self):
         section = _flat(_section(_doc("PRIVACY.md"),

@@ -768,8 +768,10 @@ class TestTheDocuments:
         # computer", a sentence of its own)
         local = flat[flat.index("**Exports and copies.**"):]
         local = local[:local.index("**Files you fill in.**")]
+        # (v0.15.4, the readability reading: the rules named in words)
         assert ("Each copy carries the same content as a backup, so the "
-                "`ai_data/` and symlink rules below apply to it") in local
+                "rules below on the `ai_data/` folder and on links "
+                "(symlinks) apply to it") in local
         assert "(each carries the same content" not in local
 
     def test_quickstart_troubleshooting_without_a_project(self):

@@ -648,6 +648,38 @@ def sandboxed_session_manager(storage_dir) -> SessionManager:
                           no_project=lambda: server._no_project_message())
 
 
+def seal_session_file(path) -> None:
+    """Seal again a session's file kept in a project that a test changed
+    by hand, as Exegete seals one it saves (v0.15.4): each approval in it
+    marked as given here, and the seal over the rest, under the test's
+    own key (the preview tokens' secret in its state folder). Everything
+    else the test wrote is kept as it is, so the file reads as this
+    installation's and holds what the test made it hold. Import it as
+    `from tests.conftest import seal_session_file`: `import conftest`
+    would load a second copy."""
+    import json
+    from exegete import preview_tokens, sessions
+    key = preview_tokens.load_secret()
+    path = Path(path)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    sid = data.get("session_id")
+    for field, kind, mark in (
+            ("suggestions", sessions.CodingSuggestion,
+             sessions.suggestion_mark),
+            ("proposed_codes", sessions.ProposedCode,
+             sessions.proposal_mark)):
+        for raw in data.get(field) or []:
+            if not isinstance(raw, dict) or raw.get("status") != "approved":
+                continue
+            try:
+                item = kind.from_dict(raw)
+            except (TypeError, ValueError):
+                continue        # a broken item the test means to leave
+            raw[sessions.APPROVAL_MARK_FIELD] = mark(key, sid, item)
+    data[sessions.SEAL_FIELD] = sessions.seal_of(key, data)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
 @pytest.fixture(autouse=True)
 def _restore_tool_registry():
     """Put the server's tool registry back as it was after every test.

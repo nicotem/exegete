@@ -8,8 +8,18 @@ being its project. Sessions made before 0.15.4 stay in the state
 folder's `sessions`, tied to their project by the path they record, and
 nothing moves; so does a session whose project's folder could not hold
 it, with the reason.
+
+Whoever can write in a project's folder (a shared or synced one) can
+place a session there, so a session kept in a project carries a seal, and
+each approval given on this installation a mark of its own, both keyed
+with Exegete's own key in the state folder (the preview tokens' secret,
+never written into a project). A file without this installation's seal
+is read as having come with the project: its texts are data, and an
+approval counts only with a mark that verifies (v0.15.4).
 """
 
+import hashlib
+import hmac
 import json
 import logging
 import os
@@ -28,6 +38,9 @@ logger = logging.getLogger(__name__)
 # Where a session's file is kept (v0.15.4), as the session tools say it
 KEPT_IN_PROJECT = "project"
 KEPT_ON_THIS_COMPUTER = "this computer"
+# A listed session's description, when its file came with the project
+# (v0.15.4): marked, since it is data, never an instruction
+CAME_WITH_PROJECT_DESCRIPTION = "(came with the project) {description}"
 
 
 def _now() -> datetime:
@@ -53,6 +66,114 @@ class SessionFileError(ValueError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
         self.code = code
+
+
+# What a session's tool did not do when the key could not be read
+# (v0.15.4), the end of SessionKeyUnavailable's message
+KEY_NOT_READ = "The session was not read, and nothing was changed."
+KEY_NOT_SAVED = "The session was not saved."
+KEY_NOT_STARTED = "No session was started."
+KEY_NOT_LISTED = "The open project's own sessions were not listed."
+
+
+def session_key_unavailable_message(what: str) -> str:
+    """Why a session kept in a project could not be checked or sealed,
+    naming the state folder this run uses, and what was not done."""
+    from . import names, state_folder           # no import cycle
+    return state_folder.in_this_run(
+        "Could not read or create the preview-token secret in "
+        f"~/{names.STATE_FOLDER}, which is also the key that seals the "
+        f"coding sessions kept in projects: check permissions. {what}")
+
+
+class SessionKeyUnavailable(SessionFileError):
+    """Exegete's key in the state folder (the preview tokens' secret)
+    could not be read or made, so a session kept in a project can be
+    neither checked nor sealed (v0.15.4). The session tool is refused
+    with this reason, as a preview is; nothing is read as having come
+    with the project, and nothing is saved."""
+
+    def __init__(self, what: str):
+        super().__init__("key_unavailable",
+                         session_key_unavailable_message(what))
+
+
+def session_key(what: str) -> str:
+    """The key, read at each use as the preview tokens read it
+    (preview_tokens.load_secret, which makes it at its first use).
+
+    Raises:
+        SessionKeyUnavailable: it could not be read or made, with `what`
+            (KEY_NOT_READ, KEY_NOT_SAVED, ...) said after the reason
+    """
+    from . import preview_tokens                # no import cycle
+    try:
+        return preview_tokens.load_secret()
+    except preview_tokens.PreviewSecretUnavailable:
+        raise SessionKeyUnavailable(what) from None
+
+
+# The seal and the approvals' marks (v0.15.4). The seal is a field of a
+# session's own file kept in a project: a keyed digest of the rest of the
+# file as its JSON text holds it, in the canonical ASCII form kept_texts
+# signs an entry in (sorted keys, no spaces), so that key order, spacing
+# and line endings change nothing, written in the same bytes and the
+# same replace as the session. Each approval given here carries a mark in
+# its item, over the session's id, the item's id, what its write takes and
+# the decision, so that it still counts here after the file is saved
+# elsewhere. Each kind of digest has a label of its own, as
+# change_record's digests do. Neither is ever shown.
+SEAL_FIELD = "seal"
+APPROVAL_MARK_FIELD = "approval_mark"
+_SEAL_LABEL = "exegete coding session seal"
+_SUGGESTION_MARK_LABEL = "exegete coding session approval of a suggestion"
+_PROPOSAL_MARK_LABEL = "exegete coding session approval of a proposal"
+
+
+def _keyed_digest(key: str, label: str, value: Any) -> str:
+    signed = json.dumps(value, sort_keys=True, separators=(",", ":"),
+                        ensure_ascii=True)
+    return hmac.new(key.encode("ascii"), f"{label}\n{signed}".encode("ascii"),
+                    hashlib.sha256).hexdigest()
+
+
+def _matches(given: Any, expected: str) -> bool:
+    """Whether a digest read from a file is the one expected, compared in
+    constant time; anything but text never is."""
+    return isinstance(given, str) and hmac.compare_digest(
+        given.encode("utf-8", "surrogatepass"), expected.encode("ascii"))
+
+
+def seal_of(key: str, data: Dict[str, Any]) -> str:
+    """A session file's seal: the digest of every field but the seal."""
+    return _keyed_digest(key, _SEAL_LABEL,
+                         {k: v for k, v in data.items() if k != SEAL_FIELD})
+
+
+def suggestion_mark(key: str, session_id: str, suggestion: Any) -> str:
+    """An approval's mark on a suggestion: what apply_codings writes from
+    it (its file, its code and the code's recorded name, its span, passage,
+    reason and reading), its session and its own id, and the decision."""
+    return _keyed_digest(key, _SUGGESTION_MARK_LABEL, {
+        "session_id": session_id, "guid": suggestion.guid,
+        "file_id": suggestion.file_id, "code_id": suggestion.code_id,
+        "code_name": suggestion.code_name,
+        "start_pos": suggestion.start_pos, "end_pos": suggestion.end_pos,
+        "segment_text": suggestion.segment_text,
+        "reasoning": suggestion.reasoning, "reading": suggestion.reading,
+        "decision": "approved"})
+
+
+def proposal_mark(key: str, session_id: str, proposal: Any) -> str:
+    """An approval's mark on a proposal: what create_proposed_codes makes
+    from it and update_proposal's withdrawal binds (its name, definition,
+    colour, category and evidence), its session and its own id, and the
+    decision."""
+    return _keyed_digest(key, _PROPOSAL_MARK_LABEL, {
+        "session_id": session_id, "guid": proposal.guid,
+        "name": proposal.name, "definition": proposal.memo,
+        "color": proposal.color, "category": proposal.category,
+        "evidence": proposal.example_segments, "decision": "approved"})
 
 
 # How a suggested code reads the passage (owner rulings 21 and 25, v0.14):
@@ -156,6 +277,7 @@ class CodingSuggestion:
         adjusted: bool = False,
         applied_ctid: Optional[int] = None,
         reading_cleared: bool = False,
+        approval_mark: Optional[str] = None,
     ):
         self.file_id = file_id
         self.file_name = file_name
@@ -198,13 +320,23 @@ class CodingSuggestion:
         # None before v0.14 and until the suggestion is applied.
         self.applied_ctid = (applied_ctid if isinstance(applied_ctid, int)
                              and not isinstance(applied_ctid, bool) else None)
+        # The mark an approval came with in a session kept in a project
+        # (v0.15.4): kept as it was read while the suggestion stays
+        # approved, so that it still counts where it was given; written
+        # only with that status
+        self.approval_mark = (approval_mark if isinstance(approval_mark, str)
+                              else None)
+        # Whether this installation gave the approval: its mark verified
+        # when the session was read, or it was given or set back here.
+        # Never written; the save marks such an approval
+        self.approval_here = False
 
         # For backwards compatibility with old ai_memo field
         self.ai_memo = reasoning
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialisation."""
-        return {
+        data = {
             "file_id": self.file_id,
             "file_name": self.file_name,
             "code_id": self.code_id,
@@ -221,6 +353,10 @@ class CodingSuggestion:
             "applied_ctid": self.applied_ctid,
             "reading_cleared": self.reading_cleared,
         }
+        # An item that leaves approved keeps no mark (v0.15.4)
+        if self.status == "approved" and self.approval_mark is not None:
+            data[APPROVAL_MARK_FIELD] = self.approval_mark
+        return data
 
     _REQUIRED_FIELDS = {
         "file_id", "file_name", "code_id", "code_name",
@@ -267,6 +403,7 @@ class CodingSuggestion:
             applied_ctid=data.get("applied_ctid"),
             reading_cleared=(data.get("reading_cleared")
                              or data.get("support_cleared", False)),
+            approval_mark=data.get(APPROVAL_MARK_FIELD),
         )
 
 
@@ -295,6 +432,7 @@ class ProposedCode:
         created_code_id: Optional[int] = None,
         guid: Optional[str] = None,
         merged_into: Optional[str] = None,
+        approval_mark: Optional[str] = None,
     ):
         self.name = name
         self.memo = memo                    # the code definition
@@ -310,9 +448,14 @@ class ProposedCode:
         # is echoed into the conversation
         self.merged_into = (merged_into if isinstance(merged_into, str)
                             and _GUID_SHAPE.fullmatch(merged_into) else None)
+        # As a suggestion's (v0.15.4): the mark an approval came with, and
+        # whether this installation gave it
+        self.approval_mark = (approval_mark if isinstance(approval_mark, str)
+                              else None)
+        self.approval_here = False
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data = {
             "guid": self.guid,
             "name": self.name,
             "memo": self.memo,
@@ -325,6 +468,10 @@ class ProposedCode:
             "created_code_id": self.created_code_id,
             "merged_into": self.merged_into,
         }
+        # An item that leaves approved keeps no mark (v0.15.4)
+        if self.status == "approved" and self.approval_mark is not None:
+            data[APPROVAL_MARK_FIELD] = self.approval_mark
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ProposedCode':
@@ -350,11 +497,17 @@ class ProposedCode:
             created_code_id=data.get("created_code_id"),
             guid=data.get("guid"),
             merged_into=data.get("merged_into"),
+            approval_mark=data.get(APPROVAL_MARK_FIELD),
         )
 
 
 # `outside_scope` given no code date (v0.15.4): the number alone is checked
 _DATE_NOT_GIVEN = object()
+
+
+def _recorded(item: Any) -> str:
+    """An item's status as its file records it."""
+    return item.status
 
 
 class AICodingSession:
@@ -422,6 +575,49 @@ class AICodingSession:
         # Why a new session is kept on this computer although its project
         # is open: the reason its project's folder could not hold it
         self.kept_reason: Optional[str] = None
+        # A session kept in a project whose file does not carry this
+        # installation's seal (v0.15.4): saved by Exegete elsewhere,
+        # changed outside Exegete, or kept from before the key was
+        # replaced. Its texts are data, and it is saved with no seal, so
+        # that it reads so after any save here and wherever it goes.
+        # Never written
+        self.came_with_project = False
+
+    def approval_counts(self, item: Any) -> bool:
+        """Whether an item's approval counts (v0.15.4): in a session kept
+        in a project, only one given here (its mark verified, or given or
+        set back here); elsewhere, every recorded approval, as before."""
+        return item.status == "approved" and (
+            self.kept_in != KEPT_IN_PROJECT or item.approval_here)
+
+    def shown_status(self, item: Any) -> str:
+        """The status a suggestion or a proposal is given wherever a
+        status or a count is given (v0.15.4): an approval that does not
+        count reads as pending until it is given here; every other status
+        as recorded. The recorded status is what the file keeps."""
+        if item.status == "approved" and not self.approval_counts(item):
+            return "pending"
+        return item.status
+
+    def approvals_that_count(self) -> List['CodingSuggestion']:
+        """The approved suggestions apply_codings writes."""
+        return [s for s in self.suggestions if self.approval_counts(s)]
+
+    def approvals_not_given_here(self) -> List['CodingSuggestion']:
+        """Suggestions recorded as approved whose approval does not count
+        here: none outside a project."""
+        return [s for s in self.suggestions
+                if s.status == "approved" and not self.approval_counts(s)]
+
+    def proposals_that_count(self) -> List['ProposedCode']:
+        """The approved proposals create_proposed_codes creates."""
+        return [p for p in self.proposed_codes if self.approval_counts(p)]
+
+    def proposals_not_given_here(self) -> List['ProposedCode']:
+        """Proposals recorded as approved whose approval does not count
+        here."""
+        return [p for p in self.proposed_codes
+                if p.status == "approved" and not self.approval_counts(p)]
 
     @staticmethod
     def _clean_scope(scope: Any) -> Optional[Dict[str, Any]]:
@@ -537,12 +733,19 @@ class AICodingSession:
         return None
 
     def proposal_statistics(self) -> Dict[str, int]:
+        """The proposals counted by the status the session tools give
+        them (shown_status, v0.15.4)."""
+        return self._proposal_counts(self.shown_status)
+
+    def _proposal_counts(self, status_of: Callable[[Any], str]
+                         ) -> Dict[str, int]:
         counts = {"total_proposals": len(self.proposed_codes),
                   "pending": 0, "approved": 0, "rejected": 0, "created": 0,
                   "merged": 0}
         for p in self.proposed_codes:
-            if p.status in counts:
-                counts[p.status] += 1
+            status = status_of(p)
+            if status in counts:
+                counts[status] += 1
         return counts
 
     def update_proposals_by_guid(
@@ -559,7 +762,11 @@ class AICodingSession:
         whose status moved; one that already had that status is counted
         in `unchanged` (fix round 1: the counts are what the researcher
         checks against what they said). The caller refuses a GUID given
-        in both lists before calling."""
+        in both lists before calling.
+
+        Each proposal is taken at the status the session tools give it
+        (v0.15.4): an approval that does not count here reads as pending,
+        so approving it gives it here, marked at the next save."""
         counts = {"approved": 0, "rejected": 0, "unchanged": 0,
                   "skipped_created": 0, "skipped_merged": 0, "changed": 0}
         not_found: List[Any] = []
@@ -572,10 +779,11 @@ class AICodingSession:
                 if p.status in ("created", "merged"):
                     counts[f"skipped_{p.status}"] += 1
                     continue
-                if p.status == status:
+                if self.shown_status(p) == status:
                     counts["unchanged"] += 1
                     continue
                 p.status = status
+                p.approval_here = status == "approved"
                 counts[status] += 1
                 counts["changed"] += 1
         if counts["changed"]:
@@ -595,13 +803,20 @@ class AICodingSession:
         return [s for s in self.suggestions if s.status == status]
 
     def get_statistics(self) -> Dict[str, Any]:
-        """Get session statistics."""
+        """Get session statistics: each suggestion counted by the status
+        the session tools give it (shown_status, v0.15.4); the file keeps
+        the recorded statuses' counts."""
+        return self._suggestion_counts(self.shown_status)
+
+    def _suggestion_counts(self, status_of: Callable[[Any], str]
+                           ) -> Dict[str, Any]:
+        statuses = [status_of(s) for s in self.suggestions]
         total = len(self.suggestions)
-        approved = len([s for s in self.suggestions if s.status == "approved"])
-        rejected = len([s for s in self.suggestions if s.status == "rejected"])
-        pending = len([s for s in self.suggestions if s.status == "pending"])
-        applied = len([s for s in self.suggestions if s.status == "applied"])
-        removed = len([s for s in self.suggestions if s.status == "removed"])
+        approved = statuses.count("approved")
+        rejected = statuses.count("rejected")
+        pending = statuses.count("pending")
+        applied = statuses.count("applied")
+        removed = statuses.count("removed")
 
         # By file
         by_file = {}
@@ -674,6 +889,7 @@ class AICodingSession:
             sugg = self.get_suggestion_by_guid(guid)
             if sugg is not None:
                 sugg.status = "applied"
+                sugg.approval_here = False
                 if ctids and guid in ctids:
                     sugg.applied_ctid = ctids[guid]
                 count += 1
@@ -726,6 +942,12 @@ class AICodingSession:
         approved number against what they said yes to). The caller
         refuses a GUID given in more than one list before calling.
 
+        Each suggestion is taken at the status the session tools give it
+        (v0.15.4): an approval that does not count here reads as pending,
+        so approving it gives it here, marked at the next save, and
+        reopening it changes nothing, its approval and mark kept for
+        where they were given.
+
         Returns:
             Counts of approved, rejected, reopened, unchanged,
             skipped_applied and changed, and the not_found list
@@ -744,10 +966,11 @@ class AICodingSession:
                 if sugg.status == "applied":
                     counts["skipped_applied"] += 1
                     continue
-                if sugg.status == status:
+                if self.shown_status(sugg) == status:
                     counts["unchanged"] += 1
                     continue
                 sugg.status = status
+                sugg.approval_here = status == "approved"
                 counts[key] += 1
                 counts["changed"] += 1
         if counts["changed"]:
@@ -803,8 +1026,10 @@ class AICodingSession:
             "suggestions": [s.to_dict() for s in self.suggestions],
             "proposed_codes": [p.to_dict() for p in self.proposed_codes],
             "span_edit_stats": self.span_edit_stats,
-            "statistics": self.get_statistics(),
-            "proposal_statistics": self.proposal_statistics()
+            # The recorded statuses' counts, as every status is kept
+            # (v0.15.4); no answer takes them from a file kept in a project
+            "statistics": self._suggestion_counts(_recorded),
+            "proposal_statistics": self._proposal_counts(_recorded)
         }
 
     # The fields a session file in the state folder must hold; a file kept
@@ -1025,9 +1250,20 @@ class SessionManager:
             self._save_on_this_computer(session)
             session.kept_in = KEPT_ON_THIS_COMPUTER
             return
+        # The key first (v0.15.4): a session kept in its project is sealed
+        # with it, and one that cannot be read refuses the start before
+        # anything is written. Keeping the session on this computer
+        # instead is for a folder that cannot hold it, not for this
+        session_key(KEY_NOT_STARTED)
+        # Never saved or read, the session is this installation's whole,
+        # and so is any approval it holds
+        for item in session.suggestions + session.proposed_codes:
+            item.approval_here = item.status == "approved"
         try:
             private_files.ensure_sessions_folder(project)
             self._save_in_project(session, project)
+        except SessionKeyUnavailable:
+            raise SessionKeyUnavailable(KEY_NOT_STARTED) from None
         except (private_files.PrivateFilesError, SessionFileError,
                 OSError) as e:
             reason = (str(e) if isinstance(
@@ -1075,13 +1311,25 @@ class SessionManager:
         just written is a save done, as a network share or a virus
         scanner can report a replace as failed after making it: the
         file is the session, whole, and answering that it was not
-        saved, its file as it was, would be untrue."""
+        saved, its file as it was, would be untrue.
+
+        Sealed and marked with the key (v0.15.4), read before anything is
+        written: each approval given here carries its mark, every other
+        item keeps what it came with, and the file carries this
+        installation's seal unless the session came with the project, which
+        is saved with none and so reads as having come with it after any
+        save here. Raises SessionKeyUnavailable when the key cannot be
+        read, the file as it was."""
         if project is None:
             raise SessionFileError(
                 "no_project", "This session's project is not known, so it "
                               "was not saved.")
+        key = session_key(KEY_NOT_SAVED)
+        self._mark_approvals_given_here(session, key)
         data = session.to_dict()
         data.pop("project_path", None)
+        if not session.came_with_project:
+            data[SEAL_FIELD] = seal_of(key, data)
         raw = json.dumps(data, indent=2).encode("utf-8")
         name = self.file_name(session.session_id)
         try:
@@ -1096,6 +1344,41 @@ class SessionManager:
                          f"its project: {error_label(e)}")
             raise SessionFileError(e.code, str(e)) from None
         logger.info(f"Saved session {session.session_id}")
+
+    @staticmethod
+    def _mark_approvals_given_here(session: AICodingSession,
+                                   key: str) -> None:
+        """Each approval given or set back here, marked with the key over
+        the item as it stands (v0.15.4); an approval that came with the
+        session keeps the mark it came with."""
+        for suggestion in session.suggestions:
+            if suggestion.status == "approved" and suggestion.approval_here:
+                suggestion.approval_mark = suggestion_mark(
+                    key, session.session_id, suggestion)
+        for proposal in session.proposed_codes:
+            if proposal.status == "approved" and proposal.approval_here:
+                proposal.approval_mark = proposal_mark(
+                    key, session.session_id, proposal)
+
+    @staticmethod
+    def _check_seal_and_marks(session: AICodingSession,
+                              data: Dict[str, Any], key: str) -> None:
+        """A file kept in a project read against the key (v0.15.4): the
+        session came with the project unless its file carries this
+        installation's seal, and an approval counts only with a mark that
+        verifies. In memory alone: nothing is written at a read."""
+        session.came_with_project = not _matches(data.get(SEAL_FIELD),
+                                                 seal_of(key, data))
+        for suggestion in session.suggestions:
+            suggestion.approval_here = (
+                suggestion.status == "approved" and _matches(
+                    suggestion.approval_mark,
+                    suggestion_mark(key, session.session_id, suggestion)))
+        for proposal in session.proposed_codes:
+            proposal.approval_here = (
+                proposal.status == "approved" and _matches(
+                    proposal.approval_mark,
+                    proposal_mark(key, session.session_id, proposal)))
 
     @staticmethod
     def _holds(project: Path, name: str, raw: bytes) -> bool:
@@ -1238,10 +1521,17 @@ class SessionManager:
         id's name there or the folder cannot be read. The session keeps
         the place it was read from, and is saved there.
 
+        A file kept in the project is checked against the key (v0.15.4):
+        without this installation's seal it is read as having come with
+        the project (`came_with_project`), and each approval counts only
+        with a mark that verifies. Logged with the session's id alone.
+
         Raises:
             ValueError: If the id is not UUID4, or the file holds another id
             SessionFileError: The project's file at the id's name could
-                not be read, with the reason
+                not be read, with the reason; SessionKeyUnavailable when
+                the key could not be read, nothing read as having come
+                with the project
             FileNotFoundError: If session file doesn't exist
         """
         self._validate_session_id(session_id)
@@ -1268,6 +1558,13 @@ class SessionManager:
                     f"Session file for {session_id} holds another session's "
                     f"id; it is refused rather than used or written")
             session.kept_in, session.kept_folder = kept_in, project
+            if kept_in == KEPT_IN_PROJECT:
+                self._check_seal_and_marks(session, data,
+                                           session_key(KEY_NOT_READ))
+                if session.came_with_project:
+                    logger.info(f"Session {session_id} does not carry this "
+                                f"installation's seal: read as having come "
+                                f"with the project")
             logger.info(f"Loaded session {session_id}")
             return session, raw
         except Exception as e:
@@ -1444,6 +1741,13 @@ class SessionManager:
         service's conflicted copy is not at a session's name, and is
         neither listed nor counted.
 
+        Each session kept in the open project is read as a lookup reads
+        it (v0.15.4): checked against the key, read once, and counted from
+        its items as the session tools give their statuses; one that came
+        with the project is flagged (`came_with_project`) and its
+        description marked. A key that cannot be read lists none of them,
+        its reason given as a folder's that cannot be read.
+
         A `days_old` that counts back past the year 1 raises
         OverflowError, as before: the tool refuses one before it gets
         here (days_back_to_year_one)."""
@@ -1460,7 +1764,8 @@ class SessionManager:
         project_read = False
 
         def listed(data: Dict[str, Any], expected_id: str,
-                   project_db: str, kept_in: str) -> None:
+                   project_db: str, kept_in: str,
+                   session: Optional[AICodingSession] = None) -> None:
             # A copy whose inner id is not its file's name is refused by
             # every tool (load_session), so it is not listed either:
             # listed, it showed the real session's id twice (fix round 2)
@@ -1475,26 +1780,38 @@ class SessionManager:
             last_modified = datetime.fromisoformat(data['last_modified'])
             if last_modified < cutoff_date:
                 return
-            sessions.append({
+            # A session kept in the project is counted from its items, as
+            # the session tools give their statuses, never from the file's
+            # own statistics (v0.15.4)
+            stats = (data['statistics'] if session is None
+                     else session.get_statistics())
+            description = data.get('description', '')
+            entry = {
                 # API-facing key only. The on-disk file keeps
                 # 'session_id'; see the docstring above.
                 'coding_session_id': data['session_id'],
                 'created_at': data['created_at'],
                 'last_modified': data['last_modified'],
-                'description': data.get('description', ''),
-                'suggestion_count': data['statistics']['total_suggestions'],
-                'approved_count': data['statistics']['approved'],
-                'rejected_count': data['statistics']['rejected'],
-                'pending_count': data['statistics']['pending'],
+                'description': description,
+                'suggestion_count': stats['total_suggestions'],
+                'approved_count': stats['approved'],
+                'rejected_count': stats['rejected'],
+                'pending_count': stats['pending'],
                 # The project's folder name, not "data" (v0.14)
                 'project_name': self.project_name(project_db),
                 'project_path': project_db,
                 'kept_in': kept_in,
-            })
+            }
+            if session is not None and session.came_with_project:
+                entry['description'] = CAME_WITH_PROJECT_DESCRIPTION.format(
+                    description=description)
+                entry['came_with_project'] = True
+            sessions.append(entry)
 
         try:
             project = self.open_project_folder()
             in_project = set()
+            came_with = 0
             if project is not None and (
                     not wanted or self.same_project(project / "data.qda",
                                                     wanted)):
@@ -1509,13 +1826,32 @@ class SessionManager:
                         project, files_only=False, refuse=True)
                 except private_files.PrivateFilesError as e:
                     names, folder_refusal = [], str(e)
+                # Each is checked against the key (v0.15.4), read once; one
+                # that cannot be read lists none of the project's sessions,
+                # with its reason, as a folder that cannot be read
+                key: Optional[str] = None
+                if names:
+                    try:
+                        key = session_key(KEY_NOT_LISTED)
+                    except SessionKeyUnavailable as e:
+                        folder_refusal = str(e)
                 for name in names:
                     sid = name[len("session_"):-len(".json")]
                     in_project.add(sid)
+                    if key is None:
+                        continue
                     try:
                         data = json.loads(private_files.read_session(
                             project, name).decode("utf-8"))
-                        listed(data, sid, project_db, KEPT_IN_PROJECT)
+                        session = None
+                        if data.get('session_id') == sid:
+                            session = AICodingSession.from_dict(
+                                data, project_path=project_db)
+                            session.kept_in = KEPT_IN_PROJECT
+                            self._check_seal_and_marks(session, data, key)
+                            came_with += session.came_with_project
+                        listed(data, sid, project_db, KEPT_IN_PROJECT,
+                               session)
                     except Exception:
                         skipped["unreadable"] += 1
                         not_read[KEPT_IN_PROJECT] += 1
@@ -1550,8 +1886,12 @@ class SessionManager:
             logger.warning("Skipped %d session file(s) that could not be "
                            "read", skipped["unreadable"])
         if folder_refusal is not None:
-            logger.warning("The open project's sessions folder could not be "
-                           "read, so its sessions were not listed")
+            logger.warning("The open project's sessions were not listed: its "
+                           "sessions folder, or the key that checks them, "
+                           "could not be read")
+        if came_with:
+            logger.info("%d session(s) kept in the open project read as "
+                        "having come with it", came_with)
         return SessionsListing(sessions, folder_refusal,
                                not_read[KEPT_IN_PROJECT],
                                not_read[KEPT_ON_THIS_COMPUTER], project_read)

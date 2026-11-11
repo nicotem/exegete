@@ -35,6 +35,7 @@ from exegete.database import (QualcoderDatabase, QUALCODER_COLORS,
                                     normalize_name, name_key, validate_qda_path)
 from test_v17_support import make_project, add_subcode  # noqa: E402
 from test_qc40_visibility import _apply_visibility_schema  # noqa: E402
+from tests.conftest import seal_session_file  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -1146,6 +1147,8 @@ class TestProposalNameNormalisation:
             proposal.status = "approved"
             session.add_proposal(proposal)
         server.session_manager.save_session(session)
+        # v0.15.4: approvals given here, as this installation saves them
+        seal_session_file(server.session_manager.session_file(sid))
 
         before = _backups(qualcoder_db_path)
         n_before = _count(qualcoder_db_path, "code_name")
@@ -1169,6 +1172,8 @@ class TestProposalNameNormalisation:
         proposal.status = "approved"
         session.add_proposal(proposal)
         server.session_manager.save_session(session)
+        # v0.15.4: approvals given here, as this installation saves them
+        seal_session_file(server.session_manager.session_file(sid))
 
         out = json.loads(server.create_proposed_codes(sid, create_backup=False))
         echo = out["created_codes"][0]
@@ -1243,6 +1248,8 @@ class TestProposalColourDisclosure:
         proposal.status = "approved"
         session.add_proposal(proposal)
         server.session_manager.save_session(session)
+        # v0.15.4: approvals given here, as this installation saves them
+        seal_session_file(server.session_manager.session_file(sid))
 
         snapped = snap_to_palette("#FF0000")
         # The approval screen names the colour the write will store.
@@ -1432,6 +1439,9 @@ class TestReviewScreenSurvivesACorruptedProposalColour:
                                                                "Corrupted"]
         data["proposed_codes"][1]["color"] = "not a colour"
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        # v0.15.4: sealed again, so that the file reads as this
+        # installation's and its point is the colour alone
+        seal_session_file(path)
         _reload()          # nothing cached from before the edit
 
         review = server.review_proposals(sid)

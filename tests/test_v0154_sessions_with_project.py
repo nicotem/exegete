@@ -77,6 +77,7 @@ from exegete.sessions import (AICodingSession,  # noqa: E402
 from test_v014_server_wide import QUOTE, TEXT_1  # noqa: E402
 from test_v0152_undo_record import (make_project, receipt_of,  # noqa: E402
                                     server_state)  # noqa: F401
+from tests.conftest import seal_session_file  # noqa: E402
 
 POSIX = os.name == "posix"
 FOLDER = private_files.SESSIONS_FOLDER
@@ -1228,6 +1229,8 @@ class TestASessionNotSavedAfterACommit:
                 entry["status"] = "approved"
                 entry["applied_ctid"] = None
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        # As Exegete would have saved it here (v0.15.4)
+        seal_session_file(path)
         call("update_suggestion_status", coding_session_id=sid,
              approve=[second])
         _failing_save(monkeypatch)

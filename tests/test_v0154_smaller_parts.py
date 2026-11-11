@@ -363,3 +363,34 @@ class TestWhatEveryPartCarries:
         assert len(rows) == 9
         assert "".join(row["text"] for row in rows) == text
 
+
+class TestTheDocuments:
+    """TOOLS.md's entry for the tool and the Terminal guide's paragraph
+    on Codex's cut give the bound, what Codex keeps with a model it does
+    not list, and the day Codex's source was read."""
+
+    @staticmethod
+    def _tools_entry() -> str:
+        text = (Path(__file__).parent.parent / "TOOLS.md").read_text(
+            encoding="utf-8")
+        (line,) = [line for line in text.splitlines()
+                   if line.startswith("- `read_file_with_codings(")]
+        return line
+
+    @staticmethod
+    def _guide_paragraph() -> str:
+        text = (Path(__file__).parent.parent / "docs"
+                / "installing-from-the-terminal.md").read_text(
+                    encoding="utf-8")
+        (paragraph,) = [block for block in text.split("\n\n")
+                        if "output_token_limit" in block
+                        and "Codex" in block]
+        return " ".join(paragraph.split())
+
+    @pytest.mark.parametrize("where", ["TOOLS.md", "the Terminal guide"])
+    def test_the_bound_and_codex_s_cut(self, where):
+        text = (self._tools_entry() if where == "TOOLS.md"
+                else self._guide_paragraph())
+        for fact in (f"{parts.BOUND:,} bytes", f"{CODEX_OTHER_BYTES:,} bytes",
+                     CODEX_READ_ON):
+            assert fact in text, (where, fact)

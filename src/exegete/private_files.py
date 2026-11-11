@@ -23,8 +23,10 @@ reach it:
    and from 0.15.4 its coding sessions, in the folder `Exegete coding
    sessions` at its top (this module; one `session_<id>.json` per
    session, which the session tools return to the conversation while the
-   project is selected, so not in the `Exegete` folder; a restore keeps
-   the folder as it is, never taking the backup's copy); new projects
+   project is selected, so not in the `Exegete` folder, beside
+   `Project id.txt`, the project's random id, which the sessions' seals
+   cover; a restore keeps the folder as it is, never taking the backup's
+   copy, and a workspace copy leaves the id out); new projects
    and copies in the folder for projects, or in the folder named when a
    project is created; exports where they were asked to go; and the
    pseudonymisation run records, which live in
@@ -53,10 +55,13 @@ path and the system launches it by its path.
 
 The sessions folder is held the same way: no other module writes there;
 its note is written at a session's start when it is missing, never
-replaced; otherwise only `session_<id>.json` files and Exegete's
-temporary files for them are written, read, listed or removed, by name;
-a session's file is replaced whole, through a temporary file synced
-first, and any other file there is never named.
+replaced; the project's id, `Project id.txt`, is written once, at a
+start or a save that finds none, published whole without replacing
+anything, and is read, never replaced or removed; otherwise only
+`session_<id>.json` files and Exegete's temporary files for them and for
+the id are written, read, listed or removed, by name; a session's file
+is replaced whole, through a temporary file synced first, and any other
+file there is never named.
 """
 
 import errno
@@ -66,6 +71,7 @@ import stat
 import sys
 import time
 import unicodedata
+import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -92,7 +98,8 @@ MAX_SESSION = 64 * 1024 * 1024
 # A session's file, and Exegete's temporary file for it while it is
 # saved: the session's name, a dot, eight random hexadecimal digits and
 # ".tmp". Nothing else in the folder is read or removed, and nothing
-# else is written but the folder's note, at a start when it is missing.
+# else is written but the folder's note, at a start when it is missing,
+# and the project's id (PROJECT_ID_FILE), with its temporary file.
 _SESSION_FILE = re.compile(
     r"session_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-"
     r"[0-9a-f]{12}\.json")
@@ -109,6 +116,26 @@ TEMPORARY_FILE_AGE = 24 * 60 * 60
 # this many seconds apart
 REPLACE_TRIES = 5
 REPLACE_PAUSE = 0.2
+
+# The project's id (v0.15.4), a file of its own in the sessions folder: a
+# random UUID4 and a line ending, in ASCII, naming no one, never shown or
+# logged. The seal on each session kept in the project and the mark on
+# each approval cover it, so that a session sealed in another project
+# reads as having come with this one. Made at a start or a save that
+# finds none, never at a read; never replaced or removed; kept by
+# backups and a restore, left out of a workspace copy, which makes its
+# own.
+PROJECT_ID_FILE = "Project id.txt"
+# The most Exegete reads of it: an id and a line ending are 37 or 38
+# bytes, 41 with a byte-order mark
+MAX_PROJECT_ID = 1024
+_PROJECT_ID = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+# Its temporary file while it is made, as a session's
+_PROJECT_ID_TEMPORARY = re.compile(r"Project id\.txt\.[0-9a-f]{8}\.tmp")
+# The id named in a refusal
+_PROJECT_ID_WORDS = ("The project's id (Project id.txt, in the project's "
+                     "Exegete coding sessions folder)")
 
 # Where the note sends the researcher for more: the document on
 # Exegete's page, since the desktop extension puts no PRIVACY.md on the
@@ -130,12 +157,17 @@ NOTE = (
     f"Exegete's page, says more: {PRIVACY_ADDRESS}\n"
 )
 
-# The note inside the sessions folder, six lines (v0.15.4)
+# The note inside the sessions folder, seven lines (v0.15.4)
 SESSIONS_NOTE = (
     "This folder holds Exegete's coding sessions for this project, one "
     "file per session: the passages suggested for coding, word for word, "
     "with their codes and reasons, the researcher's instruction and "
     "decisions, and any proposed codes with their evidence.\n"
+    f"{PROJECT_ID_FILE} holds a random id that ties these sessions to this "
+    "project and names no one. If it is changed, Exegete does not use the "
+    "sessions until it is put back or removed; once it is removed, they "
+    "read as having come with the project, and their approvals are given "
+    "again.\n"
     "While this project is selected, Exegete's session tools return what "
     "a session holds to the AI assistant.\n"
     "These files travel with the project, into its backups and copies, "
@@ -899,6 +931,13 @@ def is_session_temporary(name: str) -> bool:
     return _SESSION_TEMPORARY.fullmatch(name) is not None
 
 
+def is_project_id_temporary(name: str) -> bool:
+    """Whether `name` is the temporary file Exegete makes while it makes
+    the project's id (v0.15.4): `Project id.txt.<eight hexadecimal
+    digits>.tmp`."""
+    return _PROJECT_ID_TEMPORARY.fullmatch(name) is not None
+
+
 def _on_windows() -> bool:
     return os.name == "nt"
 
@@ -912,12 +951,12 @@ def _path_limit_applies() -> bool:
     return not new_project.windows_long_paths_enabled()
 
 
-def _too_long() -> PrivateFilesError:
+def _too_long(subject: str = f"a session's file in {_SESSIONS_FOLDER_WORDS}"
+              ) -> PrivateFilesError:
     from . import new_project
     return PrivateFilesError(
         "too_long",
-        f"The path of a session's file in "
-        f"{_SESSIONS_FOLDER_WORDS} passes the "
+        f"The path of {subject} passes the "
         f"{new_project.WINDOWS_MAX_FILE_PATH} characters Windows allows "
         f"unless long paths are switched on, so Windows cannot reach it "
         f"there. A shorter path for the project (a folder nearer the top "
@@ -1241,8 +1280,9 @@ def _remove_temporaries(held: Optional[int], top: Path,
                         session: Optional[str] = None) -> None:
     """Remove Exegete's own temporary files in the sessions folder: with
     `session` (a session's file name), that session's, whatever their
-    age; without, every session's over TEMPORARY_FILE_AGE old. Regular
-    files only, never through a link; best effort, never raises."""
+    age; without, every session's and the project's id's (v0.15.4) over
+    TEMPORARY_FILE_AGE old. Regular files only, never through a link;
+    best effort, never raises."""
     try:
         names = _names_in(held, top)
     except OSError:
@@ -1250,7 +1290,8 @@ def _remove_temporaries(held: Optional[int], top: Path,
     now = time.time()
     for name in names:
         match = _SESSION_TEMPORARY.fullmatch(name)
-        if match is None:
+        if match is None and (session is not None or _PROJECT_ID_TEMPORARY
+                              .fullmatch(name) is None):
             continue
         if session is not None and match.group(1) != session:
             continue
@@ -1267,6 +1308,21 @@ def _remove_temporaries(held: Optional[int], top: Path,
                 os.unlink(top / name)
         except OSError:
             continue
+
+
+def session_file_there(project, name: str) -> bool:
+    """Whether a regular file, not a link, is at a session's name in the
+    project's sessions folder, within Windows' path limit where it
+    applies: what `remove_session` would remove (v0.15.4, for the record
+    of the session's approvals, which goes first). Never raises."""
+    try:
+        _check_session_name(name)
+        place = sessions_folder(project) / name
+        if _passes_limit(place):
+            return False
+        return stat.S_ISREG(os.lstat(place).st_mode)
+    except (OSError, ValueError):
+        return False
 
 
 def remove_session(project, name: str) -> bool:
@@ -1315,3 +1371,200 @@ def remove_session(project, name: str) -> bool:
         raise _folder_unreadable(exc, _SESSIONS_FOLDER_WORDS) from None
     finally:
         _let_go(held)
+
+
+# ---------------------------------------------------------------------------
+# The project's id (v0.15.4): `Project id.txt` in the sessions folder
+# ---------------------------------------------------------------------------
+
+def _said_of_the_id(error: PrivateFilesError) -> PrivateFilesError:
+    """A refusal of `_read_in`, which speaks of "it" or "the file", said
+    of the project's id."""
+    text = str(error)
+    for opening in ("It ", "The file "):
+        if text.startswith(opening):
+            text = f"{_PROJECT_ID_WORDS} {text[len(opening):]}"
+            break
+    return PrivateFilesError("project_id", text)
+
+
+def _id_in(data: bytes) -> Optional[str]:
+    """The id a file holds: a UUID4 alone, a byte-order mark and line
+    endings ignored, and letter case; None for anything else."""
+    if data.startswith(_BYTE_ORDER_MARK):
+        data = data[len(_BYTE_ORDER_MARK):]
+    try:
+        text = data.decode("ascii").rstrip("\r\n").lower()
+    except UnicodeDecodeError:
+        return None
+    return text if _PROJECT_ID.fullmatch(text) else None
+
+
+def read_project_id(project) -> Optional[str]:
+    """The project's id, from `Project id.txt` in its sessions folder, for
+    Exegete's own code: never shown, logged or written into a session's
+    file (v0.15.4).
+
+    None when nothing is at its name or there is no sessions folder. Read
+    through the held folder with `read_session`'s discipline (`lstat`
+    first, never through a link, the file opened checked to be the file
+    looked at), at most MAX_PROJECT_ID bytes; on Windows a file that
+    cannot be opened is read again as a session's replace is tried
+    (REPLACE_TRIES). Refused, code "project_id", when what is there is
+    not an id: a link, not a file, past the cap, unreadable, or no UUID4.
+    On Windows without long paths, a path past 259 characters is refused
+    as a session's is, code "too_long", with that remedy, since the
+    sessions' longer paths are past it too. A refusal that is the
+    folder's (`about_folder`) means the folder cannot be read. Never
+    writes."""
+    missing = FileNotFoundError(errno.ENOENT, "The project has no id.")
+    try:
+        top, folder_info, held = _held_sessions(project, missing)
+    except FileNotFoundError:
+        return None
+    data = b""
+    try:
+        if _passes_limit(top / PROJECT_ID_FILE):
+            if any(_same_name(name, PROJECT_ID_FILE, None)
+                   for name in _names_in(held, top)):
+                raise _too_long(
+                    _PROJECT_ID_WORDS[:1].lower() + _PROJECT_ID_WORDS[1:])
+            return None
+        tries = max(1, REPLACE_TRIES) if _on_windows() else 1
+        for attempt in range(tries):
+            try:
+                data = _read_in(held, top, PROJECT_ID_FILE, missing,
+                                MAX_PROJECT_ID)
+                break
+            except PrivateFilesError as error:
+                if error.code == "unreadable" and attempt + 1 < tries:
+                    time.sleep(REPLACE_PAUSE)
+                    continue
+                raise _said_of_the_id(error) from None
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise _folder_unreadable(exc, _SESSIONS_FOLDER_WORDS) from None
+    finally:
+        _let_go(held)
+    if held is None and not _still_the_folder(top, folder_info):
+        raise _folder_changed(_SESSIONS_FOLDER_WORDS)
+    value = _id_in(data)
+    if value is None:
+        raise PrivateFilesError(
+            "project_id",
+            f"{_PROJECT_ID_WORDS} does not hold an id that Exegete made.")
+    return value
+
+
+def make_project_id(project) -> None:
+    """Make the project's id in its sessions folder, at a start or a save
+    that finds none (v0.15.4): a random UUID4 and a line ending, in ASCII,
+    written to a temporary file of its own (`Project id.txt.<random>.tmp`,
+    owner-only) made exclusively through the held folder and synced, then
+    published without replacing anything, as project_settings'
+    `_create_exclusively` publishes the earlier file's marker: a hard
+    link, or on Windows a rename that refuses an existing name; on a
+    drive without hard links (exFAT, FAT, some network shares), a rename
+    after a last look. Whatever is at the name afterwards is the id, so
+    two starts at once keep one; the caller reads it back
+    (`read_project_id`). The temporary file is removed; a process ended
+    meanwhile leaves none or all of the id, and at most its temporary
+    file, which backups and copies leave out and a save a day later
+    removes. The folder must be there (`ensure_sessions_folder`)."""
+    gone = PrivateFilesError(
+        "missing",
+        f"{_capital(_SESSIONS_FOLDER_WORDS)} is not there any more, so the "
+        f"project's id was not made.", about_folder=True)
+    top, folder_info, held = _held_sessions(project, gone)
+    try:
+        flags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY
+                 | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        descriptor = temporary = None
+        for _attempt in range(3):
+            candidate = f"{PROJECT_ID_FILE}.{os.urandom(4).hex()}.tmp"
+            try:
+                descriptor = _open_in(held, top, candidate, flags, 0o600)
+            except FileExistsError:
+                continue
+            except OSError as exc:
+                raise _session_unwritable(exc) from None
+            temporary = candidate
+            break
+        if descriptor is None or temporary is None:
+            raise PrivateFilesError(
+                "unwritable",
+                f"Exegete could not make a temporary file in "
+                f"{_SESSIONS_FOLDER_WORDS}.")
+        data = f"{uuid.uuid4()}\n".encode("ascii")
+        made: Optional[os.stat_result] = None
+        try:
+            made = os.fstat(descriptor)
+            if held is None and not _still_the_folder(top, folder_info):
+                raise _folder_changed(_SESSIONS_FOLDER_WORDS)
+            written = 0
+            while written < len(data):
+                written += os.write(descriptor, data[written:])
+            os.fsync(descriptor)
+        except OSError as exc:
+            os.close(descriptor)
+            _remove_if_ours(held, top, temporary, made)
+            raise _session_unwritable(exc) from None
+        except BaseException:
+            os.close(descriptor)
+            _remove_if_ours(held, top, temporary, made)
+            raise
+        os.close(descriptor)
+        try:
+            _publish_without_replacing(held, top, temporary)
+        finally:
+            _remove_if_ours(held, top, temporary, made)
+        if held is not None:
+            try:
+                os.fsync(held)
+            except OSError:
+                pass
+    finally:
+        _let_go(held)
+
+
+def _publish_without_replacing(held: Optional[int], top: Path,
+                               temporary: str) -> None:
+    """The id's temporary file given the id's name, never replacing what
+    is there: a hard link (macOS and Linux), a rename that refuses an
+    existing name (Windows), or, where the drive has no hard links, a
+    rename after a last look, which replaces only a file put there in
+    that instant."""
+    name = PROJECT_ID_FILE
+    if _on_windows():
+        try:
+            os.rename(top / temporary, top / name)
+        except FileExistsError:
+            return
+        except OSError as exc:
+            raise _session_unwritable(exc) from None
+        return
+    try:
+        if held is not None:
+            os.link(temporary, name, src_dir_fd=held, dst_dir_fd=held)
+        else:
+            os.link(top / temporary, top / name)
+        return
+    except FileExistsError:
+        return
+    except OSError:
+        pass                        # no hard links on this drive
+    try:
+        _lstat_in(held, top, name)
+        return                      # something is there now: it is read
+    except FileNotFoundError:
+        pass
+    except OSError as exc:
+        raise _session_unwritable(exc) from None
+    try:
+        if held is not None:
+            os.replace(temporary, name, src_dir_fd=held, dst_dir_fd=held)
+        else:
+            os.replace(top / temporary, top / name)
+    except OSError as exc:
+        raise _session_unwritable(exc) from None

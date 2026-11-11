@@ -3273,7 +3273,8 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
                  database_copied: bool = False,
                  exclude_real: Optional[set] = None,
                  leave_out_top: Tuple[str, ...] = (),
-                 leave_out_names_leftovers: bool = False):
+                 leave_out_names_leftovers: bool = False,
+                 leave_out_project_id: bool = False):
     """The ignore callback shared by backup_project and copy_project_to_workspace.
 
     Applies BACKUP_IGNORE_PATTERNS and additionally skips any entry that
@@ -3310,8 +3311,19 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
     (`session_<id>.json.<random>.tmp`, `private_files.is_session_temporary`)
     is left out too, by backups and workspace copies alike: the save
     that made it replaces it within the instant, and a copy meeting it
-    gone would fail whole. BACKUP_IGNORE_PATTERNS, which QualCoder's own
+    gone would fail whole. So is the temporary file of the project's id
+    (`Project id.txt.<random>.tmp`, `private_files.is_project_id_temporary`),
+    for the same reason. BACKUP_IGNORE_PATTERNS, which QualCoder's own
     set is held to, stays as it is.
+
+    With `leave_out_project_id` (v0.15.4; a workspace copy passes it, a
+    backup never), the project's id in that folder
+    (`private_files.PROJECT_ID_FILE`, matched by `top_entry_named`) is
+    left out too, whatever it is: the copy makes an id of its own at its
+    first start or save, so that the sessions it carries read there as
+    having come with the project and a decision in one never changes
+    which approvals count in the other. A backup keeps the id, so that a
+    restore of it keeps the sessions' seals.
 
     With `leave_out_names_leftovers` (v0.15.4; a workspace copy passes
     it, a backup never), every entry at the project's top whose name has
@@ -3353,7 +3365,13 @@ def _copy_ignore(project_root: Union[str, Path], skipped: List[str],
             ignored.update(n for n in names if n in DATABASE_FILES)
         if not at_top and _in_sessions_folder(dirpath):
             ignored.update(n for n in names
-                           if private_files.is_session_temporary(n))
+                           if private_files.is_session_temporary(n)
+                           or private_files.is_project_id_temporary(n))
+            if leave_out_project_id:
+                ignored.update(
+                    n for n in names
+                    if top_entry_named(dirpath, n,
+                                       (private_files.PROJECT_ID_FILE,)))
         if leave_out_top and at_top:
             # Before the links are looked at, so a link at one of these
             # names is left out, not reported as skipped
@@ -3731,7 +3749,8 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
                        report: Optional[Dict[str, Any]] = None,
                        database_later: bool = False,
                        leave_out_top: Tuple[str, ...] = (),
-                       leave_out_names_leftovers: bool = False
+                       leave_out_names_leftovers: bool = False,
+                       leave_out_project_id: bool = False
                        ) -> Optional[Path]:
     """Copy a project folder into `dest`, an empty folder the caller has
     just claimed (and removes on any failure): the database
@@ -3751,7 +3770,9 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
     the copy, whatever they are (`_copy_ignore`): a backup passes
     MEDIA_FOLDERS, a workspace copy nothing. `leave_out_names_leftovers`
     leaves out the names list's temporary copies at the top, whatever
-    their age (`_copy_ignore`): a workspace copy passes it (v0.15.4)."""
+    their age, and `leave_out_project_id` the project's id in its
+    sessions folder (`_copy_ignore`): a workspace copy passes both
+    (v0.15.4)."""
     database = source / "data.qda"
     exclude_real: set = set()
     database_source: Optional[Path] = None
@@ -3778,7 +3799,8 @@ def _copy_project_tree(source: Path, dest: Path, skipped: List[str],
                             exclude_real=exclude_real,
                             leave_out_top=leave_out_top,
                             leave_out_names_leftovers=(
-                                leave_out_names_leftovers)))
+                                leave_out_names_leftovers),
+                            leave_out_project_id=leave_out_project_id))
     _withhold_exegete_folder_links(source, skipped, report)
     return database_source if database_later else None
 
@@ -4299,9 +4321,12 @@ def copy_project_to_workspace(
         # The database consistently, as a backup is made (v0.14): a copy
         # taken while QualCoder writes holds what was last committed.
         # Unlike a backup, it leaves out every temporary copy of the names
-        # list, however young (v0.15.4): the original is only read
+        # list, however young (v0.15.4): the original is only read; and
+        # the project's id, so that the copy makes its own and the
+        # sessions it carries read there as having come with the project
         _copy_project_tree(source_path, dest_path, skipped, report,
-                           leave_out_names_leftovers=True)
+                           leave_out_names_leftovers=True,
+                           leave_out_project_id=True)
         # A copy with no ai_data gets an empty one, as create_project
         # makes (AI_DATA_FOLDER: spares QualCoder 4.0 a race on its first
         # open); one the copy carries is left as it is

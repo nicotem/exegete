@@ -775,3 +775,157 @@ class TestTheBinding:
             assert done.get("success") is True, done
             assert "kept_by_phrases" not in done
             assert stored(folder).count("Participant B") == 2
+
+
+def record_read(done):
+    return json.loads(Path(done["manifest_path"]).read_text(encoding="utf-8"))
+
+
+class TestTheRepeatAndTheRecords:
+
+    def test_execute_with_asks_for_them_again(self, tmp_path):
+        """execute_with carries no phrase: it says how many to give again,
+        and the hint asks for the same keep_phrases; without phrases
+        neither does."""
+        with project_with(tmp_path, DAY):
+            out = preview_of(mapping=MAY, keep_phrases=TWO + ["Theresa  May"])
+            again = out["execute_with"]["keep_phrases_to_repeat"]
+            assert again == {"phrases": 2,
+                             "message": server._KEEP_PHRASES_TO_REPEAT}
+            assert "keep_phrases" not in out["execute_with"]["arguments"]
+            assert "keep_phrases" in out["hint"]
+            plain = preview_of(mapping=MAY)
+            assert "keep_phrases_to_repeat" not in plain["execute_with"]
+            assert "keep_phrases" not in plain["hint"]
+
+    @pytest.mark.parametrize("rewrite_memos", [False, True])
+    def test_counts_in_the_journal_the_record_and_the_answer(
+            self, tmp_path, rewrite_memos):
+        """The journal entry, the run record and the answer count what the
+        phrases kept, as the plans count it: in the file text and, with
+        rewrite_memos, in notes; never a phrase."""
+        with project_with(tmp_path, SPOKE, setup=_notes) as folder:
+            plan = plan_of()
+            in_text = sum(item["kept"] for item in plan["files"])
+            kept = {"file_text": in_text}
+            if rewrite_memos:
+                kept["notes"] = server.db.pseudonymise_memo_plan(
+                    plan["compiled"], plan)["totals"]["kept_by_phrases"]
+            assert kept == ({"file_text": 1, "notes": 1} if rewrite_memos
+                            else {"file_text": 1})
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             rewrite_memos=rewrite_memos)
+            done = execute_from(out, mapping=MAY, keep_phrases=PHRASE)
+            assert done.get("success") is True, done
+            assert done["kept_by_phrases"] == kept
+            record = record_read(done)
+            assert record["kept_by_phrases"] == kept
+            assert record["format"] == 3
+            line = next(line for line in journal_text(folder).splitlines()
+                        if line.startswith("Phrases to keep:"))
+            assert [int(n) for n in re.findall(r"\d+", line)] == list(
+                kept.values()), line
+
+    def test_without_phrases_nothing_is_added(self, tmp_path):
+        with project_with(tmp_path, SPOKE, setup=_notes) as folder:
+            out = preview_of(mapping=MAY, rewrite_memos=True)
+            done = execute_from(out, mapping=MAY)
+            assert done.get("success") is True, done
+            assert "kept_by_phrases" not in done
+            assert "kept_by_phrases" not in done["memos"]["totals"]
+            assert "kept_by_phrases" not in record_read(done)
+            assert "Phrases to keep" not in journal_text(folder)
+
+    def test_no_phrase_reaches_a_file_record_or_answer(self, tmp_path,
+                                                       caplog):
+        """After a run with a distinctive phrase, the mapping saved into
+        pseudonyms.json and the notes rewritten, the phrase and its
+        distinctive word are in the file's text alone: not in the
+        preview (execute_with and the hint included), the answer, the
+        run record, the journal entry, the change records,
+        pseudonyms.json, which holds the mapping alone, or the log at
+        DEBUG."""
+        caplog.set_level(logging.DEBUG)
+        word = "Quillfeather"
+        text = f"Admiral {word} May spoke first.\nThen May answered."
+        phrase = [f"Admiral  {word} May"]
+
+        def notes(folder):
+            add_annotation(folder, 1, 0, 8, memo=f"Admiral {word} May")
+        with project_with(tmp_path, text, setup=notes) as folder:
+            out = preview_of(mapping=MAY, keep_phrases=phrase,
+                             save_mapping_to_project=True,
+                             rewrite_memos=True)
+            assert "preview_token" in out, out
+            done = execute_from(out, mapping=MAY, keep_phrases=phrase)
+            assert done.get("success") is True, done
+            assert done["mapping_saved"] is True
+            assert done["kept_by_phrases"] == {"file_text": 1, "notes": 1}
+            saved = (folder / "pseudonyms.json").read_text(encoding="utf-8")
+            assert json.loads(saved) == [{"original": "May",
+                                          "pseudonym": "Participant B"}]
+            changes = [path.read_text(encoding="utf-8")
+                       for path in change_record.root().rglob("*")
+                       if path.is_file()]
+            assert changes
+            places = {
+                "preview": json.dumps(out, ensure_ascii=False),
+                "answer": json.dumps(done, ensure_ascii=False),
+                "run record": Path(done["manifest_path"]).read_bytes()
+                .decode("utf-8"),
+                "journal entry": journal_text(folder),
+                "change records": "\n".join(changes),
+                "pseudonyms.json": saved,
+                "log": "\n".join(record.getMessage()
+                                 for record in caplog.records)}
+            for place, words in places.items():
+                assert word not in words, place
+                assert "Admiral" not in words, place
+            assert stored(folder) == text.replace(
+                "Then May", "Then Participant B")
+            assert query(folder, "SELECT memo FROM annotation"
+                         )[0]["memo"] == f"Admiral {word} May"
+
+
+class TestEveryOccurrenceKeptThroughTheCall:
+
+    def test_the_notes_alone_are_rewritten(self, tmp_path):
+        """A file whose every occurrence is kept, with a note to rewrite
+        and a hidden coder's coding stored past the end of the text: the
+        preview counts no clamp, asks for no allow_hidden_coder, says that
+        the file's rows were not read and counts no file; the execute
+        rewrites the note alone and leaves the file's text and the
+        coding's row as they were, with no file in the run record, the
+        journal entry saying that no position changed, and no note that
+        positions changed."""
+        with project_with(tmp_path, ONLY, setup=_past_the_end) as folder:
+            out = preview_of(mapping=MAY, keep_phrases=PHRASE,
+                             rewrite_memos=True)
+            assert "preview_token" in out, out
+            entry = out["preview"]["files"][0]
+            assert entry["rows_read"] is False
+            assert entry["hidden_coder_rows"]["clamped"] == 0
+            assert out["preview"]["hidden_coder_rows"][
+                "override_required"] is False
+            assert out["preview"]["totals"]["files"] == 0
+            assert out["preview"]["memo_rewrites"]["totals"]["rows"] == 1
+            assert "allow_hidden_coder" not in out["execute_with"][
+                "arguments"]
+            done = execute_from(out, mapping=MAY, keep_phrases=PHRASE,
+                                allow_hidden_coder=False)
+            assert done.get("success") is True, done
+            assert done["files"] == [] and done["hidden_coder_rows_updated"] \
+                == 0
+            assert done["memos"]["totals"]["rows_updated"] == 1
+            assert done["kept_by_phrases"] == {"file_text": 1, "notes": 0}
+            assert stored(folder) == ONLY
+            assert positions(folder) == {1: (0, len(ONLY) + 10)}
+            assert query(folder, "SELECT memo FROM code_name WHERE cid=1"
+                         )[0]["memo"] == "Participant B agreed."
+            assert record_read(done)["files"] == []
+            body = journal_text(folder)
+            assert "Files rewritten: 0." in body
+            assert "no position has changed" in body
+            assert not any(note.startswith("Positions after")
+                           for note in done["notes"]), done["notes"]
+            assert done["stale_sessions"] == []

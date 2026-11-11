@@ -5,22 +5,22 @@
   phrases of up to 200 characters, such as a public figure who shares a
   participant's name or a saying. Every name of the mapping that lies
   wholly inside an occurrence of a phrase stays as it is, in the file's
-  text and in the notes the run rewrites; a name that runs past a
-  phrase is replaced, and the preview warns about it. Phrases are
-  matched as whole words under the run's `case_mode`, within a line,
-  and in a Word, OpenDocument or RTF file both through the markers its
-  notes and comments left and as stored, as names are. The preview's
-  `phrases` block counts, by each phrase's number, how often it occurs,
-  the names it keeps and those that run past it; the warnings count the
-  occurrences kept among those left by choice; the occurrences block
-  marks their rows, and the page for choosing occurrences marks them
-  with no tick box. The phrases are bound into the preview's token and
-  kept in no file, record or answer: the run record, the journal entry
-  and the answer count what they kept, and every answer that may send
-  the assistant to a new preview asks for the same phrases again. With
-  the project's names list (`use_project_pseudonyms`) they are refused
-  before the list is read, since what Exegete said about a phrase would
-  tell whether a name in it is on the list.
+  text and in the notes the run rewrites; a name that runs past a phrase
+  is replaced, and the preview warns about those in the file's text.
+  Phrases are matched as whole words under the run's `case_mode`, within
+  a line, and in a Word, OpenDocument or RTF file both through the
+  markers its notes and comments left and as stored, as names are. The
+  preview's `phrases` block counts, by each phrase's number, how often
+  it occurs, the names it keeps and those that run past it; the warnings
+  count the occurrences kept among those left by choice; the occurrences
+  block marks their rows, and the page for choosing occurrences marks
+  them with no tick box. The phrases are bound into the preview's token
+  and kept in no file, record or answer: the run record, the journal
+  entry and the answer count what they kept, and every answer that may
+  send the assistant to a new preview asks for the same phrases again.
+  With the project's names list (`use_project_pseudonyms`) they are
+  refused before the list is read, since what Exegete said about a
+  phrase would tell whether a name in it is on the list.
 
 ### Changed
 

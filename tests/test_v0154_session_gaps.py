@@ -771,6 +771,41 @@ def _tree(folder) -> dict:
             if p.is_file()}
 
 
+@pytest.fixture
+def publish(request, monkeypatch):
+    """How the id is published. "here": as this system publishes it.
+    "on Windows": Windows' branch, on any system: no held folder, as on
+    Windows, and a rename that refuses an existing name, as Windows' own
+    does (the real call is tested on the Windows jobs by
+    test_v012_preview_tokens.py). "without hard links": a drive that makes
+    none (exFAT, FAT, some network shares), so that macOS and Linux
+    publish by a rename after a last look. On Windows the last two are
+    Windows' own publish, which the case "here" runs, so they are skipped
+    there."""
+    if request.param != "here" and os.name == "nt":
+        pytest.skip("Windows' own publish runs in the case 'here'")
+    if request.param == "on Windows":
+        monkeypatch.setattr(private_files, "_on_windows", lambda: True)
+        monkeypatch.setattr(private_files, "_path_limit_applies",
+                            lambda: False)
+        monkeypatch.setattr(private_files, "_HOLDS_FOLDERS", False)
+        monkeypatch.setattr(private_files, "REPLACE_PAUSE", 0)
+        real = os.rename
+
+        def rename(source, target, *args, **kwargs):
+            if os.path.lexists(target):
+                raise FileExistsError(
+                    errno.EEXIST,
+                    "Cannot create a file when that file already exists")
+            return real(source, target, *args, **kwargs)
+        monkeypatch.setattr(os, "rename", rename)
+    elif request.param == "without hard links":
+        def no_links(*args, **kwargs):
+            raise OSError(errno.EPERM, "Operation not permitted")
+        monkeypatch.setattr(os, "link", no_links)
+    return request.param
+
+
 class TestTheProjectsId:
 
     def test_made_at_the_first_start_and_never_at_a_read(self, project):
@@ -807,25 +842,25 @@ class TestTheProjectsId:
         assert sessions.SEAL_FIELD not in stored(project, sid)
         assert loaded(sid).came_with_project
 
-    def test_two_starts_at_once_keep_one_id(self, project, monkeypatch):
-        """The second start meets the first's id at its publish: the link
-        refuses to replace it, and the start reads back and uses that id,
-        so both sessions are this installation's."""
-        real = os.link
+    @pytest.mark.parametrize(
+        "publish", ["here", "on Windows", "without hard links"],
+        indirect=True)
+    def test_two_starts_at_once_keep_one_id(self, project, monkeypatch,
+                                            publish):
+        """The second start meets the first's id at its publish, which
+        never replaces it (a hard link, a rename that refuses an existing
+        name, or a rename after a last look), and reads back and uses that
+        id, so both sessions are this installation's. The first start's id
+        is put at the name as the publish begins, so that whichever call
+        the system publishes with meets it."""
+        real = private_files._publish_without_replacing
 
-        def first_start_won(source, target, *args, **kwargs):
-            folder = kwargs.get("dst_dir_fd")
-            if folder is not None:
-                descriptor = os.open(target, os.O_CREAT | os.O_WRONLY,
-                                     0o600, dir_fd=folder)
-            else:
-                descriptor = os.open(target, os.O_CREAT | os.O_WRONLY,
-                                     0o600)
-            os.write(descriptor, f"{ANOTHER_ID}\n".encode("ascii"))
-            os.close(descriptor)
-            return real(source, target, *args, **kwargs)
+        def first_start_won(held, top, temporary):
+            (top / ID_FILE).write_bytes(f"{ANOTHER_ID}\n".encode("ascii"))
+            return real(held, top, temporary)
         with monkeypatch.context() as patch:
-            patch.setattr(os, "link", first_start_won)
+            patch.setattr(private_files, "_publish_without_replacing",
+                          first_start_won)
             first = start()["coding_session_id"]
         second = start()["coding_session_id"]
         assert id_of(project) == ANOTHER_ID
@@ -846,22 +881,28 @@ class TestTheProjectsId:
         assert [p.name for p in folder_of(project).iterdir()
                 if private_files.is_project_id_temporary(p.name)] == []
 
-    def test_a_failure_after_its_temporary_file(self, project, monkeypatch):
-        """Publishing it fails: no id and no temporary file is left, the
-        session is kept on this computer with the reason, as where the
-        project's folder cannot hold it, and a later start makes one."""
+    @pytest.mark.parametrize("publish", ["here", "on Windows"],
+                             indirect=True)
+    def test_a_failure_after_its_temporary_file(self, project, monkeypatch,
+                                                publish):
+        """Publishing it fails, by whichever call the system publishes
+        with (a hard link, a rename or a replace): no id and no temporary
+        file is left, the session is kept on this computer with the
+        reason, as where the project's folder cannot hold it, and a later
+        start makes one."""
         def refused(*args, **kwargs):
             raise OSError(errno.EIO, "Input/output error")
-        real = os.replace
 
-        def no_replace(source, target, *args, **kwargs):
-            if str(target) == ID_FILE or str(target).endswith(
-                    os.sep + ID_FILE):
-                refused()
-            return real(source, target, *args, **kwargs)
+        def refused_at_the_id(real):
+            def call(source, target, *args, **kwargs):
+                if Path(target).name == ID_FILE:
+                    refused()
+                return real(source, target, *args, **kwargs)
+            return call
         with monkeypatch.context() as patch:
             patch.setattr(os, "link", refused)
-            patch.setattr(os, "replace", no_replace)
+            patch.setattr(os, "replace", refused_at_the_id(os.replace))
+            patch.setattr(os, "rename", refused_at_the_id(os.rename))
             out = start()
         assert out["kept_in"] == KEPT_ON_THIS_COMPUTER, out
         assert "Input/output error" in out["kept_in_reason"]

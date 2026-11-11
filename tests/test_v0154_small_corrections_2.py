@@ -643,7 +643,10 @@ def _decode_error(tmp_path, word):
 def test_a_message_quoting_the_words_is_neither_busy_nor_transient(
         tmp_path, word):
     error = _decode_error(tmp_path, word)
-    assert word in str(error)
+    if word not in str(error):
+        # The premise is Python's wording, quoting the text (3.11 to
+        # 3.13), which a later Python may change
+        pytest.skip("this Python's message does not quote the text")
     assert not database._is_locked_error(error)
     assert not server._is_transient_sqlite_error(error)
 

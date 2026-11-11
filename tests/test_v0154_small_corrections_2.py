@@ -364,3 +364,114 @@ def test_a_session_whose_passages_fit_exports_as_before(
     assert not {"skipped_suggestions", "skipped_details",
                 "skip_note"} & set(answer)
     assert pending and applied
+
+
+# ===========================================================================
+# 2. An export removes only its own destination's earlier part files
+#    (row 249)
+# ===========================================================================
+
+def _part(folder, name, pid, ns):
+    """An earlier export's part file of `name`, as one killed before its
+    replace leaves it."""
+    path = Path(folder) / refi_export.part_name(name, pid, ns)
+    path.write_bytes(b"left by an export")
+    return path.name
+
+
+def test_another_destinations_part_stays_where_the_folder_tells_them_apart(
+        setup_server, qualcoder_db_path, tmp_path):
+    """Names differing in letter case alone, and in an accented letter's
+    two forms: the other name's part stays where this folder tells the
+    two names apart, and goes where it takes them as one, as
+    `os.path.exists` of the other name there says (a Mac's default disk
+    takes both as one, Windows the letter case alone, Linux neither); the
+    same name's earlier part goes in every case."""
+    before = time.time_ns() - 10
+    same = _part(tmp_path, "Study.qdpx", 11, before - 3)
+    by_case = _part(tmp_path, "study.qdpx", 12, before - 2)
+    answer = _export(output_path=str(tmp_path / "Study.qdpx"))
+    assert answer["success"] is True, answer
+    one_by_case = (tmp_path / "study.qdpx").exists()
+    left = _parts(tmp_path)
+    assert same not in left
+    assert (by_case not in left) is one_by_case
+    assert answer["part_files_removed"] == (2 if one_by_case else 1)
+
+    composed = "Étude.qdpx"
+    decomposed = unicodedata.normalize("NFD", composed)
+    same = _part(tmp_path, composed, 13, before - 1)
+    by_form = _part(tmp_path, decomposed, 14, before)
+    answer = _export(output_path=str(tmp_path / composed))
+    assert answer["success"] is True, answer
+    one_by_form = (tmp_path / decomposed).exists()
+    left = _parts(tmp_path)
+    assert same not in left
+    assert (by_form not in left) is one_by_form
+    # The first export's part of the other letter case is no concern of
+    # this one's
+    assert (by_case in left) is not one_by_case
+
+
+@pytest.mark.parametrize("taken_as_one", [False, True],
+                         ids=["told apart", "taken as one"])
+def test_the_folders_answer_decides(tmp_path, monkeypatch, taken_as_one):
+    """Called directly, with the folder's answer given: a folder that
+    tells the names apart (Linux, and Windows for the forms) keeps the
+    other names' parts; one that takes them as one removes them."""
+    calls = []
+
+    def probe(folder, name, other):
+        calls.append((name, other))
+        return taken_as_one
+    monkeypatch.setattr(refi_export, "_taken_as_one", probe)
+    destination = "Étude.qdpx"
+    (tmp_path / destination).write_bytes(b"the export")
+    before = time.time_ns()
+    same = _part(tmp_path, destination, 21, before - 3)
+    by_case = _part(tmp_path, destination.upper(), 22, before - 2)
+    by_form = _part(tmp_path, unicodedata.normalize("NFD", destination),
+                    23, before - 1)
+    removed = refi_export.remove_earlier_parts(tmp_path, destination,
+                                               before)
+    left = _parts(tmp_path)
+    assert same not in left
+    if taken_as_one:
+        assert removed == 3 and left == []
+    else:
+        assert removed == 1 and left == sorted([by_case, by_form])
+    # Both probes were made on the destination's own name
+    assert calls == [(destination, destination.swapcase()),
+                     (destination, unicodedata.normalize("NFD",
+                                                         destination))]
+
+
+def test_a_probe_that_fails_compares_exactly(tmp_path, monkeypatch):
+    """A folder whose answer cannot be had (a network share, say):
+    `os.path.samefile` failing is read as no, so the names are compared
+    exactly and another name's part stays."""
+    def fails(a, b):
+        raise OSError(5, "Input/output error")
+    monkeypatch.setattr(refi_export.os.path, "samefile", fails)
+    (tmp_path / "Study.qdpx").write_bytes(b"the export")
+    before = time.time_ns()
+    by_case = _part(tmp_path, "study.qdpx", 31, before - 1)
+    same = _part(tmp_path, "Study.qdpx", 32, before - 2)
+    assert refi_export.remove_earlier_parts(tmp_path, "Study.qdpx",
+                                            before) == 1
+    assert _parts(tmp_path) == [by_case] and same not in _parts(tmp_path)
+
+
+def test_a_name_cut_at_100_bytes_is_known_by_its_cut_as_before(
+        setup_server, qualcoder_db_path, tmp_path):
+    """Two destinations over 100 bytes sharing their first 100: the
+    other's earlier part goes, as before, since its name carries only the
+    cut."""
+    first = "a" * 110 + " one.qdpx"
+    second = "a" * 110 + " two.qdpx"
+    other = _part(tmp_path, second, 41, time.time_ns() - 10)
+    assert other == f".{'a' * 100}.41-{other.split('-')[-1]}"
+    answer = _export(output_path=str(tmp_path / first))
+    assert answer["success"] is True, answer
+    assert answer["part_files_removed"] == 1
+    assert _parts(tmp_path) == []

@@ -669,10 +669,14 @@ def test_the_part_file_and_what_it_leaves(setup_server, qualcoder_db_path,
     assert answer["success"] is True, answer
     assert modes == [0o600]
     assert stat.S_IMODE(out.stat().st_mode) == 0o600
-    assert answer["part_files_removed"] == 2
+    # v0.15.4: the upper-case part goes only where the folder takes the
+    # two names as one (tests/test_v0154_small_corrections_2.py)
+    ignores_case = (tmp_path / "P.QDPX").exists()
+    assert answer["part_files_removed"] == (2 if ignores_case else 1)
     assert _parts(tmp_path) == sorted([
         f".p.qdpx.13-{10 ** 20}.part", ".other.qdpx.14-1.part",
-        ".p.qdpx.15-1.part", ".p.qdpx.16-1.part"])
+        ".p.qdpx.15-1.part", ".p.qdpx.16-1.part"]
+        + ([] if ignores_case else [f".P.QDPX.12-{before - 4}.part"]))
     assert (tmp_path / "target").read_bytes() == b"not a part file"
 
     # A destination name of 245 characters, which exported before the

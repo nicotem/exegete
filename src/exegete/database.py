@@ -15456,8 +15456,8 @@ class QualcoderDatabase:
     # A row inside a phrase to keep (v0.15.4), said where the file has one
     PSEUDONYMISE_OCCURRENCES_KEPT_NOTE = (
         "A row marked kept lies wholly inside a phrase to keep: the run "
-        "leaves it as it is, listed or not, while the same keep_phrases "
-        "are given.")
+        "leaves it as it is whether or not a list names it, as long as the "
+        "same keep_phrases are given.")
 
     @classmethod
     def _pseudonymise_occurrences(cls, item: Dict[str, Any],

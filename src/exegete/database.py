@@ -2150,36 +2150,20 @@ def unusable_pdf_link_refusal(name: Any, problem: str) -> str:
             f"can still link it to the case.")
 
 
-def validate_qda_path(db_path: str) -> Path:
-    """Validate that the path is a legitimate Qualcoder project.
-
-    Qualcoder projects can be either:
-    - A .qda folder containing data.qda file (standard structure)
-    - A direct path to data.qda file
-
-    Args:
-        db_path: Path to validate (can be project folder or data.qda file)
+def project_database_path(path: Path) -> Path:
+    """select_project's rule of kind and name, which the project listing
+    shares (v0.15.4): the data.qda of `path`, a path already resolved, as
+    `validate_qda_path` resolves it, so that a link is judged where it
+    leads. Read from the file system's own data; nothing is opened.
 
     Returns:
-        Resolved Path object to the data.qda file
+        The data.qda: inside `path`, a folder whose name ends in
+        lower-case `.qda`, or `path` itself, the data.qda inside one
 
     Raises:
-        ValueError: If path is invalid
-        FileNotFoundError: If database file doesn't exist
-        ProjectFileKindError: If a side file of SQLite's beside the
-            database is not a regular file (v0.15.1), before SQLite
-            opens anything
+        FileNotFoundError: the folder holds no data.qda
+        ValueError: any other kind or name, in select_project's words
     """
-    try:
-        # Resolve to absolute path, following symlinks
-        path = Path(db_path).resolve(strict=False)
-    except (OSError, RuntimeError) as e:
-        raise ValueError(f"Invalid path: {e}")
-
-    # Check if path exists
-    if not path.exists():
-        raise FileNotFoundError(f"Path not found: {path}")
-
     # Handle different path formats. QualCoder can ONLY open a directory
     # whose name ends in lowercase '.qda' and that contains a 'data.qda'
     # SQLite file (QualCoder 3.8.2 __main__.py:306, 2635) — accepting
@@ -2217,6 +2201,40 @@ def validate_qda_path(db_path: str) -> Path:
             )
     else:
         raise ValueError(f"Path is neither a file nor a directory: {path}")
+    return path
+
+
+def validate_qda_path(db_path: str) -> Path:
+    """Validate that the path is a legitimate Qualcoder project.
+
+    Qualcoder projects can be either:
+    - A .qda folder containing data.qda file (standard structure)
+    - A direct path to data.qda file
+
+    Args:
+        db_path: Path to validate (can be project folder or data.qda file)
+
+    Returns:
+        Resolved Path object to the data.qda file
+
+    Raises:
+        ValueError: If path is invalid
+        FileNotFoundError: If database file doesn't exist
+        ProjectFileKindError: If a side file of SQLite's beside the
+            database is not a regular file (v0.15.1), before SQLite
+            opens anything
+    """
+    try:
+        # Resolve to absolute path, following symlinks
+        path = Path(db_path).resolve(strict=False)
+    except (OSError, RuntimeError) as e:
+        raise ValueError(f"Invalid path: {e}")
+
+    # Check if path exists
+    if not path.exists():
+        raise FileNotFoundError(f"Path not found: {path}")
+
+    path = project_database_path(path)
 
     # SQLite's side files, looked at before SQLite opens them (v0.15.1):
     # a named pipe there would make every open wait for ever

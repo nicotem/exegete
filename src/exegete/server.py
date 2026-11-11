@@ -58,6 +58,7 @@ from .database import (
     DB_LOCKED_MESSAGE,
     version_for_details,
     validate_qda_path,
+    project_database_path,
     validate_coder_name,
     validate_coder_note,
     forbidden_display_char,
@@ -1922,6 +1923,58 @@ _USUAL_SEARCH_PLACES = ["~/Documents/QualCoder_projects",
                         "~/Documents"]
 
 
+# The listing's mark of an entry select_project refuses by its kind or
+# name (v0.15.4): listed, never left out, as a folder with no usable
+# database is marked
+NOT_A_PROJECT_FOLDER_NOTE = (
+    "select_project does not take this entry: Exegete selects a project "
+    "by a folder whose name ends in lower-case .qda and holds data.qda, "
+    "or by that data.qda.")
+# The tag Windows gives a junction (IO_REPARSE_TAG_MOUNT_POINT, which
+# Python's stat module defines on Windows alone)
+_JUNCTION_TAG = 0xA0000003
+
+
+def _selectable(found: Path) -> bool:
+    """Whether select_project takes a listed entry by its kind and name:
+    `project_database_path`, the rule the two share, on the entry's path
+    resolved as select_project resolves it, so that a link is judged
+    where it leads. Nothing is opened."""
+    try:
+        project_database_path(found.resolve(strict=False))
+    except (OSError, ValueError, RuntimeError):
+        return False
+    return True
+
+
+def _files_megabytes(folder: Path) -> float:
+    """The size of the files in a folder and its subfolders, in MB to two
+    places, for the project listing (v0.15.4): a walk on `os.scandir`,
+    each entry's own data taken without following a link (on Windows
+    from the folder's listing itself, with no call per file), entering
+    no link and, on Windows, no junction. Nothing is opened; a folder
+    that cannot be listed adds nothing."""
+    total = 0
+    pending = [os.fspath(folder)]
+    while pending:
+        try:
+            with os.scandir(pending.pop()) as listing:
+                entries = list(listing)
+        except OSError:
+            continue
+        for entry in entries:
+            try:
+                state = entry.stat(follow_symlinks=False)
+            except OSError:
+                continue
+            if stat.S_ISREG(state.st_mode):
+                total += state.st_size
+            elif (stat.S_ISDIR(state.st_mode)
+                  and getattr(state, "st_reparse_tag", 0) != _JUNCTION_TAG):
+                pending.append(entry.path)
+    return round(total / (1024 * 1024), 2)
+
+
 def _is_one_of(folder: str, places: List[str]) -> bool:
     """Whether `folder` is the same folder as one of `places`: the same
     path once resolved, or, where both exist, the same folder by identity
@@ -2010,19 +2063,28 @@ def discover_projects(search_paths: Optional[List[str]] = None) -> List[Dict[str
                 seen_paths.add(qda_file)
 
                 try:
-                    stat = qda_file.stat()
+                    state = qda_file.stat()
+                    is_folder = qda_file.is_dir()
                     entry = {
                         "path": str(qda_file),
                         "name": qda_file.stem,
                         "directory": str(qda_file.parent),
-                        "size_mb": round(stat.st_size / (1024 * 1024), 2),
-                        "modified": stat.st_mtime
+                        # A folder's size is that of the files in it
+                        # (v0.15.4); a file's, its own
+                        "size_mb": (_files_megabytes(qda_file) if is_folder
+                                    else round(state.st_size
+                                               / (1024 * 1024), 2)),
+                        "modified": state.st_mtime
                     }
                     # A folder with no usable database is listed, and
                     # marked (v0.14): as an unfinished creation only when
-                    # it holds nothing else; nothing is opened here.
+                    # it holds nothing else; nothing is opened here. An
+                    # entry select_project refuses by its kind or name is
+                    # listed and marked too (v0.15.4).
                     note = (_unusable_folder_note(str(qda_file))
-                            if qda_file.is_dir() else None)
+                            if is_folder else None)
+                    if note is None and not _selectable(qda_file):
+                        note = NOT_A_PROJECT_FOLDER_NOTE
                     if note is not None:
                         entry["usable"] = False
                         entry["note"] = note

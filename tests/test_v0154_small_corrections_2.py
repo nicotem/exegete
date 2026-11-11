@@ -424,6 +424,44 @@ def test_a_code_or_file_gone_keeps_its_reason_alone(
     assert "(status:" not in error and "To correct" not in error, error
 
 
+@pytest.mark.skipif(
+    not hasattr(server, "_with_shown_status"),
+    reason="coding sessions' approval marks are not on this branch; the "
+           "test runs once they are")
+def test_an_approval_not_given_here_is_named_pending(
+        setup_server, qualcoder_db_path, tmp_path, monkeypatch):
+    """Where coding sessions' approval marks are merged: an approval
+    given by Exegete on another computer reads as pending here, so its
+    suggestion, whose passage moved, is named pending with
+    edit_suggestion's way, which edit_suggestion takes; the export then
+    goes ahead (the design's test 3; review, round 1)."""
+    from exegete import preview_tokens
+    with monkeypatch.context() as patch:
+        # Exegete on another computer: the same project, another key
+        patch.setattr(preview_tokens, "load_secret", lambda: "b" * 64)
+        sid = new_session()
+        guid = _guid(sid, STRESSED)
+        call("update_suggestion_status", coding_session_id=sid,
+             approve=[guid])
+    _exec(qualcoder_db_path, "UPDATE source SET fulltext = ? WHERE id = 1",
+          (SHORTER,))
+    _reopen(qualcoder_db_path)
+
+    out = tmp_path / "e.qdpx"
+    refused = _export(coding_session_id=sid, output_path=str(out))
+    error = refused.get("error", "")
+    assert (f"(GUID {guid}): the passage it records is not at positions "
+            f"24-56 of File ID 1 (status: pending)") in error, refused
+    assert error.endswith(". " + refi_export.PASSAGE_MOVED_PENDING), error
+    edited = jcall("edit_suggestion", coding_session_id=sid,
+                   suggestion_guid=guid, segment_text=STRESSED)
+    assert "error" not in edited, edited
+    answer = _export(coding_session_id=sid, output_path=str(out))
+    assert answer.get("success") is True, answer
+    assert _selections(out)[0] == [
+        ("interview.txt", 20, 52, "Status: pending")]
+
+
 def test_a_passage_with_a_paragraph_separator_still_matches(
         setup_server, qualcoder_db_path, tmp_path):
     """A recorded passage holding U+2029 where the file has a line break

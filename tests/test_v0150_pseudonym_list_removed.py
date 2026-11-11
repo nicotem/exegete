@@ -297,6 +297,10 @@ INSTALL_OLDER_ENTRY = (
     "lines, `[mcp_servers.exegete.tools.read_pseudonym_list]` and "
     "`approval_mode = \"prompt\"` under it: that tool was removed in "
     "0.15.0, so you can delete both lines.")
+# v0.15.4: the one other table the guide names, for the setting that sets
+# read_file_with_codings' budget in Codex, in its paragraph on Codex's cut
+OUTPUT_LIMIT_TABLE = ("`output_token_limit` under "
+                      "`[mcp_servers.exegete.tools.read_file_with_codings]`")
 
 
 class TestNoShippedTextNamesIt:
@@ -366,8 +370,12 @@ class TestInstall:
             "default_tools_approval_mode = ", "")
         install = _flat(raw)
         # Fix round 1: the table is named once, in the sentence that says
-        # an older entry can drop it
-        rest = install.replace(INSTALL_OLDER_ENTRY, "")
+        # an older entry can drop it; v0.15.4: and the table of the
+        # setting for read_file_with_codings' budget once, with no
+        # approval line
+        rest = install.replace(INSTALL_OLDER_ENTRY, "").replace(
+            OUTPUT_LIMIT_TABLE, "")
+        assert install.count(OUTPUT_LIMIT_TABLE) == 1
         assert "[mcp_servers.exegete.tools." not in rest
         assert 'approval_mode = "prompt"' not in rest
         assert ("`default_tools_approval_mode = \"writes\"` on the line "

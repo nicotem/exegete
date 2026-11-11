@@ -54,6 +54,12 @@ Python 3.13 with the libraries in `uv.lock`:
   The guide to installing from the Terminal now gives `search_files`'
   description as about 4,800 characters on Python 3.13, and 5,200 on
   3.11 and 3.12.
+- Coding sessions are read and decided only with their project open:
+  review_suggestions' description no longer says what is shown while
+  another project is selected, 48 characters fewer in its definition
+  in both sets, and list_coding_sessions' gives the range of
+  `days_old` and an example its 30-day default keeps true, 104 more
+  in `full`.
 - The workspace copy's description now says that a copy leaves out
   every temporary copy of the names list, whatever its age, adding
   154 characters to its definition in both sets.

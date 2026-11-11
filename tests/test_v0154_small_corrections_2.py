@@ -475,3 +475,148 @@ def test_a_name_cut_at_100_bytes_is_known_by_its_cut_as_before(
     assert answer["success"] is True, answer
     assert answer["part_files_removed"] == 1
     assert _parts(tmp_path) == []
+
+
+# ===========================================================================
+# 3. The project listing: each folder's size, and a mark on what
+#    select_project refuses by its kind or name (row 224)
+# ===========================================================================
+
+MB = 1024 * 1024
+POSIX = os.name != "nt"
+
+
+def _search_folder(tmp_path, qualcoder_db_path):
+    """A project of 3 MB of files, and beside it entries select_project
+    refuses by their kind or name."""
+    database_file = Path(qualcoder_db_path) / "data.qda"
+    search = tmp_path / "search"
+    project = search / "Study.qda"
+    (project / "documents").mkdir(parents=True)
+    (project / "data.qda").write_bytes(database_file.read_bytes())
+    filler = 3 * MB - database_file.stat().st_size
+    (project / "documents" / "filler.bin").write_bytes(b"x" * filler)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "big.bin").write_bytes(b"y" * (2 * MB))
+    (search / "loose.qda").write_bytes(database_file.read_bytes())
+    (search / "Plain").mkdir()
+    (search / "Plain" / "data.qda").write_bytes(database_file.read_bytes())
+    (search / "Upper.QDA").mkdir()
+    (search / "Upper.QDA" / "data.qda").write_bytes(
+        database_file.read_bytes())
+    if POSIX:
+        # A link inside the project to a folder outside it, and a link
+        # named as a project to a folder whose name lacks .qda, holding
+        # a data.qda
+        (project / "elsewhere").symlink_to(outside,
+                                           target_is_directory=True)
+        lacking = tmp_path / "Elsewhere"
+        lacking.mkdir()
+        (lacking / "data.qda").write_bytes(database_file.read_bytes())
+        (search / "link.qda").symlink_to(lacking, target_is_directory=True)
+    return search
+
+
+def test_the_listing_sizes_folders_and_marks_what_select_project_refuses(
+        setup_server, qualcoder_db_path, tmp_path):
+    search = _search_folder(tmp_path, qualcoder_db_path)
+    listed = {Path(entry["path"]).relative_to(search).as_posix(): entry
+              for entry in server.discover_projects([str(search)])}
+    expected = {"Study.qda", "loose.qda", "Plain/data.qda"}
+    if POSIX:
+        expected.add("link.qda")
+    # A search that ignores letter case (Windows) finds Upper.QDA; one
+    # that does not leaves it unlisted, as before
+    found_upper = "Upper.QDA" in listed
+    assert found_upper is (sys.platform == "win32"), listed
+    assert set(listed) - {"Upper.QDA"} == expected, listed
+
+    project = listed["Study.qda"]
+    assert project["size_mb"] == 3.0, project
+    assert "usable" not in project and "note" not in project
+    for name in set(listed) - {"Study.qda"}:
+        assert listed[name]["usable"] is False, listed[name]
+        assert listed[name]["note"] == server.NOT_A_PROJECT_FOLDER_NOTE
+    # A file keeps its own size
+    assert listed["loose.qda"]["size_mb"] == round(
+        (search / "loose.qda").stat().st_size / MB, 2)
+
+    # Each entry's mark agrees with select_project's answer on its path
+    for name, entry in listed.items():
+        answer = json.loads(server.select_project(entry["path"]))
+        assert (answer.get("success") is not False) is (
+            "usable" not in entry), (name, answer)
+
+
+def test_the_answer_of_list_available_projects_carries_both(
+        setup_server, qualcoder_db_path, tmp_path):
+    search = _search_folder(tmp_path, qualcoder_db_path)
+    answer = json.loads(server.list_available_projects([str(search)]))
+    by_name = {entry["name"]: entry for entry in answer["projects"]}
+    assert by_name["Study"]["size_mb"] == 3.0
+    assert by_name["loose"]["usable"] is False
+
+
+def test_a_junction_is_not_entered(tmp_path, monkeypatch):
+    """On Windows a junction is a folder whose own data carries its
+    reparse tag, and the walk does not enter it, as it enters no link:
+    shown here with the listing's own entries given, on every system."""
+    from types import SimpleNamespace
+    import stat as stat_module
+
+    class Entry:
+        def __init__(self, path, mode, size=0, tag=0):
+            self.path, self.name = path, os.path.basename(path)
+            self.state = SimpleNamespace(st_mode=mode, st_size=size,
+                                         st_reparse_tag=tag)
+
+        def stat(self, follow_symlinks=True):
+            assert follow_symlinks is False
+            return self.state
+
+    folder = str(tmp_path / "Study.qda")
+    tree = {
+        folder: [
+            Entry(os.path.join(folder, "data.qda"),
+                  stat_module.S_IFREG, MB),
+            Entry(os.path.join(folder, "documents"), stat_module.S_IFDIR),
+            Entry(os.path.join(folder, "junction"), stat_module.S_IFDIR,
+                  tag=0xA0000003),
+            Entry(os.path.join(folder, "link"), stat_module.S_IFLNK),
+        ],
+        os.path.join(folder, "documents"): [
+            Entry(os.path.join(folder, "documents", "a.txt"),
+                  stat_module.S_IFREG, MB)],
+        os.path.join(folder, "junction"): [
+            Entry(os.path.join(folder, "junction", "big"),
+                  stat_module.S_IFREG, 5 * MB)],
+        os.path.join(folder, "link"): [
+            Entry(os.path.join(folder, "link", "big"),
+                  stat_module.S_IFREG, 7 * MB)],
+    }
+
+    class Listing:
+        def __init__(self, path):
+            self.entries = tree[os.fspath(path)]
+
+        def __enter__(self):
+            return iter(self.entries)
+
+        def __exit__(self, *exc):
+            return False
+
+    monkeypatch.setattr(server.os, "scandir", Listing)
+    assert server._files_megabytes(Path(folder)) == 2.0
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows' junctions")
+def test_a_real_junction_adds_nothing(setup_server, qualcoder_db_path,
+                                      tmp_path):
+    import _winapi
+    search = _search_folder(tmp_path, qualcoder_db_path)
+    _winapi.CreateJunction(str(tmp_path / "outside"),
+                           str(search / "Study.qda" / "junction"))
+    listed = {Path(entry["path"]).name: entry
+              for entry in server.discover_projects([str(search)])}
+    assert listed["Study.qda"]["size_mb"] == 3.0

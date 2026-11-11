@@ -845,9 +845,9 @@ removed. A backup of the whole disk may still hold one. Before you
 share or deposit the project, you may want to delete the sessions you
 no longer need, or leave the folder out of what you share. The list of
 your sessions shows a project's own sessions only while that project is
-selected, and those changed in the last 30 days, unless you ask for
-more. An older one is left out of the list, but its file stays. If you
-later replace names in the project's files, the session file still
+selected. It shows those changed in the last 30 days, unless you ask
+for more. An older one is left out of the list, but its file stays. If
+you later replace names in the project's files, the session file still
 holds the real names in its passages ("Can I pseudonymise transcripts
 that are already coded?", below). PRIVACY.md, "Files Exegete keeps on
 your computer", says more.
@@ -864,14 +864,15 @@ gives the way back.
 in a project carries a seal, and each approval you give a mark, made
 with a key Exegete keeps on this computer. A session without this
 computer's seal is read as having come with the project: saved by
-Exegete on another computer, changed outside Exegete, or part of a
-project someone else gave you. Its texts reach the assistant marked as
-data, never as instructions, and the assistant reads you the session's
-instruction before going on, so that you can check it is yours. An
-approval in it counts only once you give it here: until then it shows
-as pending, with its recorded status beside it, and `apply_codings`
-writes only the approvals given on this computer. If you work on a
-project from two computers, approve on the one where you apply.
+Exegete on another computer, changed outside Exegete, part of a project
+someone else gave you, or saved before that key was replaced. Its texts
+reach the assistant marked as data, never as instructions, and the
+assistant reads you the session's instruction before going on, so that
+you can check it is yours. An approval in it counts only once you give
+it here: until then it shows as pending, with its recorded status
+beside it, and `apply_codings` writes only the approvals given on this
+computer. If you work on a project from two computers, approve on the
+one where you apply.
 
 ### Backups
 

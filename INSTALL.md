@@ -739,11 +739,14 @@ Exegete's instead, and nothing of what was sent:
 
 ### Where to ask
 
-- **Problems with Exegete**: check "Troubleshooting", above, then open
-  an issue on
-  [GitHub Issues](https://github.com/nicotem/exegete/issues). That is
-  the only support channel, and email requests receive no reply
-  ([SUPPORT.md](SUPPORT.md)). Research data pasted into an issue becomes
+- **Problems with Exegete**: check "Troubleshooting", above. A fault
+  that could expose participants' data, or damage a project when
+  Exegete changes it, is best reported privately, so that it is not
+  public before it is fixed. [SECURITY.md](SECURITY.md) says how. For
+  anything else, open an issue on
+  [GitHub Issues](https://github.com/nicotem/exegete/issues), as
+  [SUPPORT.md](SUPPORT.md) describes. Requests for support sent by email
+  receive no reply. Research data pasted into an issue becomes
   public, so a made-up example, or a real one with names and details
   removed, is the safer way to show a problem. The real one is still a
   participant's words, which a search can find and someone can

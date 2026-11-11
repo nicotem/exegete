@@ -60,6 +60,7 @@ from .database import (
     version_for_details,
     validate_qda_path,
     project_database_path,
+    sqlite_says,
     validate_coder_name,
     validate_coder_note,
     forbidden_display_char,
@@ -3842,20 +3843,25 @@ WRITE_FAILED_REFUSED = (
     "open. " + BACKUP_BY_HAND_KEEPS_MEDIA)
 
 # Which of the two texts a fault gets is decided on the exception class
-# and then on its message text. That is a HEURISTIC: SQLite's messages
-# are stable but not a contract, so a transient fault worded in a way
-# this list does not know would get the refused text, whose advice is
-# the safe one either way (check the project, restore nothing that
-# opens).
-TRANSIENT_SQLITE_MARKERS = ("locked", "busy", "full", "i/o")
+# and then on SQLite's own result code (v0.15.4): busy, locked, full or
+# an I/O error, which waiting may cure. An error with no code (one
+# Python's module makes itself, such as a text that is not UTF-8, whose
+# message quotes it) counts only when its whole message is SQLite's
+# words for one of these, never by a word inside it. A transient fault
+# SQLite reports otherwise gets the refused text, whose advice is the
+# safe one either way (check the project, restore nothing that opens).
+_TRANSIENT_SQLITE_CODES = (5, 6, 10, 13)   # BUSY, LOCKED, IOERR, FULL
+_TRANSIENT_SQLITE_WORDS = ("database is locked", "database table is locked",
+                           "disk I/O error", "database or disk is full")
 
 
 def _is_transient_sqlite_error(error) -> bool:
-    """Heuristic: an OperationalError whose text says waiting may cure it."""
+    """An OperationalError that SQLite says waiting may cure, by its
+    result code (`database.sqlite_says`)."""
     if not isinstance(error, sqlite3.OperationalError):
         return False
-    text = str(error).lower()
-    return any(marker in text for marker in TRANSIENT_SQLITE_MARKERS)
+    return sqlite_says(error, _TRANSIENT_SQLITE_CODES,
+                       _TRANSIENT_SQLITE_WORDS)
 
 
 def _rollback_if_open(write_db) -> bool:
@@ -3931,8 +3937,7 @@ def _take_write_lock(write_db) -> None:
     try:
         write_db.begin_immediate()
     except sqlite3.OperationalError as e:
-        if getattr(e, "sqlite_errorcode", None) in (5, 6) or \
-                _is_locked_error(e):
+        if _is_locked_error(e):
             raise DatabaseLockedError(DB_LOCKED_MESSAGE) from None
         raise
 

@@ -666,10 +666,30 @@ def _sqlite_ro_immutable_uri(path: Union[str, Path]) -> str:
     return _sqlite_ro_uri(path) + "&immutable=1"
 
 
+# SQLite's own words for a busy and a locked database (v0.15.4)
+_SQLITE_LOCK_WORDS = ("database is locked", "database table is locked")
+
+
+def sqlite_says(e: BaseException, codes: Tuple[int, ...],
+                words: Tuple[str, ...]) -> bool:
+    """Whether SQLite gave this error one of these primary result codes
+    (v0.15.4): by its `sqlite_errorcode`, the extended code, whose low
+    byte is the primary one, which every error SQLite raises carries from
+    Python 3.11. An error with none, one Python's module makes itself (a
+    text that is not UTF-8, whose message quotes it), counts only when
+    its whole message is one of SQLite's `words` for those codes, never
+    by a word inside it: the project's text can hold any word."""
+    code = getattr(e, "sqlite_errorcode", None)
+    if isinstance(code, int) and not isinstance(code, bool):
+        return (code & 0xFF) in codes
+    return str(e) in words
+
+
 def _is_locked_error(e: sqlite3.Error) -> bool:
-    """Check whether a sqlite3 error indicates a locked/busy database."""
-    msg = str(e).lower()
-    return "locked" in msg or "busy" in msg
+    """Whether a sqlite3 error says the database is busy or locked:
+    SQLITE_BUSY or SQLITE_LOCKED, read from SQLite's own code
+    (`sqlite_says`, v0.15.4)."""
+    return sqlite_says(e, _SQLITE_BUSY_CODES, _SQLITE_LOCK_WORDS)
 
 
 # ----------------------------------------------------------------------------

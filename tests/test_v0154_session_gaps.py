@@ -958,6 +958,16 @@ class TestTheDocuments:
         for words in (ID_FILE, "another project", "workspace copy",
                       "cannot bring back an approval withdrawn since"):
             assert words in feature, words
+        # What apply_codings writes, and what the list counts as pending:
+        # the approvals that count here, not those given here, which an
+        # older copy put back can hold
+        apply = tools[tools.index("- `apply_codings("):]
+        apply = apply[:apply.index(" - `", 4)]
+        assert "approvals that count on this computer" in apply, apply
+        listed = tools[tools.index("- `list_coding_sessions("):]
+        listed = listed[:listed.index(" - `", 4)]
+        assert "does not count on this computer" in listed
+        assert "not given on this computer" not in tools
 
     def test_install(self):
         install = _doc("INSTALL.md")
@@ -982,7 +992,8 @@ class TestTheDocuments:
         came = came[:came.index(" ### ")]
         for words in (ID_FILE, "copied in from another of your projects",
                       "copy_project_to_workspace",
-                      "cannot bring back an approval you have withdrawn"):
+                      "cannot bring back an approval you have withdrawn",
+                      "writes only the approvals that count"):
             assert words in came, words
         path = (Path(__file__).resolve().parent.parent / "changelog.d"
                 / "sessions-with-project.md")
@@ -992,7 +1003,9 @@ class TestTheDocuments:
         fragment = " ".join(path.read_text(encoding="utf-8").split())
         for words in (ID_FILE, "cannot bring back an approval withdrawn "
                                "since", "read as pending",
-                      "reads its sessions as having come with the project"):
+                      "reads its sessions as having come with the project",
+                      "write only the approvals that count on this "
+                      "computer"):
             assert words in fragment, words
 
 

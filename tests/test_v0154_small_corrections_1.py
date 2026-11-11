@@ -335,3 +335,340 @@ class TestPreviewsTakeTheSameRules:
         _age(previews, 8 * DAY)
         reading_folder.sweep()
         assert page.is_file()
+
+
+# ---------------------------------------------------------------------------
+# 2. The warning about text editors with an AI assistant of their own
+# ---------------------------------------------------------------------------
+
+# A list in neither UTF-8 nor this machine's default encoding (set to
+# UTF-8 by the fixture), one the reader cannot parse, one it reads
+NEITHER = ('[{"original": "Élodie Marchbank", "pseudonym": "Participant E"}]'
+           .encode("cp1252"))
+BROKEN = b'[{"original": "Brisemar Tull", '
+READABLE = json.dumps([{"original": "Brisemar Tull",
+                        "pseudonym": "Participant B"}])
+HEADER_LINES = 5          # names_file.HEADER's lines, before the names
+
+
+def _once(raw: str) -> str:
+    """The answer, as Exegete gave it, holds the warning exactly once."""
+    assert raw.count(server.EDITOR_AI_WARNING) == 1, raw
+    return raw
+
+
+def _none(raw: str) -> None:
+    assert server.EDITOR_AI_WARNING not in raw, raw
+
+
+def _before_never_open(text: str, last: bool = True) -> None:
+    """The warning comes just before the sentence on never opening the
+    file, which stays last where `last`."""
+    assert (server.EDITOR_AI_WARNING + " "
+            + server.PREPARE_NAMES_LIST_NEVER_OPEN) in text, text
+    if last:
+        assert text.endswith(server.PREPARE_NAMES_LIST_NEVER_OPEN), text
+
+
+@pytest.fixture
+def named(tmp_path, monkeypatch):
+    """A selected project whose file 1 holds "Thomas", its Exegete folder
+    made; this machine's default encoding UTF-8, so that a list written
+    in cp1252 is read in neither encoding."""
+    import locale
+    from test_v012_pseudonymise_tool import build_project
+    from track5_helpers import write_fixture_sidecar
+    folder = build_project(tmp_path / "My studies" / "Study two.qda")
+    write_fixture_sidecar(str(folder))
+    original = (server.db, server.current_project_path)
+    answer = json.loads(server.select_project(str(folder)))
+    assert answer.get("success") is not False, answer
+    private_files.ensure_folder(folder)
+    monkeypatch.setattr(locale, "getpreferredencoding",
+                        lambda do_setlocale=True: "utf-8")
+    yield folder
+    if server.db is not None:
+        try:
+            server.db.close()
+        except Exception:
+            pass
+    server.db, server.current_project_path = original
+
+
+def _list(folder: Path, raw) -> None:
+    (folder / "pseudonyms.json").write_bytes(
+        raw if isinstance(raw, bytes) else raw.encode("utf-8"))
+
+
+def _names_file(folder: Path, *lines: str) -> Path:
+    from exegete.names_file import HEADER
+    path = folder / "Exegete" / private_files.NAMES_FILE
+    path.write_text(HEADER + "".join(line + "\n" for line in lines),
+                    encoding="utf-8")
+    return path
+
+
+class TestTheImportsAndGetCurrentProject:
+
+    def test_import_text_file_with_a_list_it_cannot_read(self, named):
+        _list(named, BROKEN)
+        raw = _once(server.import_text_file(
+            filename="fresh.txt", content="Words.",
+            apply_project_pseudonyms=True, create_backup=False))
+        assert json.loads(raw)["error"].endswith(server.EDITOR_AI_WARNING)
+
+    @pytest.mark.parametrize("kind", ["cannot_read", "cannot_use"])
+    def test_import_documents_with_a_list_it_cannot_read_or_use(
+            self, named, tmp_path, kind):
+        if kind == "cannot_read":
+            _list(named, BROKEN)
+        else:
+            # read, and refused by the engine: a pseudonym that is also a
+            # name in the list
+            _list(named, json.dumps([
+                {"original": "Annabel Quince", "pseudonym": "Tobias Wren"},
+                {"original": "Tobias Wren", "pseudonym": "Clara"}]))
+        document = tmp_path / "interview.txt"
+        document.write_text("Words of the interview.", encoding="utf-8")
+        raw = _once(server.import_documents(paths=[str(document)]))
+        stops = [stop for stop in json.loads(raw)["stops_the_import"]
+                 if server.EDITOR_AI_WARNING in stop]
+        assert len(stops) == 1 and stops[0].endswith(
+            server.EDITOR_AI_WARNING)
+
+    def test_get_current_project_with_a_list_in_neither_encoding(
+            self, named):
+        _list(named, NEITHER)
+        raw = _once(server.get_current_project())
+        error = json.loads(raw)["pseudonyms_json"]["error"]
+        assert error.endswith("save it as UTF-8. "
+                              + server.EDITOR_AI_WARNING)
+
+    @pytest.mark.parametrize("raw_list", [None, BROKEN, READABLE],
+                             ids=["none", "unparsed", "readable"])
+    def test_get_current_project_otherwise_names_no_editor(self, named,
+                                                          raw_list):
+        if raw_list is not None:
+            _list(named, raw_list)
+        _none(server.get_current_project())
+
+
+MAPPING = [{"original": "Thomas", "pseudonym": "Alex"}]
+
+
+def _execute(out: dict) -> str:
+    """The run on the preview's token, the typed mapping given again (a
+    preview never echoes it)."""
+    arguments = dict(out["execute_with"]["arguments"])
+    arguments["mapping"] = MAPPING
+    return server.pseudonymise_source(**arguments)
+
+
+class TestPseudonymiseSource:
+
+    def test_the_list_s_route(self, named):
+        _list(named, BROKEN)
+        raw = _once(server.pseudonymise_source(
+            file_id=1, use_project_pseudonyms=True))
+        assert json.loads(raw)["error"].endswith(server.EDITOR_AI_WARNING)
+
+    def test_the_typed_mapping_s_preview_and_execute(self, named):
+        """With a list in neither encoding, the warning follows the
+        reader's sentence wherever the save's refusal goes: the preview's
+        `if_saved` and the warning that quotes it, and the execute's
+        refusal."""
+        _list(named, NEITHER)
+        raw = server.pseudonymise_source(file_id=1, mapping=MAPPING,
+                                         save_mapping_to_project=True)
+        answer = json.loads(raw)
+        reader = "save it as UTF-8"
+        assert raw.count(reader) >= 1
+        assert raw.count(reader + ". " + server.EDITOR_AI_WARNING) == \
+            raw.count(reader)
+        assert raw.count(server.EDITOR_AI_WARNING) == raw.count(reader)
+        if_saved = answer["preview"]["mapping_retention"]["if_saved"][
+            "error"]
+        assert if_saved.count(server.EDITOR_AI_WARNING) == 1
+        assert if_saved.endswith(server.EDITOR_AI_WARNING)
+        refused = json.loads(_once(_execute(answer)))
+        assert refused["reason"] == "pseudonyms_json_unreadable"
+        assert (reader + ". " + server.EDITOR_AI_WARNING
+                + " Nothing was written.") in refused["error"]
+
+    def test_the_run_s_note_when_the_mapping_was_not_put_in_place(
+            self, named, monkeypatch):
+        out = json.loads(server.pseudonymise_source(
+            file_id=1, mapping=MAPPING, save_mapping_to_project=True))
+        real = Path.replace
+
+        def refusing(self, target):
+            if Path(target).name == "pseudonyms.json":
+                raise PermissionError("no")
+            return real(self, target)
+        monkeypatch.setattr(Path, "replace", refusing)
+        raw = _once(_execute(out))
+        monkeypatch.undo()
+        result = json.loads(raw)
+        assert result["mapping_saved"] is False, result
+        note = [n for n in result["notes"] if n.startswith("The mapping")][0]
+        assert note.endswith("(the button in Manage Files). "
+                             + server.EDITOR_AI_WARNING)
+
+    def test_a_mapping_put_in_place_names_no_editor(self, named):
+        out = json.loads(server.pseudonymise_source(
+            file_id=1, mapping=MAPPING, save_mapping_to_project=True))
+        raw = _execute(out)
+        assert json.loads(raw)["mapping_saved"] is True, raw
+        _none(raw)
+
+
+GOOD_LINE = "Quorvin Ashdale = Participant Q"
+
+
+class TestSaveNamesList:
+
+    def test_the_names_file_unreadable(self, named, monkeypatch):
+        _names_file(named, GOOD_LINE)
+
+        def refused(project, name):
+            raise private_files.PrivateFilesError("unreadable", "No.")
+        monkeypatch.setattr(private_files, "read_bytes", refused)
+        answer = json.loads(_once(server.save_names_list()))
+        assert answer["reason"] == "names_file_not_readable"
+        _before_never_open(answer["error"])
+
+    def test_the_names_file_not_utf8(self, named):
+        path = _names_file(named)
+        path.write_bytes(path.read_bytes()
+                         + "Élodie Marchbank = P\n".encode("cp1252"))
+        answer = json.loads(_once(server.save_names_list()))
+        assert answer["reason"] == "names_file_not_utf8"
+        _before_never_open(answer["error"])
+
+    @pytest.mark.parametrize("raw_list", [BROKEN, NEITHER],
+                             ids=["unparsed", "neither_encoding"])
+    def test_the_list_unreadable(self, named, raw_list):
+        _names_file(named, GOOD_LINE)
+        _list(named, raw_list)
+        answer = json.loads(_once(server.save_names_list()))
+        assert answer["reason"] == "pseudonyms_json_unreadable"
+        assert answer["error"].endswith(
+            server.NAMES_LIST_UNREADABLE_ADVICE + " "
+            + server.EDITOR_AI_WARNING)
+
+    @pytest.mark.parametrize("with_warnings", [False, True])
+    def test_a_preview_that_blocks_in_its_next_step_alone(self, named,
+                                                          with_warnings):
+        """A line not read blocks; with a list entry on no line, the
+        preview also warns that saving removes it, a warning that names a
+        text editor: the warning about editors is in `next_step` alone."""
+        _names_file(named, GOOD_LINE, "Brisemar")
+        if with_warnings:
+            _list(named, READABLE)
+        answer = json.loads(_once(server.save_names_list()))
+        assert answer["reason"] == "corrections_needed", answer
+        _before_never_open(answer["next_step"])
+        if with_warnings:
+            assert server.SAVE_NAMES_LIST_REMOVES in answer["warnings"]
+        assert server.EDITOR_AI_WARNING not in json.dumps(
+            answer.get("warnings", []))
+
+    @pytest.mark.parametrize("kind", ["put_back_kept", "removes",
+                                      "kept_backslash"])
+    def test_a_token_preview_with_a_warning_naming_an_editor(self, named,
+                                                             kind):
+        lines, entries = {
+            "put_back_kept": (["Ashdale = Participant A1"],
+                              [("Brisemar = Tull", "Mr Ashdale")]),
+            "removes": ([GOOD_LINE], [("Brisemar Tull", "Participant B")]),
+            "kept_backslash": ([GOOD_LINE],
+                               [("Brisemar = Tull", "Participant\\B")]),
+        }[kind]
+        _names_file(named, *lines)
+        _list(named, json.dumps([{"original": o, "pseudonym": p}
+                                 for o, p in entries]))
+        answer = json.loads(_once(server.save_names_list()))
+        assert "preview_token" in answer, answer
+        assert answer["warnings"][-1] == server.EDITOR_AI_WARNING
+        named_one = {"put_back_kept": server.SAVE_NAMES_LIST_PUT_BACK_KEPT,
+                     "removes": server.SAVE_NAMES_LIST_REMOVES,
+                     "kept_backslash": server.SAVE_NAMES_LIST_KEPT_BACKSLASH,
+                     }[kind]
+        assert any(named_one in warning for warning in answer["warnings"])
+
+    def test_none_where_no_text_names_an_editor(self, named):
+        """No names file, one holding no names, a token preview whose
+        warnings name no editor, and the saved list's note."""
+        _none(server.save_names_list())
+        _names_file(named)
+        _none(server.save_names_list())
+        _names_file(named, GOOD_LINE, "Quorvin = Participant Q")
+        preview = server.save_names_list()
+        _none(preview)
+        answer = json.loads(preview)
+        assert answer.get("warnings"), answer
+        saved = server.save_names_list(
+            preview_token=answer["preview_token"])
+        done = json.loads(saved)
+        assert done["success"] is True, done
+        assert done["note"] == server.SAVE_NAMES_LIST_NOTE
+        _none(saved)
+
+
+class TestPrepareNamesList:
+
+    def test_made_with_a_list_in_neither_encoding(self, named):
+        """The step gives the warning; the list's own error, which ends
+        with it elsewhere, then does not."""
+        _list(named, NEITHER)
+        answer = json.loads(_once(server.prepare_names_list()))
+        assert answer["created"] is True
+        _before_never_open(answer["next_step"])
+        assert answer["names_list_not_read"].endswith("save it as UTF-8.")
+
+    def test_kept(self, named):
+        _names_file(named, GOOD_LINE)
+        answer = json.loads(_once(server.prepare_names_list()))
+        assert answer["created"] is False
+        _before_never_open(answer["next_step"])
+
+    def test_kept_not_in_utf8(self, named):
+        """The step's own sentence for the file names an editor too: one
+        warning, before the sentence on never opening it."""
+        path = _names_file(named)
+        path.write_bytes(path.read_bytes()
+                         + "Élodie Marchbank = P\n".encode("cp1252"))
+        answer = json.loads(_once(server.prepare_names_list()))
+        assert answer["existing_file_not_read"] == "not_utf8"
+        _before_never_open(answer["next_step"], last=False)
+        assert answer["next_step"].endswith(server.NAMES_FILE_NOT_UTF8_STEP)
+
+    def test_too_large(self, named):
+        path = _names_file(named)
+        path.write_bytes(b"x" * (1024 * 1024 + 1))
+        answer = json.loads(_once(server.prepare_names_list()))
+        assert answer["existing_file_not_read"] == "too_large"
+        _before_never_open(answer["next_step"])
+
+    @pytest.mark.parametrize("raw_list", [READABLE, NEITHER],
+                             ids=["readable", "neither_encoding"])
+    def test_a_link_at_the_file_s_name(self, named, tmp_path, raw_list):
+        """Nothing shown or opened: the step names no editor, so only a
+        list whose refusal names one gives the warning, once."""
+        target = tmp_path / "elsewhere.txt"
+        target.write_text(GOOD_LINE + "\n", encoding="utf-8")
+        try:
+            (named / "Exegete" / private_files.NAMES_FILE).symlink_to(target)
+        except (OSError, NotImplementedError):
+            pytest.skip("links cannot be made here")
+        _list(named, raw_list)
+        raw = server.prepare_names_list()
+        answer = json.loads(raw)
+        assert answer["existing_file_not_read"] == "link"
+        assert server.EDITOR_AI_WARNING not in answer["next_step"]
+        if raw_list is READABLE:
+            _none(raw)
+        else:
+            _once(raw)
+            assert answer["names_list_not_read"].endswith(
+                server.EDITOR_AI_WARNING)

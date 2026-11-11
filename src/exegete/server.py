@@ -118,6 +118,7 @@ from .database import (
     MAX_TEXT_CONTENT_LENGTH,
     read_project_pseudonyms_with_raw,
     PSEUDONYMS_JSON_NAME,
+    NamesListEncodingError,
 )
 from . import pseudonymise as pseudo
 from . import occurrences as occurrence_ids
@@ -6298,6 +6299,17 @@ def _set_name_warnings(ro, state, name: str,
             "Unchanged; recorded again.")
     return warnings
 
+# The warning given once in each answer that names a text editor for the
+# names list or the names file, or opens that file (v0.15.4), in
+# PRIVACY.md's terms: fixed text, never a name. Placed just before
+# PREPARE_NAMES_LIST_NEVER_OPEN where an answer's text has it, which
+# stays the last sentence of a step or refusal, otherwise last.
+EDITOR_AI_WARNING = (
+    "A text editor that has an AI assistant of its own can send a file of "
+    "real names to that assistant's provider when the assistant is used "
+    "on the file: the researcher may prefer an editor whose AI features "
+    "are switched off.")
+
 # What each tool that applies the project's pseudonyms.json adds when the
 # file cannot be read (v0.14, server-wide): the reader's own message is
 # the same for every caller, and the way round it is each tool's own.
@@ -6332,12 +6344,27 @@ def _pseudonyms_json_error(e: BaseException, advice: str = "") -> str:
     `RuntimeError` pathlib raises for a link that loops on Python before
     3.13; a `RecursionError` (a file nested past Python's limit) says
     nothing useful beyond its kind.
+
+    Every advice names a text editor, and so does the reader's refusal of
+    a list in neither encoding (`NamesListEncodingError`): with either,
+    the answer ends with EDITOR_AI_WARNING, once (v0.15.4).
     """
     if isinstance(e, ValueError) or (isinstance(e, OSError)
                                      and e.errno is None):
-        return str(e) + advice
-    return (f"{PSEUDONYMS_JSON_NAME} could not be read ({error_label(e)})."
-            + advice)
+        text = str(e) + advice
+    else:
+        text = (f"{PSEUDONYMS_JSON_NAME} could not be read "
+                f"({error_label(e)})." + advice)
+    if advice or isinstance(e, NamesListEncodingError):
+        text += " " + EDITOR_AI_WARNING
+    return text
+
+
+def _without_editor_warning(text: str) -> str:
+    """`text` less the warning `_pseudonyms_json_error` ends it with, for
+    an answer that gives the warning in its step instead (v0.15.4)."""
+    ending = " " + EDITOR_AI_WARNING
+    return text[:-len(ending)] if text.endswith(ending) else text
 
 
 def _pseudonyms_json_read() -> Tuple[Dict[str, Any], Optional[List[Dict]]]:
@@ -6582,9 +6609,11 @@ PREPARE_NAMES_LIST_FILL_IN = (
     "save_names_list.")
 PREPARE_NAMES_LIST_NEVER_OPEN = (
     "Never open or read the file yourself, even when a file tool could.")
+# v0.15.4: the warning about editors with an AI assistant of their own
+# just before the last sentence, since the file opens in a text editor
 PREPARE_NAMES_LIST_NEXT_STEP = " ".join((
     PREPARE_NAMES_LIST_WHERE, PREPARE_NAMES_LIST_FILL_IN,
-    PREPARE_NAMES_LIST_NEVER_OPEN))
+    EDITOR_AI_WARNING, PREPARE_NAMES_LIST_NEVER_OPEN))
 NAMES_FILE_NOT_UTF8_STEP = (
     "The names file there is not saved as UTF-8 text: ask the researcher "
     "to save it again as plain text in UTF-8; most text editors offer the "
@@ -6747,21 +6776,28 @@ def prepare_names_list() -> str:
         found = _names_file_counts(folder, entries)
     shown = private_files.show(folder, private_files.NAMES_FILE)
     opened = private_files.open_in_app(folder, private_files.NAMES_FILE)
+    not_read = found.get("existing_file_not_read")
+    # v0.15.4: the step gives the warning about editors with an AI
+    # assistant of their own whenever the file is there to be shown and
+    # opened, and then the list's own error, which can end with it, does
+    # not give it again
+    nothing_to_open = not_read in ("link", "not_a_file")
     answer: Dict[str, Any] = {"names_file": str(place), "created": created,
                               "entries_written": written}
     if not_written:
         answer["entries_not_written"] = not_written
         answer["entries_not_written_note"] = ENTRIES_NOT_WRITTEN_NOTE
     if list_error:
-        answer["names_list_not_read"] = list_error
+        answer["names_list_not_read"] = (
+            list_error if nothing_to_open
+            else _without_editor_warning(list_error))
     answer.update(found)
     answer["shown_in_folder"] = shown.done
     answer["opened"] = opened.done
     if not opened.done:
         answer["not_opened_because"] = opened.reason
     step = PREPARE_NAMES_LIST_NEXT_STEP
-    not_read = found.get("existing_file_not_read")
-    if not_read in ("link", "not_a_file"):
+    if nothing_to_open:
         # Fix round 2: nothing there to fill in, nothing shown or opened:
         # the step stands in for the ordinary one, keeping its last
         # sentence
@@ -6771,7 +6807,7 @@ def prepare_names_list() -> str:
         # Fix round 2: shown and opened, but not one to fill in: the step
         # stands in for the ordinary one's second sentence
         step = " ".join((PREPARE_NAMES_LIST_WHERE, NAMES_FILE_TOO_LARGE_STEP,
-                         PREPARE_NAMES_LIST_NEVER_OPEN))
+                         EDITOR_AI_WARNING, PREPARE_NAMES_LIST_NEVER_OPEN))
     elif not_read is not None:
         step += " " + NAMES_FILE_NOT_READ_STEPS.get(
             not_read, NAMES_FILE_NOT_READ_STEP)
@@ -6818,12 +6854,13 @@ NAMES_FILE_CHANGED = (
 NAMES_FILE_UNREADABLE = (
     "The system refused to read the names file, so it was not read. The "
     "researcher can check that they can open it in their text editor; "
-    "then preview again. " + PREPARE_NAMES_LIST_NEVER_OPEN)
+    "then preview again. " + EDITOR_AI_WARNING + " "
+    + PREPARE_NAMES_LIST_NEVER_OPEN)
 NAMES_FILE_IN_FOLDER_NOT_READ = "So the names file was not read."
 NAMES_FILE_NOT_UTF8 = (
     "The names file is not saved as UTF-8 text. Ask the researcher to save "
     "it again as plain text in UTF-8 (most text editors offer the encoding "
-    "when saving a file), then preview again. "
+    "when saving a file), then preview again. " + EDITOR_AI_WARNING + " "
     + PREPARE_NAMES_LIST_NEVER_OPEN)
 NAMES_FILE_EMPTY = (
     "The names file holds no names yet, only notes or blank lines. Ask the "
@@ -7116,9 +7153,11 @@ def _names_list_review(folder: Path) -> _NamesListReview:
             existing, _encoding, raw_list, existing_mode = \
                 read_project_pseudonyms_with_raw(folder)
         except (ValueError, OSError, LookupError, RuntimeError) as e:
+            # The advice passed in, so the warning about editors follows
+            # it, once (v0.15.4)
             return _names_review_refusal(
                 "pseudonyms_json_unreadable",
-                f"{_pseudonyms_json_error(e)} {NAMES_LIST_UNREADABLE_ADVICE}")
+                _pseudonyms_json_error(e, " " + NAMES_LIST_UNREADABLE_ADVICE))
     # 5. The checks, by line number
     pairs = parsed.pairs
     first_line: Dict[str, Tuple[int, str]] = {}
@@ -7320,10 +7359,32 @@ def _names_list_correct_step(preview: Dict[str, Any]) -> str:
         step.append(SAVE_NAMES_LIST_TOO_MANY)
     if preview["kept_entries_in_conflict"]:
         step.append(SAVE_NAMES_LIST_KEPT_CONFLICT)
+    # v0.15.4: the step names a text editor, so it gives the warning
+    # about editors with an AI assistant of their own, in every preview
+    # that blocks (its warnings then never give it)
+    step.append(EDITOR_AI_WARNING)
     # Fix round 1: the moment an assistant with file tools of its own is
     # most tempted to look, so the step ends as prepare_names_list's do
     step.append(PREPARE_NAMES_LIST_NEVER_OPEN)
     return " ".join(step)
+
+
+# The warnings of save_names_list's preview that send the researcher to
+# pseudonyms.json in a text editor (v0.15.4): in a preview with a token,
+# the warning about editors with an AI assistant of their own follows them
+_WARNINGS_NAMING_AN_EDITOR = (SAVE_NAMES_LIST_PUT_BACK_KEPT,
+                              SAVE_NAMES_LIST_REMOVES,
+                              SAVE_NAMES_LIST_KEPT_BACKSLASH)
+
+
+def _token_preview_warnings(warnings: List[str]) -> List[str]:
+    """A token preview's warnings, ended with EDITOR_AI_WARNING when one
+    of them names a text editor (SAVE_NAMES_LIST_PUT_BACK_KEPT is given
+    inside SAVE_NAMES_LIST_PUT_BACK's warning)."""
+    if any(named in warning for warning in warnings
+           for named in _WARNINGS_NAMING_AN_EDITOR):
+        return list(warnings) + [EDITOR_AI_WARNING]
+    return list(warnings)
 
 
 @mcp.tool(annotations=TOOL_CHANGES)
@@ -7375,7 +7436,9 @@ def save_names_list(preview_token: Optional[str] = None) -> str:
         try:
             payload = _issue_preview(
                 "save_names_list", token_args, shown, review.rows,
-                SAVE_NAMES_LIST_HINT, {}, warnings=review.warnings or None,
+                SAVE_NAMES_LIST_HINT, {},
+                warnings=_token_preview_warnings(review.warnings or [])
+                or None,
                 state_preview=review.preview)
         except PreviewSecretUnavailable:
             return json.dumps(
@@ -21335,6 +21398,12 @@ def _pseudonyms_json_merge(folder: Path, validated) -> Dict[str, Any]:
                       and PSEUDONYMS_JSON_NAME in str(e) else
                       f"{PSEUDONYMS_JSON_NAME} could not be read "
                       f"({type(e).__name__})")
+            if isinstance(e, NamesListEncodingError):
+                # The reader's sentence names a text editor: the warning
+                # about editors with an AI assistant of their own follows
+                # it wherever the detail goes (v0.15.4), each place
+                # ending the detail with its own full stop
+                detail += ". " + EDITOR_AI_WARNING.rstrip(".")
             raise _SaveRefused("pseudonyms_json_unreadable", detail) from None
         if not isinstance(raw, list) or len(raw) != len(existing):
             raise _SaveRefused(
@@ -22411,7 +22480,8 @@ def _pseudonymise_mapping_notes(result: Dict[str, Any],
                  f"into pseudonyms.json in the project folder with a text "
                  f"editor, as a list of {{original, pseudonym}} entries; "
                  f"or, if they use QualCoder, enter it in its "
-                 f"Pseudonyms dialog (the button in Manage Files).")
+                 f"Pseudonyms dialog (the button in Manage Files). "
+                 f"{EDITOR_AI_WARNING}")
     else:
         note += (" On this run the call attested that the researcher keeps "
                  "their own record. Make sure that is true now.")

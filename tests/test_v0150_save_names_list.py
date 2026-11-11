@@ -73,10 +73,13 @@ NOT_READABLE = {
 # researcher to act on the file
 NEVER_OPEN = (
     "Never open or read the file yourself, even when a file tool could.")
+# v0.15.4: a refusal that names a text editor gives the warning about
+# editors with an AI assistant of their own, just before NEVER_OPEN
 NOT_UTF8 = (
     "The names file is not saved as UTF-8 text. Ask the researcher to save "
     "it again as plain text in UTF-8 (most text editors offer the encoding "
-    "when saving a file), then preview again. " + NEVER_OPEN)
+    "when saving a file), then preview again. " + server.EDITOR_AI_WARNING
+    + " " + NEVER_OPEN)
 EMPTY = (
     "The names file holds no names yet, only notes or blank lines. Ask the "
     "researcher to fill it in and save it, then preview again. "
@@ -524,7 +527,8 @@ class TestTheRefusals:
         ("unreadable", "The system refused to read the names file, so it "
                        "was not read. The researcher can check that they "
                        "can open it in their text editor; then preview "
-                       "again. " + NEVER_OPEN)])
+                       "again. " + server.EDITOR_AI_WARNING + " "
+                       + NEVER_OPEN)])
     def test_the_readers_other_refusals(self, selected, monkeypatch, code,
                                         words):
         _write_names(selected, "Quorvin Ashdale = Participant Q")
@@ -562,11 +566,13 @@ class TestTheRefusals:
             '[{"original": "Brisemar Tull", ', encoding="utf-8")
         text = _refused(_save(), "pseudonyms_json_unreadable")
         assert text.startswith("The project's names list (pseudonyms.json")
-        assert text.endswith(" " + UNREADABLE_ADVICE)
+        # v0.15.4: the advice names a text editor
+        assert text.endswith(" " + UNREADABLE_ADVICE + " "
+                             + server.EDITOR_AI_WARNING)
         (selected / "pseudonyms.json").write_text('{"a": 1}',
                                                   encoding="utf-8")
         assert _refused(_save(), "pseudonyms_json_unreadable").endswith(
-            UNREADABLE_ADVICE)
+            UNREADABLE_ADVICE + " " + server.EDITOR_AI_WARNING)
 
     def test_the_list_a_link(self, selected, tmp_path):
         _write_names(selected, "Quorvin Ashdale = Participant Q")
@@ -946,7 +952,9 @@ class TestTheWarnings:
         # no line
         assert answer["warnings"] == [
             server.SAVE_NAMES_LIST_PUT_BACK + " "
-            + server.SAVE_NAMES_LIST_PUT_BACK_KEPT]
+            + server.SAVE_NAMES_LIST_PUT_BACK_KEPT,
+            # v0.15.4: that warning names a text editor
+            server.EDITOR_AI_WARNING]
         assert ("on no line of the names file: the researcher can change "
                 "them in pseudonyms.json") in \
             server.SAVE_NAMES_LIST_PUT_BACK_KEPT

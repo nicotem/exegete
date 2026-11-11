@@ -530,9 +530,9 @@ assistant. These pages change often, and the linked pages govern.
   are three exceptions:
   - In the version where chat and Cowork are one conversation (above),
     a conversation can read a folder you connect.
-  - Another extension can read your project: "Local MCP servers bundled
-    with plugins and desktop extensions run on your computer with the
-    same permissions as any other program you run."
+  - Another extension that reads files can read your project: "Local MCP
+    servers bundled with plugins and desktop extensions run on your
+    computer with the same permissions as any other program you run."
     (<https://support.claude.com/en/articles/13364135-use-claude-cowork-safely>,
     read 4 November 2026).
   - Computer use can, once switched on (the "Enable computer use"
@@ -696,9 +696,9 @@ versions"). It also holds:
     were.
 
   Exegete replaces the secret by itself, with the same effects, when it
-  finds the file malformed. On macOS and Linux it also replaces it when
-  other accounts can read it, as after a restore or a sync tool widened
-  its permissions, and logs that it did. The export tools refuse paths
+  finds the file malformed or, on macOS and Linux, readable by other
+  accounts, as after a restore or a sync tool widened its permissions.
+  It logs that it did. The export tools refuse paths
   inside this folder, and inside the project folder, by which folder a
   path really is, not by how it is spelled. So another spelling of the
   same folder is refused too, such as `~/.EXEGETE` on a Mac or on
@@ -1073,11 +1073,11 @@ QualCoder:
 - **Whole-row deletes** are the one exception to that. A tool that
   removes an entire row, such as a coding, removes any private note on
   it together with the row. `delete_coding` and `delete_annotation`
-  remove single rows. The cascades remove the rows that depend on what
-  they delete or merge: `delete_code`, `delete_category`, `merge_codes`
-  (for the duplicate codings it discards and, in a database of a version
-  before 16, the merged code's own memo) and `merge_category` (when
-  merging to the top level, or in a database before version 16).
+  remove single rows. The cascades, which can remove many rows at once,
+  are `delete_code`, `delete_category`, `merge_codes` (for the duplicate
+  codings it discards and, in a database of a version before 16, the
+  merged code's own memo) and `merge_category` (when merging to the top
+  level, or in a database before version 16).
   `delete_coding` and `delete_annotation` refuse a row whose memo
   carries a private note unless the call passes
   `confirm_private_note_deletion=true`. The refusal says only that a
@@ -1985,19 +1985,19 @@ that open files by themselves" says.
 ### Rung 4: fully local models (Experimental)
 
 The model runs on your computer, so no third-party processor is
-involved. Every operation of Exegete happens on your computer too,
-while its check for new versions stays off, as it is on this route
-unless you switch it on ("Checking for new versions", below). One thing
-still leaves the computer, though: on Windows x64 a library Exegete
-installs for PDFs reports its use to Windows, with nothing from your projects
-("A library's usage reports", under "How your data flows"). LM
-Studio's documentation states (quoted 4 November 2026,
+involved. Every operation of Exegete happens on your computer too, while
+its check for new versions stays off, as it is on this route unless you
+switch it on ("Checking for new versions", below). One exception
+remains, though: on Windows x64 a library Exegete installs for PDFs
+reports its use to Windows, with nothing from your projects ("A
+library's usage reports", under "How your data flows"). LM Studio's
+documentation states (quoted 4 November 2026,
 <https://lmstudio.ai/docs/app/offline>) that LM Studio "can operate
 entirely offline" and that "Nothing you enter into LM Studio when
 chatting with LLMs leaves your device". That is the maker's statement,
 not a certification by this project. You can check offline work by
-disconnecting and working. You can also check that the host's entry
-for Exegete, the lines in its configuration that start Exegete, sets
+disconnecting and working. You can also check that the host's entry for
+Exegete, the lines in its configuration that start Exegete, sets
 `EXEGETE_UPDATE_CHECK` to `off` (Exegete's log says at each start
 whether checking is on). A data-management plan could record both.
 Disconnecting shows that the work needs no network, not that nothing

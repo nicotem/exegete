@@ -504,8 +504,8 @@ def test_privacy_says_what_onnxruntime_reports_and_what_can_be_done():
     governance = _flat_section("PRIVACY.md", "## Your governance options")
     # (v0.15.4, the readability reading: a sentence of its own, with its
     # subject named)
-    assert ("One thing still leaves the computer, though: on Windows x64 a "
-            "library Exegete installs for PDFs reports its use to Windows") \
+    assert ("One exception remains, though: on Windows x64 a library "
+            "Exegete installs for PDFs reports its use to Windows") \
         in governance
     # (v0.15.2: the LM Studio recipe is the Terminal guide's)
     install = " ".join((REPO / "docs/installing-from-the-terminal.md"

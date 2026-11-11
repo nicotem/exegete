@@ -620,3 +620,86 @@ def test_a_real_junction_adds_nothing(setup_server, qualcoder_db_path,
     listed = {Path(entry["path"]).name: entry
               for entry in server.discover_projects([str(search)])}
     assert listed["Study.qda"]["size_mb"] == 3.0
+
+
+# ===========================================================================
+# 4. "Busy" only when SQLite says so (row 251)
+# ===========================================================================
+
+def _decode_error(tmp_path, word):
+    """The error Python's module makes for a text that is not UTF-8,
+    quoting it, here with `word` after the bad byte."""
+    with closing(sqlite3.connect(str(tmp_path / f"{len(word)}.db"))) as c:
+        c.execute("CREATE TABLE t (x TEXT)")
+        c.execute("INSERT INTO t VALUES (CAST(? AS TEXT))",
+                  (b"\xff" + word.encode(),))
+        with pytest.raises(sqlite3.OperationalError) as caught:
+            c.execute("SELECT x FROM t").fetchall()
+    return caught.value
+
+
+@pytest.mark.parametrize("word", ["database is locked", "busy", "full",
+                                  "I/O", "database or disk is full"])
+def test_a_message_quoting_the_words_is_neither_busy_nor_transient(
+        tmp_path, word):
+    error = _decode_error(tmp_path, word)
+    assert word in str(error)
+    assert not database._is_locked_error(error)
+    assert not server._is_transient_sqlite_error(error)
+
+
+def test_a_real_busy_error_and_a_table_lock_are_both(tmp_path):
+    path = str(tmp_path / "b.db")
+    with closing(sqlite3.connect(path)) as one, \
+            closing(sqlite3.connect(path, timeout=0)) as two:
+        one.execute("CREATE TABLE t (x)")
+        one.executemany("INSERT INTO t VALUES (?)", [(1,), (2,)])
+        one.commit()
+        one.execute("BEGIN IMMEDIATE")
+        with pytest.raises(sqlite3.OperationalError) as busy:
+            two.execute("BEGIN IMMEDIATE")
+        one.rollback()
+        cursor = one.execute("SELECT x FROM t")
+        cursor.fetchone()
+        with pytest.raises(sqlite3.OperationalError) as table:
+            one.execute("DROP TABLE t")
+        cursor.close()
+    for error in (busy.value, table.value):
+        assert database._is_locked_error(error), error
+        assert server._is_transient_sqlite_error(error), error
+
+
+def test_an_error_with_no_code_counts_by_sqlites_whole_words():
+    """An error made with SQLite's words (as a library or a test makes
+    one) is read by its whole message, never by a word inside it."""
+    for words in ("database is locked", "database table is locked"):
+        assert database._is_locked_error(sqlite3.OperationalError(words))
+    for words in ("database is busy", "database is locked by Ann",
+                  "Ann's notes: locked"):
+        assert not database._is_locked_error(
+            sqlite3.OperationalError(words))
+        assert not server._is_transient_sqlite_error(
+            sqlite3.OperationalError(words))
+    for words in ("disk I/O error", "database or disk is full"):
+        assert server._is_transient_sqlite_error(
+            sqlite3.OperationalError(words))
+        assert not database._is_locked_error(
+            sqlite3.OperationalError(words))
+    # An extended code is read by its primary one (SQLITE_BUSY_SNAPSHOT)
+    snapshot = sqlite3.OperationalError("cannot start a transaction")
+    snapshot.sqlite_errorcode = 5 | (2 << 8)
+    assert database._is_locked_error(snapshot)
+
+
+def test_an_export_reading_a_text_that_quotes_busy_says_the_read(
+        setup_server, qualcoder_db_path, tmp_path):
+    """A code memo holding bytes that are not UTF-8 and "busy": the
+    export answers the read's refusal, naming the kind of row, never the
+    busy database's text."""
+    _exec(qualcoder_db_path, "UPDATE code_name SET memo = CAST(? AS TEXT) "
+          "WHERE cid = 1", (b"\xff database is busy",))
+    _reopen(qualcoder_db_path)
+    answer = _export(output_path=str(tmp_path / "b.qdpx"))
+    assert answer["error"] != DB_LOCKED_MESSAGE, answer
+    assert answer["error"] == refi_export.export_read_refusal(
+        "codes and categories"), answer

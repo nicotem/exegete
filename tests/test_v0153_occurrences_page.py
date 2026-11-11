@@ -1198,12 +1198,12 @@ class TestWhereThePageGoes:
             assert not page.exists() and fresh_temp.exists()
 
     def test_a_reading_copy_beside_the_page_goes_at_its_week(self, tmp_path):
-        """A reading copy more than a week old goes at the sweep that
-        removes the page for choosing beside it: the page's folder, and
-        the file's folder whose time its making changed, keep the copy no
-        longer than the page stands. Beside a page under an hour old the
-        copy stays until that page goes. The folders' own times are left
-        as Exegete's writes made them."""
+        """A reading copy more than a week old goes at the first sweep,
+        by its own time, even beside a page for choosing under an hour old
+        (v0.15.4): the page and the folders stay while it stands, and the
+        sweep that removes the page takes the file's folder, which then
+        holds no file. The folders' own times are left as Exegete's writes
+        made them."""
         with fresh(tmp_path, TOMS) as folder:
             shown = json.loads(server.open_file_for_reading(1))
             copy = Path(shown["location"])
@@ -1214,7 +1214,8 @@ class TestWhereThePageGoes:
             os.utime(copy, (now - reading_folder.LIFETIME - 24 * 3600,) * 2)
             os.utime(page, (now - 30 * 60,) * 2)
             reading_folder.sweep(now)
-            assert copy.exists() and page.exists()
+            assert not copy.exists() and page.exists()
+            assert copy.parent.is_dir()
             os.utime(page, (now - reading_folder.PREVIEW_LIFETIME - 5,) * 2)
             reading_folder.sweep(now)
             assert not page.exists()

@@ -28,7 +28,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import exegete.server as server  # noqa: E402
-from exegete import database, private_files  # noqa: E402
+from exegete import (database, private_files,  # noqa: E402
+                     reading_folder)
 
 from test_v0152_undo_record import (make_project,  # noqa: E402
                                     server_state)  # noqa: F401
@@ -185,3 +186,152 @@ class TestAWorkspaceCopyLeavesOutTheNamesListsTemporaryCopies:
             assert "pseudonyms.json.<eight characters>.tmp" in text, text
             assert "whatever its age" in text, text
         assert "the same exclusions as backups" in line
+
+
+# ---------------------------------------------------------------------------
+# 3. A reading copy goes a week after it was written (the design's item 4)
+# ---------------------------------------------------------------------------
+
+DAY = 24 * HOUR
+
+
+def _page(folder: Path, name: str) -> Path:
+    return reading_folder.write_page(
+        folder, name, "<!DOCTYPE html>\n" + reading_folder.PAGE_MARK)
+
+
+def _a_file_s_folder(tmp_path, name, copy_age=None, original_age=None):
+    """In project `name`'s subfolder of the reading folder, file 1's folder
+    with a reading copy and a copy of its original of the ages given
+    (None: not there), each folder's time that of its newest write."""
+    project = tmp_path / f"{name}.qda"
+    folder = reading_folder.file_folder(project, 1)
+    made = {"qda": project, "project": folder.parent, "folder": folder}
+    ages = []
+    if copy_age is not None:
+        made["copy"] = _page(folder, "int1.html")
+        _age(made["copy"], copy_age)
+        ages.append(copy_age)
+    if original_age is not None:
+        source = tmp_path / f"{name}.docx"
+        source.write_bytes(b"the original")
+        inside = reading_folder.original_folder(project, 1)
+        made["original"] = reading_folder.copy_read_only(source, inside,
+                                                         "int1.docx")
+        _age(made["original"], original_age)
+        _age(inside, original_age)
+        ages.append(original_age)
+    if ages:
+        _age(folder, min(ages))
+    return made
+
+
+def _link(link: Path, target: Path) -> None:
+    """A link to a folder: a junction on Windows, else a symbolic link."""
+    if os.name == "nt":
+        import _winapi  # Windows only
+        _winapi.CreateJunction(str(target), str(link))
+    else:
+        link.symlink_to(target, target_is_directory=True)
+
+
+class TestEachReadingCopyGoesAtItsOwnWeek:
+
+    def test_a_reading_copy_a_week_old_beside_a_younger_copy(self, tmp_path):
+        made = _a_file_s_folder(tmp_path, "A", copy_age=8 * DAY,
+                                original_age=DAY)
+        reading_folder.sweep()
+        assert not made["copy"].exists()
+        assert made["original"].is_file() and made["folder"].is_dir()
+
+    def test_a_copy_of_an_original_a_week_old_beside_a_younger_page(
+            self, tmp_path):
+        made = _a_file_s_folder(tmp_path, "B", copy_age=DAY,
+                                original_age=8 * DAY)
+        reading_folder.sweep()
+        assert not made["original"].exists()
+        assert made["copy"].is_file() and made["folder"].is_dir()
+
+    def test_both_a_week_old_take_both_folders_in_the_same_tidy(
+            self, tmp_path):
+        made = _a_file_s_folder(tmp_path, "C", copy_age=8 * DAY,
+                                original_age=8 * DAY)
+        reading_folder.sweep()
+        assert not os.path.lexists(made["folder"])
+        assert not os.path.lexists(made["project"])
+
+    def test_a_reading_copy_alone_a_week_old_takes_both_folders(
+            self, tmp_path):
+        made = _a_file_s_folder(tmp_path, "D", copy_age=8 * DAY)
+        reading_folder.sweep()
+        assert not os.path.lexists(made["folder"])
+        assert not os.path.lexists(made["project"])
+
+    def test_beside_a_page_for_choosing_under_an_hour_old(self, tmp_path):
+        """The reading copy goes; the page and the folders stay while the
+        page stands; the tidy that removes the page takes both folders."""
+        made = _a_file_s_folder(tmp_path, "E", copy_age=8 * DAY)
+        choosing = reading_folder.occurrences_folder(made["qda"], 1)
+        page = _page(choosing, "choose.html")
+        for path in (page, choosing, made["folder"]):
+            _age(path, 30 * 60)
+        now = time.time()
+        reading_folder.sweep(now)
+        assert not made["copy"].exists()
+        assert page.is_file() and made["folder"].is_dir()
+        reading_folder.sweep(now + 31 * 60)
+        assert not os.path.lexists(made["folder"])
+        assert not os.path.lexists(made["project"])
+
+    def test_an_empty_file_s_folder_made_now_stays(self, tmp_path):
+        made = _a_file_s_folder(tmp_path, "F")
+        reading_folder.sweep()
+        assert made["folder"].is_dir() and made["project"].is_dir()
+
+    def test_a_link_or_a_junction_counts_as_a_file(self, tmp_path):
+        """A folder holding a link, even to an empty folder, holds a file:
+        it is kept, and the link never followed."""
+        made = _a_file_s_folder(tmp_path, "G", copy_age=8 * DAY)
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        inside = reading_folder.original_folder(made["qda"], 1)
+        link = inside / "linked"
+        try:
+            _link(link, outside)
+        except (OSError, NotImplementedError):
+            pytest.skip("this system makes no link here")
+        reading_folder.sweep()
+        assert not made["copy"].exists()
+        assert os.path.lexists(link) and made["folder"].is_dir()
+        assert outside.is_dir()
+
+
+class TestPreviewsTakeTheSameRules:
+
+    def test_emptied_by_the_tidy_it_goes_with_its_last_page(self, tmp_path):
+        """A page two hours old goes, as before, and the folder of previews
+        it leaves empty goes with it, then the project's subfolder."""
+        previews = reading_folder.previews_folder(tmp_path / "P.qda")
+        page = _page(previews, "check.html")
+        _age(page, 2 * HOUR)
+        _age(previews, 2 * HOUR)
+        reading_folder.sweep()
+        assert not os.path.lexists(previews)
+        assert not os.path.lexists(previews.parent)
+
+    def test_already_empty_it_goes_once_a_week_old(self, tmp_path):
+        old = reading_folder.previews_folder(tmp_path / "Old.qda")
+        young = reading_folder.previews_folder(tmp_path / "Young.qda")
+        _age(old, 8 * DAY)
+        _age(young, DAY)
+        reading_folder.sweep()
+        assert not os.path.lexists(old) and not os.path.lexists(old.parent)
+        assert young.is_dir()
+
+    def test_a_page_under_an_hour_old_keeps_it(self, tmp_path):
+        previews = reading_folder.previews_folder(tmp_path / "Q.qda")
+        page = _page(previews, "check.html")
+        _age(page, 30 * 60)
+        _age(previews, 8 * DAY)
+        reading_folder.sweep()
+        assert page.is_file()

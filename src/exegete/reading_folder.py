@@ -43,7 +43,10 @@ while it writes here, and at each start); a page for choosing
 occurrences goes once it is an hour old, at the same tidy, since it
 marks which words are names; a file's folder goes whenever Exegete changes that file's text
 or name; a project's whole subfolder goes when a backup is restored over
-it; and anything older than a week goes at the first tidy after that. A
+it; and anything older than a week goes at the first tidy after that,
+each reading copy and copy of an original by its own age, whatever
+stands beside it (v0.15.4), and a folder the tidy leaves holding no
+file with its last entry. A
 short note at the top says what the pages are and that they can be
 deleted at any time; Exegete writes it again when its words there are
 not this release's.
@@ -467,7 +470,14 @@ def sweep(now: Optional[float] = None) -> int:
     """Remove preview pages and pages for choosing occurrences older than
     an hour, temporary files left by an interrupted write, anything older
     than a week, and project folders left empty. Returns how many
-    entries went."""
+    entries went.
+
+    Inside a file's folder each entry ages by its own time (v0.15.4): a
+    reading copy, a copy of an original and anything else there goes a
+    week after it was written, whatever newer entry stands beside it. A
+    file's folder, or `previews`, that this tidy's removals leave holding
+    no file goes in the same tidy (`_emptied_or_older`), and the
+    project's subfolder after it when nothing else is there."""
     now = time.time() if now is None else now
     top = root()
     removed = 0
@@ -492,33 +502,42 @@ def sweep(now: Optional[float] = None) -> int:
                     pages = list(os.scandir(entry.path))
                 except OSError:
                     pages = []
+                gone = 0
                 for page in pages:
-                    removed += _remove_if_older(Path(page.path), now,
-                                                PREVIEW_LIFETIME)
+                    gone += _remove_if_older(Path(page.path), now,
+                                             PREVIEW_LIFETIME)
+                removed += gone + _emptied_or_older(path, now, gone)
                 continue
             if entry.is_dir(follow_symlinks=False):
                 try:
                     inner = list(os.scandir(entry.path))
                 except OSError:
                     inner = []
+                gone = 0
                 for item in inner:
                     if item.name.startswith(TEMP_PREFIX):
-                        removed += _remove_if_older(Path(item.path), now,
-                                                    TEMP_LIFETIME)
+                        gone += _remove_if_older(Path(item.path), now,
+                                                 TEMP_LIFETIME)
                     elif (item.name == ORIGINAL
                           and item.is_dir(follow_symlinks=False)):
-                        # An interrupted copy of an original is left in
-                        # the original's own folder, one level down.
-                        removed += _sweep_inside(item.path, now)
+                        # The copy of an original, and an interrupted
+                        # copy's temporary file, in the original's own
+                        # folder, one level down: each by its own time
+                        # (v0.15.4)
+                        gone += _sweep_inside(item.path, now, LIFETIME)
                     elif (item.name == OCCURRENCES
                           and item.is_dir(follow_symlinks=False)):
                         # The page for choosing occurrences marks which
                         # words are names, so it goes after an hour, as a
                         # preview page does (v0.15.3)
-                        removed += _sweep_inside(item.path, now,
-                                                 PREVIEW_LIFETIME)
-                removed += _remove_if_older(path, now, LIFETIME,
-                                            newest_inside=True)
+                        gone += _sweep_inside(item.path, now,
+                                              PREVIEW_LIFETIME)
+                    else:
+                        # The reading copy, and anything else beside it,
+                        # by its own time (v0.15.4)
+                        gone += _remove_if_older(Path(item.path), now,
+                                                 LIFETIME)
+                removed += gone + _emptied_or_older(path, now, gone)
                 continue
             removed += _remove_if_older(path, now, LIFETIME)
         try:
@@ -549,14 +568,47 @@ def _sweep_inside(folder: str, now: float,
     return removed
 
 
+def _holds_no_file(folder: Path) -> bool:
+    """Whether a folder holds nothing but folders that hold nothing, at
+    any depth (v0.15.4). A link or a junction counts as a file and is
+    never followed; a folder that cannot be read counts as holding one."""
+    try:
+        entries = list(os.scandir(folder))
+    except OSError:
+        return False
+    for entry in entries:
+        inner = Path(entry.path)
+        try:
+            if not entry.is_dir(follow_symlinks=False) or \
+                    _is_junction(inner):
+                return False
+        except OSError:
+            return False
+        if not _holds_no_file(inner):
+            return False
+    return True
+
+
+def _emptied_or_older(folder: Path, now: float, gone: int) -> int:
+    """A file's folder, or `previews`, once the tidy has been through
+    what it holds (v0.15.4): removed at once when the tidy's removals in
+    it (`gone`) left it holding no file; otherwise once its newest
+    entry, or its own time when it holds nothing, is a week old
+    (`_newest`), which keeps a folder a write has just made. Returns how
+    many went."""
+    if gone and _holds_no_file(folder):
+        return _remove(folder)
+    return _remove_if_older(folder, now, LIFETIME, newest_inside=True)
+
+
 def _newest(path: Path) -> float:
-    """The newest modification time of what a file's folder holds: each
-    entry's own, but for the folder of the page for choosing occurrences
-    the times of what is in it (v0.15.3). That page goes after an hour:
-    while it stands it keeps the file's folder, and once it has gone its
-    empty folder keeps nothing. The file's folder's own time, which a
-    removal or a new folder inside it changes with nothing written to
-    keep, counts only when nothing inside it does."""
+    """The newest modification time of what a file's folder, or
+    `previews`, holds: each entry's own, but for the folder of the page
+    for choosing occurrences the times of what is in it (v0.15.3). That
+    page goes after an hour: while it stands it keeps the file's folder,
+    and once it has gone its empty folder keeps nothing. The folder's
+    own time, which a removal or a new folder inside it changes with
+    nothing written to keep, counts only when nothing inside it does."""
     times = []
     try:
         entries = list(os.scandir(path))

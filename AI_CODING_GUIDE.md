@@ -1137,6 +1137,24 @@ A second run can then give the second person a pseudonym of their own.
 That run needs a list you type and keep yourself, since the names list
 holds one pseudonym for each name.
 
+With a list you type, a run can also keep whole the phrases you give
+it (`keep_phrases`), such as a public figure who shares a participant's
+name ("Theresa May") or a saying ("Mark my words"). A name from your
+list that lies wholly inside one of these phrases stays as it is, in
+the file's text and in the notes the run rewrites. A name that runs
+past a phrase is still replaced, and the preview warns about it. The
+preview counts what each phrase keeps, and the page for choosing
+occurrences marks the occurrences kept, with no tick box. A phrase
+keeps every name inside it, so a phrase that holds a participant's
+full name keeps that name too: you may prefer phrases for public
+figures and sayings. Exegete keeps the phrases nowhere, not with the
+names list and not in its records, so the assistant gives them again
+to each preview and to the run. A later run without them, or an import
+that applies the names list, replaces the names they kept. Phrases do
+not go with the names list (`use_project_pseudonyms`), since what
+Exegete said about a phrase would tell whether a name in it is on the
+list; there, choosing occurrences leaves a name as it is in one file.
+
 The rest of the project is treated in other ways:
 
 - notes and journal entries are scanned and their names counted. With

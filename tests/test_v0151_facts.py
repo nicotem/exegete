@@ -64,7 +64,8 @@ except ModuleNotFoundError:  # Python 3.10, where pytest itself needs tomli
     import tomli as tomllib
 
 from exegete import (doc_import, env_settings, import_reading, names,
-                     occurrences, preview_tokens, reading_folder, server)
+                     occurrences, preview_tokens, pseudonymise,
+                     reading_folder, server)
 
 REPO = Path(__file__).resolve().parents[1]
 GB = 1024 * 1024 * 1024
@@ -188,6 +189,10 @@ class Facts:
     # v0.15.3: the most occurrences one pseudonymisation run leaves as
     # they are (occurrences.py)
     occurrences_left: int
+    # v0.15.4: the most phrases one pseudonymisation run takes, and the
+    # most characters in each, as read (pseudonymise.py)
+    phrases_taken: int
+    phrase_characters: int
 
 
 def _pdf_epub_extra(project: dict) -> str:
@@ -429,7 +434,9 @@ def facts_from_the_code(root: Path = REPO,
         full_characters=sizes["full"]["tool_definitions_characters"],
         core_characters=sizes["core"]["tool_definitions_characters"],
         occurrences_left=occurrences.MAX_OCCURRENCES_LEFT,
-        occurrences_listed=occurrences.OCCURRENCES_LISTED)
+        occurrences_listed=occurrences.OCCURRENCES_LISTED,
+        phrases_taken=pseudonymise.MAX_PHRASES,
+        phrase_characters=pseudonymise.MAX_PHRASE_CHARS)
 
 
 # The counts the documents give, each with the constants it is held to.
@@ -449,6 +456,9 @@ QUANTITIES: Dict[str, Tuple[Tuple[str, ...], Callable[[Facts], float]]] = {
                            lambda f: f.occurrences_listed),
     "occurrences left": (("occurrences_left",),
                          lambda f: f.occurrences_left),
+    "phrases taken": (("phrases_taken",), lambda f: f.phrases_taken),
+    "phrase characters": (("phrase_characters",),
+                          lambda f: f.phrase_characters),
 }
 for _field in ("extension_call_seconds", "terminal_call_seconds",
                "call_seconds_least", "call_seconds_most",
@@ -550,6 +560,14 @@ OCCURRENCE_PATTERNS = (
 LEFT_PATTERNS = (
     (r"\bat\s+most\s+(?P<n>\d+)\s+occurrences\b",
      {"n": ("occurrences left",)}),
+)
+# The most phrases one pseudonymisation run takes, and the characters in
+# each (v0.15.4): "At most 50, of up to 200 characters" in the tool's
+# description, "at most 50 phrases, of up to 200 characters" in TOOLS.md
+PHRASE_PATTERNS = (
+    (r"\b[Aa]t\s+most\s+(?P<n>\d+)(?:\s+phrases)?,\s+of\s+up\s+to\s+"
+     r"(?P<m>\d+)\s+characters\b",
+     {"n": ("phrases taken",), "m": ("phrase characters",)}),
 )
 # The size of each set's tool definitions, as the documents round it
 # (v0.15.2): a figure passes within SIZE_TOLERANCE of the snapshot's,
@@ -938,6 +956,11 @@ FACTS: Dict[str, Fact] = {
         code="occurrences.py: MAX_OCCURRENCES_LEFT",
         documents=(SERVER_SOURCE,),
         patterns=tuple(p for p, _ in LEFT_PATTERNS),
+        code_texts=True),
+    "the phrases to keep": Fact(
+        code="pseudonymise.py: MAX_PHRASES, MAX_PHRASE_CHARS",
+        documents=(SERVER_SOURCE, "TOOLS.md"),
+        patterns=tuple(p for p, _ in PHRASE_PATTERNS),
         code_texts=True),
 }
 # The version and its date are held already: tests/test_updates.py and
@@ -2271,6 +2294,8 @@ CHECKS: Dict[str, Callable[[Facts, Document], List[Place]]] = {
         "the occurrences listed", OCCURRENCE_PATTERNS, facts, document),
     "the occurrences left": lambda facts, document: _check_numbers(
         "the occurrences left", LEFT_PATTERNS, facts, document),
+    "the phrases to keep": lambda facts, document: _check_numbers(
+        "the phrases to keep", PHRASE_PATTERNS, facts, document),
 }
 
 
@@ -2444,6 +2469,9 @@ CHANGES = (
     ("occurrences_listed", lambda f: f.occurrences_listed + 50),
     # v0.15.3: the most occurrences a run leaves, fifty more
     ("occurrences_left", lambda f: f.occurrences_left + 50),
+    # v0.15.4: the most phrases a run takes, and their characters, more
+    ("phrases_taken", lambda f: f.phrases_taken + 50),
+    ("phrase_characters", lambda f: f.phrase_characters + 50),
 )
 
 
@@ -2839,6 +2867,8 @@ SOURCES = {
     "preview_tools": (preview_tokens, "REGISTRY"),
     "occurrences_listed": (occurrences, "OCCURRENCES_LISTED"),
     "occurrences_left": (occurrences, "MAX_OCCURRENCES_LEFT"),
+    "phrases_taken": (pseudonymise, "MAX_PHRASES"),
+    "phrase_characters": (pseudonymise, "MAX_PHRASE_CHARS"),
 }
 
 

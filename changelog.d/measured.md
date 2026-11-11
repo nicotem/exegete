@@ -10,7 +10,7 @@ Python 3.13 with the libraries in `uv.lock`:
 | `full` (80 tools) | 212,322 | 210,397 |
 | `core` (28 tools) | 77,625 | 76,805 |
 | The opening text | 2,042 | 2,042 |
-| The full brief | 14,457 | 14,180 |
+| The full brief | 14,564 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
 
 - Choosing occurrences by their numbers adds 243 characters to `full`:
@@ -44,6 +44,10 @@ Python 3.13 with the libraries in `uv.lock`:
   does. On Python 3.11 that description is 19,841 characters, within
   the 20,000 that the guide to installing from the Terminal gives for
   Claude Code's setting.
+- The full brief is 107 characters longer, from its line on choosing
+  occurrences, which now says to give the same `keep_phrases` to
+  every preview after one that had them, and to the run. The
+  documents give the full brief as about 14,600 characters.
 - Four descriptions that now say what their tools count and refuse add
   706 characters to `full` and 377 to `core`. In both sets,
   `search_files`' sentences on an empty pattern, a search of neither

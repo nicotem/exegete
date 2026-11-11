@@ -7782,13 +7782,13 @@ def copy_project_to_workspace(
     replace.txt), with the real names in them, and the coding sessions in
     its Exegete coding sessions folder, which are the copy's own once it
     is selected. Like a backup, it leaves out lock files, the database's
-    side files (its journal and WAL files among them), the temporary file
-    of a session being saved and ai_data/search.sqlite, which QualCoder
-    4.0 rebuilds when it opens the copy. Unlike a backup, it keeps the
-    audio and video folders, and it leaves out every temporary copy of
-    the names list (pseudonyms.json.<eight characters>.tmp, which a write
-    cut short can leave), whatever its age. A copy of a project without
-    an ai_data folder gets an empty one, as a new project does.
+    side files (its journal and WAL files among them), a session's
+    temporary files (whatever their age) and ai_data/search.sqlite, which
+    QualCoder 4.0 rebuilds when it opens the copy. Unlike a backup, it
+    keeps the audio and video folders, and it leaves out every temporary
+    copy of the names list (pseudonyms.json.<eight characters>.tmp, which
+    a write cut short can leave), whatever its age. A copy of a project
+    without an ai_data folder gets an empty one, as a new project does.
 
     The database is copied with SQLite's own online backup, so a copy
     taken while another program is writing to the project holds what was
@@ -17950,8 +17950,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                 "(qualcoder_gui_signals), and if there are some, ask the "
                 "researcher before writing",
                 "Coding sessions are kept with their project, in its "
-                "Exegete coding sessions folder (earlier ones on this "
-                "computer), so work can resume later",
+                "Exegete coding sessions folder (earlier ones, and any its "
+                "folder could not hold, on this computer), so work can "
+                "resume later",
                 "Ways back: undo_changes, delete_coding, list_backups, "
                 "restore_backup"
             ]

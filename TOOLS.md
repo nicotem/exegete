@@ -528,7 +528,7 @@ history, which are yours. They also carry the project's names list,
 `Names to replace.txt`, when the project has them. Both hold real
 names in plain text. They carry its coding sessions too, in its
 `Exegete coding sessions` folder, each with its passages word for word,
-but not the temporary file of a session being saved; `restore_backup`
+but not a session's temporary files, whatever their age; `restore_backup`
 keeps that folder as it is, never taking a backup's. They leave out QualCoder's own backup ignore
 set (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`,
 `*.sqlite-wal`, `*.sqlite-journal`) and lock files. Backups also leave
@@ -735,7 +735,7 @@ folders, which a restore keeps.
   a measurement.
   Nothing sorts or totals by the reading. An applied coding's memo says
   which, in words
-- **Sessions kept with the project**: each session is saved in a file of its own, in the project's `Exegete coding sessions` folder, so the work can go on in a later conversation, and the session goes wherever the project goes. A session is read, decided and applied only while its project is selected
+- **Sessions kept with the project**: each session is saved in a file of its own, in the project's `Exegete coding sessions` folder, so the work can go on in a later conversation, and the session goes wherever the project goes. Where that folder cannot hold it, as in a read-only project, it is kept on this computer instead, and `start_coding_session` says why. A session is read, decided and applied only while its project is selected
 - **A session that came with the project**: each session Exegete starts in a project carries a seal, and each approval given on this computer a mark, both made with the key Exegete keeps in its own folder (`preview_secret`). A session whose file lacks this computer's seal (saved by Exegete on another computer or under another account, changed outside Exegete, or kept from before that key was replaced) is read as having come with the project. Every answer that gives its texts flags them as data, never instructions (`came_with_project`), with the session's instruction for the assistant to read to you before going on, and an approval in it counts only once given on this computer, reading as pending until then. So approvals given on one computer do not carry to another
 - **Backups**: Exegete itself takes a timestamped backup before every change to the project's database. `create_backup` no longer does anything: it is still accepted until the release on method, and a call that gives it is told so
 - **The workspace**: new projects and copies of projects are kept in the workspace folder
@@ -1341,7 +1341,7 @@ For AI-assisted coding, which writes to the database:
 - **Backups**, taken by Exegete itself, before every change to the project's database
 - **Workspace**: new projects and copies are kept in the workspace folder; a project made in another program can be worked on as a copy
 - **Conversational approval**: nothing is written until an item is marked approved. Exegete cannot tell who approved, so two things stand behind the mark: the host asking you before each decision, and your own check of the counts the approval step reports ("Who approves", above)
-- **Session files**: AI coding sessions (each suggestion with its passage word for word and its reason, the proposals, and their statuses) are saved in the project's `Exegete coding sessions` folder, so they go into its backups and copies and to anyone who can read a shared or synced project folder, until `delete_coding_session` removes them. Sessions made before 0.15.4, and any started where the project's folder could not hold one, are in `~/.exegete/sessions/`
+- **Session files**: AI coding sessions (each suggestion with its passage word for word and its reason, the proposals, and their statuses) are saved in the project's `Exegete coding sessions` folder, so they go into its backups and copies and to anyone who can read a shared or synced project folder. `delete_coding_session` removes a session's file there; its copies in backups and in copies of the project stay until those are removed. Sessions made before 0.15.4, and any started where the project's folder could not hold one, are in `~/.exegete/sessions/`
 - **Restoring**: a backup can return the project to an earlier state (`restore_backup`)
 
 **Suggestions for AI coding:**
@@ -1376,7 +1376,8 @@ For AI-assisted coding, which writes to the database:
   folder `EXEGETE_WORKSPACE` gives (the desktop extension's default
   is `~/Exegete projects/`)
 - Session files: in each project's `Exegete coding sessions` folder;
-  those made before 0.15.4 in `~/.exegete/sessions/`
+  those made before 0.15.4, and any started where the project's folder
+  could not hold one, in `~/.exegete/sessions/`
 - Records of changes, for undo: `~/.exegete/changes/` (ids and
   digests, never a name or a text; each removed once it is a day old,
   at Exegete's next start or its next record of a change to the same

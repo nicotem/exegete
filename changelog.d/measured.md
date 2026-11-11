@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 213,915 | 210,397 |
-| `core` (28 tools) | 77,991 | 76,805 |
+| `full` (80 tools) | 213,948 | 210,397 |
+| `core` (28 tools) | 78,024 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,625 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |

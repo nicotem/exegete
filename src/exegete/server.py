@@ -861,8 +861,8 @@ Each is stated in full by its tool:
   the numbers. You give those alone: the numbers as they are in
   leave_numbers, with the list's numbering (a pasted line's own) in
   numbering, and every id in leave_occurrences. Where a preview had
-  keep_phrases, give the same keep_phrases to every preview after it and
-  to the run.
+  keep_phrases, give the same keep_phrases to every preview after it for
+  that file, and to the run.
 - When the researcher wants to read a whole file, use
   open_file_for_reading: it opens on their screen and its text stays off
   the conversation. That page and the copies it opens, and the page a

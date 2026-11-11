@@ -11,12 +11,13 @@
   `edit_suggestion` for a pending one, and for one already decided,
   `update_suggestion_status` with `reopen` first, then
   `edit_suggestion`, then the decision again. An applied or removed
-  suggestion that no longer fits, which cannot be corrected that way, is
-  left out of the file instead, counted in `skipped_suggestions` and the
-  first 20 named in `skipped_details`, as the whole project's export
-  leaves out codings that do not fit; the whole project's export carries
-  what the project holds. The session is not changed. The answer's
-  counts of codings, codes and files are those of what the file holds.
+  suggestion that no longer fits, whose coding is in the project or was
+  deleted from it, is left out of the file instead, counted in
+  `skipped_suggestions` and the first 20 named in `skipped_details`, as
+  the whole project's export leaves out codings that do not fit; the
+  whole project's export carries what the project holds. The session is
+  not changed. The answer's counts of codings, codes and files are those
+  of what the file holds.
 - **An export removes only its own earlier part files.** An export
   removes the part files an earlier export to the same name left when
   it was cut short. It compared their names without regard to letter

@@ -799,7 +799,17 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "Beta, that can keep Codex's own commands from reading outside "
             "the folder it works in; it has not been tested with Exegete.",
             "- **What stays on the computer, and for how long.**",
-            "the lists of suggestions waiting for review "
+            # (v0.15.4, coding sessions kept with their project: a new
+            # session is kept in the project's sessions folder, so in its
+            # backups and copies; Exegete's own folder keeps the earlier
+            # ones and any a project's folder could not hold, as
+            # sessions.SessionManager._save_new does)
+            "From 0.15.4 the project keeps its coding sessions in its "
+            "`Exegete coding sessions` folder, each suggested passage word "
+            "for word with its reason, so its backups and copies hold them "
+            "too;",
+            "in Exegete's own folder (`~/.exegete`), the coding sessions "
+            "made before 0.15.4 and any a project's folder could not hold "
             "(`~/.exegete/sessions/`)",
             # (the staleness audit of 20 October 2026: the reading folder
             # and the run records, which PRIVACY's table already listed;
@@ -821,6 +831,11 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "Claude Code's transcripts (`~/.claude/projects/`)",
             "and when you will delete them."):
         assert words in checklist, words
+    # (v0.15.4: the sessions folder by the name the code gives it, and the
+    # list no longer says that every session waits in Exegete's folder)
+    from exegete import private_files
+    assert f"`{private_files.SESSIONS_FOLDER}` folder" in checklist
+    assert "waiting for review" not in checklist
     # the ten questions, in that order: terms first, as before, then
     # training with either AI provider (the owner, 1 October 2026; "AI
     # provider", the one term, since v0.15.2); the check

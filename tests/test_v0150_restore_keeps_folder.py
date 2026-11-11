@@ -1300,17 +1300,29 @@ class TestTheTexts:
             in backups
         assert "stays in the backup" not in _flat(privacy)
         # exegete.json: rolled back with the rest of the project, not of
-        # the folder
+        # the folder (v0.15.4: nor of the sessions folder, which a restore
+        # keeps too, as TOOLS.md says)
         assert ("a restore rolls it back with the rest of the project (all "
-                "but its `Exegete`, `audio` and `video` folders, which a "
-                "restore keeps).") in _flat(privacy)
+                "but its `Exegete`, `Exegete coding sessions`, `audio` and "
+                "`video` folders, which a restore keeps).") in _flat(privacy)
         # the passage on pseudonyms.json no longer says the whole folder
         assert "rolls the whole folder back" not in _flat(privacy)
         # (v0.15.4, the readability reading: the file first, the folders a
         # restore keeps after it)
         assert ("`restore_backup` rolls the project back, this file with it, "
-                "all but its `Exegete`, `audio` and `video` folders, which a "
-                "restore keeps.") in _flat(privacy)
+                "all but its `Exegete`, `Exegete coding sessions`, `audio` "
+                "and `video` folders, which a restore keeps.") \
+            in _flat(privacy)
+        assert "all but its `Exegete`, `audio`" not in _flat(privacy)
+        # (v0.15.4) and the section on backups says why the sessions
+        # folder is kept, as the restore's note does
+        assert server.SESSIONS_FOLDER_KEPT_NOTE.startswith(
+            f"The project's {private_files.SESSIONS_FOLDER} folder")
+        assert ("A restore keeps the project's `Exegete coding sessions` "
+                "folder as it is too, and leaves the backup's copy in the "
+                "backup. The backup's older sessions would otherwise take "
+                "away the decisions made since, and bring back sessions "
+                "deleted since.") in backups
 
     def test_the_changelog(self):
         changelog = _flat(_read("CHANGELOG.md"))

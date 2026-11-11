@@ -150,12 +150,16 @@ officer will ask, and the summary above depends on them:
 - **What stays on the computer, and for how long.** Copies stay on the
   computer you work on, and "Files Exegete keeps on your computer",
   below, says how long each stays:
-  - the project, its backups and your exports;
-  - in Exegete's own folder (`~/.exegete`), the lists of suggestions
-    waiting for review (`~/.exegete/sessions/`), the texts an import's
-    preview read (`~/.exegete/import-texts.noindex`), the records of
-    changes kept for undo, and the
-    pseudonymisation run records (`~/.exegete/pseudonymisation/`);
+  - the project, its backups and your exports. From 0.15.4 the project
+    keeps its coding sessions in its `Exegete coding sessions` folder,
+    each suggested passage word for word with its reason, so its
+    backups and copies hold them too;
+  - in Exegete's own folder (`~/.exegete`), the coding sessions made
+    before 0.15.4 and any a project's folder could not hold
+    (`~/.exegete/sessions/`), the texts an import's preview read
+    (`~/.exegete/import-texts.noindex`), the records of changes kept for
+    undo, and the pseudonymisation run records
+    (`~/.exegete/pseudonymisation/`);
   - the reading folder's pages and copies: pages with a file's whole
     text and its codings, read-only copies of originals, and the pages
     for checking an import's letters and for choosing occurrences
@@ -254,14 +258,18 @@ readers:
   pseudonymisation is for", below).
 - **What stays on the computer, and who else reads it.** Several things
   stay on your disk: the project, its backups and copies, Exegete's own
-  folder (coding sessions, the texts an import's preview read, the
-  records of changes kept for undo, the pseudonymisation run records),
-  the reading folder, and the host's own records of the conversation
-  (its log, its transcripts). Anything that reads the disk can read
-  them: a sync or backup service, a copy you give someone, another
+  folder, the reading folder, and the host's own records of the
+  conversation (its log, its transcripts). The project holds its coding
+  sessions, so its backups and copies hold them too. Exegete's own
+  folder holds the texts an import's preview read, the records of
+  changes kept for undo and the pseudonymisation run records. It also
+  holds the coding sessions made before 0.15.4, and any a project's
+  folder could not hold. Anything that reads the disk can read all of
+  these: a sync or backup service, a copy you give someone, another
   assistant that opens files by itself, a log or a support bundle you
-  send. Exegete's own log lines name no project or file and quote no
-  text ("Error answers and Exegete's log", below).
+  send.
+  Exegete's own log lines name no project or file and quote no text
+  ("Error answers and Exegete's log", below).
 - **How much passes through the conversation.** Every turn can be kept
   by the host and by the provider, under their own terms. So Exegete
   passes text through the conversation only when it has to. A file you
@@ -664,16 +672,17 @@ ones.
 
 | Kind | Where | What | Who deletes it |
 |---|---|---|---|
-| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, coding sessions awaiting review, the last project, the update check's record, the texts an import's preview read, and the records of the changes Exegete makes to projects (`changes/`, below); the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as below, and a change's record once it is a day old; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the sessions awaiting review, any preview not yet carried out, the records of changes (those changes can then no longer be undone), the pseudonymisation run records, and the secret that keys their digests |
+| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, the coding sessions made before 0.15.4 and any a project's folder could not hold, the last project, the update check's record, the texts an import's preview read, and the records of the changes Exegete makes to projects (`changes/`, below); the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as below, and a change's record once it is a day old; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the coding sessions kept there, any preview not yet carried out, the records of changes (those changes can then no longer be undone), the pseudonymisation run records, and the secret that keys their digests |
 | Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled, the page for choosing occurrences of a name | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page or a page for choosing occurrences), as "Reading a whole file" says, so they can stay longer while Exegete is not running, or runs without writing there; the working folder as each reading ends; you, at any time |
 | Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
-| Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json` and `qualcoder_mcp.json`; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word). At your word, `undo_changes` also removes the originals an import stored, when it takes the import back, and `pseudonyms.json`, when it takes back the save that made it |
+| Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json`, `qualcoder_mcp.json` and, from 0.15.4, the coding sessions in its `Exegete coding sessions` folder; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word). At your word, `undo_changes` also removes the originals an import stored, when it takes the import back, and `pseudonyms.json`, when it takes back the save that made it. `delete_coding_session` removes a coding session's file at your word |
 
 **Exegete's own folder**, `~/.exegete`, is created owner-only on macOS
 and Linux, which means that only your account can open it. It holds
-the coding sessions (`~/.exegete/sessions/`), each file written whole in
-one step and owner-only, and `update_check.json` ("Checking for new
-versions"). It also holds:
+`update_check.json` ("Checking for new versions"), and the coding
+sessions made before 0.15.4 and any a project's folder could not hold
+(`~/.exegete/sessions/`). Each session's file there is written whole in
+one step, and owner-only. It also holds:
 
 - **The preview-token secret** (`~/.exegete/preview_secret`): 64 random
   hex characters. Some of Exegete's changes take two steps: a preview,
@@ -682,11 +691,14 @@ versions"). It also holds:
   in the pseudonymisation run records, to key the ids a pseudonymisation
   preview gives for choosing occurrences, and to name and sign the texts
   an import's preview keeps. It also keys the records of changes
-  (below), from which `undo_changes` takes a change back. A digest is a
-  short fingerprint of a text, and a keyed digest can be made or checked
-  only with the secret. The secret never leaves your machine, and never
-  appears in a result, a log line or an error. It holds nothing about
-  your project. Deleting it has five effects, and nothing else:
+  (below), from which `undo_changes` takes a change back. And it makes
+  the seal of each coding session kept in a project, and the mark of
+  each approval you give on this computer ("In the project's folder",
+  below). A digest is a short fingerprint of a text, and a keyed digest
+  can be made or checked only with the secret. The secret never leaves
+  your machine, and never appears in a result, a log line or an error.
+  It holds nothing about your project. Deleting it has six effects, and
+  nothing else:
   - any preview not yet carried out loses its token, so the next run
     asks for a fresh preview;
   - the keyed digests in the run records already written can then no
@@ -700,7 +712,11 @@ versions"). It also holds:
   - a change Exegete made before can no longer be undone: `undo_changes`
     refuses it, since its record was made with the old secret. A backup
     taken before that change is still a way back, with `restore_backup`,
-    which also takes back everything done after that backup.
+    which also takes back everything done after that backup;
+  - every coding session kept in a project then reads as having come
+    with the project. Its texts reach the assistant marked as data, and
+    its approvals read as pending until you give them again on this
+    computer. Nothing in the sessions is lost.
 
   Exegete replaces the secret by itself, with the same effects, when it
   finds the file malformed or, on macOS and Linux, readable by other
@@ -825,11 +841,12 @@ originals:
   came from its settings at creation), and the AI coder name in
   Exegete's settings at the time. It travels with the project folder,
   its backups and its workspace copies, and a restore rolls it back with
-  the rest of the project (all but its `Exegete`, `audio` and `video`
-  folders, which a restore keeps). It is returned into the conversation
-  by create_project when it stores the name, get_current_project,
-  select_project and set_project_ai_coder_name, and the current name
-  appears on every write result. So the note reaches the provider like
+  the rest of the project (all but its `Exegete`, `Exegete coding
+  sessions`, `audio` and `video` folders, which a restore keeps). It is
+  returned into the conversation by create_project when it stores the
+  name, get_current_project, select_project and
+  set_project_ai_coder_name, and the current name appears on every
+  write result. So the note reaches the provider like
   any other project text the assistant reads. QualCoder never reads or
   writes this file. Deleting it makes the next AI write ask for the name
   again. The exception is when the earlier `qualcoder_mcp.json` beside
@@ -852,6 +869,50 @@ originals:
   it behind.
 - **`pseudonyms.json`**, the names list, if you keep one, and the
   **`Exegete` folder**, with the files you fill in (below).
+- **The `Exegete coding sessions` folder**, from 0.15.4: one file for
+  each coding session kept in the project, and a short note on what the
+  folder holds. A session's file holds each suggested passage word for
+  word, with its code and reason, your instruction and decisions, and
+  the proposed codes with their evidence. It holds no path of the
+  project. On macOS and Linux the folder is owner-only (0700, its files
+  0600). Each session's file is written whole: Exegete writes a
+  temporary file, makes sure it is on the disk, and then puts it in the
+  file's place. The sessions travel with the project: into its backups,
+  into copies of it, and to any service that syncs or shares its
+  folder. Whoever can open the folder there can read their passages.
+  `delete_coding_session` removes a session's file there, with its
+  temporary files. Its copies in backups and in copies of the project
+  stay until those are removed, and a restore keeps the folder as it
+  is. Before sharing or depositing a project, you may want to delete
+  the sessions you no longer need, or leave the folder out of what you
+  share. On a Mac, Spotlight can index the folder, as it can the
+  project's other files. Adding the folder, or the whole project folder,
+  to Spotlight's privacy list (System Settings, Spotlight) keeps it out
+  of the index.
+
+**Coding sessions that came with the project.** Whoever can write in a
+project's folder, a shared or synced one for example, can put a
+session's file in it. So each coding session that Exegete starts in a
+project on this computer carries a seal, and each approval you give on
+this computer carries a mark. Both are keyed digests made with the
+preview-token secret (above), which never leaves Exegete's own folder.
+They name no one, and differ in every file and approval, so they do not
+tell anyone which computer made a session. The seal holds while only
+Exegete on this computer saves the file and nothing else changes it. A
+session whose file lacks this computer's seal is read as having come
+with the project. Such a session was saved by Exegete on another
+computer or under another account, changed outside Exegete, or kept
+from before the secret was replaced. Its texts then reach the
+assistant marked as data, never as instructions. An approval in it
+counts only where it carries this computer's mark, which holds while
+the suggestion or proposed code is as it was when you approved it
+here. Every other approval in it, one that an undo set back there
+included, reads as pending until you give it again on this computer.
+So approvals do not carry from one computer to another. A session saved
+on the other computer reads as having come with the project, on both
+computers, from then on. The seal and the marks never appear in an
+answer. A failed check is logged with a session's id or a count, never
+a file's name or a text.
 
 **Exports and copies.** Exported files go where you ask: CSV files,
 text and Markdown reports, and REFI-QDA files (`.qdpx`), the format
@@ -977,7 +1038,10 @@ holds, real names included:
   which anyone can put the real names back;
 - the names file, `Names to replace.txt` in the project's `Exegete`
   folder, if you made one, which holds real names and their pseudonyms
-  in plain text as `pseudonyms.json` does.
+  in plain text as `pseudonyms.json` does;
+- its coding sessions, in its `Exegete coding sessions` folder, whose
+  passages were recorded word for word, real names included if they
+  were recorded before the names were replaced.
 
 "Pseudonymising a project does not empty it of names", below, says what
 stays, the backups beside the project included. An export from Exegete
@@ -1024,6 +1088,23 @@ assistant is told never to open or read that page. You give it the
 numbers to leave, shown in bold on the page, or paste the line the page
 gives you. "Reading a whole file", below, says where the page is kept
 and when it goes.
+
+With a mapping you type, a run can also keep whole phrases
+(`keep_phrases`), such as a public figure's name or a saying. A name
+inside one then stays as it is. The phrases are typed into the call, so
+they are in the conversation and in the host's records, as a typed
+mapping is. Exegete itself keeps no phrase: no file, record, log line
+or answer of its own holds one. The preview, the run's answer, the run
+record and the journal entry count the occurrences the phrases kept.
+The preview also says how many phrases to give again for the run. The
+records of changes kept for undo and `pseudonyms.json` hold nothing of
+them. The
+page for choosing occurrences marks the occurrences kept, in the text
+it already shows, and lists no phrase. With the names list, phrases are
+refused before the list is read, since an answer about a phrase could
+tell whether a name in it is on the list. A name inside a phrase is a
+real name: it stays in the file's text after the run, and in the notes
+the run rewrites.
 
 An imagined example. You bring ten interview transcripts into a project,
 meaning to replace the names before any coding starts. One file is
@@ -1607,11 +1688,12 @@ The cautions:
   import, and the backup the undo takes first, hold the originals and
   their text until `prune_backups` removes them. Coding sessions that
   hold passages of the files keep them, with the files' names, until
-  `delete_coding_session` removes them. An export made since keeps what
-  it holds until you delete it. If you use QualCoder, its own backups
-  beside the project may hold the files too. Its AI search index keeps
-  their text until it next re-indexes with AI on, and its AI chat
-  history may quote them. The undo's preview and answer count the
+  `delete_coding_session` removes them. The project's backups and
+  copies keep copies of the sessions kept in it. An export made since
+  keeps what it holds until you delete it. If you use QualCoder, its
+  own backups beside the project may hold the files too. Its AI search
+  index keeps their text until it next re-indexes with AI on, and its AI
+  chat history may quote them. The undo's preview and answer count the
   backups and the coding sessions, and name each of those other files
   that Exegete finds beside or inside the project.
 - **More of a document comes in than in QualCoder**: a Word,
@@ -1684,7 +1766,11 @@ leaves the folder where it is. It leaves the backup's copy of that
 folder in the backup. (QualCoder, if you use it, removes its own older
 backups when it closes a project, so a copy in one of those may not
 stay.) When the project has no such folder, a restore does not bring
-the backup's back, and you can copy it into the project yourself.
+the backup's back, and you can copy it into the project yourself. A
+restore keeps the project's `Exegete coding sessions` folder as it is
+too, and leaves the backup's copy in the backup. The backup's older
+sessions would otherwise take away the decisions made since, and bring
+back sessions deleted since.
 
 The project database is the one file not copied as a file. `data.qda` is
 copied with SQLite's own online backup, from a read-only connection. So
@@ -2496,9 +2582,10 @@ near the top of this document, set them out.
     the names list, `undo_changes` brings back the list as it was before
     that save, or removes the list if the save made it. `restore_backup`
     rolls the project back, this file with it, all but its `Exegete`,
-    `audio` and `video` folders, which a restore keeps. Its preview says
-    beforehand whether the backup's file is the same, differs or is
-    missing, by a fingerprint of the two files' bytes, never a name. And
+    `Exegete coding sessions`, `audio` and `video` folders, which a
+    restore keeps. Its preview says beforehand whether the backup's
+    file is the same, differs or is missing, by a fingerprint of the
+    two files' bytes, never a name. And
     the file the project had stays in the pre-restore safety backup.
     `prune_backups` lists in its preview any backup it would remove that
     holds the only copy of a `pseudonyms.json` that Exegete knows of,
@@ -2661,7 +2748,9 @@ near the top of this document, set them out.
     still holds it until QualCoder indexes the project again; Exegete's
     backups keep QualCoder 3.8's store ("Backups, project copies, and
     the `ai_data/` folder").
-  - **Exegete's own session files** in `~/.exegete/sessions/`. A coding
+  - **Exegete's coding sessions**, in the project's `Exegete coding
+    sessions` folder, and in `~/.exegete/sessions/` for those made
+    before 0.15.4 or that the project's folder could not hold. A coding
     session records the excerpt each suggestion refers to, with the
     file's name and the reason given for it (which may quote the
     passage), and each proposed code with its definition and evidence
@@ -2674,10 +2763,11 @@ near the top of this document, set them out.
     never deletes one; `delete_coding_session` is yours to call. Until a
     session is deleted, `review_suggestions`, `review_proposals` and
     `get_coding_session_info` return its passages as they were
-    recorded, real names included, whichever project is selected, and
-    they are marked read-only, so a host in an auto mode runs them
-    without asking. These files are part of what stays on the computer
-    ("How your data flows").
+    recorded, real names included, while its project is selected. They
+    are marked read-only, so a host in an auto mode runs them without
+    asking. The project's backups and copies keep copies of the
+    sessions kept in it. These files are part of what stays on the
+    computer ("How your data flows").
   - **The run record and the journal entry.** The run record in
     `~/.exegete/pseudonymisation/` ("Files Exegete keeps on your
     computer") and the journal entry inside the project (the pseudonyms

@@ -1328,7 +1328,9 @@ class TestTheDocuments:
                 "the names file, `Names to replace.txt` in the project's "
                 "`Exegete` folder, if you made one, which holds real names "
                 "and their pseudonyms in plain text as `pseudonyms.json` "
-                "does.") in purpose
+                # (v0.15.4: the project's coding sessions follow in the
+                # list, tests/test_v0154_privacy_additions.py)
+                "does;") in purpose
         mitigations = privacy[privacy.index("\n## Practical mitigations\n"):]
         names = mitigations[mitigations.index(
             "- **Pseudonymising a project does not empty it of names.**"):]

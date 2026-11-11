@@ -1045,9 +1045,12 @@ class TestTheDocumentsSayWhatTheLogCarries:
         # pseudonymise_source's run manifests and the texts an import's
         # preview keeps; the paragraph names each use and what losing the
         # secret does to it, and a replaced secret does the same
-        from exegete import kept_texts, preview_tokens
+        # (v0.15.4, the coding sessions kept in projects: the sixth use,
+        # the seal and the approvals' marks, read with the same call)
+        from exegete import kept_texts, preview_tokens, sessions
         for module, call in ((preview_tokens, "secret = load_secret()"),
-                             (kept_texts, "preview_tokens.load_secret()")):
+                             (kept_texts, "preview_tokens.load_secret()"),
+                             (sessions, "preview_tokens.load_secret()")):
             assert call in Path(module.__file__).read_text(
                 encoding="utf-8"), module.__name__
         source = Path(server.__file__).read_text(encoding="utf-8")
@@ -1084,9 +1087,16 @@ class TestTheDocumentsSayWhatTheLogCarries:
                  "choosing occurrences",
                  "every occurrence gets a new id"),
                 ("keys the records of changes",
-                 "a change Exegete made before can no longer be undone")):
+                 "a change Exegete made before can no longer be undone"),
+                # (v0.15.4: a session kept in a project without this
+                # computer's seal reads as having come with it, and an
+                # approval without this computer's mark as pending)
+                ("the seal of each coding session kept in a project, and "
+                 "the mark of each approval you give on this computer",
+                 "every coding session kept in a project then reads as "
+                 "having come with the project")):
             assert use in secret and lost in secret, use
-        assert "Deleting it has five effects, and nothing else" in secret
+        assert "Deleting it has six effects, and nothing else" in secret
         assert "Exegete replaces the secret by itself, with the same " \
             "effects" in secret
         # (v0.15.4, PRIVACY read whole: how the re-read shares its memory

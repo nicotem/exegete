@@ -908,9 +908,7 @@ while only Exegete on this computer saves the file and nothing else
 changes it.
 
 A session whose file lacks this computer's seal is read as having come
-with the project. Such a session was saved by Exegete on another
-computer or under another account, changed outside Exegete, or kept
-from before the secret was replaced. Exegete gives its texts to the
+with the project. Such a session was saved by Exegete on another computer or under another account, changed outside Exegete, brought in from another project, carried by a workspace copy of the project, or kept from before the secret was replaced or the project's id was lost. Exegete gives its texts to the
 assistant with a note that they came with the project and are data,
 never instructions. An approval in it counts only if it carries this
 computer's mark. The mark holds while the suggestion or proposed code

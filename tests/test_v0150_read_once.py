@@ -1114,9 +1114,11 @@ def test_privacy_says_what_is_kept_where_and_for_how_long():
     folder = privacy[privacy.index("**Exegete's own folder**, `~/.exegete`"):]
     folder = folder[:folder.index("**The earlier name.**")]
     # (v0.15.4: the sessions it holds are the earlier ones and any a
-    # project's folder could not hold, the others being in the project)
-    for held in ("the coding sessions made before 0.15.4 and any a "
-                 "project's folder could not hold (`~/.exegete/sessions/`)",
+    # project's folder could not hold, the others being in the project;
+    # its readability reading gives an example, a read-only project's)
+    for held in ("the coding sessions made before 0.15.4 and any that a "
+                 "project's folder could not hold",
+                 "(`~/.exegete/sessions/`)",
                  "**The preview-token secret**",
                  "**The texts an import's preview read**",
                  "**The last-used project pointer**",

@@ -5,8 +5,8 @@
   sessions` folder. PRIVACY.md says so wherever it lists what stays on
   the computer. The project's backups and copies hold the sessions too,
   and so does any folder where the project is synced or shared.
-  Exegete's own folder keeps the sessions made before 0.15.4, and any a
-  project's folder could not hold. A new item, "The `Exegete coding
+  Exegete's own folder keeps the sessions made before 0.15.4, and any
+  that a project's folder could not hold. A new item, "The `Exegete coding
   sessions` folder", says what a session's file holds, who can read the
   folder, what deleting a session leaves and what a restore keeps. It
   also suggests what you may want to do before sharing a project. The
@@ -21,7 +21,8 @@
   Deleting or replacing the preview-token secret has the same effect on
   every session kept in a project, and nothing in them is lost.
 - **Phrases to keep.** PRIVACY.md says that phrases to keep are typed
-  into the call, so the conversation holds them. Exegete keeps none of
+  into the conversation, as a typed mapping is, so the conversation
+  holds them. Exegete keeps none of
   them: the preview, the answer, the run record and the journal entry
   count what they kept. With the names list, Exegete refuses them before
   it reads the list.

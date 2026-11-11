@@ -441,7 +441,7 @@ What changed for everyone:
 - **Exegete's own folder** moves by itself at the first start, from
   `~/.qualcoder_mcp` to `~/.exegete`, whole. It holds the secret that
   signs Exegete's previews, the coding sessions made before 0.15.4 and
-  any a project's folder could not hold ("Coding sessions, from
+  any that a project's folder could not hold ("Coding sessions, from
   0.15.4", above), the last-project hint and the pseudonymisation run
   records. A link is left under the old
   name (on Windows, a kind of link called a junction), so that an older
@@ -739,23 +739,22 @@ Exegete's instead, and nothing of what was sent:
 
 ### Where to ask
 
-- **Problems with Exegete**: check "Troubleshooting", above. A fault
-  that could expose participants' data, or damage a project when
+- **Problems with Exegete**: check "Troubleshooting", above, first. A
+  fault that could expose participants' data, or damage a project when
   Exegete changes it, is best reported privately, so that it is not
-  public before it is fixed. [SECURITY.md](SECURITY.md) says how. For
-  anything else, open an issue on
+  public before it is fixed. [SECURITY.md](SECURITY.md) says how.
+- **Other problems and questions** go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues), as
   [SUPPORT.md](SUPPORT.md) describes. Requests for support sent by email
-  receive no reply. Research data pasted into an issue becomes
-  public, so a made-up example, or a real one with names and details
-  removed, is the safer way to show a problem. The real one is still a
-  participant's words, which a search can find and someone can
-  recognise. Your ethics approval may not allow you to publish it. Give
-  the Exegete version, and your QualCoder version if you use it. Say
-  which host you use: Claude Desktop, and whether in a chat, Cowork or
-  a Code session. Give the tool set too: `full`, or
-  `core` if the small tool set is on. `lifecycle` is the earlier name
-  of `full`.
+  receive no reply. An issue is public, so research data pasted into
+  one is published with it. A made-up example, or a real one with names
+  and details removed, is the safer way to show a problem. The real one
+  is still a participant's words, which a search can find and someone
+  can recognise. Your ethics approval may not allow you to publish it.
+  Give the Exegete version, and your QualCoder version if you use it.
+  Say which host you use: Claude Desktop, and whether in a chat, Cowork
+  or a Code session. Give the tool set too: `full`, or `core` if the
+  small tool set is on. `lifecycle` is the earlier name of `full`.
 - **The protocol Exegete speaks to apps**, MCP:
   https://modelcontextprotocol.io/
 - **If you also use QualCoder**, its own help:

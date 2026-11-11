@@ -878,7 +878,12 @@ beside it, and `apply_codings` writes only the approvals that count on
 this computer. An approval counts only while Exegete's own folder on this
 computer records it, so an older copy of the session's file, put back
 from a backup or by a sync service, cannot bring back an approval you
-have withdrawn since. If you work on a project from two computers,
+have withdrawn since on this computer. One withdrawn on another
+computer, in a session deleted outside Exegete, or by a save cut short
+before the record was updated stays in that record until Exegete here
+saves or deletes the session, and an older copy put back before then
+still counts it. The same holds if Exegete's own folder is put back
+from an older backup. If you work on a project from two computers,
 approve on the one where you apply.
 
 ### Backups

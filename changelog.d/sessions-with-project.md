@@ -56,11 +56,20 @@
   counts only while Exegete's own folder on this computer records it
   (`approvals`), so an older copy of a session's file put back, from a
   backup, by a sync service or by an earlier release's restore, cannot
-  bring back an approval withdrawn since; deleting that folder makes
-  the approvals given here read as pending, nothing lost. A
-  `Project id.txt` changed by hand is never replaced: the session tools
-  refuse the project's sessions, with the reason, until it is put back
-  or removed. So approvals do not carry from one computer to another. If the key is lost or
+  bring back an approval withdrawn since on this computer. One
+  withdrawn on another computer, in a session deleted outside Exegete,
+  or by a save cut short before the record was updated stays in the
+  record until Exegete here saves or deletes that session, and an
+  older copy put back before then still counts it; the same holds if
+  that folder is put back from an older backup. Deleting that folder
+  makes the approvals given here read as pending, nothing lost.
+  Exegete never replaces `Project id.txt`. When it cannot read an id
+  there, the session tools refuse the project's sessions, with the
+  reason and what can be done, until the file can be read, is put back
+  or is removed. Removed, or changed to another id, it leaves every
+  session there read as having come with the project, and a session
+  saved meanwhile goes on reading so after the id is put back. Approvals
+  do not carry from one computer to another. If the key is lost or
   replaced, every session kept in a project reads as having come with
   the project, nothing in it lost. When the key cannot be read, the
   session tools refuse, with its reason, to start a session or to read

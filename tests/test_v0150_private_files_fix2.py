@@ -261,14 +261,16 @@ class TestHowFarAFolderOfItsOwnGoes:
         section = _files_section()
         assert ("Some ways narrow that reach, though none closes it. You "
                 "could keep the project in a folder no assistant with its "
+                # (v0.15.4, the readability reading: the pointer first, then
+                # Cowork, then the others, each a sentence)
                 "own file access is given. How far that goes depends on the "
-                "assistant: it keeps the project out of Cowork's reach when "
-                "no folder connected to it holds the project, but Codex "
+                "assistant (\"Assistants that open files by themselves\" "
+                "says which). It keeps the project out of Cowork's reach when "
+                "no folder connected to it holds the project. But Codex "
                 "reads well beyond any folder of its own, Claude Code's "
                 "read-only commands, and its file tools in auto mode, read "
                 "beyond its working folders, and computer use sees whatever "
-                "a window shows (\"Assistants that open files by "
-                "themselves\" says which).") in section
+                "a window shows.") in section
         assert "for Codex a folder of its own is not enough" not in section
 
     def test_what_that_section_says_of_claude_code(self):
@@ -538,13 +540,14 @@ class TestTheTexts:
         assert ("in that order: backups; the project's database "
                 "(`data.qda`), the documents' originals, `pseudonyms.json`")\
             in section
+        # (v0.15.4, the readability reading: one fact a sentence)
         assert ("For the length of each write, Exegete also writes a lock "
                 "file into the project's folder (`project_in_use.lock`, the "
-                "file QualCoder 3.8.2 uses to mark a project open), holding "
-                "your computer account's name and the time, which it renews "
-                "every five seconds while the write runs; it removes the "
-                "file when the write ends if the file still holds its own "
-                "lines, though a write that is cut off can leave it "
+                "file QualCoder 3.8.2 uses to mark a project open). It holds "
+                "your computer account's name and the time, which Exegete "
+                "renews every five seconds while the write runs. Exegete "
+                "removes the file when the write ends, if the file still "
+                "holds its own lines. A write that is cut off can leave it "
                 "behind.") in section
         assert ("A backup or a copy that leaves out a link kept there counts "
                 "it the same way.") in section

@@ -117,12 +117,15 @@ def test_privacy_says_what_a_rename_cannot_reach():
     assert "never rewritten by the pseudonymisation tool (a case or file " \
            "name is renamed with `rename_case` or `rename_file`, below)" \
            in flat
-    assert ("A rename cannot reach, and the preview's count does not read: "
-            "the stored copy and stored path of an imported file (the copy "
-            "in the project folder keeps the name it was imported under "
-            "and, for a document, the original text, and QualCoder's "
-            "exports ship that copy), saved graph labels, saved table "
-            "displays and filters, and QualCoder's saved SQL queries. Each "
+    # (v0.15.4, the readability reading: what the copy keeps, a sentence
+    # of its own after the list)
+    assert ("A rename cannot reach the following, and the preview's count "
+            "does not read them: the stored copy and stored path of an "
+            "imported file, saved graph labels, saved table displays and "
+            "filters, and QualCoder's saved SQL queries. The copy in the "
+            "project folder keeps the name it was imported under and, for a "
+            "document, the original text, and QualCoder's exports ship that "
+            "copy. Each "
             "rename's result counts the saved graph labels, table displays "
             "and filters for the case or file it renamed; nothing in "
             "Exegete reads the saved SQL queries.") in flat

@@ -662,9 +662,10 @@ class TestTheDocuments:
 
     def test_privacy(self):
         text = _doc("PRIVACY.md")
+        # (v0.15.4, the readability reading: two sentences)
         assert ("You can choose it in advance, in Exegete's settings (\"AI "
                 "coder name\" in the extension, `EXEGETE_AI_CODER_NAME` on "
-                "other routes): Exegete stores it with each project it "
+                "other routes). Exegete then stores it with each project it "
                 "creates, without asking, and the answer that creates the "
                 "project says so.") in text
         assert ("When the AI coder name is filled in Exegete's settings, it "

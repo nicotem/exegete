@@ -8903,7 +8903,9 @@ class TestTheDocumentsTellTheTruth:
         # B3: what re-reads, and what an unreadable declaration means
         "A coder hidden while Exegete is connected is filtered out from "
         "the next call on, without selecting the project again.",
-        "every tool that would decide who is hidden treats unknown as "
+        # (v0.15.4, the readability reading: the causes in a sentence of
+        # their own, before this one)
+        "tool that would decide who is hidden then treats unknown as "
         "hidden",
         # S6 and S7: what the residue reads, and what it cannot reach.
         # v0.13, Brief 2: "Notes" under the fixed vocabulary (the key
@@ -8912,12 +8914,14 @@ class TestTheDocumentsTellTheTruth:
         "included), journal entries and their names, case names, file "
         "names, code names, category names, attribute-type names and "
         "attribute values.",
-        "Scanned and counted; of these, only the public part of the notes "
-        "and journal entries is rewritten, and only when `rewrite_memos` "
-        "is on, across the whole project; the names of things and the "
-        "attribute values are never rewritten by the pseudonymisation tool "
-        "(a case or file name is renamed with `rename_case` or "
-        "`rename_file`, below).",           # the merge with main
+        # (v0.15.4, the readability reading: the fragment given its
+        # subject, the semicolons full stops)
+        "The preview scans and counts names in all of these. Of these, "
+        "only the public part of the notes and journal entries is "
+        "rewritten, and only when `rewrite_memos` is on, across the whole "
+        "project. The names of things and the attribute values are never "
+        "rewritten by the pseudonymisation tool (a case or file name is "
+        "renamed with `rename_case` or `rename_file`, below).",
         "A note's private part (from its `#####` marker) is carried across "
         "unread, so a name there is still there and nothing in Exegete "
         "can report it.",
@@ -8932,9 +8936,11 @@ class TestTheDocumentsTellTheTruth:
         "QualCoder's own `_BKUP_` backups do not count as keeping a copy, "
         "because QualCoder deletes them past its `backup_num` when a "
         "project closes.",
-        "The approval token signs that set of only copies, so a prune "
-        "whose set changed after its preview is refused and removes "
-        "nothing.",
+        # (v0.15.4, the readability reading: "that set of only copies"
+        # said in full)
+        "The token that approves the prune signs that set of backups "
+        "holding the only copies, so a prune whose set changed after its "
+        "preview is refused and removes nothing.",
         # Brief 2 fix round 1, Security's ruling (S-1): the departure,
         # named.
         "A file the save creates is owner-only (0600) on macOS and Linux, "
@@ -8966,9 +8972,10 @@ class TestTheDocumentsTellTheTruth:
         "guidance is to remove `pseudonyms.json` and store it securely once "
         "the import is done",
         # Ruling 2: an audit record, not a way back
+        # (v0.15.4, the readability reading: two sentences)
         "an audit record of which rows a run changed and where the "
-        "pseudonyms now sit, kept so a run can be accounted for "
-        "afterwards; no tool reads them back, and the way back is the "
+        "pseudonyms now sit, kept so that a run can be accounted for "
+        "afterwards. No tool reads them back, and the way back is the "
         "backup taken before the run.",
         "A look-alike letter from another script (a Cyrillic \"о\" for a "
         "Latin \"o\") is a different letter to the comparison, and is out "
@@ -8989,22 +8996,24 @@ class TestTheDocumentsTellTheTruth:
         "can undo the pseudonymisation for whoever receives both",
         "A reader tells the two kinds apart by the record's `format` (3 is "
         "keyed) and by the field names",
-        "today's answer gives only the plain SHA-256 of the text after the "
+        "Today's answer gives only the plain SHA-256 of the text after the "
         "run (`new_sha256`)",
         # Fix round 4, R3: the symlink route.
         "On `pseudonymise_source`'s result the name of a skipped symlink "
         "is withheld where a reader of it would see a name from the "
         "mapping, the count kept",
-        "the log line that reports a skipped symlink carries the count and "
+        "The log line that reports a skipped symlink carries the count and "
         "the reason, never the path",
         # Rulings 7.3(3) and 7.4: the flagship's override rule, in
         # plain words.
-        "A coding that covered a name, or contained one, and now covers or "
-        "contains its pseudonym needs no override, whatever the two "
-        "lengths, and neither does a pure position shift, because neither "
-        "changes a coding decision.",
-        "A coding that grew to swallow a pseudonym, or one clamped because "
-        "its stored end lay past the end of the text, requires the "
+        # (v0.15.4, the readability reading: the reason first, then the
+        # two cases; "clamped" in plain words)
+        "Some changes need no override, because they change no coding "
+        "decision: a coding that covered a name, or contained one, and now "
+        "covers or contains its pseudonym, whatever the two lengths, and a "
+        "coding that only shifts position.",
+        "A coding that grew to swallow a pseudonym, or one shortened "
+        "because its stored end lay past the end of the text, requires the "
         "override.",
         # v0.13, Brief 1: the file text, and the four things the sidecar
         # path still returns, as the description declares them.
@@ -9017,7 +9026,7 @@ class TestTheDocumentsTellTheTruth:
         "a pseudonym that carries a name from the mapping",
         "On a mapping you type, the block also lists the longer words a "
         "name sits inside, which are words of the file text",
-        "on the `use_project_pseudonyms` path it lists none and shows no "
+        "On the `use_project_pseudonyms` path it lists none and shows no "
         "form of a name.",
         "Four things are still returned as they stand, because a preview "
         "whose files cannot be named cannot be relayed: the project path, "
@@ -9027,7 +9036,10 @@ class TestTheDocumentsTellTheTruth:
         # Fix round 5: the budgets; PRIVACY keeps the rule a reader needs
         # and points to TOOLS.md for the rest
         "no file is ever reported clean when it was not read.",
-        "TOOLS.md, under `pseudonymise_source`, gives the budgets.",
+        # (v0.15.4, the readability reading: how each count reads the
+        # text, which TOOLS.md gives too, is left to it)
+        "TOOLS.md, under `pseudonymise_source`, says how each count reads "
+        "the text, and gives the budgets.",
     ])
     def test_privacy_says_it(self, sentence):
         assert " ".join(sentence.split()) in self._flat("PRIVACY.md")

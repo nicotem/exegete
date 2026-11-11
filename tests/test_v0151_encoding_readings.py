@@ -477,8 +477,11 @@ class TestTheDocuments:
                 "set reads it") in tools
         assert "a preview (never the text, but that line)" in tools
         privacy = _flat("PRIVACY.md")
-        assert ("does not pass through the conversation on the way in, but "
-                "for one line of a plain text file not saved as UTF-8, as "
-                "each character set reads it") in privacy
+        # (v0.15.4, PRIVACY's readability reading: the exception in a
+        # sentence of its own, UTF-8 explained, as the README does)
+        assert ("does not pass through the conversation on the way in, with "
+                "one exception. For a plain text file not saved as UTF-8, the "
+                "usual way of storing letters, the preview shows one line, as "
+                "each character set that can read it reads it") in privacy
         assert "| the rest of the text, also when that page shows it to " \
             "you;" in privacy

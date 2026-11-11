@@ -348,7 +348,9 @@ class TestFixRoundOneWords:
          "- The resources' addresses")])
     def test_the_move_promises_what_the_code_does(self, name, start, end):
         passage = self._state_folder_passage(name, start, end)
-        for words in ("the move never copies or duplicates the secret",
+        # (v0.15.4, PRIVACY's readability reading: the move a sentence of
+        # its own there, so its first word is a capital)
+        for words in ("move never copies or duplicates the secret",
                       "the folder is put back",
                       "unless an older copy of the server has already "
                       "written at the old path in that instant",

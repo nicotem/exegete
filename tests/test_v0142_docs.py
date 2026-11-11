@@ -330,9 +330,10 @@ def _chat_suggestions():
             _flat("QUICKSTART.md"),
             "### Claude Code instead of Claude Desktop",
             "## Installation steps"),
-        "PRIVACY, practical mitigations": _between(
-            privacy, "- **An assistant that opens files by itself can read "
-            "a project whole**", "- **Advice.**"),
+        # (v0.15.4, the readability reading: PRIVACY's practical
+        # mitigations no longer repeat the suggestion; they point to
+        # "Assistants that open files by themselves", whose summary is
+        # above)
     }
 
 
@@ -569,8 +570,11 @@ def test_privacy_warns_of_auto_where_it_suggests_the_chat():
                      r"takes actions\.", route)
     imports = _between(privacy, "- **Hidden instructions in a document**",
                        "- **A file imported by mistake**")
-    assert ("Ultra and Team plans, and on Auto automated safety checks run "
-            "instead of asking you.") in imports
+    # (v0.15.4, the readability reading: what Auto does is said where the
+    # chat is suggested, which the import's warning points to)
+    assert ("the permission setting starts on Auto on Pro, Max, Ultra and "
+            "Team plans (\"Assistants that open files by themselves\").") \
+        in imports
     assert re.search(r"Anthropic's page, " + READ_ON + r", does not say what "
                      r"either of its modes does with the mark", imports)
 
@@ -700,14 +704,14 @@ def test_deleting_the_name_file_says_its_exception():
     marked and still holds a name brings that name back without a
     question, as the server's own warning says (removing_alone_warning)."""
     privacy = _flat("PRIVACY.md")
-    assert ("Deleting it makes the next AI write ask for the name again, "
-            "unless the earlier `qualcoder_mcp.json` beside it could not "
-            "be marked as moved and still holds a name (Exegete says so "
-            "while it stays unmarked): that name would then come back "
-            "without a question, so you could remove both files.") \
-        in privacy  # (v0.15.4: a suggestion, where it was an instruction)
-    assert "Deleting it makes the next AI write ask for the name again." \
-        not in privacy
+    # (v0.15.4: a suggestion, where it was an instruction; the readability
+    # reading: the exception in sentences of its own)
+    assert ("Deleting it makes the next AI write ask for the name again. "
+            "The exception is when the earlier `qualcoder_mcp.json` beside "
+            "it could not be marked as moved and still holds a name, which "
+            "Exegete says while it stays unmarked. That name would then come "
+            "back without a question, so you could remove both files.") \
+        in privacy
     warning = project_settings.removing_alone_warning("Claude")
     assert "remove both files instead" in warning
     assert project_settings.removing_alone_warning(None) == ""
@@ -1200,9 +1204,10 @@ def test_privacy_on_the_check_claims_no_more_than_is_known():
     # and Claude Code in auto mode asks a classifier: "normally asks your
     # permission" claimed more than the section it cites
     assert "normally asks your permission" not in check
-    assert ("which hosts that ask before a tool runs ask about (INSTALL.md, "
-            "\"What hosts do with the tools' read and write marks\", says "
-            "which do)") in check
+    # (v0.15.4, the readability reading: a sentence of its own)
+    assert ("Hosts that ask before a tool runs ask before that check too "
+            "(INSTALL.md, \"What hosts do with the tools' read and write "
+            "marks\", says which do)") in check
     # Whether GitHub shows a Pages site's owner who fetched a file is not
     # yet checked (design.md, section 13): say what this project adds
     assert "**What this project receives.** Nothing" not in check

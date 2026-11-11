@@ -2510,10 +2510,11 @@ near the top of this document, set them out.
     preview is refused and removes nothing. A backup the prune could not
     remove whole, as when another program has one of its files open, is
     named apart in its answer. If it held the only copy of a
-    `pseudonyms.json`, it may still hold it. It keeps its name, so `list_backups` lists it and `restore_backup` accepts it
-    while its database remains, though it may lack some of its files,
-    which a restore from it would not bring back. You could remove it by
-    hand once nothing holds it open.
+    `pseudonyms.json`, it may still hold it. It keeps its name, so
+    `list_backups` lists it and `restore_backup` accepts it while its
+    database remains, though it may lack some of its files, which a
+    restore from it would not bring back. You could remove it by hand once
+    nothing holds it open.
 
     A run on a mapping you typed is refused unless the call either asks
     for the mapping to be saved into this file

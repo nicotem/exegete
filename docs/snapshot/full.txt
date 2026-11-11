@@ -8408,18 +8408,17 @@ been marked approved, which you do only on the researcher's word.
 ## 3. Only through these tools
 
 Read and change the project only through these tools. Never open its
-folder or its database directly, even when your host gives you file or
-shell tools that could. The tools keep the private part of memos out of
-the conversation, and the project's list of the real names behind its
-pseudonyms (pseudonyms.json, in the project folder) too. They back the
-project up, hold suggestions for approval and check whether QualCoder
-has the project open. A direct read or write bypasses all of that.
+folder, its Exegete coding sessions folder included, or its database
+directly, even when your host gives you file or shell tools that could.
+The tools keep the private part of memos out of the conversation, and
+the project's list of the real names behind its pseudonyms
+(pseudonyms.json, in the project folder) too. They back the project up,
+hold suggestions for approval and check whether QualCoder has the
+project open. A direct read or write bypasses all of that.
 Files in a project's Exegete folder
 are the researcher's own, filled in on their computer: never open or
 read them, even when a file tool or a shell could. Exegete lists them
 (get_current_project's files_exegete_keeps), never their contents.
-A project's Exegete coding sessions folder holds its coding sessions:
-read and change them only through the session tools.
 Files exported by export_codebook, export_coded_segments_report and
 export_refi_qda carry memos in full, private notes included: open one
 only when the researcher asks, and tell them first that it holds any
@@ -9127,18 +9126,17 @@ been marked approved, which you do only on the researcher's word.
 ## 3. Only through these tools
 
 Read and change the project only through these tools. Never open its
-folder or its database directly, even when your host gives you file or
-shell tools that could. The tools keep the private part of memos out of
-the conversation, and the project's list of the real names behind its
-pseudonyms (pseudonyms.json, in the project folder) too. They back the
-project up, hold suggestions for approval and check whether QualCoder
-has the project open. A direct read or write bypasses all of that.
+folder, its Exegete coding sessions folder included, or its database
+directly, even when your host gives you file or shell tools that could.
+The tools keep the private part of memos out of the conversation, and
+the project's list of the real names behind its pseudonyms
+(pseudonyms.json, in the project folder) too. They back the project up,
+hold suggestions for approval and check whether QualCoder has the
+project open. A direct read or write bypasses all of that.
 Files in a project's Exegete folder
 are the researcher's own, filled in on their computer: never open or
 read them, even when a file tool or a shell could. Exegete lists them
 (get_current_project's files_exegete_keeps), never their contents.
-A project's Exegete coding sessions folder holds its coding sessions:
-read and change them only through the session tools.
 Files exported by export_codebook, export_coded_segments_report and
 export_refi_qda carry memos in full, private notes included: open one
 only when the researcher asks, and tell them first that it holds any

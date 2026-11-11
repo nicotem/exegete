@@ -110,14 +110,17 @@ def call(tool, **args):
 
 class TestTheServedTexts:
 
-    def test_the_brief_sends_sessions_through_the_session_tools(self):
+    def test_the_brief_sends_sessions_through_the_tools(self):
         """The brief's section on working only through the tools names
-        the folder where a project's sessions are kept, and says to read
-        and change them only through the session tools."""
+        the folder where a project's sessions are kept among what is
+        never opened directly: its sessions are read and changed through
+        the tools alone."""
         brief = _flat(server.BRIEF_FULL)
         section = brief[brief.index("## 3. "):brief.index("## 4. ")]
         sentence = _sentence_with(section, FOLDER)
-        assert "session tools" in sentence, sentence
+        assert "Never open" in sentence and "directly" in sentence, sentence
+        assert "only through these tools" in _sentence_with(
+            section, "Read and change the project")
 
     def test_the_list_says_what_it_lists_and_where_each_is_kept(
             self, tmp_path, server_state):

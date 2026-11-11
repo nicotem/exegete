@@ -50,11 +50,11 @@
   computer and name the others (`not_approved_here`). So approvals do
   not carry from one computer to another. If the key is lost or
   replaced, every session kept in a project reads as having come with
-  the project, nothing in it lost. When the key cannot be read, a start
-  and a session kept in a project are refused with its reason; the
-  sessions kept on this computer are read as before, and
-  `list_coding_sessions` lists them, with that reason for the project's
-  own.
+  the project, nothing in it lost. When the key cannot be read, the
+  session tools refuse, with its reason, to start a session or to read
+  or save one kept in a project; the sessions kept on this computer are
+  read as before, and `list_coding_sessions` lists them, with that
+  reason for the project's own.
 
 ### Fixed
 

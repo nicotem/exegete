@@ -427,7 +427,11 @@ class TestTheDocuments:
             flat, "Backups and copies leave out")
         bound = _sentence_with(flat, "at the place the session")
         assert "listed" in bound and "applied" in bound, bound
+        # With the key unreadable, a start and the reads and saves of a
+        # session kept in a project are refused; one kept on this computer
+        # is read as before (sessions.py, session_key)
         unreadable = _sentence_with(flat, "When the key cannot be read")
+        assert "kept in a project" in unreadable, unreadable
         assert KEPT_ON_THIS_COMPUTER in unreadable, unreadable
         documents = flat[flat.index("### Documents"):]
         assert "Going back to an earlier version" in documents

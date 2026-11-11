@@ -1519,12 +1519,15 @@ class TestPseudonymsJsonErrorsAreAnsweredByKind:
             assert expected in json.dumps(answer), answer
             assert "Failed to get project info" not in raw
         else:
-            # followed by the tool's own way round it (v0.14, server-wide)
+            # followed by the tool's own way round it (v0.14, server-wide),
+            # which names a text editor, and so by the warning about
+            # editors with an AI assistant of their own (v0.15.4)
             advice = {
                 "import_text_file": server.PSEUDONYMS_JSON_ADVICE_IMPORT,
                 "pseudonymise_source":
                     server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE}[route]
-            assert answer["error"] == expected + advice
+            assert answer["error"] == (expected + advice + " "
+                                       + server.EDITOR_AI_WARNING)
 
 
 class TestOpeningADatabaseChainsNothing:

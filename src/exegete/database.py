@@ -4301,6 +4301,16 @@ _NAMES_LIST_UNREADABLE = (
     f"The project's names list ({PSEUDONYMS_JSON_NAME}, a list of "
     f"{{original, pseudonym}} entries in QualCoder's format) could not "
     f"be read")
+
+
+class NamesListEncodingError(ValueError):
+    """The reader's refusal of a names list in neither UTF-8 nor this
+    machine's default encoding, the one of its refusals that sends the
+    researcher to a text editor (v0.15.4): its own kind, so that an
+    answer giving it can add the warning about editors with an AI
+    assistant of their own. A `ValueError` still, words unchanged."""
+
+
 # The sidecar is a short list of short strings. A megabyte is orders of
 # magnitude past any real one and stops a mistaken or hostile file being
 # read into memory whole.
@@ -4492,7 +4502,7 @@ def read_project_pseudonyms_with_raw(project_folder: Union[str, Path]
         try:
             text = raw.decode(encoding)
         except (UnicodeDecodeError, LookupError):
-            raise ValueError(
+            raise NamesListEncodingError(
                 f"{_NAMES_LIST_UNREADABLE}: it is neither UTF-8 nor this "
                 f"machine's default encoding ({encoding}). A file written "
                 f"on Windows, by QualCoder or another program, is usually "

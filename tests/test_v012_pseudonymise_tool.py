@@ -5196,7 +5196,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "contains one of the names, or write it into pseudonyms.json in "
             "the project folder with a text editor, as a list of {original, "
             "pseudonym} entries; or, if they use QualCoder, enter it in its "
-            "Pseudonyms dialog (the button in Manage Files).")
+            "Pseudonyms dialog (the button in Manage Files). "
+            + server.EDITOR_AI_WARNING)
         record = json.loads(Path(result["manifest_path"]).read_text(
             encoding="utf-8"))
         assert record["mapping_retention"]["choice"] == "save_requested"
@@ -7915,7 +7916,8 @@ class TestProjectPseudonyms:
         # The tool's own way round it follows the reader's message
         # (v0.14, server-wide)
         assert refused == {"error": self.NOT_REGULAR
-                           + server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE}
+                           + server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE
+                           + " " + server.EDITOR_AI_WARNING}
 
     @POSIX_ONLY
     def test_a_directory_is_refused_value_free(self, project):

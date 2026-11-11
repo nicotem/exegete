@@ -306,10 +306,12 @@ class TestAListThatCannotBeRead:
         preview = _import(paths=[str(_transcript(tmp_path))])
         stops = [s for s in preview.get("stops_the_import", [])
                  if "names list" in s]
+        # v0.15.4: the advice names a text editor, so the warning about
+        # editors with an AI assistant of their own ends the stop
         assert stops == [
             OPENS + tail + CORRECT_UNREADABLE + "The import applies the "
             "list as the text comes in, so it cannot go ahead with a list "
-            "it cannot read."], preview
+            "it cannot read. " + server.EDITOR_AI_WARNING], preview
         # Fix round 1: QualCoder's dialog cannot open such a list, so it
         # is not offered.
         assert "QualCoder" not in stops[0][stops[0].index(
@@ -322,7 +324,11 @@ class TestAListThatCannotBeRead:
         tail = _unreadable(importing, way, monkeypatch)
         report = json.loads(server.get_current_project())["pseudonyms_json"]
         assert report["entries"] is None
-        assert report["error"] == OPENS + tail
+        expected = OPENS + tail
+        if way == "encoding":
+            # The one refusal that names a text editor (v0.15.4)
+            expected += " " + server.EDITOR_AI_WARNING
+        assert report["error"] == expected
 
     def test_a_list_written_on_windows_names_no_one_program(
             self, importing, monkeypatch):
@@ -348,7 +354,8 @@ class TestAListThatCannotBeRead:
         # Fix round 2: the list can be read; it cannot be used.
         assert stops[0].endswith(
             CORRECT + "The import applies the list as the text comes in, "
-            "so it cannot go ahead with a list it cannot use.")
+            "so it cannot go ahead with a list it cannot use. "
+            + server.EDITOR_AI_WARNING)
         # The engine's own refusal names a departure from QualCoder's
         # import (kept); the advice that follows leads with the editor.
         _before_qualcoder(stops[0][stops[0].index(CORRECT):],
@@ -624,7 +631,7 @@ class TestThePreviewAndItsRefusals:
         monkeypatch.undo()
         assert result["mapping_saved"] is False, result
         note = [n for n in result["notes"] if n.startswith("The mapping")][0]
-        assert note.endswith(NOT_MADE)
+        assert note.endswith(NOT_MADE + " " + server.EDITOR_AI_WARNING)
         _before_qualcoder(NOT_MADE, "save it with a run on another file")
         _before_qualcoder(NOT_MADE, "with a text editor")
         # Fix round 2: what to write, in the words the reader's refusal

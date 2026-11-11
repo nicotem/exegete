@@ -70,7 +70,9 @@ NEXT_STEP = (
     "(or, when it could not be opened, where it is). They write each real "
     "name and its pseudonym on a line of their own, save the file, and "
     # the files design, piece 4: the call that saves it
-    "tell you when the list is ready; then call save_names_list. Never "
+    "tell you when the list is ready; then call save_names_list. "
+    # v0.15.4: the file opens in a text editor
+    + server.EDITOR_AI_WARNING + " Never "
     "open or read the file yourself, even when a file tool could.")
 NOT_UTF8_STEP = (
     "The names file there is not saved as UTF-8 text: ask the researcher "
@@ -155,7 +157,8 @@ TOO_LARGE_NEXT_STEP = (
     "did not read it: the researcher may want to look at what it holds. "
     "To start afresh, they can rename it, leaving it in the project's "
     "Exegete folder, which Exegete does not import from; then call "
-    "prepare_names_list again to make a new names file. Never open or "
+    "prepare_names_list again to make a new names file. "
+    + server.EDITOR_AI_WARNING + " Never open or "
     "read the file yourself, even when a file tool could.")
 
 
@@ -1227,6 +1230,7 @@ class TestWhatItSays:
         last sentence stays."""
         assert server.PREPARE_NAMES_LIST_FILL_IN == FILL_IN
         assert " ".join((server.PREPARE_NAMES_LIST_WHERE, FILL_IN,
+                         server.EDITOR_AI_WARNING,
                          server.PREPARE_NAMES_LIST_NEVER_OPEN)) == NEXT_STEP
         for step in (NOT_A_FILE_NEXT_STEP, TOO_LARGE_NEXT_STEP):
             assert FILL_IN not in step

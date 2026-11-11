@@ -34,7 +34,8 @@ from decimal import Decimal
 from xml.dom import minidom
 import zipfile
 from pathlib import Path
-from typing import Any, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
+from typing import (Any, BinaryIO, Callable, Dict, List, NamedTuple,
+                    Optional, Set, Tuple)
 from datetime import datetime, timezone
 
 from . import names
@@ -77,6 +78,28 @@ SUGGESTION_STATUSES = ("pending", "approved", "rejected", "applied",
 EMPTY_PROJECT_REFUSAL = (
     "The project has no codes, categories, text sources, cases or journal "
     "entries to export.")
+
+# A session's export (v0.15.4): the way to correct a suggestion whose
+# passage is not the file's text at its positions, by its status, given
+# at the end of the refusal. edit_suggestion edits a pending suggestion
+# alone, and record_suggestions only adds (its `replace` drops pending
+# ones alone), so a decided one is reopened first.
+PASSAGE_MOVED_PENDING = (
+    "To correct a pending one: edit_suggestion, with the passage as the "
+    "file now has it, or new positions.")
+PASSAGE_MOVED_DECIDED = (
+    "To correct one whose status is {statuses}: update_suggestion_status "
+    "with reopen, then edit_suggestion, then decide it again.")
+# An applied or removed suggestion that fails a check is left out of the
+# session's file instead: an applied one cannot be reopened, its coding
+# being in the project, and a removed one's status is the only record
+# that its coding was written and then deleted, which undo reads
+LEFT_OUT_STATUSES = ("applied", "removed")
+NOTHING_LEFT_REFUSAL = (
+    "Export validation failed: every suggestion of the session is applied "
+    "or removed and no longer fits the project (its passage, positions, "
+    "code or file), so the file would hold none ({count} left out). The "
+    "whole project's export carries what the project holds.")
 
 # The part file: the archive is written beside its destination under
 # this name and moved into place only when complete. The destination's
@@ -404,6 +427,79 @@ def _status_word(status: Any) -> str:
     return status if status in SUGGESTION_STATUSES else "unknown"
 
 
+# A session's suggestion is named by its number, and by its GUID, ids and
+# positions only where each has its shape (v0.15.4): a session's file is
+# taken as it holds them, and from 0.15.4 a session can come with someone
+# else's project, so a value of another shape is said to be so and never
+# repeated
+def _shown_guid(value: Any) -> Optional[str]:
+    """A suggestion's GUID when it has a GUID's shape, matched whole (as
+    sessions.py's `_GUID_SHAPE`), else None."""
+    if isinstance(value, str) and _GUID_RE.fullmatch(value):
+        return value
+    return None
+
+
+def _whole_number(value: Any) -> bool:
+    """Whether an id or a position is a whole number (a boolean is not)."""
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def _shown_number(value: Any) -> Any:
+    """An id or a position as it is when a whole number, else what it is
+    in words, for a reason or a left-out suggestion's entry."""
+    if _whole_number(value):
+        return value
+    return "missing" if value is None else "not a whole number"
+
+
+def _which(index: int, suggestion: Any) -> str:
+    """A suggestion as a reason names it: by its place counted from 1, as
+    review_suggestions counts, and by its GUID, which every session tool
+    takes, when it has a GUID's shape."""
+    guid = _shown_guid(getattr(suggestion, "guid", None))
+    return f"Suggestion {index + 1}" + (
+        f" (GUID {guid})" if guid else " (its GUID is not in a GUID's form)")
+
+
+def _passage_at(content: str, suggestion: Any) -> bool:
+    """Whether a suggestion's recorded passage is the file's text at its
+    positions, or that passage with U+2029 read as a line break, as
+    apply_codings compares it; a recorded passage that is not text is
+    not. The positions are whole numbers within the text."""
+    passage = suggestion.segment_text
+    if not isinstance(passage, str):
+        return False
+    found = content[suggestion.start_pos:suggestion.end_pos]
+    return found in (passage, passage.replace(" ", "\n"))
+
+
+def _way_to_correct(statuses: List[str]) -> str:
+    """The way to correct each status named among the passages not at
+    their positions, pending first, or "" when none is named."""
+    ways = []
+    if "pending" in statuses:
+        ways.append(PASSAGE_MOVED_PENDING)
+    decided = [word for word in SUGGESTION_STATUSES + ("unknown",)
+               if word in statuses and word != "pending"]
+    if decided:
+        named = (decided[0] if len(decided) == 1
+                 else ", ".join(decided[:-1]) + " or " + decided[-1])
+        ways.append(PASSAGE_MOVED_DECIDED.format(statuses=named))
+    return "".join(" " + way for way in ways)
+
+
+class SuggestionCheck(NamedTuple):
+    """What `check_suggestions` found: the reasons that refuse the export;
+    the status, in words, of each passage not at its positions among them,
+    by the reason's place; the suggestions left out of a session's file,
+    each as the answer names it; and the suggestions the file can hold."""
+    reasons: List[str]
+    moved: Dict[int, str]
+    left_out: List[Dict[str, Any]]
+    kept: List[Any]
+
+
 def _whole_file_link(pos0: Any, pos1: Any, length: int) -> bool:
     """Whether a case's link covers the whole file: both positions 0, as
     QualCoder writes for a file as a whole, or a span from the start to
@@ -503,6 +599,9 @@ class RefiQdaExporter:
         self.ai_user_name = ai_user_name
         # What the last file built holds and leaves out, by count
         self.counts: Dict[str, Any] = {}
+        # The session's suggestions the last export left out, each as the
+        # answer names it (v0.15.4)
+        self.left_out: List[Dict[str, Any]] = []
 
     def create_project_xml(
         self,
@@ -1270,6 +1369,10 @@ class RefiQdaExporter:
         Suggestions are validated first; stale code/file references,
         out-of-bounds positions, or files without text content fail the
         export loudly instead of producing a .qdpx that crashes importers.
+        Suggestions rather than a whole project (a session's export,
+        v0.15.4) are also compared with the file's text at their
+        positions, and an applied or removed one that fails any check is
+        left out, named in `left_out`, rather than refusing the export.
         Every text and journal entry is then read once, and the element
         and the member of each written from that read; every read is made
         before the file is. The archive is written beside the destination
@@ -1287,28 +1390,45 @@ class RefiQdaExporter:
 
         Returns:
             Path to created .qdpx file; `counts` then says what the file
-            holds and leaves out
+            holds and leaves out (`codings` written, and for suggestions
+            the codes and files they name, `codes_named` and
+            `files_named`), and `left_out` names the suggestions left out
 
         Raises:
-            ValueError: If any suggestion fails validation, or the project
-                holds nothing the file can carry
+            ValueError: If any suggestion fails validation, every one was
+                left out, or the project holds nothing the file can carry
             RuntimeError: If a read or the export itself fails
         """
         texts = dict(texts or {})
+        self.left_out = []
         # Validate BEFORE building anything (Gap 4: stale IDs used to
         # KeyError mid-export; empty-content files left dangling members).
         # A whole-project export without codings goes ahead.
         if suggestions or not whole_project:
-            problems = self.validate_suggestions(suggestions, texts)
+            check = self.check_suggestions(
+                suggestions, texts, compare_passages=not whole_project)
+            problems = check.reasons
             if problems:
                 shown = "; ".join(problems[:10])
                 more = (f" (+{len(problems) - 10} more)"
                         if len(problems) > 10 else "")
-                raise ValueError(f"Export validation failed: {shown}{more}")
+                way = _way_to_correct([status for place, status
+                                       in check.moved.items() if place < 10])
+                raise ValueError(f"Export validation failed: {shown}{more}"
+                                 + (f".{way}" if way else ""))
+            if check.left_out and not check.kept:
+                raise ValueError(NOTHING_LEFT_REFUSAL.format(
+                    count=len(check.left_out)))
+            # What the file holds is what is written and counted
+            suggestions, self.left_out = check.kept, check.left_out
 
         root, members = self._build(
             suggestions, project_name, names.SERVER_NAME, owners,
             coder_name, whole_project, mark_status, texts)
+        self.counts["codings"] = len(suggestions)
+        if not whole_project:
+            self.counts["codes_named"] = len({s.code_id for s in suggestions})
+            self.counts["files_named"] = len({s.file_id for s in suggestions})
 
         # Serialize ONCE. The previous minidom pretty-print re-parse
         # roughly doubled peak memory (~147 MB for a 4 MB project) and
@@ -1350,7 +1470,8 @@ class RefiQdaExporter:
 
     def validate_suggestions(
             self, suggestions: List[CodingSuggestion],
-            texts: Optional[Dict[int, Optional[Dict[str, Any]]]] = None
+            texts: Optional[Dict[int, Optional[Dict[str, Any]]]] = None,
+            compare_passages: bool = False,
     ) -> List[str]:
         """Validate suggestions before export.
 
@@ -1358,6 +1479,11 @@ class RefiQdaExporter:
             suggestions: List of suggestions to validate
             texts: Texts already read, by file id; each other text the
                 check needs is read once and kept there
+            compare_passages: A session's export (v0.15.4): each passage
+                is compared with the file's text at its positions, and an
+                applied or removed suggestion that fails a check is left
+                out (`check_suggestions` names it) rather than giving a
+                reason
 
         Returns:
             List of validation warnings/errors (empty if all valid)
@@ -1366,13 +1492,38 @@ class RefiQdaExporter:
             RuntimeError: a read of the project failed, in words naming
                 the kind of row (`read_for_export`)
         """
-        warnings = []
+        return self.check_suggestions(suggestions, texts,
+                                      compare_passages).reasons
+
+    def check_suggestions(
+            self, suggestions: List[CodingSuggestion],
+            texts: Optional[Dict[int, Optional[Dict[str, Any]]]] = None,
+            compare_passages: bool = False,
+    ) -> SuggestionCheck:
+        """The reasons that refuse an export of these suggestions, and,
+        with `compare_passages` (a session's export, v0.15.4), the
+        suggestions left out of its file.
+
+        Each suggestion's code, file, positions and text are checked as
+        before; with `compare_passages` its recorded passage must also be
+        the file's text at its positions (`_passage_at`). An applied or
+        removed suggestion that fails any check of its own is then left
+        out and named, as the whole project's export leaves out codings
+        that do not fit, never giving a reason; any other gives its
+        reasons, and the export is refused. A suggestion is named by its
+        number, and by its GUID, ids and positions only where each has
+        its shape (`_which`, `_shown_number`), its status in
+        `_status_word`'s words, never by the file's text.
+
+        Raises:
+            RuntimeError: a read of the project failed, in words naming
+                the kind of row (`read_for_export`)
+        """
         texts = texts if texts is not None else {}
 
         # Check if we have any suggestions
         if not suggestions:
-            warnings.append("No suggestions to export")
-            return warnings
+            return SuggestionCheck(["No suggestions to export"], {}, [], [])
 
         # Every code and file of the project, each read worded by its kind
         # of row when it fails, as the export's other reads are: the
@@ -1384,71 +1535,108 @@ class RefiQdaExporter:
 
         # File text lengths (also identifies files with no exportable text)
         content_lengths: Dict[int, int] = {}
+        reasons: List[str] = []
+        moved: Dict[int, str] = {}
+        left_out: List[Dict[str, Any]] = []
+        kept: List[Any] = []
 
         # Validate each suggestion
         for i, suggestion in enumerate(suggestions):
-            # Named by its place counted from 1, as review_suggestions
-            # counts, and by its GUID, which every session tool takes
-            which = f"Suggestion {i + 1}" + (
-                f" (GUID {suggestion.guid})"
-                if getattr(suggestion, "guid", None) else "")
+            which = _which(i, suggestion)
+            code_id, file_id = suggestion.code_id, suggestion.file_id
+            start, end = suggestion.start_pos, suggestion.end_pos
+            # Each reason's text, and whether it is the suggestion's own
+            # (the file's 2 GiB limit is not)
+            found: List[Tuple[str, bool]] = []
+            moved_text: Optional[str] = None
+            content = ""
             # Check code exists
-            if suggestion.code_id not in code_ids:
-                warnings.append(
-                    f"{which}: Code ID {suggestion.code_id} not found in project"
-                )
+            if not (_whole_number(code_id) and code_id in code_ids):
+                found.append((
+                    f"Code ID {code_id} not found in project"
+                    if _whole_number(code_id) else
+                    "Code ID not found in project (it is not a whole "
+                    "number)", True))
 
             # Check file exists
-            if suggestion.file_id not in file_ids:
-                warnings.append(
-                    f"{which}: File ID {suggestion.file_id} not found in project"
-                )
+            if not (_whole_number(file_id) and file_id in file_ids):
+                found.append((
+                    f"File ID {file_id} not found in project"
+                    if _whole_number(file_id) else
+                    "File ID not found in project (it is not a whole "
+                    "number)", True))
             else:
-                if suggestion.file_id not in content_lengths:
-                    fc = self._text(suggestion.file_id, texts)
-                    content = (fc or {}).get("content") or ""
-                    content_lengths[suggestion.file_id] = len(content)
-                    if content and len(content.encode("utf-8")) > _MAX_INTERNAL_FILE_BYTES:
-                        warnings.append(
-                            f"File {suggestion.file_id} exceeds the REFI-QDA "
-                            f"2 GiB internal file limit"
-                        )
-                length = content_lengths[suggestion.file_id]
+                if file_id not in content_lengths:
+                    fc = self._text(file_id, texts)
+                    text = (fc or {}).get("content") or ""
+                    content_lengths[file_id] = len(text)
+                    if text and len(text.encode("utf-8")) > _MAX_INTERNAL_FILE_BYTES:
+                        found.append((
+                            f"File {file_id} exceeds the REFI-QDA "
+                            f"2 GiB internal file limit", False))
+                content = (texts.get(file_id) or {}).get("content") or ""
+                length = content_lengths[file_id]
                 if length == 0:
-                    warnings.append(
-                        f"{which}: File ID {suggestion.file_id} has no "
-                        f"text content; selections cannot be exported for it"
-                    )
-                elif isinstance(suggestion.end_pos, int) and suggestion.end_pos > length:
-                    warnings.append(
-                        f"{which}: End position {suggestion.end_pos} is "
-                        f"beyond the file text (length {length})"
-                    )
+                    found.append((
+                        f"File ID {file_id} has no text content; "
+                        f"selections cannot be exported for it", True))
+                elif _whole_number(end) and end > length:
+                    found.append((
+                        f"End position {end} is beyond the file text "
+                        f"(length {length})", True))
 
             # Check positions are valid. Damaged projects can carry rows with
-            # NULL positions (QA2-6) — report them, never TypeError on them.
-            if (not isinstance(suggestion.start_pos, int)
-                    or isinstance(suggestion.start_pos, bool)
-                    or not isinstance(suggestion.end_pos, int)
-                    or isinstance(suggestion.end_pos, bool)):
-                warnings.append(
-                    f"{which}: missing or non-integer positions "
-                    f"(start={suggestion.start_pos!r}, end={suggestion.end_pos!r}) "
-                    f"; the coding row may be damaged"
-                )
+            # NULL positions (QA2-6): report them, never a TypeError on them.
+            if not (_whole_number(start) and _whole_number(end)):
+                found.append((
+                    f"missing or non-integer positions "
+                    f"(start={_shown_number(start)}, "
+                    f"end={_shown_number(end)}); the coding row may be "
+                    f"damaged", True))
+            else:
+                if start < 0:
+                    found.append((f"Invalid start position {start}", True))
+                if end <= start:
+                    found.append((
+                        f"End position {end} must be greater than start "
+                        f"position {start}", True))
+                # The passage, where the positions fit the text
+                if (compare_passages and content
+                        and 0 <= start < end <= len(content)
+                        and not _passage_at(content, suggestion)):
+                    moved_text = (f"the passage it records is not at "
+                                  f"positions {start}-{end} of File ID "
+                                  f"{file_id}")
+                    found.append((moved_text, True))
+
+            own = [text for text, is_own in found if is_own]
+            if (compare_passages and own
+                    and suggestion.status in LEFT_OUT_STATUSES):
+                left_out.append({
+                    "suggestion": i + 1,
+                    "guid": (_shown_guid(suggestion.guid)
+                             or "not in a GUID's form"),
+                    "status": _status_word(suggestion.status),
+                    "file_id": _shown_number(file_id),
+                    "start_pos": _shown_number(start),
+                    "end_pos": _shown_number(end),
+                    "reason": "; ".join(own),
+                })
+                reasons += [text for text, is_own in found if not is_own]
                 continue
+            if not own:
+                kept.append(suggestion)
+            for text, is_own in found:
+                if not is_own:
+                    reasons.append(text)
+                elif text is moved_text:
+                    moved[len(reasons)] = _status_word(suggestion.status)
+                    reasons.append(f"{which}: {text} (status: "
+                                   f"{_status_word(suggestion.status)})")
+                else:
+                    reasons.append(f"{which}: {text}")
 
-            if suggestion.start_pos < 0:
-                warnings.append(
-                    f"{which}: Invalid start position {suggestion.start_pos}"
-                )
-
-            if suggestion.end_pos <= suggestion.start_pos:
-                warnings.append(
-                    f"{which}: End position {suggestion.end_pos} must be greater than start position {suggestion.start_pos}"
-                )
-
-        return warnings
+        return SuggestionCheck(reasons, moved, left_out, kept)
 
 
 def _unset(value: Any) -> bool:

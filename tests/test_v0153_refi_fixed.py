@@ -888,11 +888,15 @@ def test_a_session_suggestion_that_does_not_fit_refuses_the_export(
     assert re.fullmatch(
         rf"Export validation failed: Suggestion 1 \(GUID {rejected}\): "
         r"Code ID \d+ not found in project", again["error"]), again
+    # v0.15.4: an applied or removed suggestion is left out instead
+    # (tests/test_v0154_small_corrections_2.py)
     flat = " ".join(_description().split())
-    assert ("In a session's export such a suggestion is not left out, nor "
-            "one whose code or file has gone since, whatever its status: "
-            "the export is refused, and its first ten reasons each name a "
-            "suggestion by its GUID.") in flat
+    assert ("A suggestion that fails a check, or whose code or file has "
+            "gone since, refuses the export: its first ten reasons each "
+            "name a suggestion by its GUID, and the refusal says how to "
+            "correct each by its status. An applied or removed one is left "
+            "out instead, counted in skipped_suggestions and the first 20 "
+            "named in skipped_details") in flat
 
 
 def test_a_coding_on_a_source_without_text_is_counted_apart(

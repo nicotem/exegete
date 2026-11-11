@@ -405,6 +405,13 @@ REFI_EXPORT_SESSION_NOTE = (
     "with its status, the codes they name and their text sources. The "
     "categories above the exported codes are included, as non-codable "
     "parent codes (QualCoder's own REFI-QDA convention).")
+# v0.15.4: beside a session's export that left out applied or removed
+# suggestions which no longer fit the project
+REFI_EXPORT_SESSION_SKIP_NOTE = (
+    "Applied and removed suggestions whose passage, positions, code or "
+    "file no longer fit the project were left out of the file; the "
+    "session is unchanged. The whole project's export carries what the "
+    "project holds.")
 REFI_EXPORT_READ_ONLY_REFUSAL = (
     "Exegete cannot write '{name}' (it may be read-only or locked), so it "
     "is unchanged. Choose another name for the export.")
@@ -8810,10 +8817,16 @@ def export_refi_qda(
     text. The counts also take in the case links, values and annotations
     of files left out, and journal entries' attribute values. Codings
     whose positions do not fit their text are left out and counted too,
-    the first 20 named in skipped_details. In a session's export such a
-    suggestion is not left out, nor one whose code or file has gone
-    since, whatever its status: the export is refused, and its first ten
-    reasons each name a suggestion by its GUID.
+    the first 20 named in skipped_details. Past 5,000 codings of one
+    code, the rest are left out, the code named in truncated_codes. A
+    session's export also checks that each suggestion's passage is still
+    the file's text at its positions. A suggestion that fails a check,
+    or whose code or file has gone since, refuses the export: its first
+    ten reasons each name a suggestion by its GUID, and the refusal says
+    how to correct each by its status. An applied or removed one is left
+    out instead, counted in skipped_suggestions and the first 20 named in
+    skipped_details; the whole project's export carries what the project
+    holds.
 
     The project's coder name is the first user, which QualCoder's
     importer takes as its own coder name. The AI coder name is the last,
@@ -8922,11 +8935,16 @@ def export_refi_qda(
         # its owner (v0.15.3: each coding under its own coder).
         #
         # Skip-and-disclose (QA2-5): real legacy projects legitimately
-        # contain rows this server would never write — GUI-created codings
+        # contain rows Exegete would never write: GUI-created codings
         # on emoji/CRLF files whose positions overrun the text in
-        # code-point space, or damaged rows with NULL positions. Strict
-        # all-or-nothing is right for explicit session exports, but "export
-        # my project" must export everything valid and report the rest.
+        # code-point space, or damaged rows with NULL positions. "Export
+        # my project" exports everything valid and reports the rest: past
+        # 5,000 codings of one code, the rest are left out and the code
+        # named. A session's export refuses a suggestion that does not
+        # fit, its passage compared with the file's text too, but for an
+        # applied or removed one (its coding is in the project, or was
+        # deleted), which the exporter leaves out, counts and names as
+        # here (v0.15.4).
         suggestions = []
         owners = {}
         skipped_invalid = []
@@ -9014,14 +9032,17 @@ def export_refi_qda(
         mark_status=not whole_project, texts=texts, overwrite=overwrite)
     counts = exporter.counts
 
+    # What the file holds, never the list read: a session's applied and
+    # removed suggestions that do not fit are left out by the exporter
+    # (v0.15.4), and with them a code or file only they name
     output = {
         "success": True,
         "output_path": result_path,
-        "codings_exported": len(suggestions),
+        "codings_exported": counts["codings"],
         "codes_exported": (counts["codes"] if whole_project
-                           else len({s.code_id for s in suggestions})),
+                           else counts["codes_named"]),
         "files_exported": (counts["text_sources"] if whole_project
-                           else len({s.file_id for s in suggestions})),
+                           else counts["files_named"]),
         # Where the AI User's name came from: the project's own AI
         # coder name, the AI coder name in Exegete's settings (the value
         # "host_declaration"), or the built-in default.
@@ -9042,6 +9063,12 @@ def export_refi_qda(
     else:
         output["suggestions_by_status"] = counts["suggestions_by_status"]
         output["note"] = REFI_EXPORT_SESSION_NOTE
+        if exporter.left_out:
+            # Counted, and the first 20 named, as the project's export
+            # names the codings it leaves out
+            output["skipped_suggestions"] = len(exporter.left_out)
+            output["skipped_details"] = exporter.left_out[:20]
+            output["skip_note"] = REFI_EXPORT_SESSION_SKIP_NOTE
     output["part_files_removed"] = counts["part_files_removed"]
     if skipped_non_text:
         output["skipped_codings_on_non_text_sources"] = skipped_non_text

@@ -9,9 +9,10 @@ path instead, unless the tool's tools/list entry declares a larger
 (code.claude.com's MCP page, read on 5 November 2026). Since v0.15.4 a
 full part of a long file is within parts.BOUND, about 39,000 characters
 of English, and the declaration stays for an answer over the bound,
-which a long file memo can make. Pinned here: the declaration over the
-host's path, a full part's answer shorter than 50,000 characters, and
-the limit under the ceiling.
+which long memos or many codings over a part's start can make (the
+file's memo, or those of codings and annotations reaching over it).
+Pinned here: the declaration over the host's path, a full part's answer
+shorter than 50,000 characters, and the limit under the ceiling.
 """
 
 import asyncio

@@ -13898,12 +13898,12 @@ class QualcoderDatabase:
         fix round 1, QA-B2-5).
 
         The file plan's phrases to keep (`keep_phrases`, v0.15.4) are
-        matched in each note's public part right after the rewriter: a
-        match wholly inside an occurrence of a phrase is kept, counted in
-        `totals["kept_by_phrases"]` first, so a note whose every match is
-        kept leaves the plan as a note with no match does, neither
-        written nor dated nor counted as rewritten. Without phrases the
-        totals have no such key.
+        matched in each note's public part right after the matcher and
+        before the rewrite: a match wholly inside an occurrence of a phrase
+        is kept, counted in `totals["kept_by_phrases"]` first, so a note
+        whose every match is kept leaves the plan as a note with no match
+        does, neither written nor dated nor counted as rewritten. Without
+        phrases the totals have no such key.
         """
         from . import pseudonymise as engine
 

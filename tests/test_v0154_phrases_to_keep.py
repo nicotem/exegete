@@ -236,6 +236,22 @@ class TestTheFileText:
             assert len(item["found"]) == 2
             assert item["kept_at"] == kept
 
+    @pytest.mark.parametrize("text, phrase", [
+        ("XTheresa May spoke.", "Theresa May"),
+        ("Theresa May Days came.", "Theresa May Day")])
+    def test_whole_words_at_both_ends(self, tmp_path, text, phrase):
+        """The phrase is matched as whole words at its start and at its
+        end, by the rule names are found by (QualCoder's): inside a longer
+        word it keeps nothing, and the name is replaced."""
+        with project_with(tmp_path, text) as folder:
+            item = plan_of([phrase])["files"][0]
+            assert len(item["found"]) == 1
+            assert item["kept_at"] == []
+            assert item["phrases"] == [
+                {"number": 1, "occurs": 0, "keeps": 0, "cut": 0}]
+            write(folder, [phrase])
+            assert stored(folder) == text.replace("May", "Participant B")
+
     @pytest.mark.parametrize("mediapath, kept, after", [
         ("/docs/P01.docx", [0, 1],
          "Theresa[Comment 1] May spoke. Theresa May[Comment 1]day came. "
@@ -332,7 +348,7 @@ class TestTheNotes:
     def test_a_note_whose_every_match_is_kept_is_not_written(self,
                                                               tmp_path):
         """With rewrite_memos the phrases are matched in each note's
-        public part right after the rewriter and before the skip of a
+        public part right after the matcher and before the skip of a
         note with no match: the annotation whose note is the phrase alone
         keeps its words and its date and is in no list of notes
         rewritten, the code's note is rewritten in its public part, and

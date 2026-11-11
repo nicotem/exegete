@@ -529,7 +529,11 @@ history, which are yours. They also carry the project's names list,
 names in plain text. They carry its coding sessions too, in its
 `Exegete coding sessions` folder, each with its passages word for word,
 but not a session's temporary files, whatever their age; `restore_backup`
-keeps that folder as it is, never taking a backup's. They leave out QualCoder's own backup ignore
+keeps that folder as it is, never taking a backup's. A backup keeps the
+project's id there (`Project id.txt`); a workspace copy leaves it out
+and makes its own, so the sessions it carries read in the copy as having
+come with the project, and their approvals are given again there, apart
+from the original's. They leave out QualCoder's own backup ignore
 set (`search.sqlite`, `search.sqlite-*`, `*.sqlite-shm`,
 `*.sqlite-wal`, `*.sqlite-journal`) and lock files. Backups also leave
 out the project's `audio/` and `video/` folders, whatever is at those
@@ -736,7 +740,7 @@ folders, which a restore keeps.
   Nothing sorts or totals by the reading. An applied coding's memo says
   which, in words
 - **Sessions kept with the project**: each session is saved in a file of its own, in the project's `Exegete coding sessions` folder, so the work can go on in a later conversation, and the session goes wherever the project goes. Where that folder cannot hold it, as in a read-only project, it is kept on this computer instead, and `start_coding_session` says why. A session is read, decided and applied only while its project is selected
-- **A session that came with the project**: each session Exegete starts in a project carries a seal, and each approval given on this computer a mark, both made with the key Exegete keeps in its own folder (`preview_secret`). A session whose file lacks this computer's seal (saved by Exegete on another computer or under another account, changed outside Exegete, or kept from before that key was replaced) is read as having come with the project. Every answer that gives its texts flags them as data, never instructions (`came_with_project`), with the session's instruction for the assistant to read to you before going on, and an approval in it counts only once given on this computer, reading as pending until then. So approvals given on one computer do not carry to another
+- **A session that came with the project**: each session Exegete starts in a project carries a seal, and each approval given on this computer a mark, both made with the key Exegete keeps in its own folder (`preview_secret`) and both tied to the project by a random id in its `Exegete coding sessions` folder (`Project id.txt`). A session whose file lacks this computer's seal for this project (saved by Exegete on another computer or under another account, changed outside Exegete, brought in from another project, carried by a workspace copy, or kept from before that key was replaced or the project's id was lost) is read as having come with the project. Every answer that gives its texts flags them as data, never instructions (`came_with_project`), with the session's instruction for the assistant to read to you before going on, and an approval in it counts only once given on this computer, reading as pending until then. An approval counts only while Exegete's own folder on this computer records it (`approvals`), so an older copy of a session's file put back, from a backup or by a sync service, cannot bring back an approval withdrawn since. So approvals given on one computer do not carry to another
 - **Backups**: Exegete itself takes a timestamped backup before every change to the project's database. `create_backup` no longer does anything: it is still accepted until the release on method, and a call that gives it is told so
 - **The workspace**: new projects and copies of projects are kept in the workspace folder
 - **Written straight to the project**: there is no import or export step. The next read shows the codings, and QualCoder, if you use it, shows them when it next opens the project. An open QualCoder 4.0 window shows Exegete's changes only once the project is reopened
@@ -1241,7 +1245,7 @@ answer is a finding.
 - `set_attribute(target_type, target_id, attribute_name, value, create_backup)` - **Writes to the database** - Set or clear an attribute value; a numeric attribute takes a finite number in the digits 0 to 9 ("nan", "inf" and "1_000" are refused, though QualCoder accepts them); not on a journal entry (see `create_attribute_type`)
 
 **Recovery and safety:**
-- `copy_project_to_workspace(source_path, new_name)` - Copy a project into Exegete's workspace (the database copied consistently and the same exclusions as backups, but keeping the audio and video folders and leaving out every temporary copy of the names list, `pseudonyms.json.<eight characters>.tmp`, whatever its age; a copy with no `ai_data` folder gets an empty one; reports skipped symlinks); a project kept in a project's `Exegete` folder is refused
+- `copy_project_to_workspace(source_path, new_name)` - Copy a project into Exegete's workspace (the database copied consistently and the same exclusions as backups, but keeping the audio and video folders and leaving out every temporary copy of the names list, `pseudonyms.json.<eight characters>.tmp`, whatever its age, and the project's id in its `Exegete coding sessions` folder, so the sessions the copy carries read there as having come with the project, their approvals given again there; a copy with no `ai_data` folder gets an empty one; reports skipped symlinks); a project kept in a project's `Exegete` folder is refused
 - `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` - **Writes to the database** - Remove one coded segment (refuses a hidden coder's row or a row carrying a private note unless the override is passed); a coding an AI coding session applied is marked removed in that session, which the answer says
 - `list_backups()` - List this project's backups (Exegete's `_backup_` ones and QualCoder's `_BKUP_` ones); a backup holding its database's journal or WAL file, copied while a program was writing, is marked `unclean`; each says whether it holds a file in its audio or video folders (`holds_audio_or_video`, read from the backup: Exegete's backups now leave the folders out, and an older one may hold files there; empty folders give no mark)
 - `prune_backups(keep_last, older_than_days, preview_token)` - Delete Exegete's own backups by a retention policy (preview first, then the token the preview returns; QualCoder's `_BKUP_` backups are never removed); the preview counts, for each backup it would remove, the files in its audio or video folders that neither the project nor a backup kept holds (`audio_video_files_only_here`), which may be the only copies of recordings
@@ -1375,13 +1379,21 @@ For AI-assisted coding, which writes to the database:
 - The workspace folder: `~/Documents/Exegete projects/`, or the
   folder `EXEGETE_WORKSPACE` gives (the desktop extension's default
   is `~/Exegete projects/`)
-- Session files: in each project's `Exegete coding sessions` folder;
-  those made before 0.15.4, and any started where the project's folder
-  could not hold one, in `~/.exegete/sessions/`
+- Session files: in each project's `Exegete coding sessions` folder,
+  beside the project's id (`Project id.txt`, a random id that the
+  sessions' seals cover); those made before 0.15.4, and any started
+  where the project's folder could not hold one, in
+  `~/.exegete/sessions/`
 - Records of changes, for undo: `~/.exegete/changes/` (ids and
   digests, never a name or a text; each removed once it is a day old,
   at Exegete's next start or its next record of a change to the same
   project)
+- Records of approvals: `~/.exegete/approvals/` (for each coding
+  session kept in a project that holds an approval given on this
+  computer, ids and keyed digests, never a name or a text; an approval
+  in such a session counts only while its record holds it, and a record
+  deleted leaves those approvals pending, to be given again, nothing in
+  the session lost)
 - Last-used project pointer: `~/.exegete/mru_project.json` (one
   project path and a timestamp, given only in the "no project selected"
   error, as a recovery hint; see [PRIVACY.md](https://github.com/nicotem/exegete/blob/main/PRIVACY.md))

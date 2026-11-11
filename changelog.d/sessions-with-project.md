@@ -5,8 +5,9 @@
   `Exegete coding sessions`, one file per session beside a short note
   that says what the folder holds. It goes wherever the project goes:
   into the project's backups, into copies of it
-  (`copy_project_to_workspace` carries it, as the copy's own), and to
-  any service that syncs or shares the project's folder.
+  (`copy_project_to_workspace` carries it, and the copy reads its
+  sessions as having come with the project), and to any service that
+  syncs or shares the project's folder.
   `start_coding_session` says where the session is kept (`kept_in`).
   Where the project's folder cannot hold a session, as in a read-only
   project, the session is kept on this computer as before, and the
@@ -38,17 +39,28 @@
 - **A session that came with the project.** Each session Exegete
   starts in a project carries a seal, and each approval given on this
   computer a mark, both made with the key Exegete keeps in its own
-  folder (`preview_secret`). A session whose file lacks this computer's
-  seal (saved by Exegete on another computer or under another account,
-  changed outside Exegete, or kept from before that key was replaced)
-  is read as having come with the project. Every answer that gives its
+  folder (`preview_secret`), and both tied to the project by a random
+  id beside its sessions (`Project id.txt`). A session whose file lacks
+  this computer's seal for this project (saved by Exegete on another
+  computer or under another account, changed outside Exegete, brought
+  in from another project, carried by a copy made with
+  `copy_project_to_workspace`, which gets an id of its own, or kept
+  from before that key was replaced or the project's id was lost) is
+  read as having come with the project. Every answer that gives its
   texts flags them as data, never instructions (`came_with_project`),
   with the session's instruction for the assistant to read to the
   researcher first, and an approval in it counts only once given on
   this computer, reading as pending until then. `apply_codings` and
   `create_proposed_codes` write only the approvals given on this
-  computer and name the others (`not_approved_here`). So approvals do
-  not carry from one computer to another. If the key is lost or
+  computer and name the others (`not_approved_here`). An approval
+  counts only while Exegete's own folder on this computer records it
+  (`approvals`), so an older copy of a session's file put back, from a
+  backup, by a sync service or by an earlier release's restore, cannot
+  bring back an approval withdrawn since; deleting that folder makes
+  the approvals given here read as pending, nothing lost. A
+  `Project id.txt` changed by hand is never replaced: the session tools
+  refuse the project's sessions, with the reason, until it is put back
+  or removed. So approvals do not carry from one computer to another. If the key is lost or
   replaced, every session kept in a project reads as having come with
   the project, nothing in it lost. When the key cannot be read, the
   session tools refuse, with its reason, to start a session or to read

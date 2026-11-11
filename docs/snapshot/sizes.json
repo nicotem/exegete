@@ -3,7 +3,7 @@
     "brief_characters": 1923,
     "opening_text_characters": 2042,
     "tool_count": 28,
-    "tool_definitions_characters": 77625,
+    "tool_definitions_characters": 77986,
     "tools": {
       "analyze_file_with_coding": {
         "definition_characters": 556,
@@ -18,8 +18,8 @@
         "description_characters": 2327
       },
       "copy_project_to_workspace": {
-        "definition_characters": 2687,
-        "description_characters": 2264
+        "definition_characters": 2840,
+        "description_characters": 2415
       },
       "create_code": {
         "definition_characters": 3988,
@@ -74,8 +74,8 @@
         "description_characters": 4484
       },
       "restore_backup": {
-        "definition_characters": 3911,
-        "description_characters": 3480
+        "definition_characters": 4119,
+        "description_characters": 3685
       },
       "review_suggestions": {
         "definition_characters": 1876,
@@ -121,10 +121,10 @@
   },
   "counted": "Characters, as Python counts them. tool_definitions_characters: json.dumps, with Python's defaults, of the list of every tool's name, description and input schema, in the order tools/list gives (TOOLS.md, the tool sets); definition_characters: one tool's entry in that list, alone.",
   "full": {
-    "brief_characters": 14579,
+    "brief_characters": 14702,
     "opening_text_characters": 2042,
     "tool_count": 80,
-    "tool_definitions_characters": 212859,
+    "tool_definitions_characters": 213910,
     "tools": {
       "add_annotation": {
         "definition_characters": 2337,
@@ -155,8 +155,8 @@
         "description_characters": 3039
       },
       "copy_project_to_workspace": {
-        "definition_characters": 2687,
-        "description_characters": 2264
+        "definition_characters": 2840,
+        "description_characters": 2415
       },
       "create_attribute_type": {
         "definition_characters": 2744,
@@ -199,8 +199,8 @@
         "description_characters": 2750
       },
       "delete_coding_session": {
-        "definition_characters": 592,
-        "description_characters": 294
+        "definition_characters": 749,
+        "description_characters": 448
       },
       "edit_suggestion": {
         "definition_characters": 4602,
@@ -299,8 +299,8 @@
         "description_characters": 2695
       },
       "list_coding_sessions": {
-        "definition_characters": 1127,
-        "description_characters": 747
+        "definition_characters": 1461,
+        "description_characters": 1076
       },
       "merge_category": {
         "definition_characters": 3044,
@@ -331,12 +331,12 @@
         "description_characters": 3019
       },
       "prune_backups": {
-        "definition_characters": 4186,
-        "description_characters": 3623
+        "definition_characters": 4329,
+        "description_characters": 3763
       },
       "pseudonymise_source": {
-        "definition_characters": 21349,
-        "description_characters": 18669
+        "definition_characters": 21405,
+        "description_characters": 18725
       },
       "query_by_attribute": {
         "definition_characters": 3267,
@@ -375,8 +375,8 @@
         "description_characters": 3229
       },
       "restore_backup": {
-        "definition_characters": 3911,
-        "description_characters": 3480
+        "definition_characters": 4119,
+        "description_characters": 3685
       },
       "review_proposals": {
         "definition_characters": 907,

@@ -7,8 +7,8 @@ Python 3.13 with the libraries in `uv.lock`:
 
 | | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
 |---|---|---|
-| `full` (80 tools) | 212,322 | 210,397 |
-| `core` (28 tools) | 77,625 | 76,805 |
+| `full` (80 tools) | 212,355 | 210,397 |
+| `core` (28 tools) | 77,658 | 76,805 |
 | The opening text | 2,042 | 2,042 |
 | The full brief | 14,579 | 14,180 |
 | The brief in `core` | 1,923 | 1,923 |
@@ -67,5 +67,10 @@ Python 3.13 with the libraries in `uv.lock`:
 - The workspace copy's description now says that a copy leaves out
   every temporary copy of the names list, whatever its age, adding
   154 characters to its definition in both sets.
+- Smaller parts add 33 characters to read_file_with_codings' definition
+  in both sets: its description gives a part as about 35,000 characters
+  of English, where it gave 60,000, in as many characters, and says that
+  `codes_used` in a part counts that part's codings, which takes one
+  more line.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).

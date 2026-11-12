@@ -462,7 +462,7 @@ so that its results match QualCoder's exactly.
 Exegete's commitment is that whatever analytic work QualCoder offers
 should also be possible from the conversation. Today the two programs
 differ in both directions. The table sets QualCoder 3.8.2 and 4.0, as
-checked on 10 October 2026, beside Exegete 0.15.3.
+checked on 12 November 2026, beside Exegete 0.15.4.
 
 | | In QualCoder | From the conversation, with Exegete |
 |---|---|---|

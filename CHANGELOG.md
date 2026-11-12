@@ -14,23 +14,23 @@ release is prepared.
 
 This release keeps each new coding session inside its project, in a
 folder at the project's top called `Exegete coding sessions`, so that a
-session's instruction, suggestions and decisions go wherever the
-project goes: into its backups and copies, and to any service that
-syncs or shares its folder. Sessions made before this release stay on
-this computer. A session that Exegete did not save on this computer,
-such as one saved on another computer or changed outside Exegete, is
-read as having come with the project: its texts reach the assistant
-marked as data, and its approvals count only once given on this
-computer. When you choose which occurrences of a name a replacement
-leaves, the preview now numbers them, and the page lets you tick them
-and copy one line to paste into the conversation. A run with a typed
-mapping can keep phrases as they are, such as the name of a public
-figure who shares a participant's name. A long file now comes in
-smaller parts, each within 40,000 bytes as an app receives it, so that
-Codex keeps each part whole with the models it lists. An id that
-`search_memos` gives no longer leads another tool to a different
-coding, and `true` or `false` no longer stands for a number. PRIVACY.md
-was read whole and is shorter.
+session's instruction, suggestions and decisions go wherever the project
+goes: into its backups and copies, and to any service that syncs or
+shares its folder. Sessions made before this release stay on this
+computer. A session without this computer's seal, such as one saved on
+another computer or changed outside Exegete, is read as having come with
+the project: its texts reach the assistant marked as data, and its
+approvals count only once given on this computer. When you choose which
+occurrences of a name a replacement leaves, the preview now numbers
+them, and the page lets you tick them and copy one line to paste into
+the conversation. A run with a typed mapping can keep phrases as they
+are, such as the name of a public figure who shares a participant's
+name. A long file now comes in smaller parts, each within 40,000 bytes
+as an app receives it, so that Codex keeps each part whole with the
+models it lists. An id that `search_memos` gives no longer leads another
+tool to a different coding, and `true` or `false` no longer stands for a
+number. PRIVACY.md was read whole: what it said twice is said once, and
+its sentences are plainer.
 
 The release on method follows as v0.15.5 (README.md, "What comes
 next"). "Upgrading from 0.15.3-alpha" comes first and says what changes
@@ -497,9 +497,10 @@ again, so that it loads the new tool list.
 
 - **PRIVACY.md, read whole.** What it said twice is said once. Its list
   of what stays on the computer is now part of "Files Exegete keeps on
-  your computer", and the pseudonymisation run record is described
-  there alone. It is about a fifteenth shorter, and every warning and
-  its suggestion is kept.
+  your computer", and the pseudonymisation run record is described there
+  alone. The reading made it about a fifteenth shorter, before this
+  release's additions on coding sessions, which make it longer than in
+  0.15.3, and kept every warning and its suggestion.
 - **PRIVACY.md in plainer sentences.** It was read again as a
   researcher new to Exegete would read it. Long sentences are split,
   lists take the place of sentences joined by semicolons, and words

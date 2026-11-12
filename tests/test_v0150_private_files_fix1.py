@@ -15,6 +15,7 @@ only by its spelling; the list of projects leaving out what is inside
 one; and a folder swapped for a link after its check, never followed.
 """
 
+import inspect
 import json
 import os
 import stat
@@ -206,11 +207,23 @@ class TestThePlacesAndTheTable:
         # v0.15.2: and the records of changes once a day old
         # (v0.15.4, PRIVACY read whole: the account of those texts is in
         # this section now, below the table)
+        # (v0.15.4's release preparation: a session's record of approvals
+        # goes with its session, set aside before the session's file is
+        # removed and dropped after, or at a save once none of its
+        # approvals counts, so it is not among what stays)
         assert ("| Exegete removes the texts an import's preview read, as "
                 "below, and a change's record once it "
                 "is a day old; coding sessions go at your "
-                "word (`delete_coding_session`); the "
-                "rest stays until you delete it.") in section
+                "word (`delete_coding_session`), and a record of approvals "
+                "goes with its session, or once no approval in it counts; "
+                "the rest stays until you delete it.") in section
+        from exegete import sessions
+        delete = inspect.getsource(sessions.SessionManager.delete_session)
+        assert "aside = self._forget_approvals(project, session_id)" \
+            in delete
+        assert "drop_record_set_aside(aside)" in delete
+        settle = inspect.getsource(sessions.SessionManager._settle_record)
+        assert "remove_record(project_id, session.session_id)" in settle
         # (v0.15.1: cleanup_old_sessions removed, as announced in 0.14)
         assert "cleanup_old_sessions" not in section
         assert "says for each" not in section

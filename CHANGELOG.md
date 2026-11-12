@@ -27,10 +27,11 @@ the conversation. A run with a typed mapping can keep phrases as they
 are, such as the name of a public figure who shares a participant's
 name. A long file now comes in smaller parts, each within 40,000 bytes
 as an app receives it, so that Codex keeps each part whole with the
-models it lists. An id that `search_memos` gives no longer leads another
-tool to a different coding, and `true` or `false` no longer stands for a
-number. PRIVACY.md was read whole: what it said twice is said once, and
-its sentences are plainer.
+models it lists. Only a long memo, or many codings over a part's start,
+makes a part longer. An id that `search_memos` gives no longer leads
+another tool to a different coding, and `true` or `false` no longer
+stands for a number. PRIVACY.md was read whole: what it said twice is
+said once, and its sentences are plainer.
 
 The release on method follows as v0.15.5 (README.md, "What comes
 next"). "Upgrading from 0.15.3-alpha" comes first and says what changes
@@ -69,8 +70,10 @@ again, so that it loads the new tool list.
   or removes it. INSTALL.md, "Going back to an earlier version",
   suggests copying the folder somewhere else first, or updating again.
 - **A session is read and decided only with its project open.** The
-  session tools show nothing of another project's session, and one
-  given an id it cannot find lists the open project's sessions alone.
+  tools that read and decide a session show nothing of another
+  project's session, and one given an id it cannot find lists the open
+  project's sessions alone. `list_coding_sessions` still lists the
+  sessions kept on this computer, whichever project is selected.
 - **Three new arguments for `pseudonymise_source`**: `leave_numbers`
   and `numbering`, for occurrences chosen by their numbers, and
   `keep_phrases`, for phrases to keep with a typed mapping ("Choosing
@@ -78,8 +81,9 @@ again, so that it loads the new tool list.
 - **A long file comes in more parts.** `read_file_with_codings`, the
   file resource and the case resource serve parts of at most 40,000
   bytes as an app receives them: about 35,000 characters of English,
-  where a part held about 60,000. An interview of about an hour now
-  takes two calls where it took one ("Changed", below).
+  where a part held about 60,000. Only a long memo, or many codings
+  over a part's start, makes a part longer. An interview of about an
+  hour now takes two calls where it took one ("Changed", below).
 - **The ids of region and audio/video codings.** `search_memos` gives
   them under `region_coding_id` and `av_coding_id`, with `id` null, and
   no tool takes them. Before, such an id given to `delete_coding` or
@@ -779,7 +783,7 @@ again, so that it loads the new tool list.
   keeps its backup and its undo receipt.
 - **The known limits of 0.15.3-alpha still hold**, below, except one
   this release changes: a coding session's REFI-QDA export now compares
-  each suggestion's passage with the file's text ("Fixed", below).
+  each suggestion's passage with the file's text ("Fixed", above).
 
 ### For contributors
 

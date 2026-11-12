@@ -2,7 +2,7 @@
 
 # Exegete
 
-**A qualitative data analysis application you use in conversation with an
+**Agentic QDA: an agentic qualitative data analysis application you use in conversation with an
 AI assistant**
 
 [![PyPI](https://img.shields.io/pypi/v/exegete)](https://pypi.org/project/exegete/)

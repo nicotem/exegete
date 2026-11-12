@@ -6,7 +6,9 @@ name "Exegete", which is woven across the ring: the README cut of the
 owner's chosen lockup, on its own light tile as the plain lockup was, so
 that it reads on GitHub's dark theme too. The files keep their address
 on main, which the README and PyPI's pages use. The extension's icon
-stays the ring with the E (test_v0141_mark.py).
+stays the ring with the E (test_v0141_mark.py). From v0.15.4 the README
+shows the owner's own display cut, which he uploaded and put in the
+README on 12 November 2026; the earlier cut stays beside its drawing.
 """
 
 import re
@@ -23,15 +25,32 @@ TILE = ('<rect x="-48" y="-48" width="877" height="608" rx="56" '
 def _readme_image():
     first = (REPO / "README.md").read_text(encoding="utf-8").splitlines()[0]
     img = re.fullmatch(r'<p align="center"><img src="([^"]+)" '
-                       r'alt="([^"]+)" width="(\d+)"></p>', first)
+                       r'alt="([^"]+)"></p>', first)
     assert img, first
-    src, alt, width = img.groups()
+    src, alt = img.groups()
     assert src.startswith(RAW), src
-    return REPO / src[len(RAW):], alt, int(width)
+    return REPO / src[len(RAW):], alt
 
 
 def test_the_readmes_logo_is_the_woven_lockup():
-    png, alt, width = _readme_image()
+    # v0.15.4: the owner's display cut of the woven lockup, uploaded and
+    # put in the README by him on 12 November 2026: 300 px tall, shown at
+    # its own size, on an opaque white ground of its own (RGB, no
+    # transparency), so that it reads on GitHub's dark theme as the
+    # earlier tile did
+    png, alt = _readme_image()
+    assert png.name == "exegete-lockup-woven-display-300.png"
+    data = png.read_bytes()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR"
+    w, h = struct.unpack(">II", data[16:24])
+    assert (w, h, data[25]) == (451, 300, 2)
+    assert "woven" in alt and "Exegete" in alt and "ring" in alt
+
+
+def test_the_earlier_cut_stays_with_its_source():
+    # The cut the README showed from 0.14.2 to 0.15.3 stays in the tree
+    # with the drawing it was rendered from
+    png = REPO / "docs" / "brand" / "exegete-lockup.png"
     svg = png.with_suffix(".svg")
     text = svg.read_text(encoding="utf-8")
     # its own description says what it is, and the tile is the woven
@@ -42,12 +61,10 @@ def test_the_readmes_logo_is_the_woven_lockup():
                     r'viewBox="-48 -48 877 608" width="877" height="608">',
                     text), text[:120]
     assert TILE in text
-    # the PNG is rendered from it: the same shape, 240 px tall, shown at
-    # half size, with clear corners round the tile (RGBA)
+    # the PNG is rendered from it: the same shape, 240 px tall, with
+    # clear corners round the tile (RGBA)
     data = png.read_bytes()
     assert data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR"
     w, h = struct.unpack(">II", data[16:24])
     assert (w, h, data[25]) == (346, 240, 6)
     assert abs(w / h - 877 / 608) < 0.01
-    assert width * 2 == w
-    assert "woven" in alt and "Exegete" in alt and "ring" in alt

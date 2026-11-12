@@ -108,9 +108,11 @@ class TestTheIntroduction:
 
     def test_an_application_in_its_own_right_compatible_with_qualcoder(self):
         opening = _opening()
-        assert ("**A qualitative analysis application you use in "
-                "conversation with an AI assistant, compatible with "
-                "QualCoder.**") in opening
+        # v0.15.4, the owner's own edit of 12 November 2026, made on
+        # GitHub: the tagline is his, with no QualCoder in it; the
+        # compatibility is the lede's alone (below)
+        assert ("**Agentic QDA: a qualitative data analysis application "
+                "you use in conversation with an AI assistant**") in opening
         # v0.14.2, the README rewritten to persuade: the same facts, in
         # one paragraph that leads with them. The README's third round
         # (with the owner's decisions of 1 October 2026): the newcomer

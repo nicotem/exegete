@@ -43,6 +43,10 @@ TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
 TAGLINE = ("A qualitative analysis application you use in conversation "
            "with an AI assistant, compatible with QualCoder.")
+# The README's own tagline, since the owner's edit of 12 November 2026 on
+# GitHub (v0.15.4); the command's help and NOTICE keep TAGLINE
+README_TAGLINE = ("Agentic QDA: a qualitative data analysis application you "
+                  "use in conversation with an AI assistant")
 
 # (v0.15.2, the opening texts: QualCoder said once what it is, and
 # documents, not transcripts alone)
@@ -341,7 +345,7 @@ class TestWhatWasDecided:
                 "analysis application you use in conversation with an AI "
                 "assistant, compatible with QualCoder.") in page
         readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
-        assert "**" + TAGLINE + "**" in readme
+        assert "**" + README_TAGLINE + "**" in readme
         # (v0.15.2, the readability reading: the commitment a sentence of
         # its own; QualCoder offered once, after the list)
         assert ("Exegete is built to stay interoperable with QualCoder. Your "

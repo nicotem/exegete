@@ -2,8 +2,8 @@
 
 # Exegete
 
-**A qualitative analysis application you use in conversation with an
-AI assistant, compatible with QualCoder.**
+**A qualitative data analysis application you use in conversation with an
+AI assistant**
 
 [![PyPI](https://img.shields.io/pypi/v/exegete)](https://pypi.org/project/exegete/)
 [![Licence: LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-blue)](https://github.com/nicotem/exegete/blob/main/COPYING.LESSER)

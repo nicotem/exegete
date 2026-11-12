@@ -26,9 +26,6 @@ RELEASES = {"0.15.5": "method", "0.16": "chat-first"}
 # The rows of ruling 41, the rename's, keep the release that
 # names.OLD_SPELLINGS_UNTIL gives.
 PLANNED = {
-    "coding sessions kept with their project": ("feature", "0.15.4", (
-        r"\bsessions\s+(?:are\s+)?kept\s+with\s+(?:their|the|its)\s+"
-        r"project",), "85, 105, 115"),
     "the review of method": ("feature", "0.15.5", (
         r"\bsupports\s+a\s+study's\s+method\b", r"\breview\s+of\s+method\b"),
         "85, 105, 115"),

@@ -155,10 +155,11 @@ class TestTheRemovalsInV0151:
         # released; what it brought is in the CHANGELOG's entry. So does
         # v0.15.2's, whose preparation moved the occurrences choice, the
         # REFI-QDA fix and Apple silicon to v0.15.3, the week having no
-        # room for them; and v0.15.3's, which brought those three with the
-        # stricter checks on names
-        assert list(items)[:4] == ["v0.15.4", "v0.15.5", "v0.16", "v0.17"]
-        assert "coding sessions kept with their project" in items["v0.15.4"]
+        # room for them; v0.15.3's, which brought those three with the
+        # stricter checks on names; and v0.15.4's, which brought coding
+        # sessions kept with their project
+        assert list(items)[:3] == ["v0.15.5", "v0.16", "v0.17"]
+        assert "v0.15.4" not in items
         assert "method" in items["v0.15.5"]
         assert "the earlier names of the two renamed tools" \
             in items["v0.15.5"]

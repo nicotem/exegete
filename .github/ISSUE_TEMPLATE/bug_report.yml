@@ -38,7 +38,7 @@ body:
     attributes:
       label: Exegete version
       description: "With the Claude Desktop extension, the version is in the name of the `.mcpb` file you installed. If you installed from the Terminal, `exegete --version` gives it, run in the environment you installed into. For an install from the source, the command is `python -m exegete.server --version`. An install made under the earlier name, qualcoder-mcp, answers `qualcoder-mcp --version` too. `pip show exegete`, `pipx list` and `uv tool list` also give it. The commands write the version as PyPI does, with a0 for -alpha, and either spelling is fine. If you ask the assistant instead, it may answer without asking Exegete, so the file name or a command is surer."
-      placeholder: e.g. 0.15.3a0
+      placeholder: e.g. 0.15.4a0
     validations:
       required: true
   - type: input

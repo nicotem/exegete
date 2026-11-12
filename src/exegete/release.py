@@ -18,28 +18,28 @@ of release preparation (CONTRIBUTING.md, "The check for new versions").
 """
 
 # pyproject.toml's version, as written there
-VERSION = "0.15.3-alpha"
+VERSION = "0.15.4-alpha"
 # The release date, as the CHANGELOG heading gives it (set again on the
 # day if the release moves: the CHANGELOG heading, CITATION.cff and the
 # update site's two files hold the same date)
-RELEASED = "2026-11-09"
+RELEASED = "2026-11-16"
 # One plain paragraph of at most 800 characters, with no link and no line
 # break (v0.15.3): what is new for a researcher and what changes for them
 # (what to do, what behaves differently). Written by hand at each release
 # preparation from the CHANGELOG entry's opening and its "Upgrading from"
 # part. The note after an update gives it as written, and the update
 # page's "What's new" shows the same words (scripts/check_pages_site.py).
-# 0.15.3's paragraph, 799 characters.
-SUMMARY = ("When Exegete replaces names, you can now choose which occurrences "
-           "of a name to leave as they are, such as where it names another "
-           "person. The preview opens a page in your browser that marks each "
-           "occurrence with a short id. A new code, category or case name "
-           "may no longer hold most characters that usually show nothing on "
-           "screen. The REFI-QDA export now carries the whole project but "
-           "its media: each coder's codings, the codebook, texts, cases, "
-           "attributes, journal entries and annotations. On a Mac with Apple "
-           "silicon, PDFs are read with a newer library, PyMuPDF 2. The "
-           "extension there needs macOS 14 or later, and its first start "
-           "after the update needs the internet. After an update, Exegete "
-           "now gives the assistant a paragraph on what is new. The two "
-           "guides to coding with the assistant are now one.")
+# 0.15.4's paragraph, 798 characters.
+SUMMARY = ("Coding sessions are now kept with their project, in its folder "
+           "Exegete coding sessions, and go with it into backups, copies and "
+           "synced or shared folders. Sessions made before this version stay "
+           "on this computer. A session saved on another computer, or "
+           "changed outside Exegete, is read as having come with the "
+           "project: its approvals count only once you give them again "
+           "here. When you choose which occurrences of a name to leave, the "
+           "preview numbers them, and you can give the numbers, or tick them "
+           "on the page and paste the line it gives. With names typed into "
+           "the request, phrases to keep, such as a public figure who shares "
+           "a participant's name, stay as they are. A long file now comes in "
+           "smaller parts, which Codex keeps whole with the models it lists. "
+           "Some wrong answers and counts are corrected.")

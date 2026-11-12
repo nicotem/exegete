@@ -520,7 +520,7 @@ wheels = [
 
 [[package]]
 name = "exegete"
-version = "0.15.3a0"
+version = "0.15.4a0"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },

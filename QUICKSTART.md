@@ -190,7 +190,7 @@ In a Terminal, go into Exegete's folder with `cd`, run `git pull`, then
 for PDF and EPUB as well. New tools appear once the app is open again.
 `venv/bin/python -m exegete.server --version` prints the installed
 version, and `venv/bin/pip show exegete` shows it too. Both spell it as
-PyPI does, with an a for alpha: `0.15.3a0` for `0.15.3-alpha`. An
+PyPI does, with an a for alpha: `0.15.4a0` for `0.15.4-alpha`. An
 update never touches your projects or their backups: it changes only
 Exegete's own code.
 

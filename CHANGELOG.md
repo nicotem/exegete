@@ -10,6 +10,792 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 The changes since the last release are added here when the next
 release is prepared.
 
+## [0.15.4-alpha] - 2026-11-16
+
+### Added
+
+- **Occurrences chosen by their numbers.** A pseudonymisation preview
+  with `choose_occurrences` now numbers each occurrence of a name 1, 2,
+  3 in the text's order, beside its id, and gives the list's numbering,
+  a short code made from the list. `pseudonymise_source` takes the
+  researcher's numbers as they are, in `leave_numbers`, with that
+  numbering in `numbering`, beside or in place of ids in
+  `leave_occurrences`. So "leave 1, 2 and 3" needs no matching of
+  numbers to ids. A number is safe only against the list it was read
+  from: the numbering changes whenever the list does, and a preview
+  refuses numbers whose numbering is not the file's list's now
+  (`numbering_changed`), and numbers past the last occurrence
+  (`occurrence_numbers_past_the_end`, with the count). The numbers and
+  their numbering are bound into the token, as the ids are. Ids and
+  numbers count together towards the 500 occurrences one run leaves.
+  With the project's names list, numbers withhold all that ids
+  withhold: no new length of the text, no count of the characters the
+  residue read, and journal entries without counts.
+- **Numbers, tick boxes and a line to copy on the page for choosing
+  occurrences.** The page a pseudonymisation preview with
+  `choose_occurrences` opens now labels each occurrence with its number
+  in bold, as the preview numbers it, before its id. The page's one
+  script, which its policy allows by the digest of the script's text
+  and no other, adds a tick box before each number and, at the foot of
+  the page, one line for the occurrences ticked, such as `File 12,
+  numbering q8x2dm: leave occurrences 3, 7, 12 as they are.`: the file's
+  id, the list's numbering and the numbers, and nothing of the text.
+  Copy puts the line on the clipboard; where the browser refuses, the
+  line is selected for the researcher to copy. Pasted into the
+  conversation, the line gives the next preview its file, its numbering
+  and its numbers. A browser that runs no script shows the numbers
+  alone. When the page loads, every box takes the state Exegete wrote,
+  so that a tick a browser restores on a reload never joins a later
+  page's list.
+- **Phrases to keep in a pseudonymisation run.** With a mapping typed
+  into the call, `pseudonymise_source` takes `keep_phrases`: up to 50
+  phrases of up to 200 characters, such as a public figure who shares a
+  participant's name or a saying. Every name of the mapping that lies
+  wholly inside an occurrence of a phrase stays as it is, in the file's
+  text and in the notes the run rewrites; a name that runs past a phrase
+  is replaced, and the preview warns about those in the file's text.
+  Phrases are matched as whole words under the run's `case_mode`, within
+  a line, and in a Word, OpenDocument or RTF file both through the
+  markers its notes and comments left and as stored, as names are. The
+  preview's `phrases` block counts, by each phrase's number, how often
+  it occurs, the names it keeps and those that run past it; the warnings
+  count the occurrences kept among those left by choice; the occurrences
+  block marks their rows, and the page for choosing occurrences marks
+  them with no tick box. The phrases are bound into the preview's token
+  and kept in no file, record or answer: the run record, the journal
+  entry and the answer count what they kept, and every answer that may
+  send the assistant to a new preview asks for the same phrases again.
+  With the project's names list (`use_project_pseudonyms`) they are
+  refused before the list is read, since what Exegete said about a
+  phrase would tell whether a name in it is on the list.
+
+### Changed
+
+- **A new attribute name may not hide a character no one sees.** Like
+  a new code, category or case name, it may not hold a character that
+  usually shows nothing on screen, such as a zero-width space, and a
+  tab or a line break inside it counts as one, since an attribute name
+  keeps its spacing as typed. A new name that matches another
+  attribute's, of any kind, only once such characters are left out of
+  both is refused too, naming that attribute and its kind. Otherwise
+  attribute names are compared exactly, as before: `age` beside `Age`
+  is a second attribute. Names already in a project are never checked.
+  `create_attribute_type` now makes its checks before the backup's
+  copy of the project's folder, so a refusal costs no copy.
+- **`search_files` refuses a search with nothing to search.** An empty
+  pattern, and a call with `search_filename` and `search_content` both
+  false, were answered as a search that found nothing, which reads as
+  "no such file". Both are now refused, saying what to pass.
+- **`search_memos` refuses a `limit` above 5,000**, as it refuses 0. It
+  cut such a limit to 5,000 without a word, so an answer with fewer
+  results than the limit asked for could still have left results out.
+- **pseudonymise_source's two-step paragraph** now says that the run is
+  refused if what the token covers changed in between, where it said
+  the project. The token covers the file's text and rows, the notes
+  with `rewrite_memos`, and the arguments it binds, not the rest of the
+  project.
+- **The page, its answer's note, the block's notes and the brief** ask
+  for the numbers in bold or the pasted line. They say that numbers said
+  rather than pasted hold only for the page written last for the file:
+  numbers read from an earlier page, or from another file's page, can
+  name other occurrences, where a pasted line carries its own page's
+  numbering and a preview refuses it if the list has changed. The page
+  no longer says that the occurrences it marks as left were left by a
+  list of ids when the preview was given numbers.
+- **EPUB import.** The optional part for PDF and EPUB now installs
+  EbookLib 0.21, which no longer needs the library six. QualCoder 4.0's
+  own import functions, run on the test documents with EbookLib 0.21,
+  give the same text for every document as with 0.20 (checked on 10
+  November 2026). NOTICE no longer lists six.
+- **A file left with no replacement.** Where a list leaves every
+  occurrence in the file, or phrases keep them, the run replaces
+  nothing in its text, and the preview no longer reads the positions
+  of the file's codings, annotations and case links. The file's entry
+  says so (`rows_read`), counts none of them and is left out of
+  `totals.files`, and the preview asks for no `allow_hidden_coder`.
+  Before, a preview whose list left every occurrence counted a hidden
+  coder's coding stored past the end of the text as clamped and asked
+  for `allow_hidden_coder` for a run that writes nothing.
+- **The page for choosing occurrences** says that the line it gives
+  takes the place of any list given before, so that every occurrence
+  to leave is ticked, and a second skip link, shown with the line,
+  leads to it.
+- **The reading tool's description** gives its rule on relaying
+  `position_safety_warning` straight after the paragraph on parts, so
+  that on Python 3.11 and 3.12, which keep a description's indentation,
+  the rule stays within the first 2,048 characters that some apps keep.
+- **Coding sessions are kept with their project.** A new coding session
+  is kept inside its project, in a folder at the project's top called
+  `Exegete coding sessions`, one file per session beside a short note
+  that says what the folder holds. It goes wherever the project goes:
+  into the project's backups, into copies of it
+  (`copy_project_to_workspace` carries it, and the copy reads its
+  sessions as having come with the project), and to any service that
+  syncs or shares the project's folder.
+  `start_coding_session` says where the session is kept (`kept_in`).
+  Where the project's folder cannot hold a session, as in a read-only
+  project, the session is kept on this computer as before, and the
+  answer says why (`kept_in_reason`). Backups and copies leave out a
+  session's temporary files, whatever their age. `restore_backup` keeps
+  the folder as it is, never taking the backup's copy, whose older
+  sessions would take away the decisions made since, and says so
+  (`sessions_folder_note`).
+- **Sessions made before this release stay on this computer**, in
+  `~/.exegete/sessions`, and nothing moves. Each is listed whichever
+  project is selected, but read, decided and applied only while its
+  project is open at the place the session records. If the project has
+  moved or been renamed since, the session's tools say it could not be
+  found and give the way back: put the project back at that place
+  (`list_coding_sessions` gives it as `project_path`), select it there,
+  and finish, apply or export the session.
+- **A session is read and decided only with its project open**, as it
+  was already applied. `review_suggestions`, `get_coding_session_info`,
+  `review_proposals`, `update_suggestion_status` and
+  `update_proposal_status` answer another project's session by naming
+  both projects, and show nothing of it. A session tool given an id it
+  cannot find lists the open project's sessions alone, no longer every
+  project's with their descriptions and paths.
+- **`list_coding_sessions` says what its list covers** (`covers`): a
+  project's own sessions are listed only while it is selected, and each
+  entry says where it is kept (`kept_in`). When the project's sessions
+  folder cannot be read, the answer gives the reason, and entries it
+  cannot read are counted, never named.
+- **A session that came with the project.** Each session Exegete
+  starts in a project carries a seal, and each approval given on this
+  computer a mark, both made with the key Exegete keeps in its own
+  folder (`preview_secret`), and both tied to the project by a random
+  id beside its sessions (`Project id.txt`). A session whose file lacks
+  this computer's seal for this project (saved by Exegete on another
+  computer or under another account, changed outside Exegete, brought
+  in from another project, carried by a copy made with
+  `copy_project_to_workspace`, which gets an id of its own, or kept
+  from before that key was replaced or the project's id was lost) is
+  read as having come with the project. Every answer that gives its
+  texts flags them as data, never instructions (`came_with_project`),
+  with the session's instruction for the assistant to read to the
+  researcher first, and an approval in it counts only once given on
+  this computer, reading as pending until then. `apply_codings` and
+  `create_proposed_codes` write only the approvals that count on this
+  computer and name the others (`not_approved_here`). An approval
+  counts only while Exegete's own folder on this computer records it
+  (`approvals`), so an older copy of a session's file put back, from a
+  backup, by a sync service or by an earlier release's restore, cannot
+  bring back an approval withdrawn since on this computer. One
+  withdrawn on another computer, in a session deleted outside Exegete,
+  or by a save cut short before the record was updated stays in the
+  record until Exegete here saves or deletes that session, and an
+  older copy put back before then still counts it; the same holds if
+  that folder is put back from an older backup. Deleting that folder
+  makes the approvals given here read as pending, nothing lost.
+  Exegete never replaces `Project id.txt`. When it cannot read an id
+  there, the session tools refuse the project's sessions, with the
+  reason and what can be done, until the file can be read, is put back
+  or is removed. Removed, or changed to another id, it leaves every
+  session there read as having come with the project, and a session
+  saved meanwhile goes on reading so after the id is put back. Approvals
+  do not carry from one computer to another. If the key is lost or
+  replaced, every session kept in a project reads as having come with
+  the project, nothing in it lost. When the key cannot be read, the
+  session tools refuse, with its reason, to start a session or to read
+  or save one kept in a project; the sessions kept on this computer are
+  read as before, and `list_coding_sessions` lists them, with that
+  reason for the project's own.
+- **A long file comes in smaller parts, each measured as an app
+  receives it.** `read_file_with_codings`, the file resource and the
+  case resource chose a part's end by an estimate that left the file's
+  memo out, so a part of English reached Codex as about 73,600 bytes,
+  over the 48,000 that Codex keeps of an answer for the models it lists,
+  and lost its middle there. Each answer that serves a part is now
+  measured and kept within 40,000 bytes: about 35,000 characters of
+  English, or 5,000 to 7,000 of Chinese, Greek, Arabic or Hebrew, and
+  fewer where a part holds many codings. Such a part reaches Claude Code
+  whole, and Codex whole with the models Codex lists (Codex 0.167.0's
+  source, read on 10 November 2026). With any other model, such as a
+  local one, Codex keeps about 12,000 bytes of an answer. A file whose
+  answer fits comes whole, as before. A longer one takes more calls
+  than before: 9 for 300,000 characters of English, where it took 5,
+  and 2 for an interview of about an hour (55,000 characters), where it
+  took 1.
+- **Every part carries the file's memo, and a long memo makes the parts
+  shorter.** When what every part from a place carries (the memo, and
+  the codings and annotations that reach over the part's start, with
+  their memos; in the case resource, the case's memo and its excerpts)
+  passes 20,000 bytes, the part's own text keeps 20,000 bytes and the
+  answer passes 40,000: from a memo of about 19,000 characters of
+  English, or from a few dozen codings over the whole file.
+- **A coding that runs past the start or end of a part comes in that
+  part without its passage**, marked `reaches_beyond_part`, its memo
+  kept. In a part, `codes_used` counts the codes of that part's codings;
+  `statistics` still count the whole file. The part's note asks the
+  assistant to read every part before saying anything about the whole
+  file.
+
+### Fixed
+
+- **An id `search_memos` gives no longer leads to another coding.**
+  `search_memos` gave a region coding (an area on a PDF page or an
+  image) and an audio/video coding their own numbers under `id`, and
+  `delete_coding` and `set_memo`'s `coding` target read any number as a
+  text coding's: given such an id, they removed or changed a different
+  coding, a text one. Those rows now give their id under
+  `region_coding_id` or `av_coding_id`, with `id` null, and no tool
+  takes these ids. An id read before the update can still reach a text
+  coding; such a change keeps its backup and its undo receipt. The note
+  a text read gives of the codings it leaves out now says that no tool
+  removes or changes one such coding alone: `delete_code` removes them
+  with their code, and `merge_codes` moves them to the code it merges
+  into.
+- **`true` and `false` no longer stand for a number.** The library that
+  carries the assistant's requests to Exegete read them as 1 and 0
+  before Exegete's own checks saw them, so an id sent as `true` acted
+  on item 1 (`delete_coding` deleted coding 1 at once), and `keep_last`
+  sent as `false` lifted the floor that keeps the newest backup. Every
+  tool now refuses `true` or `false` wherever it takes a number, alone
+  or in a list, before anything runs, naming the arguments and
+  repeating no value. A number sent as text, such as `"5"`, is still
+  taken as that number.
+- **`prune_backups`' `older_than_days` must be a finite number.**
+  `"nan"` and `"inf"` were accepted, and removed nothing.
+- **`set_memo` with the project memo refuses a `target_id`**, which was
+  ignored without a word, so that a call meant for another target wrote
+  the project memo.
+- **A coding counts once for its case.** `get_codes_by_case`,
+  `get_cases_by_code`, `get_case_code_matrix` and
+  `export_case_code_matrix_csv` counted a coding twice when it lay
+  inside two overlapping spans of one case. They now count each coding
+  once for each case it lies in. In case mode,
+  `export_coded_segments_report` still writes such a coding once for
+  each span, as before, and its answer now gives `repeated_rows`, the
+  number of rows written again.
+- **A case or file with no value stored for an attribute reads as
+  unset.** The attribute reads listed only the values stored, and
+  `query_by_attribute` joined them, so `""` missed a case or file with
+  no row for the attribute, and a numeric comparison left it out of its
+  count of unset values. Such a case or file now reads as `""`:
+  `get_case_attributes` and `get_file_attributes` list the attribute
+  with `""` and no `attribute_id`, `""` finds it, and `values_left_out`
+  counts it as unset. A value stored as null reads as `""` too, in the
+  two reads with its row's `attribute_id`.
+- **`search_files` counts a file whose every match is already coded
+  only when the file is not listed.** With the name search on, the
+  default, such a file whose name matched was listed and counted in
+  `files_with_all_matches_excluded` as well. Its entry gives its
+  content counts, and the count covers the files the page examined, as
+  the description and the note now say.
+- **`get_coded_segments` counts the codings it leaves out for a hidden
+  coder within `file_ids`**, as it lists the segments. Its
+  `codings_suppressed` covered every file.
+- **`export_coded_segments_report` says when `include_variables` came
+  with the txt format**, which has no columns for attribute values, in
+  `variables_note`. It was taken without a word.
+- **A search of file names alone no longer reads every file's text**,
+  which slowed the search the description calls fast.
+- **A session limited to named codes no longer accepts a code given the
+  number of one deleted since.** When the code with the highest number
+  is deleted, the next code made takes that number, and a session kept
+  its codes by number alone. It now keeps each code's date too, so
+  `record_suggestions` and `edit_suggestion` refuse the new code, and an
+  undo takes a code out of a session only where its date matches. A
+  code's date is kept to the second, so a new code made within the same
+  second as the code whose number it took is not told apart from it. A
+  session whose codes an earlier release recorded is checked by number,
+  as before.
+- **`list_coding_sessions` refuses a `days_old` it cannot count**: below
+  1, which listed nothing, or reaching back before the year 1, which
+  answered an error. The refusal gives the range.
+- **After `apply_codings` or `create_proposed_codes` has written, a
+  session that cannot be saved is said as such.** The answer was an
+  error, though the codings or codes were written. It now says that they
+  are written and the session not saved, with the reason and the way
+  on.
+- **`record_suggestions` and `edit_suggestion` refuse a `code_id` and a
+  `code_name` that point to different codes**, or a `code_name` that
+  matches no code, where the id used to win without a word.
+- **`review_proposals` gives each proposal's collision with the
+  codebook as it stands**, so a code made since the proposal was
+  recorded shows, as its description says. `update_proposal_status`
+  names the collision of each proposal it approves.
+- **`propose_codes` refuses an item whose `example_segments` is not a
+  list**, before recording it.
+- **A workspace copy no longer carries the names list's temporary
+  copies.** A save of the names list, its undo or a pseudonymisation run
+  cut short can leave a temporary copy of the list, with the real names
+  in it, in the project's folder: its name is `pseudonyms.json.`, eight
+  letters, digits or underscores, then `.tmp`. `copy_project_to_workspace`
+  copied every such file, whatever its age, and the copy kept it. A copy
+  now leaves them all out, and the original stays as it is. Backups are
+  as they were: a backup removes such a file from the project once it is
+  an hour old, and until then carries it.
+- **Answers that send you to a text editor for the names list warn about
+  editors with an AI assistant of their own.** Such an editor can send a
+  file of real names to that assistant's provider when the assistant is
+  used on the file. Each answer that suggests changing `pseudonyms.json`
+  or the names file in a text editor, and `prepare_names_list`, which
+  opens the names file in your computer's text editor, now says so once,
+  and suggests an editor whose AI features are switched off.
+- **A reading copy goes a week after it was written.** The reading
+  folder kept a file's reading copy, and the read-only copy of its
+  original, until everything in that file's folder was a week old, so a
+  newer page or copy beside them kept them longer. Each now goes a week
+  after it was written, whatever stands beside it. A file's folder that
+  the tidy leaves empty goes at the same tidy, and so does the project's
+  own folder there, named after the project, when nothing else is in it.
+  The folder of an import's preview pages now goes with its last page
+  too; before, it stayed until an import or a restore removed it.
+- **A coding session's REFI-QDA export checks each passage.** The
+  export checked a suggestion's positions against the length of its
+  file's text, not its words, so once the text had changed (by a
+  pseudonymisation run, or in another program) a suggestion could be
+  written onto other words. Each suggestion's passage is now compared
+  with the file's text at its positions, as `apply_codings` compares
+  it. A pending, approved or rejected suggestion whose passage or
+  positions no longer fit the file's text refuses the export, and the
+  refusal gives its status and says how to correct it:
+  `edit_suggestion` for a pending one, and for one already decided,
+  `update_suggestion_status` with `reopen` first, then
+  `edit_suggestion`, then the decision again. One whose code or file
+  has gone refuses the export as before, with its reason alone. An
+  applied or removed suggestion that no longer fits the project (its
+  passage, positions, code or file), whose coding is in the project or
+  was deleted from it, is left out of the file instead, counted in
+  `skipped_suggestions` and the first 20 named in `skipped_details`, as
+  the whole project's export leaves out codings that do not fit; the
+  whole project's export carries what the project holds. The session is
+  not changed. The answer's counts of codings, codes and files are those
+  of what the file holds.
+- **An export removes only its own earlier part files.** An export
+  removes the part files an earlier export to the same name left when
+  it was cut short. It compared their names without regard to letter
+  case or to the two ways of writing an accented letter, so on a disk
+  that tells such names apart it could remove another export's part
+  file, even one still being written, which then failed. Names are now
+  compared exactly, and letter case or an accented letter's form is set
+  aside only where the folder takes the two names as one.
+- **The project listing gives each project's size.**
+  `list_available_projects` gave `size_mb` as the size of the project
+  folder's own entry, 0.0 for every project. It now gives the size of
+  the files in the folder, without following a link inside it, or on
+  Windows a junction. An entry that `select_project` does not take by
+  its kind or name, such as a file whose name ends in `.qda`, a
+  `data.qda` in a folder whose name lacks `.qda`, a link to such a
+  folder or, on Windows, a folder whose name ends in `.QDA`, is now
+  marked `usable: false`, with a note saying what Exegete selects.
+- **"Busy" only when the database is busy.** A text stored in an
+  encoding other than UTF-8 makes Python's SQLite module raise an error
+  that quotes the text. When the text held "locked" or "busy", Exegete
+  answered that the database was busy and to try again, which could not
+  help. Busy and locked are now read from SQLite's own error codes, as
+  are the other faults that waiting may cure (a full disk, a disk
+  error), and such an error now gets the answer of a read that failed,
+  not that of a busy database.
+- **A long coding no longer makes parts one character long.** A coding
+  whose passage alone passed the estimate, about 6,650 characters of
+  Chinese, 8,150 to 8,550 of Greek, Arabic or Hebrew, or 70,000 of
+  English, made every part from its start one character long, each
+  repeating the passage. Such a coding now comes without its passage in
+  each part it runs past, and the parts keep their length.
+
+### Security
+
+- **CI's validator.** The official validator's lock moves node-forge
+  from 1.4.0 to 1.4.1, a release that none of the twelve advisories
+  on node-forge affects, so the advisory check no longer needs to
+  accept them. node-forge is a library of the validator that CI alone
+  installs to check the extension's manifest, and Exegete installs none
+  of it.
+
+### Documents
+
+- `create_code`'s and `create_category`'s descriptions, and TOOLS.md,
+  say which arguments are checked before the name (a memo holding the
+  private-note marker, the category or the parent category, and the
+  colour), so that their refusals come even for a name that exists.
+- `delete_coding`'s and `update_annotation`'s descriptions say which
+  ids, and which note, the answer gives for a hidden coder's row with
+  the override.
+- `search_memos`' description and TOOLS.md name the two new keys, and
+  TOOLS.md gives the rule on attribute names.
+- `add_annotation`'s Returns names the keys of the annotation its
+  answer gives, where it named three that are not keys.
+- `export_coded_segments_report`'s description says that only the csv
+  format writes the attribute columns, and what `repeated_rows` counts.
+- The help's `not_yet_coded` topic names `search_files` with
+  `search_filename=false`, and TOOLS.md says what changed above.
+- **TOOLS.md and the AI coding guide** say that a pseudonymisation run
+  takes a backup before it changes something, and none when it changes
+  nothing, where they said that a backup is always taken.
+- **PRIVACY.md** describes the page's script, the line and the
+  clipboard, and warns that the browser's history keeps the page's
+  title and address, which hold the file's and the project folder's
+  names, after the page is gone, and that a browser may sync them. It
+  suggests deleting those entries, or keeping history sync off.
+- **TOOLS.md, the AI coding guide and CONTRIBUTING.md** describe the
+  numbers, the tick boxes and the line; TOOLS.md gives
+  `pseudonymise_source`'s signature and binding with `leave_numbers` and
+  `numbering`.
+- **TOOLS.md and the AI coding guide** describe phrases to keep. TOOLS.md
+  gives `pseudonymise_source`'s signature and binding with
+  `keep_phrases`, and the full brief as about 14,600 characters.
+- **PRIVACY.md on coding sessions kept with their project.** From
+  0.15.4 a project keeps its coding sessions in its `Exegete coding
+  sessions` folder. PRIVACY.md says so wherever it lists what stays on
+  the computer. The project's backups and copies hold the sessions too,
+  and so does any folder where the project is synced or shared.
+  Exegete's own folder keeps the sessions made before 0.15.4, and any
+  that a project's folder could not hold. A new item, "The `Exegete coding
+  sessions` folder", says what a session's file holds, who can read the
+  folder, what deleting a session leaves and what a restore keeps. It
+  also suggests what you may want to do before sharing a project. The
+  session tools give a session's passages only while its project is
+  selected, as PRIVACY.md now says.
+- **A coding session that came with the project.** PRIVACY.md says what
+  the seal on a session and the mark on an approval are, and that they
+  name no one. Exegete reads a session without this computer's seal as
+  having come with the project. Its texts reach the assistant marked as
+  data. Its approvals read as pending until you give them again on this
+  computer, so approvals do not carry from one computer to another.
+  Deleting or replacing the preview-token secret has the same effect on
+  every session kept in a project, and nothing in them is lost.
+- **Phrases to keep.** PRIVACY.md says that phrases to keep are typed
+  into the conversation, as a typed mapping is, so the conversation
+  holds them. Exegete keeps none of
+  them: the preview, the answer, the run record and the journal entry
+  count what they kept. With the names list, Exegete refuses them before
+  it reads the list.
+- **Where to report a fault.** INSTALL.md's "Where to ask" sends a fault
+  that could expose participants' data, or damage a project when
+  Exegete changes it, to a private report. SECURITY.md says how, and now
+  uses the same words. INSTALL.md no longer calls GitHub Issues the only
+  support channel.
+- **PRIVACY.md, read whole.** What it said twice is said once. Its list
+  of what stays on the computer is now part of "Files Exegete keeps on
+  your computer", and the pseudonymisation run record is described
+  there alone. It is about a fifteenth shorter, and every warning and
+  its suggestion is kept.
+- **PRIVACY.md in plainer sentences.** It was read again as a
+  researcher new to Exegete would read it. Long sentences are split,
+  lists take the place of sentences joined by semicolons, and words
+  such as MCP, digest, symlink, Cowork and computer use are explained
+  where they first appear. Where a section repeated the advice of
+  another, such as which assistant to use for participants' data, it
+  now points to that section.
+- **Warnings where PRIVACY.md gave orders.** Switching training off, an
+  old run record, a repair of a damaged database, the notes of two
+  people who share a name, a coder name file left beside another, a
+  document converted with another tool and the reading folder at a
+  study's end are each said as what could happen and what you could do.
+  "Prefer synthetic data" and "the safe path" became a warning that
+  pseudonymised data is still personal data, with made-up or genuinely
+  anonymised data suggested for trying Exegete out.
+- **Choosing occurrences.** PRIVACY.md says that the preview numbers
+  each occurrence beside its id and gives the list's numbering, and that
+  you give the bold numbers on the page, or paste its line. A new secret
+  changes the ids and the numbering, never the numbers.
+- **The lengths in a pseudonymisation answer.** With the names list and
+  occurrences to leave, the preview and the run's answer leave the new
+  length out, as PRIVACY.md now says.
+- **Your browser's history.** Each page Exegete opens in your browser
+  leaves an entry there: a reading copy, the page for choosing
+  occurrences, an import's page for checking letters, and a copy of an
+  original that opens in a browser, as a PDF can. PRIVACY.md says
+  what each entry holds, and suggests deleting such entries or keeping
+  history sync off.
+- **What hosts keep, and where.** PRIVACY.md dates Claude Desktop's log,
+  which can hold every request and answer, from MCP's page on debugging,
+  read on 10 November 2026. It adds Claude Code's files for answers over
+  50,000 characters, from Anthropic's page on MCP, read on 10 November
+  2026, and the deny rules' second gap, a command such as `grep -r`. It
+  says what `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` and
+  `cleanupPeriodDays` each change, from Anthropic's pages read on
+  11 November 2026.
+- **Claude's memory** can carry what was said in one conversation into
+  another. PRIVACY.md quotes Anthropic's pages, read on 10 November
+  2026, and gives the switches for one conversation and for the
+  account.
+- **LM Studio's LM Link** loads models on other machines, cloud ones
+  included, so the conversation can be read there. PRIVACY.md says so
+  beside the fully local option, and suggests checking where the model
+  is loaded.
+- **ChatGPT Business, Enterprise and Edu.** From OpenAI's page on
+  enterprise privacy (an Internet Archive capture of 3 November 2026),
+  PRIVACY.md says that on Enterprise and Edu the workspace's admins set
+  how long data is kept and can reach an audit log of conversations, and
+  that on Business they can view and export members' conversations.
+- **onnxruntime on Windows.** PRIVACY.md gives both accounts: the note in
+  onnxruntime's package, which says its official Windows releases read
+  the setting Exegete gives, and the reading of the Windows package
+  Exegete's lock installs, which reports through Windows' diagnostic
+  data.
+- **Smaller corrections.** Ultra is named beside Free, Pro and Max. A
+  hidden coder's coding, deleted with the override, gives the ids of its
+  code and its file too. A resource address whose id is not a number is
+  refused by the MCP library, with no error logged. Deleting the
+  preview secret also means that a change made before can no longer be
+  undone. `save_names_list` is named among the tools that read a
+  backup, which it does to keep a keyed digest of the names list.
+  Readings that said "the same day" give their date. "Questions" points
+  to SECURITY.md for a fault that could expose participants' data.
+- INSTALL.md has a section on coding sessions from 0.15.4: where new
+  sessions are kept, the way back for an earlier one whose project has
+  moved, what a session's file copied by hand into a project does, and
+  what the key means for sessions and approvals on two computers.
+  "Going back to an earlier version" says what an earlier release does
+  to the `Exegete coding sessions` folder: it does not list or update
+  the sessions there, and its `restore_backup` replaces the folder with
+  the backup's copy, or removes it, so copying the folder somewhere
+  else first, or updating again, is suggested. "Uninstalling" says that
+  the sessions kept in projects stay with them.
+- TOOLS.md, the AI coding guide and the descriptions of
+  `list_coding_sessions`, `delete_coding_session`,
+  `copy_project_to_workspace`, `prune_backups`, `restore_backup` and
+  `pseudonymise_source` say where sessions are kept, what goes with the
+  project, and that a project's backups and copies hold copies of its
+  sessions. The brief says to read and change the sessions only through
+  the session tools. CONTRIBUTING.md's map names the folder.
+- **TOOLS.md** and `copy_project_to_workspace`'s description say that a
+  workspace copy leaves out every temporary copy of the names list,
+  whatever its age.
+- **TOOLS.md** and `export_refi_qda`'s description say that a session's
+  export compares each passage, how a suggestion that no longer fits is
+  refused or left out, and that past 5,000 codings of one code the rest
+  are left out of a project's export, the code named in
+  `truncated_codes`.
+- **PROJECT_SELECTION_GUIDE.md** says what `size_mb` gives and how an
+  entry that `select_project` does not take is marked.
+- **TOOLS.md** gives a part's size in bytes and characters, what a long
+  memo does to it, what Codex keeps of an answer with a model it does
+  not list, `reaches_beyond_part` and `codes_used` in a part.
+- **The guide to installing from the Terminal** says what Codex keeps of
+  an answer with the models it lists and with others, and that it marks
+  the middle it leaves out (Codex 0.167.0's source, read on 10 November
+  2026). It names two settings that change Codex's budget, neither tried
+  by this project: `tool_output_token_limit`, for every tool, and
+  `output_token_limit` under
+  `[mcp_servers.exegete.tools.read_file_with_codings]`, for that tool
+  alone.
+- **A fault that could expose participants' data.** Such a fault, or
+  one that could damage a project when Exegete changes it, is best
+  reported privately, so that it is not public before it is fixed. The
+  bug report form, SUPPORT.md and GitHub's page for opening an issue
+  now point to
+  [SECURITY.md](https://github.com/nicotem/exegete/blob/main/SECURITY.md)
+  for it, as CONTRIBUTING.md does.
+- **What an issue can publish.** The bug report form says that the
+  tools' answers in a copied conversation can also hold the names of
+  files and cases, attribute values, codes and memos. The form,
+  SUPPORT.md and INSTALL.md say that a real example with names and
+  details removed is still a participant's words. A search can find
+  them, someone can recognise them, and an ethics approval may not
+  allow you to publish them. The form also says that the copy of a
+  project it suggests holds any names list and names file, with the
+  real names in them.
+- **Claude Desktop's log on Linux.** INSTALL.md gives its folder,
+  `~/.config/Claude/logs`, from MCP's page on debugging, read on 10
+  November 2026, in "Reading the server log" and among what stays after
+  an uninstall.
+- **Claude's personal plans.** README.md, QUICKSTART.md and INSTALL.md
+  name Ultra beside Free, Pro and Max for the setting that switches
+  training off. INSTALL.md also says that Anthropic can train on a
+  conversation flagged for a safety review, from Anthropic's page "Is
+  my data used for model training?", read on 10 November 2026.
+- **OpenAI's plans.** README.md says that the Help Center's page does
+  not name Go for the training setting, where it said that the Help
+  Center does not name Go at all.
+- **CONTRIBUTING.md** says that the optional part brings PyMuPDF 2 with
+  Python 3.11 to 3.14. For onnxruntime on Windows, it gives what the
+  package's own note says, beside what the Windows package that the lock
+  installs does.
+- **Plainer sentences.** The bug report form, SUPPORT.md, INSTALL.md and
+  CONTRIBUTING.md were read again for readability, and long sentences
+  are split. INSTALL.md's "Reading the server log" now says what
+  Claude Desktop's log can hold before it describes the lines Exegete
+  and its MCP library write there.
+- **The bug report form** warns and suggests where it gave orders. It
+  says that an issue is public, and how to show a problem without
+  participants' data. It says that a conversation copied into the steps
+  to reproduce can carry passages of your documents, and suggests the
+  steps in your own words instead. Before you try a problem again, it
+  suggests a copy of the project. If you use QualCoder, the form asks
+  for its version and whether it had the project open; otherwise you
+  can answer "none". ChatGPT's desktop app or Codex is now among the
+  apps to choose. The link to SUPPORT.md describes that page as it now
+  reads, and the form for ideas says who works out Exegete's next
+  features.
+- **What Claude Desktop's log can hold.** SUPPORT.md, README.md and
+  INSTALL.md now give the source and its date: MCP's page on debugging,
+  read on 10 November 2026, lists message exchanges among what Claude
+  Desktop's logs capture. So the log can hold every request to Exegete
+  and every answer, the text of your documents included.
+- **Claude Desktop on Linux.** INSTALL.md says that Anthropic's help
+  page, read on 10 November 2026, lists Claude Desktop for Linux too, as
+  a beta. The guide's steps are written for a Mac and Windows, and
+  Exegete's tests install and start the extension on Linux without
+  Claude Desktop itself.
+- **Claude Code's question before an import.** INSTALL.md says that
+  Claude Code offers no "don't ask again" for `import_documents` and
+  `save_names_list` from version 2.1.246, by its changelog, read on 10
+  November 2026. From 2.1.199 until then, Claude Code offered it, and
+  then ignored the allow rule it wrote.
+- **OpenAI's plans.** README.md no longer counts Go among the plans that
+  OpenAI's Help Center names for switching training off. Its page "Data
+  controls in ChatGPT" (Archive capture of 6 November 2026) names Free,
+  Plus and Pro, and README.md suggests checking for the setting on Go.
+- **QUICKSTART.md** quotes the two messages Exegete gives for a project
+  path that leads to no project, one as it starts and one in its
+  answers, in place of "Database file not found", which Exegete no
+  longer prints.
+- **CONTRIBUTING.md** suggests `ORT_DISABLE_TELEMETRY=1` to a
+  contributor who imports PyMuPDF 2 outside the suite and Exegete's
+  reading process, since onnxruntime then reports its use to Microsoft
+  unless it is switched off.
+- **The record of the update check's texts**,
+  `docs/update-check/wording.md`, quotes the code's words again.
+- **Plainer sentences.** The bug report form, SUPPORT.md, QUICKSTART.md,
+  README.md, INSTALL.md and CONTRIBUTING.md were read again for
+  readability. Long sentences are split, lists inside sentences are set
+  out as lists, and an order is said as a warning where one belongs,
+  such as what an issue publishes. INSTALL.md's section on approving the
+  AI's suggestions is now headed "Approving the AI's suggestions", and
+  links to its earlier address still lead there.
+
+### For contributors
+
+- **The page's script runs under Node in the tests**, with a stub of
+  the calls it makes. The test is skipped where Node is not on the path,
+  and fails in CI, whose runners have it, so that it never goes unrun
+  there. A test of the occurrence ids no longer reads the CHANGELOG's
+  words.
+- **A lock test that failed at random on Windows.** The test of the
+  lock's refresh on a full disk read the lock's lines before making
+  its writes fail, so a refresh in between could change them. It now
+  reads them while holding the lock's own mutex, under which every
+  refresh writes.
+- **The record of what QualCoder 4.0's import stores** from each test
+  document now lists PyMuPDF 2.1, the release an install from PyPI
+  takes on the computers that get PyMuPDF 2, and EbookLib 0.21 among
+  the releases that give the same text. Both were checked on 10
+  November 2026 with `scripts/qualcoder_parity.py --check` and with the
+  tests that compare Exegete's import to that record, and no text
+  changed. The job that tries the newest libraries now compares their
+  text instead of skipping it. The lock keeps PyMuPDF 2.0.
+- Tests hold:
+  - the private route in the bug report form, the issue configuration
+    and SUPPORT.md
+  - INSTALL.md's Linux log folder, against the folders that
+    `exegete --check-transition` reads
+  - the versions of Claude Code that offered "don't ask again"
+  - onnxruntime's note, where the package is installed
+  - the plans named beside the training setting
+- **A test of the workspace copy that failed on Windows.** It compared
+  the original project's entries before and after a copy, with each
+  entry's times read from a folder listing. On Windows a listing gives
+  a folder's times from its parent's index, which is updated later, so
+  two listings could differ where nothing had changed. The test now
+  reads each entry's own times.
+
+### Measured
+
+What a host is sent with every request, beside 0.15.3's published
+figures, in characters (the tool sets' names, descriptions and input
+schemas together; the brief as `read_brief` returns it), measured on
+Python 3.13 with the libraries in `uv.lock`:
+
+| | 0.15.4, Python 3.13 | 0.15.3, Python 3.13 |
+|---|---|---|
+| `full` (80 tools) | 214,132 | 210,397 |
+| `core` (28 tools) | 78,208 | 76,805 |
+| The opening text | 2,042 | 2,042 |
+| The full brief | 14,625 | 14,180 |
+| The brief in `core` | 1,923 | 1,923 |
+
+- Choosing occurrences by their numbers adds 243 characters to `full`:
+  242 for the schemas of pseudonymise_source's two new arguments, and
+  1 in its description, where the arguments for choosing occurrences
+  now take about the room they took before. The full brief is 277
+  characters longer, from its privacy section's sentences on the
+  numbers and on the line the page for choosing occurrences gives to
+  paste. The sizes of `core`, which has no pseudonymisation tool, do
+  not change.
+- Six descriptions that now say what their tools do add 649 characters
+  to `full` and 337 to `core`. In both sets, `create_code`'s sentence on
+  the arguments it checks before the name adds 166 to its definition,
+  `search_memos`' sentence on the ids of region and audio/video codings
+  129, and `delete_coding`'s Returns 42. In `full` alone,
+  `create_category`'s sentence on the arguments it checks before the
+  name adds 130, the rule on a new attribute name in
+  `create_attribute_type`'s arguments 108, and `update_annotation`'s
+  sentence on what the answer gives for a hidden coder's row 74.
+- pseudonymise_source's sentence on what the transport does to a file
+  id now says that true and false are refused, adding 36 characters to
+  `full`.
+- Phrases to keep add 81 characters to `full`: 137 for the schema of
+  pseudonymise_source's new argument, `keep_phrases`, while its
+  description is 56 characters shorter. The description gains the
+  argument's entry and its name among the arguments to repeat on the
+  execute. It loses two passages: the paragraph on an open window that
+  does not refresh after a run and on what QualCoder 4.0 keeps, which
+  the run's answer gives on signs of QualCoder, and the last sentence,
+  which named the bound arguments again, as the description's opening
+  does. On Python 3.11 that description is 19,841 characters, within
+  the 20,000 that the guide to installing from the Terminal gives for
+  Claude Code's setting.
+- The full brief is 122 characters longer, from its line on choosing
+  occurrences, which now says to give the same `keep_phrases` to
+  every preview of that file after one that had them, and to the
+  run. The documents give the full brief as about 14,600 characters.
+- Four descriptions that now say what their tools count and refuse add
+  706 characters to `full` and 377 to `core`. In both sets,
+  `search_files`' sentences on an empty pattern, a search of neither
+  place and the count of files whose every match is coded add 326 to
+  its definition, and `search_memos`' limit 51. In `full` alone,
+  `export_coded_segments_report`'s `repeated_rows` and
+  `include_variables` add 230, and `add_annotation`'s Returns 99.
+  The guide to installing from the Terminal now gives `search_files`'
+  description as about 4,800 characters on Python 3.13, and 5,200 on
+  3.11 and 3.12.
+- Coding sessions kept with their project add 1,112 characters to
+  `full` and 318 to `core`. Read and decided only with their project
+  open, review_suggestions' description no longer says what is shown
+  while another project is selected, 48 characters fewer in its
+  definition in both sets, and list_coding_sessions' gives the range
+  of `days_old` and an example its 30-day default keeps true, 104 more
+  in `full`. The descriptions that now say where sessions are kept add,
+  in both sets, 208 to restore_backup's definition (the sessions folder
+  kept as it is) and 158 to copy_project_to_workspace's (the sessions a
+  copy carries, and the sessions' temporary files it leaves out,
+  whatever their age). In `full` alone they add 334 to
+  list_coding_sessions' (what it lists, and where each session is
+  kept), 157 to delete_coding_session's (where the copies stay), 143 to
+  prune_backups' (the sessions a backup holds) and 56 to
+  pseudonymise_source's (the copies in backups and copies of the
+  project), which brings that description to 19,897 characters on
+  Python 3.11. The full brief is 46 characters longer: its sentence
+  on what is never opened directly now names the project's sessions
+  folder.
+- The workspace copy's description now says that a copy leaves out
+  every temporary copy of the names list, whatever its age, adding
+  154 characters to its definition in both sets.
+- The REFI-QDA export's description now says that a session's export
+  compares each suggestion's passage with the file's text, that an
+  applied or removed suggestion that no longer fits is left out,
+  counted and the first 20 named, that the refusal gives the status of
+  any other whose positions or passage no longer fit, and that past
+  5,000 codings of one code the rest are left out, adding 537
+  characters to its definition in `full`.
+- Smaller parts add 33 characters to read_file_with_codings' definition
+  in both sets: its description gives a part as about 35,000 characters
+  of English, where it gave 60,000, in as many characters, and says that
+  `codes_used` in a part counts that part's codings, which takes one
+  more line.
+- Approvals that count only while this computer records them add 184
+  characters to copy_project_to_workspace's definition in both sets:
+  its description now says that a copy leaves out the project's id and
+  gets its own, so that the sessions it carries read in the copy as
+  having come with the project, their approvals given again there,
+  where it said that they were the copy's own once it was selected.
+- The documents now give the size of `full` as about 210,000 characters
+  (README and the Terminal guide) and about 211,000 (TOOLS.md).
+
 ## [0.15.3-alpha] - 2026-11-09
 
 This release lets a replacement of names leave chosen occurrences of a

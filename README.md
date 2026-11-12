@@ -617,7 +617,6 @@ and the main code files. The map in [CONTRIBUTING.md](https://github.com/nicotem
 Plans, not promises: the order may change with what testers report.
 [CHANGELOG.md](https://github.com/nicotem/exegete/blob/main/CHANGELOG.md) says what each release changed.
 
-- v0.15.4: coding sessions kept with their project
 - v0.15.5, method: a review of how the assistant supports a study's
   method; shorter tool descriptions; and retiring the earlier names of
   the two renamed tools and the tools' backup option, which Exegete

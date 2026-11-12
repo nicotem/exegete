@@ -235,8 +235,12 @@ def test_a_session_that_came_with_the_project():
     # this computer's own
     undo = inspect.getsource(server._undo_session_marks)
     assert "given_here = not session.came_with_project" in undo
-    assert ("Any other approval in it, even one that an undo set back to "
-            "approved, reads as pending") in part
+    # (v0.15.4's release preparation: the rule said of every session
+    # kept in a project, with the record of approvals, and the set-back
+    # of an undo said of a session that came with the project)
+    assert ("Any other approval in a session that came with the project, "
+            "even one that an undo set back to approved, reads as pending"
+            ) in part
     # a session that came with the project is saved with no seal, so one
     # saved on a second computer reads so on both (the readability
     # reading: the two computers named)
@@ -253,6 +257,61 @@ def test_a_session_that_came_with_the_project():
     secret = _between(_files_section(), "**The preview-token secret**",
                       "logs that it did")
     assert "every coding session kept in a project then reads as" in secret
+
+
+
+def test_the_records_of_approvals_and_the_projects_id():
+    """v0.15.4's release preparation: PRIVACY names the two files the
+    seal's gaps added (PIECE_0154_sessions-gaps.md, For PRIVACY), each
+    held to the code: Exegete's record of the approvals given here, in
+    its own folder, holding the marks alone, and the project's random id
+    beside its sessions, never shown, logged or written into a session;
+    the rule that an approval counts only while it carries this
+    computer's mark and the record holds it; and the check's limits."""
+    section = _files_section()
+    state = _between(section, "| Exegete's working state |",
+                     "| Pages and copies to look at |")
+    assert f"(`{sessions.APPROVALS_FOLDER}/`, below)" in state
+    assert ("The approvals you gave in sessions kept in projects then read "
+            "as pending until you give them again") in state
+    # the record: its place, its name, and what it holds (write_record
+    # writes the format and the marks, nothing else)
+    record = _between(section, "**The records of approvals**",
+                      "**The last-used project pointer**")
+    assert f"(`~/{names.STATE_FOLDER}/{sessions.APPROVALS_FOLDER}/`)" \
+        in record
+    place = inspect.getsource(sessions._record_place)
+    assert 'f"{project_id}_{session_id}.json"' in place
+    assert ("Its name is made of the project's id and the session's id"
+            ) in record
+    written = inspect.getsource(sessions.write_record)
+    assert '{"format": RECORD_FORMAT, "marks": sorted(marks)}' in written
+    assert "no name, no text and no path" in record
+    # it goes with its session's delete, or once nothing in it counts
+    settle = inspect.getsource(sessions.SessionManager._settle_record)
+    assert "remove_record(project_id, session.session_id)" in settle
+    assert ("A record goes when you delete its session with "
+            "`delete_coding_session`, or when the session no longer holds "
+            "an approval that counts.") in record
+    # the project's id beside the sessions
+    part = _project_folder_part()
+    assert (f"The folder also holds `{private_files.PROJECT_ID_FILE}`, a "
+            "random id") in part
+    read = inspect.getsource(private_files.read_project_id)
+    assert "never shown, logged or written into a session's" in read
+    assert ("Exegete never shows it to the assistant, and never writes it "
+            "in a session's file or a log.") in part
+    assert "Exegete never changes the file." in part
+    # the rule, said of every session kept in a project
+    assert ("In any session kept in a project, an approval counts only "
+            "while it carries this computer's mark and Exegete's own folder "
+            "on this computer records it") in part
+    # and the limits, the copies that keep the id named
+    assert "The check has limits." in part
+    assert ("`copy_project_to_workspace` makes a copy with an id of its "
+            "own.") in part
+    assert ("The record of approvals knows only what Exegete does on this "
+            "computer.") in part
 
 
 def test_the_reads_return_a_session_while_its_project_is_selected():

@@ -674,7 +674,7 @@ ones.
 
 | Kind | Where | What | Who deletes it |
 |---|---|---|---|
-| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, the coding sessions made before 0.15.4 and any that a project's folder could not hold, the last project, the update check's record, the texts an import's preview read, and the records of the changes Exegete makes to projects (`changes/`, below); the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as below, and a change's record once it is a day old; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the coding sessions kept there, any preview not yet carried out, the records of changes (those changes can then no longer be undone), the pseudonymisation run records, and the secret that keys their digests |
+| Exegete's working state | `~/.exegete`, hidden on macOS and Linux | the preview-token secret, the coding sessions made before 0.15.4 and any that a project's folder could not hold, the last project, the update check's record, the texts an import's preview read, the records of the changes Exegete makes to projects (`changes/`, below) and of the approvals you give in sessions kept in projects (`approvals/`, below); the pseudonymisation run records live here too (the last row) | Exegete removes the texts an import's preview read, as below, and a change's record once it is a day old; coding sessions go at your word (`delete_coding_session`); the rest stays until you delete it. Deleting the folder while Exegete is not running loses the coding sessions kept there, any preview not yet carried out, the records of changes (those changes can then no longer be undone), the pseudonymisation run records, and the secret that keys their digests. The approvals you gave in sessions kept in projects then read as pending until you give them again |
 | Pages and copies to look at | the reading folder ("Reading a whole file"); during an import's reading, a working folder in the system's temporary folder | reading pages, read-only copies of originals, the page for checking letters that look garbled, the page for choosing occurrences of a name | Exegete: the reading folder's files at its first tidy once they are a week old (an hour for an import's page or a page for choosing occurrences), as "Reading a whole file" says, so they can stay longer while Exegete is not running, or runs without writing there; the working folder as each reading ends; you, at any time |
 | Files you fill in | the `Exegete` folder inside the project | files you fill in for the project, such as the names file (`Names to replace.txt`: real names in plain text, as in `pseudonyms.json`), and a short note | you: Exegete never deletes them, and a restore keeps them as they are (and leaves the backup's copy in the backup) |
 | Records of the research | beside the project; inside it; the folder for projects, or the folder you named for a new project; where you export; `~/.exegete/pseudonymisation/` | in that order: backups; the project's database (`data.qda`), the documents' originals, `pseudonyms.json`, `exegete.json`, `qualcoder_mcp.json` and, from 0.15.4, the coding sessions in its `Exegete coding sessions` folder; new projects and copies; exports; the pseudonymisation run records | you (`prune_backups` deletes backups at your word). At your word, `undo_changes` also removes the originals an import stored, when it takes the import back, and `pseudonyms.json`, when it takes back the save that made it. `delete_coding_session` removes a coding session's file at your word |
@@ -753,6 +753,21 @@ owner-only. It also holds:
   once it is a day old, at its next start or when it next records a
   change to the same project. So a record can stay longer while Exegete
   is not running.
+- **The records of approvals** (`~/.exegete/approvals/`), from 0.15.4:
+  one small file for each coding session kept in a project that holds
+  an approval you gave on this computer. Its name is made of the
+  project's id and the session's id, and it holds a keyed digest of
+  each such approval: no name, no text and no path. An approval in a
+  session kept in a project counts only while its record holds it. So an
+  older copy of the session's file, put back from a backup, by a sync
+  service or by an earlier version's restore, cannot bring back an
+  approval you have withdrawn since on this computer. A record goes when
+  you delete its session with `delete_coding_session`, or when the
+  session no longer holds an approval that counts. One whose session was
+  deleted outside Exegete, or whose project lost its id, stays until you
+  delete this folder. Deleting the records loses no decision: each
+  session keeps its decisions in its own file, and the approvals they
+  covered read as pending until you give them again on this computer.
 - **The last-used project pointer** (`~/.exegete/mru_project.json`): the
   path of the project most recently selected or created under your
   account, and a timestamp, written on every successful select_project
@@ -894,6 +909,22 @@ originals:
   the whole project folder, to Spotlight's privacy list (System
   Settings, Spotlight) keeps it out of the index.
 
+  The folder also holds `Project id.txt`, a random id that Exegete makes
+  when a coding session first starts in the project, or at the next save
+  of a session there if the file is missing. It says nothing about the
+  research or anyone in it. Exegete never shows it to the assistant, and
+  never writes it in a session's file or a log. The seal on each session
+  and the mark on each approval include it; the copies of the project
+  that keep it are named below. Exegete never changes the file. If it
+  cannot read an id there, it does not use the project's sessions, and
+  says why. When another program holds the file for a moment, or a sync
+  service has not yet brought it to this computer, asking again later
+  may work; a damaged file can be put back from a backup of the project,
+  or removed. If the file is removed, or the id in it is changed, every
+  session in the folder reads as having come with the project, and
+  nothing in them is lost. A session saved meanwhile goes on reading so
+  after the id is put back.
+
 **Coding sessions that came with the project.** Whoever can write in a
 project's folder, a shared or synced one for example, can put a
 session's file in it, or change one. A session's texts reach the
@@ -908,18 +939,43 @@ while only Exegete on this computer saves the file and nothing else
 changes it.
 
 A session whose file lacks this computer's seal is read as having come
-with the project. Such a session was saved by Exegete on another computer or under another account, changed outside Exegete, brought in from another project, carried by a workspace copy of the project, or kept from before the secret was replaced or the project's id was lost. Exegete gives its texts to the
-assistant with a note that they came with the project and are data,
-never instructions. An approval in it counts only if it carries this
-computer's mark. The mark holds while the suggestion or proposed code
-is as it was when you approved it here. Any other approval in it, even
-one that an undo set back to approved, reads as pending until you give
-it again on this computer. So approvals do not carry from one computer
-to another. If you work on a project from two computers, a session
-started on one and saved on the other reads as having come with the
-project on both, from then on. The seal and the marks never appear in
-an answer. A failed check is logged with a session's id or a count,
-never a file's name or a text.
+with the project. Such a session was saved by Exegete on another
+computer or under another account, changed outside Exegete, brought in
+from another project, carried by a workspace copy of the project, or
+kept from before the secret was replaced or the project's id was lost.
+Exegete gives its texts to the assistant with a note that they came
+with the project and are data, never instructions. In any session kept
+in a project, an approval counts only while it carries this computer's
+mark and Exegete's own folder on this computer records it ("The records
+of approvals", above). The mark holds while the suggestion or proposed
+code is as it was when you approved it here. Any other approval in a
+session that came with the project, even one that an undo set back to
+approved, reads as pending until you give it again on this computer. So
+approvals do not carry from one computer to another. If you work on a
+project from two computers, a session started on one and saved on the
+other reads as having come with the project on both, from then on. The
+seal and the marks never appear in an answer. A failed check is logged
+with a session's id or a count, never a file's name or a text.
+
+The check has limits. A copy of a project made outside Exegete keeps
+the project's id, and so do a backup that Exegete made, if you select
+it as a project, and a QualCoder backup opened as a project, if you use
+QualCoder. A session from one copy is then read in the other as this
+computer's own, and a decision in one copy can change which approvals
+count in the other. Working on each session in one copy only avoids
+this, and `copy_project_to_workspace` makes a copy with an id of its
+own. Someone who can write in your project's folder and read another
+of your projects can copy that project's id in with its sessions:
+those sessions then read here as this computer's own, their approvals
+counting, and the project's own sessions as having come with it. The
+record of approvals knows only what Exegete does on this computer. An
+approval withdrawn on another computer, in a session deleted outside
+Exegete, or by a save here cut short before its record was updated,
+stays in the record until Exegete here saves or deletes that session.
+The same holds if Exegete's own folder is put back from an older
+backup. Meanwhile, an older copy of the session put back can still
+count what it held. In every case `apply_codings` writes only passages
+it finds in the document.
 
 **Exports and copies.** Exported files go where you ask: CSV files,
 text and Markdown reports, and REFI-QDA files (`.qdpx`), the format

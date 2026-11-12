@@ -98,8 +98,8 @@ def _edit(path, old, new):
     # words of this release's summary (0.14.2's named QualCoder 4.0,
     # 0.14.3's "Word, PDF and other", 0.15.0's "reads each document once",
     # 0.15.1's "a restore's preview says", 0.15.2's "showing first what
-    # it")
-    ("update/index.html", "opens a page in your browser", "opens a page",
+    # it", 0.15.3's "opens a page in your browser")
+    ("update/index.html", "tick them on the page", "tick them",
      "does not give the summary"),
     ("update/index.html", "/releases/download/v", "/releases/tag/v",
      "does not link the download link"),

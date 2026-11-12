@@ -421,15 +421,16 @@ again, so that it loads the new tool list.
   or the names file in a text editor, and `prepare_names_list`, which
   opens the names file in your computer's text editor, now says so once,
   and suggests an editor whose AI features are switched off.
-- **A reading copy goes a week after it was written.** The reading
+- **Each reading copy goes once it is a week old itself.** The reading
   folder kept a file's reading copy, and the read-only copy of its
   original, until everything in that file's folder was a week old, so a
-  newer page or copy beside them kept them longer. Each now goes a week
-  after it was written, whatever stands beside it. A file's folder that
-  the tidy leaves empty goes at the same tidy, and so does the project's
-  own folder there, named after the project, when nothing else is in it.
-  The folder of an import's preview pages now goes with its last page
-  too; before, it stayed until an import or a restore removed it.
+  newer page or copy beside them kept them longer. Each now goes at
+  Exegete's first tidy once it is a week old, whatever stands beside it.
+  A file's folder that the tidy leaves empty goes at the same tidy, and
+  so does the project's own folder there, named after the project, when
+  nothing else is in it. The folder of an import's preview pages now
+  goes with its last page too; before, it stayed until an import or a
+  restore removed it.
 - **A coding session's REFI-QDA export checks each passage.** The
   export checked a suggestion's positions against the length of its
   file's text, not its words, so once the text had changed (by a

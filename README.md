@@ -1,9 +1,9 @@
-<p align="center"><img src="https://raw.githubusercontent.com/nicotem/exegete/main/docs/brand/exegete-lockup.png" alt="The Exegete mark: a braided ring with an E in its eye, the first letter of the name Exegete, which is woven across the ring" width="173"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/nicotem/exegete/main/docs/brand/exegete-lockup-woven-display-300.png" alt="The Exegete mark: a braided ring with an E in its eye, the first letter of the name Exegete, which is woven across the ring"></p>
 
 # Exegete
 
-**A qualitative analysis application you use in conversation with an
-AI assistant, compatible with QualCoder.**
+**Agentic QDA: a qualitative data analysis application you use in conversation with an
+AI assistant**
 
 [![PyPI](https://img.shields.io/pypi/v/exegete)](https://pypi.org/project/exegete/)
 [![Licence: LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-blue)](https://github.com/nicotem/exegete/blob/main/COPYING.LESSER)

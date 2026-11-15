@@ -98,7 +98,7 @@ again, so that it loads the new tool list.
   file with no value stored for an attribute now reads as `""`, unset.
 - **For contributors**: the optional part for PDF and EPUB installs
   EbookLib 0.21, without the library six; CI's validator takes
-  node-forge 1.4.1; the page for choosing occurrences has a script,
+  node-forge 1.4.3; the page for choosing occurrences has a script,
   which the tests run under Node ("For contributors", below).
 
 ### Coding sessions kept with their project
@@ -491,11 +491,15 @@ again, so that it loads the new tool list.
 ### Security
 
 - **CI's validator.** The official validator's lock moves node-forge
-  from 1.4.0 to 1.4.1, a release that none of the twelve advisories
+  from 1.4.0 to 1.4.3, a release that none of the twelve advisories
   on node-forge affects, so the advisory check no longer needs to
-  accept them. node-forge is a library of the validator that CI alone
-  installs to check the extension's manifest, and Exegete installs none
-  of it.
+  accept them. 1.4.3 also fixes four advisories published on 10
+  November, which affect 1.4.1: a check of Ed25519 signatures, a slow
+  pattern match in its HTTP code, and two crashes of its TLS client
+  (GHSA-6889-vf6x-f3g5, GHSA-6cv4-p8m7-4r25, GHSA-j8rw-jp99-435v and
+  GHSA-w4xr-hqv8-ch44). node-forge is a library of the validator that
+  CI alone installs to check the extension's manifest, and Exegete
+  installs none of it.
 
 ### Documents
 

@@ -138,7 +138,9 @@ VALIDATOR_ONLY = (
 # release in the lock fixes yet. The comment gives each one's subject and
 # its first fixed release. node-forge's twelve (one of 27 October, eleven
 # accepted on 3 November 2026) went when the lock moved to node-forge
-# 1.4.1 on 10 November 2026, a release none of them affects.
+# 1.4.1 on 10 November 2026, a release none of them affects. Four more,
+# published on 10 November 2026 against 1.4.1, were never accepted: the
+# lock moved to node-forge 1.4.3, which fixes them, on 15 November 2026.
 KNOWN_NPM: Dict[str, Tuple[str, Tuple[str, ...], str, str]] = {
     # a temporary file written through a symbolic link (0.2.4)
     "GHSA-52f5-9888-hmc6": ("tmp", ("0.0.33",), "2026-10-27",

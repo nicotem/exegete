@@ -223,7 +223,8 @@ def test_pypis_summary_names_both():
         import tomli as tomllib
     with open(REPO / "pyproject.toml", "rb") as handle:
         summary = tomllib.load(handle)["project"]["description"]
-    assert summary.startswith("Exegete: ")
+    # v0.15.4: the owner's tagline leads, and the name follows it
+    assert "Exegete" in summary
     assert "QualCoder" in summary and "formerly qualcoder-mcp" in summary
 
 

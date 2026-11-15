@@ -1,9 +1,9 @@
 Exegete
 =======
 
-A qualitative analysis application you use in conversation with an AI
-assistant, compatible with QualCoder. It runs as a Model Context Protocol
-server.
+Agentic QDA: a qualitative data analysis application you use in
+conversation with an AI assistant, compatible with QualCoder. It runs as
+a Model Context Protocol server.
 
 Copyright (C) 2025-2026 Niccolò Tempini
 

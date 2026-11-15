@@ -1,10 +1,10 @@
 # Quick start: Exegete by hand in Claude Desktop
 
-Exegete (formerly qualcoder-mcp) is a qualitative analysis application
-you use in conversation with an AI assistant, compatible with QualCoder.
-QualCoder is free software for qualitative analysis. This guide sets up
-Exegete by hand: you type a few commands in a Terminal window and edit
-Claude Desktop's settings file.
+Exegete (formerly qualcoder-mcp) is agentic QDA: a qualitative data
+analysis application you use in conversation with an AI assistant,
+compatible with QualCoder. QualCoder is free software for qualitative
+analysis. This guide sets up Exegete by hand: you type a few commands in
+a Terminal window and edit Claude Desktop's settings file.
 
 If you are new to Exegete, the one-click extension for Claude Desktop
 needs no typed commands: [README, "One click in Claude Desktop"](https://github.com/nicotem/exegete#one-click-in-claude-desktop).

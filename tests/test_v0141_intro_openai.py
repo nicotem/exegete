@@ -1388,10 +1388,12 @@ class TestTheOtherFirstImpressions:
             assert re.search(r"qualitative (data )?analysis application",
                              text), where
             assert "compatible with QualCoder" in text, where
-        assert summary == ("Exegete: a qualitative analysis application you "
-                           "use in conversation with an AI assistant, "
-                           "compatible with QualCoder. An MCP server, "
-                           "formerly qualcoder-mcp.")
+        # v0.15.4, the owner's word of 15 November 2026: his README
+        # tagline, with the compatibility beside it
+        assert summary == ("Agentic QDA: a qualitative data analysis "
+                           "application you use in conversation with an AI "
+                           "assistant, compatible with QualCoder. Exegete, "
+                           "formerly qualcoder-mcp, is an MCP server.")
         assert "Technically, a Model Context Protocol server." in citation
         # The old framing is gone
         for where, text in texts.items():

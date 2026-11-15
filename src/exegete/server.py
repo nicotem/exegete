@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Exegete (formerly qualcoder-mcp): a qualitative analysis application you
-use in conversation with an AI assistant, compatible with QualCoder. It runs
-as a Model Context Protocol server."""
+"""Agentic QDA: a qualitative data analysis application you use in
+conversation with an AI assistant, compatible with QualCoder. Exegete,
+formerly qualcoder-mcp, runs as a Model Context Protocol server."""
 
 import contextvars
 import copy
@@ -28230,11 +28230,11 @@ def _build_arg_parser(started_as: Optional[str] = None
         version = f"{names.COMMAND} {_package_version}"
     parser = argparse.ArgumentParser(
         prog=prog,
-        description="Exegete: a qualitative analysis application you use "
-                    "in conversation with an AI assistant, compatible with "
-                    "QualCoder. It runs as an MCP server, started by an MCP "
-                    "host over stdio; run it with --version to check the "
-                    "installed version.")
+        description="Agentic QDA: a qualitative data analysis application "
+                    "you use in conversation with an AI assistant, "
+                    "compatible with QualCoder. Exegete runs as an MCP "
+                    "server, started by an MCP host over stdio; run it with "
+                    "--version to check the installed version.")
     parser.add_argument("--version", action="version", version=version)
     # v0.14.1: the transition check (transition.py)
     parser.add_argument(

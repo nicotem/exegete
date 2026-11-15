@@ -194,9 +194,10 @@ class TestTheExtensionsIcon:
         # The name Claude Desktop shows; the identifier stays
         # qualcoder-mcp
         assert template["display_name"] == "Exegete"
+        # v0.15.4: the owner's tagline of 12 November 2026
         assert template["long_description"].startswith(
-            "Exegete (formerly qualcoder-mcp) is a qualitative analysis "
-            "application you use in conversation with Claude")
+            "Exegete (formerly qualcoder-mcp) is agentic QDA: a qualitative "
+            "data analysis application you use in conversation with Claude")
         assert "github.com/nicotem/exegete/" in template["documentation"]
 
 

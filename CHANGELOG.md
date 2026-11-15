@@ -321,6 +321,14 @@ again, so that it loads the new tool list.
   `position_safety_warning` straight after the paragraph on parts, so
   that on Python 3.11 and 3.12, which keep a description's indentation,
   the rule stays within the first 2,048 characters that some apps keep.
+- **How Exegete describes itself.** Since 12 November 2026 the README
+  has described Exegete as "Agentic QDA: a qualitative data analysis
+  application you use in conversation with an AI assistant". The same
+  words now describe it in NOTICE, the summary on PyPI and the old
+  name's page there, the citation, Zenodo's record, the update site's
+  home page, QUICKSTART.md and `exegete --help`, followed by "compatible
+  with QualCoder". The extension's descriptions use them too, with
+  Claude for an AI assistant.
 
 ### Fixed
 

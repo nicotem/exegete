@@ -474,7 +474,7 @@ def test_initialize_carries_methodology_instructions():
     # read_brief (and so to the methods notes)
     # (v0.15.2, the opening texts: QualCoder said once what it is)
     assert instructions.startswith(
-        "Exegete is a qualitative analysis application for working with "
+        "Exegete is a qualitative data analysis application for working with "
         "the researcher on their project, in the format of QualCoder, a "
         "free qualitative analysis program.")
     assert "call read_brief once" in instructions

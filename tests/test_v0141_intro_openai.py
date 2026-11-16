@@ -3,7 +3,7 @@
 texts that no longer address the assistant as Claude.
 
 The owner's rulings of 30 September 2026. Ruling 40: the README's
-opening presents Exegete as a qualitative analysis application in its
+opening presents Exegete as a qualitative data analysis application in its
 own right, compatible with QualCoder, and stays true today (what it
 covers, what still needs QualCoder, the aim). Ruling 39: easy-to-follow
 instructions for people who use OpenAI's apps, written from OpenAI's

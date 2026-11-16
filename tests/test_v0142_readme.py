@@ -80,7 +80,7 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
             # the benefit, in the reader's terms, before any feature name
             # (the owner's word of 23 October 2026: what Exegete is, with
             # no kind of data presumed and QualCoder not the frame)
-            "Exegete is a qualitative analysis application you use in "
+            "Exegete is a qualitative data analysis application you use in "
             "conversation with an AI assistant. You ask in your own words. "
             "The assistant reads, searches and suggests, and you decide. "
             "Every suggested coding quotes the text word for word, and "
@@ -108,8 +108,8 @@ def test_the_first_screen_says_what_it_does_and_where_to_go():
             "participants' data put into one is published with it."):
         assert words in opening, words
     # no tool, protocol or feature name before the benefit sentence
-    lede = opening[:opening.index("Exegete is a qualitative analysis "
-                                  "application you use")]
+    lede = opening[:opening.index("Exegete is a qualitative data "
+                                  "analysis application you use")]
     for word in ("MCP", "tool", "server", "`"):
         assert word not in lede.replace("shields.io", ""), word
     # the example comes before the next steps

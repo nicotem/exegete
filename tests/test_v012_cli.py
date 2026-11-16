@@ -173,7 +173,7 @@ class TestTtyNotice:
         assert "exegete --version" in server.TTY_NOTICE
         assert "python -m exegete.server --version" in server.TTY_NOTICE
         assert server.TTY_NOTICE.startswith(
-            "Exegete is a qualitative analysis application that runs as an "
+            "Exegete is a qualitative data analysis application that runs as an "
             "MCP server.")
         # Exegete, never "the server" (v0.15.2)
         assert "the server" not in server.TTY_NOTICE

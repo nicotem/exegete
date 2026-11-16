@@ -40,7 +40,7 @@ class TestWhatTheServerSays:
 
     def test_the_instructions_begin_with_it(self):
         assert server.SERVER_INSTRUCTIONS.startswith(
-            "Exegete is a qualitative analysis application for working with "
+            "Exegete is a qualitative data analysis application for working with "
             "the researcher on their project, in the format of QualCoder, a "
             "free qualitative analysis program.")
 

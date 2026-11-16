@@ -1,6 +1,6 @@
 # Installing Exegete
 
-Exegete is a qualitative analysis application that you use in
+Exegete is a qualitative data analysis application that you use in
 conversation with an AI assistant. This guide installs it as an
 extension for Claude Desktop, on a Mac or on Windows, and takes you as
 far as a first project. Claude Desktop is Anthropic's app for talking

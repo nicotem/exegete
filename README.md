@@ -9,13 +9,14 @@ AI assistant**
 [![Licence: LGPL-3.0-or-later](https://img.shields.io/badge/licence-LGPL--3.0--or--later-blue)](https://github.com/nicotem/exegete/blob/main/COPYING.LESSER)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23496246.svg)](https://doi.org/10.5281/zenodo.23496246)
 
-Exegete is a qualitative analysis application you use in conversation
-with an AI assistant. You ask in your own words. The assistant reads,
-searches and suggests, and you decide. Every suggested coding quotes the
-text word for word, and Exegete writes it into your project only when
-you approve it. Your project is kept in QualCoder's format, so it can
-also be opened in [QualCoder](https://github.com/ccbogel/QualCoder).
-QualCoder is free software for qualitative analysis.
+Exegete is a qualitative data analysis application you use in
+conversation with an AI assistant. You ask in your own words. The
+assistant reads, searches and suggests, and you decide. Every suggested
+coding quotes the text word for word, and Exegete writes it into your
+project only when you approve it. Your project is kept in QualCoder's
+format, so it can also be opened in
+[QualCoder](https://github.com/ccbogel/QualCoder). QualCoder is free
+software for qualitative analysis.
 
 > **You:** Bring this into the project Practice as "Interview 3". [text]\
 > **Assistant:** First: which name should my work be stored under?\

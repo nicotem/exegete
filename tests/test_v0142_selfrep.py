@@ -52,7 +52,7 @@ TAGLINE = README_TAGLINE + ", compatible with QualCoder."
 
 # (v0.15.2, the opening texts: QualCoder said once what it is, and
 # documents, not transcripts alone)
-OPENING = ("Exegete is a qualitative analysis application for working with "
+OPENING = ("Exegete is a qualitative data analysis application for working with "
            "the researcher on their project, in the format of QualCoder, a "
            "free qualitative analysis program. Use its tools to read and "
            "search documents, codes, coded passages, memos, cases and "
@@ -60,7 +60,7 @@ OPENING = ("Exegete is a qualitative analysis application for working with "
            "approve.")
 
 BRIEF_FIRST_PARAGRAPH = (
-    "In Exegete, a qualitative analysis application on the researcher's "
+    "In Exegete, a qualitative data analysis application on the researcher's "
     "computer, you and the researcher work on their project through this "
     "conversation: the researcher decides, and you read, search and "
     "suggest through Exegete's tools. The project is theirs, a folder "
@@ -326,7 +326,7 @@ class TestWhatWasDecided:
         assert parser.description.startswith(
             TAGLINE + " Exegete runs as an MCP server,")
         assert _flat(server.TTY_NOTICE).startswith(
-            "Exegete is a qualitative analysis application that runs as an "
+            "Exegete is a qualitative data analysis application that runs as an "
             "MCP server.")
 
     def test_notices_first_line_in_both_packages(self):
@@ -734,7 +734,7 @@ class TestQualCoderIsOptional:
                 "keep it, and name the departure") in claude
         assert "be better than QualCoder" not in claude
         assert "follow QualCoder's own behaviour" not in claude
-        assert claude.index("Exegete is a qualitative analysis application"
+        assert claude.index("Exegete is a qualitative data analysis application"
                             ) < claude.index("## Commands")
         contributing = _flat((REPO / "CONTRIBUTING.md").read_text(
             encoding="utf-8"))

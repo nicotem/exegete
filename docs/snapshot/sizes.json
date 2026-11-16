@@ -1,7 +1,7 @@
 {
   "core": {
-    "brief_characters": 1923,
-    "opening_text_characters": 2042,
+    "brief_characters": 1928,
+    "opening_text_characters": 2047,
     "tool_count": 28,
     "tool_definitions_characters": 78208,
     "tools": {
@@ -121,8 +121,8 @@
   },
   "counted": "Characters, as Python counts them. tool_definitions_characters: json.dumps, with Python's defaults, of the list of every tool's name, description and input schema, in the order tools/list gives (TOOLS.md, the tool sets); definition_characters: one tool's entry in that list, alone.",
   "full": {
-    "brief_characters": 14625,
-    "opening_text_characters": 2042,
+    "brief_characters": 14630,
+    "opening_text_characters": 2047,
     "tool_count": 80,
     "tool_definitions_characters": 214132,
     "tools": {

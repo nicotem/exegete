@@ -327,8 +327,11 @@ again, so that it loads the new tool list.
   words now describe it in NOTICE, the summary on PyPI and the old
   name's page there, the citation, Zenodo's record, the update site's
   home page, QUICKSTART.md and `exegete --help`, followed by "compatible
-  with QualCoder". The extension's descriptions use them too, with
-  Claude for an AI assistant.
+  with QualCoder". The extension's descriptions use them too. The first
+  sentences of the README, INSTALL.md, the writing guide, the guide for
+  AI coding agents, the note Exegete prints when started by hand in a
+  terminal and the brief it gives the assistant now call it a
+  qualitative data analysis application.
 
 ### Fixed
 
@@ -499,15 +502,15 @@ again, so that it loads the new tool list.
 ### Security
 
 - **CI's validator.** The official validator's lock moves node-forge
-  from 1.4.0 to 1.4.3, a release that none of the twelve advisories
-  on node-forge affects, so the advisory check no longer needs to
-  accept them. 1.4.3 also fixes four advisories published on 10
-  November, which affect 1.4.1: a check of Ed25519 signatures, a slow
-  pattern match in its HTTP code, and two crashes of its TLS client
+  from 1.4.0 to 1.4.3, a release that none of the twelve advisories on
+  node-forge affects, so the advisory check no longer needs to accept
+  them. 1.4.3 also fixes four advisories published on 10 November, which
+  affect every release up to 1.4.2: a check of Ed25519 signatures, a
+  slow pattern match in its HTTP code, and two crashes of its TLS client
   (GHSA-6889-vf6x-f3g5, GHSA-6cv4-p8m7-4r25, GHSA-j8rw-jp99-435v and
-  GHSA-w4xr-hqv8-ch44). node-forge is a library of the validator that
-  CI alone installs to check the extension's manifest, and Exegete
-  installs none of it.
+  GHSA-w4xr-hqv8-ch44). node-forge is a library of the validator that CI
+  alone installs to check the extension's manifest, and Exegete installs
+  none of it.
 
 ### Documents
 
@@ -843,9 +846,9 @@ Python 3.13 with the libraries in `uv.lock`:
 |---|---|---|
 | `full` (80 tools) | 214,132 | 210,397 |
 | `core` (28 tools) | 78,208 | 76,805 |
-| The opening text | 2,042 | 2,042 |
-| The full brief | 14,625 | 14,180 |
-| The brief in `core` | 1,923 | 1,923 |
+| The opening text | 2,047 | 2,042 |
+| The full brief | 14,630 | 14,180 |
+| The brief in `core` | 1,928 | 1,923 |
 
 - Choosing occurrences by their numbers adds 243 characters to `full`:
   242 for the schemas of pseudonymise_source's two new arguments, and
@@ -934,6 +937,10 @@ Python 3.13 with the libraries in `uv.lock`:
   where it said that they were the copy's own once it was selected.
 - The documents now give the size of `full` as about 210,000 characters
   (README and the Terminal guide) and about 211,000 (TOOLS.md).
+- The maintainer's description adds 5 characters to the opening text
+  and to both briefs: the word "data" in "a qualitative data analysis
+  application". The opening text, 2,047 characters, stays within the
+  2,048 that Claude Code kept before its version 2.1.296.
 
 ## [0.15.3-alpha] - 2026-11-09
 

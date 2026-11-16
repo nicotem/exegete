@@ -4,8 +4,8 @@ Guidance for Claude Code and other AI coding agents working in this
 repository. People start with CONTRIBUTING.md; this file adds what an
 agent most often gets wrong.
 
-Exegete is a qualitative analysis application used in conversation with
-an AI assistant, compatible with QualCoder: its projects keep
+Exegete is a qualitative data analysis application used in conversation
+with an AI assistant, compatible with QualCoder: its projects keep
 QualCoder's format and conventions, so a researcher can work on a
 project in either program, one at a time, and its aim is the whole life
 of a project from the conversation. It runs as an MCP server.

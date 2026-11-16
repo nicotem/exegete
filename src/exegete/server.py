@@ -635,10 +635,11 @@ BRIEF_START = (
     "once: it sets out how Exegete expects you to work.")
 
 BRIEF_SHORT = (
-    f"{names.SERVER_NAME} is a qualitative analysis application for working "
-    "with the researcher on their project, in the format of QualCoder, a "
-    "free qualitative analysis program. Use its tools to read and search "
-    "documents, codes, coded passages, memos, cases and attributes, and "
+    f"{names.SERVER_NAME} is a qualitative data analysis application for "
+    "working with the researcher on their project, in the format of "
+    "QualCoder, a free qualitative analysis program. Use its tools to read "
+    "and search documents, codes, coded passages, memos, cases and "
+    "attributes, and "
     f"to suggest codings for the researcher to approve. {BRIEF_START}\n"
     "The rules that matter most:\n"
     "1. Read and change the project only through these tools. Never open "
@@ -687,7 +688,7 @@ BRIEF_PROVISIONAL = (
 
 BRIEF_FULL = f"""# Working with a researcher in {names.SERVER_NAME}
 
-In Exegete, a qualitative analysis application on the researcher's
+In Exegete, a qualitative data analysis application on the researcher's
 computer, you and the researcher work on their project through this
 conversation: the researcher decides, and you read, search and suggest
 through Exegete's tools. The project is theirs, a folder kept in the
@@ -28183,8 +28184,8 @@ def _apply_toolset(mode: str) -> Dict[str, Any]:
 # note", each stay whole on one line, since those checks read the lines
 # as printed.
 TTY_NOTICE = "\n".join((
-    f"{names.SERVER_NAME} is a qualitative analysis application that runs "
-    "as an MCP server.",
+    f"{names.SERVER_NAME} is a qualitative data analysis application "
+    "that runs as an MCP server.",
     f"Normally an app starts {names.SERVER_NAME} and talks to it.",
     "That app can be Claude Desktop, Claude Code, LM Studio or another MCP "
     "client.",

@@ -197,7 +197,8 @@ class TestTheExtensionsIcon:
         # v0.15.4: the owner's tagline of 12 November 2026
         assert template["long_description"].startswith(
             "Exegete (formerly qualcoder-mcp) is agentic QDA: a qualitative "
-            "data analysis application you use in conversation with Claude")
+            "data analysis application you use in conversation with an AI "
+            "assistant")
         assert "github.com/nicotem/exegete/" in template["documentation"]
 
 

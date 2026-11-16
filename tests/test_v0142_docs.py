@@ -295,8 +295,9 @@ def test_claude_codes_file_tools_in_auto_mode_are_named():
             "file tools in auto mode.") in section
     hosts = _between(_flat("PRIVACY.md"), "## Assistants that open files "
                      "by themselves", "## Keeping notes private")
+    # (v0.15.4, PRIVACY read whole: said in Claude Code's own entry)
     assert ("but does not stop its read-only commands reading them, or its "
-            "file tools in auto mode (above)") in hosts
+            "file tools in auto mode.") in hosts
 
 
 # ---------------------------------------------------------------------------
@@ -329,9 +330,10 @@ def _chat_suggestions():
             _flat("QUICKSTART.md"),
             "### Claude Code instead of Claude Desktop",
             "## Installation steps"),
-        "PRIVACY, practical mitigations": _between(
-            privacy, "- **An assistant that opens files by itself can read "
-            "a project whole**", "- **Consult your institution's"),
+        # (v0.15.4, the readability reading: PRIVACY's practical
+        # mitigations no longer repeat the suggestion; they point to
+        # "Assistants that open files by themselves", whose summary is
+        # above)
     }
 
 
@@ -519,7 +521,7 @@ def test_claudes_manual_mode_is_named_where_claude_asks():
                         "Auto") == 1
     approvals = _between(_flat("INSTALL.md"),
                          "**Claude's questions before a tool runs.**",
-                         "**Switch training off**")
+                         "**Training.**")
     # (v0.15.3: the page, read again, gives each mode its default by plan;
     # the warning about Auto comes with the suggestion)
     # (its readability reading: the version, the rollout and the setting a
@@ -568,8 +570,11 @@ def test_privacy_warns_of_auto_where_it_suggests_the_chat():
                      r"takes actions\.", route)
     imports = _between(privacy, "- **Hidden instructions in a document**",
                        "- **A file imported by mistake**")
-    assert ("Ultra and Team plans, and on Auto automated safety checks run "
-            "instead of asking you.") in imports
+    # (v0.15.4, the readability reading: what Auto does is said where the
+    # chat is suggested, which the import's warning points to)
+    assert ("the permission setting starts on Auto on Pro, Max, Ultra and "
+            "Team plans (\"Assistants that open files by themselves\").") \
+        in imports
     assert re.search(r"Anthropic's page, " + READ_ON + r", does not say what "
                      r"either of its modes does with the mark", imports)
 
@@ -627,10 +632,12 @@ def test_cowork_and_trusted_folders_as_anthropic_says():
     # the account's terms, in the list before participants' data (the
     # owner, 1 October 2026: the same training advice for both makers)
     # v0.15.2, the opening texts: the risk, then the switch
+    # (v0.15.4: Ultra among the personal plans, as Claude's pricing page
+    # lists it under "Individual", read on 10 November 2026)
     assert ("3. **Training.** While training is on, Anthropic may use your "
             "conversations, with the participants' data in them, to train "
-            "its models. On a personal plan (Free, Pro or Max), the setting "
-            "\"Help improve our AI models\"") in data
+            "its models. On a personal plan (Free, Pro, Max or Ultra), the "
+            "setting \"Help improve our AI models\"") in data
     assert "the newer Claude app" not in _flat("README.md")
     # Anthropic's words for the rollout, as PRIVACY.md quotes the page
     # (read again in v0.15.3, with the Ultra plan)
@@ -697,13 +704,14 @@ def test_deleting_the_name_file_says_its_exception():
     marked and still holds a name brings that name back without a
     question, as the server's own warning says (removing_alone_warning)."""
     privacy = _flat("PRIVACY.md")
-    assert ("Deleting it makes the next AI write ask for the name again, "
-            "unless the earlier `qualcoder_mcp.json` beside it could not "
-            "be marked as moved and still holds a name (Exegete says so "
-            "while it stays unmarked): that name would then come back "
-            "without a question, so remove both files.") in privacy
-    assert "Deleting it makes the next AI write ask for the name again." \
-        not in privacy
+    # (v0.15.4: a suggestion, where it was an instruction; the readability
+    # reading: the exception in sentences of its own)
+    assert ("Deleting it makes the next AI write ask for the name again. "
+            "The exception is when the earlier `qualcoder_mcp.json` beside "
+            "it could not be marked as moved and still holds a name, which "
+            "Exegete says while it stays unmarked. That name would then come "
+            "back without a question, so you could remove both files.") \
+        in privacy
     warning = project_settings.removing_alone_warning("Claude")
     assert "remove both files instead" in warning
     assert project_settings.removing_alone_warning(None) == ""
@@ -791,8 +799,20 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "Beta, that can keep Codex's own commands from reading outside "
             "the folder it works in; it has not been tested with Exegete.",
             "- **What stays on the computer, and for how long.**",
-            "the lists of suggestions waiting for review "
-            "(`~/.exegete/sessions/`)",
+            # (v0.15.4, coding sessions kept with their project: a new
+            # session is kept in the project's sessions folder, so in its
+            # backups and copies; Exegete's own folder keeps the earlier
+            # ones and any a project's folder could not hold, as
+            # sessions.SessionManager._save_new does; the readability
+            # reading: what a session holds in a sentence of its own)
+            "From 0.15.4 the project also keeps its coding sessions, in its "
+            "`Exegete coding sessions` folder. Each session holds the "
+            "passages the assistant suggested for coding, word for word, "
+            "with their reasons. The project's backups and copies hold the "
+            "sessions too;",
+            "in Exegete's own folder (`~/.exegete`), the coding sessions "
+            "made before 0.15.4 and any that a project's folder could not "
+            "hold (`~/.exegete/sessions/`)",
             # (the staleness audit of 20 October 2026: the reading folder
             # and the run records, which PRIVACY's table already listed;
             # v0.15.3, the occurrences choice's readability reading: its
@@ -806,12 +826,18 @@ def test_the_checklist_asks_about_the_assistant_and_the_copies():
             "Linux `~/.cache/exegete/reading`",
             "the pseudonymisation run records "
             "(`~/.exegete/pseudonymisation/`)",
-            "Claude Desktop's log of the extension, which keeps every "
+            # (v0.15.4: "can hold", dated from MCP's page on debugging)
+            "Claude Desktop's log of the extension, which can hold every "
             "request and answer",
             "Codex's session files (`~/.codex/sessions`)",
             "Claude Code's transcripts (`~/.claude/projects/`)",
             "and when you will delete them."):
         assert words in checklist, words
+    # (v0.15.4: the sessions folder by the name the code gives it, and the
+    # list no longer says that every session waits in Exegete's folder)
+    from exegete import private_files
+    assert f"`{private_files.SESSIONS_FOLDER}` folder" in checklist
+    assert "waiting for review" not in checklist
     # the ten questions, in that order: terms first, as before, then
     # training with either AI provider (the owner, 1 October 2026; "AI
     # provider", the one term, since v0.15.2); the check
@@ -1195,9 +1221,10 @@ def test_privacy_on_the_check_claims_no_more_than_is_known():
     # and Claude Code in auto mode asks a classifier: "normally asks your
     # permission" claimed more than the section it cites
     assert "normally asks your permission" not in check
-    assert ("which hosts that ask before a tool runs ask about (INSTALL.md, "
-            "\"What hosts do with the tools' read and write marks\", says "
-            "which do)") in check
+    # (v0.15.4, the readability reading: a sentence of its own)
+    assert ("Hosts that ask before a tool runs ask before that check too "
+            "(INSTALL.md, \"What hosts do with the tools' read and write "
+            "marks\", says which do)") in check
     # Whether GitHub shows a Pages site's owner who fetched a file is not
     # yet checked (design.md, section 13): say what this project adds
     assert "**What this project receives.** Nothing" not in check

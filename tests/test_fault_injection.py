@@ -1686,7 +1686,8 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         sqlite3.OperationalError("database or disk is full"),
         sqlite3.OperationalError("disk I/O error"),
         sqlite3.OperationalError("database is locked"),
-        sqlite3.OperationalError("database is busy"),
+        # v0.15.4: SQLite's own words; it never says "database is busy"
+        sqlite3.OperationalError("database table is locked"),
     ]
 
     @pytest.mark.parametrize("fault", NOT_CURED_BY_RETRYING,
@@ -1775,7 +1776,7 @@ class TestAWriteThatFailsAfterItsBackupNamesIt:
         """Named a heuristic in the source; its edges pinned here so a
         change to them is deliberate."""
         transient = server._is_transient_sqlite_error
-        for text in ("database is locked", "database is busy",
+        for text in ("database is locked", "database table is locked",
                      "database or disk is full", "disk I/O error"):
             assert transient(sqlite3.OperationalError(text)), text
         assert not transient(

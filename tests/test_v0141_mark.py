@@ -46,8 +46,10 @@ def test_the_extensions_icon_is_a_512_px_png():
 
 def test_the_readme_opens_with_the_lockup():
     first = (REPO / "README.md").read_text(encoding="utf-8").splitlines()[0]
+    # v0.15.4: the owner's display cut of 12 November 2026, shown at its
+    # own size, so the width the earlier cut gave is no longer there
     img = re.fullmatch(r'<p align="center"><img src="([^"]+)" '
-                       r'alt="([^"]+)" width="\d+"></p>', first)
+                       r'alt="([^"]+)"(?: width="\d+")?></p>', first)
     assert img, first
     src, alt = img.groups()
     # an address on main, so that GitHub and PyPI both show it; the file
@@ -55,15 +57,17 @@ def test_the_readme_opens_with_the_lockup():
     assert src.startswith(RAW)
     path = REPO / src[len(RAW):]
     assert path.is_file(), path
-    width, height, _ = png_size(path.read_bytes())
-    assert (width, height) == (346, 240)          # shown at half size
+    assert png_size(path.read_bytes()) is not None, path
     assert "Exegete" in alt and "ring" in alt
 
 
 def test_the_mark_files_are_few_and_small():
     brand = REPO / "docs" / "brand"
+    # v0.15.4: the owner's display cut of the woven lockup joins the
+    # earlier files (his upload of 12 November 2026)
     assert sorted(p.name for p in brand.iterdir()) == [
-        "exegete-lockup.png", "exegete-lockup.svg", "exegete-mark.svg"]
+        "exegete-lockup-woven-display-300.png", "exegete-lockup.png",
+        "exegete-lockup.svg", "exegete-mark.svg"]
     for path in brand.iterdir():
         assert path.stat().st_size < 100_000, path
     for name in ("exegete-lockup.svg", "exegete-mark.svg"):

@@ -763,7 +763,8 @@ class TestTheWords:
         start = privacy.index("**Process listing.**")
         bullet = _collapsed(privacy[start:privacy.find("\n- **", start)])
         assert "`qualcoder_history`" in bullet
-        assert ("the settings folder's contents (QualCoder's settings and "
+        # (v0.15.4, the readability reading: a sentence of its own)
+        assert ("The settings folder's contents (QualCoder's settings and "
                 "API keys) are never listed, opened or measured") in bullet
         assert "never a path or a project's name" in bullet
         assert ("not given as a sign when the process scan could read "

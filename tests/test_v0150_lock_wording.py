@@ -85,9 +85,12 @@ class TestTheThreeTexts:
 
     def test_privacy_md_before_a_repair(self):
         privacy = _flat(_read("PRIVACY.md"))
-        assert ("Copy the whole project folder by hand, with no program "
-                "using the project (QualCoder closed, if you use it), before "
-                "trying any repair, and keep that copy.") in privacy
+        # (v0.15.4, PRIVACY read whole: a warning and a suggestion, where
+        # it was an instruction; v0.15.3's deferred table)
+        assert ("A repair can make a damaged database worse: before trying "
+                "one, you could copy the whole project folder by hand, with "
+                "no program using the project (QualCoder closed, if you use "
+                "it), and keep that copy.") in privacy
         assert "with QualCoder closed" not in privacy
 
     def test_the_coding_guide_gives_the_causes_and_the_rule(self):

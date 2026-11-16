@@ -260,7 +260,10 @@ def test_only_tracked_files_are_read(tmp_path):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("heading, expected", [
-    # linked today: README 176, README 195, QUICKSTART 5
+    # linked today: README 176, README 195, QUICKSTART 5 (v0.15.4: the
+    # heading without its flourish; INSTALL keeps the earlier address as
+    # an anchor of its own)
+    ("Approving the AI's suggestions", "approving-the-ais-suggestions"),
     ("Approving the AI's suggestions: your host's settings are the "
      "safeguard",
      "approving-the-ais-suggestions-your-hosts-settings-are-the-safeguard"),

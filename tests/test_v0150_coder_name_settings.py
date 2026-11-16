@@ -891,9 +891,11 @@ class TestTheDocuments:
         item = privacy[privacy.index("- **Creating a project** "
                                      "(`create_project`"):]
         item = item[:item.index("## Your governance options")]
+        # (v0.15.4, the readability reading: what Exegete does not open,
+        # a sentence of its own)
         assert ("The coder name is asked for, or taken from Exegete's own "
                 "settings when the researcher has filled it in there, never "
-                "read from QualCoder's:") in item
+                "read from QualCoder's.") in item
         assert ("Both coder name settings, the researcher's and the AI's, "
                 "reach Exegete from the app that starts it") in item
         # one person through the passage, and "it" no longer ambiguous
@@ -904,11 +906,13 @@ class TestTheDocuments:
         # the name in the settings still reaches the conversation
         # and set_project_coder_name's answer (v0.15.0, coder names,
         # piece 2, fix round 1)
+        # (v0.15.4, the readability reading: the places in sentences of
+        # their own)
         assert ("A coder name in the settings still enters the "
-                "conversation: `create_project`'s answers give it, so do "
+                "conversation. `create_project`'s answers give it, and so do "
                 "the notes a selection gives when they apply "
                 "(`coder_name_notes`), for instance when the project records "
-                "another name or none, and so does `set_project_coder_name`'s "
+                "another name or none. So does `set_project_coder_name`'s "
                 "answer after a change when the setting holds another name. "
                 "A coder name that is not the "
                 "researcher's real name works as well, for a researcher who "

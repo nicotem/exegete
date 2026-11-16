@@ -97,11 +97,14 @@ class TestTheProjectMemo:
         info = json.loads(server.get_current_project())
         assert "aunt" not in json.dumps(info)
 
-    def test_the_id_is_not_used_for_the_project(self, tmp_path):
+    def test_an_id_with_the_project_is_refused(self, tmp_path):
+        """v0.15.4: an id given with the project memo was ignored
+        without a word; it is refused, and nothing is written."""
         folder = _project(tmp_path)
         server.select_project(str(folder))
-        json.loads(server.set_memo("project", 7, "Any id"))
-        assert _memo(folder) == "Any id"
+        out = json.loads(server.set_memo("project", 7, "Any id"))
+        assert "target_id" in out["error"]
+        assert _memo(folder) == ""
 
     def test_other_targets_still_need_their_id(self, tmp_path):
         server.select_project(str(_project(tmp_path)))
@@ -339,8 +342,11 @@ class TestTheDocumentsInFixRound1:
             "bug_report.yml options": options,
             "CONTRIBUTING.md": _read_flat("CONTRIBUTING.md"),
             "SUPPORT.md": _read_flat("SUPPORT.md"),
+            # (v0.15.4, the readability reading: "the tool set", the
+            # documents' word, in sentences of their own)
             "INSTALL.md": _read_flat("INSTALL.md")[
-                _read_flat("INSTALL.md").index("the toolset mode ("):][:60],
+                _read_flat("INSTALL.md").index("Give the tool set too:"):
+            ][:120],
         }
         for mode in server._VALID_TOOLSET_MODES:
             for where, text in places.items():

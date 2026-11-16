@@ -41,12 +41,18 @@ import exegete.server as server  # noqa: E402
 
 TOOL_SETS = ("full", "core")     # v0.15.0: `lifecycle` is read as `full`
 
-TAGLINE = ("A qualitative analysis application you use in conversation "
-           "with an AI assistant, compatible with QualCoder.")
+# The README's own tagline, since the owner's edit of 12 November 2026 on
+# GitHub (v0.15.4)
+README_TAGLINE = ("Agentic QDA: a qualitative data analysis application you "
+                  "use in conversation with an AI assistant")
+# The owner's word of 15 November 2026 (v0.15.4): his README tagline goes
+# everywhere the earlier one was, with the compatibility kept beside it
+# where a text needs it as a fact (the command's help, NOTICE's first line)
+TAGLINE = README_TAGLINE + ", compatible with QualCoder."
 
 # (v0.15.2, the opening texts: QualCoder said once what it is, and
 # documents, not transcripts alone)
-OPENING = ("Exegete is a qualitative analysis application for working with "
+OPENING = ("Exegete is a qualitative data analysis application for working with "
            "the researcher on their project, in the format of QualCoder, a "
            "free qualitative analysis program. Use its tools to read and "
            "search documents, codes, coded passages, memos, cases and "
@@ -54,7 +60,7 @@ OPENING = ("Exegete is a qualitative analysis application for working with "
            "approve.")
 
 BRIEF_FIRST_PARAGRAPH = (
-    "In Exegete, a qualitative analysis application on the researcher's "
+    "In Exegete, a qualitative data analysis application on the researcher's "
     "computer, you and the researcher work on their project through this "
     "conversation: the researcher decides, and you read, search and "
     "suggest through Exegete's tools. The project is theirs, a folder "
@@ -318,10 +324,9 @@ class TestWhatWasDecided:
     def test_the_tagline_in_the_commands_help(self):
         parser = server._build_arg_parser()
         assert parser.description.startswith(
-            "Exegete: " + TAGLINE[0].lower() + TAGLINE[1:] +
-            " It runs as an MCP server,")
+            TAGLINE + " Exegete runs as an MCP server,")
         assert _flat(server.TTY_NOTICE).startswith(
-            "Exegete is a qualitative analysis application that runs as an "
+            "Exegete is a qualitative data analysis application that runs as an "
             "MCP server.")
 
     def test_notices_first_line_in_both_packages(self):
@@ -337,11 +342,12 @@ class TestWhatWasDecided:
     def test_the_old_names_page_and_the_readme(self):
         page = _flat((REPO / "packaging/pypi-old-name/README.md")
                      .read_text(encoding="utf-8"))
-        assert ("qualcoder-mcp is now called **Exegete**: a qualitative "
-                "analysis application you use in conversation with an AI "
-                "assistant, compatible with QualCoder.") in page
+        assert ("qualcoder-mcp is now called **Exegete**. It is agentic "
+                "QDA: a qualitative data analysis application you use in "
+                "conversation with an AI assistant, compatible with "
+                "QualCoder.") in page
         readme = _flat((REPO / "README.md").read_text(encoding="utf-8"))
-        assert "**" + TAGLINE + "**" in readme
+        assert "**" + README_TAGLINE + "**" in readme
         # (v0.15.2, the readability reading: the commitment a sentence of
         # its own; QualCoder offered once, after the list)
         assert ("Exegete is built to stay interoperable with QualCoder. Your "
@@ -728,7 +734,7 @@ class TestQualCoderIsOptional:
                 "keep it, and name the departure") in claude
         assert "be better than QualCoder" not in claude
         assert "follow QualCoder's own behaviour" not in claude
-        assert claude.index("Exegete is a qualitative analysis application"
+        assert claude.index("Exegete is a qualitative data analysis application"
                             ) < claude.index("## Commands")
         contributing = _flat((REPO / "CONTRIBUTING.md").read_text(
             encoding="utf-8"))

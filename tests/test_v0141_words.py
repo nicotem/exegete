@@ -40,7 +40,7 @@ class TestWhatTheServerSays:
 
     def test_the_instructions_begin_with_it(self):
         assert server.SERVER_INSTRUCTIONS.startswith(
-            "Exegete is a qualitative analysis application for working with "
+            "Exegete is a qualitative data analysis application for working with "
             "the researcher on their project, in the format of QualCoder, a "
             "free qualitative analysis program.")
 
@@ -223,7 +223,8 @@ def test_pypis_summary_names_both():
         import tomli as tomllib
     with open(REPO / "pyproject.toml", "rb") as handle:
         summary = tomllib.load(handle)["project"]["description"]
-    assert summary.startswith("Exegete: ")
+    # v0.15.4: the owner's tagline leads, and the name follows it
+    assert "Exegete" in summary
     assert "QualCoder" in summary and "formerly qualcoder-mcp" in summary
 
 
@@ -340,13 +341,17 @@ class TestFixRoundOneWords:
         return text[first:text.index(end, first)]
 
     @pytest.mark.parametrize("name, start, end", [
-        ("PRIVACY.md", "Exegete's own folder, `~/.exegete`",
-         "- AI-coding session files"),
+        # (v0.15.4, PRIVACY read whole: its own paragraph in "Files
+        # Exegete keeps on your computer")
+        ("PRIVACY.md", "**The earlier name.**",
+         "**In the project's folder**"),
         ("CHANGELOG.md", "The server's own folder is `~/.exegete`",
          "- The resources' addresses")])
     def test_the_move_promises_what_the_code_does(self, name, start, end):
         passage = self._state_folder_passage(name, start, end)
-        for words in ("the move never copies or duplicates the secret",
+        # (v0.15.4, PRIVACY's readability reading: the move a sentence of
+        # its own there, so its first word is a capital)
+        for words in ("move never copies or duplicates the secret",
                       "the folder is put back",
                       "unless an older copy of the server has already "
                       "written at the old path in that instant",
@@ -375,9 +380,12 @@ class TestFixRoundOneWords:
         assert line.startswith(heading[5:-1])
         text = (REPO / "INSTALL.md").read_text(encoding="utf-8")
         section = " ".join(_section(text, heading, "\n### ").split())
-        for words in ("with a secret of its own there, which Exegete never "
-                      "uses", "says this once in its log, not at every "
-                      "start", "Quit or update that older copy",
+        # (v0.15.4, the readability reading: the new folder's secret, a
+        # sentence of its own)
+        for words in ("The new folder holds a secret of its own, which "
+                      "Exegete never uses",
+                      "says this once in its log, not at every start",
+                      "Quit or update that older copy",
                       "keeping the old folder changes nothing for Exegete",
                       "removing it removes that copy's secret, sessions "
                       "and run records with it"):

@@ -436,7 +436,7 @@ def _args_pseudonymise_source(kwargs):
     with no side effect, in the class of `record_in_journal`, and is not.
 
     `file_id` is one id since v0.13 (one file per call), bound as the
-    integer the server validated. `TOKEN_VERSION` is not bumped for it:
+    integer Exegete validated. `TOKEN_VERSION` is not bumped for it:
     a token lives sixty minutes, and one issued by 0.12 for `file_ids`
     that did reach this binding would fail as `token_other_operation`,
     which is what it is. The `bool()` on each switch is so that a truthy
@@ -444,11 +444,30 @@ def _args_pseudonymise_source(kwargs):
 
     `leave_occurrences` (v0.15.3) names the occurrences the run leaves
     as they are, so it changes what happens to the text and is bound,
-    as the server settled it (occurrences.canonical_leave: each id read
+    as Exegete settled it (occurrences.canonical_leave: each id read
     as Crockford's decoding reads it, sorted, each once). It joins the
     binding only when the list is not empty, so a run without it binds
     exactly as before and a token issued before the update still
     verifies.
+
+    `leave_numbers` and `numbering` (v0.15.4) name the occurrences to
+    leave by their numbers in a preview's list, and the numbering of
+    that list, as Exegete settled them
+    (occurrences.canonical_numbers: the numbers sorted, each once; the
+    numbering read as an id is). Both are bound, on the same terms: only
+    when numbers are given, so that a run without them, by ids or by
+    neither, binds exactly as before and a token issued before the
+    update still verifies.
+
+    `keep_phrases` (v0.15.4) names the phrases whose names the run keeps
+    as they are, so it changes what happens to the text and to the notes
+    and is bound, as Exegete settled it
+    (pseudonymise.canonical_phrases: each phrase as the matcher reads
+    it, in NFC, each once, sorted), on the same terms: only when the
+    list is not empty, so that a run without phrases binds exactly as
+    before and a token issued before the update still verifies. Its
+    words are a typed mapping's kind, so the bind stays keyed
+    (`KEYED_BIND`).
     """
     bound = {"file_id": int(kwargs["file_id"]),
              "mapping": kwargs["mapping"],
@@ -460,6 +479,13 @@ def _args_pseudonymise_source(kwargs):
     leave = kwargs.get("leave_occurrences")
     if leave:
         bound["leave_occurrences"] = [str(one) for one in leave]
+    numbers = kwargs.get("leave_numbers")
+    if numbers:
+        bound["leave_numbers"] = [int(one) for one in numbers]
+        bound["numbering"] = str(kwargs["numbering"])
+    phrases = kwargs.get("keep_phrases")
+    if phrases:
+        bound["keep_phrases"] = [str(one) for one in phrases]
     return bound
 
 

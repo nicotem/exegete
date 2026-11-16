@@ -23,7 +23,7 @@ import re
 from pathlib import Path
 
 import exegete.server as server
-from exegete import new_project
+from exegete import new_project, private_files
 from test_v012_pseudonymise_tool import (  # noqa: F401  (`project` is a fixture)
     MAPPING, TEXT, execute_from, preview_of, project, query)
 from test_v014_privacy import (  # noqa: F401  (`arriving` is a fixture)
@@ -95,13 +95,15 @@ class TestTheBackupLeadsBackOnItsOwn:
 
     def test_the_guide_says_what_a_session_file_holds(self):
         """sessions.py keeps each suggestion's passage, segment_text,
-        and its reasoning in the session's file, outside the project.
+        and its reasoning in the session's file, from 0.15.4 in the
+        project's sessions folder (private_files.SESSIONS_FOLDER).
         (v0.15.3: one coding guide, which holds the workflow guide's
         text.)"""
         for name in ("AI_CODING_GUIDE.md",):
             text = _flat(name)
             assert "word for word" in _between(
-                text, "~/.exegete/sessions/", "delete_coding_session"), name
+                text, private_files.SESSIONS_FOLDER,
+                "delete_coding_session"), name
 
 
 class TestEveryReadChecksForCoderVisibility:

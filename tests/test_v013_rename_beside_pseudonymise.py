@@ -117,12 +117,15 @@ def test_privacy_says_what_a_rename_cannot_reach():
     assert "never rewritten by the pseudonymisation tool (a case or file " \
            "name is renamed with `rename_case` or `rename_file`, below)" \
            in flat
-    assert ("A rename cannot reach, and the preview's count does not read: "
-            "the stored copy and stored path of an imported file (the copy "
-            "in the project folder keeps the name it was imported under "
-            "and, for a document, the original text, and QualCoder's "
-            "exports ship that copy), saved graph labels, saved table "
-            "displays and filters, and QualCoder's saved SQL queries. Each "
+    # (v0.15.4, the readability reading: what the copy keeps, a sentence
+    # of its own after the list)
+    assert ("A rename cannot reach the following, and the preview's count "
+            "does not read them: the stored copy and stored path of an "
+            "imported file, saved graph labels, saved table displays and "
+            "filters, and QualCoder's saved SQL queries. The copy in the "
+            "project folder keeps the name it was imported under and, for a "
+            "document, the original text, and QualCoder's exports ship that "
+            "copy. Each "
             "rename's result counts the saved graph labels, table displays "
             "and filters for the case or file it renamed; nothing in "
             "Exegete reads the saved SQL queries.") in flat
@@ -266,9 +269,19 @@ def test_privacy_says_rename_file_reads_the_backups():
     # v0.15.1: rename_file no longer reads the backups, as announced
     # (tests/test_v0151_journal_and_rename_back.py); v0.15.2: undo reads
     # the backup of the change it takes back, said in a paragraph of its own
+    # (v0.15.4, PRIVACY's fix round: save_names_list reads the names list
+    # in the backup it has just taken, as a keyed digest for its record;
+    # server.py, _record_names_list_save)
     assert ("No tool reads the backups' contents, apart from "
-            "`restore_backup`, `prune_backups` and `undo_changes`."
+            "`restore_backup`, `prune_backups`, `undo_changes` and "
+            "`save_names_list`.") in paragraph
+    assert ("`save_names_list` reads the `pseudonyms.json` of the backup it "
+            "takes before the save, only to keep a keyed digest of it"
             ) in paragraph
+    source = Path(server.__file__).read_text(encoding="utf-8")
+    record = source[source.index("def _record_names_list_save("):]
+    record = record[:record.index("\ndef ")]
+    assert "pseudonyms_json_fingerprint(backup)" in record
     assert "In 0.15.0 and earlier, `rename_file` read the names in the " \
            "backups to recognise a rename back." in paragraph
     assert "`undo_changes` reads the backup Exegete took" in paragraph

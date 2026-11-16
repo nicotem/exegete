@@ -906,6 +906,10 @@ class Plan:
         self.checked: Dict[Tuple[str, Any], Tuple[str, Tuple[str, ...]]] = {}
         self.marks: List[Tuple[Any, ...]] = []
         self.removed_codes: Set[int] = set()
+        # Each removed code's date, from its row as it is now (v0.15.4):
+        # a session's scope loses the number only where it recorded that
+        # date, or none
+        self.removed_code_dates: Dict[int, Optional[str]] = {}
         self.removed_files: Set[int] = set()
         self.files_touched: Set[int] = set()
         self.suggestions_on_removed_files = 0
@@ -2048,19 +2052,12 @@ def find_backup_folder(project_db: Path, secret: str, digest: Optional[str]
 def project_sessions(manager: SessionManager, project_db: Path
                      ) -> List[Tuple[str, Any, bytes]]:
     """This project's coding sessions, each with the bytes it was read
-    with, found as delete_coding's marks find them: every session file,
-    its project compared by `same_project`; one that cannot be read is
-    passed over, since it cannot be applied either."""
-    found = []
-    for path in sorted(manager.storage_dir.glob("session_*.json")):
-        sid = path.stem[len("session_"):]
-        try:
-            session, raw = manager.load_session_and_bytes(sid)
-        except Exception:
-            continue
-        if SessionManager.same_project(session.project_path, project_db):
-            found.append((sid, session, raw))
-    return found
+    with, found as delete_coding's marks find them: the manager's
+    (v0.15.4), those kept in the project's sessions folder and those in
+    the state folder recording it, its project compared by
+    `same_project`; one that cannot be read is passed over, since it
+    cannot be applied either."""
+    return manager.project_sessions(project_db)
 
 
 def _marks_of(record: Dict[str, Any]) -> Tuple[Optional[str], List[str]]:
@@ -2145,6 +2142,15 @@ def plan(db_, receipts: Sequence[str], *, secret: str, project: str,
     return result
 
 
+def _date_of(row: Optional[Row]) -> Optional[str]:
+    """A code's date from its row, as the codebook gives it (a text), or
+    None (v0.15.4)."""
+    for column, value in (row or {}).items():
+        if column.lower() == "date":
+            return text_of(value)
+    return None
+
+
 def _gather(result: Plan) -> None:
     """What the write checks before its commit, and what the undo sets
     back after it: the coding sessions' marks, the scopes and the files
@@ -2172,6 +2178,7 @@ def _gather(result: Plan) -> None:
                 result.checked[(low, step.key)] = (step.table, step.columns)
                 if low == "code_name" and what == "removed":
                     result.removed_codes.add(step.key)
+                    result.removed_code_dates[step.key] = _date_of(step.now)
                 if low == "source":
                     result.files_touched.add(step.key)
                     if what == "removed":

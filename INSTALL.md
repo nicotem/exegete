@@ -1,6 +1,6 @@
 # Installing Exegete
 
-Exegete is a qualitative analysis application that you use in
+Exegete is a qualitative data analysis application that you use in
 conversation with an AI assistant. This guide installs it as an
 extension for Claude Desktop, on a Mac or on Windows, and takes you as
 far as a first project. Claude Desktop is Anthropic's app for talking
@@ -14,10 +14,10 @@ needs.
 
 Other ways of installing Exegete use the Terminal, the program where
 commands are typed. They are in a guide of their own,
-[Installing Exegete from the Terminal](docs/installing-from-the-terminal.md):
-installing with pip, pipx or uv, setting Exegete up by hand for Claude
-Code, Codex, LM Studio or Claude Desktop, and installing from the
-source code as a contributor.
+[Installing Exegete from the Terminal](docs/installing-from-the-terminal.md).
+That guide covers installing with pip, pipx or uv, setting Exegete up
+by hand for Claude Code, Codex, LM Studio or Claude Desktop, and
+installing from the source code as a contributor.
 
 Exegete was called qualcoder-mcp until version 0.14.0. What you set up
 under that name keeps working, and
@@ -28,14 +28,18 @@ what changed.
 
 - **Claude Desktop**, the latest version, from
   https://claude.ai/download, and a Claude account to sign in with.
-- **A Mac or a Windows computer.** Claude Desktop runs on both. On a
-  Mac, Anthropic's help page, read on 3 November 2026, asks for macOS 13
-  (Ventura) or later. On a Mac with Apple silicon (M1 or later), the
-  extension needs macOS 14 (Sonoma) or later, from 0.15.3: a library it
-  fetches to read PDFs has no package for earlier releases there. On
-  macOS 13 it does not start ("Troubleshooting", below, says what you
-  can do). On an Intel Mac, the extension needs no more than Claude
-  Desktop does.
+- **A Mac or a Windows computer.** This guide's steps are written for
+  these two. Anthropic's help page "Install Claude Desktop", read on
+  10 November 2026, lists Claude Desktop for macOS, for Windows and, as
+  a beta, for Linux, on Ubuntu 22.04 or Debian 12 and later. Exegete's
+  tests install and start the extension on Linux the way Claude Desktop
+  does, but without Claude Desktop itself.
+- **On a Mac, macOS 13 (Ventura) or later**, as the same page asks. From
+  0.15.3, on a Mac with Apple silicon (M1 or later), the extension needs
+  macOS 14 (Sonoma) or later. A library it fetches to read PDFs has no
+  package for earlier releases of macOS there. On macOS 13 it does not
+  start ("Troubleshooting", below, says what you can do). On an Intel
+  Mac, the extension needs no more than Claude Desktop does.
 - **The internet when Exegete first starts**, and after each update.
   At those times Claude Desktop fetches a tool called uv, which fetches
   Python and the libraries Exegete needs, the ready-made code it builds
@@ -191,27 +195,28 @@ since Claude Desktop fetches Exegete's libraries then.
 permission before it uses one of Exegete's tools. How it asks depends
 on where you use Exegete:
 
-- **A Cowork or Code session.** In a Cowork or Code session, it depends
-  on the session's mode, Manual or Auto, and on each tool's own setting
-  under "+", Connectors.
+- **A Cowork or Code session.** It depends on the session's mode, Manual
+  or Auto, and on each tool's own setting under "+", Connectors.
 - **Claude Desktop's ordinary chat.** Anthropic does not document what
   the chat does. Each tool carries marks that say what kind of tool it
   is, such as a tool that only reads. Claude Desktop 2.9939.2 was seen
-  to pass on the mark of a tool that only reads (26 September 2026),
-  and what the chat then does with it is not known.
+  to pass on the mark of a tool that only reads (26 September 2026).
+  What the chat then does with it is not known.
 - **Chat and Cowork as one conversation.** In one version of Claude,
   chat and Cowork are one conversation. Anthropic is rolling it out to
   Pro, Max and Ultra plans first. In that version, a permission setting
   in the message box has two modes. Anthropic's page
   (<https://support.claude.com/en/articles/16761823-claude-cowork-and-chat-are-one-claude>,
-  read 4 November 2026) describes them: "**Auto (default on Pro, Max,
-  Ultra, and Team plans):** Claude keeps working without stopping to
-  ask about each step, and automated safety checks run before it takes
-  an action." and "**Manual (default on Enterprise plans):** Claude
-  asks before it takes actions, and you choose whether to allow each
-  one." The same page says how to tell whether you have that version:
-  "If you're on a Pro, Max, or Ultra plan and your message box still
-  shows "Chat" and "Cowork" options, you don't have it yet."
+  read 4 November 2026) describes them:
+  - "**Auto (default on Pro, Max, Ultra, and Team plans):** Claude keeps
+    working without stopping to ask about each step, and automated
+    safety checks run before it takes an action."
+  - "**Manual (default on Enterprise plans):** Claude asks before it
+    takes actions, and you choose whether to allow each one."
+
+  The same page says how to tell whether you have that version: "If
+  you're on a Pro, Max, or Ultra plan and your message box still shows
+  "Chat" and "Cowork" options, you don't have it yet."
 
 On Manual, Claude keeps asking you, which suits work on real data. On
 Pro, Max, Ultra and Team plans, such a conversation starts on Auto. On
@@ -220,16 +225,22 @@ so you could switch it to Manual before you use participants' data.
 ["What hosts do with the tools' read and write marks"](#what-hosts-do-with-the-tools-read-and-write-marks),
 below, says what each host does, from Anthropic's pages.
 
-**Switch training off** before participants' data: while it is on,
-Anthropic may use your conversations to train its models. On a personal
-plan (Free, Pro or Max) it is the setting "Help improve our AI models",
-at https://claude.ai/settings/data-privacy-controls. Rating a reply
-(thumbs up or down) can still let Anthropic train on that conversation.
+**Training.** While training is on, Anthropic may use your
+conversations, with any participants' data in them, to train its
+models. On a personal plan (Free, Pro, Max or Ultra), the setting "Help
+improve our AI models", at
+https://claude.ai/settings/data-privacy-controls, switches training off
+(Anthropic's pages, read on 10 November 2026). Anthropic's page "Is my
+data used for model training?" says that rating a reply, with a thumbs
+up or down, can still let Anthropic train on that conversation.
+Anthropic can also train on a conversation flagged for a safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
-in the README, says the rest: the checks before participants' data, and
-which assistants open files by themselves.
+in the README, says the rest: the checks to make before you use
+participants' data, and which assistants open files by themselves.
 
-### Approving the AI's suggestions: your host's settings are the safeguard
+### Approving the AI's suggestions
+
+<a id="approving-the-ais-suggestions-your-hosts-settings-are-the-safeguard"></a>
 
 When the assistant suggests codings or new codes, nothing is written to
 your project until each item is marked approved and then applied.
@@ -264,10 +275,10 @@ PyYAML, tabulate and packaging. Everywhere else the part brings PyMuPDF
 On a Mac with Apple silicon, the onnxruntime the extension installs has
 packages for macOS 14 or later alone, so there the extension needs
 macOS 14. The choice between PyMuPDF 2 and 1.x goes by the kind of
-computer and the Python, never by the macOS release, so on macOS 13 or
-earlier the extension's install stops rather than take PyMuPDF 1.x
+computer and the Python, never by the macOS release. So on macOS 13 or
+earlier, the extension's install stops rather than take PyMuPDF 1.x
 ("Troubleshooting", below). The extension installs the releases the
-tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.20. Both releases
+tests ran with: PyMuPDF 2.0 or 1.28.2, and EbookLib 0.21. Both releases
 of PyMuPDF read the test documents' PDFs to the same text, the text that
 QualCoder 4.0 stores.
 
@@ -322,7 +333,7 @@ QualCoder, a PDF's text saved that way can differ from the one it reads.
 
 Exegete does not update itself. Unless you switched off "Tell me when a
 new version is out", Exegete asks Claude to tell you when a newer
-version is out, and you can ask "How do I update Exegete?" for the
+version is out. You can also ask "How do I update Exegete?" for the
 steps. With the small tool set, which has no tool for that question,
 the notice gives the address of the update page instead. If you have a
 GitHub account, you can also be told of each release: on Exegete's
@@ -332,7 +343,7 @@ To update, download the newer `.mcpb` and install it the same way.
 Claude replaces the extension you have and keeps its settings. The first
 start after an update can take longer, and needs the internet, since
 Claude Desktop may fetch Exegete's libraries again. On a Mac with Apple
-silicon, the update to 0.15.3 or later needs macOS 14 or later, and its
+silicon, the update to 0.15.3 or later needs macOS 14 or later. Its
 first start downloads up to about 105 MB of libraries for reading PDFs,
 where 0.15.2 needed about 33 MB ("PDF and EPUB: the optional part",
 above). On macOS 13 or earlier the updated extension does not start: you
@@ -365,6 +376,84 @@ For an install from the Terminal, the Terminal guide's
 ["Updating"](docs/installing-from-the-terminal.md#updating) gives the
 steps for each way of installing.
 
+### Coding sessions, from 0.15.4
+
+From 0.15.4, Exegete keeps each new coding session inside its project,
+in a folder at the project's top called `Exegete coding sessions`. A
+session holds the passages suggested for coding, word for word, with
+their reasons and your decisions. Kept there, it goes wherever the
+project goes: into its backups and copies, and to anyone who can open
+the project's folder where it is shared or synced. PRIVACY.md, "Files
+Exegete keeps on your computer", says more.
+
+Sessions made before 0.15.4 stay where they were, in Exegete's own
+folder (`~/.exegete/sessions`), and nothing moves. A new session is
+kept there too when the project's folder cannot hold it, as in a
+read-only project, and Exegete's answer then says why. Each of these
+sessions is listed whichever project is selected, but read, decided and
+applied only while its project is open at the place the session
+records. If you have moved or renamed the project since, you
+can put it back at that place, select it there, and finish, apply or
+export the session; the project can then move again.
+`list_coding_sessions` gives that place as the session's
+`project_path`. A session's file copied by hand from
+`~/.exegete/sessions` into a project's `Exegete coding sessions` folder
+is read as having come with the project, as the next paragraph says,
+and while the project is selected Exegete uses it in place of the file
+of the same name in `~/.exegete/sessions`.
+
+Each session Exegete starts in a project carries a seal, and each
+approval you give on this computer a mark, both made with a key that
+Exegete keeps in its own folder (`preview_secret`, which also signs
+its previews) and both tied to the project by a random id that Exegete
+keeps beside the sessions (`Project id.txt`). A session whose file
+lacks this computer's seal for this project is read as having come with
+the project: one saved by Exegete on another computer or under another
+account, one changed outside Exegete, one in a project someone else
+gave you, one copied in from another of your projects, or one carried
+by a copy made with `copy_project_to_workspace`, which gets an id of its
+own. Its texts then reach the assistant marked as data, never as
+instructions, with a note asking it to read you the session's
+instruction before going on. An approval in it counts only once you
+give it on this computer. An approval also counts only while Exegete's
+own folder on this computer records it, so an older copy of a session's
+file, put back from a backup or by a sync service, cannot bring back an
+approval you have withdrawn since on this computer. That record knows
+only what Exegete did here: an approval withdrawn on another computer,
+in a session deleted outside Exegete, or by a save here cut short
+before the record was updated, stays in it until Exegete here saves or
+deletes that session, and an older copy put back before then still
+counts it. The same holds if Exegete's own folder is put back from an
+older backup. Approvals do not carry from one computer to another: if
+you work on a project from two computers, give them on the computer
+where the codings are written. A session saved on the other computer
+reads as having come with the project, on both, from then on. If the
+key is lost or replaced, every session kept in a project reads as
+having come with the project. Nothing in them is lost, and you give
+their approvals again. Exegete replaces the key when it is damaged
+and, on a Mac or Linux, when its permissions have been widened, as
+copying or restoring a home folder without its permissions can leave
+them.
+
+Exegete makes `Project id.txt` when a session first starts in the
+project, or at the next save of a session there if the file is missing,
+and never changes it. If Exegete cannot read an id in the file, it does
+not use the project's sessions, and says why. When another program
+holds the file for a moment, or a sync service has not yet brought it
+to this computer, asking again later may work; when the file is
+damaged, it can be put back from a backup of the project, or removed.
+If the file is removed, or the id in it is changed, every session there
+reads as having come with the project, and you give their approvals
+again; a session saved in the meantime goes on reading so after the id
+is put back. A copy of the project made outside Exegete, in the file
+manager or by a sync service, keeps the same id, and so does a backup
+that Exegete made, if you select it as a project: a session from one
+copy then reads in the other as this computer's own, and a decision in
+one copy can change which approvals count in the other. If you use
+QualCoder, a backup it made, opened as a project, keeps the id too.
+Working on each session in one copy only avoids this, and
+`copy_project_to_workspace` makes a copy with an id of its own.
+
 ### Coming from qualcoder-mcp
 
 Exegete was called qualcoder-mcp until version 0.14.0. The program is
@@ -383,8 +472,10 @@ What changed for everyone:
   again before it uses each tool.
 - **Exegete's own folder** moves by itself at the first start, from
   `~/.qualcoder_mcp` to `~/.exegete`, whole. It holds the secret that
-  signs Exegete's previews, the coding sessions, the last-project hint
-  and the pseudonymisation run records. A link is left under the old
+  signs Exegete's previews, the coding sessions made before 0.15.4 and
+  any that a project's folder could not hold ("Coding sessions, from
+  0.15.4", above), the last-project hint and the pseudonymisation run
+  records. A link is left under the old
   name (on Windows, a kind of link called a junction), so that an older
   copy of the program on the same computer keeps using the same folder
   and secret. If a backup or sync rule of yours names the old folder,
@@ -416,7 +507,7 @@ With the extension, the change of name can leave two things behind.
 One is the link under the old name, which holds nothing of its own
 ("Exegete's own folder", above, says what it is for). The other is the
 old log file, `mcp-server-qualcoder-mcp.log`, beside Claude Desktop's
-log of the extension ("Reading the server log", below). It keeps every
+log of the extension ("Reading the server log", below). It can hold every
 request and every answer from before 0.14.1 in full, names and quoted
 text included. You could delete it once you no longer need it to report
 a problem from that time. A check typed in the Terminal lists what the
@@ -448,6 +539,18 @@ An older release may have other settings, with defaults of its own, as
 its settings page shows. Every release with the check for new versions,
 from 0.14.2 on, has it on by default.
 
+Releases before 0.15.4 do not know a project's `Exegete coding
+sessions` folder ("Coding sessions, from 0.15.4", above). They do not
+list the sessions kept there, and do not update them when a coding is
+deleted or a change undone. Their `restore_backup` also replaces the
+folder with the backup's copy of it, older decisions and sessions
+deleted since included, or removes it when the backup has none. The
+folder as it was is then only in the safety backup that restore takes.
+So before going back, you may want to finish the sessions you have
+open. Before restoring a backup in the earlier release, you could copy
+the `Exegete coding sessions` folder somewhere else, or update again
+first.
+
 If you go back as far as 0.14.0, you meet one refusal. In a project
 where a later release has stored the AI coder name, 0.14.0 refuses the
 changes that need that name, and says to upgrade ("Coming from
@@ -468,24 +571,37 @@ GitHub Issues ("Getting help", below).
      empties the cache.
    - **Exegete's own folder**, `~/.exegete`, with the link to it under
      its earlier name, `~/.qualcoder_mcp`. It holds the coding sessions
-     waiting for review, the texts an import's preview read
+     made before 0.15.4, and any started where a project's folder could
+     not hold one ("Coding sessions, from 0.15.4", above); the others
+     are in each project's `Exegete coding sessions` folder, and stay
+     with the project. It also holds the texts an import's preview read
      (`import-texts.noindex/`), the last project used, the record of the
-     check for new versions, the pseudonymisation run records and the
-     secret that signs Exegete's previews. PRIVACY.md, "Files Exegete
-     keeps on your computer", says what each file holds.
+     check for new versions, the pseudonymisation run records, the
+     records of the approvals given on this computer in sessions kept
+     in projects (`approvals/`), and the secret that signs Exegete's
+     previews and seals the sessions kept in projects. PRIVACY.md, "Files Exegete keeps on your computer", says
+     what each file holds.
      - The texts an import's preview read are each document's whole
        text, before any names are replaced. Exegete removes them after
        the import. When no import follows, they stay until the first
        time Exegete starts, or prepares an import, at least an hour and
        five minutes after the preview. After an uninstall neither
        happens, so they stay until you delete the folder.
-     - If you delete the folder, you lose the coding sessions waiting
-       for review and the pseudonymisation run records, and a change
+     - If you delete the folder, you lose every coding session kept
+       there and the pseudonymisation run records, and a change
        previewed but not yet made, such as an import, needs a new
-       preview.
+       preview. The sessions kept in your projects stay, and read as
+       the next two points say.
+     - If you delete only the records of approvals, `approvals/`,
+       the approvals you gave on this computer in sessions kept in
+       projects read as pending, and you give them again. Nothing in
+       the sessions is lost: each keeps its decisions in its own file.
      - If you delete only the secret, `preview_secret`, the run records
        stay, but their digests can no longer be checked, and a change
-       previewed but not yet made needs a new preview.
+       previewed but not yet made needs a new preview. Every session
+       kept in a project then reads as having come with the project,
+       and its approvals are given again ("Coding sessions, from
+       0.15.4", above).
    - **The reading folder**, where Exegete writes the pages you read on
      your own computer, with a file's whole text and its codings, and
      read-only copies of originals:
@@ -494,11 +610,12 @@ GitHub Issues ("Getting help", below).
      only while it runs, so after an uninstall it stays until you
      delete it.
    - **Claude Desktop's log of the extension**,
-     `mcp-server-Exegete.log` in `~/Library/Logs/Claude` on a Mac or
-     `%APPDATA%\Claude\logs` on Windows, with
-     `mcp-server-qualcoder-mcp.log` beside it from before 0.14.1. It
-     keeps every request and every answer in full, names, paths and
-     quoted text included. Exegete never removes it.
+     `mcp-server-Exegete.log` in `~/Library/Logs/Claude` on a Mac,
+     `%APPDATA%\Claude\logs` on Windows or `~/.config/Claude/logs` on
+     Linux. A log from before 0.14.1, `mcp-server-qualcoder-mcp.log`,
+     stays beside it. The log can hold every request and every answer in
+     full, names, paths and quoted text included ("Reading the server
+     log", below). Exegete never removes it.
 
 The backups Exegete took sit beside each project, in folders named
 `<project>_backup_<timestamp>.qda`. The `prune_backups` tool removes
@@ -524,16 +641,17 @@ how long".
 - The first start needs the internet.
 - On a Mac with Apple silicon, from 0.15.3, the extension needs macOS
   14 or later. On macOS 13 or earlier it stops before Exegete runs, so
-  Exegete cannot say why: Claude Desktop's log of the extension
-  ("Reading the server log", below) holds uv's message that a library,
-  onnxruntime, has no package for that macOS. Updating macOS to 14 or
-  later brings the extension back, and so does installing 0.15.2's
-  extension again ("Going back to an earlier version", below). While
-  Exegete cannot start, it removes nothing it keeps: the texts an
-  import's preview read, and the reading folder's pages and copies of
-  originals, stay where "Decide what to do with what stays", under
-  "Uninstalling", says. 0.15.2's extension, installed again, removes
-  them at its first start once their time has passed.
+  Exegete cannot say why. Claude Desktop's log of the extension
+  ("Reading the server log", below) holds the reason: uv's message that
+  a library, onnxruntime, has no package for that macOS. Updating macOS
+  to 14 or later brings the extension back, and so does installing
+  0.15.2's extension again ("Going back to an earlier version", below).
+  While Exegete cannot start, it removes nothing it keeps. The texts an
+  import's preview read stay in Exegete's own folder, and the pages and
+  copies of originals stay in the reading folder. "Decide what to do
+  with what stays", under "Uninstalling", says where both folders are.
+  0.15.2's extension, installed again, removes them at its first start
+  once their time has passed.
 - An empty "Folder for projects", or a coder name outside the rules
   under "The settings page", stops the extension from starting. The log
   says which setting is at fault, never its value ("Reading the server
@@ -592,13 +710,13 @@ and the selection was lost. The hint gets you back with one call.
 #### "Both ~/.exegete and ~/.qualcoder_mcp are folders"
 
 A copy of the program older than 0.14.1, or a restore from a backup,
-made a new `~/.qualcoder_mcp` after Exegete had moved it to
-`~/.exegete`, with a secret of its own there, which Exegete never uses.
-Exegete takes from it only the session files it lacks, and says this
-once in its log, not at every start. Quit or update that older copy.
-After that, keeping the old folder changes nothing for Exegete, and
-removing it removes that copy's secret, sessions and run records with
-it.
+made a new `~/.qualcoder_mcp` after Exegete had moved the folder to
+`~/.exegete`. The new folder holds a secret of its own, which Exegete
+never uses. Exegete takes from it only the session files it lacks, and
+says this once in its log, not at every start. Quit or update that older
+copy. After that, keeping the old folder changes nothing for Exegete,
+and removing it removes that copy's secret, sessions and run records
+with it.
 
 ### Reading the server log
 
@@ -607,20 +725,33 @@ in `~/Library/Logs/Claude` on a Mac or `%APPDATA%\Claude\logs` on
 Windows, and Settings, Developer, Show Logs opens it. Before 0.14.1 the
 log was `mcp-server-qualcoder-mcp.log`, which stays where it was.
 
+MCP, the protocol Exegete speaks to apps, has a page on debugging,
+<https://modelcontextprotocol.io/docs/tools/debugging>. Read on
+10 November 2026, it gives the log's folder on Linux, where Claude
+Desktop is a beta, as `~/.config/Claude/logs`. It also lists message
+exchanges among what Claude Desktop's logs capture. So Claude Desktop's
+log, the file Show Logs opens, can hold every request and every answer
+in full. That is everything the tools returned and the arguments they
+were given, names, paths and quoted text included, as the conversation
+holds them. Before sharing the file, read it as you would the
+conversation.
+
 Exegete writes its own lines to the log, at the INFO level and above.
 They carry ids, counts and the kinds of errors. They name no project,
 file, code, category, case, journal entry or attribute, and no path.
 They hold no memo text and no SQLite message. A project is kept in an
 SQLite database, and a database error is logged by its kind and
-SQLite's short name for it. So a project built to put a note into an
-error (with a database trigger), or a damaged one (with a note that is
-not UTF-8), does not make a tool log that note, private part included.
+SQLite's short name for it. A project could be built to put a note into
+an error message, with a database trigger. Even then, no tool logs that
+note, including any part that a `#####` mark keeps private. A damaged
+project, with a note that is not UTF-8, does not make a tool log it
+either.
 A project's schema version, the version of its database layout, appears
 only in QualCoder's format (`v` and digits). A file refused as damaged
-leaves one line with the kind of error, never the file. For a PDF,
-EPUB, RTF or Word file, the line also gives the release of the library
-Exegete reads that kind of file with. That line helps when you report
-a problem.
+leaves one line with the kind of error, never the file's name. For a
+PDF, EPUB, RTF or Word file, the line also gives the release of the
+library Exegete reads that kind of file with. That line helps when you
+report a problem.
 
 The MCP library, the code Exegete uses to talk to the app, writes lines
 of its own beside them, giving the kind of each request. They carry
@@ -633,32 +764,34 @@ text the app sent in two cases:
   name.
 
 That text is what the app or the model sent, never anything read from
-the project, but it can hold a name the model wrote. When the library
-does not take a line, a request or a notification the app sent (a line
-that is not JSON, a response to no request, an address that is not a
-URL, arguments that are not an object, a request sent before the app
-had finished starting the session), or when a response's id is text
-that is not a number, its line about it holds a fixed sentence of
-Exegete's instead, and nothing of what was sent.
+the project, but it can hold a name the model wrote. In two other cases,
+the library's line about what the app sent holds a fixed sentence of
+Exegete's instead, and nothing of what was sent:
 
-Claude Desktop's log (the file Show Logs opens) also records every
-request and every answer in full. So it holds everything the tools
-returned and the arguments they were given, names, paths and quoted text
-included, as the conversation does. Before sharing the file, read it as
-you would the conversation.
+- the library does not take a line, a request or a notification the
+  app sent: a line that is not JSON, a response to no request, an
+  address that is not a URL, arguments that are not an object, or a
+  request sent before the app had finished starting the session;
+- a response's id is text that is not a number.
 
 ### Where to ask
 
-- **Problems with Exegete**: check "Troubleshooting", above, then open
-  an issue on
-  [GitHub Issues](https://github.com/nicotem/exegete/issues). That is
-  the only support channel, and email requests receive no reply
-  ([SUPPORT.md](SUPPORT.md)). Research data pasted into an issue becomes
-  public, so a redacted or made-up example is the safer way to show a
-  problem. Give the Exegete version, your QualCoder version if you use
-  it, your host (Claude Desktop, and whether in a chat, Cowork or a Code
-  session) and the toolset mode (`full`, or `core` if the small tool set
-  is on; `lifecycle` is the earlier name of `full`).
+- **Problems with Exegete**: check "Troubleshooting", above, first. A
+  fault that could expose participants' data, or damage a project when
+  Exegete changes it, is best reported privately, so that it is not
+  public before it is fixed. [SECURITY.md](SECURITY.md) says how.
+- **Other problems and questions** go to
+  [GitHub Issues](https://github.com/nicotem/exegete/issues), as
+  [SUPPORT.md](SUPPORT.md) describes. Requests for support sent by email
+  receive no reply. An issue is public, so research data pasted into
+  one is published with it. A made-up example, or a real one with names
+  and details removed, is the safer way to show a problem. The real one
+  is still a participant's words, which a search can find and someone
+  can recognise. Your ethics approval may not allow you to publish it.
+  Give the Exegete version, and your QualCoder version if you use it.
+  Say which host you use: Claude Desktop, and whether in a chat, Cowork
+  or a Code session. Give the tool set too: `full`, or `core` if the
+  small tool set is on. `lifecycle` is the earlier name of `full`.
 - **The protocol Exegete speaks to apps**, MCP:
   https://modelcontextprotocol.io/
 - **If you also use QualCoder**, its own help:
@@ -692,9 +825,11 @@ Anthropic documents for Claude Code: `import_documents`, and
 `save_names_list`, which changes the names list every later import
 applies. From version 2.1.199, Claude Code asks before every call of
 such a tool in every permission mode, auto and `bypassPermissions`
-included. It offers no "don't ask again", and lets no allow rule skip
-it. In `dontAsk` mode, it refuses the call. Earlier versions ignore the
-mark.
+included, and lets no allow rule skip it. In `dontAsk` mode, it refuses
+the call. Earlier versions ignore the mark. From version 2.1.246, its
+question offers no "don't ask again". From 2.1.199 until then, it
+offered "Yes, and don't ask again", but then ignored the allow rule that
+choice wrote (Claude Code's changelog, read on 10 November 2026).
 
 `check_for_updates` is not marked read-only: it records each check in
 Exegete's own folder, so a host that asks before a tool runs asks
@@ -736,7 +871,7 @@ What each host does, from Anthropic's pages as read on 4 November 2026
   mode does with the marks.
 - **Claude Desktop's chat.** Anthropic's pages do not say what it does
   with the marks. Claude Desktop 2.9939.2 was seen to pass the
-  read-only mark on with each tool (26 September 2026, below); what
+  read-only mark on with each tool (26 September 2026, below). What
   the chat then does with it is not known.
 - **Connectors added on claude.ai** group their tools into read-only and
   write or delete, each with its own "always allow", "needs approval"

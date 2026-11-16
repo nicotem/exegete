@@ -59,11 +59,13 @@ The answer lists each project with its path, its name, the folder it is
 in, and when the project's own folder last changed, the most recently
 changed first. It also gives the project selected, if any, the folder
 where new projects go and the folders searched. The size it gives,
-`size_mb`, leaves out the files inside the project's folder, so it does
-not show how large the project is. In this example, the first project
-is in the desktop extension's folder and the second in one of
-QualCoder's, as it would be if you use QualCoder. The answer begins
-like this:
+`size_mb`, is that of the files in the project's folder, in megabytes;
+a link inside the folder is not followed. An entry that `select_project`
+would not take, such as a file whose name ends in `.qda`, is listed
+with `"usable": false` and a note saying what Exegete selects. In this
+example, the first project is in the desktop extension's folder and the
+second in one of QualCoder's, as it would be if you use QualCoder. The
+answer begins like this:
 
 ```json
 {
@@ -73,14 +75,14 @@ like this:
       "path": "/Users/you/Exegete projects/Interview Study 2024.qda",
       "name": "Interview Study 2024",
       "directory": "/Users/you/Exegete projects",
-      "size_mb": 0.0,
+      "size_mb": 14.28,
       "modified": 1698765432.0
     },
     {
       "path": "/Users/you/Documents/QualCoder/Focus Groups/Focus Groups.qda",
       "name": "Focus Groups",
       "directory": "/Users/you/Documents/QualCoder/Focus Groups",
-      "size_mb": 0.0,
+      "size_mb": 2.65,
       "modified": 1698654321.0
     }
   ]

@@ -515,8 +515,10 @@ class TestTheTexts:
             text = _doc(name)
             assert "never set the import to" not in text, name
             assert "never set it to" not in text, name
-            assert ("allowing it once, after reading the preview, keeps you "
-                    "asked each time") in text, name
+            # (v0.15.4, PRIVACY's readability reading: a sentence of its
+            # own there)
+            assert ("it once, after reading the preview, keeps you asked "
+                    "each time") in text, name
 
     def test_the_licence_suggestion_fits_its_readers(self):
         install = _doc("INSTALL.md")

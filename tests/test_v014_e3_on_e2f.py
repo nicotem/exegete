@@ -121,7 +121,9 @@ class TestNotesOnBothSides:
         assert HIDDEN not in json.dumps(found)
         privacy = " ".join((REPO / "PRIVACY.md").read_text(
             encoding="utf-8").split())
-        assert ("elsewhere, memo searches aside (below), a code's or a "
+        # (v0.15.4, PRIVACY read whole: the memo searches are told in the
+        # item above the cascades' now)
+        assert ("elsewhere, memo searches aside (above), a code's or a "
                 "category's owner is shown as QualCoder shows it") in privacy
         assert "`search_memos` is the exception" in privacy
         assert "`file_info`, `search_memos`, `export_code_report`" \

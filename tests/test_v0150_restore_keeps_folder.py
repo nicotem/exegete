@@ -1245,15 +1245,18 @@ class TestTheTexts:
                 "in) is kept as it is, never taken from the backup; the "
                 "preview says when either has one. So are its `audio` and "
                 "`video` folders") in entry
+        # (v0.15.4: the project's sessions folder, which a restore keeps
+        # too, among them)
         assert ("`list_backups` and `restore_backup` roll the project back "
-                "to a backup, all but its `Exegete`, `audio` and `video` "
-                "folders, which a restore keeps.") in tools
+                "to a backup, all but its `Exegete`, `Exegete coding "
+                "sessions`, `audio` and `video` folders, which a restore "
+                "keeps.") in tools
         # v0.15.1, the restore: its preview counts rows by kind, every
         # coder's together, never by owner
         assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete`, `audio` and `video` folders, which a restore "
-                "keeps): its preview counts each kind of row, every coder's "
-                "together, never by owner") in tools
+                "`Exegete`, `Exegete coding sessions`, `audio` and `video` "
+                "folders, which a restore keeps): its preview counts each "
+                "kind of row, every coder's together, never by owner") in tools
         assert "whole project back" not in tools
 
     def test_privacy(self):
@@ -1269,12 +1272,15 @@ class TestTheTexts:
                 "note | you: Exegete never deletes them, and a restore keeps "
                 "them as they are (and leaves the backup's copy in the "
                 "backup) |") in files
+        # (v0.15.4, the readability reading: the exceptions in a sentence
+        # of their own)
         assert ("They travel with the project into every backup (Exegete's, "
-                "and QualCoder's if you use it) and every copy, apart from "
-                "files whose names those leave out (lock files, "
-                "`search.sqlite` and SQLite's side files, and in QualCoder's "
-                "backups, audio and video when its settings say so), and to "
-                "any service that syncs the project's folder.") in files
+                "and QualCoder's if you use it) and every copy, and to any "
+                "service that syncs the project's folder. The exceptions are "
+                "files whose names those backups and copies leave out: lock "
+                "files, `search.sqlite` and SQLite's side files, and in "
+                "QualCoder's backups, audio and video when its settings say "
+                "so.") in files
         assert "this folder with it" not in files
         backups = _flat(privacy[privacy.index(
             "\n## Backups, project copies, and the `ai_data/` folder\n"):])
@@ -1283,23 +1289,40 @@ class TestTheTexts:
                 "normal: QualCoder rebuilds it on project open. A restore "
                 "keeps the project's `Exegete` folder as it is, with every "
                 "file in it, those whose names backups leave out included: "
+                # (v0.15.4, the readability reading: the aside and the
+                # case without a folder, sentences of their own)
                 "it leaves the folder where it is. It leaves the backup's "
-                "copy of that folder in the backup (QualCoder, if you use it, "
-                "removes its own older backups when it closes a project, so a "
-                "copy in one of those may not stay); when the project has no "
-                "such folder, a restore does not bring the backup's back, and "
-                "you can copy it into the project yourself.") in backups
+                "copy of that folder in the backup. (QualCoder, if you use "
+                "it, removes its own older backups when it closes a project, "
+                "so a copy in one of those may not stay.) When the project "
+                "has no such folder, a restore does not bring the backup's "
+                "back, and you can copy it into the project yourself.") \
+            in backups
         assert "stays in the backup" not in _flat(privacy)
         # exegete.json: rolled back with the rest of the project, not of
-        # the folder
+        # the folder (v0.15.4: nor of the sessions folder, which a restore
+        # keeps too, as TOOLS.md says)
         assert ("a restore rolls it back with the rest of the project (all "
-                "but its `Exegete`, `audio` and `video` folders, which a "
-                "restore keeps).") in _flat(privacy)
+                "but its `Exegete`, `Exegete coding sessions`, `audio` and "
+                "`video` folders, which a restore keeps).") in _flat(privacy)
         # the passage on pseudonyms.json no longer says the whole folder
         assert "rolls the whole folder back" not in _flat(privacy)
-        assert ("`restore_backup` rolls the project back (all but its "
-                "`Exegete`, `audio` and `video` folders, which a restore "
-                "keeps), this file with it") in _flat(privacy)
+        # (v0.15.4, the readability reading: the file first, the folders a
+        # restore keeps after it)
+        assert ("`restore_backup` rolls the project back, this file with it, "
+                "all but its `Exegete`, `Exegete coding sessions`, `audio` "
+                "and `video` folders, which a restore keeps.") \
+            in _flat(privacy)
+        assert "all but its `Exegete`, `audio`" not in _flat(privacy)
+        # (v0.15.4) and the section on backups says why the sessions
+        # folder is kept, as the restore's note does
+        assert server.SESSIONS_FOLDER_KEPT_NOTE.startswith(
+            f"The project's {private_files.SESSIONS_FOLDER} folder")
+        assert ("A restore keeps the project's `Exegete coding sessions` "
+                "folder as it is too, and leaves the backup's copy in the "
+                "backup. The backup's older sessions would otherwise take "
+                "away the decisions made since, and bring back sessions "
+                "deleted since.") in backups
 
     def test_the_changelog(self):
         changelog = _flat(_read("CHANGELOG.md"))

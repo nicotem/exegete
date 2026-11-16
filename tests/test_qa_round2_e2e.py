@@ -30,6 +30,7 @@ from exegete.database import (
     QUALCODER_LOCK_FILENAME,
     validate_qda_path,
 )
+from exegete.sessions import SessionManager
 
 
 FULLTEXT = "This is interview text. I feel stressed about deadlines. I cope by exercising."
@@ -224,7 +225,12 @@ class TestUnhappyPaths:
     def test_wrong_project_selected_mid_session(self, setup_server,
                                                 qualcoder_db_path, tmp_path):
         """Session created in A, project B selected: every session-consuming
-        write refuses and B is untouched."""
+        write refuses and B is untouched. (v0.15.4: a session kept on this
+        computer, as every session was before 0.15.4; one kept in project
+        A is not found from B, and a copy of A carries its own:
+        tests/test_v0154_sessions_with_project.py.)"""
+        server.session_manager = SessionManager(
+            str(server.session_manager.storage_dir))
         sid = _session_id(server.start_coding_session([1], instruction="test"))
         rec = json.loads(server.record_suggestions(sid, [{"reading": "explicit",
             "file_id": 1, "code_name": "Stress",

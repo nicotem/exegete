@@ -1103,10 +1103,12 @@ class TestTheDocuments:
                 "your word, `undo_changes` also removes",
                 "The files you fill in are never returned to the assistant",
                 # piece 2's fix round 2: backups leave out files by name
+                # (v0.15.4, the readability reading: the exceptions in a
+                # sentence of their own, after the places)
                 "They travel with the project into every backup (Exegete's, "
-                "and QualCoder's if you use it) and every copy, apart from "
-                "files whose names those leave out",
-                "and to any service that syncs the project's folder.",
+                "and QualCoder's if you use it) and every copy, and to any "
+                "service that syncs the project's folder. The exceptions are "
+                "files whose names those backups and copies leave out",
                 "These rules govern what passes through Exegete, not what an "
                 "assistant can reach by other routes. Imagine you tell the "
                 "assistant that Exegete refused a file you filled in",
@@ -1117,14 +1119,21 @@ class TestTheDocuments:
         assert "—" not in section
 
     def test_privacy_lists_the_folder_among_what_stays_local(self):
+        # (v0.15.4, PRIVACY read whole: the list "What stays local, always"
+        # went into "Files Exegete keeps on your computer", which gives the
+        # folder its row in the table and its place among the project's
+        # files, kept by you and never returned to the assistant)
         local = _flat(_read("PRIVACY.md"))
-        local = local[local.index("What stays local, always"):]
-        item = ("- the project's `Exegete` folder (v0.15.0), with the files "
-                "you fill in for it: yours to keep or delete; never returned "
-                "to the assistant (\"Files Exegete keeps on your computer\")")
-        assert item in local
-        assert local.index("- the reading folder (v0.14.3)") < \
-            local.index(item) < local.index("- the texts an import's preview")
+        local = local[local.index("## Files Exegete keeps on your "
+                                  "computer"):]
+        assert ("| Files you fill in | the `Exegete` folder inside the "
+                "project |") in local
+        assert ("you: Exegete never deletes them, and a restore keeps them "
+                "as they are") in local
+        assert ("the **`Exegete` folder**, with the files you fill in "
+                "(below)") in local
+        assert ("**Files you fill in.** The files you fill in are never "
+                "returned to the assistant") in local
 
     def test_tools_and_the_changelog(self):
         tools = _flat(_read("TOOLS.md"))

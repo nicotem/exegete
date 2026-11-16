@@ -15,6 +15,7 @@ only by its spelling; the list of projects leaving out what is inside
 one; and a folder swapped for a link after its check, never followed.
 """
 
+import inspect
 import json
 import os
 import stat
@@ -96,7 +97,8 @@ class TestNarrowingWhatAnAssistantCanReach:
         assert ("If you want to be sure that what you write never reaches an "
                 "assistant, a safer way is to prepare pseudonymised copies "
                 "elsewhere, before the documents come to this computer, as "
-                "\"What pseudonymisation is for\" suggests: then no list of "
+                # (v0.15.4, the readability reading: two sentences)
+                "\"What pseudonymisation is for\" suggests. Then no list of "
                 "real names need be written on this computer at all."
                 ) in section
         assert ("you could keep the project in a folder no assistant with "
@@ -149,16 +151,18 @@ class TestThePlacesAndTheTable:
                 "file\"); - while an import reads a document, a working "
                 "folder in the system's temporary folder, which it removes "
                 "when that reading ends. Nowhere else, apart from one check "
-                "you run yourself:") in section
+                # (v0.15.4, the readability reading: where it is run)
+                "you run yourself in the Terminal:") in section
         # (the staleness audit of 20 October 2026: the transition check,
         # which reads the hosts' configuration files and, asked to tidy,
         # removes the old link and Claude Desktop's old logs)
         for words in ("`exegete --check-transition` reads the assistant "
                       "apps' configuration files", "and never changes them",
-                      "with `--tidy` it removes the link left at "
-                      "`~/.qualcoder_mcp`", "with `--tidy-old-logs` as well, "
-                      "Claude Desktop's log files under the extension's "
-                      "earlier name"):
+                      # (v0.15.4, the readability reading: a sentence each)
+                      "With `--tidy` it removes the link left at "
+                      "`~/.qualcoder_mcp`", "With `--tidy-old-logs` as well, "
+                      "it also removes Claude Desktop's log files under the "
+                      "extension's earlier name"):
             assert words in section, words
 
     def test_the_earlier_names_in_sentences_of_their_own(self):
@@ -167,7 +171,9 @@ class TestThePlacesAndTheTable:
                 "Exegete's own folder was `~/.qualcoder_mcp` before 0.14.1: "
                 "since "
                 "then Exegete keeps a link under that name pointing at "
-                "`~/.exegete`, as \"How your data flows\" says.") in section
+                # (v0.15.4, PRIVACY read whole: the folder's account moved
+                # into this section, under "The earlier name")
+                "`~/.exegete` (\"The earlier name\", below).") in section
         # the maintainer's sitting of 19 October 2026: the update moved a
         # setting left at the earlier default; said as seen, once, with a
         # folder chosen by hand said to be unchecked (the staleness audit of 20
@@ -199,11 +205,25 @@ class TestThePlacesAndTheTable:
         assert ("| Exegete's working state | `~/.exegete`, hidden on macOS "
                 "and Linux |") in section
         # v0.15.2: and the records of changes once a day old
+        # (v0.15.4, PRIVACY read whole: the account of those texts is in
+        # this section now, below the table)
+        # (v0.15.4's release preparation: a session's record of approvals
+        # goes with its session, set aside before the session's file is
+        # removed and dropped after, or at a save once none of its
+        # approvals counts, so it is not among what stays)
         assert ("| Exegete removes the texts an import's preview read, as "
-                "\"How your data flows\" says, and a change's record once it "
+                "below, and a change's record once it "
                 "is a day old; coding sessions go at your "
-                "word (`delete_coding_session`); the "
-                "rest stays until you delete it.") in section
+                "word (`delete_coding_session`), and a record of approvals "
+                "goes with its session, or once no approval in it counts; "
+                "the rest stays until you delete it.") in section
+        from exegete import sessions
+        delete = inspect.getsource(sessions.SessionManager.delete_session)
+        assert "aside = self._forget_approvals(project, session_id)" \
+            in delete
+        assert "drop_record_set_aside(aside)" in delete
+        settle = inspect.getsource(sessions.SessionManager._settle_record)
+        assert "remove_record(project_id, session.session_id)" in settle
         # (v0.15.1: cleanup_old_sessions removed, as announced in 0.14)
         assert "cleanup_old_sessions" not in section
         assert "says for each" not in section
@@ -213,11 +233,12 @@ class TestThePlacesAndTheTable:
     def test_counted_never_named_and_the_systems_own_files(self):
         """Fix round 2: which files are named, said plainly."""
         section = _files_section()
-        assert ("Exegete names only the files it makes there (the note, and "
-                "the files it gives you to fill in); anything you add "
+        # (v0.15.4, the readability reading: one fact a sentence)
+        assert ("Exegete names only the files it makes there: the note, and "
+                "the files it gives you to fill in. Anything you add "
                 "yourself is counted, never named, since a name you give a "
-                "file may hold a participant's name, and the count can "
-                "include hidden files your system keeps there.") in section
+                "file may hold a participant's name. The count can include "
+                "hidden files your system keeps there.") in section
 
     def test_the_file_manager_on_every_system(self):
         section = _files_section()
@@ -486,8 +507,10 @@ class TestAFolderSwappedForALink:
         real = private_files._check_folder
         swapped = []
 
-        def check(top):
-            info = real(top)
+        # (v0.15.4: the step takes the folder's words too, for the
+        # sessions folder's refusals)
+        def check(top, *words):
+            info = real(top, *words)
             if not swapped:
                 swapped.append(True)
                 os.rename(top, top.with_name("Exegete, moved"))

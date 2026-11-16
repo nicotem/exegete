@@ -119,7 +119,7 @@ class TestTheOpeningText:
         # (v0.15.2, the opening texts: QualCoder said once what it is,
         # which takes the text to 2,046)
         assert short.startswith(
-            "Exegete is a qualitative analysis application for working with "
+            "Exegete is a qualitative data analysis application for working with "
             "the researcher on their project, in the format of QualCoder, a "
             "free qualitative analysis program. ")
         assert server.BRIEF_START in short
@@ -257,7 +257,7 @@ class TestTheStartTool:
             " " + server.BRIEF_START, "")
         assert "read_brief" not in answer
         assert answer.startswith(
-            "Exegete is a qualitative analysis application for working with "
+            "Exegete is a qualitative data analysis application for working with "
             "the researcher on their project, in the format of QualCoder, a "
             "free qualitative analysis program.")
         assert "\nThe rules that matter most:\n1. " in answer

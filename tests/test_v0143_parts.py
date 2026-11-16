@@ -5,7 +5,9 @@
 returned a whole file's text with no limit; a long document overflowed
 Claude Code's 25,000-token cap on one answer. They now return a part at
 a time, with whole-file positions, and say where the next part starts.
-A file that fits one part reads as before.
+A file that fits one part reads as before. Since v0.15.4 each answer is
+held to parts.BOUND, in bytes as a host receives it
+(tests/test_v0154_smaller_parts.py measures it as Codex does).
 """
 
 import asyncio
@@ -22,9 +24,15 @@ import exegete.server as server  # noqa: E402
 from exegete import parts  # noqa: E402
 
 SENTENCE = "The ward was quiet that night, and nobody came. "
-# An answer must stay well inside Claude Code's 25,000 tokens: at the
-# estimate's 3.5 characters a token for English JSON, 90,000 characters.
-MAX_ANSWER = 90_000
+# An answer stays within the bound in bytes (v0.15.4), measured as a
+# host receives it: JSON-encoded once more, as a tool's structured
+# content carries it, in UTF-8
+MAX_ANSWER = parts.BOUND
+
+
+def received(raw: str) -> int:
+    return len(json.dumps({"result": raw}, separators=(",", ":"),
+                          ensure_ascii=False).encode("utf-8"))
 
 
 def host(tool: str, **args):
@@ -73,7 +81,7 @@ class TestTheTool:
         pieces, seen, start, answers = [], set(), 0, 0
         while True:
             raw = host("read_file_with_codings", file_id=60, start=start)
-            assert len(raw) < MAX_ANSWER
+            assert received(raw) <= MAX_ANSWER
             answer = json.loads(raw)
             answers += 1
             assert "full_text" not in answer
@@ -83,7 +91,12 @@ class TestTheTool:
             pieces.append(answer["part_text"])
             for segment in answer["coded_segments"]:
                 p0, p1 = segment["position_start"], segment["position_end"]
-                assert long_file[p0:p1] == segment["text"]   # whole-file
+                if segment.get("reaches_beyond_part"):
+                    # runs past the part: no passage (v0.15.4)
+                    assert "text" not in segment
+                    assert p0 < start or p1 > part["end"]
+                else:
+                    assert long_file[p0:p1] == segment["text"]  # whole-file
                 assert p0 < part["end"] and p1 > start
                 seen.add(segment["segment_id"])
             if part["continues_at"] is None:
@@ -115,7 +128,7 @@ class TestTheTool:
             "VALUES (61, 'greek.txt', ?, 'TestCoder', '2026-10-01')", (text,))
         raw = host("read_file_with_codings", file_id=61)
         answer = json.loads(raw)
-        assert len(raw) < MAX_ANSWER * 1.2
+        assert received(raw) <= MAX_ANSWER
         assert len(answer["part_text"]) < 20_000
 
     def test_a_coding_after_an_emoji_says_where_its_words_are(
@@ -160,8 +173,9 @@ class TestTheTool:
 class TestTheResources:
 
     def test_the_file_resource_and_its_later_parts(self, long_file):
-        first = json.loads(resource("exegete://files/60"))
-        assert len(json.dumps(first)) < MAX_ANSWER
+        raw = resource("exegete://files/60")
+        assert received(raw) <= MAX_ANSWER
+        first = json.loads(raw)
         end = first["part"]["continues_at"]
         assert first["content"] == long_file[:end]
         assert f"exegete://files/60/from/{end}" in first["part"]["note"]
@@ -171,7 +185,7 @@ class TestTheResources:
 
     def test_the_case_resource_is_cut(self, long_file):
         raw = resource("exegete://cases/1")
-        assert len(raw) < MAX_ANSWER
+        assert received(raw) <= MAX_ANSWER
         case = json.loads(raw)
         cut = [s for s in case["text_segments"] if "text_continues_at" in s]
         assert cut and "read_file_with_codings" in case["parts_note"]
@@ -179,12 +193,17 @@ class TestTheResources:
         assert segment["text"] == long_file[:segment["text_continues_at"]]
 
 
-class TestTheEstimate:
+class TestThePartsSize:
 
-    def test_english_gets_about_sixty_thousand_characters(self):
-        text = SENTENCE * 5000
-        end = parts.choose_end(text, 0)
-        assert 55_000 <= end <= 72_000
+    def test_a_part_of_the_long_file_is_30_000_to_40_000_characters(
+            self, long_file):
+        answer = json.loads(host("read_file_with_codings", file_id=60))
+        assert 30_000 <= len(answer["part_text"]) <= 40_000
 
-    def test_always_at_least_one_character(self):
-        assert parts.choose_end("😀" * 50_000, 0, budget=1) >= 1
+    @pytest.mark.parametrize("start", [0, 10])
+    def test_a_part_is_at_least_one_character(self, start):
+        """Even where every end's answer passes what is allowed."""
+        text = "😀" * 50_000
+        end = parts.end_of_part(text, start,
+                                lambda e: 10 ** 9 * (e - start))
+        assert end == start + 1

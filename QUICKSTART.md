@@ -1,10 +1,10 @@
 # Quick start: Exegete by hand in Claude Desktop
 
-Exegete (formerly qualcoder-mcp) is a qualitative analysis application
-you use in conversation with an AI assistant, compatible with QualCoder.
-QualCoder is free software for qualitative analysis. This guide sets up
-Exegete by hand: you type a few commands in a Terminal window and edit
-Claude Desktop's settings file.
+Exegete (formerly qualcoder-mcp) is agentic QDA: a qualitative data
+analysis application you use in conversation with an AI assistant,
+compatible with QualCoder. QualCoder is free software for qualitative
+analysis. This guide sets up Exegete by hand: you type a few commands in
+a Terminal window and edit Claude Desktop's settings file.
 
 If you are new to Exegete, the one-click extension for Claude Desktop
 needs no typed commands: [README, "One click in Claude Desktop"](https://github.com/nicotem/exegete#one-click-in-claude-desktop).
@@ -26,8 +26,8 @@ needs no typed commands: [README, "One click in Claude Desktop"](https://github.
 In Claude Code, leave out step 3's settings file. Instead, run
 `claude mcp add exegete -- <venv-python> -m exegete.server` in an empty
 folder, with the path `which python` gives in place of `<venv-python>`
-(the Terminal guide, "Claude Code"). Started in your home folder, or in
-one that holds a study, Claude Code reads that study without asking.
+(the Terminal guide, "Claude Code"). If you start Claude Code in your home
+folder, or in one that holds a study, it reads that study without asking.
 
 Claude Code opens files by itself, outside Exegete. A study kept on the
 same computer is within its reach, wherever your practice projects are,
@@ -35,9 +35,9 @@ and Exegete's list of projects tells it where each listed project is.
 What Claude Code opens goes to Anthropic, the AI provider that runs its
 model. While training is on, Anthropic may train its models on it. If
 that matters for a study, you could work on that study in Claude
-Desktop's chat, with computer use off, no folder that holds your
-projects or transcripts connected, and no other extension that reads
-files ([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
+Desktop's chat. There, you could keep computer use off, connect no
+folder that holds your projects or transcripts, and add no other
+extension that reads files ([PRIVACY.md, "Assistants that open files by themselves"](PRIVACY.md#assistants-that-open-files-by-themselves)).
 
 ## Installation steps
 
@@ -142,9 +142,9 @@ project selected.
 On this route, a new project goes to `~/Documents/Exegete projects`
 unless `EXEGETE_WORKSPACE` names another folder. iCloud (Desktop and
 Documents) or OneDrive may sync Documents, and so copy your projects,
-with their transcripts, off the computer. A sync service can also copy a
-project's database and the working file beside it, the database's
-journal, at different moments, which can leave a damaged copy. You could
+with their transcripts, off the computer. A sync service can also leave
+a damaged copy. It may copy a project's database and the working file
+beside it, the database's journal, at different moments. You could
 name a folder outside Documents, such as `~/Exegete projects`. To do so,
 add `"EXEGETE_WORKSPACE": "/Users/yourname/Exegete projects"` as a line
 of the `env` block, with a comma after the line before it (the Terminal
@@ -160,23 +160,22 @@ Quit Claude Desktop completely, with Cmd+Q on a Mac, and open it again.
 codes, memos, names) goes to Anthropic, the AI provider that runs
 Claude's AI model. While training is on, Anthropic may use your
 conversations, with any participants' data in them, to train its models.
-On a personal plan (Free, Pro or Max), the setting "Help improve our AI
-models" at https://claude.ai/settings/data-privacy-controls switches
+On a personal plan (Free, Pro, Max or Ultra), the setting "Help improve our
+AI models" at https://claude.ai/settings/data-privacy-controls switches
 training off (Anthropic's pages, read on 4 November 2026). The same pages
 say that rating a reply, with a thumbs up or down, can still let Anthropic
-train on that conversation, and so can its being flagged for a safety review.
+train on that conversation, and so can a flag for a safety review.
 [Where your data goes](https://github.com/nicotem/exegete#where-your-data-goes),
 in the README, says the rest: the checks before participants' data, and
 which assistants open files by themselves.
 
-If you have no project yet, ask Claude to "Create a new project in
-Exegete called Practice". Exegete first asks the assistant to check your
-coder name with you and to say where the project will be made. If your
-coder name is already set, the project is made with that name at once,
-and the answer says where. You set it with `EXEGETE_CODER_NAME` in the
-`env` section above, or with "Your coder name" in the extension's
-settings, which reaches Exegete once Claude Desktop has been quit and
-opened again.
+If you have no project yet, ask Claude to "Create a new project in Exegete
+called Practice". Exegete first asks the assistant to check your coder
+name with you and to say where the project will be made. If your coder
+name is already set, the project is made with that name at once, and the
+answer says where. You set it with `EXEGETE_CODER_NAME` in the `env`
+section above, or with "Your coder name" in the extension's settings,
+which reaches Exegete once Claude Desktop has been quit and opened again.
 
 Then try "Can you give me a summary of my project?", "What codes do I
 have?" and "Show me the most frequently used codes". The "Example
@@ -191,7 +190,7 @@ In a Terminal, go into Exegete's folder with `cd`, run `git pull`, then
 for PDF and EPUB as well. New tools appear once the app is open again.
 `venv/bin/python -m exegete.server --version` prints the installed
 version, and `venv/bin/pip show exegete` shows it too. Both spell it as
-PyPI does, with an a for alpha: `0.15.3a0` for `0.15.3-alpha`. An
+PyPI does, with an a for alpha: `0.15.4a0` for `0.15.4-alpha`. An
 update never touches your projects or their backups: it changes only
 Exegete's own code.
 
@@ -233,18 +232,19 @@ section and spelt correctly. Otherwise, ask Claude to list and select a
 project. The error also gives the last project used on this computer,
 if it still exists, so Claude can open it again in one step.
 
-**"Database file not found"**: check that the path to the `.qda` folder
-is right and complete, and that the folder holds `data.qda`.
+**"...EXEGETE_PROJECT_PATH was not found"**, as Exegete starts, or **"The
+project set in the host's configuration could not be opened"**, in its
+answers: check that the path to the `.qda` folder is right and complete,
+and that the folder holds `data.qda`.
 
-**"Module not found"**: check that you ran `pip install -e .` in the
-virtual environment, or `pip install -e ".[pdf-epub]"` for PDF and EPUB
-as well, and that the Python path in the settings file is the virtual
-environment's.
+**"Module not found"**: check that you ran `pip install -e .` in the virtual
+environment, or `pip install -e ".[pdf-epub]"` for PDF and EPUB as well, and
+that the Python path in the settings file is the virtual environment's.
 
 ## Getting help
 
 - [The Terminal guide's troubleshooting section](docs/installing-from-the-terminal.md#troubleshooting)
 - If you use QualCoder, [its documentation](https://github.com/ccbogel/QualCoder/wiki)
 - [GitHub Issues](https://github.com/nicotem/exegete/issues), the only
-  support channel. It is public, so leave out participants' data.
-  Requests by email receive no reply ([SUPPORT.md](SUPPORT.md)).
+  support channel. It is public: participants' data put into an issue is
+  published with it. Requests by email get no reply ([SUPPORT.md](SUPPORT.md)).

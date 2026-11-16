@@ -3,23 +3,28 @@
 NOTICE, read in full. The facts their fix round corrected, each held to
 its source.
 
-- NOTICE names six with the EbookLib release that needs it. EbookLib
-  0.20, the release uv.lock gives, requires lxml and six; 0.21, on PyPI
-  since 1 November 2026, requires lxml alone (PyPI's metadata for both,
-  read on 4 November 2026). pyproject.toml's `ebooklib>=0.20` lets an
-  install from PyPI take 0.21, and nothing else in the lock needs six,
-  so six comes with the lock's EbookLib alone.
+- NOTICE names six only while the lock's EbookLib needs it. EbookLib
+  0.20 requires lxml and six; 0.21, on PyPI since 1 November 2026 and
+  in uv.lock from v0.15.4, requires lxml alone (PyPI's metadata for
+  both, read on 4 November 2026), and nothing else in the lock needs
+  six, so NOTICE no longer names it.
 - CONTRIBUTING's map says that open_file_for_reading shows or opens a
   read-only copy of the original, never the original itself (reading.py;
   tests/test_v0143_reading.py, TestTheOriginal, holds the behaviour).
 - SUPPORT's warnings about what an issue publishes: an issue is public;
   a line of the names file or of pseudonyms.json pairs a real name with
-  its pseudonym; the host's log keeps every request and every answer.
-  These safety sentences are the fact, so their words are held.
+  its pseudonym; the host's log can hold every request and every answer
+  (v0.15.4: dated from MCP's page on debugging, which lists message
+  exchanges among what Claude Desktop's logs capture). These safety
+  sentences are the fact, so their words are held.
 - CONTRIBUTING says that on Windows onnxruntime makes a few reports as
   it loads, before Exegete's switch can reach them
   (import_reading._onnxruntime_reports_off; PRIVACY.md, "How your data
   flows").
+- v0.15.4: CONTRIBUTING gives onnxruntime's own note on Windows beside
+  what the Windows package the lock installs does, and the Python
+  releases with which the optional part brings PyMuPDF 2; the bug report
+  form says what a copied conversation and a copy of a project carry.
 """
 
 import inspect
@@ -122,8 +127,15 @@ def test_support_warns_what_an_issue_and_a_log_publish():
     assert (f"A line of the names file, `{private_files.NAMES_FILE}`, or an "
             f"entry of the project's `{PSEUDONYMS_JSON_NAME}` pairs a real "
             f"name with its pseudonym.") in support
-    assert ("a file that records every request to Exegete and every "
-            "answer, the text of your documents included") in support
+    assert ("So the log can hold every request to Exegete and every "
+            "answer, the text of your documents included.") in support
+    # (v0.15.4) the claim is dated, in the form the dates check reads,
+    # from the page that lists what Claude Desktop's logs capture
+    assert ("https://modelcontextprotocol.io/docs/tools/debugging"
+            in support)
+    assert re.search(r"Read on \d{1,2} [A-Z][a-z]+ 20\d\d, it lists message "
+                     r"exchanges among what Claude Desktop's logs capture",
+                     support)
     assert ("Read a log before you copy any of it into an issue, and copy "
             "only the lines about the problem.") in support
     assert ("They include the request that failed and Exegete's answer, "
@@ -141,3 +153,92 @@ def test_contributing_says_onnxruntime_reports_on_windows_as_it_loads():
     assert 'PRIVACY.md, "How your data flows"' in sentence
     assert "\n## How your data flows\n" in (REPO / "PRIVACY.md").read_text(
         encoding="utf-8")
+
+
+def test_contributing_gives_onnxruntimes_own_note_beside_the_package():
+    """v0.15.4: onnxruntime's own note, Privacy.md in its package, says
+    that its official releases for Windows report as on Linux and macOS
+    and read ORT_DISABLE_TELEMETRY, and that its older way of reporting
+    on Windows does not read it. The Windows package the lock installs
+    reports that older way (PRIVACY.md, "How your data flows", from its
+    files), so CONTRIBUTING gives both, not a bare "does not read"."""
+    contributing = _flat("CONTRIBUTING.md")
+    assert "On Windows, onnxruntime does not read the setting" \
+        not in contributing
+    # (the readability reading: the note named first, then what it says
+    # for Windows, a sentence each, and the release the lock gives)
+    for words in ("onnxruntime's package holds a note, `Privacy.md`. For "
+                  "Windows, the note says that onnxruntime's official "
+                  "releases report as they do on Linux and macOS, and read "
+                  "the setting.",
+                  "It also says that onnxruntime's older way of reporting "
+                  "on Windows, through Windows' own diagnostic data, does "
+                  "not read the setting."):
+        assert words in contributing, words
+    lock = tomllib.loads((REPO / "uv.lock").read_text(encoding="utf-8"))
+    release = next(package["version"] for package in lock["package"]
+                   if package["name"] == "onnxruntime")
+    assert (f"The lock, `uv.lock`, installs onnxruntime {release}, whose "
+            f"Windows package reports in that older way, as its files "
+            f"show.") in contributing
+    assert ("comes from onnxruntime's source code and the Windows package "
+            "Exegete installs") in _flat("PRIVACY.md")
+    # PyMuPDF 2, and onnxruntime with it, only with Python 3.11 to 3.14,
+    # as pyproject.toml's markers give it
+    assert ("On Windows x64, Linux and Macs with Apple silicon, with "
+            "Python 3.11 to 3.14, the part brings PyMuPDF 2") in contributing
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    assert ("\"pymupdf>=2.0,<3; python_version >= '3.11' and "
+            "python_version < '3.15'") in pyproject
+
+
+def test_onnxruntimes_note_says_what_contributing_reports():
+    """The note itself, where the package is installed: found, not
+    imported, since importing onnxruntime starts its reports."""
+    import importlib.util
+    spec = importlib.util.find_spec("onnxruntime")
+    places = list(spec.submodule_search_locations or []) if spec else []
+    notes = [Path(place) / "Privacy.md" for place in places
+             if (Path(place) / "Privacy.md").is_file()]
+    if not notes:
+        import pytest
+        pytest.skip("no onnxruntime package with its note here")
+    note = " ".join(notes[0].read_text(encoding="utf-8").split())
+    assert "for other Windows builds including our official releases" in note
+    assert ("The legacy Windows TraceLogging backend does not use this "
+            "environment variable.") in note
+
+
+def test_the_bug_form_says_what_a_conversation_and_a_copy_carry():
+    """v0.15.4: the bug report form's warnings, safety sentences whose
+    words are held. A copied conversation carries the tools' answers,
+    with names and values from the project. An example with names and
+    details removed is still a participant's words (the form, SUPPORT
+    and INSTALL say so). The copy the form suggests holds any names list
+    and names file, as copy_project_to_workspace's description says."""
+    form = _flat(".github/ISSUE_TEMPLATE/bug_report.yml")
+    # (the readability reading: "a real one" named once, and the warning
+    # about it the next sentence, in the form, SUPPORT and INSTALL)
+    real = "a real one with names and details removed"
+    still = ("The real one is still a participant's words, which a search "
+             "can find and someone can recognise. Your ethics approval may "
+             "not allow you to publish it.")
+    for words in ("The tools' answers can also hold the names of files and "
+                  "cases, attribute values, codes and memos, which can "
+                  "identify a participant.",
+                  real, still,
+                  "The copy goes into your folder for projects. It holds the "
+                  "whole project, including any names list and names file, "
+                  "with the real names in them."):
+        assert words in form, words
+    for name in ("SUPPORT.md", "INSTALL.md"):
+        text = _flat(name)
+        assert real in text, name
+        assert still in text, name
+        assert text.index(real) < text.index(still), name
+    source = (REPO / "src/exegete/server.py").read_text(encoding="utf-8")
+    tool = source[source.index("def copy_project_to_workspace("):]
+    tool = " ".join(tool[:tool.index('"""', tool.index('"""') + 3)].split())
+    assert (f"any names list and names file ({PSEUDONYMS_JSON_NAME}, "
+            f"Exegete/{private_files.NAMES_FILE}), with the real names in "
+            f"them") in tool

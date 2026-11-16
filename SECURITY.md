@@ -1,8 +1,9 @@
 # Reporting a security fault
 
 If you find a fault in Exegete that could expose participants' data, or
-let a write damage a project, report it privately rather than in a
-public issue, so that it is not public before a fix is released.
+damage a project when Exegete changes it, report it privately rather
+than in a public issue, so that it is not public before a fix is
+released.
 
 On GitHub, open the repository's Security tab and choose "Report a
 vulnerability"
@@ -17,5 +18,5 @@ characters" or "a code name with an apostrophe", rather than pasting it.
 [SUPPORT.md](SUPPORT.md) says what a log can hold, and what to read in
 one before you copy any of it.
 
-Faults that are not about data exposure or damage to a project go in
-ordinary issues, as [SUPPORT.md](SUPPORT.md) describes.
+Any other fault goes in an ordinary issue, as [SUPPORT.md](SUPPORT.md)
+describes.

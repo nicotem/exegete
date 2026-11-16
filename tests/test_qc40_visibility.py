@@ -656,6 +656,11 @@ class TestWriteEchoesRedactHiddenTargets:
         assert out["success"] is True
         assert out["memo"] == "probe"
         assert out["label"] == "coding 3"
+        # (v0.15.4, PRIVACY's fix round: the coding's id alone, unlike
+        # delete_coding's answer, which gives its code's and file's too)
+        assert out["target_id"] == 3
+        for absent in ("code_id", "file_id", "cid", "fid", "owner"):
+            assert absent not in out, absent
         assert _row(visibility_db,
                     "SELECT memo FROM code_text WHERE ctid = 3")[0] == "probe"
 

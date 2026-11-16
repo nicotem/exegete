@@ -1,11 +1,11 @@
 # Writing guide
 
-Exegete is a qualitative analysis application that a researcher uses in
-conversation with an AI assistant. The assistant works Exegete through
-named actions, called tools; Exegete answers each one, and sometimes
-refuses with a reason. This guide is for anyone who writes for Exegete:
-the documents in this repository, the settings and pages a researcher
-sees on screen, and the texts the assistant receives.
+Exegete is a qualitative data analysis application that a researcher
+uses in conversation with an AI assistant. The assistant works Exegete
+through named actions, called tools; Exegete answers each one, and
+sometimes refuses with a reason. This guide is for anyone who writes for
+Exegete: the documents in this repository, the settings and pages a
+researcher sees on screen, and the texts the assistant receives.
 
 ## Who reads these texts
 

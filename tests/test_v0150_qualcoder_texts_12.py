@@ -187,7 +187,13 @@ SEGMENTS_RULE = (
     "same rule as QualCoder's coding report). " + COMPARED + " Whole-file "
     "links made "
     "in QualCoder end at len-1 or len depending on the dialog, which can "
-    "exclude a coding touching the file end.")
+    "exclude a coding touching the file end."
+    # v0.15.4, the claims audit's point 42: a coding written again for
+    # its case (tests/test_v0154_audit_2.py)
+    " A coding that lies inside two or more overlapping spans of one case "
+    "is written once for each of them, as in QualCoder's own report; "
+    "repeated_rows counts the rows that repeat a coding already written "
+    "for the same case.")
 MATRIX_RULE = (
     "Containment: a coding counts for a case when, and only when, it lies "
     "fully inside one of the case's text spans on the same file (text "

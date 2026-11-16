@@ -339,8 +339,8 @@ def _session():
 
 
 def _session_bytes(sid):
-    return (server.session_manager.storage_dir
-            / f"session_{sid}.json").read_bytes()
+    # (v0.15.4: a new session is kept in its project's sessions folder)
+    return server.session_manager.session_file(sid).read_bytes()
 
 
 def _propose(sid, *names):

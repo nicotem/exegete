@@ -1,9 +1,9 @@
 # qualcoder-mcp is now Exegete
 
-qualcoder-mcp is now called **Exegete**: a qualitative analysis
-application you use in conversation with an AI assistant, compatible
-with QualCoder. Its PyPI name, its command and its Python package are
-`exegete`:
+qualcoder-mcp is now called **Exegete**. It is agentic QDA: a
+qualitative data analysis application you use in conversation with an
+AI assistant, compatible with QualCoder. Its PyPI name, its command and
+its Python package are `exegete`:
 https://pypi.org/project/exegete/ and
 https://github.com/nicotem/exegete.
 

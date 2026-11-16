@@ -70,7 +70,9 @@ NEXT_STEP = (
     "(or, when it could not be opened, where it is). They write each real "
     "name and its pseudonym on a line of their own, save the file, and "
     # the files design, piece 4: the call that saves it
-    "tell you when the list is ready; then call save_names_list. Never "
+    "tell you when the list is ready; then call save_names_list. "
+    # v0.15.4: the file opens in a text editor
+    + server.EDITOR_AI_WARNING + " Never "
     "open or read the file yourself, even when a file tool could.")
 NOT_UTF8_STEP = (
     "The names file there is not saved as UTF-8 text: ask the researcher "
@@ -155,7 +157,8 @@ TOO_LARGE_NEXT_STEP = (
     "did not read it: the researcher may want to look at what it holds. "
     "To start afresh, they can rename it, leaving it in the project's "
     "Exegete folder, which Exegete does not import from; then call "
-    "prepare_names_list again to make a new names file. Never open or "
+    "prepare_names_list again to make a new names file. "
+    + server.EDITOR_AI_WARNING + " Never open or "
     "read the file yourself, even when a file tool could.")
 
 
@@ -1227,6 +1230,7 @@ class TestWhatItSays:
         last sentence stays."""
         assert server.PREPARE_NAMES_LIST_FILL_IN == FILL_IN
         assert " ".join((server.PREPARE_NAMES_LIST_WHERE, FILL_IN,
+                         server.EDITOR_AI_WARNING,
                          server.PREPARE_NAMES_LIST_NEVER_OPEN)) == NEXT_STEP
         for step in (NOT_A_FILE_NEXT_STEP, TOO_LARGE_NEXT_STEP):
             assert FILL_IN not in step
@@ -1317,11 +1321,16 @@ class TestTheDocuments:
         purpose = _flat(privacy[privacy.index(
             "\n## What pseudonymisation is for\n"):])
         purpose = purpose[:purpose.index(" ## ")]
-        assert ("`pseudonyms.json`, if you keep one, the reverse key at its "
-                "root; and the names file, `Names to replace.txt` in the "
-                "project's `Exegete` folder, if you made one, which holds "
-                "real names and their pseudonyms in plain text as "
-                "`pseudonyms.json` does.") in purpose
+        # (v0.15.4, the readability reading: what the folder still holds,
+        # as a list)
+        assert ("- `pseudonyms.json`, if you keep one, the reverse key at "
+                "its root, from which anyone can put the real names back; - "
+                "the names file, `Names to replace.txt` in the project's "
+                "`Exegete` folder, if you made one, which holds real names "
+                "and their pseudonyms in plain text as `pseudonyms.json` "
+                # (v0.15.4: the project's coding sessions follow in the
+                # list, tests/test_v0154_privacy_additions.py)
+                "does;") in purpose
         mitigations = privacy[privacy.index("\n## Practical mitigations\n"):]
         names = mitigations[mitigations.index(
             "- **Pseudonymising a project does not empty it of names.**"):]
@@ -1334,16 +1343,17 @@ class TestTheDocuments:
             "- **The names file** (`Names to replace.txt`), if you made one "
             "with `prepare_names_list`. It sits in the project's `Exegete` "
             "folder and holds real names and their pseudonyms in plain "
-            "text, the same reverse key as `pseudonyms.json`; "
+            # (v0.15.4, the readability reading: one fact a sentence)
+            "text, the same reverse key as `pseudonyms.json`. "
             "`pseudonymise_source`'s preview does not report it. Exegete "
-            "never deletes it, a restore keeps it as it is, and every "
+            "never deletes it, and a restore keeps it as it is. Every "
             "backup and copy of the project made while it is there holds "
             "it, so a project you are about to share is not free of names "
             "while it is there. You can move it out of the project before "
             "sharing, and remove the backups and copies that still hold it "
             "(\"Files Exegete keeps on your computer\"). Once it is out of a "
             "project's `Exegete` folder, Exegete no longer refuses to import "
-            "it, so you may prefer to keep it in a folder you do not ask the "
+            "it. So you may prefer to keep it in a folder you do not ask the "
             "assistant to bring documents from.")
 
     def test_privacy_says_what_the_counts_show_and_warns_of_the_app(self):
@@ -1359,19 +1369,20 @@ class TestTheDocuments:
         assert (
             "When a names file is already there, `prepare_names_list` reads "
             "it for counts only: the lines it read, the lines it could not read, "
+            # (v0.15.4, the readability reading: one fact a sentence)
             "and how many entries of the project's names list are on no "
-            "line of it. Because those counts compare the list with the "
-            "file, an assistant that adds a name to the list (with a typed "
-            "mapping saved to it, for instance) can tell from the next count "
-            "whether that name is in your names file; it learns nothing of "
+            "line of it. Those counts compare the list with the file. So an "
+            "assistant that adds a name to the list (with a typed mapping "
+            "saved to it, for instance) can tell from the next count "
+            "whether that name is in your names file. It learns nothing of "
             "names it does not already have. When you say the list is "
-            "ready, `save_names_list` reads the file to check it: its "
+            "ready, `save_names_list` reads the file to check it. Its "
             "preview gives counts, which compare the list with the file in "
             "the same way, and the numbers of the lines to correct, never a "
-            "name; on your word, after a backup, it replaces the list in "
-            "`pseudonyms.json` with the file's names, keeping only the "
-            "list's entries the file cannot hold as a line, and the file "
-            "itself stays as it is. "
+            "name. On your word, after a backup, it replaces the list in "
+            "`pseudonyms.json` with the file's names. It keeps only those of "
+            "the list's entries that the file cannot hold as a line, and the "
+            "file itself stays as it is. "
             # v0.15.1, privacy by audience (the owner, 21 October 2026):
             # the rule says which of the three things it protects
             "Counts and line numbers, never names, protect the key (\"How "
@@ -1380,9 +1391,9 @@ class TestTheDocuments:
             "write in any project's `Exegete` folder, so an export cannot "
             "replace a file you "
             "filled in. The names file opens in the app your computer uses "
-            "for text files: if that app has an AI assistant of its own, "
+            "for text files. If that app has an AI assistant of its own, "
             "what the file holds can reach that assistant's provider when "
-            "it is used on the file, so you may prefer to fill the file in "
+            "it is used on the file. So you may prefer to fill the file in "
             "with an editor whose AI features are switched off.") in files
         assert files.index("and to any service that syncs the project's "
                            "folder.") < files.index(

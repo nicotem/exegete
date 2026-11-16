@@ -51,7 +51,7 @@ pass on, so the brief reaches the assistant four ways:
 
 - **The opening text**, a short version of the brief. Claude Code shows
   it (and keeps the first 4,096 characters of a server's opening text,
-  2,048 before its version 2.1.296; this one is 2,042). Claude Desktop
+  2,048 before its version 2.1.296; this one is 2,047). Claude Desktop
   does not pass it on (checked on 9 November 2026), and LM Studio does
   not support it.
 - **The tool `read_brief`**, in every tool set. Its description asks the
@@ -400,8 +400,8 @@ The descriptions are longer on Python 3.11 and 3.12 than on 3.13, which
 strips the indentation they are written with. On Python 3.13, 4 of
 `full`'s 80 descriptions are longer than 4,096 characters
 (`pseudonymise_source`, about 18,000; `start_coding_session`, about
-6,000; `search_files`, about 4,500; `record_suggestions`, about 4,500).
-On 3.11 and 3.12, the same four are, at about 19,000, 6,300, 4,900 and
+6,000; `search_files`, about 4,800; `record_suggestions`, about 4,500).
+On 3.11 and 3.12, the same four are, at about 19,000, 6,300, 5,200 and
 4,700.
 [docs/snapshot/sizes.json](snapshot/sizes.json) gives each
 description's exact length on Python 3.13.
@@ -588,8 +588,8 @@ reports place the practical minimum for work with many tools around
 14B parameters.
 
 **Step 3. Use the small tool set.** Exegete offers 80 tools by default,
-and the serialised tool definitions alone measure about 200,000
-characters, roughly 50,000 tokens, against about 76,000 characters,
+and the serialised tool definitions alone measure about 210,000
+characters, roughly 53,000 tokens, against about 76,000 characters,
 roughly 19,000 tokens, for the 28 tools of `core` (measured on Python 3.13
 with the libraries in `uv.lock`; TOOLS.md says how, and
 [docs/snapshot/](snapshot/) gives the exact figures). The full set
@@ -605,7 +605,7 @@ load settings, or its default settings
 length to at least 32k for the core toolset (that leaves about 13k
 tokens for your transcript excerpts and conversation; 16k would not even
 hold the schema and is not workable), or 64k if you must run the full
-surface (its schema alone is about 50,000 tokens).
+surface (its schema alone is about 53,000 tokens).
 
 **Step 5. Add Exegete.** Open the Program tab in the right sidebar,
 click Install, then Edit mcp.json, and add these lines (LM Studio
@@ -894,14 +894,14 @@ What the lines do:
   take more than a minute. These two values are suggestions, which this
   project has not measured with Codex.
 
-Codex gives the model a tool's answer cut to the model's budget: about
-48,000 bytes for the models Codex 0.166.0 lists, with the middle of the
-answer left out (Codex's source, read on 4 November 2026). A part of a
-long file from `read_file_with_codings` is about 60,000 characters of
-English, so in Codex the assistant can miss the middle of each part
-without being told. Codex's setting `tool_output_token_limit` raises
-that budget (its source); Codex's own documentation says where to set
-it, and this project has not tried a value with Codex.
+Codex keeps 48,000 bytes of a tool's answer for the models it lists and 12,000
+bytes for others, such as a local model, cutting a longer answer's middle and
+leaving a marker (Codex 0.167.0's source, read on 10 November 2026). A part of
+a file is at most 40,000 bytes unless long memos, or many codings, annotations
+or a case's excerpts, come with it. A smaller `limit` shortens other long
+answers. Untried here: `tool_output_token_limit` sets the budget of every tool
+and resource (10,000 tokens for listed models), and `output_token_limit` under
+`[mcp_servers.exegete.tools.read_file_with_codings]` that tool's alone.
 
 If the file already has an entry named `exegete` (because you added it
 in the app's settings screen or with `codex mcp add`, below), do not
@@ -1077,7 +1077,7 @@ the safeguard" says holds in Codex too.
   back on). OpenAI's pricing page: "Every MCP server adds more context
   to your messages and uses more of your limit. Disable MCP servers
   when you don’t need them." Exegete's tool descriptions are long
-  (about 200,000 characters with `full`; TOOLS.md says how that
+  (about 210,000 characters with `full`; TOOLS.md says how that
   was measured), so switch it off in chats that do not need it.
 - Problems and results, good or bad, go to
   [GitHub Issues](https://github.com/nicotem/exegete/issues): say which
@@ -1340,7 +1340,7 @@ In the Terminal, the command with `--version` prints `exegete` and the
 version, then stops: `~/exegete-venv/bin/exegete --version` for the
 virtual environment, `exegete --version` after pipx or uv tool, and
 `~/Documents/exegete/venv/bin/python -m exegete.server --version` for a
-copy of the source. The version `0.15.3-alpha` shows as `0.15.3a0`, its
+copy of the source. The version `0.15.4-alpha` shows as `0.15.4a0`, its
 normalised form. Started without `--version`, Exegete prints its
 start-up lines and a short note: an app such as Claude Desktop
 normally starts it and talks to it, so started by hand it waits for an
@@ -1440,7 +1440,7 @@ and EPUB: to be sure of keeping it, write
 fetched first, until the command names a version or uv's cache is
 cleared. To update, quit the host, change `exegete` (or the earlier
 name, qualcoder-mcp) in that entry to `exegete@` and the newest version
-as PyPI spells it, for example `exegete@0.15.3a0`, and open the host
+as PyPI spells it, for example `exegete@0.15.4a0`, and open the host
 again: it fetches that version when it next starts, which needs the
 internet that once. With the check for new versions on, "How do I update
 Exegete?" gives this step with the version filled in. An entry that runs

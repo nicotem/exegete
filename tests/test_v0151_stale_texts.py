@@ -124,7 +124,7 @@ def test_compare_coders_names_what_privacy_says_it_names():
     assert re.search(r'"file_name": file_info\["file_name"\]', body)
     privacy = _flat("PRIVACY.md")
     assert ("the name of each code and of its category" in privacy and
-            "with `per_file=true`, it also names, under each code, every "
+            "With `per_file=true`, it also names, under each code, every "
             "file either coder coded" in privacy)
 
 
@@ -157,9 +157,32 @@ def test_the_uninstall_says_claude_desktop_s_log_stays(tmp_path):
                   "**Claude Desktop's log of the extension**",
                   "`mcp-server-Exegete.log` in `~/Library/Logs/Claude`",
                   "`mcp-server-qualcoder-mcp.log`",
-                  "keeps every request and every answer in full",
+                  "can hold every request and every answer in full",
                   "Exegete never removes it"):
         assert words in stays, words
+
+
+def test_install_gives_the_linux_log_folder_the_check_reads(tmp_path):
+    """v0.15.4: Claude Desktop runs on Linux as a beta, and MCP's page on
+    debugging, read on 10 November 2026, gives its log folder there as
+    `~/.config/Claude/logs`, the last of the folders the transition check
+    reads. The list of what stays after an uninstall and "Reading the
+    server log" both give it."""
+    assert (transition.claude_log_folders(tmp_path)[-1]
+            == tmp_path / ".config" / "Claude" / "logs")
+    assert "`%APPDATA%\\Claude\\logs` on Windows or `~/.config/Claude/logs` " \
+        "on Linux" in _extension_stays()
+    install = _flat("INSTALL.md")
+    section = install[install.index("### Reading the server log"):]
+    section = section[:section.index("### Where to ask")]
+    # (the readability reading: the page named, with its address, before
+    # the folder it gives)
+    page = "https://modelcontextprotocol.io/docs/tools/debugging"
+    assert page in section
+    assert re.search(r"Read on \d{1,2} [A-Z][a-z]+ 20\d\d, it gives the "
+                     r"log's folder on Linux, where Claude Desktop is a beta, "
+                     r"as `~/\.config/Claude/logs`\.",
+                     section[section.index(page):])
 
 
 def test_the_uninstall_says_the_hosts_records_stay_as_privacy_lists():
@@ -252,7 +275,8 @@ def test_the_backup_before_a_database_change_is_never_copied_as_a_file():
     finish = inspect.getsource(database.QualcoderDatabase.backup_before_write)
     assert "started.finish(copy_as_file=False)" in finish
     privacy = _flat("PRIVACY.md")
-    assert ("the backup Exegete takes before a change to the project's "
+    # (v0.15.4, the readability reading: a sentence of its own)
+    assert ("The backup Exegete takes before a change to the project's "
             "database is never copied as a file") in privacy
     readme = _flat("README.md")
     # (the ignored argument, merged first: "every change", whatever
@@ -311,7 +335,9 @@ def test_privacy_says_when_qualcoder_3_8_keeps_its_store():
             "copy") in privacy
     assert "where its AI search was used" not in privacy
     assert "Exegete opens no file in" not in privacy
-    assert privacy.count("reads no file in") == 2
+    # (v0.15.4, PRIVACY read whole: said once, in "Backups, project
+    # copies, and the `ai_data/` folder", which the mitigations point to)
+    assert privacy.count("reads no file in") == 1
 
 
 def test_list_backups_note_names_qualcoder_3_8_s_store():

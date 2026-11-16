@@ -372,21 +372,25 @@ class TestTheExtension:
                 "bug_report.yml").read_text(encoding="utf-8")
         block = text[text.index("id: toolset"):]
         block = block[:block.index("  - type:")]
-        assert ("description: \"`full` is the default, every tool, creating "
-                "a project included; `core` is the reduced set for local "
-                "models; `lifecycle` was `full`'s name in the extension "
-                "before 0.15.0.") in block
+        # v0.15.4: SUPPORT.md's facts, a sentence each: `full` the
+        # default, with every tool; unset means `full`; `lifecycle` its
+        # earlier name
+        for fact in ("`full`, the default, has every tool, creating a "
+                     "project included.",
+                     "Exegete takes `full` when it is not set.",
+                     "`full` was called `lifecycle` before 0.15.0."):
+            assert fact in block, fact
         # v0.15.1: with the extension, `core` when the switch "Limit
         # Exegete to its small tool set" is on, `full` otherwise (after
         # 0.15.1 the switch alone, the text setting gone)
         switch = MANIFEST["user_config"]["small_toolset"]["title"]
-        assert (f"it is `core` when the extension's switch \\\"{switch}\\\" "
-                f"is on, and `full` otherwise.\"") in block
+        assert (f"the tool set is `core` when its switch \\\"{switch}\\\" "
+                f"is on, and `full` otherwise.") in block
         assert "Tool set setting" not in block
         options = re.findall(r"^        - (.+)$", block, re.M)
         # Fix round 1: the option no longer reads as a version the
         # researcher is not on, since 0.15.0 may still show `lifecycle`
-        assert options == ["full (default, or variable not set)", "core",
+        assert options == ["full (the default)", "core",
                            "lifecycle (the earlier name of full)",
                            "Not sure"]
         support = _flat("SUPPORT.md")
@@ -565,11 +569,13 @@ class TestTheDocuments:
                 "projects` unless `EXEGETE_WORKSPACE` names another folder. "
                 "iCloud (Desktop and Documents) or OneDrive may sync "
                 "Documents, and so copy your projects, with their "
-                "transcripts, off the computer. A sync service can also copy "
-                "a project's database and the working file beside it, the "
-                "database's journal, at different moments, which can leave a "
-                "damaged copy. You could name a folder outside Documents, "
-                "such as `~/Exegete projects`.") in step3
+                "transcripts, off the computer. A sync service can also leave "
+                "a damaged copy. It may copy a project's database and the "
+                "working file beside it, the database's journal, at different "
+                "moments. You could name a folder outside Documents, such as "
+                "`~/Exegete projects`.") in step3
+        # (v0.15.4, the readability reading: the damage first, then how
+        # it comes about, a sentence each)
         # (v0.15.2, the readability reading: the database's journal said
         # as its working file, not the research journal; the step a
         # sentence of its own)
@@ -599,11 +605,15 @@ class TestTheDocuments:
 
     def test_privacy_says_where_new_projects_go(self):
         flat = _flat("PRIVACY.md")
-        local = flat[flat.index("What stays local, always"):]
-        local = local[:local.index("- Exegete's own folder")]
-        assert ("- new projects made by create_project and project copies "
-                "made by copy_project_to_workspace, in `~/Documents/Exegete "
-                "projects/` by default") in local
+        # (v0.15.4, PRIVACY read whole: "What stays local, always" went
+        # into "Files Exegete keeps on your computer", whose list of places
+        # gives the folder for projects and its defaults)
+        local = flat[flat.index("## Files Exegete keeps on your "
+                                "computer"):]
+        local = local[:local.index("| Kind |")]
+        assert ("- the folder for projects (`~/Exegete projects` in the "
+                "desktop extension, `~/Documents/Exegete projects` "
+                "otherwise") in local
         item = flat[flat.index("- **Creating a project** (`create_project`"):]
         item = item[:item.index("## Your governance options")]
         assert ("A new project is made in the folder the researcher names, "
@@ -612,9 +622,10 @@ class TestTheDocuments:
                 "`~/Documents/Exegete projects`, unless `EXEGETE_WORKSPACE` "
                 "names another folder. iCloud (Desktop and Documents) or "
                 "OneDrive may sync Documents, and so copy the project, "
-                "imported originals included, off the computer: consider a "
-                "folder outside it (the Terminal guide, \"What you need\").") \
-            in item
+                # (v0.15.4: a suggestion in the conventions' form)
+                "imported originals included, off the computer: you could "
+                "choose a folder outside it (the Terminal guide, \"What you "
+                "need\").") in item
 
     def test_the_ai_coding_guide_on_every_route(self):
         flat = _flat("AI_CODING_GUIDE.md")
@@ -753,10 +764,14 @@ class TestTheDocuments:
 
     def test_privacy_a_new_project_is_not_a_backups_copy(self):
         flat = _flat("PRIVACY.md")
-        local = flat[flat.index("What stays local, always"):]
-        local = local[:local.index("- Exegete's own folder")]
-        assert ("(each copy carries the same content as a backup, so the "
-                "`ai_data/` and symlink rules below apply to it)") in local
+        # (v0.15.4, PRIVACY read whole: said in "Files Exegete keeps on your
+        # computer", a sentence of its own)
+        local = flat[flat.index("**Exports and copies.**"):]
+        local = local[:local.index("**Files you fill in.**")]
+        # (v0.15.4, the readability reading: the rules named in words)
+        assert ("Each copy carries the same content as a backup, so the "
+                "rules below on the `ai_data/` folder and on links "
+                "(symlinks) apply to it") in local
         assert "(each carries the same content" not in local
 
     def test_quickstart_troubleshooting_without_a_project(self):

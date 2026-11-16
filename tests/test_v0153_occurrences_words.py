@@ -12,9 +12,12 @@ is not cut:
 - the full brief's privacy section, after its line on pseudonyms: when
   to preview with `choose_occurrences`, that the page it opens is the
   researcher's, never to be opened, read or looked at, nor the
-  researcher asked for words from it, and that the assistant gives the
-  ids alone, in `leave_occurrences`. It is a safety sentence, held word
-  for word, and the names it gives are the tool's own;
+  researcher asked for words of its text, and that the assistant gives
+  what the researcher gives alone: since v0.15.4 the numbers, from the
+  page or a line pasted from it, in `leave_numbers` with the list's
+  numbering, and any id in `leave_occurrences`. It is a safety
+  sentence, held word for word, and the names it gives are the tool's
+  own;
 - the description's paragraph "Two people who share a name": a second
   run inside one file, through both arguments, the sentence that names
   them ending within the first 4,096 characters of the description on
@@ -35,14 +38,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import exegete.server as server  # noqa: E402
 
 # The brief's sentence, word for word (the readability reading: "you
-# give those ids", where "you send back" could be read as back to the
-# researcher)
+# give those", where "you send back" could be read as back to the
+# researcher). Since v0.15.4 the researcher gives the numbers in bold on
+# the page, or pastes the line it gives, which holds no word of the text
 BRIEF_SENTENCE = (
     "When the researcher wants to leave some occurrences of a name as they "
     "are, preview pseudonymise_source with choose_occurrences. The page it "
     "opens is theirs: never open, read or look at it, and never ask them "
-    "for words from it. They tell you the ids to leave, and you give those "
-    "ids alone, in leave_occurrences.")
+    "for words of the text it shows. They give you the occurrences' "
+    "numbers, in bold there as in the preview's list, or paste the line "
+    "the page gives them, which holds the file, the list's numbering and "
+    "the numbers. You give those alone: the numbers as they are in "
+    "leave_numbers, with the list's numbering (a pasted line's own) in "
+    "numbering, and every id in leave_occurrences.")
 # The line it follows in the brief's privacy section
 PSEUDONYMS_LINE = ("Where the researcher uses pseudonyms, use them, and never "
                    "try to work out who someone is.")

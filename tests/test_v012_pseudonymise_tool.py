@@ -5196,7 +5196,8 @@ class TestSavingTheMappingIntoPseudonymsJson:
             "contains one of the names, or write it into pseudonyms.json in "
             "the project folder with a text editor, as a list of {original, "
             "pseudonym} entries; or, if they use QualCoder, enter it in its "
-            "Pseudonyms dialog (the button in Manage Files).")
+            "Pseudonyms dialog (the button in Manage Files). "
+            + server.EDITOR_AI_WARNING)
         record = json.loads(Path(result["manifest_path"]).read_text(
             encoding="utf-8"))
         assert record["mapping_retention"]["choice"] == "save_requested"
@@ -6769,8 +6770,8 @@ class TestStaleSessions:
 
     def test_the_run_never_touches_a_session_file(self, project):
         session = self._session(project, 1)
-        path = Path(server.session_manager.storage_dir) / \
-            f"session_{session.session_id}.json"
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = server.session_manager.session_file(session.session_id)
         before = path.read_bytes()
         execute_from(preview_of())
         assert path.read_bytes() == before
@@ -7915,7 +7916,8 @@ class TestProjectPseudonyms:
         # The tool's own way round it follows the reader's message
         # (v0.14, server-wide)
         assert refused == {"error": self.NOT_REGULAR
-                           + server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE}
+                           + server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE
+                           + " " + server.EDITOR_AI_WARNING}
 
     @POSIX_ONLY
     def test_a_directory_is_refused_value_free(self, project):
@@ -8520,12 +8522,10 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "After the run, re-read the file before any further coding: "
          "every position after the first replacement in it has changed, "
          "and any pending coding suggestion for it is stale."),
-        ("qualcoder_does_not_refresh",
-         "If the researcher uses QualCoder: a QualCoder window open on the "
-         "project does not refresh from this write on its own"),
-        ("the_40_search_index_is_stale",
-         "QualCoder 4.0's AI search index keeps the previous text until it "
-         "re-indexes on the next open with AI enabled."),
+        # (v0.15.4, phrases to keep: the paragraph on a QualCoder window
+        # and on QualCoder 4.0's search index went, to make room; the
+        # run's answer gives both on a sign, PSEUDONYMISE_WINDOW_NOTE and
+        # the AI files note)
         ("the_sidecar_path_quotes_nothing",              # B4 / S3
          "The real names in that file did not come from you, so on this "
          "path no diagnostic and no refusal quotes one, and include_context "
@@ -8592,10 +8592,12 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "file or a source with no stored text is refused with the reason "
          "(pdf_source, no_fulltext, unknown_file_id)."),
         ("repeat_the_same_bound_arguments",       # decision A; Brief 2
-         # v0.15.3: leave_occurrences joins them, "same" in lower case
+         # v0.15.3: leave_occurrences joins them, "same" in lower case;
+         # v0.15.4: the numbers and their numbering too, and keep_phrases
          "call again with the same mapping, file_id, case_mode, "
-         "overlap_policy, rewrite_memos, save_mapping_to_project and "
-         "leave_occurrences when given, plus preview_token=<the token>."),
+         "overlap_policy, rewrite_memos, save_mapping_to_project, and "
+         "keep_phrases, leave_occurrences, leave_numbers and numbering when "
+         "given, plus preview_token=<the token>."),
         ("a_carrying_pseudonym_is_withheld",             # fix round 1, F1
          "A pseudonym that carries one of those names is withheld (null) "
          "wherever the preview would quote it, and its entry number stands "
@@ -8604,10 +8606,10 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "a file name, folder name, path or pseudonym that carries one is "
          "withheld from both, and the file id or the entry number is used "
          "instead."),
-        ("the_transport_coerces_file_id",   # fix round 1, QA-3; fix round 2, CORR-5
+        ("the_transport_coerces_file_id",   # fix round 1, QA-3; fix round 2, CORR-5; v0.15.4
          "The transport turns anything Python reads as an integer into that "
-         "integer before Exegete sees it: \"1\", 1.0, true, \"01\" and "
-         "\"+1\" are file 1, and \"1_0\" is file 10."),
+         "integer before Exegete sees it: \"1\", 1.0, \"01\" and \"+1\" are "
+         "file 1, and \"1_0\" is file 10; true and false are refused."),
         ("the_residue_detail_argument",     # fix round 1, F4; fix round 2, CORR-4
          "residue_detail: \"file\" (default): full detail for the file this "
          "call gives and, for up to 1,000 other files that still show a "
@@ -8627,12 +8629,9 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "lower bound. A file too large to count with this many names is "
          "reported as such: with fewer names, a text file could be "
          "counted. A file too large for any mapping is reported too."),
-        ("the_bound_arguments",                   # decision A; Brief 2
-         # v0.15.3: leave_occurrences joins them, named without a count
-         "The arguments that are bound are mapping, file_id, case_mode, "
-         "overlap_policy, rewrite_memos, save_mapping_to_project and "
-         "leave_occurrences when given, and they must be repeated "
-         "identically on the execute call."),
+        # (v0.15.4, phrases to keep: the closing sentence that named the
+        # bound arguments again went, to make room; the recipe above
+        # names them whole)
         ("the_unbound_arguments",                        # Brief 2, H.2.5
          # v0.15.3: choose_occurrences joins them, named without a count
          "The arguments from include_context to choose_occurrences, "
@@ -8896,15 +8895,18 @@ class TestTheDocumentsTellTheTruth:
         for name in ("README.md", "TOOLS.md"):
             assert claim not in self._flat(name), name
 
+    # v0.15.4, PRIVACY read whole: the sentences below are held as the
+    # facts they state, in the words the reading left (tests pin facts,
+    # not phrasing); the residue count's budgets are told in TOOLS.md,
+    # which PRIVACY points to (test_tools_gives_the_budgets_privacy_cites)
     @pytest.mark.parametrize("sentence", [
-        # B3: the promise, scoped to what re-reads; v0.14 closes the
-        # residual (every read re-reads).
-        "as every decision that puts a coder's name into a result already "
-        "did",
-        "Since v0.14 every read re-reads the declaration from the project "
-        "when it is made",
-        "if the declaration itself cannot be read, the answer is the same "
-        "posture rather than \"nobody is hidden\"",
+        # B3: what re-reads, and what an unreadable declaration means
+        "A coder hidden while Exegete is connected is filtered out from "
+        "the next call on, without selecting the project again.",
+        # (v0.15.4, the readability reading: the causes in a sentence of
+        # their own, before this one)
+        "tool that would decide who is hidden then treats unknown as "
+        "hidden",
         # S6 and S7: what the residue reads, and what it cannot reach.
         # v0.13, Brief 2: "Notes" under the fixed vocabulary (the key
         # stays `memos`), and the sentence after the list conditional.
@@ -8912,12 +8914,14 @@ class TestTheDocumentsTellTheTruth:
         "included), journal entries and their names, case names, file "
         "names, code names, category names, attribute-type names and "
         "attribute values.",
-        "Scanned and counted; of these, only the public part of the notes "
-        "and journal entries is rewritten, and only when `rewrite_memos` "
-        "is on, across the whole project; the names of things and the "
-        "attribute values are never rewritten by the pseudonymisation tool "
-        "(a case or file name is renamed with `rename_case` or "
-        "`rename_file`, below).",           # the merge with main
+        # (v0.15.4, the readability reading: the fragment given its
+        # subject, the semicolons full stops)
+        "The preview scans and counts names in all of these. Of these, "
+        "only the public part of the notes and journal entries is "
+        "rewritten, and only when `rewrite_memos` is on, across the whole "
+        "project. The names of things and the attribute values are never "
+        "rewritten by the pseudonymisation tool (a case or file name is "
+        "renamed with `rename_case` or `rename_file`, below).",
         "A note's private part (from its `#####` marker) is carried across "
         "unread, so a name there is still there and nothing in Exegete "
         "can report it.",
@@ -8925,46 +8929,36 @@ class TestTheDocumentsTellTheTruth:
         "entries Exegete wrote for earlier runs",
         "Exegete writes it only when asked, in QualCoder's own format, "
         "and removes or replaces it only by a restore",
-        # The merge fix (M3): what a restore and a prune do to it.
-        "The restore result says so when the file appears, disappears or "
-        "changes, and the one the project had stays in the pre-restore "
-        "safety backup, which `prune_backups` can remove; its preview lists "
-        "any backup it would remove that holds a `pseudonyms.json` which "
-        "neither the project nor a backup Exegete keeps holds, byte for "
-        "byte, as the only lasting copy Exegete knows of.",
-        # The v0.13 release preparation: the mapping gaps' two refinements.
+        # The merge fix (M3): what a restore and a prune do to it
+        "the file the project had stays in the pre-restore safety backup",
+        "holds the only copy of a `pseudonyms.json` that Exegete knows of",
+        # The v0.13 release preparation: the mapping gaps' refinements
         "QualCoder's own `_BKUP_` backups do not count as keeping a copy, "
-        "because QualCoder deletes them past its `backup_num` when a project "
-        "closes, so a copy in one of them does not stop a backup being "
-        "listed;",
-        "The approval token signs that set of only copies, so a prune whose "
-        "set changed after its preview (the project's own file removed "
-        "outside Exegete, for example) is refused as a changed project "
-        "and removes nothing,",
+        "because QualCoder deletes them past its `backup_num` when a "
+        "project closes.",
+        # (v0.15.4, the readability reading: "that set of only copies"
+        # said in full)
+        "The token that approves the prune signs that set of backups "
+        "holding the only copies, so a prune whose set changed after its "
+        "preview is refused and removes nothing.",
         # Brief 2 fix round 1, Security's ruling (S-1): the departure,
         # named.
         "A file the save creates is owner-only (0600) on macOS and Linux, "
         "where QualCoder's own write would leave it readable by other "
         "accounts under the usual umask: a departure, for a file of real "
         "names.",
-        # Brief 2 fix round 1, S-4: what the save preview confirms.
-        "A preview that asks for the save lists, by entry number, which of "
-        "the typed names the file already maps and which typed pseudonyms "
-        "it already gives to another name",
-        "it also confirms, to anyone who can call the preview, whether a "
-        "name they type is in the file.",
-        # Fix round 2, RS-1: the save's other two confirmations.
-        "The same preview lists which typed names hold, as a word, a name "
-        "the file lists (`pre_empted_by_existing`): the researcher needs "
-        "that to order the file, and it confirms whether a typed name "
-        "holds, as whole words, a name in the file, so one call can test "
-        "many guesses.",
+        # S-4 and RS-1: what the save preview confirms
+        "lists, by entry number, which of the typed names the file already "
+        "maps, which typed pseudonyms it already gives to another name, "
+        "and which typed names hold, as a word, a name the file lists "
+        "(`pre_empted_by_existing`)",
+        "they also confirm, to anyone who can call the preview, whether a "
+        "name they type is in the file, so one call can test many guesses.",
         "An execute refused for a name the file already maps says when the "
         "file holds every typed name under its typed pseudonym, which "
         "confirms an exact pair. Neither writes anything or takes a "
         "backup.",
-        # v0.15.0, the files design, piece 5: the tool that returned the
-        # names was removed
+        # v0.15.0, the files design, piece 5: no tool returns the names
         "No tool returns the names (`read_pseudonym_list` was removed in "
         "0.15.0): you see and change the list in the names file on your "
         "own computer (`prepare_names_list`, then `save_names_list`), whose "
@@ -8977,84 +8971,90 @@ class TestTheDocumentsTellTheTruth:
         "`pseudonyms.json`, where you can see them. QualCoder's own "
         "guidance is to remove `pseudonyms.json` and store it securely once "
         "the import is done",
-        "each is an audit record of which rows a run changed and where the "
-        "pseudonyms now sit, kept so a run can be accounted for afterwards. "
-        "It is not a way back; the backup taken before the run is.",
-        "a look-alike letter from another script (a Cyrillic \"о\" for a "
+        # Ruling 2: an audit record, not a way back
+        # (v0.15.4, the readability reading: two sentences)
+        "an audit record of which rows a run changed and where the "
+        "pseudonyms now sit, kept so that a run can be accounted for "
+        "afterwards. No tool reads them back, and the way back is the "
+        "backup taken before the run.",
+        "A look-alike letter from another script (a Cyrillic \"о\" for a "
         "Latin \"o\") is a different letter to the comparison, and is out "
         "of scope",
-        # S2: the keyed bind and manifest digest.
-        "The manifest's `token_bind` and its `mapping_hmac_sha256` are "
-        "both keyed with the per-user token secret rather than plain "
-        "digests",
-        # v0.13 release fix round 1 (S-REL-1) said the per-file digests
-        # were plain and confirmed a guessed name; v0.14 keys them in the
-        # manifest and drops the old one from the result, and says what
-        # a record written before then still holds.
+        # S2: the keyed bind and manifest digest, and the per-file ones
+        "digests keyed with the secret, of the run's token and the mapping "
+        "(`token_bind`, `mapping_hmac_sha256`) and of each file's text "
+        "before and after the run (`old_text_hmac_sha256`, "
+        "`new_text_hmac_sha256`).",
+        # v0.13 release fix round 1 (S-REL-1); v0.14 keys the digests and
+        # drops the old one from the result; v0.15.4, a warning and a
+        # suggestion where the record "must not be shared"
         "Records written before v0.14 (format 1 by v0.12, format 2 by "
         "v0.13) carry each file's length and plain SHA-256 before and "
-        "after the run instead (`old_fingerprint`, `new_fingerprint`): "
-        "together with the pseudonymised text those confirm a guessed "
-        "original name, so such a record must not be shared",
+        "after the run instead (`old_fingerprint`, `new_fingerprint`).",
+        "a guessed name can be put back where a pseudonym sits and checked "
+        "against that digest",
+        "can undo the pseudonymisation for whoever receives both",
         "A reader tells the two kinds apart by the record's `format` (3 is "
         "keyed) and by the field names",
-        "Since v0.14 so are the per-file digests",
-        "the run's result carries no digest of the text before the run",
-        # (Fix round 4, L3's sentence, that a write settles which table
-        # the reads go to and `prune_backups` does not, went with the
-        # residual it qualified: v0.14, every read re-reads.)
+        "Today's answer gives only the plain SHA-256 of the text after the "
+        "run (`new_sha256`)",
         # Fix round 4, R3: the symlink route.
         "On `pseudonymise_source`'s result the name of a skipped symlink "
         "is withheld where a reader of it would see a name from the "
-        "mapping, the count kept; and the log line that reports a skipped "
-        "symlink carries the count and the reason, never the path",
+        "mapping, the count kept",
+        "The log line that reports a skipped symlink carries the count and "
+        "the reason, never the path",
         # Rulings 7.3(3) and 7.4: the flagship's override rule, in
         # plain words.
-        "a coding that covered a name, or contained one, and now covers "
-        "or contains its pseudonym needs no override, whatever the two "
-        "lengths, and neither does a pure position shift, because "
-        "neither changes a coding decision; a coding that grew to "
-        "swallow a pseudonym, or one that had to be clamped because its "
-        "stored end lay past the end of the text requires the override.",
+        # (v0.15.4, the readability reading: the reason first, then the
+        # two cases; "clamped" in plain words)
+        "Some changes need no override, because they change no coding "
+        "decision: a coding that covered a name, or contained one, and now "
+        "covers or contains its pseudonym, whatever the two lengths, and a "
+        "coding that only shifts position.",
+        "A coding that grew to swallow a pseudonym, or one shortened "
+        "because its stored end lay past the end of the text, requires the "
+        "override.",
         # v0.13, Brief 1: the file text, and the four things the sidecar
         # path still returns, as the description declares them.
         "The block names every file in which a name still shows, "
-        "including the files this run does not touch, on both mapping "
-        "paths, so name your files accordingly.",
+        "including the files this run does not touch",
         # Fix round 1: what a longer word is, and the records' pseudonyms.
         "A longer word is listed only when it extends the name by at most "
         "eight characters and carries no character of a script written "
-        "without spaces between words (Chinese, Japanese, Thai, Lao, "
-        "Khmer, Myanmar)",
-        "A pseudonym that itself carries a name from the mapping",
-        "On a mapping you type, it also lists the longer words a name sits "
-        "inside (`Thomas_P01`, `Thomasson`), which are words of the file "
-        "text, so an exact entry can be added for one; on the "
-        "`use_project_pseudonyms` path it lists none and shows no form of "
-        "a name.",
+        "without spaces between words.",
+        "a pseudonym that carries a name from the mapping",
+        "On a mapping you type, the block also lists the longer words a "
+        "name sits inside, which are words of the file text",
+        "On the `use_project_pseudonyms` path it lists none and shows no "
+        "form of a name.",
         "Four things are still returned as they stand, because a preview "
         "whose files cannot be named cannot be relayed: the project path, "
         "each file's own name (including every file the residue's "
-        "file-text block lists), the backup path and the note that gives "
+        "file-text block lists), the backup path, and the note that gives "
         "the backup's name",
-        # Fix round 5: the lead's four rules, as PRIVACY.md states them.
-        "The count has fixed budgets, and everything it spends is charged "
-        "to them, a count that stops part-way too, so its time is bounded.",
-        "A count that stops part-way has found a name: the file is listed "
-        "in `files_counted_in_part`, with a lower bound on its occurrences.",
-        "the warning says to preview such files one at a time, except a "
-        "PDF source, which cannot be named for a preview and has a sentence "
-        "of its own, as has a PDF source too large to count: neither is "
-        "promised that fewer names would let it be counted.",
-        "A file too large to count with this many names is told apart "
-        "before anything is counted, because its estimated cost passes the "
-        "whole budget",
-        "A file too large to count even with one name is listed in "
-        "`files_too_large_for_any_mapping` instead, and fewer names is not "
-        "offered for it.",
+        # Fix round 5: the budgets; PRIVACY keeps the rule a reader needs
+        # and points to TOOLS.md for the rest
+        "no file is ever reported clean when it was not read.",
+        # (v0.15.4, the readability reading: how each count reads the
+        # text, which TOOLS.md gives too, is left to it)
+        "TOOLS.md, under `pseudonymise_source`, says how each count reads "
+        "the text, and gives the budgets.",
     ])
     def test_privacy_says_it(self, sentence):
         assert " ".join(sentence.split()) in self._flat("PRIVACY.md")
+
+    @pytest.mark.parametrize("words", [
+        "files_counted_in_part` with a lower bound",
+        "files_too_large_for_this_mapping`, where fewer names is the remedy",
+        "files_too_large_for_any_mapping`, where there is none",
+        "never reported clean",
+        "at most eight characters",
+    ])
+    def test_tools_gives_the_budgets_privacy_cites(self, words):
+        """v0.15.4, PRIVACY read whole: the residue count's budgets, which
+        PRIVACY.md told at length, are TOOLS.md's to give."""
+        assert words in self._flat("TOOLS.md")
 
     def test_the_privacy_document_no_longer_promises_a_reversal_over_spans(
             self):

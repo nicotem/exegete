@@ -185,11 +185,36 @@ class TestTheRunsFingerprints:
         assert ("Records written before v0.14 (format 1 by v0.12, format 2 "
                 "by v0.13) carry each file's length and plain SHA-256 "
                 "before and after the run instead") in privacy
-        assert ("the keyed digests in the run manifests already written "
+        # (v0.15.4, PRIVACY read whole: "run records", the document's one
+        # word for them)
+        assert ("the keyed digests in the run records already written "
                 "can then no longer be checked") in privacy
         assert "Deleting it invalidates outstanding preview tokens, which " \
                "means the next execute asks for a fresh preview; nothing " \
                "else." not in privacy
+
+    def test_the_documents_say_the_record_keeps_where_each_pseudonym_sits(
+            self, project):
+        """(v0.15.4, PRIVACY's fix round) A replacement in the record is
+        an entry and where its pseudonym now sits in the text after the
+        run, never what it replaced; PRIVACY said "the stretches of text
+        they replaced", which reads as the names themselves."""
+        _, record, new_text = _run(project)
+        pseudonyms = {entry["index"]: entry["pseudonym"]
+                      for entry in record["entries"]}
+        replacements = record["files"][0]["replacements"]
+        assert replacements
+        for replacement in replacements:
+            assert set(replacement) == {"entry", "new_span"}, replacement
+            start, end = replacement["new_span"]
+            assert new_text[start:end] == pseudonyms[replacement["entry"]]
+        privacy = " ".join((Path(__file__).parent.parent / "PRIVACY.md"
+                            ).read_text(encoding="utf-8").split())
+        held = privacy[privacy.index("**The pseudonymisation run records**"):]
+        held = held[:held.index("A record never holds an original name")]
+        assert ("the pseudonyms applied, where each pseudonym now sits in "
+                "the text after the run") in held
+        assert "stretches of text they replaced" not in held
 
     def test_the_does_not_rewrite_list_names_the_stored_copy(self):
         doc = " ".join(server.pseudonymise_source.__doc__.split())
@@ -723,11 +748,29 @@ class TestTheDocumentsSayTheRule:
 
     def test_privacy_says_the_rule(self):
         privacy = _flat("PRIVACY.md")
-        assert ("Since v0.14 neither carries SQLite's message: an error "
-                "from the database is reported by its kind and SQLite's "
-                "short name for it") in privacy
-        assert ("The same rule holds for the resources (the `exegete://` "
-                "addresses)") in privacy
+        # (v0.15.4, PRIVACY read whole: the rule as it stands, without
+        # the release it came in)
+        # (v0.15.4, the readability reading: the reason first, then the
+        # rule, each a sentence)
+        assert ("SQLite's own error message can quote a note, its private "
+                "part included. So neither the answer nor the log carries "
+                "that message. An error from the database is reported by "
+                "its kind and SQLite's short name for it") in privacy
+        # (v0.15.4, the claims audit's point 52: the resources answer as
+        # content the errors Exegete meets; an id that is not a number is
+        # refused by the MCP library first, as a protocol error)
+        # (and its readability reading: the resources and the MCP library
+        # named before the rule; then the privacy additions' readability
+        # reading: the failed read as the clause's subject, the error given
+        # as the resource's content, server._resource_guard)
+        assert ("When a resource cannot be read, Exegete gives the error as "
+                "the resource's content, as a tool does") in privacy
+        assert "the error as the resource's content" in " ".join(
+            server._resource_guard.__doc__.split())
+        assert ("The MCP library refuses an address whose id is not a "
+                "number, such as `exegete://codes/abc`, before Exegete sees "
+                "it. Its refusal, a protocol error, quotes what was sent, and "
+                "the library logs no error for it.") in privacy
 
     def test_install_no_longer_says_the_log_quotes_a_note(self):
         install = _flat("INSTALL.md")
@@ -968,9 +1011,9 @@ class TestTheDocumentsSayWhatTheLogCarries:
 
     def test_privacy_says_the_log_names_nothing(self):
         privacy = _flat("PRIVACY.md")
-        assert ("Since v0.14 the log also carries no name of a project, "
-                "file, code, category, case, journal entry or attribute, and "
-                "no path") in privacy
+        assert ("The log carries no name of a project, file, code, "
+                "category, case, journal entry or attribute, and no path") \
+            in privacy
 
     def test_install_no_longer_says_the_log_carries_names(self):
         install = _flat("INSTALL.md")
@@ -981,45 +1024,91 @@ class TestTheDocumentsSayWhatTheLogCarries:
     def test_both_say_what_a_host_that_records_every_answer_keeps(self):
         """Fix round 1 (the refuter's widening of QA F1): the sentences
         are about the lines this server writes; Claude Desktop's file
-        records every request and answer beside them."""
+        can hold every request and answer beside them (dated in v0.15.4
+        from MCP's page on debugging)."""
         install = _flat("INSTALL.md")
         privacy = _flat("PRIVACY.md")
-        assert ("Claude Desktop's log (the file Show Logs opens) also "
-                "records every request and every answer in full") \
-            in install
-        assert ("A host may record more in the same file: Claude "
-                "Desktop's server log") in privacy
-        assert ("The rule closes one channel, SQLite's message; it does "
-                "not make a project built to leak safe to open.") in privacy
+        # (v0.15.4) dated from MCP's page on debugging, which lists
+        # message exchanges among what Claude Desktop's logs capture
+        assert ("So Claude Desktop's log, the file Show Logs opens, can "
+                "hold every request and every answer in full") in install
+        assert "lists message exchanges among what Claude" in install
+        # (v0.15.4, PRIVACY read whole: "can hold", dated, as INSTALL)
+        assert "A host may record more in the same file." in privacy
+        assert ("So Claude Desktop's server log (the file Settings > "
+                "Developer > Show Logs opens) can hold every request and "
+                "every answer") in privacy
+        assert "lists message exchanges among what Claude" in privacy
+        # (v0.15.4, the readability reading: two sentences, the project
+        # "built to leak" said with its subject)
+        assert ("Keeping SQLite's message out closes one channel only. It "
+                "does not make a project that someone built to leak its "
+                "notes safe to open.") in privacy
         # (the staleness audit of 20 October 2026, and its fix round: held
         # to the code) Three parts of Exegete read the secret: the tokens,
         # pseudonymise_source's run manifests and the texts an import's
         # preview keeps; the paragraph names each use and what losing the
         # secret does to it, and a replaced secret does the same
-        from exegete import kept_texts, preview_tokens
+        # (v0.15.4, the coding sessions kept in projects: the sixth use,
+        # the seal and the approvals' marks, read with the same call)
+        from exegete import kept_texts, preview_tokens, sessions
         for module, call in ((preview_tokens, "secret = load_secret()"),
-                             (kept_texts, "preview_tokens.load_secret()")):
+                             (kept_texts, "preview_tokens.load_secret()"),
+                             (sessions, "preview_tokens.load_secret()")):
             assert call in Path(module.__file__).read_text(
                 encoding="utf-8"), module.__name__
         source = Path(server.__file__).read_text(encoding="utf-8")
         run = source[source.index("def pseudonymise_source("):]
         assert "secret = load_secret()" in run[:run.index("\n@mcp.tool")]
-        secret = privacy[privacy.index("the preview-token secret "
+        # (v0.15.4, PRIVACY's fix round: the records of changes are the
+        # fifth use. Every change Exegete records is keyed with the
+        # secret, and undo refuses a record made under another one,
+        # tests/test_v0152_undo_tool.py's test_a_replaced_secret_is_refused)
+        capture = source[source.index("def _capture_start("):]
+        capture = capture[:capture.index("\ndef ")]
+        assert "secret = load_secret()" in capture
+        assert 'change_record.digest(secret, "key check", "")' in capture
+        from exegete import undo
+        assert undo.SECRET_REPLACED in server.UNDO_REFUSAL_TEXTS
+        # (v0.15.4, PRIVACY read whole: an item of "Files Exegete keeps
+        # on your computer", in bold)
+        secret = privacy[privacy.index("preview-token secret** "
                                        "(`~/.exegete/preview_secret`)"):]
         secret = secret[:secret.index("logs that it did")]
         for use, lost in (
+                # (v0.15.4, PRIVACY's fix round: what losing the secret
+                # does to a preview, in the words the table above uses,
+                # which the promises check reads as a state)
                 ("sign the tokens that approve a two-step operation",
-                 "invalidates outstanding preview tokens"),
-                ("key the digests in the pseudonymisation run manifests",
-                 "the keyed digests in the run manifests already written "
+                 "any preview not yet carried out loses its token"),
+                ("key the digests in the pseudonymisation run records",
+                 "the keyed digests in the run records already written "
                  "can then no longer be checked"),
                 ("name and sign the texts an import's preview keeps",
                  "the texts an import's preview kept can no longer be "
-                 "used")):
+                 "used"),
+                ("key the ids a pseudonymisation preview gives for "
+                 "choosing occurrences",
+                 "every occurrence gets a new id"),
+                ("keys the records of changes",
+                 "a change Exegete made before can no longer be undone"),
+                # (v0.15.4: a session kept in a project without this
+                # computer's seal reads as having come with it, and an
+                # approval without this computer's mark as pending)
+                ("the seal of each coding session kept in a project, and "
+                 "the mark of each approval you give on this computer",
+                 "every coding session kept in a project then reads as "
+                 "having come with the project")):
             assert use in secret and lost in secret, use
+        assert "Deleting it has six effects, and nothing else" in secret
         assert "Exegete replaces the secret by itself, with the same " \
             "effects" in secret
-        assert ("they share one memory of it") in privacy
+        # (v0.15.4, PRIVACY read whole: how the re-read shares its memory
+        # left the document, which keeps what a researcher sees: a coder
+        # hidden while Exegete is connected is filtered from the next call
+        # on; section 4 below holds the behaviour)
+        assert ("A coder hidden while Exegete is connected is filtered out "
+                "from the next call on") in privacy
 
 
 # =============================================================================
@@ -1516,12 +1605,15 @@ class TestPseudonymsJsonErrorsAreAnsweredByKind:
             assert expected in json.dumps(answer), answer
             assert "Failed to get project info" not in raw
         else:
-            # followed by the tool's own way round it (v0.14, server-wide)
+            # followed by the tool's own way round it (v0.14, server-wide),
+            # which names a text editor, and so by the warning about
+            # editors with an AI assistant of their own (v0.15.4)
             advice = {
                 "import_text_file": server.PSEUDONYMS_JSON_ADVICE_IMPORT,
                 "pseudonymise_source":
                     server.PSEUDONYMS_JSON_ADVICE_PSEUDONYMISE}[route]
-            assert answer["error"] == expected + advice
+            assert answer["error"] == (expected + advice + " "
+                                       + server.EDITOR_AI_WARNING)
 
 
 class TestOpeningADatabaseChainsNothing:

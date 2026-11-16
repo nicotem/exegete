@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Exegete: a qualitative analysis application you use in conversation
-with an AI assistant, compatible with QualCoder. An MCP server, formerly
-qualcoder-mcp."""
+"""Agentic QDA: a qualitative data analysis application you use in
+conversation with an AI assistant, compatible with QualCoder. Exegete,
+formerly qualcoder-mcp, is an MCP server."""
 
 from importlib.metadata import PackageNotFoundError, version
 

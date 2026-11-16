@@ -19,10 +19,11 @@ for your operating system. An issue is public, so participants' data or
 a project put into one is published with it. Describe the data without
 copying it instead, such as "a code name with an apostrophe" or "a file
 of about 40,000 characters". SUPPORT.md says what a log can hold.
-A security concern, such as a fault that could expose participants'
-data or let a write damage a project, is best reported privately, as
+Some faults are security concerns, such as one that could expose
+participants' data or damage a project when Exegete changes it. A
+security concern is best reported privately, as
 [SECURITY.md](SECURITY.md) describes, so that it is not public before
-its fix. Describe it there without copying data, as above.
+it is fixed. Describe it there without copying data, as above.
 
 ## Proposing changes
 
@@ -45,6 +46,33 @@ its fix. Describe it there without copying data, as above.
    `pdf-epub` is the optional part that reads PDF and EPUB. Without it,
    the tests of PDF and EPUB import are skipped. Its libraries are under
    the AGPL (INSTALL.md, "PDF and EPUB: the optional part").
+
+   On Windows x64, Linux and Macs with Apple silicon, with Python 3.11
+   to 3.14, the part brings PyMuPDF 2. PyMuPDF 2 loads onnxruntime,
+   Microsoft's library for running trained models. onnxruntime reports
+   on its own use to Microsoft unless it is switched off. On Linux and
+   macOS, onnxruntime's own setting, `ORT_DISABLE_TELEMETRY=1`, switches
+   the reports off when it is given before onnxruntime loads. Exegete's
+   reading process, the suite (`tests/conftest.py`) and
+   `scripts/qualcoder_parity.py` give that setting. An import of PyMuPDF
+   anywhere else, such as your own check of what is installed, does
+   not. On a Mac with Apple silicon, with
+   onnxruntime 1.31.0, such an import made onnxruntime write a device id
+   and a database of events into the home folder, in
+   `Library/Application Support/Microsoft/DeveloperTools/.onnxruntime`.
+   That measurement did not check whether anything was sent. You can
+   give the setting yourself before you start Python, with
+   `export ORT_DISABLE_TELEMETRY=1` in the Terminal.
+
+   onnxruntime's package holds a note, `Privacy.md`. For Windows, the
+   note says that onnxruntime's official releases report as they do on
+   Linux and macOS, and read the setting. It also says that
+   onnxruntime's older way of reporting on Windows, through Windows' own
+   diagnostic data, does not read the setting. The lock, `uv.lock`,
+   installs onnxruntime 1.31.0, whose Windows package reports in that
+   older way, as its files show.
+   [PRIVACY.md, "How your data flows"](PRIVACY.md#how-your-data-flows)
+   says what it reports there.
 
 4. **Run the test suite** from the repository root:
 
@@ -198,15 +226,20 @@ its fix. Describe it there without copying data, as above.
    constant in `src/exegete/server.py`, and `_with_paragraphs` puts it
    back into each tool's docstring, so a change to it is made there.
    Three tool texts also give the lock paragraph's words, typed by hand:
-   `apply_codings`' safety guarantees, `restore_backup`'s list of
-   safeguards, and the key features in `explain_ai_coding_tools`'
-   overview. Six texts give a shorter form of the same rule: the brief,
-   which `read_brief` returns; the descriptions of `select_project` and
-   `set_project_coder_name`; `get_current_project`'s account of
-   `qualcoder_open`; `start_coding_session`'s paragraph on a project in
-   use; and `import_documents`' list of what it refuses. Rule 9 of the
-   opening text says what the assistant does when a tool reports another
-   program. A rewording is made in each of them too.
+   - `apply_codings`' safety guarantees
+   - `restore_backup`'s list of safeguards
+   - the key features in `explain_ai_coding_tools`' overview
+
+   Six texts give a shorter form of the same rule:
+   - the brief, which `read_brief` returns
+   - the descriptions of `select_project` and `set_project_coder_name`
+   - `get_current_project`'s account of `qualcoder_open`
+   - `start_coding_session`'s paragraph on a project in use
+   - `import_documents`' list of what it refuses
+
+   Rule 9 of the opening text says what the assistant does when a tool
+   reports another program. When the rule's words change, change them in
+   each of these texts too.
 
    For each tool set, `full` and `core`, `docs/snapshot/` keeps the
    texts Exegete gives the assistant that are the same for every
@@ -291,11 +324,11 @@ its fix. Describe it there without copying data, as above.
    paragraph names. A dated reading gives the day a claim about another
    program was checked, in the form [docs/WRITING.md](docs/WRITING.md)
    gives, and the list gives its age in days. At release preparation,
-   `python scripts/check_promises.py --release`, run in a full clone,
-   fails on a promise whose line is older than the script's
-   `MAX_AGE_DAYS` and that names no row of the plan, and on a reading
-   older than `MAX_AGE_DAYS`. Write what is missing as what Exegete
-   does not do, or give it a row in the plan. A sentence that uses a
+   `python scripts/check_promises.py --release` is run in a full clone.
+   It fails on a promise whose line is older than the script's
+   `MAX_AGE_DAYS` and that names no row of the plan. It also fails on a
+   reading older than `MAX_AGE_DAYS`. Write what is missing as what
+   Exegete does not do, or give it a row in the plan. A sentence that uses a
    promise's words for a state, such as
    `a change previewed but not yet made`, goes into the script's
    `NOT_PROMISES`, with its reason.
@@ -501,7 +534,7 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── file_kinds.py        # What kind of entry sits at a name: a named pipe is refused, never opened (0.15.1)
 │   │   ├── memo_privacy.py      # QualCoder's '#####' private-memo convention
 │   │   ├── new_project.py       # create_project: the folder and its schema v17 database
-│   │   ├── sessions.py          # AI coding session management
+│   │   ├── sessions.py          # AI coding sessions: each kept in its project's Exegete coding sessions folder, sealed with Exegete's key, earlier ones in the state folder (0.15.4)
 │   │   ├── project_settings.py  # The project's AI coder name (exegete.json)
 │   │   ├── preview_tokens.py    # Preview tokens for the destructive tools
 │   │   ├── change_record.py     # The record each change leaves for undo; a sweep removes it once a day old
@@ -520,14 +553,14 @@ exegete/                     # the clone (its folder's name does not matter)
 │   │   ├── reading_copy.py      # The reading page: a file's whole text and its codings
 │   │   ├── reading_folder.py    # The private reading folder, and its tidying
 │   │   ├── opener.py            # Opening a file in its own app, or showing it in its folder
-│   │   ├── private_files.py     # The files Exegete keeps, and the project's Exegete folder (0.15.0)
+│   │   ├── private_files.py     # The files Exegete keeps, the project's Exegete folder (0.15.0) and its Exegete coding sessions folder (0.15.4)
 │   │   ├── names_file.py        # The names file: its five lines, and how it is read back (0.15.0)
 │   │   ├── origin_mark.py       # The internet-origin mark, carried to a copy
 │   │   ├── parts.py             # Whole-file reads in parts
 │   │   ├── cursors.py           # Paging cursors for the search and segment tools
 │   │   ├── coder_comparison.py  # compare_coders: agreement and the two kappas
 │   │   ├── pseudonymise.py      # pseudonymise_source: matching, remapping, the residue detector
-│   │   ├── occurrences.py       # pseudonymise_source: the short id and line number of each occurrence of a name, and the page for choosing them (0.15.3)
+│   │   ├── occurrences.py       # pseudonymise_source: the short id and line number of each occurrence of a name, and the page for choosing them (0.15.3); each occurrence's number, the list's numbering and the page's one script (0.15.4)
 │   │   ├── refi_export.py       # REFI-QDA XML export
 │   │   ├── transition.py        # --check-transition: what the move from qualcoder-mcp left
 │   │   ├── updates.py           # The check for new versions: check_for_updates, the notes given once
@@ -610,19 +643,22 @@ npx @modelcontextprotocol/inspector python -m exegete.server
 
 The MCP library's own command, `mcp dev src/exegete/server.py`, cannot
 start Exegete. It loads `server.py` as a file on its own, and the
-module's imports are relative to its package. Started from the
-Inspector, Exegete works in your own home folder, as it does however it
-is started. It keeps its working files in `~/.exegete`, and looks for
-projects in the usual places. If an earlier copy left a folder at
-`~/.qualcoder_mcp`, the first start moves it to `~/.exegete`. The
-pages and copies that Exegete opens for reading go into its reading
+module's imports are relative to its package.
+
+Started from the Inspector, Exegete works in your own home folder, as it
+does however it is started. It keeps its working files in `~/.exegete`,
+and looks for projects in the usual places. If an earlier copy left a
+folder at `~/.qualcoder_mcp`, the first start moves it to `~/.exegete`.
+The pages and copies that Exegete opens for reading go into its reading
 folder, and a reading page holds a document's whole text and its
-codings. [PRIVACY.md](PRIVACY.md#reading-a-whole-file-what-leaves-the-computer)
-says where that folder is. To try the tools away from your own
-projects and these folders, start the Inspector with `HOME` set to an
-empty folder, as the suite does for each test. On Windows, set
-`USERPROFILE` to the same folder and `LOCALAPPDATA` to a folder inside
-it. On Linux, unset `XDG_CACHE_HOME` or set it inside that folder.
+codings.
+[PRIVACY.md](PRIVACY.md#reading-a-whole-file-what-leaves-the-computer)
+says where that folder is. To try the tools away from your own projects
+and these folders, start the Inspector with `HOME` set to an empty
+folder, as the suite does for each test. On Windows, set `USERPROFILE`
+to the same folder and `LOCALAPPDATA` to a folder inside it. On Linux,
+unset `XDG_CACHE_HOME` or set it inside that folder.
+
 Exegete also reads its settings from the environment it starts in. A
 project or a folder for projects set there would point the trial at
 your real projects, so leave out every setting whose name begins with
@@ -637,12 +673,17 @@ Exegete is built on the
 ## Scope
 
 The design is for general use, principles first. A feature is justified
-on general grounds: the whole life of a project from the conversation;
-interoperability with QualCoder, its formats and conventions kept and
-every departure named; general mappings that hold for any project;
-capability probes rather than special cases. Requests that fit only one research project, one
-researcher's habits or one MCP host are usually declined or generalised
-first. The same rule applies to the maintainer's own projects.
+on general grounds:
+
+- the whole life of a project from the conversation
+- interoperability with QualCoder, its formats and conventions kept and
+  every departure named
+- general mappings that hold for any project
+- capability probes rather than special cases
+
+Requests that fit only one research project, one researcher's habits or
+one MCP host are usually declined or generalised first. The same rule
+applies to the maintainer's own projects.
 
 ## The earlier name
 
@@ -677,7 +718,7 @@ anything (`scripts/release_version.py`).
 
 Every installed copy with checking on fetches
 `https://nicotem.github.io/exegete/latest.json` (`src/exegete/updates.py`)
-and follows no redirect, so that address is permanent. Never rename or
+and follows no redirect, so that address must never change. Never rename or
 delete the `nicotem` account, the `exegete` repository or its Pages
 site, and never set a custom domain on this Pages site or on the
 account's own one. Each of these would remove the site or move it to
@@ -708,20 +749,20 @@ is `_after_update_text` in `src/exegete/updates.py`.
 
 The version file, and the update page Exegete's notes point to
 (`https://nicotem.github.io/exegete/update/`), live in `pages/`. Each
-release updates both with `release.py`: in `latest.json`, the version
-as PyPI spells it and its date; on the page, the version, its date, the
-links and the commands, and under "What's new" the same paragraph as
-the note, word for word. `tests/test_v0142_pages.py` holds them to
+release updates both with `release.py`. `latest.json` gets the version
+as PyPI spells it, and its date. The page gets the version, its date,
+the links and the commands, and, under "What's new", the same paragraph
+as the note, word for word. `tests/test_v0142_pages.py` holds them to
 `release.py`.
 
-What Exegete tells once (the check's disclosure and a new version,
-whether on another tool's answer or in `check_for_updates`' own, and
-the note after an update) is recorded as told only after the answer
-carrying it has been written to standard output and flushed
-(`src/exegete/standard_output.py`), and not when the app has cancelled
-the request. Every tool but `check_for_updates` runs on the event loop,
-so the library reads a cancel only once such a tool has answered, and
-that answer still goes out. Standard input's own thread
+Exegete tells some things once: the check's disclosure, a new version,
+and the note after an update. The first two can come on another tool's
+answer or in `check_for_updates`' own. Each is recorded as told only
+after the answer carrying it has been written to standard output and
+flushed (`src/exegete/standard_output.py`). It is not recorded when the
+app has cancelled the request. Every tool but `check_for_updates` runs
+on the event loop, so the library reads a cancel only once such a tool
+has answered, and that answer still goes out. Standard input's own thread
 (`src/exegete/standard_input.py`) reads the line after the call while
 such a tool runs, and gives it to `standard_output.read_cancel`, so a
 cancel sent next is known before the answer goes out. A cancel sent
@@ -729,27 +770,27 @@ behind several other lines is read only once the tool has answered,
 and can come too late: the note then counts as given.
 This relies on the MCP library flushing standard output once each
 message has been written: a message written in two parts, or two
-messages to one flush, are read alike. A release of the library that
-stopped flushing would leave every note held: each would come again at
-every start, and with checking on, the disclosure would never be
-recorded, so the check would never run.
+messages to one flush, are read alike. With a release of the library
+that stopped flushing, no note would ever be recorded as told. Each
+would then come again at every start. With checking on, the disclosure
+would never be recorded, so the check would never run.
 `tests/test_v0153_update_note.py` holds this, and the
 `newest-libraries` job, which runs the suite on the newest releases,
 is where such a change would show first.
 
 Each release's notes on GitHub list what the desktop extension
-installs, under "What the extension installs": the table in the summary
-of the Linux desktop extension job in the release commit's CI run
-(`scripts/extension_libraries.py`, from the lock's dry run on each
-computer).
+installs, under "What the extension installs". The list is the table
+that `scripts/extension_libraries.py` writes from the lock's dry run on
+each computer. It is in the summary of the Linux desktop extension job,
+in the CI run of the release's commit.
 
 The site is published by `.github/workflows/pages.yml`,
-deployed from GitHub Actions and never from a branch (the maintainer's
-decision of 5 October 2026, recorded in `docs/update-check/design.md`):
-a branch would let any token that can push rewrite `latest.json`
-without a release. Once the release is published, with its extension
-file, and both packages are on PyPI, start the workflow by hand from
-the release's tag. It checks the site against the release
+deployed from GitHub Actions and never from a branch. A branch would
+let any token that can push rewrite `latest.json` without a release.
+That was the maintainer's decision of 5 October 2026, recorded in
+`docs/update-check/design.md`. Once the release is published, with its
+extension file, and both packages are on PyPI, start the workflow by
+hand from the release's tag. It checks the site against the release
 (`scripts/check_pages_site.py`) and that the release is out. The deploy
 then waits in the `github-pages` environment for the maintainer's
 approval: the last step of each release, and a hold switch for a bad

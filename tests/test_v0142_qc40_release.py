@@ -121,20 +121,17 @@ def test_privacy_says_what_its_verification_covers():
         found = [i for i, h in enumerate(headings) if h.startswith(name)]
         assert len(found) == 1 and found[0] > here, name
     for words in (
+            # (v0.15.4, the readability reading: the commit's line numbers
+            # in fewer words; the correction made at the release, history
+            # that changes nothing now, left out)
             "The code behind the private memo marker, the coder-visibility "
             "table and its views, and QualCoder's backups is the same there "
             "as in its development tree at commit 9bddf17 (25 August 2026), "
-            "where they were first checked, and the line numbers cited from "
-            "QualCoder's code are still that commit's.",
+            "whose line numbers they cite.",
             # (v0.15.3: named by the release it is true of, which no
             # longer changes, as docs/WRITING.md allows)
-            # (its readability reading: the correction a sentence of its
-            # own)
-            "What these sections say of QualCoder's own assistant and AI "
-            "server, whose code changed a good deal in the release, was read "
-            "again in 4.0's released code. One statement was corrected: "
-            "what QualCoder's server answers about an annotation (under "
-            "\"Coder visibility\").",
+            "What they say of QualCoder's own assistant and AI server was "
+            "read again in 4.0's released code.",
             "TOOLS.md, \"Supported QualCoder versions\", says what else was "
             "checked at the release."):
         assert words in note, words
@@ -152,12 +149,23 @@ def test_privacy_tells_qualcoder_s_annotation_answer_as_it_is():
     (TestWriteEchoesRedactHiddenTargets)."""
     writes = _between(_flat("PRIVACY.md"),
                       "**Writes that target an existing row by id**",
-                      "The token-gated cascades")
+                      "**The cascades**")
     assert "as QualCoder's AI server does" not in writes
     for words in (
-            "With the override, the result echoes ids only (update_annotation "
-            "also echoes back the public note text the AI itself just "
-            "supplied), never the hidden coder's name, code, span or text.",
+            # (v0.15.4, the claims audit's point 25: with the override the
+            # code's and the file's ids do enter the conversation, which
+            # "never the hidden coder's ... code" denied; server.py
+            # delete_coding, database.py's hidden-row answers. PRIVACY's
+            # fix round: set_memo's answer gives the coding's id alone,
+            # database.py's set_memo, so each tool's answer is said apart)
+            "With the override, the answer gives ids. delete_coding gives "
+            "those of the coding, its code and its file, which together "
+            "tell which code was applied to which file. set_memo gives the "
+            "coding's id alone, with the public part of the note it wrote. "
+            "update_annotation and delete_annotation give those of the "
+            "annotation and its file, with the note and its date that "
+            "update_annotation wrote. The coder's name, the span and the "
+            "text never enter the conversation.",
             "QualCoder 4.0's own AI server answers the same way about a "
             "coding but not about an annotation: its update and delete of an "
             "annotation answer with the annotation's position and its "
@@ -216,9 +224,10 @@ def test_the_readme_table_is_checked_against_the_release():
     assert "TOOLS.md#supported-qualcoder-versions" in readme
     # the owner's word of 29 October 2026: the table back, its QualCoder
     # column as checked against the release on 10 October 2026, beside the
-    # release the table describes (0.15.3 from its release preparation)
-    assert ("The table sets QualCoder 3.8.2 and 4.0, as checked on 10 "
-            "October 2026, beside Exegete 0.15.3.") in readme
+    # release the table describes (0.15.3 from its release preparation);
+    # checked again against both releases at v0.15.4's preparation
+    assert ("The table sets QualCoder 3.8.2 and 4.0, as checked on 12 "
+            "November 2026, beside Exegete 0.15.4.") in readme
     assert ("3.8.2: an AI search finds passages, which you code. 4.0: its "
             "assistant codes as it works, within the AI permission you set "
             "(Read-only stops it), with undo") in readme
@@ -262,15 +271,22 @@ def test_the_bug_report_form_names_the_release():
     for words in ("4.0-Beta", "4.0 Beta", "9bddf17", "a released QualCoder"):
         assert words not in form, words
     # v0.14.2 (the owner's ruling of 7 October 2026): asked only of those
-    # who use QualCoder
-    assert ('description: A release (3.8.x or 4.0), or "none" if you do '
-            'not use QualCoder.') in form
+    # who use QualCoder (v0.15.4: the label says so, and the sentence gives
+    # the two releases and "none" without naming QualCoder again)
+    asked = form[form.index("id: qualcoder-version"):]
+    asked = asked[:asked.index("- type:")]
+    assert "label: QualCoder version, if you use it" in asked
+    assert '3.8.x or 4.0, or "none" if you do not use it.' in asked
     # v0.15.0, the whole-branch review's round 3: the lock file has two
-    # causes, QualCoder 3.8 or another conversation using Exegete
-    assert ("Writes are refused while the project's lock file is active "
-            "(QualCoder 3.8.2 has the project open, or another conversation "
-            "using Exegete is writing to it); QualCoder 4.0 writes no lock "
-            "file") in form
+    # causes, QualCoder 3.8.2 or another conversation using Exegete; 4.0
+    # writes none (v0.15.4: in SUPPORT.md's sentences)
+    opened = form[form.index("id: qualcoder-open"):]
+    opened = opened[:opened.index("- type:")]
+    assert "label: If you use QualCoder, was the project open" in opened
+    for fact in ("QualCoder 3.8.2 writes one while it has the project open",
+                 "another conversation using Exegete while it writes",
+                 "QualCoder 4.0 writes no lock file"):
+        assert fact in opened, fact
 
 
 def test_the_verified_check_would_notice():

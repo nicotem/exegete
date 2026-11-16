@@ -68,20 +68,27 @@ FIRST_LINE = "Replace names with pseudonyms in a project's stored text."
 # The names file's fix round 1 (v0.15.0, the files design, piece 3): the
 # names file, a second plain-text file of real names, joins what the
 # folder still holds (tests/test_v0150_names_file.py)
+# (v0.15.4, the readability reading: what the folder still holds in a
+# list, and the reverse key explained)
 SHARING_THE_FOLDER = (
     "Sharing the project's folder itself, though, shares what it still "
-    "holds, real names included: the imported documents' originals, copied "
-    "unchanged into its folder of originals; `pseudonyms.json`, if you keep "
-    "one, the reverse key at its root; and the names file, `Names to "
-    "replace.txt` in the project's `Exegete` folder, if you made one, which "
-    "holds real names and their pseudonyms in plain text as "
-    "`pseudonyms.json` does. \"Pseudonymising a project does not empty it "
-    "of names\", below, says what stays, the backups beside the project "
-    "included.")
+    "holds, real names included: - the imported documents' originals, "
+    "copied unchanged into its folder of originals; - `pseudonyms.json`, if "
+    "you keep one, the reverse key at its root, from which anyone can put "
+    "the real names back; - the names file, `Names to replace.txt` in the "
+    "project's `Exegete` folder, if you made one, which holds real names "
+    "and their pseudonyms in plain text as `pseudonyms.json` does; "
+    # (v0.15.4: the coding sessions kept with the project, each passage
+    # recorded word for word, sessions.CodingSuggestion's segment_text)
+    "- its coding sessions, in its `Exegete coding sessions` folder, whose "
+    "passages were recorded word for word, real names included if they "
+    "were recorded before the names were replaced. "
+    "\"Pseudonymising a project does not empty it of names\", below, says "
+    "what stays, the backups beside the project included.")
 # Fix round 2: what an export still carries, said after the folder
 EXPORTS = (
     "An export from Exegete carries the replaced text, but file and case "
-    "names as they are, and notes in full, private parts included; an "
+    "names as they are, and notes in full, private parts included. An "
     "export made in QualCoder carries the unchanged originals.")
 # The files design, piece 5 (read_pseudonym_list removed): the list can
 # be filled in on the researcher's own computer, a paragraph after the
@@ -89,7 +96,7 @@ EXPORTS = (
 FILLED_IN = (
     "The list can be filled in on your own computer, in the names file "
     "Exegete prepares, so that the names do not pass through the "
-    "conversation; an assistant that opens files by itself could still read "
+    "conversation. An assistant that opens files by itself could still read "
     "that file (\"Files Exegete keeps on your computer\").")
 # v0.15.1, privacy by audience (the owner, 21 October 2026): the rule
 # says which of the three things PRIVACY.md's opening names it protects
@@ -98,14 +105,16 @@ FILLED_IN_PROTECTS = (
 # Fix round 2: the list is a selection, a name in another form is
 # named, the condition is on the last item alone, and the long sentence
 # is three
+# (v0.15.4, the readability reading: the selection in a list, its
+# condition still on the last item alone)
 AMONG_WHAT_REACHES = (
-    "Not everything is replaced, though; among what still reaches the "
-    "assistant through Exegete: a PDF's text, file and case names, "
-    "attribute values, any name, or form of a name, that the list or the "
+    "Not everything is replaced, though. Among what still reaches the "
+    "assistant through Exegete: - a PDF's text; - file and case names, and "
+    "attribute values; - any name, or form of a name, that the list or the "
     # (v0.15.3, the occurrences choice: the occurrences a run leaves by
     # choice are real names, still in the text)
-    "mapping does not match, occurrences left by choice, and notes and "
-    "journal entries unless you ask for them to be rewritten.")
+    "mapping does not match; - occurrences left by choice; - notes and "
+    "journal entries, unless you ask for them to be rewritten.")
 TYPED_NAMES = (
     "Names you type into the conversation for a mapping reach the "
     "assistant as you type them.")
@@ -153,15 +162,50 @@ LISTED_ABOVE = "What this does not rewrite, so the names remain there:"
 CHOOSING_OCCURRENCES = (
     "A run can also leave chosen occurrences of a name as they are, such as "
     "those of a second person with the same name. For that choice, the "
-    "preview gives the conversation a short id for each of the first "
-    f"{occurrences.OCCURRENCES_LISTED} occurrences, and counts. When the "
-    "mapping was typed into the conversation, each id comes with its line "
-    "number. It gives none of the words around an occurrence: "
-    "those are on a page that Exegete opens in your browser, where you "
-    "choose. The "
-    "assistant is told never to open or read that page, and you give it the "
-    "ids to leave. \"Reading a whole file\", below, says where the page is "
-    "kept and when it goes.")
+    # (v0.15.4, the way of choosing: each occurrence has a number beside
+    # its id, the list its numbering, and the page shows the numbers in
+    # bold and gives a line to paste; PRIVACY read whole, the choosing
+    # page's review, finding 7)
+    "preview gives the conversation a number and a short id for each of "
+    f"the first {occurrences.OCCURRENCES_LISTED} occurrences, the list's "
+    "numbering, and counts. When the mapping was typed into the "
+    "conversation, each occurrence also comes with its line number. It "
+    "gives none of the words around an occurrence: those are on a page "
+    "that Exegete opens in your browser, where you choose. The assistant is "
+    "told never to open or read that page. You give it the numbers to "
+    "leave, shown in bold on the page, or paste the line the page gives "
+    "you. \"Reading a whole file\", below, says where the page is kept and "
+    "when it goes.").replace(
+        # (v0.15.4, the readability reading: the numbering explained, and
+        # the preview named where "It" stood)
+        "the list's numbering, and counts. ",
+        "the list's numbering, and counts. The numbering is a short code "
+        "that names that list. ").replace(
+        "line number. It gives none", "line number. The preview gives none")
+# v0.15.4, phrases to keep: typed into the call, bound into the token and
+# kept in no file of Exegete's, counted by the preview, the answer, the
+# run record and the journal entry (server.py: _kept_by_phrases,
+# _KEEP_PHRASES_TO_REPEAT), refused with the names list before it is read
+# (_PHRASES_NEED_A_TYPED_MAPPING); held to the code in
+# tests/test_v0154_privacy_additions.py (its readability reading: the
+# warning that a name inside a kept phrase stays said second, the names
+# list and the records of changes joined to the sentence that keeps no
+# phrase, and why the run needs the phrases again)
+PHRASES_TO_KEEP = (
+    "With a mapping you type, a run can also keep whole phrases as they are "
+    "(`keep_phrases`), such as a public figure's name or a saying. A name "
+    "inside a kept phrase is a real name: it stays in the file's text after "
+    "the run, and in the notes the run rewrites. Like a typed mapping, the "
+    "phrases are typed into the conversation, so they are in it and in the "
+    "host's records. Exegete itself keeps no phrase: no file, record, log "
+    "line or answer of its own holds one, `pseudonyms.json` and the records "
+    "of changes kept for undo included. So the run needs the phrases again, "
+    "and the preview says how many to give. The preview, the run's answer, "
+    "the run record and the journal entry count the occurrences the phrases "
+    "kept. The page for choosing occurrences marks those occurrences in the "
+    "text it already shows, and lists no phrase. With the names list, "
+    "phrases are refused before the list is read, since an answer about a "
+    "phrase could tell whether a name in it is on the list.")
 # The new texts, word for word, white space collapsed (fix round 1:
 # what the project's folder still holds, what is not replaced, where
 # else an unchanged copy sits, and three phrases)
@@ -176,14 +220,18 @@ SECTION = (
     + FILLED_IN_PROTECTS + " "
     # the files design, piece 5, fix round 1: the subject named, after
     # the paragraph on the names file
+    # (v0.15.4, the readability reading: what the tools miss said as a
+    # fact, where "should not be trusted blindly" stood; the route outside
+    # Exegete and what it reads, two sentences)
     "For what reaches the AI assistant, the list and `pseudonymise_source` "
-    "help, but they should not be trusted blindly. "
+    "help, but they do not catch every name. "
     + NOT_EVERYTHING + " "
     "And depending on how your assistant is set up, an assistant that "
-    "meets a problem may work round it by a route outside Exegete, and "
-    "what it reads that way goes to its AI provider in full (\"Assistants "
+    "meets a problem may work round it by a route outside Exegete. What it "
+    "reads that way goes to its AI provider in full (\"Assistants "
     "that open files by themselves\", above). "
     + CHOOSING_OCCURRENCES + " "
+    + PHRASES_TO_KEEP + " "
     "An imagined example. You bring ten interview transcripts into a "
     "project, meaning to replace the names before any coding starts. One "
     "file is refused. The assistant, which in your set-up can open files on "
@@ -205,7 +253,7 @@ SECTION = (
 # The phrases the design names, each looked for on its own as well
 SECTION_PHRASES = (
     "replaces participants' names as documents are imported",
-    "help, but they should not be trusted blindly",
+    "help, but they do not catch every name",
     "Nothing in Exegete saw that read",
     "a safer way is to replace them before the documents come to the "
     "computer where the assistant works",
@@ -374,7 +422,7 @@ class TestPrivacy:
     def test_the_section_says_not_everything_is_replaced_and_where(self):
         privacy = _doc("PRIVACY.md")
         section = _flat(_section(privacy, "What pseudonymisation is for"))
-        assert ("they should not be trusted blindly. " + NOT_EVERYTHING
+        assert ("they do not catch every name. " + NOT_EVERYTHING
                 + " And depending on how your assistant") in section
         # the first round's wider claim is gone
         assert "what Exegete's tools return carries the pseudonyms" \
@@ -409,7 +457,7 @@ class TestPrivacy:
                                  "What pseudonymisation is for"))
         assert AMONG_WHAT_REACHES in section
         # a selection, not the whole account
-        assert ("Not everything is replaced, though; among what still "
+        assert ("Not everything is replaced, though. Among what still "
                 "reaches the assistant through Exegete:") in section
         # a name in another form is named, and "match" rather than "hold"
         assert ("any name, or form of a name, that the list or the mapping "
@@ -417,7 +465,7 @@ class TestPrivacy:
         # the condition is on notes and journal entries alone: the last
         # item, and the sentence ends with it
         listed = AMONG_WHAT_REACHES[AMONG_WHAT_REACHES.index(":") + 1:]
-        assert listed.endswith(", and notes and journal entries unless you "
+        assert listed.endswith("- notes and journal entries, unless you "
                                "ask for them to be rewritten.")
         assert listed.count("unless") == 1
         assert ("unless you ask for them to be rewritten. " + TYPED_NAMES
@@ -431,8 +479,10 @@ class TestPrivacy:
         sentences = re.split(r'(?<=\.) (?=["A-Z])', second)
         longest = max(sentences, key=lambda s: len(s.split()))
         assert len(longest.split()) <= LONGEST_SENTENCE, longest
-        # what the first round said in one sentence is now three
-        assert len(sentences) == 6, sentences
+        # what the first round said in one sentence is now three; and
+        # (v0.15.4, the readability reading) the list that ends the
+        # paragraph stands apart from it
+        assert len(sentences) == 4, sentences
 
     def test_the_second_rounds_words_are_gone(self):
         section = _flat(_section(_doc("PRIVACY.md"),
@@ -446,10 +496,16 @@ class TestPrivacy:
     def test_practical_mitigations_points_to_it(self):
         privacy = _doc("PRIVACY.md")
         mitigations = _section(privacy, "Practical mitigations")
-        first = mitigations[mitigations.index("- **Prefer synthetic"):]
+        # (v0.15.4, PRIVACY read whole: "Prefer synthetic" and "the safe
+        # path", a prescription and a reassurance, became a warning and a
+        # suggestion, the pointer kept)
+        first = mitigations[mitigations.index(
+            "- **Pseudonymised data is still personal data.**"):]
         first = _flat(first[:first.index("\n- ")])
-        assert first.endswith("genuinely anonymised data is the safe path "
-                              "for experimentation. " + MITIGATION)
+        assert "Pseudonymisation reduces risk only." in first
+        assert first.endswith("you could use made-up data, or data that is "
+                              "genuinely anonymised. " + MITIGATION)
+        assert "safe path" not in mitigations
 
     def test_no_long_dash_in_the_new_texts(self):
         privacy = _doc("PRIVACY.md")

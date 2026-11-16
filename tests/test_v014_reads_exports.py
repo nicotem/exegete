@@ -303,7 +303,10 @@ class TestAttributeQueriesCompareNumbersOnly:
         assert [r["attribute_value"] for r in out["results"]] == ["55"]
         assert out["result_count"] == 1
         assert out["values_compared"] == 1
-        assert out["values_left_out"] == {"not_numbers": 3, "unset": 1}
+        # Unset: case 6's "" and case 1, which has no row for 'Stated
+        # age' and reads as unset since v0.15.4 (the claims audit's point
+        # 34)
+        assert out["values_left_out"] == {"not_numbers": 3, "unset": 2}
         assert "character attribute" in out["note"]
 
     def test_lt_finds_nothing_rather_than_unknown(self, mixed_ages):
@@ -456,7 +459,8 @@ class TestUnknownValuesAreRefused:
         ("find_cooccurring_codes", {"code_id": 3}),
         ("get_codes_by_case", {"case_id": 2}),
         ("get_cases_by_code", {"code_id": 3}),
-        ("get_case_attributes", {"case_id": 2}),
+        # get_case_attributes for case 2: since v0.15.4 a case with no row
+        # for an attribute lists it as unset (the test below)
         ("query_by_attribute", {"attr_name": "Age", "attr_value": "999",
                                 "operator": "gt"}),
     ]
@@ -475,6 +479,15 @@ class TestUnknownValuesAreRefused:
             assert counts and all(c == [] for c in counts), out
         else:
             assert out == []
+
+    def test_a_case_with_no_attribute_rows_lists_them_unset(self, scoped):
+        """v0.15.4 (the claims audit's point 34): a case with no row for
+        an attribute reads as unset, as QualCoder reads it, so the read
+        lists the project's case attribute with "" and no error."""
+        out = host("get_case_attributes", case_id=2)
+        assert "error" not in out, out
+        assert [(a["name"], a["value"]) for a in out["attributes"]] == [
+            ("Age", "")]
 
     def test_frequencies_of_a_known_coder_count_zero_where_none(self, scoped):
         out = host("get_coding_frequencies", coder="Other")

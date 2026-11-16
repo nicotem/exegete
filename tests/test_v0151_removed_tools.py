@@ -130,10 +130,11 @@ class TestTheToolsAreGone:
     @pytest.mark.parametrize("name", GONE)
     def test_a_call_is_refused_as_an_unknown_tool(self, name, setup_server):
         # A session left untouched for ten years, older than any days_old
-        session_dir = Path(server.session_manager.storage_dir)
         sid = server.start_coding_session([1], instruction="test").split(
             "Session ID: `")[1].split("`")[0]
-        path = session_dir / f"session_{sid}.json"
+        # (v0.15.4: a new session is kept in its project's sessions folder)
+        path = server.session_manager.session_file(sid)
+        session_dir = path.parent
         data = json.loads(path.read_text(encoding="utf-8"))
         data["last_modified"] = (datetime.now()
                                  - timedelta(days=3650)).isoformat()
@@ -179,7 +180,8 @@ def merged_session(setup_server):
     target = _propose(sid, "Deadline stress",
                       ["I feel stressed about deadlines"])
     source = _propose(sid, "Coping by exercise", ["I cope by exercising"])
-    path = Path(server.session_manager.storage_dir) / f"session_{sid}.json"
+    # (v0.15.4: a new session is kept in its project's sessions folder)
+    path = server.session_manager.session_file(sid)
     data = json.loads(path.read_text(encoding="utf-8"))
     by_guid = {p["guid"]: p for p in data["proposed_codes"]}
     by_guid[target]["example_segments"] += by_guid[source][

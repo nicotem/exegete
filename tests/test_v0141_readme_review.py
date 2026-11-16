@@ -187,10 +187,11 @@ def test_the_readme_quotes_the_consumer_terms_in_privacys_words():
     # with the feedback exception beside it
     # (v0.15.2, the opening texts: the risk, the setting and the
     # exception, as a warning with what to do, not an order)
+    # (v0.15.4: Ultra, a plan for individuals, among the personal plans)
     assert ("3. **Training.** While training is on, Anthropic may use your "
             "conversations, with the participants' data in them, to train "
-            "its models. On a personal plan (Free, Pro or Max), the setting "
-            "\"Help improve our AI models\" at "
+            "its models. On a personal plan (Free, Pro, Max or Ultra), the "
+            "setting \"Help improve our AI models\" at "
             "https://claude.ai/settings/data-privacy-controls switches "
             "training off. Rating a reply, with a thumbs up or down, can "
             "still let Anthropic train on that conversation (PRIVACY.md "
@@ -240,10 +241,12 @@ def test_the_three_commitments():
     # word of 29 October 2026 makes 0.15.2 (v0.15.2's release
     # preparation: the clause on the REFI-QDA fix went with the fix's move
     # to v0.15.3; "What comes next" names its release), and v0.15.3's
-    # release preparation 0.15.3, whose REFI-QDA row the table gives
+    # release preparation 0.15.3, whose REFI-QDA row the table gives;
+    # v0.15.4's release preparation checked QualCoder's side again on 12
+    # November 2026, beside 0.15.4
     dated = section.index("The table sets QualCoder 3.8.2 and 4.0, as "
-                          "checked on 10 October 2026, beside Exegete "
-                          "0.15.3.")
+                          "checked on 12 November 2026, beside Exegete "
+                          "0.15.4.")
     table = section.index("| | In QualCoder | From the conversation, with "
                           "Exegete |")
     assert dated < table

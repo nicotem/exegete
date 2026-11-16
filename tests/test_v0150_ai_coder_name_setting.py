@@ -662,9 +662,10 @@ class TestTheDocuments:
 
     def test_privacy(self):
         text = _doc("PRIVACY.md")
+        # (v0.15.4, the readability reading: two sentences)
         assert ("You can choose it in advance, in Exegete's settings (\"AI "
                 "coder name\" in the extension, `EXEGETE_AI_CODER_NAME` on "
-                "other routes): Exegete stores it with each project it "
+                "other routes). Exegete then stores it with each project it "
                 "creates, without asking, and the answer that creates the "
                 "project says so.") in text
         assert ("When the AI coder name is filled in Exegete's settings, it "
@@ -688,10 +689,12 @@ class TestTheDocuments:
         # (v0.15.2, the opening texts: the same fact, reworded)
         # (the readability reading: who asks, and when; the exception a
         # sentence of its own)
+        # (v0.15.4, the readability reading: what Exegete does with the
+        # name, a sentence of its own)
         assert ("Before Exegete first writes to the project, the assistant "
-                "asks for the AI coder name, kept per project, under which "
-                "Exegete writes what is done through the conversation. It "
-                "does not ask if the project was made with that name in "
+                "asks for the AI coder name. Exegete keeps it per project, "
+                "and writes what is done through the conversation under it. "
+                "It does not ask if the project was made with that name in "
                 "Exegete's settings.") in _doc("README.md")
         guide = _doc("AI_CODING_GUIDE.md")
         # (v0.15.2: the two ways of choosing it, one to an item)

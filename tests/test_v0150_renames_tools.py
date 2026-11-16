@@ -356,8 +356,8 @@ def _session_answers(registered):
     unreadable = json.loads(_call(
         "start_coding_session", file_ids=[1],
         instruction="test"))["coding_session_id"]
-    path = (Path(server.session_manager.storage_dir)
-            / f"session_{unreadable}.json")
+    # (v0.15.4: a new session is kept in its project's sessions folder)
+    path = server.session_manager.session_file(unreadable)
     data = json.loads(path.read_text(encoding="utf-8"))
     data["scope"] = "all"
     path.write_text(json.dumps(data), encoding="utf-8")

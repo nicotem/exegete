@@ -297,6 +297,10 @@ INSTALL_OLDER_ENTRY = (
     "lines, `[mcp_servers.exegete.tools.read_pseudonym_list]` and "
     "`approval_mode = \"prompt\"` under it: that tool was removed in "
     "0.15.0, so you can delete both lines.")
+# v0.15.4: the one other table the guide names, for the setting that sets
+# read_file_with_codings' budget in Codex, in its paragraph on Codex's cut
+OUTPUT_LIMIT_TABLE = ("`output_token_limit` under "
+                      "`[mcp_servers.exegete.tools.read_file_with_codings]`")
 
 
 class TestNoShippedTextNamesIt:
@@ -366,8 +370,12 @@ class TestInstall:
             "default_tools_approval_mode = ", "")
         install = _flat(raw)
         # Fix round 1: the table is named once, in the sentence that says
-        # an older entry can drop it
-        rest = install.replace(INSTALL_OLDER_ENTRY, "")
+        # an older entry can drop it; v0.15.4: and the table of the
+        # setting for read_file_with_codings' budget once, with no
+        # approval line
+        rest = install.replace(INSTALL_OLDER_ENTRY, "").replace(
+            OUTPUT_LIMIT_TABLE, "")
+        assert install.count(OUTPUT_LIMIT_TABLE) == 1
         assert "[mcp_servers.exegete.tools." not in rest
         assert 'approval_mode = "prompt"' not in rest
         assert ("`default_tools_approval_mode = \"writes\"` on the line "
@@ -387,9 +395,22 @@ class TestInstall:
                  "the names list every later import applies. From version "
                  "2.1.199, Claude Code asks before every call of such a tool "
                  "in every permission mode, auto and `bypassPermissions` "
-                 "included. It offers no \"don't ask again\", and lets no "
-                 "allow rule skip it. In `dontAsk` mode, it refuses the "
-                 "call. Earlier versions ignore the mark.")) in install
+                 "included, and lets no allow rule skip it. In `dontAsk` "
+                 "mode, it refuses the call. Earlier versions ignore the "
+                 "mark.")) in install
+        # (v0.15.4) the missing "don't ask again" from 2.1.246, as Claude
+        # Code's changelog gives it, with the day it was read
+        assert ("From version 2.1.246, its question offers no \"don't ask "
+                "again\".") in install
+        # (v0.15.4) the option and its ignored allow rule belong to the
+        # versions that read the mark, before the fix: from 2.1.199,
+        # never every earlier version
+        assert ("From 2.1.199 until then, it offered \"Yes, and don't ask "
+                "again\", but then ignored the allow rule that choice "
+                "wrote") in install
+        assert "Before that version, it offered" not in install
+        assert re.search(r"Claude Code's changelog, read on \d{1,2} "
+                         r"[A-Z][a-z]+ 20\d\d", install)
         assert ("`check_for_updates` is not marked read-only: it records "
                 "each check") in install
         assert ("(here, `import_documents` and `save_names_list`) is asked "
@@ -487,18 +508,23 @@ class TestToolsReadmePrivacy:
             "\n## What pseudonymisation is for\n")[1]
         paragraphs = [p.strip() for p in section.split("\n\n") if p.strip()]
         assert paragraphs[0].startswith("The project's names list")
-        assert _flat(paragraphs[1]) == (
+        # (v0.15.4, the readability reading: what the folder still holds
+        # is a list after the first paragraph, so the paragraph is found by
+        # its start; two sentences where a semicolon joined them)
+        filled = next(i for i, p in enumerate(paragraphs)
+                      if p.startswith("The list can be filled in"))
+        assert _flat(paragraphs[filled]) == (
             "The list can be filled in on your own computer, in the names "
             "file Exegete prepares, so that the names do not pass through "
-            "the conversation; an assistant that opens files by itself "
+            "the conversation. An assistant that opens files by itself "
             "could still read that file (\"Files Exegete keeps on your "
             "computer\"). Filling it in there protects the key (\"How your "
             "data flows\").")
         # Fix round 1: the next paragraph names its subject
-        assert _flat(paragraphs[2]).startswith(
+        assert _flat(paragraphs[filled + 1]).startswith(
             "For what reaches the AI assistant, the list and "
-            "`pseudonymise_source` help, but they should not be trusted "
-            "blindly.")
+            "`pseudonymise_source` help, but they do not catch every "
+            "name.")
         assert "\n## Files Exegete keeps on your computer\n" in (
             REPO / "PRIVACY.md").read_text(encoding="utf-8")
 

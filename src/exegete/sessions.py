@@ -1,19 +1,528 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
-"""Session management for AI coding suggestions with disk persistence."""
+"""Session management for AI coding suggestions with disk persistence.
 
+From 0.15.4 a new session is kept inside its project, in the project's
+`Exegete coding sessions` folder (private_files), and goes wherever the
+project goes; a file kept there records no project path, its place
+being its project. Sessions made before 0.15.4 stay in the state
+folder's `sessions`, tied to their project by the path they record, and
+nothing moves; so does a session whose project's folder could not hold
+it, with the reason.
+
+Whoever can write in a project's folder (a shared or synced one) can
+place a session there, so a session kept in a project carries a seal, and
+each approval given on this installation a mark of its own, both keyed
+with Exegete's own key in the state folder (the preview tokens' secret,
+never written into a project) and both covering the project's id
+(`Project id.txt` in its sessions folder, private_files). A file without
+this installation's seal for this project is read as having come with
+the project: its texts are data, and an approval counts only with a mark
+that verifies and while the state folder's record of the session's
+approvals (`approvals/<project id>_<session id>.json`) holds it, so that
+an older copy of the file put back brings back no approval withdrawn here
+since (v0.15.4). The record knows only what Exegete did here: an approval
+withdrawn on another computer, in a session deleted outside Exegete, or
+by a save cut short before the record was set right, stays in it until
+Exegete here saves or deletes that session.
+"""
+
+import errno
+import hashlib
+import hmac
 import json
 import logging
 import os
 import re
+import stat
 import tempfile
+import time
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Optional, Any
+from typing import Callable, List, Dict, NamedTuple, Optional, Any, Tuple
 
+from . import private_files
 from .database import error_label
 
 logger = logging.getLogger(__name__)
+
+# Where a session's file is kept (v0.15.4), as the session tools say it
+KEPT_IN_PROJECT = "project"
+KEPT_ON_THIS_COMPUTER = "this computer"
+# A listed session's description, when its file came with the project
+# (v0.15.4): marked, since it is data, never an instruction
+CAME_WITH_PROJECT_DESCRIPTION = "(came with the project) {description}"
+
+
+def _now() -> datetime:
+    """The time now, for the sessions' ages (one place, so that a test
+    can fix the clock)."""
+    return datetime.now()
+
+
+def days_back_to_year_one(now: Optional[datetime] = None) -> int:
+    """The most days a session list can count back (v0.15.4): the whole
+    days from the start of the year 1, the earliest date Python's dates
+    hold, to now. One more counts back past it, which Python cannot do
+    (739,929 on 10 November 2026, one more each day)."""
+    return ((now or _now()) - datetime.min).days
+
+
+class SessionFileError(ValueError):
+    """A session's file that could not be read, saved or removed in the
+    project's sessions folder, or a start refused, with the reason in
+    plain words: no path, nothing the file holds. `code` says which. A
+    ValueError, so that a tool answers its message (v0.15.4)."""
+
+    def __init__(self, code: str, message: str):
+        super().__init__(message)
+        self.code = code
+
+
+# What a session's tool did not do when the key could not be read
+# (v0.15.4), the end of SessionKeyUnavailable's message
+KEY_NOT_READ = "The session was not read, and nothing was changed."
+KEY_NOT_SAVED = "The session was not saved."
+KEY_NOT_STARTED = "No session was started."
+KEY_NOT_LISTED = "Only the sessions kept on this computer are listed."
+KEY_NOT_DELETED = "The session was not deleted."
+
+# What a project's id that is not an id leaves the researcher to do
+# (v0.15.4): Exegete never replaces the file
+PROJECT_ID_WAYS_ON = (
+    "Exegete never replaces that file. Putting it back from a backup of "
+    "the project, or removing it, lets the project's coding sessions be "
+    "used again; once it is removed, every session there reads as having "
+    "come with the project, its approvals to be given again, and nothing "
+    "in them is lost.")
+# ... and one that could not be read at that moment, which is no sign
+# that it is damaged: asking again comes first, since removing it would
+# make every session there read as having come with the project
+PROJECT_ID_UNREAD_WAYS_ON = (
+    "Exegete never replaces that file. Another program may be holding it "
+    "for a moment, or a sync service may not yet have brought it to this "
+    "computer, so asking again later may work. Removing it would make "
+    "every session there read as having come with the project, its "
+    "approvals to be given again.")
+# Said when a delete was refused and the session's record of approvals,
+# set aside first, could not be put back either (v0.15.4)
+RECORD_NOT_PUT_BACK = (
+    "Its record of approvals could not be put back, so the approvals "
+    "given on this computer in this session read as pending until they "
+    "are given again; every decision stays in the session's file.")
+
+
+def session_key_unavailable_message(what: str) -> str:
+    """Why a session kept in a project could not be checked or sealed,
+    naming the state folder this run uses, and what was not done."""
+    from . import names, state_folder           # no import cycle
+    return state_folder.in_this_run(
+        "Could not read or create the preview-token secret in "
+        f"~/{names.STATE_FOLDER}, which is also the key that seals the "
+        f"coding sessions kept in projects: check permissions. {what}")
+
+
+class SessionKeyUnavailable(SessionFileError):
+    """Exegete's key in the state folder (the preview tokens' secret)
+    could not be read or made, so a session kept in a project can be
+    neither checked nor sealed (v0.15.4). The session tool is refused
+    with this reason, as a preview is; nothing is read as having come
+    with the project, and nothing is saved."""
+
+    def __init__(self, what: str):
+        super().__init__("key_unavailable",
+                         session_key_unavailable_message(what))
+
+
+class ProjectIdUnusable(SessionFileError):
+    """What is at the project's id's name in its sessions folder is not
+    an id (v0.15.4): a link, not a file, past the cap, unreadable, or no
+    UUID4. A start and every read, decision, save and delete of the
+    project's sessions are refused with the reason and the ways on, as an
+    unreadable key refuses them; the file is never replaced. `reason` is
+    the id's refusal alone, and `ways_on` what the researcher can do: for
+    an id that could not be read at that moment, asking again first. (An
+    id whose path is past Windows' limit is refused as a session's file
+    is, with that remedy.)"""
+
+    def __init__(self, reason: str, what: str,
+                 ways_on: str = PROJECT_ID_WAYS_ON):
+        super().__init__("project_id", f"{reason} {what} {ways_on}")
+        self.reason = reason
+        self.ways_on = ways_on
+
+
+class ApprovalRecordError(SessionFileError):
+    """The record of a session's approvals in the state folder could not
+    be written or removed where a save or a delete needs it (v0.15.4):
+    the save or the delete is refused, the session's file as it was.
+    `reason` is the record's refusal alone."""
+
+    def __init__(self, reason: str, what: str):
+        super().__init__("approvals_record", f"{reason} {what}")
+        self.reason = reason
+
+
+def session_key(what: str) -> str:
+    """The key, read at each use as the preview tokens read it
+    (preview_tokens.load_secret, which makes it at its first use).
+
+    Raises:
+        SessionKeyUnavailable: it could not be read or made, with `what`
+            (KEY_NOT_READ, KEY_NOT_SAVED, ...) said after the reason
+    """
+    from . import preview_tokens                # no import cycle
+    try:
+        return preview_tokens.load_secret()
+    except preview_tokens.PreviewSecretUnavailable:
+        raise SessionKeyUnavailable(what) from None
+
+
+# The seal and the approvals' marks (v0.15.4). The seal is a field of a
+# session's own file kept in a project: a keyed digest of the rest of the
+# file as its JSON text holds it, in the canonical ASCII form kept_texts
+# signs an entry in (sorted keys, no spaces), so that key order, spacing
+# and line endings change nothing, written in the same bytes and the
+# same replace as the session. Each approval given here carries a mark in
+# its item, over the session's id, the item's id, what its write takes and
+# the decision, so that it still counts here after the file is saved
+# elsewhere. Both cover the project's id too (private_files.
+# PROJECT_ID_FILE), so that a session sealed in another project, or in
+# the original of a workspace copy, reads as having come with the
+# project it is in. Each kind of digest has a label of its own, as
+# change_record's digests do. Neither is ever shown.
+SEAL_FIELD = "seal"
+APPROVAL_MARK_FIELD = "approval_mark"
+_SEAL_LABEL = "exegete coding session seal"
+_SUGGESTION_MARK_LABEL = "exegete coding session approval of a suggestion"
+_PROPOSAL_MARK_LABEL = "exegete coding session approval of a proposal"
+
+
+def _keyed_digest(key: str, label: str, value: Any) -> str:
+    signed = json.dumps(value, sort_keys=True, separators=(",", ":"),
+                        ensure_ascii=True)
+    return hmac.new(key.encode("ascii"), f"{label}\n{signed}".encode("ascii"),
+                    hashlib.sha256).hexdigest()
+
+
+def _matches(given: Any, expected: str) -> bool:
+    """Whether a digest read from a file is the one expected, compared in
+    constant time; anything but text never is."""
+    return isinstance(given, str) and hmac.compare_digest(
+        given.encode("utf-8", "surrogatepass"), expected.encode("ascii"))
+
+
+def seal_of(key: str, project_id: str, data: Dict[str, Any]) -> str:
+    """A session file's seal: the digest of the project's id and every
+    field but the seal."""
+    return _keyed_digest(key, _SEAL_LABEL, {
+        "project_id": project_id,
+        "file": {k: v for k, v in data.items() if k != SEAL_FIELD}})
+
+
+def suggestion_mark(key: str, session_id: str, project_id: str,
+                    suggestion: Any) -> str:
+    """An approval's mark on a suggestion: what apply_codings writes from
+    it (its file, its code and the code's recorded name, its span, passage,
+    reason and reading), its project, its session and its own id, and the
+    decision."""
+    return _keyed_digest(key, _SUGGESTION_MARK_LABEL, {
+        "project_id": project_id,
+        "session_id": session_id, "guid": suggestion.guid,
+        "file_id": suggestion.file_id, "code_id": suggestion.code_id,
+        "code_name": suggestion.code_name,
+        "start_pos": suggestion.start_pos, "end_pos": suggestion.end_pos,
+        "segment_text": suggestion.segment_text,
+        "reasoning": suggestion.reasoning, "reading": suggestion.reading,
+        "decision": "approved"})
+
+
+def proposal_mark(key: str, session_id: str, project_id: str,
+                  proposal: Any) -> str:
+    """An approval's mark on a proposal: what create_proposed_codes makes
+    from it and update_proposal's withdrawal binds (its name, definition,
+    colour, category and evidence), its project, its session and its own
+    id, and the decision."""
+    return _keyed_digest(key, _PROPOSAL_MARK_LABEL, {
+        "project_id": project_id,
+        "session_id": session_id, "guid": proposal.guid,
+        "name": proposal.name, "definition": proposal.memo,
+        "color": proposal.color, "category": proposal.category,
+        "evidence": proposal.example_segments, "decision": "approved"})
+
+
+# The records of approvals (v0.15.4): in Exegete's own folder on this
+# computer, `approvals/<project id>_<session id>.json`, apart from
+# `sessions`, one for each session kept in a project that holds an
+# approval that counts here: the marks of those approvals, the mark itself
+# being the value kept, since it covers the project, the session, the item
+# as its write takes it and the decision. In a session kept in a project
+# an approval counts only when its mark verifies and its record holds it,
+# so an older copy of the session's file put back brings back no approval
+# withdrawn here since, and a workspace copy, with an id of its own, keeps
+# records apart from its original's. A record holds ids and digests
+# alone. One that is missing, damaged or a link reads as none, and the
+# next write puts a whole one in its place; one of a higher format reads
+# as none and is never replaced; one that cannot be read (another program
+# holding it, on Windows tried again as a session's replace is) reads as
+# none. A save judges what counts against the record as it finds it, so
+# that an approval a load could not see is kept, and, when it cannot read
+# the record, against what the load read: one adding an approval new to
+# it is refused, one ending approvals leaves it for the next save, so
+# that no write drops its other approvals. A delete sets the record aside
+# before the session's file is removed and puts it back if the removal is
+# refused. A record taken as none leaves the session's approvals pending,
+# every recorded status and mark kept in the session's file: no decision
+# is lost.
+APPROVALS_FOLDER = "approvals"
+RECORD_FORMAT = 1
+_RECORD_NAME = re.compile(
+    r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}_"
+    r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.json")
+_RECORD_TEMPORARY = re.compile(_RECORD_NAME.pattern + r"\.[0-9a-f]{8}\.tmp")
+_MARK_SHAPE = re.compile(r"[0-9a-f]{64}")
+# The words for the record in a refusal
+_RECORD_WORDS = ("Exegete's record of the approvals given on this computer "
+                 "in this session, in its own folder on this computer,")
+
+
+class ApprovalsRecord(NamedTuple):
+    """A session's record of approvals, as read (v0.15.4)."""
+    # The marks it holds; none when it is missing, damaged, a link, of a
+    # higher format or could not be read
+    marks: frozenset
+    # Whether something is at its name (a file, a link, anything)
+    present: bool
+    # Why a write must leave it as it is (of a higher format, or it could
+    # not be read), in words; None when a write may put a whole one in its
+    # place
+    held: Optional[str]
+
+
+def approvals_folder() -> Path:
+    """The records' folder, in the state folder this run uses."""
+    from .preview_tokens import state_home      # no import cycle
+    return state_home() / APPROVALS_FOLDER
+
+
+def _record_place(project_id: str, session_id: str) -> Path:
+    return approvals_folder() / f"{project_id}_{session_id}.json"
+
+
+def _on_windows() -> bool:
+    return os.name == "nt"
+
+
+def _with_tries(action: Callable[[], Any]) -> Any:
+    """`action`, tried again on Windows while another program holds the
+    file it touches, as a session's replace is (private_files'
+    REPLACE_TRIES and REPLACE_PAUSE)."""
+    tries = max(1, private_files.REPLACE_TRIES) if _on_windows() else 1
+    for attempt in range(tries):
+        try:
+            return action()
+        except PermissionError:
+            if attempt + 1 >= tries:
+                raise
+            time.sleep(private_files.REPLACE_PAUSE)
+
+
+def read_record(project_id: str, session_id: str) -> ApprovalsRecord:
+    """A session's record of approvals (v0.15.4). Never raises, never
+    writes: a record that cannot be used is read as none, `held` saying
+    when a write must leave it as it is."""
+    place = _record_place(project_id, session_id)
+    try:
+        info = os.lstat(place)
+    except FileNotFoundError:
+        return ApprovalsRecord(frozenset(), False, None)
+    except OSError as e:
+        return ApprovalsRecord(frozenset(), True, _record_unreadable(e))
+    if stat.S_ISLNK(info.st_mode):
+        return ApprovalsRecord(frozenset(), True, None)
+    if not stat.S_ISREG(info.st_mode):
+        return ApprovalsRecord(
+            frozenset(), True, f"{_RECORD_WORDS} is not an ordinary file.")
+    flags = (os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+             | getattr(os, "O_BINARY", 0))
+
+    def read() -> bytes:
+        descriptor = os.open(place, flags)
+        try:
+            chunks, remaining = [], private_files.MAX_SESSION + 1
+            while remaining > 0:
+                chunk = os.read(descriptor, remaining)
+                if not chunk:
+                    break
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            return b"".join(chunks)
+        finally:
+            os.close(descriptor)
+    try:
+        raw = _with_tries(read)
+    except FileNotFoundError:
+        return ApprovalsRecord(frozenset(), False, None)
+    except OSError as e:
+        return ApprovalsRecord(frozenset(), True, _record_unreadable(e))
+    try:
+        if len(raw) > private_files.MAX_SESSION:
+            raise ValueError("past the cap")
+        data = json.loads(raw.decode("ascii"))
+        form = data.get("format")
+        if not isinstance(form, int) or isinstance(form, bool) or form < 1:
+            raise ValueError("no format")
+        marks = data.get("marks")
+        if not isinstance(marks, list):
+            raise ValueError("no marks")
+    except (ValueError, AttributeError, UnicodeDecodeError):
+        return ApprovalsRecord(frozenset(), True, None)       # damaged
+    if form > RECORD_FORMAT:
+        return ApprovalsRecord(frozenset(), True, (
+            f"{_RECORD_WORDS} was written by a newer version of Exegete, "
+            f"which this version never changes."))
+    return ApprovalsRecord(frozenset(
+        mark for mark in marks
+        if isinstance(mark, str) and _MARK_SHAPE.fullmatch(mark)), True, None)
+
+
+def _record_unreadable(error: OSError) -> str:
+    return (f"{_RECORD_WORDS} could not be read "
+            f"({error.strerror or type(error).__name__}): another program "
+            f"may hold it, such as a virus scanner or a backup.")
+
+
+def write_record(project_id: str, session_id: str, marks: frozenset) -> None:
+    """Write a session's record of approvals whole (v0.15.4): ASCII JSON,
+    `format` and the marks, to a temporary file of its own made
+    exclusively and owner-only, synced, then put in place with
+    `os.replace`, on Windows tried again while another program holds the
+    record; the folder owner-only. The records' temporary files over a day
+    old are removed after. Raises OSError, leaving the record as it was
+    and no temporary file where it can be removed."""
+    from . import preview_tokens                # no import cycle
+    preview_tokens.ensure_state_home()
+    folder = approvals_folder()
+    preview_tokens.ensure_state_dir(folder)
+    place = _record_place(project_id, session_id)
+    data = json.dumps({"format": RECORD_FORMAT, "marks": sorted(marks)},
+                      separators=(",", ":"), ensure_ascii=True
+                      ).encode("ascii")
+    flags = (os.O_CREAT | os.O_EXCL | os.O_WRONLY
+             | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    temporary = descriptor = None
+    for _attempt in range(3):
+        candidate = place.with_name(f"{place.name}.{os.urandom(4).hex()}.tmp")
+        try:
+            descriptor = os.open(candidate, flags, 0o600)
+        except FileExistsError:
+            continue
+        temporary = candidate
+        break
+    if descriptor is None or temporary is None:
+        raise FileExistsError("no temporary name was free")
+    try:
+        try:
+            written = 0
+            while written < len(data):
+                written += os.write(descriptor, data[written:])
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        _with_tries(lambda: os.replace(temporary, place))
+        temporary = None
+    finally:
+        if temporary is not None:
+            try:
+                os.unlink(temporary)
+            except OSError:
+                pass
+    _remove_old_record_temporaries(folder)
+
+
+def remove_record(project_id: str, session_id: str) -> None:
+    """Remove a session's record of approvals, whatever is at its name
+    but a folder; nothing there is no failure. On Windows tried again
+    while another program holds it. Raises OSError."""
+    place = _record_place(project_id, session_id)
+    try:
+        _with_tries(lambda: os.unlink(place))
+    except FileNotFoundError:
+        pass
+
+
+def set_record_aside(project_id: str, session_id: str
+                     ) -> Optional[Tuple[Path, Path]]:
+    """Before a session kept in a project is deleted (v0.15.4): its record
+    of approvals moved off its name to a temporary name of the records',
+    so that it reads as none from then on, and can be put back if the
+    session's file is not removed after all (`put_record_back`). Whatever
+    is at its name but a folder is moved, a record that cannot be read
+    included; on Windows tried again while another program holds it.
+    (the temporary place, the record's place), or None when nothing is
+    there. Raises OSError, the record as it was."""
+    place = _record_place(project_id, session_id)
+    try:
+        if stat.S_ISDIR(os.lstat(place).st_mode):
+            raise IsADirectoryError(errno.EISDIR, os.strerror(errno.EISDIR))
+    except FileNotFoundError:
+        return None
+    aside = place.with_name(f"{place.name}.{os.urandom(4).hex()}.tmp")
+    try:
+        _with_tries(lambda: os.replace(place, aside))
+    except FileNotFoundError:
+        return None
+    return aside, place
+
+
+def put_record_back(set_aside: Optional[Tuple[Path, Path]]) -> bool:
+    """A record `set_record_aside` moved, put back at its name; True when
+    it is back or nothing was set aside, False when it could not be (on
+    Windows tried again while another program holds it). One left aside
+    is a record's temporary file, which a later write removes a day on
+    (`_remove_old_record_temporaries`)."""
+    if set_aside is None:
+        return True
+    aside, place = set_aside
+    try:
+        _with_tries(lambda: os.replace(aside, place))
+    except OSError:
+        return False
+    return True
+
+
+def drop_record_set_aside(set_aside: Optional[Tuple[Path, Path]]) -> None:
+    """A record `set_record_aside` moved, removed once its session's file
+    is; one that cannot be is left as a record's temporary file, which a
+    later write removes a day on."""
+    if set_aside is None:
+        return
+    try:
+        _with_tries(lambda: os.unlink(set_aside[0]))
+    except OSError:
+        pass
+
+
+def _remove_old_record_temporaries(folder: Path) -> None:
+    """The records' temporary files over a day old, left by a write whose
+    process ended (private_files.TEMPORARY_FILE_AGE): removed, best
+    effort, never through a link."""
+    try:
+        names = os.listdir(folder)
+    except OSError:
+        return
+    now = time.time()
+    for name in names:
+        if _RECORD_TEMPORARY.fullmatch(name) is None:
+            continue
+        try:
+            info = os.lstat(folder / name)
+            if not stat.S_ISREG(info.st_mode) or \
+                    now - info.st_mtime <= private_files.TEMPORARY_FILE_AGE:
+                continue
+            os.unlink(folder / name)
+        except OSError:
+            continue
 
 
 # How a suggested code reads the passage (owner rulings 21 and 25, v0.14):
@@ -117,6 +626,7 @@ class CodingSuggestion:
         adjusted: bool = False,
         applied_ctid: Optional[int] = None,
         reading_cleared: bool = False,
+        approval_mark: Optional[str] = None,
     ):
         self.file_id = file_id
         self.file_name = file_name
@@ -159,13 +669,23 @@ class CodingSuggestion:
         # None before v0.14 and until the suggestion is applied.
         self.applied_ctid = (applied_ctid if isinstance(applied_ctid, int)
                              and not isinstance(applied_ctid, bool) else None)
+        # The mark an approval came with in a session kept in a project
+        # (v0.15.4): kept as it was read while the suggestion stays
+        # approved, so that it still counts where it was given; written
+        # only with that status
+        self.approval_mark = (approval_mark if isinstance(approval_mark, str)
+                              else None)
+        # Whether this installation gave the approval: its mark verified
+        # when the session was read, or it was given or set back here.
+        # Never written; the save marks such an approval
+        self.approval_here = False
 
         # For backwards compatibility with old ai_memo field
         self.ai_memo = reasoning
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialisation."""
-        return {
+        data = {
             "file_id": self.file_id,
             "file_name": self.file_name,
             "code_id": self.code_id,
@@ -182,6 +702,10 @@ class CodingSuggestion:
             "applied_ctid": self.applied_ctid,
             "reading_cleared": self.reading_cleared,
         }
+        # An item that leaves approved keeps no mark (v0.15.4)
+        if self.status == "approved" and self.approval_mark is not None:
+            data[APPROVAL_MARK_FIELD] = self.approval_mark
+        return data
 
     _REQUIRED_FIELDS = {
         "file_id", "file_name", "code_id", "code_name",
@@ -228,6 +752,7 @@ class CodingSuggestion:
             applied_ctid=data.get("applied_ctid"),
             reading_cleared=(data.get("reading_cleared")
                              or data.get("support_cleared", False)),
+            approval_mark=data.get(APPROVAL_MARK_FIELD),
         )
 
 
@@ -256,6 +781,7 @@ class ProposedCode:
         created_code_id: Optional[int] = None,
         guid: Optional[str] = None,
         merged_into: Optional[str] = None,
+        approval_mark: Optional[str] = None,
     ):
         self.name = name
         self.memo = memo                    # the code definition
@@ -271,9 +797,14 @@ class ProposedCode:
         # is echoed into the conversation
         self.merged_into = (merged_into if isinstance(merged_into, str)
                             and _GUID_SHAPE.fullmatch(merged_into) else None)
+        # As a suggestion's (v0.15.4): the mark an approval came with, and
+        # whether this installation gave it
+        self.approval_mark = (approval_mark if isinstance(approval_mark, str)
+                              else None)
+        self.approval_here = False
 
     def to_dict(self) -> Dict[str, Any]:
-        return {
+        data = {
             "guid": self.guid,
             "name": self.name,
             "memo": self.memo,
@@ -286,6 +817,10 @@ class ProposedCode:
             "created_code_id": self.created_code_id,
             "merged_into": self.merged_into,
         }
+        # An item that leaves approved keeps no mark (v0.15.4)
+        if self.status == "approved" and self.approval_mark is not None:
+            data[APPROVAL_MARK_FIELD] = self.approval_mark
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'ProposedCode':
@@ -311,7 +846,17 @@ class ProposedCode:
             created_code_id=data.get("created_code_id"),
             guid=data.get("guid"),
             merged_into=data.get("merged_into"),
+            approval_mark=data.get(APPROVAL_MARK_FIELD),
         )
+
+
+# `outside_scope` given no code date (v0.15.4): the number alone is checked
+_DATE_NOT_GIVEN = object()
+
+
+def _recorded(item: Any) -> str:
+    """An item's status as its file records it."""
+    return item.status
 
 
 class AICodingSession:
@@ -333,7 +878,13 @@ class AICodingSession:
         # claims audit's item 10): {"file_ids": [...], "code_ids": [...] or
         # None for every code}. None for a session made before v0.14 (or
         # built directly), whose file_ids and code_names were only ever a
-        # note: those sessions keep that behaviour.
+        # note: those sessions keep that behaviour. From 0.15.4 a scope
+        # limited to named codes also keeps each code's date beside its
+        # number, "code_dates" ({"<number>": "<date>"}): SQLite gives a
+        # deleted code's number to the next code made, and the date, kept
+        # to the second, tells the two apart unless the one was deleted
+        # and the other made within the same second. A session without
+        # it is checked by number alone.
         self.scope = self._clean_scope(scope)
         # A scope that is there but cannot be read (a damaged or hand-made
         # file) fails closed: nothing is recorded into the session, rather
@@ -364,6 +915,64 @@ class AICodingSession:
             "manual_edits": 0, "shorter_picks": 0, "longer_picks": 0}
         self.created_at = datetime.now().isoformat()
         self.last_modified = self.created_at
+        # Where the session's file is kept (v0.15.4), never written into
+        # it: KEPT_IN_PROJECT, in `kept_folder`'s sessions folder, or
+        # KEPT_ON_THIS_COMPUTER, in the state folder. None until it is
+        # first saved or read; a session is saved where it was read.
+        self.kept_in: Optional[str] = None
+        self.kept_folder: Optional[Path] = None
+        # Why a new session is kept on this computer although its project
+        # is open: the reason its project's folder could not hold it
+        self.kept_reason: Optional[str] = None
+        # A session kept in a project whose file does not carry this
+        # installation's seal (v0.15.4): saved by Exegete elsewhere,
+        # changed outside Exegete, or kept from before the key was
+        # replaced. Its texts are data, and it is saved with no seal, so
+        # that it reads so after any save here and wherever it goes.
+        # Never written
+        self.came_with_project = False
+        # The marks its record of approvals held when it was read, or as
+        # its last save left it (v0.15.4); None when the record could not
+        # be read, as while another program held it. A save that cannot
+        # read the record judges by these, so that it refuses only an
+        # approval new to the record. Never written
+        self.recorded_marks: Optional[frozenset] = frozenset()
+
+    def approval_counts(self, item: Any) -> bool:
+        """Whether an item's approval counts (v0.15.4): in a session kept
+        in a project, only one given here (its mark verified, or given or
+        set back here); elsewhere, every recorded approval, as before."""
+        return item.status == "approved" and (
+            self.kept_in != KEPT_IN_PROJECT or item.approval_here)
+
+    def shown_status(self, item: Any) -> str:
+        """The status a suggestion or a proposal is given wherever a
+        status or a count is given (v0.15.4): an approval that does not
+        count reads as pending until it is given here; every other status
+        as recorded. The recorded status is what the file keeps."""
+        if item.status == "approved" and not self.approval_counts(item):
+            return "pending"
+        return item.status
+
+    def approvals_that_count(self) -> List['CodingSuggestion']:
+        """The approved suggestions apply_codings writes."""
+        return [s for s in self.suggestions if self.approval_counts(s)]
+
+    def approvals_not_given_here(self) -> List['CodingSuggestion']:
+        """Suggestions recorded as approved whose approval does not count
+        here: none outside a project."""
+        return [s for s in self.suggestions
+                if s.status == "approved" and not self.approval_counts(s)]
+
+    def proposals_that_count(self) -> List['ProposedCode']:
+        """The approved proposals create_proposed_codes creates."""
+        return [p for p in self.proposed_codes if self.approval_counts(p)]
+
+    def proposals_not_given_here(self) -> List['ProposedCode']:
+        """Proposals recorded as approved whose approval does not count
+        here."""
+        return [p for p in self.proposed_codes
+                if p.status == "approved" and not self.approval_counts(p)]
 
     @staticmethod
     def _clean_scope(scope: Any) -> Optional[Dict[str, Any]]:
@@ -385,15 +994,35 @@ class AICodingSession:
             code_ids = ids(code_ids)
             if code_ids is None:
                 return None
-        return {"file_ids": file_ids, "code_ids": code_ids}
+        cleaned = {"file_ids": file_ids, "code_ids": code_ids}
+        # The codes' dates (v0.15.4): only a text for a number the scope
+        # holds is kept; anything else is read past, and a session whose
+        # dates cannot be read at all is checked by number, as before
+        dates = scope.get("code_dates")
+        if code_ids is not None and isinstance(dates, dict):
+            numbers = {str(cid) for cid in code_ids}
+            cleaned["code_dates"] = {
+                key: value for key, value in dates.items()
+                if isinstance(key, str) and key in numbers
+                and isinstance(value, str)}
+        return cleaned
 
-    def outside_scope(self, file_id: int,
-                      code_id: Optional[int] = None) -> Optional[str]:
+    def _recorded_date(self, code_id: int) -> Optional[str]:
+        """The date the scope recorded for a code's number, or None."""
+        dates = (self.scope or {}).get("code_dates")
+        return dates.get(str(code_id)) if isinstance(dates, dict) else None
+
+    def outside_scope(self, file_id: int, code_id: Optional[int] = None,
+                      code_date: Any = _DATE_NOT_GIVEN) -> Optional[str]:
         """Which part of the scope a file or code falls outside, or None.
 
         'file' or 'code'; 'unreadable' when the session's scope is there but
         cannot be read; None when the session has no scope (made before
-        v0.14) or both are inside it. code_id None checks the file only."""
+        v0.14) or both are inside it. code_id None checks the file only.
+        `code_date` (v0.15.4) is the code's date as the codebook holds it
+        now: a code whose number the scope holds under another date is
+        another code, given the number of one deleted since, and falls
+        outside ('code')."""
         if self.scope_unreadable:
             return "unreadable"
         if self.scope is None:
@@ -401,17 +1030,46 @@ class AICodingSession:
         if file_id not in self.scope["file_ids"]:
             return "file"
         codes = self.scope["code_ids"]
-        if code_id is not None and codes is not None and code_id not in codes:
-            return "code"
+        if code_id is not None and codes is not None:
+            if code_id not in codes:
+                return "code"
+            recorded = self._recorded_date(code_id)
+            if (code_date is not _DATE_NOT_GIVEN and recorded is not None
+                    and code_date != recorded):
+                return "code"
         return None
 
-    def add_codes_to_scope(self, code_ids: List[int]) -> None:
+    def scope_recorded(self, code_id: int, code_date: Any) -> bool:
+        """Whether this session's scope names the code of that number and
+        date (v0.15.4): its number is there with that date, or with none
+        recorded. Undo takes a removed code out of a scope only where it
+        did, so undoing a later code given a deleted code's number leaves
+        the session's own code in its scope."""
+        if self.scope is None or self.scope.get("code_ids") is None:
+            return False
+        if code_id not in self.scope["code_ids"]:
+            return False
+        recorded = self._recorded_date(code_id)
+        return recorded is None or recorded == code_date
+
+    def add_codes_to_scope(self, codes: Dict[int, Any]) -> None:
         """Codes created from this session's approved proposals join a
-        session limited to named codes, so the loop can apply them."""
-        if self.scope is not None and self.scope["code_ids"] is not None:
-            for cid in code_ids:
-                if cid not in self.scope["code_ids"]:
-                    self.scope["code_ids"].append(cid)
+        session limited to named codes, so the loop can apply them: each
+        number added where it is missing, and its date set (v0.15.4),
+        replacing the one recorded where the number is already there (the
+        session's own code deleted, and its number given to the code its
+        proposal made). `codes`: each new code's number and date, as its
+        write read the row back."""
+        if not codes or self.scope is None or self.scope["code_ids"] is None:
+            return
+        dates = self.scope.setdefault("code_dates", {})
+        for cid, date in codes.items():
+            if cid not in self.scope["code_ids"]:
+                self.scope["code_ids"].append(cid)
+            if isinstance(date, str):
+                dates[str(cid)] = date
+            else:
+                dates.pop(str(cid), None)
 
     def add_suggestion(self, suggestion: CodingSuggestion):
         """Add a coding suggestion to the session."""
@@ -430,12 +1088,19 @@ class AICodingSession:
         return None
 
     def proposal_statistics(self) -> Dict[str, int]:
+        """The proposals counted by the status the session tools give
+        them (shown_status, v0.15.4)."""
+        return self._proposal_counts(self.shown_status)
+
+    def _proposal_counts(self, status_of: Callable[[Any], str]
+                         ) -> Dict[str, int]:
         counts = {"total_proposals": len(self.proposed_codes),
                   "pending": 0, "approved": 0, "rejected": 0, "created": 0,
                   "merged": 0}
         for p in self.proposed_codes:
-            if p.status in counts:
-                counts[p.status] += 1
+            status = status_of(p)
+            if status in counts:
+                counts[status] += 1
         return counts
 
     def update_proposals_by_guid(
@@ -452,7 +1117,11 @@ class AICodingSession:
         whose status moved; one that already had that status is counted
         in `unchanged` (fix round 1: the counts are what the researcher
         checks against what they said). The caller refuses a GUID given
-        in both lists before calling."""
+        in both lists before calling.
+
+        Each proposal is taken at the status the session tools give it
+        (v0.15.4): an approval that does not count here reads as pending,
+        so approving it gives it here, marked at the next save."""
         counts = {"approved": 0, "rejected": 0, "unchanged": 0,
                   "skipped_created": 0, "skipped_merged": 0, "changed": 0}
         not_found: List[Any] = []
@@ -465,10 +1134,11 @@ class AICodingSession:
                 if p.status in ("created", "merged"):
                     counts[f"skipped_{p.status}"] += 1
                     continue
-                if p.status == status:
+                if self.shown_status(p) == status:
                     counts["unchanged"] += 1
                     continue
                 p.status = status
+                p.approval_here = status == "approved"
                 counts[status] += 1
                 counts["changed"] += 1
         if counts["changed"]:
@@ -488,13 +1158,20 @@ class AICodingSession:
         return [s for s in self.suggestions if s.status == status]
 
     def get_statistics(self) -> Dict[str, Any]:
-        """Get session statistics."""
+        """Get session statistics: each suggestion counted by the status
+        the session tools give it (shown_status, v0.15.4); the file keeps
+        the recorded statuses' counts."""
+        return self._suggestion_counts(self.shown_status)
+
+    def _suggestion_counts(self, status_of: Callable[[Any], str]
+                           ) -> Dict[str, Any]:
+        statuses = [status_of(s) for s in self.suggestions]
         total = len(self.suggestions)
-        approved = len([s for s in self.suggestions if s.status == "approved"])
-        rejected = len([s for s in self.suggestions if s.status == "rejected"])
-        pending = len([s for s in self.suggestions if s.status == "pending"])
-        applied = len([s for s in self.suggestions if s.status == "applied"])
-        removed = len([s for s in self.suggestions if s.status == "removed"])
+        approved = statuses.count("approved")
+        rejected = statuses.count("rejected")
+        pending = statuses.count("pending")
+        applied = statuses.count("applied")
+        removed = statuses.count("removed")
 
         # By file
         by_file = {}
@@ -567,6 +1244,7 @@ class AICodingSession:
             sugg = self.get_suggestion_by_guid(guid)
             if sugg is not None:
                 sugg.status = "applied"
+                sugg.approval_here = False
                 if ctids and guid in ctids:
                     sugg.applied_ctid = ctids[guid]
                 count += 1
@@ -619,6 +1297,12 @@ class AICodingSession:
         approved number against what they said yes to). The caller
         refuses a GUID given in more than one list before calling.
 
+        Each suggestion is taken at the status the session tools give it
+        (v0.15.4): an approval that does not count here reads as pending,
+        so approving it gives it here, marked at the next save, and
+        reopening it changes nothing, its approval and mark kept for
+        where they were given.
+
         Returns:
             Counts of approved, rejected, reopened, unchanged,
             skipped_applied and changed, and the not_found list
@@ -637,10 +1321,11 @@ class AICodingSession:
                 if sugg.status == "applied":
                     counts["skipped_applied"] += 1
                     continue
-                if sugg.status == status:
+                if self.shown_status(sugg) == status:
                     counts["unchanged"] += 1
                     continue
                 sugg.status = status
+                sugg.approval_here = status == "approved"
                 counts[key] += 1
                 counts["changed"] += 1
         if counts["changed"]:
@@ -696,17 +1381,28 @@ class AICodingSession:
             "suggestions": [s.to_dict() for s in self.suggestions],
             "proposed_codes": [p.to_dict() for p in self.proposed_codes],
             "span_edit_stats": self.span_edit_stats,
-            "statistics": self.get_statistics(),
-            "proposal_statistics": self.proposal_statistics()
+            # The recorded statuses' counts, as every status is kept
+            # (v0.15.4); no answer takes them from a file kept in a project
+            "statistics": self._suggestion_counts(_recorded),
+            "proposal_statistics": self._proposal_counts(_recorded)
         }
 
+    # The fields a session file in the state folder must hold; a file kept
+    # in a project holds no project_path (v0.15.4)
     _REQUIRED_FIELDS = {
         "project_path", "session_id", "created_at", "last_modified"
     }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'AICodingSession':
+    def from_dict(cls, data: Dict[str, Any],
+                  project_path: Optional[str] = None) -> 'AICodingSession':
         """Create session from dictionary.
+
+        `project_path` (v0.15.4): for a file kept in a project's sessions
+        folder, the database of the project it was read from, which takes
+        the place of any path the file holds; the file need not hold one.
+        Without it, the file's own `project_path` is required, as in the
+        state folder.
 
         Raises:
             ValueError: If required fields are missing
@@ -715,12 +1411,15 @@ class AICodingSession:
         if not isinstance(data, dict):
             raise TypeError("AICodingSession data must be a dictionary")
 
-        missing = cls._REQUIRED_FIELDS - set(data.keys())
+        required = (cls._REQUIRED_FIELDS if project_path is None
+                    else cls._REQUIRED_FIELDS - {"project_path"})
+        missing = required - set(data.keys())
         if missing:
             raise ValueError(f"Missing required session fields: {missing}")
 
         session = cls(
-            project_path=data["project_path"],
+            project_path=(data["project_path"] if project_path is None
+                          else project_path),
             session_id=data["session_id"],
             description=data.get("description", ""),
             file_ids=data.get("file_ids", []),
@@ -756,6 +1455,26 @@ class AICodingSession:
         return session
 
 
+class SessionsListing(NamedTuple):
+    """What a list of sessions found (v0.15.4,
+    SessionManager.sessions_listing)."""
+    # The sessions, as list_sessions lists them
+    sessions: List[Dict[str, Any]]
+    # Why the open project's sessions folder could not be read, in the
+    # words a lookup gives (a link or a file at its name, a folder its
+    # owner alone can read, a path past Windows' limit); None otherwise
+    project_folder_refusal: Optional[str]
+    # Entries at a session's name in the open project's sessions folder
+    # that could not be read, or hold another session's id
+    not_read_in_project: int
+    # Session files in the state folder that could not be read, or hold
+    # another session's id, whichever project they record
+    not_read_on_this_computer: int
+    # Whether the open project's own folder was read: False when no
+    # project is open, or the list was asked for another project
+    project_read: bool
+
+
 class SessionManager:
     """Manage AI coding sessions with disk persistence."""
 
@@ -764,7 +1483,9 @@ class SessionManager:
         r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     )
 
-    def __init__(self, storage_dir: Optional[str] = None):
+    def __init__(self, storage_dir: Optional[str] = None,
+                 project: Optional[Callable[[], Optional[Any]]] = None,
+                 no_project: Optional[Callable[[], str]] = None):
         # Constructing a manager must not touch the disk: the server
         # builds one at import time, and `exegete --version` would
         # otherwise create the storage directory before it had even read
@@ -779,7 +1500,30 @@ class SessionManager:
         # whose move could not be made uses the old one for everything.
         self._storage_dir = (None if storage_dir is None
                              else Path(storage_dir).expanduser())
+        # `project` (v0.15.4): a function giving the open project's
+        # folder, or None when no project is open, called at each lookup
+        # and never at construction. A new session of the open project is
+        # kept in that project's sessions folder, and a lookup by id reads
+        # that folder first. Without it, the state folder alone, as
+        # before 0.15.4. `no_project`: the words, with their way on, for
+        # a lookup made while no project is open, of a session not on
+        # this computer (the server's "No project selected" answer).
+        self._project = project
+        self._no_project = no_project
         logger.debug("SessionManager storage ready")
+
+    def open_project_folder(self) -> Optional[Path]:
+        """The open project's folder, from the function the manager was
+        built with; None when there is none or no project is open."""
+        if self._project is None:
+            return None
+        folder = self._project()
+        return None if folder is None else Path(folder)
+
+    @staticmethod
+    def file_name(session_id: str) -> str:
+        """A session's file name, in either place."""
+        return f"session_{session_id}.json"
 
     @property
     def storage_dir(self) -> Path:
@@ -821,7 +1565,381 @@ class SessionManager:
         return session_id
 
     def save_session(self, session: AICodingSession) -> None:
-        """Save session to disk as JSON, atomically and owner-only.
+        """Save a session where it is kept (v0.15.4): back where it was
+        read; a new one in its project's sessions folder when its project
+        is the open one, else in the state folder.
+
+        A new session whose project's folder cannot hold it (a link or a
+        file at the folder's name, a read-only project, a path too long
+        on Windows) is kept on this computer instead, with the reason in
+        `kept_reason`, but only when that attempt left nothing at the
+        session's name in the project: otherwise SessionFileError, and
+        the session is kept nowhere else, so that no session is in two
+        places.
+
+        A save in a project that reports a failure while the file at the
+        session's name holds the bytes just written is a save done (a
+        network share or a virus scanner can report a replace as failed
+        after making it): the session is kept there, and saying it was
+        not saved would be untrue.
+
+        Raises:
+            ValueError: If session ID is not valid UUID4 format
+            SessionFileError: The project's sessions folder refused the
+                save, with the reason; the file as it was, or, for a new
+                session, a file there that Exegete cannot read back as
+                the session
+        """
+        self._validate_session_id(session.session_id)
+        if session.kept_in is None:
+            self._save_new(session)
+        elif session.kept_in == KEPT_IN_PROJECT:
+            self._save_in_project(session, session.kept_folder)
+        else:
+            self._save_on_this_computer(session)
+
+    def _save_new(self, session: AICodingSession) -> None:
+        project = self.open_project_folder()
+        if project is None or not self.same_project(
+                session.project_path, project / "data.qda"):
+            self._save_on_this_computer(session)
+            session.kept_in = KEPT_ON_THIS_COMPUTER
+            return
+        # The key first (v0.15.4): a session kept in its project is sealed
+        # with it, and one that cannot be read refuses the start before
+        # anything is written. Keeping the session on this computer
+        # instead is for a folder that cannot hold it, not for this
+        session_key(KEY_NOT_STARTED)
+        # Never saved or read, the session is this installation's whole,
+        # and so is any approval it holds
+        for item in session.suggestions + session.proposed_codes:
+            item.approval_here = item.status == "approved"
+        try:
+            private_files.ensure_sessions_folder(project)
+            self._save_in_project(session, project)
+        except SessionKeyUnavailable:
+            raise SessionKeyUnavailable(KEY_NOT_STARTED) from None
+        # As for the key (v0.15.4): the folder could hold the session, so
+        # it is not kept on this computer instead
+        except ProjectIdUnusable as e:
+            raise ProjectIdUnusable(e.reason, KEY_NOT_STARTED,
+                                    e.ways_on) from None
+        except ApprovalRecordError as e:
+            raise ApprovalRecordError(e.reason, KEY_NOT_STARTED) from None
+        except (private_files.PrivateFilesError, SessionFileError,
+                OSError) as e:
+            reason = (str(e) if isinstance(
+                e, (private_files.PrivateFilesError, SessionFileError))
+                else "Exegete could not write in the project's Exegete "
+                     f"coding sessions folder ({error_label(e)}).")
+            place = (private_files.sessions_folder(project)
+                     / self.file_name(session.session_id))
+            if os.path.lexists(place):
+                # Only this save can put a file at a new id's name, and
+                # one holding the bytes it wrote was taken as the session
+                # (_save_in_project): what is there now could not be read
+                # back as the session, and may still hold it
+                logger.error("A new session could not be kept in its "
+                             "project, and something is at its name there")
+                raise SessionFileError(
+                    "left",
+                    "Exegete could not finish saving the new session in "
+                    "the project's Exegete coding sessions folder "
+                    f"({reason.rstrip('.')}). A file is now at the "
+                    "session's name there that Exegete could not read back "
+                    "as the session, so the session was not kept on this "
+                    "computer as well: if that file holds the session, its "
+                    f"id is {session.session_id}, and it is found while "
+                    "this project is selected. Asking again starts "
+                    "another session."
+                ) from None
+            logger.warning("A new session is kept on this computer: its "
+                           "project's sessions folder could not hold it")
+            self._save_on_this_computer(session)
+            session.kept_in = KEPT_ON_THIS_COMPUTER
+            session.kept_folder = None
+            session.kept_reason = reason
+            return
+        session.kept_in = KEPT_IN_PROJECT
+        session.kept_folder = project
+
+    def _save_in_project(self, session: AICodingSession,
+                         project: Optional[Path]) -> None:
+        """Write a session into a project's sessions folder, without its
+        project path (private_files.replace_session: synced, owner-only,
+        capped).
+
+        A refusal while the file at the session's name holds the bytes
+        just written is a save done, as a network share or a virus
+        scanner can report a replace as failed after making it: the
+        file is the session, whole, and answering that it was not
+        saved, its file as it was, would be untrue.
+
+        Sealed and marked with the key (v0.15.4), read before anything is
+        written: each approval given here carries its mark, every other
+        item keeps what it came with, and the file carries this
+        installation's seal unless the session came with the project, which
+        is saved with none and so reads as having come with it after any
+        save here. Raises SessionKeyUnavailable when the key cannot be
+        read, the file as it was.
+
+        The seal and the marks cover the project's id, made here when the
+        project has none (`_project_id_for_save`); ProjectIdUnusable when
+        what is at its name is not an id, the file as it was. The record
+        of the session's approvals (v0.15.4) is written on either side of
+        the replace: the marks of approvals new to it before, a failure
+        there refusing the save with ApprovalRecordError, the file as it
+        was (a process ended there leaves a mark no file yet holds); and
+        after, or after a refusal whose file holds the bytes written, it
+        keeps only the marks of the approvals that count in the file, so
+        that those the save ended leave it only once the file holds their
+        end, and is removed when it holds none. A failure at that second
+        write is logged by count and set right at the session's next
+        save, never answered as a save not made. What counts is judged
+        against the record as the save finds it, not as the load found
+        it, so an approval the load could not see (its record held by
+        another program then) is kept; and where the save cannot read the
+        record, against what the load read, so that only an approval new
+        to it is refused."""
+        if project is None:
+            raise SessionFileError(
+                "no_project", "This session's project is not known, so it "
+                              "was not saved.")
+        key = session_key(KEY_NOT_SAVED)
+        project_id = self._project_id_for_save(project)
+        self._mark_approvals_given_here(session, key, project_id)
+        data = session.to_dict()
+        data.pop("project_path", None)
+        if not session.came_with_project:
+            # Over the rest of the file as its JSON text will hold it, as a
+            # load reads it: every key text, so that a file's or a code's
+            # name the project holds as NULL, beside names held as text (a
+            # statistic's by_file and by_code), sorts as it will be read
+            data = json.loads(json.dumps(data))
+            data[SEAL_FIELD] = seal_of(key, project_id, data)
+        raw = json.dumps(data, indent=2).encode("utf-8")
+        name = self.file_name(session.session_id)
+        given = self._marks_given_here(session)
+        record = read_record(project_id, session.session_id)
+        recorded = self._record_new_approvals(
+            project_id, session.session_id, record, given,
+            record.marks if record.held is None else session.recorded_marks)
+        counting = self._marks_that_count(session, key, project_id, given,
+                                          recorded)
+        try:
+            private_files.replace_session(project, name, raw)
+        except private_files.PrivateFilesError as e:
+            if self._holds(project, name, raw):
+                logger.warning(f"Saved session {session.session_id} in its "
+                               f"project, though the save reported "
+                               f"{error_label(e)}: its file holds it")
+                self._settle_record(session, project_id, record, recorded,
+                                    counting)
+                return
+            logger.error(f"Failed to save session {session.session_id} in "
+                         f"its project: {error_label(e)}")
+            raise SessionFileError(e.code, str(e)) from None
+        self._settle_record(session, project_id, record, recorded, counting)
+        logger.info(f"Saved session {session.session_id}")
+
+    @staticmethod
+    def _project_id(project: Path, what: str) -> Optional[str]:
+        """The project's id from its sessions folder (v0.15.4), None when
+        it has none; ProjectIdUnusable, with `what` was not done, when
+        what is at its name is not an id. A folder that cannot be read,
+        or an id's path past Windows' limit, is refused as a session's
+        file is, with its own remedy."""
+        try:
+            return private_files.read_project_id(project)
+        except private_files.PrivateFilesError as e:
+            if e.about_folder or e.code == "too_long":
+                raise SessionFileError(e.code, str(e)) from None
+            raise ProjectIdUnusable(
+                str(e), what, PROJECT_ID_UNREAD_WAYS_ON
+                if e.code == private_files.PROJECT_ID_UNREAD
+                else PROJECT_ID_WAYS_ON) from None
+
+    def _project_id_for_save(self, project: Path) -> str:
+        """The project's id for a save there (v0.15.4), made when the
+        project has none and read back, so that two starts at once keep
+        the one published first. SessionFileError when it could not be
+        made, with the reason."""
+        project_id = self._project_id(project, KEY_NOT_SAVED)
+        if project_id is not None:
+            return project_id
+        try:
+            private_files.make_project_id(project)
+        except private_files.PrivateFilesError as e:
+            raise SessionFileError(e.code, str(e)) from None
+        project_id = self._project_id(project, KEY_NOT_SAVED)
+        if project_id is None:
+            raise SessionFileError(
+                "unwritable", "Exegete could not make the project's id in "
+                              "the project's Exegete coding sessions "
+                              "folder, so the session was not saved.")
+        return project_id
+
+    @staticmethod
+    def _marks_given_here(session: AICodingSession) -> frozenset:
+        """The marks of the approvals a save of a session kept in a project
+        takes as given here: given or set back here, or read with a mark
+        that verifies and a record that held it."""
+        return frozenset(
+            item.approval_mark
+            for item in session.suggestions + session.proposed_codes
+            if item.status == "approved" and item.approval_here
+            and item.approval_mark is not None)
+
+    @staticmethod
+    def _marks_that_count(session: AICodingSession, key: str,
+                          project_id: str, given: frozenset,
+                          recorded: frozenset) -> frozenset:
+        """The marks of the approvals that count in the file a save writes
+        (v0.15.4): those given here, and every other approval whose mark
+        verifies and that the record holds as the save found it, so that
+        one the load could not see (its record held by another program
+        then) stays in the record."""
+        counting = set(given)
+        for suggestion in session.suggestions:
+            if suggestion.status == "approved" and \
+                    suggestion.approval_mark in recorded and _matches(
+                        suggestion.approval_mark, suggestion_mark(
+                            key, session.session_id, project_id, suggestion)):
+                counting.add(suggestion.approval_mark)
+        for proposal in session.proposed_codes:
+            if proposal.status == "approved" and \
+                    proposal.approval_mark in recorded and _matches(
+                        proposal.approval_mark, proposal_mark(
+                            key, session.session_id, project_id, proposal)):
+                counting.add(proposal.approval_mark)
+        return frozenset(counting)
+
+    @staticmethod
+    def _record_new_approvals(project_id: str, session_id: str,
+                              record: ApprovalsRecord, given: frozenset,
+                              known: Optional[frozenset]) -> frozenset:
+        """Before a session's file is replaced (v0.15.4): the marks of the
+        approvals new to its record enter it. `known` is what the record
+        holds: as read now or, when it cannot be read now, as the load
+        read it (None when the load could not read it either), so that a
+        save giving no new approval is never refused for it. What the
+        record then holds, as far as is known; ApprovalRecordError when
+        the new marks could not enter it, nothing changed."""
+        known = known or frozenset()
+        new = given - known
+        if not new:
+            return known
+        if record.held is not None:
+            raise ApprovalRecordError(
+                f"{record.held} So an approval given here could not be "
+                f"recorded without losing the others.", KEY_NOT_SAVED)
+        try:
+            write_record(project_id, session_id, known | new)
+        except OSError as e:
+            raise ApprovalRecordError(
+                f"Exegete could not record the approvals given here in its "
+                f"own folder on this computer "
+                f"({e.strerror or type(e).__name__}).",
+                KEY_NOT_SAVED) from None
+        return known | new
+
+    @staticmethod
+    def _settle_record(session: AICodingSession, project_id: str,
+                       record: ApprovalsRecord, recorded: frozenset,
+                       counting: frozenset) -> None:
+        """After a session's file is replaced (v0.15.4): its record keeps
+        only the marks of the approvals that count in the file, and goes
+        when it holds none. A record a write must leave as it is stays; a
+        failure is logged by count and set right at the next save. The
+        session keeps what the record then holds, for its next save."""
+        if record.held is not None:
+            if recorded != counting:
+                logger.warning("After a save, %d approval(s) were not set "
+                               "right in their record, which could not be "
+                               "read; the session's next save does it",
+                               len(recorded ^ counting))
+            return
+        if recorded == counting and (counting or not record.present):
+            session.recorded_marks = counting
+            return
+        try:
+            if counting:
+                write_record(project_id, session.session_id, counting)
+            else:
+                remove_record(project_id, session.session_id)
+        except OSError as e:
+            logger.warning("After a save, %d approval(s) were not set right "
+                           "in their record (%s); the session's next save "
+                           "does it", len(recorded ^ counting),
+                           error_label(e))
+            session.recorded_marks = recorded
+            return
+        session.recorded_marks = counting
+
+    @staticmethod
+    def _mark_approvals_given_here(session: AICodingSession, key: str,
+                                   project_id: str) -> None:
+        """Each approval given or set back here, marked with the key over
+        the project's id and the item as it stands (v0.15.4); an approval
+        that came with the session keeps the mark it came with."""
+        for suggestion in session.suggestions:
+            if suggestion.status == "approved" and suggestion.approval_here:
+                suggestion.approval_mark = suggestion_mark(
+                    key, session.session_id, project_id, suggestion)
+        for proposal in session.proposed_codes:
+            if proposal.status == "approved" and proposal.approval_here:
+                proposal.approval_mark = proposal_mark(
+                    key, session.session_id, project_id, proposal)
+
+    @staticmethod
+    def _check_seal_and_marks(session: AICodingSession,
+                              data: Dict[str, Any], key: str,
+                              project_id: Optional[str],
+                              recorded: frozenset) -> None:
+        """A file kept in a project read against the key and the project's
+        id (v0.15.4): the session came with the project unless its file
+        carries this installation's seal for this project, and an approval
+        counts only with a mark that verifies and that the session's
+        record (`recorded`) holds. A project with no id reads every
+        session as having come with it. In memory alone: nothing is
+        written at a read."""
+        if project_id is None:
+            session.came_with_project = True
+            for item in session.suggestions + session.proposed_codes:
+                item.approval_here = False
+            return
+        session.came_with_project = not _matches(
+            data.get(SEAL_FIELD), seal_of(key, project_id, data))
+        for suggestion in session.suggestions:
+            suggestion.approval_here = (
+                suggestion.status == "approved"
+                and suggestion.approval_mark in recorded and _matches(
+                    suggestion.approval_mark,
+                    suggestion_mark(key, session.session_id, project_id,
+                                    suggestion)))
+        for proposal in session.proposed_codes:
+            proposal.approval_here = (
+                proposal.status == "approved"
+                and proposal.approval_mark in recorded and _matches(
+                    proposal.approval_mark,
+                    proposal_mark(key, session.session_id, project_id,
+                                  proposal)))
+
+    @staticmethod
+    def _holds(project: Path, name: str, raw: bytes) -> bool:
+        """Whether the project's file at a session's name holds `raw`, read
+        through the held folder (private_files.read_session); False when
+        it cannot be read, or `raw` is past the cap. Never raises."""
+        if len(raw) > private_files.MAX_SESSION:
+            return False
+        try:
+            return private_files.read_session(project, name) == raw
+        except (OSError, ValueError, private_files.PrivateFilesError):
+            return False
+
+    def _save_on_this_computer(self, session: AICodingSession) -> None:
+        """Save session to the state folder as JSON, atomically and
+        owner-only.
 
         The MRU write discipline (server.py _open_mru_tmp), applied here
         because a session file holds the researcher's approvals and a
@@ -833,17 +1951,12 @@ class SessionManager:
         the new one; a failure unlinks the temp and leaves the previous
         file intact. No fsync: sessions are re-creatable, and the one
         fsync in this server is the AI coder name sidecar, which is not
-        (H5, B4.5).
-
-        Args:
-            session: The AICodingSession to save
-
-        Raises:
-            ValueError: If session ID is not valid UUID4 format
+        (H5, B4.5). A session kept in its project is synced
+        (private_files.replace_session), since it travels on whatever
+        drive holds the project.
         """
-        self._validate_session_id(session.session_id)
         self._ensure_storage_dir()
-        filepath = self.storage_dir / f"session_{session.session_id}.json"
+        filepath = self.storage_dir / self.file_name(session.session_id)
         tmp = None
         try:
             fd, tmp_name = tempfile.mkstemp(dir=str(self.storage_dir),
@@ -887,6 +2000,57 @@ class SessionManager:
         """
         return self.load_session_and_bytes(session_id)[0]
 
+    def _from_project(self, session_id: str
+                      ) -> Tuple[Optional[bytes], Optional[Path],
+                                 Optional[SessionFileError]]:
+        """The open project's file of an id (v0.15.4): (its bytes, the
+        project's folder, None); (None, None, None) when nothing is at
+        the id's name there, or the manager keeps no project's sessions;
+        (None, None, a refusal) when no project is open or the project's
+        sessions folder cannot be read, so that the state folder is read
+        and, if it lacks the id too, the refusal given rather than "not
+        found", which would be untrue. An entry at the id's name that
+        cannot be read (a link, past the cap, unreadable, its path too
+        long on Windows) raises SessionFileError: it is that session, and
+        is never passed over for the state folder's file of that id."""
+        if self._project is None:
+            return None, None, None
+        project = self.open_project_folder()
+        if project is None:
+            return None, None, self._no_project_refusal()
+        try:
+            raw = private_files.read_session(project,
+                                             self.file_name(session_id))
+        except FileNotFoundError:
+            return None, None, None
+        except private_files.PrivateFilesError as e:
+            if e.about_folder:
+                return None, None, self._folder_refusal(e)
+            raise SessionFileError(e.code, str(e)) from None
+        return raw, project, None
+
+    @staticmethod
+    def _folder_refusal(error: private_files.PrivateFilesError
+                        ) -> SessionFileError:
+        """A session found in neither place while the project's sessions
+        folder could not be read: refused with that folder's reason,
+        rather than answered as not found."""
+        return SessionFileError(
+            error.code, "This session is not among those kept on this "
+                        f"computer, and the project's could not be read. "
+                        f"{error}")
+
+    def _no_project_refusal(self) -> SessionFileError:
+        """A session not on this computer, looked for while no project is
+        open: it may be kept in a project, found while that project is
+        selected."""
+        text = ("This session is not among those kept on this computer, "
+                "and no project is selected: a session kept in a project "
+                "is found while that project is selected.")
+        if self._no_project is not None:
+            text = f"{text} {self._no_project()}"
+        return SessionFileError("no_project", text)
+
     def load_session_and_bytes(self, session_id: str):
         """Load a session and return it with the file's bytes as read.
 
@@ -896,23 +2060,66 @@ class SessionManager:
         its name is refused: saving it would write the session its inner
         id names, not the file that was read (fix round 1).
 
+        The open project's sessions folder is read first (v0.15.4): a
+        file there is that project's session, its project the open one;
+        the state folder is read, as before, only when nothing is at the
+        id's name there or the folder cannot be read. The session keeps
+        the place it was read from, and is saved there.
+
+        A file kept in the project is checked against the key and the
+        project's id (v0.15.4): without this installation's seal for this
+        project it is read as having come with the project
+        (`came_with_project`), and each approval counts only with a mark
+        that verifies and that the session's record of approvals holds.
+        Logged with the session's id alone.
+
         Raises:
             ValueError: If the id is not UUID4, or the file holds another id
+            SessionFileError: The project's file at the id's name could
+                not be read, with the reason; SessionKeyUnavailable when
+                the key could not be read, and ProjectIdUnusable when what
+                is at the project's id's name is not an id, nothing read
+                as having come with the project
             FileNotFoundError: If session file doesn't exist
         """
         self._validate_session_id(session_id)
-        filepath = self.storage_dir / f"session_{session_id}.json"
-        if not filepath.exists():
-            raise FileNotFoundError(f"Session {session_id} not found at {filepath}")
-
         try:
-            raw = filepath.read_bytes()
-            data = json.loads(raw.decode("utf-8"))
-            session = AICodingSession.from_dict(data)
+            raw, project, refusal = self._from_project(session_id)
+            if raw is not None:
+                data = json.loads(raw.decode("utf-8"))
+                session = AICodingSession.from_dict(
+                    data, project_path=str(project / "data.qda"))
+                kept_in = KEPT_IN_PROJECT
+            else:
+                filepath = self.storage_dir / self.file_name(session_id)
+                if not filepath.exists():
+                    if refusal is not None:
+                        raise refusal
+                    raise FileNotFoundError(
+                        f"Session {session_id} not found at {filepath}")
+                raw = filepath.read_bytes()
+                data = json.loads(raw.decode("utf-8"))
+                session = AICodingSession.from_dict(data)
+                kept_in, project = KEPT_ON_THIS_COMPUTER, None
             if session.session_id != session_id:
                 raise ValueError(
                     f"Session file for {session_id} holds another session's "
                     f"id; it is refused rather than used or written")
+            session.kept_in, session.kept_folder = kept_in, project
+            if kept_in == KEPT_IN_PROJECT:
+                key = session_key(KEY_NOT_READ)
+                project_id = self._project_id(project, KEY_NOT_READ)
+                record = (ApprovalsRecord(frozenset(), False, None)
+                          if project_id is None
+                          else read_record(project_id, session_id))
+                session.recorded_marks = (None if record.held is not None
+                                          else record.marks)
+                self._check_seal_and_marks(session, data, key, project_id,
+                                           record.marks)
+                if session.came_with_project:
+                    logger.info(f"Session {session_id} does not carry this "
+                                f"installation's seal: read as having come "
+                                f"with the project")
             logger.info(f"Loaded session {session_id}")
             return session, raw
         except Exception as e:
@@ -926,12 +2133,19 @@ class SessionManager:
         False, and nothing written, when another writer saved it since;
         the caller reads it again and redoes its change on the new copy,
         so a change made meanwhile (a reopen, say) is not undone. The
-        window left is the one between this comparison and the replace."""
-        filepath = self.storage_dir / f"session_{session.session_id}.json"
+        window left is the one between this comparison and the replace.
+        The file compared is the one at the session's place (v0.15.4)."""
+        name = self.file_name(session.session_id)
         try:
-            if filepath.read_bytes() != raw:
-                return False
-        except OSError:
+            if session.kept_in == KEPT_IN_PROJECT:
+                if session.kept_folder is None:
+                    return False
+                now = private_files.read_session(session.kept_folder, name)
+            else:
+                now = (self.storage_dir / name).read_bytes()
+        except (OSError, private_files.PrivateFilesError):
+            return False
+        if now != raw:
             return False
         self.save_session(session)
         return True
@@ -944,14 +2158,42 @@ class SessionManager:
 
         Returns:
             True if session file exists, False otherwise.
-            Returns False for invalid session ID formats.
+            Returns False for invalid session ID formats. True also when
+            the open project's file at the id's name cannot be read, or
+            when the state folder lacks the id while the project's
+            sessions folder cannot be read or no project is open
+            (v0.15.4): loading it then gives the reason.
         """
         try:
             self._validate_session_id(session_id)
         except ValueError:
             return False
-        filepath = self.storage_dir / f"session_{session_id}.json"
-        return filepath.exists()
+        try:
+            raw, _project, refusal = self._from_project(session_id)
+        except SessionFileError:
+            return True
+        if raw is not None:
+            return True
+        filepath = self.storage_dir / self.file_name(session_id)
+        return filepath.exists() or refusal is not None
+
+    def session_file(self, session_id: str) -> Optional[Path]:
+        """Where the lookup finds a session's file: the open project's
+        sessions folder, else the state folder; None when it is in
+        neither. A path for Exegete's own code and its tests, never for
+        an answer."""
+        try:
+            self._validate_session_id(session_id)
+        except ValueError:
+            return None
+        name = self.file_name(session_id)
+        project = self.open_project_folder()
+        if project is not None:
+            place = private_files.sessions_folder(project) / name
+            if os.path.lexists(place):
+                return place
+        place = self.storage_dir / name
+        return place if place.exists() else None
 
     @staticmethod
     def canonical_database_path(project_path: Any) -> Optional[str]:
@@ -1020,6 +2262,17 @@ class SessionManager:
     ) -> List[Dict[str, Any]]:
         """List all sessions, optionally filtered by project and age.
 
+        The open project's own sessions, kept in its sessions folder, are
+        listed beside the state folder's (v0.15.4), each entry with
+        `kept_in` (KEPT_IN_PROJECT or KEPT_ON_THIS_COMPUTER); a project's
+        own are listed only while it is the open one, and with
+        `project_path` only when that path names it. A file holding
+        another session's id, a sync service's conflicted copy and a file
+        that cannot be read are not listed, and the log counts them,
+        naming no file; `sessions_listing` gives those counts, and the
+        reason when the project's sessions folder cannot be read, beside
+        the list.
+
         Args:
             project_path: Filter by specific project path (optional)
             days_old: Only show sessions from last N days (default: 30)
@@ -1030,59 +2283,154 @@ class SessionManager:
             their own ``session_id`` key, which ``load_session`` continues
             to read.
         """
+        return self.sessions_listing(project_path, days_old).sessions
+
+    def sessions_listing(self, project_path: Optional[str] = None,
+                         days_old: int = 30) -> SessionsListing:
+        """The sessions `list_sessions` lists, with what could not be read
+        beside them (v0.15.4), so that an answer never says a project has
+        no sessions when its sessions folder, or a session in it, could
+        not be read: the folder's refusal in its own words, and the
+        entries at a session's name in each place that could not be read
+        or hold another session's id, counted, naming none. A sync
+        service's conflicted copy is not at a session's name, and is
+        neither listed nor counted.
+
+        Each session kept in the open project is read as a lookup reads
+        it (v0.15.4): checked against the key, the project's id and its
+        record of approvals, read once, and counted from its items as the
+        session tools give their statuses; one that came with the project
+        is flagged (`came_with_project`) and its description marked. A key
+        that cannot be read, or a project's id that is not one, lists none
+        of them, its reason given as a folder's that cannot be read.
+
+        A `days_old` that counts back past the year 1 raises
+        OverflowError, as before: the tool refuses one before it gets
+        here (days_back_to_year_one)."""
         sessions = []
-        cutoff_date = datetime.now() - timedelta(days=days_old)
+        cutoff_date = _now() - timedelta(days=days_old)
         # Compared as databases, whichever form or spelling either side
         # uses (same_project)
         wanted = self.canonical_database_path(project_path)
+        skipped = {"another_id": 0, "unreadable": 0}
+        # By place, for the answer: the project's entries and the state
+        # folder's files that could not be read as their session
+        not_read = {KEPT_IN_PROJECT: 0, KEPT_ON_THIS_COMPUTER: 0}
+        folder_refusal: Optional[str] = None
+        project_read = False
+
+        def listed(data: Dict[str, Any], expected_id: str,
+                   project_db: str, kept_in: str,
+                   session: Optional[AICodingSession] = None) -> None:
+            # A copy whose inner id is not its file's name is refused by
+            # every tool (load_session), so it is not listed either:
+            # listed, it showed the real session's id twice (fix round 2)
+            if data.get('session_id') != expected_id:
+                skipped["another_id"] += 1
+                not_read[kept_in] += 1
+                return
+            # Filter by project if specified
+            if wanted and not self.same_project(project_db, wanted):
+                return
+            # Filter by age
+            last_modified = datetime.fromisoformat(data['last_modified'])
+            if last_modified < cutoff_date:
+                return
+            # A session kept in the project is counted from its items, as
+            # the session tools give their statuses, never from the file's
+            # own statistics (v0.15.4)
+            stats = (data['statistics'] if session is None
+                     else session.get_statistics())
+            description = data.get('description', '')
+            entry = {
+                # API-facing key only. The on-disk file keeps
+                # 'session_id'; see the docstring above.
+                'coding_session_id': data['session_id'],
+                'created_at': data['created_at'],
+                'last_modified': data['last_modified'],
+                'description': description,
+                'suggestion_count': stats['total_suggestions'],
+                'approved_count': stats['approved'],
+                'rejected_count': stats['rejected'],
+                'pending_count': stats['pending'],
+                # The project's folder name, not "data" (v0.14)
+                'project_name': self.project_name(project_db),
+                'project_path': project_db,
+                'kept_in': kept_in,
+            }
+            if session is not None and session.came_with_project:
+                entry['description'] = CAME_WITH_PROJECT_DESCRIPTION.format(
+                    description=description)
+                entry['came_with_project'] = True
+            sessions.append(entry)
 
         try:
+            project = self.open_project_folder()
+            in_project = set()
+            came_with = 0
+            if project is not None and (
+                    not wanted or self.same_project(project / "data.qda",
+                                                    wanted)):
+                project_read = True
+                project_db = str(project / "data.qda")
+                # Every entry at a session's name is that session, as a
+                # lookup takes it, though one that cannot be read (a link,
+                # past the cap) is not listed. A folder there that cannot
+                # be read is refused with its reason, as a lookup gives it
+                try:
+                    names = private_files.session_names(
+                        project, files_only=False, refuse=True)
+                except private_files.PrivateFilesError as e:
+                    names, folder_refusal = [], str(e)
+                # Each is checked against the key and the project's id
+                # (v0.15.4), read once; one that cannot be read, or an id
+                # that is not one, lists none of the project's sessions,
+                # with its reason, as a folder that cannot be read
+                key: Optional[str] = None
+                project_id: Optional[str] = None
+                if names:
+                    try:
+                        key = session_key(KEY_NOT_LISTED)
+                        project_id = self._project_id(project,
+                                                      KEY_NOT_LISTED)
+                    except SessionFileError as e:
+                        key, folder_refusal = None, str(e)
+                for name in names:
+                    sid = name[len("session_"):-len(".json")]
+                    in_project.add(sid)
+                    if key is None:
+                        continue
+                    try:
+                        data = json.loads(private_files.read_session(
+                            project, name).decode("utf-8"))
+                        session = None
+                        if data.get('session_id') == sid:
+                            session = AICodingSession.from_dict(
+                                data, project_path=project_db)
+                            session.kept_in = KEPT_IN_PROJECT
+                            self._check_seal_and_marks(
+                                session, data, key, project_id,
+                                frozenset() if project_id is None else
+                                read_record(project_id, sid).marks)
+                            came_with += session.came_with_project
+                        listed(data, sid, project_db, KEPT_IN_PROJECT,
+                               session)
+                    except Exception:
+                        skipped["unreadable"] += 1
+                        not_read[KEPT_IN_PROJECT] += 1
             for filepath in self.storage_dir.glob("session_*.json"):
+                # An id the project's folder holds is that session there,
+                # as a lookup takes it: a copy here is not listed again
+                if filepath.stem[len("session_"):] in in_project:
+                    continue
                 try:
                     with open(filepath, 'r', encoding='utf-8') as f:
                         data = json.load(f)
-
-                    # A copy whose inner id is not its file's name is
-                    # refused by every tool (load_session), so it is not
-                    # listed either: listed, it showed the real session's
-                    # id twice (fix round 2)
-                    if data.get('session_id') != \
-                            filepath.stem[len("session_"):]:
-                        logger.warning(f"Skipping session file "
-                                       f"{filepath.name}: it holds another "
-                                       f"session's id")
-                        continue
-
-                    # Filter by project if specified
-                    if wanted and not self.same_project(
-                            data['project_path'], wanted):
-                        continue
-
-                    # Filter by age
-                    last_modified = datetime.fromisoformat(data['last_modified'])
-                    if last_modified < cutoff_date:
-                        continue
-
-                    # The project's folder name, not "data" (v0.14)
-                    project_name = self.project_name(data['project_path'])
-
-                    sessions.append({
-                        # API-facing key only. The on-disk file keeps
-                        # 'session_id'; see the docstring above.
-                        'coding_session_id': data['session_id'],
-                        'created_at': data['created_at'],
-                        'last_modified': data['last_modified'],
-                        'description': data.get('description', ''),
-                        'suggestion_count': data['statistics']['total_suggestions'],
-                        'approved_count': data['statistics']['approved'],
-                        'rejected_count': data['statistics']['rejected'],
-                        'pending_count': data['statistics']['pending'],
-                        'project_name': project_name,
-                        'project_path': data['project_path']
-                    })
-                except Exception as e:
-                    logger.warning(f"Skipping invalid session file "
-                                   f"{filepath.name}: {error_label(e)}")
+                    listed(data, filepath.stem[len("session_"):],
+                           data['project_path'], KEPT_ON_THIS_COMPUTER)
+                except Exception:
+                    skipped["unreadable"] += 1
+                    not_read[KEPT_ON_THIS_COMPUTER] += 1
                     continue
 
             # Sort by last modified (most recent first)
@@ -1092,10 +2440,78 @@ class SessionManager:
             logger.error(f"Error listing sessions: {error_label(e)}")
             raise
 
-        return sessions
+        # Counts only: a file's name can carry a person's or a computer's
+        # name (a sync service's conflicted copy)
+        if skipped["another_id"]:
+            logger.warning("Skipped %d session file(s) holding another "
+                           "session's id", skipped["another_id"])
+        if skipped["unreadable"]:
+            logger.warning("Skipped %d session file(s) that could not be "
+                           "read", skipped["unreadable"])
+        if folder_refusal is not None:
+            logger.warning("The open project's sessions were not listed: its "
+                           "sessions folder, or the key that checks them, "
+                           "could not be read")
+        if came_with:
+            logger.info("%d session(s) kept in the open project read as "
+                        "having come with it", came_with)
+        return SessionsListing(sessions, folder_refusal,
+                               not_read[KEPT_IN_PROJECT],
+                               not_read[KEPT_ON_THIS_COMPUTER], project_read)
+
+    def project_sessions(self, project_db: Any
+                         ) -> List[Tuple[str, AICodingSession, bytes]]:
+        """A project's coding sessions from both places (v0.15.4), each
+        with its id and the bytes it was read with, in the order of
+        their ids: those kept in its sessions folder while it is the open
+        project, and those in the state folder that record it. Every one
+        is listed, with no stop; a file that cannot be read is passed
+        over, since it cannot be applied either. For delete_coding's
+        marks, undo's check and its marks, each saving a session at its
+        place only if unchanged."""
+        found: Dict[str, Tuple[str, AICodingSession, bytes]] = {}
+        project = self.open_project_folder()
+        if project is not None and self.same_project(project_db,
+                                                     project / "data.qda"):
+            for name in private_files.session_names(project):
+                sid = name[len("session_"):-len(".json")]
+                try:
+                    session, raw = self.load_session_and_bytes(sid)
+                except Exception:
+                    continue
+                if session.kept_in == KEPT_IN_PROJECT:
+                    found[sid] = (sid, session, raw)
+        for path in sorted(self.storage_dir.glob("session_*.json")):
+            sid = path.stem[len("session_"):]
+            if sid in found:
+                continue
+            try:
+                session, raw = self.load_session_and_bytes(sid)
+            except Exception:
+                continue
+            if session.kept_in == KEPT_ON_THIS_COMPUTER and \
+                    self.same_project(session.project_path, project_db):
+                found[sid] = (sid, session, raw)
+        return [found[sid] for sid in sorted(found)]
 
     def delete_session(self, session_id: str) -> bool:
-        """Delete a session file.
+        """Delete a session file: the one the lookup finds (v0.15.4), in
+        the open project's sessions folder, with that session's temporary
+        files there, else in the state folder; never the other place's.
+        A link or anything but a file at the id's name in the project is
+        refused with the reason, and the state folder's file of that id
+        left as it is.
+
+        A session kept in the project has its record of approvals taken
+        off its name first (v0.15.4), so that a process ended between the
+        two leaves the session with its approvals pending, never a record
+        with no session: a record that cannot be moved refuses the delete
+        (ApprovalRecordError), and so does a project's id that is not one
+        (ProjectIdUnusable), the file as it was. The record is set aside,
+        not removed, until the file is: when the file's removal is
+        refused (a read-only folder; on Windows, a file another program
+        holds), the record is put back, and the refusal says so if it
+        cannot be, the session's approvals then reading as pending.
 
         Args:
             session_id: The session ID to delete
@@ -1108,7 +2524,37 @@ class SessionManager:
             self._validate_session_id(session_id)
         except ValueError:
             return False
-        filepath = self.storage_dir / f"session_{session_id}.json"
+        name = self.file_name(session_id)
+        project = self.open_project_folder()
+        refusal = None
+        if self._project is not None and project is None:
+            refusal = self._no_project_refusal()
+        if project is not None:
+            aside = self._forget_approvals(project, session_id)
+            try:
+                removed = private_files.remove_session(project, name)
+            except private_files.PrivateFilesError as e:
+                back = put_record_back(aside)
+                if not back:
+                    logger.error(f"Session {session_id} was not deleted, and "
+                                 f"its record of approvals could not be put "
+                                 f"back")
+                if not e.about_folder:
+                    logger.error(f"Failed to delete session {session_id}: "
+                                 f"{error_label(e)}")
+                    raise SessionFileError(e.code, str(e) if back else
+                                           f"{e} {RECORD_NOT_PUT_BACK}"
+                                           ) from None
+                refusal = self._folder_refusal(e)
+                if not back:
+                    refusal = SessionFileError(
+                        refusal.code, f"{refusal} {RECORD_NOT_PUT_BACK}")
+            else:
+                drop_record_set_aside(aside)
+                if removed:
+                    logger.info(f"Deleted session {session_id}")
+                    return True
+        filepath = self.storage_dir / name
         if filepath.exists():
             try:
                 filepath.unlink()
@@ -1117,4 +2563,31 @@ class SessionManager:
             except Exception as e:
                 logger.error(f"Failed to delete session {session_id}: {error_label(e)}")
                 raise
+        if refusal is not None:
+            raise refusal
         return False
+
+    def _forget_approvals(self, project: Path, session_id: str
+                          ) -> Optional[Tuple[Path, Path]]:
+        """Before a session kept in the project is deleted (v0.15.4): its
+        record of approvals set aside (`set_record_aside`), where a
+        regular file is at the session's name there; anything else there
+        is left for `remove_session` to refuse, the record as it was.
+        What `put_record_back` takes; ProjectIdUnusable or
+        ApprovalRecordError refuses the delete, the file as it was."""
+        if not private_files.session_file_there(project,
+                                                self.file_name(session_id)):
+            return None
+        project_id = self._project_id(project, KEY_NOT_DELETED)
+        if project_id is None:
+            return None
+        try:
+            return set_record_aside(project_id, session_id)
+        except OSError as e:
+            logger.error(f"Failed to delete session {session_id}: its "
+                         f"record of approvals could not be removed "
+                         f"({error_label(e)})")
+            raise ApprovalRecordError(
+                f"{_RECORD_WORDS} could not be removed "
+                f"({e.strerror or type(e).__name__}), and Exegete removes it "
+                f"before the session's file.", KEY_NOT_DELETED) from None

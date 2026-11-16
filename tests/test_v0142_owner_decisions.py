@@ -89,6 +89,10 @@ README_ADVICE = ("While training is on, {maker} may use your conversations, "
                  "with the participants' data in them, to train its models.")
 README_RATED = ("Rating a reply, with a thumbs up or down, can still let "
                 "{maker} train on that conversation")
+# v0.15.4, PRIVACY read whole: PRIVACY.md's own piece, which says it as the
+# README does, a warning with the setting as the suggestion (ruling 108)
+WARNING = ("While training is on, {maker} may use your conversations, with "
+           "the participants' data in them, to train its models.")
 
 
 def _plain(text):
@@ -179,11 +183,14 @@ def test_install_and_privacy_give_the_same_advice():
     assert "practice included" not in install
     assert "practice included" not in _flat("INSTALL.md")
     # PRIVACY.md: each maker's section, and the checklist for both
+    # (v0.15.4: as a warning, the README's way, where the guide keeps the
+    # order until its own reading)
     rung_one = _between(privacy, "### Rung 1:", "### Rung 2:")
-    assert ADVICE.format(maker="Anthropic") in rung_one
+    assert WARNING.format(maker="Anthropic") in rung_one
     individuals = _between(privacy, "**Services for individuals**",
                            "**ChatGPT Business, Enterprise and Edu")
-    assert ADVICE.format(maker="OpenAI") in individuals
+    assert WARNING.format(maker="OpenAI") in individuals
+    assert "Switch training off" not in privacy
     checklist = _between(privacy, "## Before you use real participant data",
                          "## How your data flows")
     # (v0.15.2, the lead's reading: "the AI provider", the one term, for
@@ -191,7 +198,7 @@ def test_install_and_privacy_give_the_same_advice():
     # the document sets out, at its first mention)
     item = _between(checklist, "- **Training, with either AI provider.**",
                     "- **Controller")
-    for words in (ADVICE.format(maker="the AI provider"),
+    for words in (WARNING.format(maker="the AI provider"),
                   "\"Help improve our AI models\"",
                   "\"Improve the model for everyone\"",
                   "\"Include environments\"",
@@ -229,22 +236,48 @@ def test_the_advice_is_where_claude_desktop_is_set_up():
     quickstart = _plain(_between(_flat("QUICKSTART.md"),
                                  "### 5. Try it",
                                  "If you have no project yet, ask Claude"))
+    # (v0.15.4: Ultra among the personal plans, as Claude's pricing page
+    # lists it under "Individual" and Anthropic's page "What is the Ultra
+    # plan?" calls it a plan for individual consumers, read on 10
+    # November 2026)
     for where, text in (("README, the checks", readme),
                         ("INSTALL, one-click", one_click),
                         ("QUICKSTART, step 5", quickstart)):
         for words in ("Anthropic may use your conversations",
-                      "to train its models", "(Free, Pro or Max)",
+                      "to train its models", "(Free, Pro, Max or Ultra)",
                       "\"Help improve our AI models\"",
                       "https://claude.ai/settings/data-privacy-controls",
                       "thumbs up or down",
                       "can still let Anthropic train on that conversation"):
             assert words in text, (where, words)
+        assert "(Free, Pro or Max)" not in text, where
     for where, text in (("INSTALL, one-click", one_click),
                         ("QUICKSTART, step 5", quickstart)):
-        assert ("[Where your data goes](https://github.com/nicotem/exegete"
-                "#where-your-data-goes), in the README, says the rest: the "
-                "checks before participants' data, and which assistants open "
-                "files by themselves.") in text, where
+        # (v0.15.4, the readability reading: the pointer held to what it
+        # points to, the README's checks and the assistants that open
+        # files, in each document's own words)
+        pointer = ("[Where your data goes](https://github.com/nicotem/exegete"
+                   "#where-your-data-goes), in the README, says the rest: the "
+                   "checks ")
+        assert pointer in text, where
+        assert re.search(r"participants' data, and which assistants open "
+                         r"files by themselves\.",
+                         text[text.index(pointer):]), where
+        # (v0.15.4) the terms' second exception where Claude Desktop is
+        # set up, as Anthropic's page "Is my data used for model
+        # training?" gives it ("Your conversations are flagged for safety
+        # review"), and PRIVACY.md's rung 1 quotes the terms; INSTALL.md
+        # in PRIVACY's checklist's words
+        assert re.search(r"can still let Anthropic train on that "
+                         r"conversation(?:, and so can a flag for a safety "
+                         r"review\.|\. Anthropic can also train on a "
+                         r"conversation flagged for a safety review\.)",
+                         text), where
+    # INSTALL.md names that page and the day it was read
+    assert re.search(r"\(Anthropic's pages, read on \d{1,2} [A-Z][a-z]+ "
+                     r"20\d\d\)\. Anthropic's page \"Is my data used for "
+                     r"model training\?\" says that rating a reply",
+                     one_click)
     # (v0.15.2, the readability reading: Anthropic named as the AI
     # provider, the one term the documents use)
     assert ("What Claude reads through Exegete (passages, codes, memos, "
@@ -276,9 +309,11 @@ def test_quickstart_dates_the_setting_as_privacy_does():
     # (the fix round: the sentence on rating a reply is a claim about the
     # same terms, so it is dated by them, and it names their second
     # exception, which the terms PRIVACY quotes that day give)
+    # (v0.15.4, the readability reading: the second exception named as
+    # a flag, for "its being flagged")
     assert ("The same pages say that rating a reply, with a thumbs up or "
             "down, can still let Anthropic train on that conversation, and "
-            "so can its being flagged for a safety review.") in step5
+            "so can a flag for a safety review.") in step5
     rung_one = _between(_flat("PRIVACY.md"), "### Rung 1:", "### Rung 2:")
     exceptions = rung_one[rung_one.index("Exceptions that apply whatever "
                                          "the setting"):]
@@ -400,8 +435,10 @@ def test_quickstart_gives_the_warning_in_short_sentences():
     section = _between(_flat("QUICKSTART.md"),
                        "### Claude Code instead of Claude Desktop",
                        "## Installation steps")
-    reason = ("Started in your home folder, or in one that holds a study, "
-              "Claude Code reads that study without asking.")
+    # (v0.15.4, the readability reading: the condition said as one,
+    # with its subject, for an opening participle)
+    reason = ("If you start Claude Code in your home folder, or in one that "
+              "holds a study, it reads that study without asking.")
     assert section.index("in an empty folder") < section.index(reason)
     assert ("Claude Code started in your home folder, your projects folder "
             "or a study's folder, or given one of them as a working folder, "
@@ -415,12 +452,15 @@ def test_quickstart_gives_the_warning_in_short_sentences():
             "What Claude Code opens goes to Anthropic, the AI provider "
             "that runs its model.",
             "While training is on, Anthropic may train its models on it.",
+            # (v0.15.4, the readability reading: the chat, then its three
+            # conditions in a sentence of their own)
             "If that matters for a study, you could work on that study in "
-            "Claude Desktop's chat, with computer use off, no folder that "
-            "holds your projects or transcripts connected, and no other "
-            "extension that reads files ([PRIVACY.md, \"Assistants that "
-            "open files by themselves\"](PRIVACY.md#assistants-that-open-"
-            "files-by-themselves))."):
+            "Claude Desktop's chat.",
+            "There, you could keep computer use off, connect no folder that "
+            "holds your projects or transcripts, and add no other extension "
+            "that reads files ([PRIVACY.md, \"Assistants that open files by "
+            "themselves\"](PRIVACY.md#assistants-that-open-files-by-"
+            "themselves))."):
         assert sentence in section, sentence
 
 

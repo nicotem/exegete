@@ -68,7 +68,36 @@ def new_session(**args):
 
 
 def session_file(sid):
-    return Path(server.session_manager.storage_dir) / f"session_{sid}.json"
+    # Where the session's file is: from 0.15.4, a new session is kept in
+    # the project's sessions folder
+    return server.session_manager.session_file(sid)
+
+
+def on_this_computer(monkeypatch):
+    """Sessions kept on this computer, as every session was before 0.15.4.
+    From 0.15.4 a session kept in its project is not found from another
+    project, and a copy of the project carries its own, so a session that
+    another project open can still reach is one of these (v0.15.4)."""
+    monkeypatch.setattr(server, "session_manager", SessionManager(
+        str(server.session_manager.storage_dir)))
+
+
+def refused_as_another_projects(text):
+    """Whether a session's read was refused because another project is
+    open (v0.15.4: a session is read only with its own project open),
+    naming both projects' folders and nothing of the session."""
+    answer = json.loads(text)
+    return ("error" in answer and "session_project" in answer
+            and "current_project" in answer)
+
+
+def every_session_file():
+    """Every session file in both places (v0.15.4)."""
+    found = set(Path(server.session_manager.storage_dir).glob("*.json"))
+    project = server.session_manager.open_project_folder()
+    if project is not None:
+        found |= set((project / "Exegete coding sessions").glob("*.json"))
+    return found
 
 
 def merged_as_in_0150(sid, source, target):
@@ -382,7 +411,10 @@ class TestTheSessionScopeLimitsWhatIsRecorded:
         session = server.session_manager.load_session(
             out["coding_session_id"])
         assert session.file_ids == [1]
-        assert session.scope == {"file_ids": [1], "code_ids": [1]}
+        assert session.scope["file_ids"] == [1]
+        assert session.scope["code_ids"] == [1]
+        # each named code with its date (v0.15.4)
+        assert set(session.scope["code_dates"]) == {"1"}
 
     def test_nothing_found_is_an_error_that_names_it(self, setup_server):
         out = jcall("start_coding_session", file_ids=[1], code_names=["Nope"], instruction="test")
@@ -705,7 +737,8 @@ INVENTED = "Paul said: I will quit tomorrow because of my manager."
 
 def old_session_with_context(qualcoder_db_path, before=INVENTED,
                              after=INVENTED, **extra):
-    """A session file as an earlier release wrote it: the suggestion
+    """A session file as an earlier release wrote it, in the state folder
+    (v0.15.4: as every release before 0.15.4 kept it): the suggestion
     carries a stored context_before and context_after (v0.14's fix round
     2 stores none)."""
     session = AICodingSession(project_path=str(
@@ -713,7 +746,8 @@ def old_session_with_context(qualcoder_db_path, before=INVENTED,
     session.add_suggestion(CodingSuggestion(
         file_id=1, file_name="interview.txt", code_id=2,
         code_name="Coping", start_pos=57, end_pos=78, segment_text=COPE))
-    server.session_manager.save_session(session)
+    SessionManager(str(server.session_manager.storage_dir)).save_session(
+        session)
     path = session_file(session.session_id)
     data = json.loads(path.read_text())
     data["suggestions"][0].update(context_before=before,
@@ -756,7 +790,8 @@ class TestTheContextIsTheFilesOwn:
         server.current_project_path = str(twin)
         out = call("review_suggestions", coding_session_id=sid)
         assert "stored before" not in out
-        assert server.CONTEXT_NOT_SHOWN_NOTE in out
+        # v0.15.4: read only with its own project open
+        assert refused_as_another_projects(out)
 
     def test_a_span_the_file_no_longer_holds_shows_no_context(
             self, setup_server, qualcoder_db_path):
@@ -1183,14 +1218,13 @@ class TestFixRoundNoInventedContextAnywhere:
             self, setup_server, qualcoder_db_path, tmp_path):
         sid = self._old_session(qualcoder_db_path)
         self._open_a_twin(qualcoder_db_path, tmp_path)
-        info = jcall("get_coding_session_info", coding_session_id=sid)
-        entry = info["suggestions"][0]
-        assert INVENTED not in json.dumps(info)
-        assert entry["context_before"] == entry["context_after"] == ""
-        assert entry["context_note"] == server.CONTEXT_NOT_SHOWN_NOTE
+        info = call("get_coding_session_info", coding_session_id=sid)
+        assert INVENTED not in info
         review = call("review_suggestions", coding_session_id=sid)
         assert INVENTED not in review
-        assert server.CONTEXT_NOT_SHOWN_NOTE in review
+        # v0.15.4: neither reads it with another project open
+        assert refused_as_another_projects(info)
+        assert refused_as_another_projects(review)
 
 
 class TestFixRoundTwoHostsOnOneProject:
@@ -1207,7 +1241,9 @@ class TestFixRoundTwoHostsOnOneProject:
         ctid = server.session_manager.load_session(sid) \
             .get_suggestion_by_guid(y).applied_ctid
 
-        other_host = SessionManager(str(server.session_manager.storage_dir))
+        other_host = SessionManager(
+            str(server.session_manager.storage_dir),
+            project=lambda: server._open_project_folder())
         original = AICodingSession.mark_removed
         fired = []
 
@@ -1233,7 +1269,7 @@ class TestFixRoundSessionFilesHardened:
             self, setup_server):
         sid = new_session()
         other = new_session()
-        folder = Path(server.session_manager.storage_dir)
+        folder = session_file(sid).parent
         before_other = (folder / f"session_{other}.json").read_text()
         data = json.loads((folder / f"session_{sid}.json").read_text())
         data["session_id"] = other                 # a copied or crafted file
@@ -1547,7 +1583,7 @@ class TestFixRound2StartingASession:
     @pytest.mark.parametrize("instruction", [None, "", "   \n"])
     def test_without_the_answers_nothing_is_started(self, setup_server,
                                                      instruction):
-        before = set(Path(server.session_manager.storage_dir).glob("*.json"))
+        before = every_session_file()
         args = {"file_ids": [1]}
         if instruction is not None:
             args["instruction"] = instruction
@@ -1557,7 +1593,7 @@ class TestFixRound2StartingASession:
         for words in ("What to look for", "How long a coded passage should "
                       "be", "more than one code", "pilot"):
             assert words in out["error"], words
-        after = set(Path(server.session_manager.storage_dir).glob("*.json"))
+        after = every_session_file()
         assert after == before
 
     def test_the_answers_are_kept_as_given(self, setup_server):
@@ -2173,7 +2209,8 @@ class TestFixRound2TheMinors:
             assert "color_snapped" in out
 
     def test_recorded_now_and_seen_with_another_project_open(
-            self, setup_server, qualcoder_db_path, tmp_path):
+            self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
+        on_this_computer(monkeypatch)
         sid = new_session()
         record(sid, item(COPE, "Coping"))
         import shutil
@@ -2181,9 +2218,11 @@ class TestFixRound2TheMinors:
         shutil.copytree(qualcoder_db_path, twin)
         server.current_project_path = str(twin)
         out = call("review_suggestions", coding_session_id=sid)
-        assert server.CONTEXT_NOT_SHOWN_NOTE in out
         assert "deadlines" not in out          # no text around it, stored
-        assert COPE in out                     # the passage itself
+        # v0.15.4: read only with its own project open, so not even the
+        # passage itself
+        assert refused_as_another_projects(out)
+        assert COPE not in out
 
     def test_names_that_all_match_two_codes_are_said_to(
             self, setup_server, qualcoder_db_path):
@@ -2245,7 +2284,7 @@ class TestFixRound2TheMinors:
 
     def test_the_session_list_leaves_out_a_copy(self, setup_server):
         sid = new_session()
-        folder = Path(server.session_manager.storage_dir)
+        folder = session_file(sid).parent
         copy = "0f0f0f0f-0000-4000-8000-00000000abcd"
         (folder / f"session_{copy}.json").write_text(
             (folder / f"session_{sid}.json").read_text())
@@ -2395,7 +2434,8 @@ class TestFixRound3NoSpanTextStored:
         assert self.NAME not in small
 
     def test_another_project_open_shows_the_length_alone(
-            self, setup_server, qualcoder_db_path, tmp_path):
+            self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
+        on_this_computer(monkeypatch)
         sid, guid = self._recorded(qualcoder_db_path)
         import shutil
         twin = tmp_path / "twin.qda"
@@ -2404,14 +2444,16 @@ class TestFixRound3NoSpanTextStored:
         small = call("review_suggestions", coding_session_id=sid,
                      suggestion_guids=[guid])
         assert self.NAME not in small
-        assert "↔ longer (full speaker turn, " in small
-        entry = jcall("get_coding_session_info", coding_session_id=sid)[
-            "suggestions"][0]
-        assert all("preview" not in alt
-                   for alt in entry["span_alternatives"])
+        info = call("get_coding_session_info", coding_session_id=sid)
+        assert self.NAME not in info
+        # v0.15.4: read only with its own project open, so neither the
+        # spans nor their lengths are shown with another open
+        assert refused_as_another_projects(small)
+        assert refused_as_another_projects(info)
 
     def test_an_old_files_previews_are_never_shown_and_are_cut(
-            self, setup_server, qualcoder_db_path, tmp_path):
+            self, setup_server, qualcoder_db_path, tmp_path, monkeypatch):
+        on_this_computer(monkeypatch)
         sid, guid = self._recorded(qualcoder_db_path)
         path = session_file(sid)
         data = json.loads(path.read_text())

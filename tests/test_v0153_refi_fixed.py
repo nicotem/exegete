@@ -669,10 +669,14 @@ def test_the_part_file_and_what_it_leaves(setup_server, qualcoder_db_path,
     assert answer["success"] is True, answer
     assert modes == [0o600]
     assert stat.S_IMODE(out.stat().st_mode) == 0o600
-    assert answer["part_files_removed"] == 2
+    # v0.15.4: the upper-case part goes only where the folder takes the
+    # two names as one (tests/test_v0154_small_corrections_2.py)
+    ignores_case = (tmp_path / "P.QDPX").exists()
+    assert answer["part_files_removed"] == (2 if ignores_case else 1)
     assert _parts(tmp_path) == sorted([
         f".p.qdpx.13-{10 ** 20}.part", ".other.qdpx.14-1.part",
-        ".p.qdpx.15-1.part", ".p.qdpx.16-1.part"])
+        ".p.qdpx.15-1.part", ".p.qdpx.16-1.part"]
+        + ([] if ignores_case else [f".P.QDPX.12-{before - 4}.part"]))
     assert (tmp_path / "target").read_bytes() == b"not a part file"
 
     # A destination name of 245 characters, which exported before the
@@ -866,10 +870,12 @@ def test_a_session_suggestion_that_does_not_fit_refuses_the_export(
     answer = _export(coding_session_id=sid, output_path=str(out))
     assert "success" not in answer, answer
     # Named by its GUID, which review_suggestions gives, and by its place
-    # counted from 1, as review_suggestions counts
+    # counted from 1, as review_suggestions counts; from v0.15.4 with its
+    # status, the refusal ending with the way to correct it
     assert answer["error"] == (
         f"Export validation failed: Suggestion 1 (GUID {guid}): End "
-        f"position 56 is beyond the file text (length 6)"), answer
+        f"position 56 is beyond the file text (length 6) (status: "
+        f"pending). {refi_export.PASSAGE_MOVED_PENDING}"), answer
     assert not out.exists() and _parts(tmp_path) == []
 
     # Whatever its status: a rejected suggestion whose code was deleted
@@ -888,11 +894,19 @@ def test_a_session_suggestion_that_does_not_fit_refuses_the_export(
     assert re.fullmatch(
         rf"Export validation failed: Suggestion 1 \(GUID {rejected}\): "
         r"Code ID \d+ not found in project", again["error"]), again
+    # v0.15.4: an applied or removed suggestion is left out instead
+    # (tests/test_v0154_small_corrections_2.py)
     flat = " ".join(_description().split())
-    assert ("In a session's export such a suggestion is not left out, nor "
-            "one whose code or file has gone since, whatever its status: "
-            "the export is refused, and its first ten reasons each name a "
-            "suggestion by its GUID.") in flat
+    assert ("A suggestion that fails a check, or whose code or file has "
+            "gone since, refuses the export, unless it is applied or "
+            "removed: such a one is left out instead, counted in "
+            "skipped_suggestions and the first 20 named in "
+            "skipped_details, and the whole project's export carries what "
+            "the project holds. The refusal's first ten reasons each name "
+            "a suggestion by its number, and by its GUID when that is in a "
+            "GUID's form; where its positions or passage no longer fit its "
+            "file's text, the reason gives its status and the refusal says "
+            "how to correct it.") in flat
 
 
 def test_a_coding_on_a_source_without_text_is_counted_apart(

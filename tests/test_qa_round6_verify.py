@@ -428,10 +428,10 @@ class TestVersionHandshake:
         from importlib import metadata
         pkg = metadata.version("exegete")
         assert exegete.__version__ == pkg
-        # 0.15.3-alpha family (canary for a stale editable install; the
+        # 0.15.4-alpha family (canary for a stale editable install; the
         # release-prep rule: check it against a FRESH clone and venv, since
         # stale editable-install metadata passed a wrong canary in Batch A)
-        assert pkg.startswith("0.15.3")
+        assert pkg.startswith("0.15.4")
 
     def test_stdio_initialize_advertises_version(self):
         """A real MCP initialize handshake over the server advertises the

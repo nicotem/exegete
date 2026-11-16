@@ -568,7 +568,8 @@ def _scratch_is_not_hidden(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def session_file(sid):
-    return server.session_manager.storage_dir / f"session_{sid}.json"
+    # (v0.15.4: a new session is kept in its project's sessions folder)
+    return server.session_manager.session_file(sid)
 
 
 def a_new_code_takes_the_number(project, cid, name="Later"):

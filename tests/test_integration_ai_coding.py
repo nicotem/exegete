@@ -49,6 +49,12 @@ def test_db(qualcoder_db_path):
     db.close()
 
 
+def passage(db, file_id, start, end):
+    """The file's text at these positions: from 0.15.4 a session's export
+    compares each suggestion's passage with it, as apply_codings does."""
+    return db.get_file_content(file_id)["content"][start:end]
+
+
 @pytest.fixture
 def temp_dir():
     """Create temporary directory for test outputs."""
@@ -155,7 +161,7 @@ class TestCompleteAICodingWorkflow:
                 code_name=code["name"],
                 start_pos=i * 5,
                 end_pos=(i * 5) + 10,
-                segment_text=f"Test segment {i}",
+                segment_text=passage(test_db, file["id"], i * 5, i * 5 + 10),
                 reasoning=f"Test memo {i}",
                 reading="explicit",
                 status="approved"
@@ -216,7 +222,7 @@ class TestCompleteAICodingWorkflow:
                 code_name=code["name"],
                 start_pos=i * 5,
                 end_pos=(i * 5) + 10,
-                segment_text=f"Sample text segment {i}",
+                segment_text=passage(test_db, file["id"], i * 5, i * 5 + 10),
                 reasoning=f"AI analysis memo {i}",
                 reading="explicit",
                 status="approved"
@@ -346,7 +352,7 @@ class TestCompleteAICodingWorkflow:
             code_name=codes[0]["name"],
             start_pos=0,
             end_pos=30,
-            segment_text="Test",
+            segment_text=passage(test_db, files[0]["id"], 0, 30),
             reading="explicit",
             guid="test-guid-123"  # Fixed GUID
         )
@@ -402,7 +408,8 @@ class TestCompleteAICodingWorkflow:
                     code_name=codes[0]["name"],
                     start_pos=j * 5,
                     end_pos=(j * 5) + 10,
-                    segment_text=f"Text {i}-{j}",
+                    segment_text=passage(test_db, file["id"], j * 5,
+                                         j * 5 + 10),
                     reading="explicit"
                 ))
 
@@ -495,7 +502,7 @@ class TestCompleteAICodingWorkflow:
             code_name=codes[0]["name"],
             start_pos=0,
             end_pos=30,
-            segment_text="Test",
+            segment_text=passage(test_db, files[0]["id"], 0, 30),
             reasoning="Important AI insight here",
             reading="explicit"
         )

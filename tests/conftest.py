@@ -630,9 +630,68 @@ def _isolate_session_manager(tmp_path, _sandbox_patch):
     that do not, and any tool call made outside them, wrote for real.
     Patch the OBJECT, the way the other three home-derived bindings are
     patched above.
+
+    Built as the server builds its own (v0.15.4): with the open project's
+    folder, where a new session is kept and looked for first
+    (`sandboxed_session_manager`).
     """
     _sandbox_patch.setattr(server, "session_manager",
-                           SessionManager(str(tmp_path / "sessions")))
+                           sandboxed_session_manager(tmp_path / "sessions"))
+
+
+def sandboxed_session_manager(storage_dir) -> SessionManager:
+    """A session manager in a test's own folder, built as the server
+    builds its own: the state folder's sessions in `storage_dir`, and the
+    open project's in its sessions folder (v0.15.4)."""
+    return SessionManager(str(storage_dir),
+                          project=lambda: server._open_project_folder(),
+                          no_project=lambda: server._no_project_message())
+
+
+def seal_session_file(path) -> None:
+    """Seal again a session's file kept in a project that a test changed
+    by hand, as Exegete seals one it saves (v0.15.4): each approval in it
+    marked as given here, and the seal over the rest, under the test's
+    own key (the preview tokens' secret in its state folder) and the
+    project's id (`Project id.txt` beside the file, made when missing),
+    the session's record of approvals holding exactly those marks.
+    Everything else the test wrote is kept as it is, so the file reads as
+    this installation's and holds what the test made it hold. Import it
+    as `from tests.conftest import seal_session_file`: `import conftest`
+    would load a second copy."""
+    import json
+    from exegete import preview_tokens, private_files, sessions
+    key = preview_tokens.load_secret()
+    path = Path(path)
+    project = path.parent.parent
+    project_id = private_files.read_project_id(project)
+    if project_id is None:
+        private_files.make_project_id(project)
+        project_id = private_files.read_project_id(project)
+    data = json.loads(path.read_text(encoding="utf-8"))
+    sid = data.get("session_id")
+    marks = set()
+    for field, kind, mark in (
+            ("suggestions", sessions.CodingSuggestion,
+             sessions.suggestion_mark),
+            ("proposed_codes", sessions.ProposedCode,
+             sessions.proposal_mark)):
+        for raw in data.get(field) or []:
+            if not isinstance(raw, dict) or raw.get("status") != "approved":
+                continue
+            try:
+                item = kind.from_dict(raw)
+            except (TypeError, ValueError):
+                continue        # a broken item the test means to leave
+            raw[sessions.APPROVAL_MARK_FIELD] = mark(key, sid, project_id,
+                                                     item)
+            marks.add(raw[sessions.APPROVAL_MARK_FIELD])
+    data[sessions.SEAL_FIELD] = sessions.seal_of(key, project_id, data)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    if marks:
+        sessions.write_record(project_id, sid, frozenset(marks))
+    else:
+        sessions.remove_record(project_id, sid)
 
 
 @pytest.fixture(autouse=True)
@@ -1009,7 +1068,7 @@ def setup_server(qualcoder_db_path, tmp_path):
     write_fixture_sidecar(qualcoder_db_path)
     server.db = QualcoderDatabase(qualcoder_db_path)
     server.current_project_path = qualcoder_db_path
-    server.session_manager = SessionManager(str(tmp_path / "sessions"))
+    server.session_manager = sandboxed_session_manager(tmp_path / "sessions")
 
     yield server
 
@@ -1036,7 +1095,7 @@ def setup_empty_server(empty_db_path, tmp_path):
     write_fixture_sidecar(empty_db_path)
     server.db = QualcoderDatabase(empty_db_path)
     server.current_project_path = empty_db_path
-    server.session_manager = SessionManager(str(tmp_path / "sessions"))
+    server.session_manager = sandboxed_session_manager(tmp_path / "sessions")
 
     yield server
 
@@ -1065,7 +1124,7 @@ def setup_server_unset(qualcoder_db_path, tmp_path):
     assert not (Path(qualcoder_db_path) / SIDECAR_NAME).exists()
     server.db = QualcoderDatabase(qualcoder_db_path)
     server.current_project_path = qualcoder_db_path
-    server.session_manager = SessionManager(str(tmp_path / "sessions"))
+    server.session_manager = sandboxed_session_manager(tmp_path / "sessions")
 
     yield server
 

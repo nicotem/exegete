@@ -926,7 +926,7 @@ Each is stated in full by its tool:
 # may show the model (best effort; host behaviour varies: Claude Code shows
 # it and keeps its first 4,096 characters, 2,048 before its version
 # 2.1.296). From v0.14.2 it is the brief's short version, within 2,048
-# characters and bytes, now kept as a margin (2,042 in v0.15.2).
+# characters and bytes, now kept as a margin (2,047 in v0.15.4).
 SERVER_INSTRUCTIONS = BRIEF_SHORT
 
 

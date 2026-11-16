@@ -306,7 +306,8 @@ class TestTheOpeningText:
         # 1,988 characters before; the new rule took it to 2,034, within
         # Claude Code's cut, as the design says (v0.15.2: the opening texts
         # took it to 2,046, saying once what QualCoder is, and rule 8, naming
-        # undoing a change, to 2,042; the exact figure is
+        # undoing a change, to 2,042; v0.15.4's 'data' in its first
+        # sentence, to 2,047; the exact figure is
         # docs/snapshot/sizes.json's)
         assert len(short) == len(short.encode("utf-8")) <= CUT
 

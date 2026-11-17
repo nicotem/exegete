@@ -219,9 +219,9 @@ class TestTheDocumentsSayIt:
         # v0.15.5: the whole-project warning gives that advice; the
         # warning of a run limited to the file's notes does not (the
         # one-file notes review, point 7)
-        assert ("pseudonyms.json` holds one pseudonym per name); the "
-                "preview of a run across the whole project says so "
-                "whenever it would rewrite a note." in tools)
+        assert ("pseudonyms.json` holds one pseudonym per name. The "
+                "preview of a run across the whole project gives this "
+                "advice whenever the run would rewrite a note." in tools)
         changelog = _flat((self.REPO / "CHANGELOG.md").read_text(
             encoding="utf-8"))
         entry_0142 = changelog[changelog.index("## [0.14.2-alpha]"):

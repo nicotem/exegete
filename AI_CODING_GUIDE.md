@@ -1126,9 +1126,9 @@ which you choose in one of two ways:
   each project it creates, without asking, and says so;
 - in a project that has no AI coder name, the first time a write needs
   one. The write stops and asks you, offering the name in the settings
-  first. `AI Coding Assistant`, the name on the AI codings Exegete made
-  before each project had one of its own, is among the names it offers.
-  Your answer is stored with the project
+  first. The names it offers include `AI Coding Assistant`, the name on
+  the AI codings Exegete made before each project had an AI coder name
+  of its own. Your answer is stored with the project
   (`set_project_ai_coder_name`).
 
 A project that already has another AI coder name keeps it, and the
@@ -1253,7 +1253,7 @@ in it. The run's answer lists those sessions. Pseudonymised data is still person
 what that means before you send it anywhere.
 
 **What happens to my original project?** Exegete changes a project
-made in Exegete directly, with a backup before every change to its
+made in Exegete in place, and takes a backup before every change to its
 database. A project made in another program, or one you want to keep
 as it is, stays as it was if you work on a copy in the workspace. Copy
 it first and work on the copy. You can compare the two, in the

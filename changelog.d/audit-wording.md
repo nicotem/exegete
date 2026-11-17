@@ -4,16 +4,16 @@
   `show_examples`, each evidence text is shown up to its first 200
   characters, as before, and a longer one now ends in "…". Its
   positions still give its whole length.
-- **`add_journal_entry` names the entry as it is stored**, without the
-  spaces around the name that the store drops, where its answer
+- **`add_journal_entry`'s answer gives the entry's name as stored**,
+  without the spaces around it that the store drops. Before, the answer
   repeated the name as typed.
 - **`explain_ai_coding_tools` lists `overview` among its topics**, the
-  topic it gives when it is called with none. Its description says that
-  the overview is of the coding loop, where it said "of all tools".
+  topic it gives when it is called with none. Its description now says
+  that the overview is of the coding loop, not "of all tools".
 - **Two refusals offer the kinds the tools take.** A new attribute's
-  `applies_to`, and the `target_type` of a value set, must be `'case'`
-  or `'file'`. The refusals offered `'journal'` too, which the two tools
-  refuse first.
+  `applies_to`, and the `target_type` of an attribute value being set,
+  must be `'case'` or `'file'`. The refusals offered `'journal'` too,
+  which the two tools refuse first.
 
 ### Fixed
 
@@ -31,57 +31,61 @@
   - `update_annotation`: a note of spaces alone counts as empty, and
     deletes the annotation;
   - `merge_codes`: it no longer says that it follows QualCoder's merge
-    exactly, since it leaves the list of recently used codes as it is;
-    its preview's hint says that a text coding is discarded only where
+    exactly, since it leaves the list of recently used codes as it is.
+    Its preview's hint says that a text coding is discarded only where
     the target already has the same span from the same coder;
   - `search_files`: a file's type can also be `media`, and the example
-    that searched "everywhere" names the documents and the notes;
+    that searched "everywhere" now searches the documents and the notes;
   - `search_coded_text`, `list_attribute_types`, `get_file_attributes`
-    and `get_case_attributes`: their answers are objects, described as
-    they are; a coded passage comes without the text around it;
-  - `import_text_file`: a byte-order mark at the start is removed and
-    line endings become LF; with `apply_project_pseudonyms`, a names
-    list holding an entry that begins or ends with a space, a name
-    shorter than 2 characters, a pseudonym shorter than 3, a name given
-    twice, or a pseudonym that is also a name, is refused, and nothing
-    is imported;
+    and `get_case_attributes`: their answers are objects, and are
+    described as they are. A passage `search_coded_text` finds comes
+    without the text around it;
+  - `import_text_file`: a byte-order mark at the start is removed, and
+    line endings become LF. With `apply_project_pseudonyms`, a names
+    list is refused, and nothing is imported, when an entry begins or
+    ends with a space, a name is shorter than 2 characters or a
+    pseudonym shorter than 3, a name is given twice, or a pseudonym is
+    also a name;
   - `rename_file`: a text with no stored file whose name ends in `.txt`
-    or has no dot keeps the ending `.txt`, or no dot at all;
+    or has no dot can lose `.txt` or gain it, but no other ending;
   - the five exports: `output_path` is a full path or one starting with
-    `~`; `export_case_code_matrix_csv`'s `sanitize_formulas` no longer
-    says that QualCoder writes such a file;
-  - `create_project`: spaces around a name are dropped before the
-    name's rules apply;
+    `~`. The `sanitize_formulas` of `export_case_code_matrix_csv` no
+    longer says that QualCoder writes such a file;
+  - `create_project`: the spaces around a name, and then a typed
+    `.qda`, are dropped before the name's rules apply;
   - the `exegete://codes/list` resource: a flat list, ordered by
     category, then name;
   - `export_frequencies_csv`: `--` for each level is QualCoder 3.8.2's
     way of marking one;
   - `set_project_ai_coder_name` and the refusals of a coder name:
     `AI Coding Assistant` is the name on AI codings made before each
-    project had a name of its own, not a default any write falls back
-    to;
+    project had an AI coder name of its own, not a default that any
+    write falls back to;
   - `pseudonymise_source`: with `memo_scope` `"file"`, the segments
-    taken are those of the file's own recording; a run with nothing to
-    rewrite saves no mapping. The warning on the notes such a run
-    leaves says that its count also takes in the file's notes into which
-    a pseudonym writes a name back;
+    taken are those of the file's own recording. A run with nothing to
+    rewrite saves no mapping. The warning on the notes a `"file"` run
+    leaves says that its count also takes in the file's rewritten notes
+    where a pseudonym puts a name of the mapping back;
   - the paragraph of the four tools that delete or merge codes and
     categories: a preview writes nothing in the project, and the second
-    call is refused when what the token covers has changed, not
-    whenever anything in the project has.
+    call is refused when any of the rows the token covers has changed,
+    not whenever anything in the project has.
 
 ### Documents
 
-- **TOOLS.md** says that the text count of `get_coding_frequencies`
-  leaves out text codings left on a deleted file, which `export_codebook`
-  counts; how `merge_codes` differs from QualCoder 4.0's merge; where
-  `exegete.json` is kept; the rule for a journal entry's name; that an
-  override's answer from `update_annotation` or `set_memo` also carries
-  the note the assistant gave; and that the advice on a typed mapping
-  for a second person is given in the preview of a run across the
-  whole project.
+- **TOOLS.md** says:
+  - that the text count of `get_coding_frequencies` leaves out text
+    codings left on a deleted file, which `export_codebook` counts;
+  - how `merge_codes` differs from QualCoder 4.0's merge;
+  - where `exegete.json` is kept, and the rule for a journal entry's
+    name;
+  - that an override's answer from `update_annotation` or `set_memo`
+    also carries the note the assistant gave;
+  - that the preview of a run across the whole project gives the advice
+    on a typed mapping for a second person who shares a name.
 - **PRIVACY.md** says that a note rewrite reaches every note of the
-  project by default, beside `memo_scope`.
+  project by default, and only the file's own notes with `memo_scope`
+  `"file"`.
 - **The AI coding guide** says which name the assistant's codings carry,
   that a backup comes before every change to the project's database,
-  and where the list of files is read.
+  and where the assistant reads the list of files.

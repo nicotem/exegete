@@ -8494,8 +8494,9 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "QualCoder 4.0's ai_data folder, speakers.json and "
          "speaker_regex.json. Notes "
          "(the twelve kinds) and journal entries are rewritten only "
-         "when rewrite_memos is on, in their public part and across "
-         "the whole project; otherwise they remain too."),
+         # v0.15.5: where memo_scope says, the whole project or the file
+         "when rewrite_memos is on, in their public part, where "
+         "memo_scope says; otherwise they remain too."),
         ("residue_says_where_names_remain",
          "The preview's `residue` block counts where the names still occur, "
          "for you to tell the researcher."),
@@ -8586,18 +8587,21 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "own pseudonyms.json each time, and with a typed mapping the "
          "mapping is repeated on each call."),
         ("the_report_covers_the_whole_project",  # decision A; Brief 2
-         "The notes and the report always cover the whole project."),
+         # v0.15.5: the report alone, since memo_scope "file" keeps the
+         # notes rewritten to the file's
+         "The report always covers the whole project."),
         ("the_file_id_argument",                         # v0.13 decision A
          "file_id: The one text source this call rewrites. A PDF, a media "
          "file or a source with no stored text is refused with the reason "
          "(pdf_source, no_fulltext, unknown_file_id)."),
         ("repeat_the_same_bound_arguments",       # decision A; Brief 2
          # v0.15.3: leave_occurrences joins them, "same" in lower case;
-         # v0.15.4: the numbers and their numbering too, and keep_phrases
+         # v0.15.4: the numbers and their numbering too, and keep_phrases;
+         # v0.15.5: memo_scope
          "call again with the same mapping, file_id, case_mode, "
          "overlap_policy, rewrite_memos, save_mapping_to_project, and "
-         "keep_phrases, leave_occurrences, leave_numbers and numbering when "
-         "given, plus preview_token=<the token>."),
+         "keep_phrases, memo_scope, leave_occurrences, leave_numbers and "
+         "numbering when given, plus preview_token=<the token>."),
         ("a_carrying_pseudonym_is_withheld",             # fix round 1, F1
          "A pseudonym that carries one of those names is withheld (null) "
          "wherever the preview would quote it, and its entry number stands "
@@ -8643,7 +8647,14 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "twelve kinds of note: codings, annotations, case links, files, "
          "cases, codes, categories, the project, attribute types, "
          "audio/video and image codings) and of every journal entry, "
-         "across the whole project whatever file_id says. Default false."),
+         # v0.15.5: memo_scope "file" keeps it to the file's notes
+         "across the whole project whatever file_id says, unless "
+         "memo_scope is \"file\". Default false."),
+        ("memo_scope_keeps_it_to_the_file",              # v0.15.5
+         "memo_scope: \"file\" keeps rewrite_memos to this file's notes: "
+         "those of its codings, annotations and case links, its own, and "
+         "those of the recording segments its codings are linked to. "
+         "Default \"project\". Bound into the token when \"file\"."),
         ("nothing_is_renamed",                           # point 2
          "Nothing is renamed: case, file, code, category, attribute-type "
          "and journal names stay as they are."),
@@ -8651,9 +8662,6 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "A note's private part (after QualCoder's marker) is carried "
          "across unchanged and never read, so a name in a private part is "
          "still there and Exegete cannot tell you whether one is."),
-        ("the_wide_counts_do_not_reach_zero",            # point 4
-         "The residue's wide counts do not go to zero after a note "
-         "rewrite"),
         ("the_save_binds_and_the_attestation_does_not",  # points 5 and 6
          "Not bound into the token: an attestation with no side effect, "
          "which may be added on the execute call."),
@@ -8763,8 +8771,20 @@ class TestTheDescriptionCarriesWhatD1Requires:
         assert "case_mode and overlap_policy, plus preview_token" \
             not in published
         assert "remain: memos, journal entries" not in published
-        assert "The report always covers the whole project." not in published
+        # (v0.15.5: "The report always covers the whole project." is said
+        # again, the notes left out of it, since memo_scope "file" keeps
+        # the notes rewritten to the file's)
+        assert "The notes and the report always cover" not in published
         assert "the PUBLIC part of memos only" not in published
+
+    def test_the_wide_counts_are_said_beside_them(self):
+        """Brief 2, 4.15, point 4, moved in v0.15.5 from the description
+        to the preview's note beside the counts it explains, in both of
+        its forms."""
+        assert ("The second number is not zero and is not meant to be."
+                in QualcoderDatabase.PSEUDONYMISE_AFTER_REWRITE_NOTE)
+        assert ("wide_after_rewrite is not zero and is not meant to be"
+                in QualcoderDatabase.PSEUDONYMISE_AFTER_REWRITE_FILE_NOTE)
 
     def test_the_wide_parity_claim_is_gone(self):
         """Fix round 3, S5: "exactly what QualCoder's own text editor
@@ -8815,9 +8835,11 @@ class TestTheDocumentsTellTheTruth:
         # pinned here; the v0.12 sentence stays only in the "Completed in
         # v0.12.0" block, which is history. The release's fix round 1
         # (QA m2) adds journal entry names, counted and never rewritten.
+        # v0.15.5: or the file's notes alone, with memo_scope "file"
         "Notes and journal entries are scanned and counted, and are "
         "rewritten, in their public part only and across the whole "
-        "project, only when `rewrite_memos` is on; case, file, code, "
+        "project (with `memo_scope` `\"file\"`, in the file's own notes "
+        "alone), only when `rewrite_memos` is on; case, file, code, "
         "category and attribute-type names, journal entry names and "
         "attribute values are scanned and counted, never rewritten",
         "On a mapping you type, the execute is refused unless "
@@ -8916,17 +8938,22 @@ class TestTheDocumentsTellTheTruth:
         "attribute values.",
         # (v0.15.4, the readability reading: the fragment given its
         # subject, the semicolons full stops)
+        # v0.15.5: or in the file's notes alone, with memo_scope "file"
         "The preview scans and counts names in all of these. Of these, "
         "only the public part of the notes and journal entries is "
-        "rewritten, and only when `rewrite_memos` is on, across the whole "
-        "project. The names of things and the attribute values are never "
-        "rewritten by the pseudonymisation tool (a case or file name is "
-        "renamed with `rename_case` or `rename_file`, below).",
+        "rewritten, and only when `rewrite_memos` is on: across the whole "
+        "project, or, with `memo_scope` set to `\"file\"`, in the notes of "
+        "the file the run rewrites alone. The names of things and the "
+        "attribute values are never rewritten by the pseudonymisation "
+        "tool (a case or file name is renamed with `rename_case` or "
+        "`rename_file`, below).",
         "A note's private part (from its `#####` marker) is carried across "
         "unread, so a name there is still there and nothing in Exegete "
         "can report it.",
-        "A second run with `rewrite_memos` on also rewrites the journal "
-        "entries Exegete wrote for earlier runs",
+        # v0.15.5: a run across the whole project, which memo_scope
+        # "file" is not
+        "A second run with `rewrite_memos` on across the whole project "
+        "also rewrites the journal entries Exegete wrote for earlier runs",
         "Exegete writes it only when asked, in QualCoder's own format, "
         "and removes or replaces it only by a restore",
         # The merge fix (M3): what a restore and a prune do to it

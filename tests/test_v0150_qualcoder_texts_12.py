@@ -132,8 +132,8 @@ FILE_RECORDS = (
     ", and so do Exegete's pseudonymisation journal entries and run "
     "records, which keep the file's name as it was at the run unless that "
     "name carried a name from the mapping (they then name the file by its "
-    "id), though a later run with rewrite_memos rewrites the public part "
-    "of those journal entries.")
+    "id), though a later run that rewrites the notes across the whole "
+    "project rewrites the public part of those journal entries.")
 FILE_LATER = (" In QualCoder, Merge Projects with a copy of the project "
               "that still has the old name brings the file in as a second "
               "file.")

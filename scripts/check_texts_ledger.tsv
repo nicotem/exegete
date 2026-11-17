@@ -87,7 +87,7 @@ d02b71caf6b7811f	PRIVACY.md	document	qualcoder	about hiding a coder, a setting t
 147aa3562d5f9371	PRIVACY.md	document	qualcoder	about hiding a coder, a setting that only QualCoder makes: the section applies only to projects where QualCoder made it	An explicit coder argument reads that coder's rows from the full data instead, t
 7d20365a0ef76df1	PRIVACY.md	document	qualcoder	about QualCoder's format or conventions, which Exegete follows, as the sentence says	Case and file names, and what a rename cannot reach. rename_case and rename_file
 6276d955b7421956	PRIVACY.md	document	voice	'easily' says how readily an assistant reads the copies: a warning, not praise (the section is held word for word by tests/test_v0150_qualcoder_texts_2.py)	Deleting the originals from Downloads after the import would not have closed tha
-88b380d02eee40d8	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Every backup, Exegete's session files, QualCoder's search index and QualCoder's 
+3d3deaeeb4f80692	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Every backup, Exegete's session files, QualCoder's search index and QualCoder's 
 7b9d226c9824bf39	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete does not open QualCoder's settings file (~/.qualcoder/config.ini, which 
 c5dddf5d7e1af477	PRIVACY.md	document	qualcoder	about the signs that QualCoder is in use, which Exegete looks for, or what Exegete does when it finds them	Exegete filters the list in memory for programs that are QualCoder itself:
 fa43106d72908ee1	PRIVACY.md	document	qualcoder	about QualCoder itself: what it does, offers, keeps or shows	Exegete reads no file in ai_data/ for any answer, since the folder is QualCoder'
@@ -440,6 +440,7 @@ bf8fc52eb689484b	src/exegete/database.py	path	qualcoder	about QualCoder itself: 
 6003eb6b3d72bdef	src/exegete/database.py	path	qualcoder	a sign: a project from a QualCoder older than 3.8, which only QualCoder can bring up to date	Without QualCoder at all, a new project made with create_project, the original d
 436e33e5bca74889	src/exegete/database.py	path	qualcoder	a sign: Exegete looks for, or found, signs that QualCoder has the project open	a process that looks like QualCoder is running on this computer ({} match(es))
 cbf9957f40ca9fed	src/exegete/database.py	path	qualcoder	about QualCoder itself: what it does, counts, keeps or shows, as the sentence says	applies_to must be 'case', 'file' or 'journal' (QualCoder's real domain set; the
+2cc9ddd15ccca45d	src/exegete/database.py	path	voice	SQL, not prose: no one reads it	avid IN (SELECT avid FROM code_text WHERE fid = ?) AND id IN (SELECT id FROM sou
 e9d3931c323b218f	src/exegete/database.py	path	voice	SQL, not prose: no one reads it	cid IS NULL AND catid = ?
 ba017bc916777f38	src/exegete/database.py	path	qualcoder	about QualCoder's format: the folders, files and backups QualCoder makes in a project	file-list views saved by QualCoder
 e0bbec5e654fceb7	src/exegete/database.py	path	voice	SQL, not prose: no one reads it	fulltext IS NOT NULL

@@ -2722,31 +2722,44 @@ near the top of this document, set them out.
     code names, category names, attribute-type names and attribute
     values.** The preview scans and counts names in all of these. Of
     these, only the public part of the notes and journal entries is
-    rewritten, and only when `rewrite_memos` is on, across the whole
-    project. The names of things and the attribute values are never
-    rewritten by the pseudonymisation tool (a case or file name is
-    renamed with `rename_case` or `rename_file`, below). A note's
-    private part (from its `#####` marker) is carried across unread, so
-    a name there is still there and nothing in Exegete can report it. A
-    second run with `rewrite_memos` on also rewrites the journal entries
-    Exegete wrote for earlier runs, which the preview counts and warns
-    about.
+    rewritten, and only when `rewrite_memos` is on: across the whole
+    project, or, with `memo_scope` set to `"file"`, in the notes of the
+    file the run rewrites alone. The names of things and the attribute
+    values are never rewritten by the pseudonymisation tool (a case or
+    file name is renamed with `rename_case` or `rename_file`, below). A
+    note's private part (from its `#####` marker) is carried across
+    unread, so a name there is still there and nothing in Exegete can
+    report it. A second run with `rewrite_memos` on across the whole
+    project also rewrites the journal entries Exegete wrote for earlier
+    runs, which the preview counts and warns about.
 
     **Two people who share a name:** one file per call gives each their
-    own pseudonym in the file text only. Inside one file, a first run
-    can leave the second person's occurrences as they are
+    own pseudonym in the file text. Inside one file, a first run can
+    leave the second person's occurrences as they are
     (`choose_occurrences`, then the numbers or ids to leave), and a
     second run then replaces them with the second person's pseudonym.
     With `rewrite_memos` on, whichever run carries it rewrites that name
     in notes across the whole project, the other person's notes
     included, whatever the order of the runs, so a note about one
-    person can end up carrying the other person's pseudonym. To avoid
-    that, you could keep `rewrite_memos` off on every run of a shared
-    name, and change the notes that name either person by hand. Since
-    `pseudonyms.json` holds one pseudonym per name, you could give the
-    second person a typed mapping with `save_mapping_to_project` off and
-    `researcher_keeps_mapping` on: the names list then holds one
-    pseudonym for that name, while the file's text holds two. Several
+    person can end up carrying the other person's pseudonym. With
+    `memo_scope` set to `"file"`, a run rewrites the notes of its own
+    file alone: those of its codings, annotations and case links, the
+    file's own note, and those of its recording's segments that its
+    codings are linked to. So where each person has a file of their
+    own, you could run each file with `rewrite_memos` and `memo_scope`
+    `"file"`, and change by hand the notes the preview counts as left:
+    other files' notes (those of PDFs, recordings and images included),
+    the notes of cases, codes, categories, attribute types and the
+    project, and journal entries. A note of the file about someone else
+    with the same name takes the pseudonym too, so the preview asks
+    whether anyone named in the file's notes shares a name. Where both
+    are in one file, you could keep `rewrite_memos` off on every run of
+    a shared name, and change the notes that name either person by
+    hand. Since `pseudonyms.json` holds one pseudonym per name, you
+    could give the second person a typed mapping with
+    `save_mapping_to_project` off and `researcher_keeps_mapping` on: the
+    names list then holds one pseudonym for that name, while the file's
+    text holds two. Several
     things lead back from the second person's pseudonym to their name:
     the mapping you typed for the second run, which is in the
     conversation, and so with your AI provider unless the model runs on
@@ -2802,8 +2815,8 @@ near the top of this document, set them out.
     do Exegete's pseudonymisation journal entries and run records, which
     keep a file's name as it was at the run unless that name carried a
     name from the mapping (they then name the file by its id), though a
-    later run with `rewrite_memos` rewrites the public part of those
-    journal entries.
+    later run that rewrites the notes across the whole project rewrites
+    the public part of those journal entries.
   - **QualCoder's `ai_data/` folder.** Its chat history may quote the
     previous text, and its search index (QualCoder 4.0's
     `search.sqlite`, or QualCoder 3.8's `vectorstore/faiss_store.bin`)
@@ -2837,8 +2850,9 @@ near the top of this document, set them out.
     and counts) never carry an original name: a pseudonym, a file's
     name or a path that would show one is withheld. A note the run
     rewrote is named in the record by its table and key, and counted in
-    the journal entry. Where a run leaves occurrences as they are, both
-    give how many, never where they are.
+    the journal entry; with `memo_scope` set to `"file"`, both say that
+    the file's notes alone were rewritten. Where a run leaves
+    occurrences as they are, both give how many, never where they are.
   - **The preview's own reply.** On the `use_project_pseudonyms` path,
     the mapping is the project's names list, the researcher's own
     reverse key, which the model never supplied. So no diagnostic and no

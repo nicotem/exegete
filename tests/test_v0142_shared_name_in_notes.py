@@ -46,10 +46,13 @@ WARNING = server._SHARED_NAME_IN_NOTES_WARNING
 MAPPING = [{"original": "Thomas", "pseudonym": "Alex"}]
 
 # The description's own words for the rule, which the warning repeats:
-# what happens, and all three of its instructions (the notes, by hand,
-# and the second person's own pseudonym)
+# its instructions (since v0.15.5, memo_scope "file" for two people each
+# in a file of their own; for two in one file, the notes by hand; and the
+# second person's own pseudonym). What happens, "no order of runs avoids
+# this", the warning says alone since v0.15.5, of a run across the whole
+# project
 RULE_WORDS = (
-    "no order of runs avoids this",
+    "memo_scope \"file\"",
     "keep rewrite_memos off on every run of a shared name and change the "
     "notes that name either person by hand",
     "give the second person a typed mapping with save_mapping_to_project "
@@ -186,6 +189,11 @@ class TestTheWarningCarriesTheRule:
         for words in RULE_WORDS:
             assert re.search(re.escape(words), paragraph, re.I), words
             assert words in warning, words
+
+    def test_what_happens_across_the_whole_project(self):
+        """The warning of a run across the whole project still says that
+        no order of runs avoids it (v0.15.5)."""
+        assert "no order of runs avoids this" in _flat(WARNING)
 
     def test_a_yes_or_no_is_enough(self):
         """With the project's own list of real names, the assistant is

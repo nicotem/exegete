@@ -179,8 +179,9 @@ def ends_at_a_break_where_one_is_near(text: str, part: str) -> bool:
 
 class TestEveryScript:
 
-    @pytest.mark.parametrize("name", ["read_file_with_codings",
-                                      "analyze_file_with_coding"])
+    # (its earlier name, analyze_file_with_coding, read here too until
+    # 0.15.5 removed it)
+    @pytest.mark.parametrize("name", ["read_file_with_codings"])
     @pytest.mark.parametrize("script", list(TEXTS))
     def test_every_part_is_within_the_bound(self, setup_server, script,
                                             name):

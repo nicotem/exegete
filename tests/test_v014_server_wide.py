@@ -137,9 +137,9 @@ EXPECTED_HINTS = {
     "save_names_list": C,
     # v0.15.2: removes, puts back or sets back rows a change wrote
     "undo_changes": C,
-    # the earlier names of the two tools renamed in 0.15.0, with the new
-    # tools' hints
-    "analyze_for_coding": A, "analyze_file_with_coding": R,
+    # (the earlier names of the two tools renamed in 0.15.0,
+    # analyze_for_coding and analyze_file_with_coding, were removed in
+    # 0.15.5, as announced)
 }
 
 
@@ -237,11 +237,9 @@ class TestToolAnnotations:
                 "anthropic/requiresUserInteraction": True},
             "save_names_list": {
                 "anthropic/requiresUserInteraction": True},
-            # v0.15.3: a result limit for Claude Code, not this mark, on
-            # the tool and on its earlier name, the same function
+            # v0.15.3: a result limit for Claude Code, not this mark (on
+            # its earlier name too until 0.15.5 removed it)
             "read_file_with_codings": {
-                "anthropic/maxResultSizeChars": 200_000},
-            "analyze_file_with_coding": {
                 "anthropic/maxResultSizeChars": 200_000}}
         wire = next(t for t in listed
                     if t.name == "save_names_list").model_dump(
@@ -462,6 +460,10 @@ NOT_TOOLS = {
                              "create_backup, which Exegete ignores",
     "search_memo": "search_files' argument removed in 0.15.1, which the "
                    "refusal of a call passing it names (REMOVED_ARGUMENTS)",
+    "analyze_for_coding": "a help topic removed in 0.15.1, whose answer "
+                          "gives it back as the topic asked for "
+                          "(REMOVED_HELP_TOPICS), and the earlier name of "
+                          "start_coding_session, removed in 0.15.5",
     "undo_receipt": "the key of a change's answer, and a line of "
                     "apply_codings' answer, that names the change's record "
                     "(v0.15.2)",
@@ -873,8 +875,6 @@ async def call_every_tool(client, root, lock_check=False):
     await run("search_memos", {"query": "interview"})
     await run("get_project_summary", {})
     await run("read_file_with_codings", {"file_id": 1})
-    # its earlier name, listed until the release on method (0.15.0)
-    await run("analyze_file_with_coding", {"file_id": 1})
     await run("open_file_for_reading", {"file_id": 1})
     await run("list_attribute_types", {})
     await run("get_file_attributes", {"file_id": 1})
@@ -913,8 +913,6 @@ async def call_every_tool(client, root, lock_check=False):
     # proposing codes
     session_2 = (await run("start_coding_session",
                            {"instruction": "test", "file_ids": [1]}))["coding_session_id"]
-    # its earlier name, listed until the release on method (0.15.0)
-    await run("analyze_for_coding", {"instruction": "test", "file_ids": [1]})
     proposed = await run("propose_codes", {
         "coding_session_id": session_2, "proposals": [
             {"name": "Reliance", "memo": "Leaning on others",
@@ -1053,11 +1051,6 @@ def test_every_description_names_exactly_the_tools_arguments():
     listed = host_session(lambda client: client.list_tools()).tools
     differ = {}
     for tool in listed:
-        if tool.name in server.RENAMED_TOOLS:
-            # An earlier name's one sentence sends the model to the new
-            # name, whose description names them; its arguments are the
-            # new tool's (tests/test_v0150_renames_tools.py)
-            continue
         named = args_section(tool.description or "")
         schema = list(tool.inputSchema.get("properties", {}))
         if sorted(named) != sorted(schema):
@@ -2094,8 +2087,6 @@ NOT_PROJECT_WRITES = {
     "open_file_for_reading": "writes a page or a copy in the reading "
                              "folder, outside the project, and works "
                              "while QualCoder has it open, as reads do",
-    "analyze_for_coding": "session file (the earlier name of "
-                          "start_coding_session)",
 }
 
 

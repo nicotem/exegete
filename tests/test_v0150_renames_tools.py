@@ -5,23 +5,22 @@
 `analyze_for_coding` analysed nothing: it starts a coding session, and
 is now `start_coding_session`. `analyze_file_with_coding` returns a
 file's text with its codings, and is now `read_file_with_codings`. The
-earlier names are still listed, each with a short description, and run
-the very same function, with the same arguments, annotations and
-answers, until a later release (planned as v0.15.2) removes them.
-Exegete's own backups are now listed with the kind `exegete` (it was
-`mcp`), and its texts say "Exegete's backups" where they said "MCP
-backups".
+earlier names were listed beside the new ones, running the very same
+function, from 0.15.0 until 0.15.5 removed them, as announced
+(tests/test_v0155_retired_names.py holds the removal). Exegete's own
+backups are now listed with the kind `exegete` (it was `mcp`), and its
+texts say "Exegete's backups" where they said "MCP backups".
 
-What this file pins: the registry in both tool sets; the earlier names
-answering as the new ones do, through the host's path; no text Exegete
-serves naming an earlier name, apart from the deprecated help topic and
-the earlier names' own entries; the backups' kind, what a prune removes
-and the reworded texts; and the documents.
+What this file pins: no text Exegete serves naming an earlier name, the
+help tool's answers and the answers reached only in a state among them;
+the help tool's answer for each earlier name; the backups' kind, what a
+prune removes and the reworded texts; and the documents, which name the
+earlier names only in TOOLS.md's section "Earlier names" and the update
+page's paragraph on the renames (and the CHANGELOG, a record).
 """
 
 import asyncio
 import json
-import logging
 import os
 import re
 import shutil
@@ -42,9 +41,6 @@ REPO = Path(__file__).resolve().parent.parent
 RENAMED = {"analyze_for_coding": "start_coding_session",
            "analyze_file_with_coding": "read_file_with_codings"}
 EARLIER = re.compile(r"\b(?:analyze_for_coding|analyze_file_with_coding)\b")
-OLD_NAME_DESCRIPTION = (
-    "The earlier name of {new}, which a later release removes: call {new} "
-    "instead. The arguments and the answer are the same.")
 
 
 def _flat(text):
@@ -69,80 +65,14 @@ def _listed(mode):
     return {t.name: t for t in asyncio.run(server.mcp.list_tools())}
 
 
-# The descriptions that named one of the two tools before the rename,
-# under the tool's name now
-NAMED_THE_TWO = (
-    "start_coding_session", "read_file_with_codings", "compare_coders",
-    "delete_coding", "edit_suggestion", "propose_codes",
-    "record_suggestions", "review_suggestions", "search_files",
-    "update_annotation", "update_suggestion_status",
-    # and the one whose list of examples the earlier name left (a help
-    # topic of that name stays, deprecated, but the tool's new name is
-    # not one)
-    "explain_ai_coding_tools",
-)
+# An example the help tool's description gave under the earlier name,
+# dropped in 0.15.0 (a help topic of that name stayed, deprecated, until
+# v0.15.1 removed the topics)
 DROPPED_EXAMPLE = '"How do I use analyze_for_coding?"'
 
 
-class TestTheRegistry:
-
-    def test_the_two_names(self):
-        assert server.RENAMED_TOOLS == RENAMED
-        assert server.OLD_NAME_DESCRIPTION == OLD_NAME_DESCRIPTION
-        # no Python name is kept for the earlier functions
-        for old in RENAMED:
-            assert not hasattr(server, old), old
-
-    @pytest.mark.parametrize("mode, count", [("full", FULL_TOOLS),
-                                             ("core", CORE_TOOLS)])
-    def test_each_earlier_name_beside_its_new_one(self, mode, count):
-        tools = _listed(mode)
-        assert len(tools) == count
-        registry = server.mcp._tool_manager._tools
-        for old, new in RENAMED.items():
-            assert tools[old].description == \
-                OLD_NAME_DESCRIPTION.format(new=new)
-            assert tools[old].inputSchema == tools[new].inputSchema
-            assert tools[old].inputSchema["additionalProperties"] is False
-            assert tools[old].outputSchema == tools[new].outputSchema
-            assert tools[old].annotations == tools[new].annotations
-            assert tools[old].meta == tools[new].meta
-            # the very same function, the one the module names
-            assert registry[old].fn is registry[new].fn is \
-                getattr(server, new)
-        if mode == "core":
-            assert set(tools) == set(server.CORE_TOOLSET)
-            assert server._small_tool_set()
-
-    def test_the_order(self):
-        """The new names where the old ones were; the earlier names after
-        the last tool."""
-        names = list(_listed("full"))
-        at = names.index("read_file_with_codings")
-        assert names[at - 1:at + 2] == [
-            "get_project_summary", "read_file_with_codings",
-            "open_file_for_reading"]
-        at = names.index("start_coding_session")
-        assert names[at - 1:at + 2] == [
-            "get_cases_by_code", "start_coding_session",
-            "record_suggestions"]
-        assert names[-3:] == ["check_for_updates", "analyze_for_coding",
-                              "analyze_file_with_coding"]
-
-    def test_no_description_uses_an_earlier_name(self):
-        """Every description names the two tools by their new names alone
-        (v0.15.2, the snapshot: the fingerprints of the descriptions as
-        they were before the rename are retired; docs/snapshot/ holds
-        every description as Exegete serves it)."""
-        server._apply_toolset("full")
-        registered = server.mcp.original_descriptions
-        assert set(NAMED_THE_TWO) <= set(registered)
-        for name, description in registered.items():
-            assert not EARLIER.search(_flat(description)), name
-
-
 # ---------------------------------------------------------------------------
-# The earlier names work, through the host's path
+# The long file the walk below reads in parts
 # ---------------------------------------------------------------------------
 
 SENTENCE = "The ward was quiet that night, and nobody came. "
@@ -173,102 +103,6 @@ def long_file(setup_server):
          "date) VALUES (1, 60, 0, ?, 'TestCoder', '2026-10-01')",
          (len(text),))
     return text
-
-
-# A session's id, and the times it carries, differ between two sessions
-_TIME = re.compile(r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?")
-
-
-def _same_but_for_the_session(answer, session_id):
-    return _TIME.sub("<time>", answer.replace(session_id, "<session>"))
-
-
-class TestTheEarlierNamesWork:
-
-    def test_reading_a_file_answers_the_same(self, setup_server):
-        for args in ({"file_id": 1}, {"file_id": 1, "without_codes": True},
-                     {"file_id": 999}):
-            new = _call("read_file_with_codings", **args)
-            assert _call("analyze_file_with_coding", **args) == new, args
-
-    def test_a_part_answers_the_same(self, long_file):
-        first = _call("read_file_with_codings", file_id=60)
-        assert _call("analyze_file_with_coding", file_id=60) == first
-        part = json.loads(first)["part"]
-        assert part["continues_at"] is not None
-        # the answer sends the model on by the new name
-        assert "read_file_with_codings(file_id=60, start=" in part["note"]
-        start = part["continues_at"]
-        second = _call("read_file_with_codings", file_id=60, start=start)
-        assert json.loads(second)["part"]["start"] == start
-        assert _call("analyze_file_with_coding", file_id=60,
-                     start=start) == second
-
-    def test_starting_a_session_answers_the_same(self, setup_server):
-        args = {"file_ids": [1], "code_names": ["Stress"],
-                "instruction": "Whole sentences; one code each."}
-        new = _call("start_coding_session", **args)
-        old = _call("analyze_for_coding", **args)
-        new_id = json.loads(new)["coding_session_id"]
-        old_id = json.loads(old)["coding_session_id"]
-        assert new_id != old_id
-        assert _same_but_for_the_session(old, old_id) == \
-            _same_but_for_the_session(new, new_id)
-        listed = _call("list_coding_sessions")
-        assert old_id in listed and new_id in listed
-        info = json.loads(_call("get_coding_session_info",
-                                coding_session_id=old_id))
-        assert "error" not in info, info
-        # the session the earlier name started takes suggestions
-        recorded = json.loads(_call(
-            "record_suggestions", coding_session_id=old_id,
-            suggestions=[{"file_id": 1, "code_name": "Stress",
-                          "segment_text": "I feel stressed about deadlines",
-                          "reading": "explicit",
-                          "reason": "The participant says so."}]))
-        assert recorded["recorded_count"] == 1, recorded
-
-    def test_an_undeclared_argument_is_refused_by_the_name_called(
-            self, setup_server):
-        before = _call("list_coding_sessions")
-        for old, new in RENAMED.items():
-            answers = {}
-            for name in (old, new):
-                body = json.loads(_call(name, zz_not_an_argument=1))
-                assert body["unknown_arguments"] == ["zz_not_an_argument"]
-                assert body["error"].startswith(
-                    f"{name} has no argument 'zz_not_an_argument'; nothing "
-                    f"was done."), body
-                answers[name] = body
-            assert answers[old]["arguments"] == answers[new]["arguments"]
-            assert answers[old]["error"].replace(old, new) == \
-                answers[new]["error"]
-        assert _call("list_coding_sessions") == before
-
-    def test_a_missing_instruction_gets_the_same_refusal(self, setup_server):
-        before = _call("list_coding_sessions")
-        old = _call("analyze_for_coding", file_ids=[1])
-        assert old == _call("start_coding_session", file_ids=[1])
-        assert json.loads(old) == {"error": server.INSTRUCTION_REQUIRED}
-        assert _call("list_coding_sessions") == before
-
-    def test_an_error_inside_gives_the_same_answer(
-            self, setup_server, monkeypatch, caplog):
-        def broken():
-            raise sqlite3.OperationalError("disk I/O error")
-        monkeypatch.setattr(server, "get_db", broken)
-        caplog.set_level(logging.ERROR, logger="exegete.server")
-        expected = json.dumps({"error": server.DB_UNAVAILABLE_ERROR})
-        for old, new in RENAMED.items():
-            args = ({"file_ids": [1], "instruction": "test"}
-                    if new == "start_coding_session" else {"file_id": 1})
-            assert _call(old, **args) == _call(new, **args) == expected
-            # the log line names the function, which is the new name's
-            lines = [r.getMessage() for r in caplog.records
-                     if r.getMessage().startswith("SQLite error in")]
-            assert lines and all(f"in {new}:" in line for line in lines)
-            assert not any(old in line for line in lines)
-            caplog.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -380,18 +214,16 @@ def _help_texts():
 
 
 def _served(mode):
-    """Every text the tool set serves, by where it is served, with the
-    places an earlier name may stand taken out: the earlier names' own
-    entries (v0.15.1 removed the deprecated topic, which kept the earlier
-    name, and its notice)."""
+    """Every text the tool set serves, by where it is served. No place is
+    taken out: the earlier names' own entries went with them in 0.15.5,
+    and v0.15.1 removed the deprecated topic, which kept the earlier name,
+    and its notice."""
     tools = _listed(mode)
     texts = {"instructions": server.mcp._mcp_server.instructions or "",
              "brief, full": server.BRIEF_FULL,
              "brief, short": server.BRIEF_SHORT,
              "methods notes": server.METHODS_GUIDANCE}
     for name, tool in tools.items():
-        if name in RENAMED:
-            continue
         texts[f"description of {name}"] = tool.description or ""
         texts[f"arguments of {name}"] = json.dumps(tool.inputSchema)
     uris = [str(r.uri) for r in asyncio.run(server.mcp.list_resources())]
@@ -595,46 +427,26 @@ class TestExegetesBackups:
 # The documents
 # ---------------------------------------------------------------------------
 
-DOCUMENTS = ("README.md", "INSTALL.md", "TOOLS.md", "PRIVACY.md",
-             "AI_CODING_GUIDE.md", "CONTRIBUTING.md")
+UPDATE_PAGE = "pages/update/index.html"
+GUIDE = "docs/installing-from-the-terminal.md"
+# (v0.15.5: the update page and the Terminal guide joined, so that a
+# sentence saying an earlier name still works fails in them too)
+DOCUMENTS = ("README.md", "INSTALL.md", GUIDE, "TOOLS.md", "PRIVACY.md",
+             "AI_CODING_GUIDE.md", "CONTRIBUTING.md", UPDATE_PAGE)
 
 # The other direction of a host's remembered choice (fix round 1): a tool
-# blocked under its earlier name is not blocked under its new one.
+# blocked under its earlier name is not blocked under its new one, as the
+# CHANGELOG's entry for 0.15.0 says.
 BLOCKED = (
     "Likewise, a choice to block or switch off an earlier name does not "
     "carry over to its new name: if you blocked one, you may want to block "
     "the new name too.")
 
-def _planned_release_of_the_earlier_names():
-    """The release the README's "What comes next" plans for retiring the
-    earlier names (the owner's decisions of 20 October 2026, ruling 85,
-    item 1: method, and with it the earlier names, is v0.15.3). The
-    documents name the same release (the staleness audit's fix round:
-    held to the plan, not to a version typed in the test)."""
-    readme = (Path(__file__).parent.parent / "README.md").read_text(
-        encoding="utf-8")
-    plans = readme[readme.index("## What comes next"):]
-    plans = " ".join(plans[:plans.index("\n## ", 5)].split())
-    found = re.findall(r"- (v\d+\.\d+(?:\.\d+)?), [^-]*?the earlier names "
-                       r"of the two renamed tools", plans)
-    assert len(found) == 1, found
-    return found[0]
-
-
-PLANNED = _planned_release_of_the_earlier_names()
-
-EARLIER_NAMES_SECTION = (
-    "## Earlier names\n\nTwo tools have been renamed. Their earlier "
-    "names are still listed, and do exactly what the new ones do, until "
-    f"a later release (planned as {PLANNED}) removes them: "
-    "`analyze_for_coding` is now `start_coding_session`, and "
-    "`analyze_file_with_coding` is now `read_file_with_codings`. If your "
-    "host remembers a choice to run one of the earlier names without "
-    "asking, it may ask again for the new one. "
-    + BLOCKED
-    # the other way round (whole-branch review, round 2)
-    + " Blocking or switching off a new name leaves its earlier name able "
-    "to run the same tool, so you may want to block both.")
+# A sentence that names an earlier name, or the two tools' earlier names,
+# and what such a sentence may no longer say since 0.15.5 removed them
+BESIDE = re.compile(EARLIER.pattern + r"|\bearlier\s+names\b", re.IGNORECASE)
+STILL = re.compile(r"\bstill\s+(?:listed|works?|answer(?:s|ed)?)\b",
+                   re.IGNORECASE)
 
 
 def _read(name):
@@ -647,9 +459,23 @@ def _section(text, heading):
     return text[start:end if end >= 0 else len(text)]
 
 
+def _renames_paragraph(page):
+    """The update page's paragraph on the two renamed tools: the one that
+    names the first earlier name."""
+    start = page.rindex("<p>", 0, page.index("analyze_for_coding"))
+    return page[start:page.index("</p>", start) + len("</p>")]
+
+
+def _sentences(text):
+    return re.split(r"(?<=[.;!?])\s+", _flat(text))
+
+
 class TestTheDocuments:
 
     def test_the_earlier_names_only_where_they_belong(self):
+        """In TOOLS.md's section "Earlier names" and in the update page's
+        paragraph on the renames, each giving the two pairs; the CHANGELOG,
+        a record, is not read here."""
         for name in DOCUMENTS:
             text = _read(name)
             if name == "TOOLS.md":
@@ -660,14 +486,33 @@ class TestTheDocuments:
                 # (v0.15.1: the deprecated help topic, by its name, went
                 # with the topics, as announced)
                 assert "analyze_for_coding" not in entry
+            if name == UPDATE_PAGE:
+                paragraph = _renames_paragraph(text)
+                flat = re.sub(r"</?code>", "`", _flat(paragraph))
+                for old, new in RENAMED.items():
+                    assert f"`{old}` is now `{new}`" in flat, old
+                text = text.replace(paragraph, "")
             assert not EARLIER.search(text), (name, EARLIER.findall(text))
 
+    def test_no_sentence_says_an_earlier_name_still_works(self):
+        """Since 0.15.5 no sentence beside an earlier name, or the two
+        tools' earlier names, says they are still listed, still work or
+        still answer: TOOLS.md's section, PRIVACY.md's opening and the
+        update page said so until then."""
+        found = [(name, sentence) for name in DOCUMENTS
+                 for sentence in _sentences(_read(name))
+                 if BESIDE.search(sentence) and STILL.search(sentence)]
+        assert found == []
+
     def test_the_section_on_earlier_names(self):
+        """The section gives the two pairs and the release that removed
+        the earlier names, after the tools' list, where each new name has
+        its entry."""
         tools = _read("TOOLS.md")
-        section = _section(tools, "## Earlier names")
-        assert " ".join(section.split()) == " ".join(
-            EARLIER_NAMES_SECTION.split())
-        # after "Available Tools", where every other tool has its entry
+        section = _flat(_section(tools, "## Earlier names"))
+        for old, new in RENAMED.items():
+            assert f"`{old}` is now `{new}`" in section, old
+        assert "removed in 0.15.5" in section
         assert tools.index("## Available tools") < tools.index(
             "## Earlier names") < tools.index("## Available prompts")
         entries = _section(tools, "## Available tools")
@@ -676,25 +521,21 @@ class TestTheDocuments:
 
     def test_the_counts(self):
         tools = _flat(_read("TOOLS.md"))
-        # the counts are the snapshot's (tests/tool_counts.py)
-        assert (f"registers {FULL_TOOLS} tools, two of them the earlier "
-                "names of two renamed tools (see \"Earlier names\" below)"
-                ) in tools
+        # the counts are the snapshot's (tests/tool_counts.py); since
+        # 0.15.5 neither set counts an earlier name
+        assert f"registers {FULL_TOOLS} tools." in tools
         assert (f"only the {CORE_TOOLS}-tool supervised coding set is "
                 "registered: read_brief,") in tools.replace("> ", "")
         assert ("search_files, read_file_with_codings, search_memos, "
                 "open_file_for_reading,") in tools.replace("> ", "")
         # (v0.15.2: and undo_changes)
         assert ("copy_project_to_workspace, delete_coding, list_backups, "
-                "restore_backup, undo_changes, and the two earlier names "
-                "below.") in tools.replace("> ", "")
+                "restore_backup and undo_changes.") in tools.replace("> ", "")
         # v0.15.2: the variables and the Terminal recipes are the Terminal
         # guide's
-        install = _flat(_read("docs/installing-from-the-terminal.md"))
+        install = _flat(_read(GUIDE))
         assert (f"`full` (default) registers {FULL_TOOLS} tools, every "
                 "tool,") in install
-        assert ("two of them are the earlier names of two renamed tools "
-                "(TOOLS.md, \"Earlier names\")") in install
         assert (f"`core` registers the {CORE_TOOLS}-tool supervised coding "
                 "set") in install
         assert f"Exegete offers {FULL_TOOLS} tools by default" in install
@@ -703,18 +544,18 @@ class TestTheDocuments:
                 "the smaller set.") in install
         readme = _read("README.md")
         # (v0.15.2, the opening texts: the rows in a researcher's words)
-        assert (f"| `full` | {FULL_TOOLS}: every tool, creating a project and "
-                "the earlier names of two renamed tools included |") in readme
+        assert (f"| `full` | {FULL_TOOLS}: every tool, creating a project "
+                "included |") in readme
         # (v0.15.2, undo: undoing changes among what core is for)
         assert (f"| `core` | {CORE_TOOLS}: reading, searching, coding with "
                 "your approval, memos, backups and undoing changes, "
                 "without creating a project or bringing documents in |"
                 ) in readme
+        # (v0.15.5: no document counts the earlier names among a set's
+        # tools any more)
         for name in DOCUMENTS:
-            flat = _flat(_read(name))
-            for stale in ("78 tools", "23-tool", "registers 78", "| 78:",
-                          "| 23:"):
-                assert stale not in flat, (name, stale)
+            assert "earlier names of two renamed tools" not in _flat(
+                _read(name)), name
 
     def test_each_document_gives_both_sizes(self):
         # v0.15.2, the snapshot: the figures are held by
@@ -815,21 +656,10 @@ class TestTheDocuments:
                 "each, add 1,231 characters") in measured
         assert "one sentence" not in measured
 
-    def test_privacy_says_the_earlier_names_do_the_same(self):
-        """PRIVACY names tools by their new names only (the test above);
-        it says once that what it says of each holds under the earlier
-        name, and its list of the tools that look at the process list
-        counts the earlier one (fix round 1)."""
+    def test_privacy_points_to_the_tools_that_report_the_signs(self):
+        """PRIVACY names tools by their new names only (the tests above);
+        its sentence on the earlier names went with them in 0.15.5."""
         flat = _flat(_read("PRIVACY.md"))
-        assert ("Two tools were renamed in 0.15.0, and their earlier names "
-                "are still listed until a later release (planned as "
-                f"{PLANNED}) removes them (TOOLS.md, \"Earlier names\"). "
-                "What this document says of either tool holds under both "
-                "its names.") in flat
-        assert f"(planned as {PLANNED})" in Path(server.__file__).read_text(
-            encoding="utf-8")
-        assert flat.index("Two tools were renamed in 0.15.0") < \
-            flat.index("## How your data flows")
         # v0.15.2: PRIVACY.md points to TOOLS.md's list of the tools that
         # report the signs, which tests/test_qc40_gui_detection.py holds
         listing = flat[flat.index("**Process listing.**"):]
@@ -881,7 +711,6 @@ class TestHelpUnderTheNewNames:
         assert earlier["note"] == server.HELP_TOPIC_REMOVED
 
     @pytest.mark.parametrize("name", ["read_file_with_codings",
-                                      "analyze_file_with_coding",
                                       "select_project", "read_brief"])
     def test_a_tool_with_no_topic_is_not_unknown(self, name):
         answer = json.loads(server.explain_ai_coding_tools(name))
@@ -906,7 +735,11 @@ class TestHelpUnderTheNewNames:
             "create_project (not available in this tool set) has no help "
             "topic of its own")
 
-    def test_a_name_exegete_does_not_have_is_still_unknown(self):
-        answer = json.loads(server.explain_ai_coding_tools("no_such_tool"))
-        assert answer["error"] == "Unknown tool: no_such_tool"
+    @pytest.mark.parametrize("name", ["no_such_tool",
+                                      "analyze_file_with_coding"])
+    def test_a_name_exegete_does_not_have_is_still_unknown(self, name):
+        """v0.15.5: the earlier name of read_file_with_codings, removed,
+        and never a help topic, is answered as any name Exegete lacks."""
+        answer = json.loads(server.explain_ai_coding_tools(name))
+        assert answer["error"] == f"Unknown tool: {name}"
         assert "tool" not in answer

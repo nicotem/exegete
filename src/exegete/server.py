@@ -27922,38 +27922,6 @@ async def check_for_updates() -> str:
 
 
 # ============================================================================
-# Two tools renamed in 0.15.0, still listed under their earlier names
-# ============================================================================
-# The owner's ruling 73 (items 4 and 10): analyze_for_coding analysed
-# nothing (it starts a coding session) and analyze_file_with_coding reads
-# a file with its codings, so each now has a name that says what it does.
-# The earlier names are still listed, with one sentence, until the release
-# on method (planned as v0.15.5) removes them, so that an instruction or a
-# conversation that names one still reaches the tool. Each runs the very
-# same function, with the same arguments, annotations, marks and answer;
-# registered after the last tool, so the others keep their order. An
-# error inside it is answered as the new name answers it (_tool_guard's
-# answer names no tool), and logged under the new name.
-RENAMED_TOOLS = {
-    "analyze_for_coding": "start_coding_session",
-    "analyze_file_with_coding": "read_file_with_codings",
-}
-
-OLD_NAME_DESCRIPTION = (
-    "The earlier name of {new}, which a later release removes: call {new} "
-    "instead. The arguments and the answer are the same.")
-
-for _old_name, _new_name in RENAMED_TOOLS.items():
-    _renamed = mcp._tool_manager._tools[_new_name]
-    mcp.add_tool(_renamed.fn, name=_old_name,
-                 description=OLD_NAME_DESCRIPTION.format(new=_new_name),
-                 annotations=_renamed.annotations)
-    if _new_name in TOOL_META:
-        TOOL_META[_old_name] = TOOL_META[_new_name]
-del _old_name, _new_name, _renamed
-
-
-# ============================================================================
 # Main entry point
 # ============================================================================
 
@@ -28007,10 +27975,6 @@ CORE_TOOLSET = frozenset({
     # (undo_changes, v0.15.2)
     "copy_project_to_workspace", "delete_coding", "list_backups",
     "restore_backup", "undo_changes",
-    # the earlier names of start_coding_session and read_file_with_codings
-    # (0.15.0, RENAMED_TOOLS), in every set that has the new ones, until
-    # the release on method removes them
-    "analyze_for_coding", "analyze_file_with_coding",
 })
 
 _VALID_TOOLSET_MODES = names.TOOLSETS

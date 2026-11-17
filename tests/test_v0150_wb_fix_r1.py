@@ -323,7 +323,11 @@ class TestTheEntryIsOneAccount:
         # used alone (whole-branch review, round 2; it kept them out)
         renames = upgrading[upgrading.index("**Two tools renamed.**"):]
         renames = renames[:renames.index("- **", 5)]
-        for old, new in server.RENAMED_TOOLS.items():
+        # (the earlier names were removed in 0.15.5; the entry, a record,
+        # keeps them)
+        for old, new in (("analyze_for_coding", "start_coding_session"),
+                         ("analyze_file_with_coding",
+                          "read_file_with_codings")):
             assert f"`{old}` is now `{new}`" in renames, old
 
     def test_the_parts_follow_what_a_researcher_meets(self):

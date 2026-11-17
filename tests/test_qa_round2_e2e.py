@@ -108,9 +108,8 @@ EXPECTED_TOOLS = {
     # creating a project, in the full toolset since 0.15.0 (v0.14's
     # `lifecycle` set until then)
     "create_project",
-    # the earlier names of start_coding_session and
-    # read_file_with_codings, listed until the release on method (0.15.0)
-    "analyze_for_coding", "analyze_file_with_coding",
+    # (the earlier names of start_coding_session and
+    # read_file_with_codings, listed from 0.15.0, were removed in 0.15.5)
 }
 
 

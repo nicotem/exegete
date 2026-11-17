@@ -2,17 +2,9 @@
   "core": {
     "brief_characters": 1928,
     "opening_text_characters": 2047,
-    "tool_count": 28,
-    "tool_definitions_characters": 78208,
+    "tool_count": 26,
+    "tool_definitions_characters": 76977,
     "tools": {
-      "analyze_file_with_coding": {
-        "definition_characters": 556,
-        "description_characters": 154
-      },
-      "analyze_for_coding": {
-        "definition_characters": 671,
-        "description_characters": 150
-      },
       "apply_codings": {
         "definition_characters": 2757,
         "description_characters": 2327
@@ -123,8 +115,8 @@
   "full": {
     "brief_characters": 14630,
     "opening_text_characters": 2047,
-    "tool_count": 80,
-    "tool_definitions_characters": 214132,
+    "tool_count": 78,
+    "tool_definitions_characters": 212901,
     "tools": {
       "add_annotation": {
         "definition_characters": 2337,
@@ -133,14 +125,6 @@
       "add_journal_entry": {
         "definition_characters": 1504,
         "description_characters": 1073
-      },
-      "analyze_file_with_coding": {
-        "definition_characters": 556,
-        "description_characters": 154
-      },
-      "analyze_for_coding": {
-        "definition_characters": 671,
-        "description_characters": 150
       },
       "apply_codings": {
         "definition_characters": 2757,

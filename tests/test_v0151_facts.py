@@ -143,7 +143,6 @@ class Facts:
     pdf_memory_cap_bytes: int
     registered_tools: FrozenSet[str]
     core_tools: FrozenSet[str]
-    earlier_names: FrozenSet[str]
     # the optional part that lists PyMuPDF (pyproject.toml)
     pdf_epub_extra: str
     # each setting of the extension: its title, and its type
@@ -406,7 +405,6 @@ def facts_from_the_code(root: Path = REPO,
         # the tools registered when exegete.server is imported: `full`
         registered_tools=frozenset(server.STANDARD_TOOL_NAMES),
         core_tools=frozenset(server.CORE_TOOLSET),
-        earlier_names=frozenset(server.RENAMED_TOOLS),
         pdf_epub_extra=_pdf_epub_extra(project),
         setting_titles={setting["title"]: setting["type"]
                         for setting in manifest["user_config"].values()},
@@ -442,13 +440,7 @@ def facts_from_the_code(root: Path = REPO,
 # The counts the documents give, each with the constants it is held to.
 QUANTITIES: Dict[str, Tuple[Tuple[str, ...], Callable[[Facts], float]]] = {
     "full": (("registered_tools",), lambda f: len(f.registered_tools)),
-    "full without the earlier names": (
-        ("registered_tools", "earlier_names"),
-        lambda f: len(f.registered_tools - f.earlier_names)),
     "core": (("core_tools",), lambda f: len(f.core_tools)),
-    "core without the earlier names": (
-        ("core_tools", "earlier_names"),
-        lambda f: len(f.core_tools - f.earlier_names)),
     "preview tools": (("preview_tools",), lambda f: len(f.preview_tools)),
     "runtime dependencies": (("runtime_dependencies",),
                              lambda f: len(f.runtime_dependencies)),
@@ -533,11 +525,6 @@ COUNT_PATTERNS = (
     (r"\|\s*`full`\s*\|\s*(?P<n>\d+):", {"n": ("full",)}),
     (r"\|\s*`core`\s*\|\s*(?P<n>\d+):", {"n": ("core",)}),
     (r"\b(?P<n>\d+)-tool\s+supervised\s+coding\s+set", {"n": ("core",)}),
-    (r"`core`\s+keeps\s+its\s+(?P<n>\d+)\s+tools\s+\((?P<m>\d+)\s+with\b",
-     {"n": ("core without the earlier names",), "m": ("core",)}),
-    (r"(?<!its\s)\b(?P<n>\d+)\s+tools\s+\((?P<m>\d+)\s+with\s+the\b[^)]*?"
-     r"earlier\s+names", {"n": ("full without the earlier names",),
-                          "m": ("full",)}),
     # a CHANGELOG's table of measured sizes
     (r"`full`\s+\((?P<n>\d+)\s+tools;", {"n": ("full",)}),
     (r"`core`\s+\((?P<n>\d+)\s+tools;", {"n": ("core",)}),
@@ -741,7 +728,9 @@ CALL_ITEM = r"(?P<name>[A-Za-z_]\w*)\s*(?:[=:].*)?"
 # own, which the documents name in call forms and as `name=`
 OTHER_NAMES = frozenset({"open", "encoding", "len"})
 # Each tool and argument a release removed, with that release: a
-# document may name it, as gone, outside a call form
+# document may name it, as gone, and an argument outside its tool's call
+# form. A row is added in the commit that removes the name from the code
+# (scripts/release_plan.py).
 RETIRED: Dict[str, Tuple[str, str]] = {
     "confirm": ("argument", "0.13"),
     # delete_code's, apply_codings' and import_text_file's, and
@@ -750,6 +739,11 @@ RETIRED: Dict[str, Tuple[str, str]] = {
     "cascade": ("argument", "0.15.1"),
     "owner": ("argument", "0.15.1"),
     "search_memo": ("argument", "0.15.1"),
+    # the earlier names of start_coding_session and
+    # read_file_with_codings, listed from 0.15.0 (ruling 73, item 10;
+    # tests/test_v0155_retired_names.py)
+    "analyze_for_coding": ("tool", "0.15.5"),
+    "analyze_file_with_coding": ("tool", "0.15.5"),
 }
 
 # A library's release (v0.15.2): a name, then the release; read when
@@ -879,8 +873,8 @@ FACTS: Dict[str, Fact] = {
         history=True),
     "the counts": Fact(
         code="server.py: the tools registered at import (STANDARD_TOOL_"
-             "NAMES), CORE_TOOLSET, RENAMED_TOOLS; preview_tokens.py: "
-             "REGISTRY; pyproject.toml: dependencies",
+             "NAMES), CORE_TOOLSET; preview_tokens.py: REGISTRY; "
+             "pyproject.toml: dependencies",
         documents=("README.md", GUIDE, "TOOLS.md", "CONTRIBUTING.md"),
         patterns=tuple(p for p, _ in COUNT_PATTERNS),
         history=True),
@@ -901,7 +895,7 @@ FACTS: Dict[str, Fact] = {
                   SETTINGS_LIST)),
     "the names": Fact(
         code="server.py: the registered tools (STANDARD_TOOL_NAMES), "
-             "RENAMED_TOOLS, the prompts and each tool's input schema",
+             "the prompts and each tool's input schema",
         documents=("README.md", "INSTALL.md", GUIDE, "PRIVACY.md",
                    "TOOLS.md", "SUPPORT.md", "AI_CODING_GUIDE.md",
                    "CONTRIBUTING.md"),
@@ -1675,23 +1669,22 @@ def _call_items(text: str) -> List[str]:
 
 
 def check_names(facts: Facts, document: Document) -> List[Place]:
-    """Every name a document calls a tool is one (or an earlier name, a
-    prompt, a retired tool); every name it calls an argument is some
-    tool's (or a retired one), and inside a tool's call form, that tool's
-    own, never a retired one."""
+    """Every name a document calls a tool is one (or a prompt, a retired
+    tool); every name it calls an argument is some tool's (or a retired
+    one), and inside a tool's call form, that tool's own, never a retired
+    one."""
     fact = "the names"
     every_argument = set().union(*facts.tool_arguments.values())
 
     def tool(name: str) -> Tuple[FrozenSet[str], Optional[str]]:
         for field_name, names_of in (("tool_names", facts.tool_names),
-                                     ("earlier_names", facts.earlier_names),
                                      ("prompts", facts.prompts)):
             if name in names_of:
                 return frozenset({f"{field_name}:{name}"}), None
         if RETIRED.get(name, ("",))[0] == "tool" or name in OTHER_NAMES:
             return frozenset(), None
         return frozenset(), (f"`{name}` is called a tool, and is no tool, "
-                             f"earlier name, prompt or retired tool")
+                             f"prompt or retired tool")
 
     def argument(name: str) -> Tuple[FrozenSet[str], Optional[str]]:
         if name in every_argument:
@@ -2412,11 +2405,10 @@ def _first_switch(facts: Facts) -> str:
 
 
 # Each constant given another value, as a change in the code would give
-# it. The earlier names are not here: no document states a count without
-# them today, so the CHANGELOG's test below holds them. Nor are the
-# version and the plan's names for releases: a version one release on
-# makes no statement wrong by itself, and a name renamed leaves its
-# statements unread, so tests of their own below hold them.
+# it. The version and the plan's names for releases are not here: a
+# version one release on makes no statement wrong by itself, and a name
+# renamed leaves its statements unread, so tests of their own below hold
+# them.
 CHANGES = (
     ("state_folder", lambda f: f.state_folder + "-test"),
     ("old_state_folder", lambda f: f.old_state_folder + "-test"),
@@ -2436,8 +2428,7 @@ CHANGES = (
     ("memory_cap_bytes", lambda f: f.memory_cap_bytes * 2),
     ("pdf_memory_cap_bytes", lambda f: f.pdf_memory_cap_bytes // 2),
     ("registered_tools", lambda f: f.registered_tools | {"one_tool_more"}),
-    ("core_tools", lambda f: f.core_tools - {
-        sorted(f.core_tools - f.earlier_names)[0]}),
+    ("core_tools", lambda f: f.core_tools - {sorted(f.core_tools)[0]}),
     ("pdf_epub_extra", lambda f: f.pdf_epub_extra + "-test"),
     # a title renamed: the first switch's
     ("setting_titles", lambda f: {
@@ -2513,8 +2504,7 @@ def _one_on(release: str) -> str:
 
 def test_every_constant_is_changed_by_one_test():
     assert {field.name for field in fields(Facts)} - {
-        name for name, _ in CHANGES} == {"earlier_names", "version",
-                                         "releases"}
+        name for name, _ in CHANGES} == {"version", "releases"}
 
 
 def _affected(name: str, before, after) -> set:
@@ -2679,8 +2669,6 @@ def test_a_reworded_sentence_is_no_longer_found(tmp_path):
 def _values(facts: Facts) -> Dict[str, object]:
     return {"full": len(facts.registered_tools),
             "core": len(facts.core_tools),
-            "full_without": len(facts.registered_tools - facts.earlier_names),
-            "core_without": len(facts.core_tools - facts.earlier_names),
             "routes": facts.terminal_call_seconds,
             "ext_s": facts.extension_call_seconds,
             "ext": facts.extension_workspace_folder,
@@ -2695,14 +2683,6 @@ CHANGELOG_LINES = (
     ("The links in the documents are checked on every push.", False),
     ("`full` now registers {full} tools.", False),
     ("`full` now registers {full_minus} tools.", True),
-    ("`core` keeps its {core_without} tools ({core} with the two earlier "
-     "names below).", False),
-    ("`core` keeps its {core} tools ({core} with the two earlier names "
-     "below).", True),
-    ("`full`: {full_without} tools ({full} with the earlier names of the "
-     "two tools renamed below).", False),
-    ("`full`: {full} tools ({full} with the earlier names of the two tools "
-     "renamed below).", True),
     ("One call is given {ext_s} seconds in the desktop extension and "
      "{routes} on every other route.", False),
     ("One call is given {ext_s_plus} seconds in the desktop extension and "
@@ -2875,7 +2855,6 @@ SOURCES = {
     "pdf_memory_cap_bytes": (import_reading, "PDF_MEMORY_CAP_BYTES"),
     "registered_tools": (server, "STANDARD_TOOL_NAMES"),
     "core_tools": (server, "CORE_TOOLSET"),
-    "earlier_names": (server, "RENAMED_TOOLS"),
     "tool_names": (server, "STANDARD_TOOL_NAMES"),
     "prompts": (server.mcp._prompt_manager, "_prompts"),
     "tool_arguments": (server.mcp._tool_manager, "_tools"),
@@ -3194,6 +3173,7 @@ NAME_SENTENCES = (
     ("The `cascade` argument was removed in 0.15.1.", "right"),
     # quoted values, `...` and items of several words aside
     ('`delete_code(code_id, "x", ..., owner as removed in 1.0)`', "right"),
+    # a tool removed in 0.15.5, the earlier name of start_coding_session
     ("`analyze_for_coding(file_ids)`", "right"),
     ("`summarize_project()`", "right"),
     ("`EXEGETE_TOOLSET=core`", "not read"),
@@ -3249,8 +3229,7 @@ def test_the_tables_kept_by_hand_hold_no_title_and_no_registered_name():
     for name, (kind, release) in RETIRED.items():
         assert kind in ("tool", "argument") and re.fullmatch(
             r"\d+\.\d+(?:\.\d+)?", release), name
-        assert name not in facts.tool_names | facts.earlier_names \
-            | facts.prompts, name
+        assert name not in facts.tool_names | facts.prompts, name
         assert not any(name in arguments
                        for arguments in facts.tool_arguments.values()), name
 

@@ -532,7 +532,8 @@ class TestWhatThisReleaseMoved:
         entry = entry[:entry.index("### ", 4)]
         assert "In fourteen descriptions" in entry
         # 0.14.2's entry names start_coding_session by its earlier name
-        earlier = {new: old for old, new in server.RENAMED_TOOLS.items()}
+        # (renamed in 0.15.0; the earlier name removed in 0.15.5)
+        earlier = {"start_coding_session": "analyze_for_coding"}
         for name in moved:
             assert f"`{earlier.get(name, name)}`" in entry, name
         assert "is as 0.14.1 served it" not in entry_0142

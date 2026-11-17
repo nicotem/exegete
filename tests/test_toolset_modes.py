@@ -346,14 +346,11 @@ class TestTheReadmeToolList:
         server._apply_toolset("full")
         names = [t.name for t in asyncio.run(server.mcp.list_tools())]
         assert len(names) == EXPECTED_FULL
-        # v0.15.0: the two earlier names have no entry of their own; the
-        # section after this one, "Earlier names", names each beside its
-        # new name (tests/test_v0150_renames_tools.py)
-        missing = [n for n in names if f"`{n}(" not in section
-                   and n not in server.RENAMED_TOOLS]
+        # (v0.15.5: the two earlier names, which had no entry of their
+        # own, were removed; the section "Earlier names" after this one
+        # names each beside its new name, tests/test_v0150_renames_tools.py)
+        missing = [n for n in names if f"`{n}(" not in section]
         assert missing == []
-        assert set(server.RENAMED_TOOLS) <= set(names)
-        assert set(server.RENAMED_TOOLS.values()) <= set(names)
         flat = " ".join(section.replace("\n>", " ").split())
         assert f"registers {EXPECTED_FULL} tools" in flat
         # v0.15.0: one set; `lifecycle` only as `full`'s earlier name

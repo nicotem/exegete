@@ -7,11 +7,12 @@ the documents or in the code that names a release to come must name an
 item planned for it, and an item named beside a release to come must be
 named beside its own. When a decision moves an item, change its row: the
 push names every sentence that still gives the old release. A text
-written ahead of its release needs its row in the same commit. At release
-preparation each row of that release leaves PLANNED, into the check's
-RETIRED table when it is a tool or an argument, and README's "What comes
-next" keeps no release already made. README's section stays the account
-for researchers; this table is the one the checks read.
+written ahead of its release needs its row in the same commit. A tool or
+an argument enters the check's RETIRED table in the commit that removes
+it from the code. At release preparation each row of that release leaves
+PLANNED, and README's "What comes next" keeps no release already made.
+README's section stays the account for researchers; this table is the
+one the checks read.
 """
 
 # The releases to come that a text calls by a name, as "the release on

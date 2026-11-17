@@ -10742,11 +10742,13 @@ class QualcoderDatabase:
         # QualCoder's journal-name charset: letters, digits, underscore,
         # space, hyphen (journals.py:662 and :787; memos-journals.md §6.4).
         # Enforce it
-        # so MCP journals are GUI-editable.
+        # so MCP journals are GUI-editable. The letters are A to Z alone
+        # (JOURNAL_NAME_RE is ASCII), as the refusal says since v0.15.5
+        # (the claims audit's point 24), where it said "letters"
         if not JOURNAL_NAME_RE.match(name):
             raise ValueError(
-                "journal name may contain only letters, digits, spaces, "
-                "underscores and hyphens"
+                "journal name may contain only letters A to Z without "
+                "accents, digits, spaces, underscores and hyphens"
             )
         _reject_if_too_long(name, "name", max_length=MAX_STRING_LENGTH)
         if not isinstance(entry, str):
@@ -13086,9 +13088,12 @@ class QualcoderDatabase:
         if not owner or not isinstance(owner, str) or not owner.strip():
             raise ValueError("owner must be a non-empty string")
         if applies_to not in self._ATTRIBUTE_DOMAINS:
+            # The method still takes 'journal', QualCoder's third domain,
+            # but create_attribute_type refuses it first (0.15.1), so the
+            # refusal offers the two it takes (v0.15.5, the claims audit's
+            # leftover beside point 32)
             raise ValueError(
-                "applies_to must be 'case', 'file' or 'journal' (QualCoder's "
-                "real domain set; there is no 'both')"
+                "applies_to must be 'case' or 'file' (there is no 'both')"
             )
         if value_type not in ("character", "numeric"):
             raise ValueError("value_type must be 'character' or 'numeric'")
@@ -13285,9 +13290,9 @@ class QualcoderDatabase:
             RuntimeError: a read that failed
         """
         if target_type not in self._ATTRIBUTE_DOMAINS:
-            raise ValueError(
-                "target_type must be 'case', 'file' or 'journal'"
-            )
+            # 'journal' is refused first by set_attribute (0.15.1), as by
+            # create_attribute_type above (v0.15.5)
+            raise ValueError("target_type must be 'case' or 'file'")
         target_id = validate_id(target_id, "target_id")
         if not isinstance(attr_name, str) or not attr_name.strip():
             raise ValueError("attr_name must be a non-empty string")
@@ -13365,9 +13370,11 @@ class QualcoderDatabase:
         in its charts window (view_charts.py:84).
 
         Deliberate deviation (documented): a non-castable value for a
-        numeric attribute is REJECTED with an error; QualCoder silently
-        replaces it with '' (interactive data loss). '' itself is the
-        canonical "unset" and is always accepted.
+        numeric attribute is REJECTED with an error; QualCoder blanks or
+        reverts such a value, with a warning, as set_attribute's
+        description says (v0.15.5, the claims audit's leftover beside
+        point 35). '' itself is the canonical "unset" and is always
+        accepted.
         """
         self._require_write_access()
         checked = self.check_set_attribute_value(target_type, target_id,
@@ -13967,7 +13974,7 @@ class QualcoderDatabase:
                                ) -> Dict[str, Any]:
         """What `rewrite_memos` would do to the notes, without writing.
 
-        Project-wide, whatever `file_id` says: the twelve fields of
+        Without `file_id`, project-wide: the twelve fields of
         `PSEUDONYMISE_MEMO_FIELDS`, which are exactly the fields the
         residue counts, so the preview never counts a field the run then
         refuses to act on. Built like the file plan, on the read

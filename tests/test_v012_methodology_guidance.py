@@ -196,12 +196,16 @@ class TestExplainAiCodingTools:
         # v0.14.2: and the brief, the one topic answered as the brief's
         # own text rather than as JSON (tests/test_v0142_brief.py)
         out = json.loads(server.explain_ai_coding_tools("unknown"))
-        # 0.14.3: and converted_documents, which import_documents names
-        assert out["available_tools"] == HELP_KEYS + ["brief",
-                                                      "converted_documents"]
+        # 0.14.3: and converted_documents, which import_documents names;
+        # v0.15.5: and overview, first, which the tool answers by name
+        # (the claims audit's point 10)
+        assert out["available_tools"] == ["overview"] + HELP_KEYS + [
+            "brief", "converted_documents"]
         for key in HELP_KEYS:
             assert "error" not in json.loads(server.explain_ai_coding_tools(key))
         assert server.explain_ai_coding_tools("brief") == server.BRIEF_FULL
+        assert server.explain_ai_coding_tools("overview") == \
+            server.explain_ai_coding_tools()
 
 
 class TestMethodsResource:

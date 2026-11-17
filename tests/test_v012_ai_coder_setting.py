@@ -361,7 +361,8 @@ EXPECTED_ASK = (
     "with their answer and retry. The name is free text; a model name such "
     "as \"Qwen 3.8 6bit\" is a good choice, because codings by different "
     "models can then be compared later. Quick picks: \"AI Coding "
-    "Assistant\" (Exegete's built-in default), or a name the researcher "
+    "Assistant\" (the name on AI codings made before each project had a "
+    "name of its own), or a name the researcher "
     "chooses (the model's name, for example). The name can be changed at "
     "any time with the same tool; earlier rows keep the name they were "
     "written under.")

@@ -692,15 +692,15 @@ Applied 12 codings (ctid 445-456)
 | `review_suggestions(coding_session_id, suggestion_guids, show_context)` | Inspect suggestions in detail |
 | `edit_suggestion(coding_session_id, suggestion_guid, start_pos, end_pos, segment_text, use_alternative, code_id, code_name, reading)` | Change a pending suggestion's passage, code or reading before you decide. The change is kept in the session only. A new code without a new reading clears the reading |
 | `update_suggestion_status(coding_session_id, approve, reject, reopen)` | Approve, reject, or reopen (back to pending, to edit and decide again) by GUID |
-| `apply_codings(coding_session_id, create_backup)` | **Write** the approved suggestions, all or none, after checking them again, and only to the session's own project. An approved suggestion whose identical coding already exists is left alone and reported by its id. That check sees every coding, a hidden coder's included. So on a project that hides the AI coder, the report reveals that one such coding exists (PRIVACY.md) |
-| `delete_coding(coding_id, create_backup, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coding. Without the matching override, it refuses a coding whose memo carries a `#####` private note, and, on a project that can hide coders (QualCoder 3.8.2 and 4.0, schema v14 and later), a hidden coder's coding |
+| `apply_codings(coding_session_id)` | **Write** the approved suggestions, all or none, after checking them again, and only to the session's own project. An approved suggestion whose identical coding already exists is left alone and reported by its id. That check sees every coding, a hidden coder's included. So on a project that hides the AI coder, the report reveals that one such coding exists (PRIVACY.md) |
+| `delete_coding(coding_id, allow_hidden_coder, confirm_private_note_deletion)` | **Write**: remove one coding. Without the matching override, it refuses a coding whose memo carries a `#####` private note, and, on a project that can hide coders (QualCoder 3.8.2 and 4.0, schema v14 and later), a hidden coder's coding |
 | `list_backups()` / `restore_backup(backup_path, preview_token)` | List the backups / restore the project from one (a preview first, then the call with the preview's token) |
 | `prune_backups(keep_last, older_than_days, preview_token)` | Remove Exegete's own backups, keeping the newest few or removing those older than a number of days, on your word (a preview first, then the call with the preview's token). It keeps the newest unless you ask it to keep none, and never removes QualCoder's `_BKUP_` backups |
 | `undo_changes(receipts, preview_token)` | **Write**: take back a change Exegete made, such as a batch of applied codings, whole and within a day, from the `undo_receipt` in its answer (a preview first, then the call with the preview's token) |
-| `import_text_file(filename, content, memo, create_backup, case_name, apply_project_pseudonyms)` | **Write**: add text typed or pasted in the conversation as a new text file, linked to a case if you choose. The text passes through the conversation, so it reaches the AI provider before any name in it is replaced. With `apply_project_pseudonyms=true`, the real names that the project's own `pseudonyms.json` lists are replaced with their pseudonyms as the text comes in, as QualCoder does. The replacement changes what the project stores, and so what you share from it |
+| `import_text_file(filename, content, memo, case_name, apply_project_pseudonyms)` | **Write**: add text typed or pasted in the conversation as a new text file, linked to a case if you choose. The text passes through the conversation, so it reaches the AI provider before any name in it is replaced. With `apply_project_pseudonyms=true`, the real names that the project's own `pseudonyms.json` lists are replaced with their pseudonyms as the text comes in, as QualCoder does. The replacement changes what the project stores, and so what you share from it |
 | `import_documents(paths, preview_token, apply_project_pseudonyms, import_pdfs_with_listed_names, import_file_names_with_listed_names, import_files_with_garbled_letters, character_sets, show_text, memo)` | **Write**: bring documents in from your computer, by their paths or a folder's. Their text does not pass through the conversation. The exception is a file not saved as UTF-8: the preview shows one line of it, as each character set reads it, so that you can choose. A preview comes first, then the import with its token, on your word |
 | `open_file_for_reading(file_id, show, without_codes)` | Let you read a whole file on your own computer, with its codings or without them; its text does not pass through the conversation |
-| `link_file_to_case(file_id, case_id, case_name, create_backup)` | **Write**: make a file visible to case-based analyses |
+| `link_file_to_case(file_id, case_id, case_name)` | **Write**: make a file visible to case-based analyses |
 | `export_refi_qda(output_path, coding_session_id, overwrite)` | Export the project, or a single coding session's suggestions, as a REFI-QDA .qdpx, as the top of this guide describes |
 | `get_coding_session_info` / `list_coding_sessions` / `delete_coding_session` | Session management |
 | `copy_project_to_workspace(source_path, new_name)` | Copy a project into Exegete's workspace |
@@ -889,8 +889,7 @@ approve on the one where you apply.
 ### Backups
 
 Exegete takes a backup before every change to the project's database.
-No tool takes one on request: some tools still accept `create_backup`,
-which no longer does anything. Each backup sits beside the project, in
+No tool takes one on request. Each backup sits beside the project, in
 the folder that holds it, named with its date and time:
 
 ```

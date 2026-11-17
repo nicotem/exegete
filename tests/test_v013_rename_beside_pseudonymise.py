@@ -50,8 +50,8 @@ def test_the_residue_count_follows_the_rename(project):
     residue = preview_of()["preview"]["residue"]
     assert residue["case_names"]["wide"] == 1
     assert residue["file_names"]["wide"] == 1
-    server.rename_case(1, "P01", create_backup=False)
-    server.rename_file(4, "P01_notes.txt", create_backup=False)
+    server.rename_case(1, "P01")
+    server.rename_file(4, "P01_notes.txt")
     residue = preview_of()["preview"]["residue"]
     assert residue["case_names"] == {"wide": 0, "whole_word": 0}
     assert residue["file_names"] == {"wide": 0, "whole_word": 0}
@@ -146,10 +146,11 @@ def test_the_guide_readme_and_changelog_name_the_tools():
             "keeps its name and text as they were.") in guide
     readme = _flat("TOOLS.md")   # v0.14.1: the tool list moved there
     # (v0.15.2: the mark in sentence case, no longer in capitals)
-    assert "- `rename_case(case_id, new_name, create_backup)` - **Writes " \
-           "to the database**" in readme
-    assert "- `rename_file(file_id, new_name, create_backup)` - **Writes " \
-           "to the database**" in readme
+    # (v0.15.5: create_backup removed)
+    assert "- `rename_case(case_id, new_name)` - **Writes to the " \
+           "database**" in readme
+    assert "- `rename_file(file_id, new_name)` - **Writes to the " \
+           "database**" in readme
     unreleased = _flat("CHANGELOG.md").split("## [0.12")[0]
     assert "### Added: `rename_case` and `rename_file`" in unreleased
     assert "**`import_text_file` shares `rename_file`'s name rules, so " \

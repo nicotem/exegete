@@ -32,9 +32,9 @@ PLANNED = {
         "85, 105, 115"),
     "shorter tool descriptions": ("feature", "0.15.5", (
         r"\bshorte(?:r|ned)\s+(?:tool\s+)?descriptions\b",), "104, 105, 115"),
-    # "their", "the tools'" or "of the two": the two tools' names, not
-    # INSTALL's "the earlier names of two renamed tools" among the full
-    # set's, nor the section "Earlier names" a sentence points to
+    # "their", "the tools'" or "of the two": the two tools' earlier
+    # names, not "earlier names" alone, which is also the title of
+    # TOOLS.md's section "Earlier names", as the Terminal guide names it
     "the two tools' earlier names": ("earlier name", "0.15.5", (
         r"\b(?:their|the\s+tools')\s+earlier\s+names\b",
         r"\bearlier\s+names\s+of\s+the\s+two\b",

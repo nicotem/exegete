@@ -270,9 +270,9 @@ class TestTheDocuments:
             assert words in listing, words
         delete = _entry(tools, "delete_coding_session(coding_session_id)")
         assert FOLDER in delete and "backups" in delete
-        for signature in ("apply_codings(coding_session_id, create_backup)",
-                          "create_proposed_codes(coding_session_id, "
-                          "create_backup)"):
+        # (v0.15.5: create_backup removed)
+        for signature in ("apply_codings(coding_session_id)",
+                          "create_proposed_codes(coding_session_id)"):
             entry = _entry(tools, signature)
             assert CAME_WITH.search(entry), signature
             assert "`not_approved_here`" in entry, signature

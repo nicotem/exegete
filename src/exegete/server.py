@@ -23980,12 +23980,12 @@ def pseudonymise_source(
     every warning it carries, and ask whether to proceed. Only if they
     agree, call again with the same mapping, file_id, case_mode,
     overlap_policy, rewrite_memos, save_mapping_to_project, and
-    keep_phrases, leave_occurrences, leave_numbers and numbering when
-    given, plus preview_token=<the token>. The token is valid for 60
-    minutes, and only while the text and the rows it covers are
-    unchanged. If what the token covers changed in between, the run is
-    refused and you must preview again. Exegete takes a backup first, as
-    before every change. A run that changes nothing takes none.
+    keep_phrases, memo_scope, leave_occurrences, leave_numbers and
+    numbering when given, plus preview_token=<the token>. The token is
+    valid for 60 minutes, and only while the text and the rows it covers
+    are unchanged. If what the token covers changed in between, the run
+    is refused and you must preview again. Exegete takes a backup first,
+    as before every change. A run that changes nothing takes none.
 
     Deterministic and rule-based. Only the names in the mapping are
     replaced, as whole words, case-sensitively unless case_mode says
@@ -24005,21 +24005,19 @@ def pseudonymise_source(
     given the mapping that is right for it. To pseudonymise a project, run
     it file by file; with use_project_pseudonyms the mapping is read from
     the project's own pseudonyms.json each time, and with a typed mapping
-    the mapping is repeated on each call. The notes and the report always
-    cover the whole project.
+    the mapping is repeated on each call. The report always covers the
+    whole project.
 
-    Two people who share a name: one file per call gives each their own
-    pseudonym in the file text only. Inside one file, a first run can
+    Two people who share a name, each in a file of their own: run each
+    file with rewrite_memos and memo_scope "file", and change by hand the
+    notes the preview counts as left. Both in one file: a first run can
     leave the second person's occurrences as they are (choose_occurrences,
     then leave_occurrences), and a second run then replaces them with the
-    second person's pseudonym. With rewrite_memos on, whichever
-    run carries it rewrites that name in notes across the whole project,
-    the other person's notes included, and no order of runs avoids
-    this. Keep rewrite_memos off on every run of a shared name and
-    change the notes that name either person by hand; give the second
-    person a typed mapping with save_mapping_to_project off and
-    researcher_keeps_mapping on (pseudonyms.json holds one pseudonym
-    per name).
+    second person's pseudonym; keep rewrite_memos off on every run of a
+    shared name and change the notes that name either person by hand.
+    Either way, give the second person a typed mapping with
+    save_mapping_to_project off and researcher_keeps_mapping on
+    (pseudonyms.json holds one pseudonym per name).
 
     What this does not rewrite, so the names remain there: case names,
     file names, attribute values, PDFs, media files, an imported
@@ -24027,8 +24025,8 @@ def pseudonymise_source(
     original text, which QualCoder's exports include), QualCoder 4.0's
     ai_data folder, speakers.json and speaker_regex.json. Notes (the
     twelve kinds) and journal entries are rewritten only when
-    rewrite_memos is on, in their public part and across the whole
-    project; otherwise they remain too. Case and file names are changed
+    rewrite_memos is on, in their public part, where memo_scope says;
+    otherwise they remain too. Case and file names are changed
     with rename_case and rename_file. The preview's `residue` block
     counts where the names still occur, for you to tell the researcher.
     It counts the public part of notes only and never reads a '#####'
@@ -24127,17 +24125,18 @@ def pseudonymise_source(
                  twelve kinds of note: codings, annotations, case links,
                  files, cases, codes, categories, the project, attribute
                  types, audio/video and image codings) and of every
-                 journal entry, across the whole project whatever file_id
-                 says. Default false. A note's private part (after
-                 QualCoder's marker) is carried across unchanged and never
-                 read, so a name in a private part is still there and
-                 Exegete cannot tell you whether one is. Nothing is
-                 renamed: case, file, code, category, attribute-type and
-                 journal names stay as they are. The residue's wide counts
-                 do not go to zero after a note rewrite: a name inside a
-                 longer word, in another letter case, or with its parts
-                 joined is still counted and still there. This argument is
-                 bound into the token: repeat it on the execute call.
+                 journal entry, across the whole project whatever file_id says,
+                 unless memo_scope is "file". Default false. A note's private
+                 part (after QualCoder's marker) is carried across unchanged
+                 and never read, so a name in a private part is still there and
+                 Exegete cannot tell you whether one is. Nothing is renamed:
+                 case, file, code, category, attribute-type and journal names
+                 stay as they are. This argument is bound into the token:
+                 repeat it on the execute call.
+        memo_scope: "file" keeps rewrite_memos to this file's notes: those
+                 of its codings, annotations and case links, its own, and
+                 those of the recording segments its codings are linked
+                 to. Default "project". Bound into the token when "file".
         save_mapping_to_project: On a typed mapping, write it into the
                  project's own pseudonyms.json in QualCoder's format,
                  merging with what is there. A name the file already maps
@@ -25669,8 +25668,8 @@ def _rename_file_note(left_in: Dict[str, Any], signs: _RenameSigns) -> str:
             "pseudonymisation journal entries and run records, which keep "
             "the file's name as it was at the run unless that name carried "
             "a name from the mapping (they then name the file by its id), "
-            "though a later run with rewrite_memos rewrites the public part "
-            "of those journal entries.")
+            "though a later run that rewrites the notes across the whole "
+            "project rewrites the public part of those journal entries.")
     if signs.qualcoder_seen:
         note += (" In QualCoder, Merge Projects with a copy of the project "
                  "that still has the old name brings the file in as a "

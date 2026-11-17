@@ -1211,7 +1211,12 @@ The rest of the project is treated in other ways:
 
 - notes and journal entries are scanned and their names counted. With
   `rewrite_memos`, their public part is rewritten too, across the whole
-  project, while a private part is carried across unread;
+  project, while a private part is carried across unread. With
+  `memo_scope` set to `"file"` as well, only the notes of the file the
+  run rewrites are: those of its codings, annotations and case links,
+  its own note, and those of its recording's segments that its codings
+  are linked to. Every other note is left as it is, and the preview
+  counts those that still hold one of the names;
 - labels and attribute values are scanned and counted, never rewritten;
 - PDFs are counted, never rewritten;
 - media files and `ai_data/` are neither scanned nor rewritten;

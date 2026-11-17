@@ -540,12 +540,17 @@ class TestAChangeAfterThePreview:
 # ---------------------------------------------------------------------------
 
 def _ai_refusal(name):
-    return (f"\"{name}\" is a name AI work is stored under (this project's AI "
-            f"coder name or an earlier one, Exegete's built-in default, the "
-            f"AI coder name in Exegete's settings, or \"AI Agent\", the name "
-            f"QualCoder 4.0's assistant writes under); the researcher's own "
-            f"coder name must differ, or AI rows could not be told apart "
-            f"from theirs. Nothing was changed.")
+    # v0.15.5: "AI Coding Assistant" by what it is, where it was "Exegete's
+    # built-in default" (the claims audit's point 58), the list after a
+    # colon
+    return (f"\"{name}\" is a name AI work is stored under: this project's "
+            f"AI coder name or an earlier one, the AI coder name in "
+            f"Exegete's settings, \"AI Coding Assistant\" (the name on AI "
+            f"codings made before each project had a name of its own) or "
+            f"\"AI Agent\" (the name QualCoder 4.0's assistant writes "
+            f"under). The researcher's own coder name must differ, or AI "
+            f"rows could not be told apart from theirs. Nothing was "
+            f"changed.")
 
 
 class TestTheNamesRefused:

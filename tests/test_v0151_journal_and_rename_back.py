@@ -336,14 +336,12 @@ def _current_claims(text):
 
 def _module_strings(path):
     """part one's reader of a module's strings, with this part's
-    exceptions: the refusal's own sentence, and the database methods'
-    refusal of a domain they do not know, which names 'journal' because
-    the methods still take it (the design keeps them), while the tools
-    refuse it first."""
+    exception: the refusal's own sentence. (The database methods'
+    refusal of a domain they do not know named 'journal' too, since the
+    methods still take it, while the tools refuse it first; since
+    v0.15.5 it names the two the tools take.)"""
     from test_v0151_removed_arguments import _string_constants
-    skip = (SENTENCE, "applies_to must be 'case', 'file' or 'journal' "
-                      "(QualCoder's real domain set; there is no 'both')",
-            "target_type must be 'case', 'file' or 'journal'")
+    skip = (SENTENCE,)
     return [piece for piece in _string_constants(path)
             if piece not in skip]
 

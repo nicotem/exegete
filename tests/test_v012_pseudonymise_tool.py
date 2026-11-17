@@ -8649,10 +8649,12 @@ class TestTheDescriptionCarriesWhatD1Requires:
          "across the whole project whatever file_id says, unless "
          "memo_scope is \"file\". Default false."),
         ("memo_scope_keeps_it_to_the_file",              # v0.15.5
+         # (the claims audit's wording piece: its recording's segments,
+         # as the code takes them, the recording naming the file)
          "memo_scope: \"file\" keeps rewrite_memos to this file's notes: "
          "those of its codings, annotations and case links, its own, and "
-         "those of the recording segments its codings are linked to. "
-         "Default \"project\". Bound into the token when \"file\"."),
+         "those of its recording's segments that its codings are linked "
+         "to. Default \"project\". \"file\" is bound into the token."),
         ("nothing_is_renamed",                           # point 2
          "Nothing is renamed: case, file, code, category, attribute-type "
          "and journal names stay as they are."),

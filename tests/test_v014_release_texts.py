@@ -106,7 +106,9 @@ def test_the_export_descriptions_name_no_ruling():
     for tool in ("export_codebook", "export_coded_segments_report",
                  "export_refi_qda"):
         description = _description(tool)
-        assert "Full memos on export (as in QualCoder's own exports)" in \
+        # v0.15.5: QualCoder's exports in the sentence, not a fragment
+        # in brackets
+        assert "Full memos on export: like QualCoder's own exports" in \
             description, tool
         assert "owner-ruled" not in description, tool
 

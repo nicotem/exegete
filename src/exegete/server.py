@@ -579,21 +579,20 @@ to it) or another program is writing to the database; for QualCoder
 4.0, get_current_project shows any signs of an open window, and if
 there are some, ask the researcher before writing."""
 
-TWO_STEP_PARAGRAPH = """Two-step by design. Call without preview_token: nothing is written and the
-result is a preview of exactly what would change, with a preview_token.
-Show the researcher the preview (including its collateral block, which
-says whose codings it affects, and every warning) and
-ask whether to proceed. Only if they agree, call again with the same
-arguments and preview_token=<the token>. The token is valid for 60
-minutes and only while the rows it covers are unchanged; if the project
-changed in between, the second call is refused and you must preview
-again. A backup is always created first."""
+TWO_STEP_PARAGRAPH = """Two-step by design. Call without preview_token: nothing in the project
+is written, and the result is a preview of exactly what would change,
+with a preview_token. Show the researcher the preview (including its
+collateral block, which says whose codings it affects, and every
+warning) and ask whether to proceed. Only if they agree, call again
+with the same arguments and preview_token=<the token>. The token is
+valid for 60 minutes and only while the rows it covers are unchanged;
+if what it covers changed in between, the second call is refused and
+you must preview again. A backup is always created first."""
 
-EXPORT_FULL_MEMOS_PARAGRAPH = """Full memos on export (as in QualCoder's own exports): the exported
-FILE keeps memo text in full, including any private '#####' section
-that read tools never show the AI.
-Mention this to the user if they plan to share the exported
-file."""
+EXPORT_FULL_MEMOS_PARAGRAPH = """Full memos on export: like QualCoder's own exports, the exported file
+keeps memo text in full, including any private '#####' section that
+read tools never show the AI. Mention this to the researcher if they
+plan to share the exported file."""
 
 CODER_VISIBILITY_COUNTS_PARAGRAPH = """Coder visibility: a project in the format of QualCoder 3.8.2, or of
 4.0 onwards, can hide some coders' work. When it does, counts cover
@@ -3389,8 +3388,8 @@ def _ask_refusal() -> Dict[str, Any]:
         "set_project_ai_coder_name with their answer and retry. The name "
         "is free text; a model name such as \"Qwen 3.8 6bit\" is a good "
         "choice, because codings by different models can then be compared "
-        "later. Quick picks: \"AI Coding Assistant\" (Exegete's "
-        "built-in default)")
+        "later. Quick picks: \"AI Coding Assistant\" (the name on AI "
+        "codings made before each project had a name of its own)")
     if offer_ai_agent:
         text += (", \"AI Agent\" (if the researcher also uses QualCoder "
                  "4.0's own assistant, this name puts both assistants' "
@@ -4898,8 +4897,10 @@ def get_project_info() -> str:
 def list_all_codes() -> str:
     """Get a list of all codes in the project.
 
-    Returns all codes with their names, categories, colours, memos, and metadata.
-    Codes are organised hierarchically by category.
+    Returns all codes with their names, categories, colours, memos, and metadata,
+    as a flat list ordered by category, then name. Each code's category
+    gives its place in the tree, and in QualCoder 4.0's format so do its
+    parent code and its path ("Category > Parent code > Code").
     """
     codes = get_db().list_codes()
     return _ai_json(codes, indent=2)
@@ -5141,7 +5142,8 @@ The decision is yours to make and to explain; for coding suggestions
 and code proposals the safety mechanism is the researcher's approval of
 each item, which you relay: Exegete writes only what is marked
 approved, and cannot see who marked it. The direct write tools write on
-the call itself, with a backup.
+the call itself, and Exegete takes a backup of the project before every
+change to its database.
 
 ## Where the study's framework lives
 
@@ -5821,11 +5823,12 @@ def set_project_ai_coder_name(name: str, note: str = "",
     name is theirs to choose. It is plain text on one line, up to 80
     characters. A model name such as "Qwen 3.8 6bit" lets codings by
     different models be compared later. Quick picks: "AI Coding Assistant"
-    (Exegete's built-in default), "AI Agent" (QualCoder 4.0's own
-    assistant). The setting is stored with the project (exegete.json in the
-    project folder), so it travels with backups and copies. It can be
-    changed at any time; earlier rows keep the name they were written
-    under. Names are compared exactly, after trimming spaces, and letter
+    (the name on AI codings made before each project had a name of its
+    own), "AI Agent" (QualCoder 4.0's own assistant). The setting is
+    stored with the project (exegete.json in the project folder), so it
+    travels with backups and copies. It can be changed at any time;
+    earlier rows keep the name they were written under. Names are
+    compared exactly, after trimming spaces, and letter
     case counts: QualCoder's format keeps coder names apart letter for
     letter, so "AI Agent" and "ai agent" are two coders. Exegete compares
     code, category and case names ignoring letter case.
@@ -5992,11 +5995,13 @@ def set_project_ai_coder_name(name: str, note: str = "",
 # warnings and the notes after the change. The refusals end "Nothing was
 # changed."; the two about work recorded under the name say so first.
 CODER_NAME_IS_AI_REFUSAL = (
-    "\"{name}\" is a name AI work is stored under (this project's AI coder "
-    "name or an earlier one, Exegete's built-in default, the AI coder name "
-    "in Exegete's settings, or \"AI Agent\", the name QualCoder 4.0's "
-    "assistant writes under); the researcher's own coder name must differ, "
-    "or AI rows could not be told apart from theirs. Nothing was changed.")
+    "\"{name}\" is a name AI work is stored under: this project's AI coder "
+    "name or an earlier one, the AI coder name in Exegete's settings, "
+    "\"AI Coding Assistant\" (the name on AI codings made before each "
+    "project had a name of its own) or \"AI Agent\" (the name QualCoder "
+    "4.0's assistant writes under). The researcher's own coder name must "
+    "differ, or AI rows could not be told apart from theirs. Nothing was "
+    "changed.")
 CODER_NAME_SPEAKER_REFUSAL = (
     "\"{speaker}\" is QualCoder's speaker coder, which every project lists; "
     "it is not a person's coder name. Ask the researcher for their own "
@@ -8196,7 +8201,11 @@ def search_coded_text(query: str, code_name: Optional[str] = None,
         cursor: next_cursor from a previous page of this same search
 
     Returns:
-        JSON array of matching segments with their codes, files, and context
+        JSON object with results, each matching coding with its passage,
+        file, code, positions, memo and coder (the coded passage alone,
+        without the text around it); result_count; total_results, or
+        total_before_novelty_filter with exclude_code_ids; and the page
+        block
     """
     db_ = get_db()
     try:
@@ -8685,7 +8694,8 @@ def search_files(
         - results: Array of matching files with:
             - file_id: ID for use with other tools
             - file_name: Name of the file
-            - file_type: Type (text, audio, video, image, pdf)
+            - file_type: Type (text, audio, video, image, pdf, or media
+              for a file whose stored location fits none of these)
             - matched_in: {filename: bool, content: bool}
             - match_count: The number of matches listed for this file
               (its name and the content matches shown), not
@@ -8704,7 +8714,8 @@ def search_files(
         The researcher says: "Search all file content for 'workplace stress'"
         → search_files("workplace stress", search_content=True)
 
-        The researcher says: "Search everywhere for 'motivation'"
+        The researcher says: "Search the documents and the notes for
+        'motivation'"
         → search_files("motivation", search_filename=True,
                       search_content=True), and search_memos for notes
 
@@ -8995,8 +9006,9 @@ def export_refi_qda(
     an earlier file Exegete cannot write is refused.
 
     Args:
-        output_path: Where to write the .qdpx file (must end in .qdpx; the
-                     directory must already exist)
+        output_path: Where to write the .qdpx file, as a full path or one
+                     starting with ~ (it must end in .qdpx, and its folder
+                     must already exist)
         coding_session_id: Optional AI coding session to export instead of the
                     project
         overwrite: Allow replacing an existing file (default: False)
@@ -9229,7 +9241,7 @@ def export_refi_qda(
             output["note"] += (
                 f" This project also has {media['av']} audio/video and "
                 f"{media['image']} image codings; REFI export covers text "
-                f"codings only, so those are NOT included."
+                f"codings only, so those are not included."
             )
         if skipped_invalid:
             output["skipped_invalid_codings"] = len(skipped_invalid)
@@ -9693,11 +9705,14 @@ def list_attribute_types() -> str:
     about files or cases (e.g., age, gender, location, data_source).
 
     Returns:
-        JSON array of attribute types with:
+        JSON object with attribute_count and attributes, a list of the
+        attribute types, each with:
         - name: Attribute name
         - value_type: Data type (character, numeric)
-        - applies_to: Whether it's for 'case' or 'file'
+        - applies_to: 'case' or 'file', or 'journal' for an attribute on
+          journal entries, which Exegete lists but no longer sets
         - memo: Description of the attribute
+        - owner and date
     """
     result = get_db().list_attribute_types()
     return _ai_json({
@@ -9719,7 +9734,8 @@ def get_file_attributes(file_id: int) -> str:
                  refused
 
     Returns:
-        JSON array of attributes with their values for this file
+        JSON object with file_id, attribute_count and attributes, a list of
+        the file attributes with their values for this file
     """
     refusal = _refuse_unknown_id(get_db(), "file", file_id, "file_id")
     if refusal is not None:
@@ -9745,7 +9761,8 @@ def get_case_attributes(case_id: int) -> str:
                  refused
 
     Returns:
-        JSON array of attributes with their values for this case
+        JSON object with case_id, attribute_count and attributes, a list of
+        the case attributes with their values for this case
     """
     refusal = _refuse_unknown_id(get_db(), "case", case_id, "case_id")
     if refusal is not None:
@@ -13100,7 +13117,9 @@ def import_text_file(
                   not a name already in the project's documents folder
                   (compared ignoring letter case), which QualCoder would
                   take for this text's stored copy
-        content: The full text content of the file
+        content: The full text content of the file. A byte-order mark at
+                 its start is removed, and its line endings are stored as
+                 LF, as QualCoder's import stores a text file
         memo: Optional memo/description for the file
         case_name: Optional existing case to link the new file to.
                    The same name, once spaces and Unicode forms are
@@ -13112,13 +13131,18 @@ def import_text_file(
                    case_match says which rule matched
         apply_project_pseudonyms: Apply the project's own pseudonyms.json to
                    the text before storing it, as QualCoder does to every
-                   text file it imports. Default false, so the text is
-                   stored exactly as given unless you ask.
-                   Case-sensitive, whole-word, like QualCoder. One
-                   difference: QualCoder applies the entries one after
+                   text file it imports. Default false, so no name in the
+                   text is replaced unless you ask.
+                   Case-sensitive, whole-word, like QualCoder. Two
+                   differences: QualCoder applies the entries one after
                    another, so a later entry can rewrite what an earlier one
                    produced; this applies them all in a single pass, longest
                    form first, so nothing it writes is ever replaced again.
+                   And a list QualCoder would apply is refused, with nothing
+                   imported, when an entry begins or ends with a space, a
+                   name is shorter than 2 characters or a pseudonym shorter
+                   than 3, a name appears twice, or a pseudonym is also a
+                   name in the list.
                    The result carries per-pseudonym counts and which
                    encoding pseudonyms.json was read in.
 
@@ -14435,9 +14459,10 @@ def _mark_removed_in_sessions(deleted: Dict[str, Any]) -> List[Dict[str, Any]]:
 def list_backups() -> str:
     """List the automatic backups of the currently open project.
 
-    Exegete takes a backup before every change (apply_codings,
-    import_text_file, delete_coding, restore_backup and the other write
-    tools). Each is a timestamped folder next to the project, named
+    Exegete takes a backup of the project before every change to its
+    database (apply_codings, import_text_file, delete_coding,
+    restore_backup and the other tools that change it). Each is a
+    timestamped folder next to the project, named
     '<project>_backup_<timestamp>.qda'. This tool lists them (kind 'exegete')
     together with QualCoder's own '<project>_BKUP_*' backups found next to
     the project (kind 'qualcoder'), newest first, so you can pick one for
@@ -14720,9 +14745,9 @@ def prune_backups(keep_last: Optional[int] = None,
     """Delete this project's own backups to reclaim disk space.
 
     It removes recovery points: preview first, then execute with the
-    token that preview returns. Every write creates a backup copy of the
-    project, and the copies accumulate until pruned. This tool prunes them
-    by a retention policy you choose:
+    token that preview returns. Exegete takes a backup of the project
+    before every change to its database, and the copies accumulate until
+    pruned. This tool prunes them by a retention policy you choose:
 
     - keep_last=N: keep only the N newest of Exegete's backups
     - older_than_days=D: remove Exegete's backups older than D days
@@ -17805,8 +17830,8 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
     them.
 
     Args:
-        tool_name: Specific tool to explain (optional); left out, the
-                  answer is an overview of all tools
+        tool_name: Specific tool to explain (optional); left out, or
+                  "overview", the answer is an overview of the coding loop
 
     Returns:
         JSON with tool documentation, examples, and tips
@@ -17862,9 +17887,9 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
                           "show the researcher that preview and the "
                           "warnings, then call again with the preview_token "
                           "it returned. The token covers that operation on "
-                          "those rows, so if the project changed in between, "
-                          "the second call is refused and you preview "
-                          "again."
+                          "those rows, so if what it covers changed in "
+                          "between, the second call is refused and you "
+                          "preview again."
             },
             "ai_coder_name": "Rows Exegete writes carry the project's AI "
                              "coder name, which the researcher chooses: in "
@@ -18165,6 +18190,7 @@ def explain_ai_coding_tools(tool_name: Optional[str] = None) -> str:
 
     else:
         topics = [
+                "overview",
                 "grounding_rules",
                 "methodology_vocabulary",
                 "methods_notes",
@@ -18242,8 +18268,9 @@ def propose_codes(coding_session_id: str, proposals: List[Dict[str, Any]],
             creation). Colours are stored as the nearest QualCoder
             palette colour (120 fixed colours, as the QualCoder colour
             picker offers); the recorded entry reports the stored colour
-            and whether it was snapped. Greys may snap to a pale hue:
-            the palette has five greys and the matching rule is
+            and whether it was snapped. Black and dark greys snap to a
+            green, and white to a pale pink: the palette has five
+            greys, none of them dark, and the matching rule is
             QualCoder's own.
             category: optional name of an existing category to place
             it in
@@ -18486,7 +18513,9 @@ def review_proposals(coding_session_id: str,
     Args:
         coding_session_id: The session ID
         proposal_guids: Specific proposals to show (default: all)
-        show_examples: Include the evidence segments (default: False)
+        show_examples: Include the evidence segments, each text up to its
+                       first 200 characters, a longer one ending in "…"
+                       (default: False)
     """
     # Bridge fix: some MCP middleware strips arguments named
     # 'session_id' (reserved for its own routing); the tool
@@ -18594,9 +18623,13 @@ def review_proposals(coding_session_id: str,
         lines.append(f"Evidence segments: {len(p.example_segments)}")
         if show_examples:
             for seg in p.example_segments:
+                # Its first 200 characters, a cut marked (v0.15.5, the
+                # claims audit's point 15); the positions give its length
+                text = seg['segment_text']
+                shown = text[:200] + ("\u2026" if len(text) > 200 else "")
                 lines.append(f"  - {seg['file_name']} "
                              f"[{seg['start_pos']}-{seg['end_pos']}]: "
-                             f"\u201c{seg['segment_text'][:200]}\u201d")
+                             f"\u201c{shown}\u201d")
     return "\n".join(lines)
 
 
@@ -18634,8 +18667,9 @@ def update_proposal(coding_session_id: str, proposal_guid: str,
         color: New #RRGGBB colour, stored as the nearest QualCoder palette
                colour (120 fixed colours, as the QualCoder colour picker
                offers); the result reports the stored colour and whether
-               it was snapped. Greys may snap to a pale hue: the palette
-               has five greys and the matching rule is QualCoder's own.
+               it was snapped. Black and dark greys snap to a green, and
+               white to a pale pink: the palette has five greys, none of
+               them dark, and the matching rule is QualCoder's own.
         category: Existing category name, or "" to clear
         memo: New definition text
         example_segments: Replacement evidence spans
@@ -19373,7 +19407,8 @@ def add_journal_entry(name: str, entry: str) -> str:
     (reflexive memos, decisions, an audit trail) kept alongside the coding.
 
     Args:
-        name: A short unique title for the entry
+        name: A short title, unique in the project, of letters A to Z
+              without accents, digits, spaces, underscores and hyphens
         entry: The journal text
 
     Returns:
@@ -19389,13 +19424,16 @@ def add_journal_entry(name: str, entry: str) -> str:
     owner, owner_error = _resolve_write_owner()
     if owner_error is not None:
         return json.dumps(owner_error, indent=2)
+    def _add(wdb):
+        added = wdb.add_journal_entry(name, entry, owner, auto_commit=False)
+        # The name as stored, without its outer spaces (v0.15.5, the
+        # claims audit's point 29)
+        return {"success": True,
+                "message": f"Added journal entry '{added['name']}'",
+                "journal_entry": added}
+
     result = _perform_write(
-        lambda wdb: {
-            "success": True,
-            "message": f"Added journal entry '{name}'",
-            "journal_entry": wdb.add_journal_entry(
-                name, entry, owner, auto_commit=False),
-        },
+        _add,
         check=_write_methods_checks(
             lambda wdb: wdb.check_add_journal_entry(name, entry, owner)),
         backup_fail_detail="the journal entry was not added",
@@ -19442,8 +19480,9 @@ def create_code(name: str, category: Optional[str] = None,
     Colours are stored as the nearest QualCoder palette colour (120 fixed
     colours, as the QualCoder colour picker offers); the result reports
     the stored colour (`color`) and whether it was snapped
-    (`color_requested`, `color_snapped`). Greys may snap to a pale hue:
-    the palette has five greys and the matching rule is QualCoder's own.
+    (`color_requested`, `color_snapped`). Black and dark greys snap to a
+    green, and white to a pale pink: the palette has five greys, none of
+    them dark, and the matching rule is QualCoder's own.
 
     Args:
         name: The code name (unique among codes, case-insensitively; no
@@ -19632,8 +19671,9 @@ def recolor_code(code_id: int, color: str) -> str:
     Colours are stored as the nearest QualCoder palette colour (120 fixed
     colours, as the QualCoder colour picker offers); the result reports
     the stored colour (`new_color`) and whether it was snapped
-    (`color_requested`, `color_snapped`). Greys may snap to a pale hue:
-    the palette has five greys and the matching rule is QualCoder's own.
+    (`color_requested`, `color_snapped`). Black and dark greys snap to a
+    green, and white to a pale pink: the palette has five greys, none of
+    them dark, and the matching rule is QualCoder's own.
     When the code already has exactly the target colour the result is
     `changed: false, reason: unchanged` with nothing written and no
     backup made; a stored value that differs only by letter case, or a
@@ -19970,12 +20010,12 @@ def move_category(category_id: int,
 
     It writes to the database. The result gives the parent the category was
     filed under (`new_parent`, null at the top level). Refuses any move that
-    would create a cycle (make a category its own ancestor); such a cycle
-    would silently hide the category and all its codes from QualCoder's code
-    tree. When the category is already under the requested parent (or
-    already at the top level) the result is `changed: false, reason:
-    unchanged` with nothing written and no backup made. Successful moves
-    carry `changed: true`.
+    would create a cycle (make a category its own ancestor): QualCoder 3.8.2
+    and QualCoder 4.0's reports would hide the category and all its codes,
+    and QualCoder 4.0's Codebook would never finish. When the category is
+    already under the requested parent (or already at the top level) the
+    result is `changed: false, reason: unchanged` with nothing written and
+    no backup made. Successful moves carry `changed: true`.
 
     Args:
         category_id: The category to move (its catid)
@@ -20903,7 +20943,7 @@ def merge_codes(from_code_id: int, into_code_id: int,
 
     It writes to the database. All codings of `from_code_id` are reassigned
     to `into_code_id`, then `from_code_id` is deleted. This follows
-    QualCoder's merge exactly, and it loses codings by design: where both
+    QualCoder's merge, and it loses codings by design: where both
     codes already mark the same text span by the same coder, the source
     coding is discarded, with its memo and important flag, and the
     destination coding is kept. Audio/video and image codings are reassigned
@@ -20958,9 +20998,10 @@ def merge_codes(from_code_id: int, into_code_id: int,
         allow_hidden_coder=allow_hidden_coder,
         backup_fail_detail="no codes were merged",
         confirm_hint="Review the counts and the collateral breakdown, then "
-                     "call merge_codes again with preview_token. The source "
-                     "coding is discarded on any duplicate span; a backup "
-                     "is made first.",
+                     "call merge_codes again with preview_token. A text "
+                     "coding of the source code is discarded where the "
+                     "target already has the same span from the same "
+                     "coder; a backup is made first.",
         execute_arguments={"from_code_id": from_code_id,
                            "into_code_id": into_code_id},
     )
@@ -22641,8 +22682,10 @@ _NOTES_LEFT_HOLD = (
     "are: other files' notes, those of PDFs, recordings and images "
     "included; the notes of cases, codes, categories, attribute types and "
     "the project; journal entries; and any of this file's notes left for a "
-    "marker. Change them by hand, or by a run across the whole project "
-    "when no one else named in those notes shares a name in this mapping.")
+    "marker. It also takes in this file's notes into which a pseudonym "
+    "writes a name of this mapping back. Change them by hand, or by a run "
+    "across the whole project when no one else named in those notes "
+    "shares a name in this mapping.")
 
 
 def _file_notes_only(preview: Dict[str, Any]) -> bool:
@@ -24014,8 +24057,8 @@ def pseudonymise_source(
                  repeat it on the execute call.
         memo_scope: "file" keeps rewrite_memos to this file's notes: those
                  of its codings, annotations and case links, its own, and
-                 those of the recording segments its codings are linked
-                 to. Default "project". Bound into the token when "file".
+                 those of its recording's segments that its codings are
+                 linked to. Default "project". "file" is bound into the token.
         save_mapping_to_project: On a typed mapping, write it into the
                  project's own pseudonyms.json in QualCoder's format,
                  merging with what is there. A name the file already maps
@@ -24046,7 +24089,8 @@ def pseudonymise_source(
                  maps says when the file holds every typed name under its
                  typed pseudonym, which confirms an exact pair. This
                  argument is bound into the token: the preview must be run
-                 with it, and the execute repeats it.
+                 with it, and the execute repeats it. A run with nothing
+                 to rewrite saves nothing.
         researcher_keeps_mapping: On a typed mapping, attest that the
                  researcher keeps their own record of it. Not bound into
                  the token: an attestation with no side effect, which may
@@ -25047,8 +25091,9 @@ def add_annotation(file_id: int, start_pos: int, end_pos: int,
     it later (update_annotation with "") deletes the annotation, exactly
     as QualCoder does. The exception is a note with a '#####' private
     section: the annotation is then kept, with the private section intact,
-    and only the public text is cleared. Each coder can have one
-    annotation on a given span.
+    and only the public text is cleared. A coder's annotations on a file
+    do not overlap, as in QualCoder: a new one on the same span as one of
+    theirs, or overlapping it, is refused.
 
     Args:
         file_id: The text file to annotate
@@ -25109,11 +25154,12 @@ def update_annotation(annotation_id: int, memo: str,
                       allow_hidden_coder: bool = False) -> str:
     """Edit an annotation's note. An empty note deletes the annotation.
 
-    It writes to the database. It follows QualCoder exactly: editing updates
-    the note and its date (owner and the anchored span never change);
-    clearing the note to "" deletes the annotation row, since QualCoder
-    never keeps an empty annotation. The response says whether it updated or
-    deleted.
+    It writes to the database. It follows QualCoder: editing updates the
+    note and its date (owner and the anchored span never change); clearing
+    the note to "" deletes the annotation row, since QualCoder never keeps
+    an empty annotation. One difference: a note of spaces alone counts as
+    empty here, since it shows nothing, where QualCoder keeps it. The
+    response says whether it updated or deleted.
 
     Memo privacy (QualCoder 4.0 convention): only the note text before
     the first '#####' marker is replaced; a private section after the
@@ -25132,7 +25178,8 @@ def update_annotation(annotation_id: int, memo: str,
     Args:
         annotation_id: The annotation's anid (from read_file_with_codings
                        or search_memos)
-        memo: The new note text ('' deletes the annotation)
+        memo: The new note text ('', or spaces alone, deletes the
+              annotation)
         allow_hidden_coder: Override to edit a hidden coder's annotation
     """
     marker = private_marker_refusal(memo, "memo")
@@ -25864,13 +25911,13 @@ def rename_file(file_id: int, new_name: str) -> str:
     keeps '.txt' or '.transcribed' exactly; '.pdf' is neither gained nor
     lost; '.transcribed' is not gained; an image, audio or video file
     keeps its stored file's extension; a text with no stored file whose
-    name ends in '.txt' or has no dot keeps it that way. QualCoder's own
-    Rename, if the researcher uses it, can still make those changes. Any
-    other name changes freely ('Thomas.Jones' to 'P01'). A rename may put
-    back an ending that the stored file's own name has. Even so, a
-    transcript may not lose both its endings, nor a media file its
-    extension. Exegete does not look for earlier names in the project's
-    backups.
+    name ends in '.txt' or has no dot keeps the ending '.txt', or no dot
+    at all. QualCoder's own Rename, if the researcher uses it, can still
+    make those changes. Any other name changes freely ('Thomas.Jones' to
+    'P01'). A rename may put back an ending that the stored file's own
+    name has. Even so, a transcript may not lose both its endings, nor a
+    media file its extension. Exegete does not look for earlier names in
+    the project's backups.
 
     The result carries `changed: true`, `old_name` and `file_type`, and
     what kept the old name:
@@ -26506,7 +26553,8 @@ def export_codebook(output_path: str, format: str = "csv",
 
     Args:
         output_path: Target file (matching extension), or an existing
-                     directory; then the default name `Codebook.csv`
+                     directory, as a full path or one starting with ~;
+                     for a directory the default name `Codebook.csv`
                      etc. is used, with `_0`, `_1` collision suffixes
         format: "csv" (default), "txt" or "md"
         include_memos: Include code/category memos (default True)
@@ -26638,7 +26686,8 @@ def export_coded_segments_report(
 
     Args:
         output_path: Target file, or an existing directory (default name
-                     `Coded_segments.csv`/`.txt`, `_0` collision suffixes)
+                     `Coded_segments.csv`/`.txt`, `_0` collision suffixes),
+                     as a full path or one starting with ~
         code_names: Codes to include (default: all). Exact name wins,
                     else unique case-insensitive match.
         case_names: Switch to case mode and filter to these cases
@@ -26893,13 +26942,15 @@ def export_frequencies_csv(output_path: str,
     QualCoder's report does.
 
     Columns: `Code Tree, Id, {coder…}, Total` (coders alphabetical).
-    Tree rows in depth order with `--` per level in the Code Tree cell
-    (QualCoder's text-export convention, kept so hierarchy survives a
-    flat CSV). UTF-8 with BOM, CRLF rows.
+    Tree rows in depth order with `--` per level in the Code Tree cell,
+    as QualCoder 3.8.2's text export marks a level (QualCoder 4.0 indents
+    with spaces instead), so the hierarchy survives a flat CSV. UTF-8 with
+    BOM, CRLF rows.
 
     Args:
         output_path: Target .csv file, or an existing directory (default
-                     name `Code_frequencies.csv`, `_0` suffixes)
+                     name `Code_frequencies.csv`, `_0` suffixes), as a
+                     full path or one starting with ~
         sanitize_formulas: Neutralise spreadsheet formula injection
             (cells starting with = + - @ tab or CR get a ' prefix;
             code and coder names come from the database). Default
@@ -27081,12 +27132,13 @@ def export_case_code_matrix_csv(output_path: str,
 
     Args:
         output_path: Target .csv file, or an existing directory (default
-                     name `Case_code_matrix.csv`, `_0` suffixes)
+                     name `Case_code_matrix.csv`, `_0` suffixes), as a
+                     full path or one starting with ~
         sanitize_formulas: Neutralise spreadsheet formula injection
             (cells starting with = + - @ tab or CR get a ' prefix;
             case and code names come from the database). Default
-            False, so the file is byte for byte what QualCoder writes;
-            set it to true to neutralise them.
+            False, so each name is written as it stands; set it to true
+            to neutralise them.
         overwrite: Allow replacing an existing file (default False)
     """
     out_file, err = _resolve_export_path(
@@ -27320,11 +27372,11 @@ CODER_NAME_SETTING_IS_SPEAKER_REFUSAL = (
 # reason set_project_coder_name refuses them (whole-branch review, round
 # 1, parity: creation took "AI Agent" and the correction refused it).
 CODER_NAME_CREATION_IS_AI_REFUSAL = (
-    "\"{name}\" is a name AI work is stored under (Exegete's built-in "
-    "default AI coder name, or \"AI Agent\", the name QualCoder 4.0's "
-    "assistant writes under); the researcher's own coder name must differ, "
-    "or AI rows could not be told apart from theirs. {ask} Nothing was "
-    "created.")
+    "\"{name}\" is a name AI work is stored under: \"AI Coding Assistant\" "
+    "(the name on AI codings made before each project had a name of its "
+    "own) or \"AI Agent\" (the name QualCoder 4.0's assistant writes "
+    "under). The researcher's own coder name must differ, or AI rows could "
+    "not be told apart from theirs. {ask} Nothing was created.")
 CODER_NAME_CREATION_IS_AI_ASK_GIVEN = (
     "Ask the researcher for their own coder name.")
 CODER_NAME_CREATION_IS_AI_ASK_SETTING = (
@@ -27705,10 +27757,11 @@ def create_project(name: str, directory: Optional[str] = None,
     When the AI coder name is filled in Exegete's settings, the new project
     stores it too, and the answer says so.
 
-    Names: the name becomes a folder, so it may not hold / \\ : < > | ? * or ",
-    end in a dot or a space, start with a dot, be a Windows device name such as
-    CON, hold "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in
-    that folder, in any letter case, is refused, and so is a name whose older
+    Names: spaces around the name are dropped first. The name becomes a
+    folder, so it may not hold / \\ : < > | ? * or ", end in a dot or a
+    space, start with a dot, be a Windows device name such as CON, hold
+    "_backup_" or "_BKUP_", or pass 200 bytes. A name already used in that
+    folder, in any letter case, is refused, and so is a name whose older
     backup folders sit there. Each refusal says why.
 
     Args:

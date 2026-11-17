@@ -457,9 +457,6 @@ NOT_TOOLS = {
                     "update_check.json, and the extension's setting",
     "search_memo": "search_files' argument removed in 0.15.1, which the "
                    "refusal of a call passing it names (REMOVED_ARGUMENTS)",
-    "create_backup": "the argument of 22 tools removed in 0.15.5, which "
-                     "the refusal of a call passing it names "
-                     "(REMOVED_ARGUMENTS)",
     "undo_receipt": "the key of a change's answer, and a line of "
                     "apply_codings' answer, that names the change's record "
                     "(v0.15.2)",
@@ -667,6 +664,31 @@ def _removed_help_topics():
     raise AssertionError("server.py has no REMOVED_HELP_TOPICS")
 
 
+def _create_backup_refusal():
+    """The places, (module, line, text), of create_backup's refusal: the
+    argument removed in 0.15.5 from the 22 tools that took it, which the
+    refusal of a call passing it names (_CREATE_BACKUP_REMOVED, and the
+    rows it gives REMOVED_ARGUMENTS). They are passed over there alone,
+    so that any other text that tells the model to pass it fails (v0.15.5,
+    the second part's review)."""
+    path = Path(exegete.__file__).parent / "server.py"
+    tree_ = ast.parse(path.read_text(encoding="utf-8"))
+    places = set()
+    for node in tree_.body:
+        targets = (node.targets if isinstance(node, ast.Assign) else
+                   [node.target] if isinstance(node, ast.AnnAssign) else [])
+        if any(isinstance(target, ast.Name) and target.id in (
+                "_CREATE_BACKUP_REMOVED", "REMOVED_ARGUMENTS")
+               for target in targets) and node.value is not None:
+            places |= {(path.name, each.lineno, each.value)
+                       for each in ast.walk(node.value)
+                       if isinstance(each, ast.Constant)
+                       and isinstance(each.value, str)
+                       and "create_backup" in each.value}
+    assert len(places) >= 2, places
+    return places
+
+
 def test_no_answer_text_names_a_tool_that_does_not_exist():
     """The refusals and answers, read from the source: a tool-shaped word
     in any literal that can reach an answer is a tool of this server, an
@@ -675,9 +697,10 @@ def test_no_answer_text_names_a_tool_that_does_not_exist():
     topics = _removed_help_topics()
     assert ("server.py", "analyze_for_coding") in {
         (module, text) for module, _, text in topics}
+    refusal = _create_backup_refusal()
     found = {}
     for module, line, text in _sendable_literals():
-        if (module, line, text) in topics:
+        if (module, line, text) in topics or (module, line, text) in refusal:
             continue
         for match in WORD.finditer(text):
             word = match.group(1)

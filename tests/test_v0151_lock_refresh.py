@@ -69,8 +69,11 @@ def fast(monkeypatch):
 
 @pytest.fixture
 def fast_and_stale(fast, monkeypatch):
-    """And a lock stale after 1 second, so that one not refreshed shows."""
-    monkeypatch.setattr(database, "QUALCODER_LOCK_TIMEOUT", 1.0)
+    """And a lock stale after 2 seconds, so that one not refreshed shows.
+    (v0.15.5: 1 second until a Windows runner, on 15 November 2026, went
+    more than a second between two refreshes; a held lock is now watched
+    for twice the stale age.)"""
+    monkeypatch.setattr(database, "QUALCODER_LOCK_TIMEOUT", 2.0)
 
 
 @pytest.fixture
@@ -122,16 +125,15 @@ def _watch(folder, seconds):
 # ---------------------------------------------------------------------------
 
 def test_a_long_hold_stays_active_at_one_length(tmp_path, fast_and_stale):
-    """Held 2.5 seconds, past the (patched) stale age of 1: always
-    active, one length, a second hold always refused. Red without the
-    refresh: the lock goes stale after a second and a second hold
-    proceeds."""
+    """Held 4 seconds, past the (patched) stale age of 2: always active,
+    one length, a second hold always refused. Red without the refresh:
+    the lock goes stale after two seconds and a second hold proceeds."""
     folder = tmp_path / "Study.qda"
     folder.mkdir()
     with database.hold_project_lock(folder) as held:
         assert held
         first = len(_lock(folder).read_bytes())
-        states, lengths, refused = _watch(folder, 2.5)
+        states, lengths, refused = _watch(folder, 4.0)
     assert states == {"active"}
     assert lengths == {first}
     assert refused == {True}
@@ -145,7 +147,7 @@ def test_a_long_tool_write_stays_active(setup_server, qualcoder_db_path,
     seen = {}
     _during_add_code(monkeypatch, lambda db: seen.update(
         zip(("states", "lengths", "refused"),
-            _watch(qualcoder_db_path, 2.5))))
+            _watch(qualcoder_db_path, 4.0))))
     answer = json.loads(server.create_code(name="Long"))
     assert answer.get("success") is True, answer
     assert seen["states"] == {"active"}

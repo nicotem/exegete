@@ -365,12 +365,20 @@ class TestNoServedTextNamesCreateBackup:
             if line.startswith("- **Backups**:")).split())
         assert "`create_backup` was removed in 0.15.5" in backups
         assert "refused" in backups
-        found = []
+        named = []
         for name in DOCUMENTS:
             flat = " ".join((REPO / name).read_text(
                 encoding="utf-8").split())
-            found += [(name, sentence) for sentence in
+            named += [(name, sentence) for sentence in
                       re.split(r"(?<=[.;!?])\s+", flat)
-                      if CREATE_BACKUP.search(sentence)
-                      and STILL_TAKEN.search(sentence)]
-        assert found == []
+                      if CREATE_BACKUP.search(sentence)]
+        # TOOLS' Backups line is the one place a researcher's documents
+        # name it, and there it is removed and refused (the second part's
+        # review): no other sentence may say that a tool takes it
+        assert named, "no document names create_backup"
+        assert {name for name, _ in named} == {"TOOLS.md"}, named
+        for _, sentence in named:
+            # a list item with no closing stop runs into the next item
+            head = sentence.split(" - **")[0]
+            assert head in backups, sentence
+            assert not STILL_TAKEN.search(head), sentence

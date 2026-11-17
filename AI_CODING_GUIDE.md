@@ -462,8 +462,8 @@ copy's answer gave. "Troubleshooting", below, says how to find it. If
 QualCoder 4.0 had the project open already, close it there and open it
 again to see the new codings. Under **Coding > Code text**, select the
 files you analysed. Each of the assistant's codings has the project's
-AI coder name as its owner: `AI Coding Assistant`, for example, if you
-chose that name. A coding's memo begins "Reading: explicit" or
+AI coder name as its owner, such as `AI Coding Assistant` if you chose
+that name. A coding's memo begins "Reading: explicit" or
 "Reading: interpretive", then gives the reasoning. A coding without a
 reading has the reasoning alone (step 5).
 
@@ -1254,8 +1254,8 @@ what that means before you send it anywhere.
 
 **What happens to my original project?** Exegete changes a project
 made in Exegete directly, with a backup before every change to its
-database. A project
-made in another program, or one you want to keep as it is, stays as it
-was if you work on a copy in the workspace. Copy it first and work on
-the copy. You can compare the two, in the conversation or in QualCoder
-if you use it, before you decide which one to keep.
+database. A project made in another program, or one you want to keep
+as it is, stays as it was if you work on a copy in the workspace. Copy
+it first and work on the copy. You can compare the two, in the
+conversation or in QualCoder if you use it, before you decide which
+one to keep.

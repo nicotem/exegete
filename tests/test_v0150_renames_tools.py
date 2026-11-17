@@ -480,7 +480,8 @@ class TestTheDocuments:
 
     def test_the_earlier_names_only_where_they_belong(self):
         """In TOOLS.md's section "Earlier names" and in the update page's
-        paragraph on the renames, each giving the two pairs; the CHANGELOG,
+        paragraph on the renames, each giving the two pairs, the paragraph
+        the release that removed them as the section does; the CHANGELOG,
         a record, is not read here."""
         for name in DOCUMENTS:
             text = _read(name)
@@ -497,6 +498,8 @@ class TestTheDocuments:
                 flat = re.sub(r"</?code>", "`", _flat(paragraph))
                 for old, new in RENAMED.items():
                     assert f"`{old}` is now `{new}`" in flat, old
+                # (v0.15.5, the first part's review)
+                assert "removed in Exegete 0.15.5" in flat
                 text = text.replace(paragraph, "")
             assert not EARLIER.search(text), (name, EARLIER.findall(text))
 

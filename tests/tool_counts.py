@@ -17,9 +17,8 @@ from pathlib import Path
 SNAPSHOT_SIZES = json.loads((Path(__file__).resolve().parents[1] / "docs"
                              / "snapshot" / "sizes.json").read_text(
                                  encoding="utf-8"))
-# Every tool, `create_project`, the two earlier names,
-# prepare_names_list and save_names_list included
+# Every tool, `create_project`, prepare_names_list and save_names_list
+# included (v0.15.5: the two earlier names, counted until then, removed)
 FULL_TOOLS = SNAPSHOT_SIZES["full"]["tool_count"]
-# The supervised coding set for local models, the two earlier names
-# included
+# The supervised coding set for local models
 CORE_TOOLS = SNAPSHOT_SIZES["core"]["tool_count"]

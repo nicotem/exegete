@@ -457,10 +457,6 @@ NOT_TOOLS = {
                     "update_check.json, and the extension's setting",
     "search_memo": "search_files' argument removed in 0.15.1, which the "
                    "refusal of a call passing it names (REMOVED_ARGUMENTS)",
-    "analyze_for_coding": "a help topic removed in 0.15.1, whose answer "
-                          "gives it back as the topic asked for "
-                          "(REMOVED_HELP_TOPICS), and the earlier name of "
-                          "start_coding_session, removed in 0.15.5",
     "create_backup": "the argument of 22 tools removed in 0.15.5, which "
                      "the refusal of a call passing it names "
                      "(REMOVED_ARGUMENTS)",
@@ -650,13 +646,39 @@ def _sendable_literals():
                 yield path.name, node.lineno, node.value
 
 
+def _removed_help_topics():
+    """The places, (module, line, text), of the help topics removed in
+    0.15.1 (REMOVED_HELP_TOPICS): the help tool gives a removed topic back
+    as the topic asked for, and analyze_for_coding, the earlier name of
+    start_coding_session, removed in 0.15.5, is one of them. They are
+    passed over there alone, so that any other text that sends the model
+    to an earlier name fails (v0.15.5, the first part's review)."""
+    path = Path(exegete.__file__).parent / "server.py"
+    tree_ = ast.parse(path.read_text(encoding="utf-8"))
+    for node in tree_.body:
+        if isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name)
+                and target.id == "REMOVED_HELP_TOPICS"
+                for target in node.targets):
+            return {(path.name, each.lineno, each.value)
+                    for each in ast.walk(node.value)
+                    if isinstance(each, ast.Constant)
+                    and isinstance(each.value, str)}
+    raise AssertionError("server.py has no REMOVED_HELP_TOPICS")
+
+
 def test_no_answer_text_names_a_tool_that_does_not_exist():
     """The refusals and answers, read from the source: a tool-shaped word
     in any literal that can reach an answer is a tool of this server, an
     argument, or a named exception."""
     tools, arguments = all_tool_names(), argument_names()
+    topics = _removed_help_topics()
+    assert ("server.py", "analyze_for_coding") in {
+        (module, text) for module, _, text in topics}
     found = {}
     for module, line, text in _sendable_literals():
+        if (module, line, text) in topics:
+            continue
         for match in WORD.finditer(text):
             word = match.group(1)
             if word in tools or word in arguments or word in NOT_TOOLS:

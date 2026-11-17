@@ -56,9 +56,10 @@
     category, then name;
   - `export_frequencies_csv`: `--` for each level is QualCoder 3.8.2's
     way of marking one;
-  - `set_project_ai_coder_name` and the refusals of a coder name: `AI
-    Coding Assistant` is the name on AI codings made before each project
-    had a name of its own, not a default any write falls back to;
+  - `set_project_ai_coder_name` and the refusals of a coder name:
+    `AI Coding Assistant` is the name on AI codings made before each
+    project had a name of its own, not a default any write falls back
+    to;
   - `pseudonymise_source`: with `memo_scope` `"file"`, the segments
     taken are those of the file's own recording; a run with nothing to
     rewrite saves no mapping. The warning on the notes such a run
@@ -66,19 +67,19 @@
     a pseudonym writes a name back;
   - the paragraph of the four tools that delete or merge codes and
     categories: a preview writes nothing in the project, and the second
-    call is refused when what the token covers has changed, not any
-    change to the project.
+    call is refused when what the token covers has changed, not
+    whenever anything in the project has.
 
 ### Documents
 
 - **TOOLS.md** says that the text count of `get_coding_frequencies`
   leaves out text codings left on a deleted file, which `export_codebook`
   counts; how `merge_codes` differs from QualCoder 4.0's merge; where
-  `exegete.json` is kept; the rule for a journal entry's
-  name; that an override's answer from `update_annotation` or `set_memo`
-  also carries the note the assistant gave; and that the advice on a
-  typed mapping for a second person is given in the preview of a run
-  across the whole project.
+  `exegete.json` is kept; the rule for a journal entry's name; that an
+  override's answer from `update_annotation` or `set_memo` also carries
+  the note the assistant gave; and that the advice on a typed mapping
+  for a second person is given in the preview of a run across the
+  whole project.
 - **PRIVACY.md** says that a note rewrite reaches every note of the
   project by default, beside `memo_scope`.
 - **The AI coding guide** says which name the assistant's codings carry,

@@ -468,6 +468,14 @@ def _args_pseudonymise_source(kwargs):
     before and a token issued before the update still verifies. Its
     words are a typed mapping's kind, so the bind stays keyed
     (`KEYED_BIND`).
+
+    `memo_scope` (v0.15.5) says whose notes the note rewrite reaches:
+    "project", the default, every note and journal entry; "file", this
+    file's notes alone, which changes what happens to rows, so it is
+    bound. Only when "file", so that a run without it, or with
+    "project", binds exactly as before and a token issued before the
+    update still verifies, and a whole-project token executed with
+    "file", or the reverse, answers as another operation.
     """
     bound = {"file_id": int(kwargs["file_id"]),
              "mapping": kwargs["mapping"],
@@ -486,6 +494,8 @@ def _args_pseudonymise_source(kwargs):
     phrases = kwargs.get("keep_phrases")
     if phrases:
         bound["keep_phrases"] = [str(one) for one in phrases]
+    if kwargs.get("memo_scope") == "file":
+        bound["memo_scope"] = "file"
     return bound
 
 
